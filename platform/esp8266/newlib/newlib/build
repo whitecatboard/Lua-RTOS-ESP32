@@ -1,0 +1,11 @@
+export PATH=/usr/local/xtensa-lx106-elf/bin:$PATH
+
+./configure --host=xtensa-lx106-elf --exec-prefix=/usr/local/xtensa-lx106-elf \
+--with-newlib --enable-multilib \
+--disable-newlib-io-c99-formats --enable-newlib-supplied-syscalls \
+--enable-target-optspace \
+--disable-option-checking \
+--enable-newlib-nano-malloc --enable-newlib-nano-formatted-io --enable-newlib-reent-small
+
+make clean
+make && cp -f libc.a ./../../../../libc/platform/esp8266/lib/ && cp -f libm.a ./../../../../libc/platform/esp8266/lib/ && cp -f libg.a ./../../../../libc/platform/esp8266/lib/

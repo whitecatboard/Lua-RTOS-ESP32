@@ -1,0 +1,670 @@
+@c                                           -*- Texinfo -*-
+@node Syscalls
+@chapter System Calls
+
+@cindex linking the C library
+The C subroutine library depends on a handful of subroutine calls for
+operating system services.  If you use the C library on a system that
+complies with the POSIX.1 standard (also known as IEEE 1003.1), most of
+these subroutines are supplied with your operating system.
+
+If some of these subroutines are not provided with your system---in
+the extreme case, if you are developing software for a ``bare board''
+system, without an OS---you will at least need to provide do-nothing
+stubs (or subroutines with minimal functionality) to allow your
+programs to link with the subroutines in @code{libc.a}.
+
+System routines may be provided in either reentrant or non-reentrant
+versions.  The reentrant versions take an extra argument for the
+reentrancy structure and have different names, formed by prepending
+@samp{_} and appending @samp{_r} (e.g., @code{_close_r} instead of
+@code{close}).  If newlib is configured to use reentrant system
+routines, the non-reentrant versions of the system routines are provided
+as cover routines.  Likewise, if newlib is configured to use
+non-reentrant system routines, reentrant cover routines are provided
+that achieve reentrancy by using a reserved global data block.
+@xref{Reentrancy,,Reentrancy}.
+
+@menu
+* Stubs::		Definitions for OS interface
+@ifset XTENSA
+* Xtensa Syscalls::     System calls in the default Xtensa runtime
+@end ifset
+@end menu
+
+@node Stubs
+@section Definitions for OS interface
+@cindex stubs
+
+@cindex subroutines for OS interface
+@cindex OS interface subroutines
+This is the complete set of system definitions (primarily subroutines)
+required; the examples shown implement the minimal functionality
+required to allow @code{libc} to link, and fail gracefully where OS
+services are not available.  
+
+Graceful failure is permitted by returning an error code.  If newlib is
+configured to use non-reentrant system routines, a minor
+complication arises here: the C library must be compatible with
+development environments that supply fully functional versions of these
+subroutines.  Such environments usually return error codes in a global
+@code{errno}.  However, the Red Hat newlib C library provides a @emph{macro}
+definition for @code{errno} in the header file @file{errno.h}, as part
+of its support for reentrant routines (@pxref{Reentrancy,,Reentrancy}).
+
+@cindex @code{errno} global vs macro
+The bridge between these two interpretations of @code{errno} is
+straightforward: the C library routines with OS interface calls
+capture the @code{errno} values returned globally, and record them in
+the appropriate field of the reentrancy structure (so that you can query
+them using the @code{errno} macro from @file{errno.h}).
+
+This mechanism becomes visible when you write non-reentrant stub
+routines for OS interfaces.  You must include @file{errno.h}, then
+disable the macro, like this:
+
+@example
+#include <errno.h>
+#undef errno
+extern int errno;
+@end example
+
+@noindent
+The examples in this chapter include this treatment of @code{errno}.
+If you are writing reentrant stub routines, this issue is irrelevant
+because the error code is stored into the reentrancy structure and 
+there is no need for a global variable.
+
+For simplicity, only the non-reentrant versions of the system routines
+are shown here.  The reentrant versions are similar except for
+the function names, the extra reentrancy structure argument,
+and the error codes being stored into the reentrancy structure
+instead of the global @code{errno} variable.
+
+@ftable @code
+@item _exit
+Exit a program without cleaning up files.  If your system doesn't
+provide this, it is best to avoid linking with subroutines that require
+it (@code{exit}, @code{system}).  Note that there is no separate
+reentrant version of this routine, even when newlib is configured to use
+reentrant system routines.
+
+@item close
+Close a file.  Minimal implementation:
+
+@example
+int close(int file) @{
+  return -1;
+@}
+@end example
+
+@item environ
+A pointer to a list of environment variables and their values.  For a
+minimal environment, this empty list is adequate:
+
+@example
+char *__env[1] = @{ 0 @};
+char **environ = __env;
+@end example
+
+@item execve
+Transfer control to a new process.  Minimal implementation (for a system
+without processes):
+
+@example
+#include <errno.h>
+#undef errno
+extern int errno;
+int execve(char *name, char **argv, char **env) @{
+  errno = ENOMEM;
+  return -1;
+@}
+@end example
+
+@item fcntl
+File control commands.  Minimal implementation:
+
+@example
+int fcntl(int fildes, int cmd, int arg) @{
+  errno = EAGAIN;
+  return -1;
+@}
+@end example
+
+@item fork
+Create a new process.  Minimal implementation (for a system without processes):
+
+@example
+#include <errno.h>
+#undef errno
+extern int errno;
+int fork(void) @{
+  errno = EAGAIN;
+  return -1;
+@}
+@end example
+
+@item fstat
+Status of an open file.  For consistency with other minimal
+implementations in these examples, all files are regarded as character
+special devices.  The @file{sys/stat.h} header file required is
+distributed in the @file{include} subdirectory for this C library.
+
+@example
+#include <sys/stat.h>
+int fstat(int file, struct stat *st) @{
+  st->st_mode = S_IFCHR;
+  return 0;
+@}
+@end example
+
+@item getpid
+Process-ID; this is sometimes used to generate strings unlikely to
+conflict with other processes.  Minimal implementation, for a system
+without processes:
+
+@example
+int getpid(void) @{
+  return 1;
+@}
+@end example
+
+@item gettimeofday
+Get the current time.  Minimal implementation:
+
+@example
+#include <sys/time.h>
+int gettimeofday(struct timeval *tv,
+                 struct timezone *tz) @{
+  errno = EINVAL;
+  return -1;
+@}
+@end example
+
+@ifclear XTENSA
+@c isatty is provided by newlib for Xtensa (in libc/sys/xtensa/isatty.c).
+@item isatty
+Query whether output stream is a terminal.   For consistency with the
+other minimal implementations, which only support output to
+@code{stdout}, this minimal implementation is suggested:
+
+@example
+int isatty(int file) @{
+  return 1;
+@}
+@end example
+@end ifclear
+
+@item kill
+Send a signal.  Minimal implementation:
+
+@example
+#include <errno.h>
+#undef errno
+extern int errno;
+int kill(int pid, int sig) @{
+  errno = EINVAL;
+  return -1;
+@}
+@end example
+
+@item link
+Establish a new name for an existing file.  Minimal implementation:
+
+@example
+#include <errno.h>
+#undef errno
+extern int errno;
+int link(char *old, char *new) @{
+  errno = EMLINK;
+  return -1;
+@}
+@end example
+
+@item lseek
+Set position in a file.  Minimal implementation:
+
+@example
+int lseek(int file, int ptr, int dir) @{
+  return 0;
+@}
+@end example
+
+@item open
+Open a file.  Minimal implementation:
+
+@example
+int open(const char *name, int flags, int mode) @{
+  return -1;
+@}
+@end example
+
+@item read
+Read from a file.  Minimal implementation:
+
+@example
+int read(int file, char *ptr, int len) @{
+  return 0;
+@}
+@end example
+
+@item _rename
+Rename a file.  For systems that do not support the @code{link} system
+routine, newlib can be configured to use this optional routine for
+renaming files.  Note that the reentrant version of this routine is
+named @code{_rename_r}.  Minimal implementation:
+
+@example
+int _rename(char *oldpath, char *newpath) @{
+  errno = EINVAL;
+  return -1;
+@}
+@end example
+
+@item sbrk
+Increase program data space.  As @code{malloc} and related functions
+depend on this, it is useful to have a working implementation.  The
+following suffices for a standalone system; it exploits the symbol
+@code{_end} automatically defined by the GNU linker.
+
+@example
+@group
+caddr_t sbrk(int incr) @{
+  extern char _end;		/* @r{Defined by the linker} */
+  static char *heap_end;
+  char *prev_heap_end;
+ 
+  if (heap_end == 0) @{
+    heap_end = &_end;
+  @}
+  prev_heap_end = heap_end;
+  if (heap_end + incr > stack_ptr) @{
+    write (1, "Heap and stack collision\n", 25);
+    abort ();
+  @}
+
+  heap_end += incr;
+  return (caddr_t) prev_heap_end;
+@}
+@end group
+@end example
+
+@item stat
+Status of a file (by name).  Minimal implementation:
+
+@example
+int stat(char *file, struct stat *st) @{
+  st->st_mode = S_IFCHR;
+  return 0;
+@}
+@end example
+
+@item times
+Timing information for current process.  Minimal implementation:
+
+@example
+int times(struct tms *buf) @{
+  return -1;
+@}
+@end example
+
+@item unlink
+Remove a file's directory entry.  Minimal implementation:
+
+@example
+#include <errno.h>
+#undef errno
+extern int errno;
+int unlink(char *name) @{
+  errno = ENOENT;
+  return -1; 
+@}
+@end example
+
+@item wait
+Wait for a child process.  Minimal implementation:
+@example
+#include <errno.h>
+#undef errno
+extern int errno;
+int wait(int *status) @{
+  errno = ECHILD;
+  return -1;
+@}
+@end example
+
+@item write
+Write to a file.  @file{libc} subroutines will use this
+system routine for output to all files, @emph{including}
+@code{stdout}---so if you need to generate any output, for example to a
+serial port for debugging, you should make your minimal @code{write}
+capable of doing this.  The following minimal implementation is an
+incomplete example; it relies on an @code{outbyte} subroutine (not
+shown; typically, you must write this in assembler from examples
+provided by your hardware manufacturer) to actually perform the output.
+
+@example
+@group
+int write(int file, char *ptr, int len) @{
+  int todo;
+
+  for (todo = 0; todo < len; todo++) @{
+    outbyte (*ptr++);
+  @}
+  return len;
+@}
+@end group
+@end example
+
+@end ftable
+
+@ifset XTENSA
+@node Xtensa Syscalls
+@section Xtensa system calls
+
+If you are not using an operating system, the default Xtensa runtime
+environment provides three options for system calls.  The first option
+is the GNU low-level operating system support library (libgloss),
+which provides minimal stub routines, similar to those described above
+(@pxref{Stubs}).  Please refer to the @cite{Xtensa Linker Support
+Packages (LSPs) Reference Manual} for instructions on modifying and
+rebuilding libgloss.
+
+The second and third options both pass some system calls to a host machine,
+where they are evaluated before passing the results back to the target
+system.  With this approach, your Xtensa system can access the file system
+of the host machine, which is often useful for development and debugging.
+The ``sim'' library uses the ``semihosting'' feature of the Xtensa
+instruction set simulator (ISS) to implement system calls that pass through
+to the host running the ISS.  This is the default when running on the
+Xtensa ISS.  The ``gdbio'' library uses the ``File-I/O'' remote protocol
+extension of the GNU debugger (GDB) to pass system calls via the On-Chip
+Debugging (OCD)
+interface to a host machine running GDB.  See the @cite{Xtensa Software
+Development Toolkit User's Guide} for information about using the gdbio
+library.  The ``File-I/O remote protocol extension'' appendix section in the
+@cite{GNU Debugger User's Guide} describes the details of this feature.
+
+Tensilica configures newlib to use reentrant system call interfaces.
+The actual system call implementations may not all be reentrant; see
+the @cite{Xtensa Linker Support Packages (LSPs) Reference Manual} for
+details.  The system routines are listed in this section with the
+reentrant function names.
+
+@menu
+* Xtensa Libgloss::		The Xtensa version of libgloss.
+* Xtensa ISS Syscalls:: 	System calls supported by the ISS.
+* Xtensa gdbio::		System calls supported by gdbio.
+@end menu
+
+@node Xtensa Libgloss
+@subsection System calls with the libgloss library
+
+The Xtensa libgloss library implements the system routines as described
+below.  Some of the routines are not implemented; programs using
+libgloss must avoid linking with functions that require those
+unimplemented routines.
+
+@table @code
+@item _exit
+Not implemented.  It is assumed that this function is provided
+elsewhere, typically in the @samp{crt1} file.
+
+@item _close_r
+Does nothing.  Returns 0.
+
+@item environ
+Not implemented.  The default implementation in newlib is used unless
+another definition is provided elsewhere.
+
+@item _execve_r
+Not implemented.
+
+@item _fcntl_r
+Not implemented.
+
+@item _fork_r
+Not implemented.
+
+@item _fstat_r
+Assumes terminal I/O and sets @code{st_mode} to @code{S_IFCHR}.
+Returns 0.
+
+@item _getpid_r
+Returns 1.
+
+@item _gettimeofday_r
+Not implemented.
+
+@item _kill_r
+Calls @code{_exit} if the specified process ID is 1 (as returned by
+@code{getpid}); otherwise, does nothing.  Returns 0.
+
+@item _link_r
+Not implemented.
+
+@item _lseek_r
+Sets @code{errno} to @code{ESPIPE}.  Returns -1.
+
+@item _open_r
+Sets @code{errno} to @code{EIO}.  Returns -1.
+
+@item _read_r
+Reads the specified number of bytes from the serial port using a
+board-specific @code{inbyte} function.  Ignores the file descriptor
+argument.  The @code{inbyte} function is not part of libgloss and must
+be provided elsewhere.
+
+@item _rename_r
+Not implemented.
+
+@item _sbrk_r
+Grows the heap.  If the end of the heap extends beyond the
+@code{_heap_sentry} symbol (set by the linker), sets @code{errno} to
+@code{ENOMEM} and returns -1.  Note that unlike the ISS semihosting
+version of @code{_sbrk_r}, this version does not currently check if the
+heap collides with the stack.
+
+@item _stat_r
+Sets @code{errno} to @code{EIO} and returns -1.
+
+@item _times_r
+Returns the current cycle count value if the Xtensa processor
+configuration includes the Timer Interrupt Option; otherwise, sets
+@code{errno} to @code{ENOSYS} and returns -1.
+
+@item _unlink_r
+Sets @code{errno} to @code{EIO}.  Returns -1.
+
+@item _wait_r
+Not implemented.
+
+@item _write_r
+Writes the specified number of bytes to the serial port using
+the board-specific @code{outbyte} function.  Ignores the file descriptor
+argument.  The @code{outbyte} function is not included in libgloss and
+must be provided elsewhere.
+@end table
+
+@node Xtensa ISS Syscalls
+@subsection System calls with the Xtensa ISS
+
+The Xtensa ISS semihosting library provides the following
+system routines (all the routines using ISS semihosting set @code{errno}
+and the return value based on the status of the host system call):
+
+@table @code
+@item _exit
+Terminates the Xtensa ISS simulation.
+
+@item _close_r
+Closes the specified host file using the ISS semihosting interface.
+
+@item environ
+Not implemented.  It is assumed that this is provided in the
+@samp{crt1-sim} file.
+
+@item _execve_r
+Not implemented.
+
+@item _fcntl_r
+Not implemented.
+
+@item _fork_r
+Not implemented.
+
+@item _fstat_r
+Assumes terminal I/O and sets @code{st_mode} to @code{S_IFCHR}.
+Returns 0.
+
+@item _getpid_r
+Returns 1.
+
+@item _gettimeofday_r
+Gets the host system's current time expressed in elapsed seconds and
+microseconds since January 1, 1970 using the ISS semihosting interface.
+
+@item _kill_r
+Calls @code{_exit} if the specified process ID is 1 (as returned by
+@code{getpid}); otherwise, does nothing.  Returns 0.
+
+@item _link_r
+Adds a hard link to a host file using the ISS semihosting interface.
+(Only supported on Unix platforms.)
+
+@item _lseek_r
+Seeks to the specified location in a host file using the ISS semihosting 
+interface.
+
+@item _open_r
+Opens the specified file on the host using the ISS semihosting
+interface.  The following flags are supported: @code{O_RDONLY},
+@code{O_WRONLY}, @code{O_RDWR}, @code{O_APPEND}, @code{O_CREAT},
+@code{O_TRUNC}, @code{O_EXCL}, @code{O_NDELAY}, @code{O_NONBLOCK},
+@code{O_BINARY}, and @code{O_TEXT}.
+
+@item _read_r
+Reads from a host file using the ISS semihosting interface.
+
+@item _rename_r
+Renames a host file using the ISS semihosting interface.
+
+@item _sbrk_r
+Grows the heap.  If the end of the heap extends beyond the
+@code{_heap_sentry} symbol (set by the linker) or if it collides with
+the stack, sets @code{errno} to @code{ENOMEM} and returns -1.
+
+@item _stat_r
+Sets @code{errno} to @code{EIO} and returns -1.
+
+@item _times_r
+Returns the Xtensa simulation cycle count.
+
+@item _unlink_r
+Unlinks (i.e., removes) a host file using the ISS semihosting interface.
+
+@item _wait_r
+Not implemented.
+
+@item _write_r
+Writes to a host file using the ISS semihosting interface.
+@end table
+
+@node Xtensa gdbio
+@subsection System calls with the gdbio library
+
+The Xtensa ``gdbio'' library (libgdbio) implements the system routines as
+described below.  Some of the routines are not implemented; programs using
+libgdbio must avoid linking with functions that require those unimplemented
+routines.
+
+@table @code
+@item _exit
+Not implemented. It is assumed that this function is provided elsewhere,
+typically in the @samp{crt1} file.
+
+@item _close_r
+Closes the specified host file using GDB's File-I/O protocol.
+
+@item environ
+Not implemented. The default implementation in newlib is used unless
+another definition is provided elsewhere.
+
+@item _execve_r
+Not implemented.
+
+@item _fcntl_r
+Not implemented.
+
+@item _fork_r
+Not implemented.
+
+@item _fstat_r
+Gets the status of an open file using GDB's File-I/O protocol.
+
+@item _getpid_r
+Returns 1.
+
+@item _gettimeofday_r
+Gets the host system's current time expressed in elapsed seconds and
+microseconds since January 1, 1970 using GDB's File-I/O protocol.
+
+@item _kill_r
+Calls _exit if the specified process ID is 1 (as returned by _getpid_r);
+otherwise, does nothing. Returns 0.
+
+@item _link_r
+Not implemented.
+
+@item _lseek_r
+Seeks to the specified location in a host file using GDB's File-I/O protocol.
+
+@item _open_r
+Opens the specified file on the host using GDB's File-I/O protocol.  The
+following flags are supported: @code{O_RDONLY}, @code{O_WRONLY},
+@code{O_RDWR}, @code{O_APPEND}, @code{O_CREAT}, @code{O_TRUNC}, and
+@code{O_EXCL}.
+
+@item _read_r
+Reads from a host file using GDB's File-I/O protocol.
+
+@item _rename_r
+Renames a host file using GDB's File-I/O protocol.
+
+@item _sbrk_r
+Grows the heap. If the end of the heap extends beyond the _heap_sentry
+symbol (set by the linker), sets errno to ENOMEM and returns -1.
+Note that unlike the ISS semihosting version of _sbrk_r, this version
+does not currently check if the heap collides with the stack.
+
+@item _stat_r
+Gets the status of the specified host file using GDB's File-I/O protocol.
+
+@item _times_r
+Returns the current cycle count value if the Xtensa processor
+configuration includes the Timer Interrupt Option; otherwise, sets
+@code{errno} to @code{ENOSYS} and returns -1.
+
+@item _unlink_r
+Unlinks (i.e., removes) a host file using GDB's File-I/O protocol.
+
+@item _wait_r
+Not implemented.
+
+@item _write_r
+Writes to a host file using GDB's File-I/O protocol.
+
+@item gdbio_system
+This function provides access to the GDB File-I/O protocol's @code{system}
+function.  It is renamed to avoid conflicting with newlib's standard
+@code{system} function.  It is only supported on Unix platforms.
+@example
+int gdbio_system(const char *command);
+@end example
+The specified command is executed on the host by running
+``@code{/bin/sh -c @var{command}}''.  The return value is -1 on error, or
+the exit status of the command otherwise.  Note that this feature is
+disabled by default in GDB and must be enabled by changing the
+``remote system-call-allowed'' setting to a nonzero value.
+@end table
+@end ifset

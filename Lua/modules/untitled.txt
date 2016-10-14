@@ -1,0 +1,14 @@
+i = 0
+while true do
+thread.start(function() i = i + 1 end)
+print("new "..i)
+end
+
+
+
+i = 0
+while true do
+thread.stop();
+thread.start(function() i = i + 1;dofile("/examples/blink.lua"); end)
+print("new "..i)
+end
