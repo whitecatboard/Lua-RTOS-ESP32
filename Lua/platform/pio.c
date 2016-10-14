@@ -29,8 +29,7 @@
 
 #include "whitecat.h"
 
-#if LUA_USE_PIO
-
+#if 0
 #include "Lua/modules/pio.h"
 
 extern const char pin_name[16];

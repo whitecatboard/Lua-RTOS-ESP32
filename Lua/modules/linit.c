@@ -68,6 +68,7 @@ LIB_INIT(LORA, lora, luaopen_lora);
 LIB_INIT(PACK, pack, luaopen_pack);
 LIB_INIT(TMR, tmr, luaopen_tmr);
 LIB_INIT(PIO, pio, luaopen_pio);
+LIB_INIT(I2C, i2c, luaopen_i2c);
 LIB_INIT(THREAD, thread, luaopen_thread);
 
 LUALIB_API void luaL_openlibs (lua_State *L) {

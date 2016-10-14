@@ -40,6 +40,7 @@
 #include "thread.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 #include <signal.h>
 #include <errno.h>

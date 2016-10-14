@@ -30,6 +30,44 @@
 #ifndef CPU_H
 #define	CPU_H
 
+/*
+ * ----------------------------------------------------------------
+ * IC2 
+ * ----------------------------------------------------------------
+*/
+
+// Number of I2C units (hardware / software)
+#define NI2CHW 5
+#define NI2CBB 5
+
+// PIC32MZ available hardware i2c ids
+#define I2C1 1
+#define I2C2 2
+#define I2C3 3
+#define I2C4 4
+#define I2C5 5
+
+// PIC32MZ available hardware i2c names
+#define I2C1_NAME  "I2C1"
+#define I2C2_NAME  "I2C2"
+#define I2C3_NAME  "I2C3"
+#define I2C4_NAME  "I2C4"
+#define I2C5_NAME  "I2C5"
+
+// PIC32MZ available bit bang i2c ids
+#define I2CBB1 6
+#define I2CBB2 7
+#define I2CBB3 8
+#define I2CBB4 9
+#define I2CBB5 10
+
+// PIC32MZ available bit bang i2c names
+#define I2CBB1_NAME  "I2CBB1"
+#define I2CBB2_NAME  "I2CBB2"
+#define I2CBB3_NAME  "I2CBB3"
+#define I2CBB4_NAME  "I2CBB4"
+#define I2CBB5_NAME  "I2CBB5"
+
 void cpu_init();
 int cpu_revission();
 void cpu_model(char *buffer);

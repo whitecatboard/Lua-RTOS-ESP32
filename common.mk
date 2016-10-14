@@ -89,7 +89,7 @@ all: $(PROGRAM_OUT) $(FW_FILE_1) $(FW_FILE_2) $(FW_FILE)
 endif
 
 ifeq ($(PLATFORM),pic32mz)
-all: $(PROGRAM_OUT)
+all: $(FIRMWARE_DIR) $(PROGRAM_OUT)
 endif
 
 # component_compile_rules: Produces compilation rules for a given

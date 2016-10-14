@@ -32,10 +32,12 @@
 #if LUA_USE_I2C
 
 #include "lua.h"
+#include "error.h"
 #include "lauxlib.h"
+#include "i2c.h"
 
-#include <drivers/cpu/error.h>
-#include <drivers/i2c/i2c.h>
+#include <sys/drivers/error.h>
+#include <sys/drivers/i2c.h>
 
 static int li2c_setup( lua_State* L ) {
     tdriver_error *error;
@@ -43,8 +45,8 @@ static int li2c_setup( lua_State* L ) {
     int total = lua_gettop(L);
     int id = luaL_checkinteger(L, 1);
     int speed = luaL_checkinteger(L, 2);
-    int sda;
-    int scl;
+    int sda = 0;
+    int scl = 0;
 
     // Some integrity checks
     if (!platform_i2c_exists(id)) {
@@ -156,17 +158,32 @@ static int li2c_write(lua_State* L) {
     return 1;
 }
 
-static const luaL_Reg li2c[] = {
-    {"setup", li2c_setup},
-    {"start", li2c_start},
-    {"stop", li2c_stop},
-    {"address", li2c_address},
-    {"read", li2c_read},
-    {"write", li2c_write},
-    {NULL, NULL}
+#include "modules.h"
+
+static const LUA_REG_TYPE li2c[] = {
+    { LSTRKEY( "setup" ),			LFUNCVAL( li2c_setup ) },
+    { LSTRKEY( "start" ),			LFUNCVAL( li2c_start ) },
+    { LSTRKEY( "stop" ),			LFUNCVAL( li2c_stop ) },
+    { LSTRKEY( "address" ),			LFUNCVAL( li2c_address ) },
+    { LSTRKEY( "read" ),			LFUNCVAL( li2c_read ) },
+    { LSTRKEY( "write" ),			LFUNCVAL( li2c_write ) },
+#if LUA_USE_ROTABLE
+	I2C_I2C1
+	I2C_I2C2
+	I2C_I2C3
+	I2C_I2C4
+	I2C_I2C5
+	I2C_I2CBB1
+	I2C_I2CBB2
+	I2C_I2CBB3
+	I2C_I2CBB4
+	I2C_I2CBB5
+#endif
+    { LNILKEY, LNILVAL }
 };
 
 int luaopen_i2c(lua_State* L) {
+#if !LUA_USE_ROTABLE
     luaL_newlib(L, li2c);
 
     int i;
@@ -191,6 +208,11 @@ int luaopen_i2c(lua_State* L) {
     lua_setfield(L, -2, "READ");
 
     return 1;
+#else
+	return 0;
+#endif
 }
+
+LUA_OS_MODULE(I2C, i2c, li2c);
 
 #endif

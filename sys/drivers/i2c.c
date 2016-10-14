@@ -37,7 +37,6 @@
 #include <sys/drivers/i2cbb.h>
 #include <sys/drivers/i2chw.h>
 #include <sys/drivers/gpio.h>
-#include <machine/pic32mz.h>
 
 static i2c_t i2c[NI2C];
 
@@ -73,6 +72,7 @@ tdriver_error *i2c_setup(int unit, int speed, int sda, int scl) {
         i2cu->i2c_stop = i2c_bb_stop;
     } else {
         // Hardware implementation
+        #ifdef I2SHW_H
         i2cu->i2c_setup = i2c_hw_setup;
         i2cu->i2c_idle = i2c_hw_idle;
         i2cu->i2c_read_ack = i2c_hw_read_ack;
@@ -82,6 +82,7 @@ tdriver_error *i2c_setup(int unit, int speed, int sda, int scl) {
         i2cu->i2c_write_nack = i2c_hw_write_nack;        
         i2cu->i2c_start = i2c_hw_start;
         i2cu->i2c_stop = i2c_hw_stop;
+        #endif
     }
     
     i2cu->i2c_setup(i2cu);

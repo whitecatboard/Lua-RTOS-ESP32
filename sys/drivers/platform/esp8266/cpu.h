@@ -30,6 +30,12 @@
 #ifndef CPU_H
 #define	CPU_H
 
+/*
+ * ----------------------------------------------------------------
+ * GPIO 
+ * ----------------------------------------------------------------
+*/
+
 // ESP8266 pin constants
 #define PIN_TOUT   5
 #define PIN_GPIO16 7
@@ -82,6 +88,24 @@
 #define GPIO_PER_PORT 16
 
 #define GPIO_ALL 0b11111000000111110
+
+/*
+ * ----------------------------------------------------------------
+ * IC2 
+ * ----------------------------------------------------------------
+*/
+
+// Number of I2C units (hardware / software)
+#define NI2CHW 0
+#define NI2CBB 2
+
+// ESP8266 available bit bang i2c ids
+#define I2CBB1 1
+#define I2CBB2 2
+
+// ESP8266 available bit bang i2c names
+#define I2CBB1_NAME  "I2CBB1"
+#define I2CBB2_NAME  "I2CBB2"
 
 void cpu_init();
 int cpu_revission();

@@ -35,7 +35,7 @@
 #include "lualib.h"
 #include "lauxlib.h"
 
-#include "drivers/i2c/i2c.h"
+#include "sys/drivers/i2c.h"
 
 int platform_i2c_exists(int id) {
     return ((id > 0) && (id <= NI2C));

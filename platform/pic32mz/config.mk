@@ -115,3 +115,4 @@ CFLAGS += -DLUA_USE_PIO=0		       # gpio
 CFLAGS += -DLUA_USE_LORA=1		       # lora
 CFLAGS += -DLUA_USE_PACK=1		       # pack
 CFLAGS += -DLUA_USE_THREAD=1		   # thread
+CFLAGS += -DLUA_USE_I2C=1			   # i2c

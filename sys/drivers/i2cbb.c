@@ -37,7 +37,6 @@
 #include <sys/drivers/i2c.h>
 #include <sys/drivers/i2cbb.h>
 #include <sys/drivers/gpio.h>
-#include <machine/pic32mz.h>
 
 // Setup
 void i2c_bb_setup(i2c_t *unit) {
