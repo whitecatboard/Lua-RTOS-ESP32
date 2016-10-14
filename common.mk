@@ -250,7 +250,8 @@ endif
 ifeq ($(PLATFORM),pic32mz)
 flash: all
 	$(CROSS)size $(PROGRAM_OUT)
-	$(CROSS)objcopy -O ihex --change-addresses=0x80000000 $(PROGRAM_OUT) $(FIRMWARE_DIR)LuaOS_V1.hex
+	$(CROSS)objcopy -O ihex --change-addresses=0x80000000 $(PROGRAM_OUT) $(FIRMWARE_DIR)LuaOS.hex
+	picocom --baud $(ESPBAUD) $(UARTPORT)
 endif
 
 flashall: all
