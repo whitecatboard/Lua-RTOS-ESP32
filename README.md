@@ -12,4 +12,4 @@ LuaOS has a 3-layers design:
 
 3. In the bottom layer there is a hardware abstraction layer, which talk directly with the platform hardware.
 
-Porting LuaOS to other platforms is only necessary to write the code for the bottom layer, because the top and the middle layer are the same for all platforms.
+For porting LuaOS to other platforms is only necessary to write the code for the bottom layer, because the top and the middle layer are the same for all platforms.
