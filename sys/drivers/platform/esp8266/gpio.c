@@ -123,3 +123,11 @@ unsigned int gpio_port_get(unsigned int port) {
 unsigned int gpio_port_get_mask(unsigned int port) {
 	return gpio_pin_get_mask(port, GPIO_ALL);
 }
+
+char gpio_portname(int pin) {
+    return 0x00;
+}
+
+int gpio_pinno(int pin) {
+    return pin;
+}

@@ -20,6 +20,7 @@
 #include "lauxlib.h"
 #include "lualib.h"
       
+LUALIB_API void luaL_checkanytable (lua_State *L, int arg);
 
 static int luaB_print (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */

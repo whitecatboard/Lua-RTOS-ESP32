@@ -37,8 +37,10 @@
 #include "FreeRTOS.h"
 // WHITECAT END
 
+#if 0
 #define CHAR_BIT        8               /* number of bits in a char */
 #define MB_LEN_MAX      6               /* Allow 31 bit UTF2 */
+#endif
 
 // WHITECAT BEGIN
 // define CLK_TCK according to FreeRTOS config
@@ -55,6 +57,7 @@
  * These numbers work for pcc as well.  The UINT_MAX and ULONG_MAX values
  * are written as hex so that GCC will be quiet about large integer constants.
  */
+ #if 0
 #define SCHAR_MAX       127             /* min value for a signed char */
 #define SCHAR_MIN       (-128)          /* max value for a signed char */
 
@@ -74,7 +77,7 @@
 #define LONG_MAX        2147483647L     /* max value for a long */
                                         /* min value for a long */
 #define LONG_MIN        (-2147483647L-1L)
-
+#endif
 #if !defined(_ANSI_SOURCE)
 #define SSIZE_MAX       INT_MAX         /* max value for a ssize_t */
 

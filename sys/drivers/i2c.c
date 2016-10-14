@@ -33,6 +33,7 @@
 #include <sys/syslog.h>
 #include <sys/drivers/error.h>
 #include <sys/drivers/resource.h>
+#include <sys/drivers/gpio.h>
 #include <sys/drivers/i2c.h>
 #include <sys/drivers/i2cbb.h>
 #include <sys/drivers/i2chw.h>

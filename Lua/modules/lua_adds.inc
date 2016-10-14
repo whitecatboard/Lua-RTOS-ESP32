@@ -39,6 +39,8 @@ static int dofile (lua_State *L, const char *name);
 
 extern int threadInited;
 
+void lua_shell(char *line);
+
 #if LUA_USE_LUA_LOCK
 pthread_mutex_t lua_mutex;
 
