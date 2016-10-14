@@ -281,28 +281,5 @@
 #define USE_FAT     USE_SD
 #define USE_SPIFFS  USE_CFI
 
-// ---------------------------------------------------------------------------
-// APPLICATION SETTINGS
-// ---------------------------------------------------------------------------
-#define HISTORY_DEFAULT_STATE 0
 
-#define SHELL_DEFAULT_STATE   0 // Initial LuaOS shell status (1 = on, 0 = off)
-
-// ---------------------------------------------------------------------------
-// Lua modules
-// ---------------------------------------------------------------------------
-#define LUA_USE_CAN         (1 && USE_CAN)
-#define LUA_USE_NET         (1 && (USE_ETHERNET || USE_WIFI || USE_GPRS))
-#define LUA_USE_ADC         0
-#define LUA_USE_SPI         0
-#define LUA_USE_MQTT        (1 && (USE_ETHERNET || USE_WIFI || USE_GPRS))
-#define LUA_USE_SCREEN      (1 && USE_DISPLAY)
-#define LUA_USE_UART        0
-#define LUA_USE_PWM         0
-#define LUA_USE_GPS         (1 && USE_GPS)
-#define LUA_USE_HTTP        (1 && (USE_ETHERNET || USE_WIFI || USE_GPRS))
-#define LUA_USE_STEPPER     (1 && USE_STEPPER)
-#define LUA_USE_I2C         0
-#define LUA_USE_SHELL       0
-#define LUA_USE_HISTORY	    0
-#endif	/* CONFIG_H */
+#endif
