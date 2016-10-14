@@ -241,12 +241,6 @@ $(FW_FILE): $(PROGRAM_OUT) $(FIRMWARE_DIR)
 endif
 
 ifeq ($(PLATFORM),esp8266)
-$(FW_FILE): $(PROGRAM_OUT) $(FIRMWARE_DIR)
-	$(vecho) "FW $@"
-	$(Q) $(ESPTOOL) elf2image --version=2 $(ESPTOOL_ARGS) $< -o $(FW_FILE)
-endif
-
-ifeq ($(PLATFORM),esp8266)
 flash: all
 	$(ESPTOOL) -p $(UARTPORT) --baud $(ESPBAUD) write_flash $(ESPTOOL_ARGS) \
 		0x0 $(RBOOT_BIN) 0x1000 $(RBOOT_CONF) 0x2000 $(FW_FILE)

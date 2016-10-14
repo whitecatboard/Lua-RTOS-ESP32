@@ -33,6 +33,7 @@ extern const char *__progname;
 char lua_syslog_level = 0xff;
 
 void luaC_fullgc (lua_State *L, int isemergency) ;
+int edit_main(int argc, char *argv[]);
 
 static int os_shell(lua_State *L) { 
     luaL_checktype(L, 1, LUA_TBOOLEAN);
