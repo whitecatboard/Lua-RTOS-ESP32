@@ -52,6 +52,8 @@ CFLAGS += -DLUA_USE_SAFE_SIGNAL=1      # Enable use of LuaOS safe signal (experi
 CFLAGS += -DSTRCACHE_N=1
 CFLAGS += -DSTRCACHE_M=1
 CFLAGS += -DMINSTRTABSIZE=32
+CFLAGS += -DLUA_USE_SHELL=0
+CFLAGS += -DLUA_USE_EDITOR=0
 
 #
 # Standard Lua modules to include
@@ -73,5 +75,4 @@ CFLAGS += -DLUA_USE_PIO=1		       # gpio
 CFLAGS += -DLUA_USE_LORA=1		       # lora
 CFLAGS += -DLUA_USE_PACK=1		       # pack
 CFLAGS += -DLUA_USE_THREAD=1		   # thread
-CFLAGS += -DLUA_USE_EDITOR=0	       # editor
 CFLAGS += -DLUA_USE_I2C=1			   # i2c
