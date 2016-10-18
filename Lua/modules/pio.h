@@ -123,6 +123,185 @@ enum
 #define PIO_GPIO16
 #endif
 
+#ifdef GPIO17
+#define PIO_GPIO17 {LSTRKEY(GPIO17_NAME), LINTVAL(GPIO17)},
+#else
+#define PIO_GPIO17
+#endif
+
+#ifdef GPIO18
+#define PIO_GPIO18 {LSTRKEY(GPIO18_NAME), LINTVAL(GPIO18)},
+#else
+#define PIO_GPIO18
+#endif
+
+#ifdef GPIO19
+#define PIO_GPIO19 {LSTRKEY(GPIO19_NAME), LINTVAL(GPIO19)},
+#else
+#define PIO_GPIO19
+#endif
+
+#ifdef GPIO20
+#define PIO_GPIO20 {LSTRKEY(GPIO20_NAME), LINTVAL(GPIO20)},
+#else
+#define PIO_GPIO20
+#endif
+
+#ifdef GPIO21
+#define PIO_GPIO21 {LSTRKEY(GPIO21_NAME), LINTVAL(GPIO21)},
+#else
+#define PIO_GPIO21
+#endif
+
+#ifdef GPIO22
+#define PIO_GPIO22 {LSTRKEY(GPIO22_NAME), LINTVAL(GPIO22)},
+#else
+#define PIO_GPIO22
+#endif
+
+#ifdef GPIO23
+#define PIO_GPIO23 {LSTRKEY(GPIO23_NAME), LINTVAL(GPIO23)},
+#else
+#define PIO_GPIO23
+#endif
+
+#ifdef GPIO24
+#define PIO_GPIO24 {LSTRKEY(GPIO24_NAME), LINTVAL(GPIO24)},
+#else
+#define PIO_GPIO24
+#endif
+
+#ifdef GPIO25
+#define PIO_GPIO25 {LSTRKEY(GPIO25_NAME), LINTVAL(GPIO25)},
+#else
+#define PIO_GPIO25
+#endif
+
+#ifdef GPIO26
+#define PIO_GPIO26 {LSTRKEY(GPIO26_NAME), LINTVAL(GPIO26)},
+#else
+#define PIO_GPIO26
+#endif
+
+#ifdef GPIO27
+#define PIO_GPIO27 {LSTRKEY(GPIO27_NAME), LINTVAL(GPIO27)},
+#else
+#define PIO_GPIO27
+#endif
+
+#ifdef GPIO28
+#define PIO_GPIO28 {LSTRKEY(GPIO28_NAME), LINTVAL(GPIO28)},
+#else
+#define PIO_GPIO28
+#endif
+
+#ifdef GPIO29
+#define PIO_GPIO29 {LSTRKEY(GPIO29_NAME), LINTVAL(GPIO29)},
+#else
+#define PIO_GPIO29
+#endif
+
+#ifdef GPIO30
+#define PIO_GPIO30 {LSTRKEY(GPIO30_NAME), LINTVAL(GPIO30)},
+#else
+#define PIO_GPIO30
+#endif
+
+#ifdef GPIO31
+#define PIO_GPIO31 {LSTRKEY(GPIO31_NAME), LINTVAL(GPIO31)},
+#else
+#define PIO_GPIO31
+#endif
+
+#ifdef GPIO32
+#define PIO_GPIO32 {LSTRKEY(GPIO32_NAME), LINTVAL(GPIO32)},
+#else
+#define PIO_GPIO32
+#endif
+
+#ifdef GPIO33
+#define PIO_GPIO33 {LSTRKEY(GPIO33_NAME), LINTVAL(GPIO33)},
+#else
+#define PIO_GPIO33
+#endif
+
+#ifdef GPIO34
+#define PIO_GPIO34 {LSTRKEY(GPIO34_NAME), LINTVAL(GPIO34)},
+#else
+#define PIO_GPIO34
+#endif
+
+#ifdef GPIO35
+#define PIO_GPIO35 {LSTRKEY(GPIO35_NAME), LINTVAL(GPIO35)},
+#else
+#define PIO_GPIO35
+#endif
+
+#ifdef GPIO36
+#define PIO_GPIO36 {LSTRKEY(GPIO36_NAME), LINTVAL(GPIO36)},
+#else
+#define PIO_GPIO36
+#endif
+
+#ifdef GPIO37
+#define PIO_GPIO37 {LSTRKEY(GPIO37_NAME), LINTVAL(GPIO37)},
+#else
+#define PIO_GPIO37
+#endif
+
+#ifdef GPIO38
+#define PIO_GPIO38 {LSTRKEY(GPIO38_NAME), LINTVAL(GPIO38)},
+#else
+#define PIO_GPIO38
+#endif
+
+#ifdef GPIO39
+#define PIO_GPIO39 {LSTRKEY(GPIO39_NAME), LINTVAL(GPIO39)},
+#else
+#define PIO_GPIO39
+#endif
+
+#ifdef GPIO40
+#define PIO_GPIO40 {LSTRKEY(GPIO40_NAME), LINTVAL(GPIO40)},
+#else
+#define PIO_GPIO40
+#endif
+
+#ifdef GPIO41
+#define PIO_GPIO41 {LSTRKEY(GPIO41_NAME), LINTVAL(GPIO41)},
+#else
+#define PIO_GPIO41
+#endif
+
+#ifdef GPIO42
+#define PIO_GPIO42 {LSTRKEY(GPIO42_NAME), LINTVAL(GPIO42)},
+#else
+#define PIO_GPIO42
+#endif
+
+#ifdef GPIO43
+#define PIO_GPIO43 {LSTRKEY(GPIO43_NAME), LINTVAL(GPIO43)},
+#else
+#define PIO_GPIO43
+#endif
+
+#ifdef GPIO44
+#define PIO_GPIO44 {LSTRKEY(GPIO44_NAME), LINTVAL(GPIO44)},
+#else
+#define PIO_GPIO44
+#endif
+
+#ifdef GPIO45
+#define PIO_GPIO45 {LSTRKEY(GPIO45_NAME), LINTVAL(GPIO45)},
+#else
+#define PIO_GPIO45
+#endif
+
+#ifdef GPIO46
+#define PIO_GPIO46 {LSTRKEY(GPIO46_NAME), LINTVAL(GPIO46)},
+#else
+#define PIO_GPIO46
+#endif
 
 typedef u32_t pio_type;
 

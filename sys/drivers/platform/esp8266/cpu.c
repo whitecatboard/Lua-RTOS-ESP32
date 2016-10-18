@@ -192,7 +192,11 @@ static unsigned int pin_number_64(unsigned int pin) {
 */
 
 unsigned int cpu_port_number(unsigned int pin) {
-	return 0;
+	return 1;
+}
+
+unsigned int cpu_gpio_number(unsigned int pin) {
+	return pin;
 }
 
 unsigned int cpu_pin_number(unsigned int pin) {
@@ -212,7 +216,7 @@ unsigned int cpu_has_gpio(unsigned int port, unsigned int bit) {
 }
 
 unsigned int cpu_has_port(unsigned int port) {
-	return (port == 0);
+	return (port == 1);
 }
 
 /*

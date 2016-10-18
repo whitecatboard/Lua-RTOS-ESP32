@@ -48,31 +48,4 @@
 #define gpio_pin_pulldwn(gpio) iomux_set_pullup_flags(gpio_to_iomux(gpio), IOMUX_PIN_PULLDOWN)
 #define gpio_pin_nopull(gpio) iomux_set_pullup_flags(gpio_to_iomux(gpio), 0)
 
-/*
-void gpio_enable_analog(int pin);
-void gpio_disable_analog(int pin);
-
-char gpio_portname(int pin);
-int gpio_pinno(int pin);
-int gpio_is_io_port(int port);
-int gpio_is_io_port_pin(int pin);
-int gpio_port_has_analog(int port);
-*/
-
-void gpio_pin_input_mask(unsigned int port, unsigned int pinmask);
-void gpio_pin_output_mask(unsigned int port, unsigned int pinmask);
-void gpio_pin_set_mask(unsigned int port, unsigned int pinmask);
-void gpio_pin_clr_mask(unsigned int port, unsigned int pinmask);
-unsigned int gpio_pin_get_mask(unsigned int port, unsigned int pinmask);
-void gpio_pin_pullup_mask(unsigned int port, unsigned int pinmask);
-void gpio_pin_pulldwn_mask(unsigned int port, unsigned int pinmask);
-void gpio_pin_nopull_mask(unsigned int port, unsigned int pinmask);
-void gpio_port_input(unsigned int port);
-void gpio_port_output(unsigned int port);
-void gpio_port_set(unsigned int port, unsigned int mask);
-unsigned int gpio_port_get(unsigned int port);
-char gpio_portname(int pin);
-int gpio_pinno(int pin);
-void gpio_disable_analog(int pin);
-
 #endif

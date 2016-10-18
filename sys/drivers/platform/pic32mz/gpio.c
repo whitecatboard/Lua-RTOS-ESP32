@@ -34,11 +34,11 @@
 
 #include "whitecat.h"
 
-#include "sys/drivers/gpio.h"
-
 #include <sys/syslog.h>
+#include "sys/drivers/gpio.h"
+#include "sys/drivers/cpu.h"
 
-const char pin_name[16] = "?ABCDEFGHJK?????";
+static const char port_name[16] = "?ABCDEFGHJK?????";
 
 int gpio_input_map1(int pin)
 {
@@ -59,7 +59,7 @@ int gpio_input_map1(int pin)
         case RP('D',6):  return 14;
     }
     syslog(LOG_ERR, "gpio: cannot map peripheral input pin %c%d, group 1",
-        pin_name[pin>>4], pin & 15);
+        port_name[pin>>4], pin & 15);
     return -1;
 }
 
@@ -82,7 +82,7 @@ int gpio_input_map2(int pin)
     case RP('D',7):  return 14;
     }
     syslog(LOG_ERR, "gpio: cannot map peripheral input pin %c%d, group 2",
-        pin_name[pin>>4], pin & 15);
+        port_name[pin>>4], pin & 15);
     return -1;
 }
 
@@ -104,7 +104,7 @@ int gpio_input_map3(int pin)
     case RP('E',9):  return 13;
     }
     syslog(LOG_ERR, "gpio: cannot map peripheral input pin %c%d, group 3",
-        pin_name[pin>>4], pin & 15);
+        port_name[pin>>4], pin & 15);
     return -1;
 }
 
@@ -125,7 +125,7 @@ int gpio_input_map4(int pin)
     case RP('E',8):  return 13;
     }
     syslog(LOG_ERR, "gpio: cannot map peripheral input pin %c%d, group 4",
-        pin_name[pin>>4], pin & 15);
+        port_name[pin>>4], pin & 15);
     return -1;
 }
 
@@ -189,10 +189,123 @@ void gpio_enable_analog(int pin) {
     }
 }
 
-char gpio_portname(int pin) {
-    return pin_name[(pin >> 4) & 15];
+// Configure gpio as input using a mask
+// If bit n on mask is set to 1 the gpio is configured
+void gpio_pin_input_mask(unsigned int port, unsigned int pinmask) {
+	unsigned int adcmask;
+	
+	port--;
+	
+    PULLUCLR(port) = pinmask;
+    PULLDPCLR(port) = pinmask;
+
+    adcmask = cpu_port_adc_pin_mask(port + 1);
+    if (adcmask) {
+        ANSELCLR(port) = adcmask & pinmask;                
+    }
+    
+    TRISSET(port) = pinmask;
+    LATCLR(port) = pinmask;
 }
 
+// Configure all gpio's port as input
+void gpio_port_input(unsigned int port) {
+	gpio_pin_input_mask(port, cpu_port_io_pin_mask(port));
+}
+
+// Configure gpio as output using a mask
+// If bit n on mask is set to 1 the gpio is configured
+void gpio_pin_output_mask(unsigned int port, unsigned int pinmask) {
+	unsigned int adcmask;
+
+	port--;
+	
+    PULLUCLR(port) = pinmask;
+    PULLDPCLR(port) = pinmask;
+
+    adcmask = cpu_port_adc_pin_mask(port + 1);
+    if (adcmask) {
+        ANSELCLR(port) = adcmask & pinmask;                
+    }
+                
+    LATCLR(port) = pinmask;
+    TRISCLR(port) = pinmask;
+}
+
+// Configure all gpio's port as output
+void gpio_port_output(unsigned int port) {
+	gpio_pin_output_mask(port, cpu_port_io_pin_mask(port));
+}
+
+// Set gpio pull-up using a mask
+// If bit n on mask is set to 1 the gpio is set pull-up
+void gpio_pin_pullup_mask(unsigned int port, unsigned int pinmask) {
+	port--;
+	
+    PULLUSET(port) = pinmask;
+    PULLDPCLR(port) = pinmask;
+}
+
+// Set gpio pull-down using a mask
+// If bit n on mask is set to 1 the gpio is set pull-up
+void gpio_pin_pulldwn_mask(unsigned int port, unsigned int pinmask) {
+	port--;
+	
+    PULLUCLR(port) = pinmask;
+    PULLDPSET(port) = pinmask;
+}
+
+// Set gpio with no pull-up and no pull-down using a mask
+// If bit n on mask is set to 1 the gpio with no pull-up and no pull-down
+void gpio_pin_nopull_mask(unsigned int port, unsigned int pinmask) {
+	port--;
+	
+    PULLUCLR(port) = pinmask;
+    PULLDPCLR(port) = pinmask;
+}
+
+// Put gpio on the high state using a mask
+// If bit n on mask is set to 1 the gpio is put on the high state
+void gpio_pin_set_mask(unsigned int port, unsigned int pinmask) {
+	port--;
+	
+    LATSET(port) = pinmask;
+}
+
+// Put port gpio's on the high state
+// If bit n on mask is set to 1 the gpio is put on the high state
+void gpio_port_set(unsigned int port, unsigned int pinmask) {
+	port--;
+	
+	LAT(port) = pinmask;
+}
+
+// Put gpio on the low state using a mask
+// If bit n on mask is set to 1 the gpio is put on the low state
+void gpio_pin_clr_mask(unsigned int port, unsigned int pinmask) {
+	port--;
+	
+	LATCLR(port) = pinmask;
+}
+
+// Get gpio values using a mask
+unsigned int gpio_pin_get_mask(unsigned int port, unsigned int pinmask) {
+	port--;
+	
+	return (PORT(port) & pinmask);
+}
+
+// Get port gpio values
+unsigned int gpio_port_get(unsigned int port) {
+	return gpio_pin_get_mask(port, cpu_port_io_pin_mask(port));
+}
+
+// Get port name
+char gpio_portname(int pin) {
+    return port_name[pin>>4];
+}
+
+// Get pin number
 int gpio_pinno(int pin) {
     return pin & 15;
 }

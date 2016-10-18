@@ -24,6 +24,8 @@
 #define PIO_PIN_OP          1
 
 // Helper functions
+//
+// port goes from 1 to GPIO_PORTS
 static pio_type pio_op(unsigned port, pio_type pinmask, int op) {
 	switch (op) {
 		case PLATFORM_IO_PIN_DIR_INPUT:
@@ -100,20 +102,20 @@ static int pioh_set_pins(lua_State* L, int stackidx, int op) {
     
     // Get port and pin inside this port
     port = cpu_port_number(v);
-    pin = cpu_pin_number(v);
+    pin = cpu_gpio_number(v);
     
     // Test if this port / pin exists
     if (!cpu_has_gpio(port, pin)) {
       return luaL_error(L, "invalid pin");
     }
     
-    pio_masks[port] |= 1 << pin;
+    pio_masks[port - 1] |= 1 << pin;
   }
   
   // Execute the given operation
   for(i = 0; i < GPIO_PORTS; i ++)
     if(pio_masks[i])
-      if(!pio_op(i, pio_masks[i], op))
+      if(!pio_op(i + 1, pio_masks[i], op))
         return luaL_error(L, "invalid PIO operation");
 
   return 0;
@@ -121,7 +123,7 @@ static int pioh_set_pins(lua_State* L, int stackidx, int op) {
 
 static int pioh_get_pins(lua_State* L, int stackidx, int op) {
   int total = lua_gettop(L);
-  int i, v, port, pin;
+  int i, j, v, port, pin;
   unsigned int val;
 
   pio_type pio_masks[GPIO_PORTS];
@@ -135,14 +137,14 @@ static int pioh_get_pins(lua_State* L, int stackidx, int op) {
     
     // Get port and pin inside this port
     port = cpu_port_number(v);
-    pin = cpu_pin_number(v);
+    pin = cpu_gpio_number(v);
     
     // Test if this port / pin exists
     if (!cpu_has_gpio(port, pin)) {
       return luaL_error(L, "invalid pin");
     }
     
-    pio_masks[port] |= 1 << pin;
+    pio_masks[port - 1] |= 1 << pin;
   }
   
   // Execute the given operation
@@ -150,9 +152,9 @@ static int pioh_get_pins(lua_State* L, int stackidx, int op) {
      if(pio_masks[i]) {
       	unsigned int mask = 1;
 
-    	val = pio_op(i, pio_masks[i], op);
+    	val = pio_op(i + 1, pio_masks[i], op);
 
-      	for(i=0; i < GPIO_PER_PORT; i++) {
+      	for(j=0; j < GPIO_PER_PORT; j++) {
       		if (pio_masks[i] & mask) {
       			if (val & mask) {
       				 lua_pushinteger(L, 1);
@@ -180,13 +182,13 @@ static int pioh_set_ports(lua_State* L, int stackidx, int op, pio_type mask) {
     port = cpu_port_number(v);
     if(!cpu_has_port(port))
       return luaL_error(L, "invalid port");
-    port_mask |= (1ULL << port);
+    port_mask |= (1 << port);
   }
   
   // Ask platform to execute the given operation
   for(i = 0; i < GPIO_PORTS; i ++)
-    if(port_mask & (1ULL << i))
-      if(!pio_op(i, mask, op))
+    if(port_mask & (1 << i))
+      if(!pio_op(i + 1, mask, op))
         return luaL_error(L, "invalid PIO operation");
 
   return 0;
@@ -274,13 +276,13 @@ static int pio_pin_pinnum(lua_State *L) {
     v = luaL_checkinteger(L, i);  
 
     port = cpu_port_number(v);
-    pin = cpu_pin_number(v);
+    pin = cpu_gpio_number(v);
     
     // Test if this port / pin exists
     if (!cpu_has_gpio(port, pin)) {
       return luaL_error(L, "invalid pin");
     } else {
-      value = cpu_pin_number(v);
+      value = cpu_gpio_number(v);
       lua_pushinteger(L, value);
     }
   }
@@ -338,7 +340,7 @@ static int pio_port_getval(lua_State *L) {
 static int pio_decode(lua_State *L) {
 	int code = (int)luaL_checkinteger(L, 1);
   	int port = cpu_port_number(code);
-  	int pin  = cpu_pin_number(code);
+  	int pin  = cpu_gpio_number(code);
 
 	lua_pushinteger(L, port);
   	lua_pushinteger(L, pin);
@@ -406,7 +408,37 @@ static const LUA_REG_TYPE pio_map[] = {
     PIO_GPIO14
     PIO_GPIO15
     PIO_GPIO16
-
+	PIO_GPIO17
+	PIO_GPIO18
+	PIO_GPIO19
+	PIO_GPIO20
+	PIO_GPIO21
+	PIO_GPIO22
+	PIO_GPIO23
+	PIO_GPIO24
+	PIO_GPIO25
+	PIO_GPIO26
+	PIO_GPIO27
+	PIO_GPIO28
+	PIO_GPIO29
+	PIO_GPIO30
+	PIO_GPIO31
+	PIO_GPIO32
+	PIO_GPIO33
+	PIO_GPIO34
+	PIO_GPIO35
+	PIO_GPIO36
+	PIO_GPIO37
+	PIO_GPIO38
+	PIO_GPIO39
+	PIO_GPIO40
+	PIO_GPIO41
+	PIO_GPIO42
+	PIO_GPIO43
+	PIO_GPIO44
+	PIO_GPIO45
+	PIO_GPIO46
+		
     { LNILKEY, LNILVAL }
 };
 #endif

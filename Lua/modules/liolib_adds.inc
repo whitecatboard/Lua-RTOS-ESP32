@@ -55,9 +55,9 @@ static int f_receive (lua_State *L) {
     unsigned int i;
     int done;
 
-    char chunk[255];
-    char *cchunk;
-    char chunk_size;
+    unsigned char chunk[255];
+    unsigned char *cchunk;
+    unsigned char chunk_size;
   
     if (strlen(filename) == 0) return 0;
 
@@ -68,7 +68,7 @@ static int f_receive (lua_State *L) {
         
         // Clear received buffer
         uart_consume(CONSOLE_UART);
-        
+
         // Send 'C' for start
         uart_write(CONSOLE_UART, 'C');
         uart_write(CONSOLE_UART, '\n');

@@ -143,8 +143,8 @@ static unsigned int port_io_pin_mask_64(unsigned int port) {
         case 3: return 0b1111000000000000; // PORT C
         case 4: return 0b0000111000111111; // PORT D
         case 5: return 0b0000000011111111; // PORT E
-        case 7: return 0b0000000000111011; // PORT F
-        case 8: return 0b0000001111000000; // PORT G
+        case 6: return 0b0000000000111011; // PORT F
+        case 7: return 0b0000001111000000; // PORT G
     }
 	
 	return 0;
@@ -158,8 +158,8 @@ static unsigned int port_adc_pin_mask_64(unsigned int port) {
         case 3: return 0b0000000000000000; // PORT C
         case 4: return 0b0000000000000000; // PORT D
         case 5: return 0b0000000011110000; // PORT E
-        case 7: return 0b0000000000000000; // PORT F
-        case 8: return 0b0000001111000000; // PORT G
+        case 6: return 0b0000000000000000; // PORT F
+        case 7: return 0b0000001111000000; // PORT G
     }
 	
 	return 0;
@@ -219,12 +219,36 @@ static unsigned int pin_number_64(unsigned int pin) {
     return 0;
 }
 
+static unsigned int has_port_64(unsigned int port) {
+	return ((port > 1) && (port <= 7));
+}
+
 unsigned int cpu_pin_number(unsigned int pin) {
     switch (pins) {
         case 64: return pin_number_64(pin);
     }
 	
 	return 0;
+}
+
+unsigned int cpu_has_port(unsigned int port) {
+    switch (pins) {
+        case 64: return has_port_64(port);
+    }
+	
+	return 0;
+}
+
+unsigned int cpu_has_gpio(unsigned int port, unsigned int bit) {
+	return (cpu_port_io_pin_mask(port) & (1 << bit));
+}
+
+unsigned int cpu_port_number(unsigned int pin) {
+	return (pin >> 4);
+}
+
+unsigned int cpu_gpio_number(unsigned int pin) {
+	return (pin & 0x0f);
 }
 
 const char *cpu_pin_name(unsigned int pin) {

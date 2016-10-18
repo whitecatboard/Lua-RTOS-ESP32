@@ -2,10 +2,6 @@
 
 #include <sys/drivers/cpu.h>
 
-void gpio_disable_analog(int pin) {
-	
-}
-
 // Configure gpio as input using a mask
 // If bit n on mask is set to 1 the gpio is configured
 void gpio_pin_input_mask(unsigned int port, unsigned int pinmask) {
@@ -99,8 +95,8 @@ void gpio_pin_set_mask(unsigned int port, unsigned int pinmask) {
 
 // Put port gpio's on the high state
 // If bit n on mask is set to 1 the gpio is put on the high state
-void gpio_port_set(unsigned int port, unsigned int mask) {
-	GPIO.OUT_SET = mask;
+void gpio_port_set(unsigned int port, unsigned int pinmask) {
+	GPIO.OUT_SET = pinmask;
 }
 
 // Put gpio on the low state using a mask
@@ -125,9 +121,12 @@ unsigned int gpio_port_get_mask(unsigned int port) {
 }
 
 char gpio_portname(int pin) {
-    return 0x00;
+    return '0';
 }
 
 int gpio_pinno(int pin) {
     return pin;
+}
+void gpio_disable_analog(int pin) {
+	
 }
