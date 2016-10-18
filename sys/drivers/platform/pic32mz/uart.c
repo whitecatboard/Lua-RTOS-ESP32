@@ -660,7 +660,7 @@ void uart_intr_rx(u8_t unit) {
         if (queue) {
             // Put byte to UART queue
             xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);    
-	}
+		}
     }
 
     // Clear rx

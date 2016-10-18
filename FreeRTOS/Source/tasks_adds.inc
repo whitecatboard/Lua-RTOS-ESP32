@@ -31,7 +31,13 @@
 
 void enter_critical_section() {
     if (portIN_ISR()) {
-        taskDISABLE_INTERRUPTS();
+		#ifdef PLATFORM_ESP8266
+		taskDISABLE_INTERRUPTS();
+		#endif
+
+		#ifdef PLATFORM_PIC32MZ
+		taskENTER_CRITICAL_FROM_ISR();
+		#endif
     } else {
         taskENTER_CRITICAL();            
     }        
@@ -39,7 +45,13 @@ void enter_critical_section() {
 
 void exit_critical_section() {
     if (portIN_ISR()) {
+		#ifdef PLATFORM_ESP8266
         taskENABLE_INTERRUPTS();
+		#endif
+
+		#ifdef PLATFORM_PIC32MZ
+		taskENTER_CRITICAL_FROM_ISR();
+		#endif
     } else {
         taskEXIT_CRITICAL();            
     }        
