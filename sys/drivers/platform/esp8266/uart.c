@@ -252,12 +252,11 @@ static int queue_byte(u8_t unit, u8_t byte, int *signal) {
                 uart_writes(CONSOLE_UART, "LuaOS-running\r\n");
             }
             
+    		status_set(STATUS_LUA_ABORT_BOOT_SCRIPTS);
+			*signal = 0;
+			
             return 0;
         } else if (byte == 0x03) {
-        	if (!status_get(STATUS_LUA_RUNNING)) {
-        		status_set(STATUS_LUA_ABORT_BOOT_SCRIPTS);
-        	}
-        	
             *signal = SIGINT;
             if (_pthread_has_signal(*signal)) {
             	return 0;
@@ -290,7 +289,9 @@ static void uart_rx_intr_handler(void) {
 		            // Put byte to UART queue
 		            xQueueSendFromISR(uart[(uart0_swaped==1?2:0)].q, &byte, &xHigherPriorityTaskWoken);		              			
 				} else {
-					_pthread_queue_signal(signal);
+					if (signal) {
+						_pthread_queue_signal(signal);
+					}
 				}
             }
 
@@ -302,7 +303,9 @@ static void uart_rx_intr_handler(void) {
 		            // Put byte to UART queue
 		            xQueueSendFromISR(uart[(uart0_swaped==1?2:0)].q, &byte, &xHigherPriorityTaskWoken);		              			
 				} else {
-					_pthread_queue_signal(signal);
+					if (signal) {
+						_pthread_queue_signal(signal);
+					}
 				}
             }
 
