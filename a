@@ -1,295 +1,338 @@
-/Users/jaumeolivepetrus/LuaOS/platform/pic32mz/main/trap.c: In function 'exception':
-/Users/jaumeolivepetrus/LuaOS/platform/pic32mz/main/trap.c:64:20: warning: variable 'exception' set but not used [-Wunused-but-set-variable]
-     exception_code exception;
-                    ^
-/Users/jaumeolivepetrus/LuaOS/platform/pic32mz/main/main.c: In function 'vAssertCalled':
-/Users/jaumeolivepetrus/LuaOS/platform/pic32mz/main/main.c:178:5: warning: format '%d' expects argument of type 'int', but argument 3 has type 'long unsigned int' [-Wformat=]
-     printf("assert: at %s, line %d\n", pcFileName, ulLine);
-     ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'find_editor':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:280:3: warning: implicit declaration of function 'realpath' [-Wimplicit-function-declaration]
+/Users/jolive/LuaOS/sys/edit.c: In function 'find_editor':
+/Users/jolive/LuaOS/sys/edit.c:280:3: warning: implicit declaration of function 'realpath' [-Wimplicit-function-declaration]
    if (!realpath(filename, fn)) strcpy(fn, filename);
    ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'get_selected_text':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:702:3: warning: pointer targets in passing argument 2 of 'copy' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c: In function 'get_selected_text':
+/Users/jolive/LuaOS/sys/edit.c:702:3: warning: pointer targets in passing argument 2 of 'copy' differ in signedness [-Wpointer-sign]
    copy(ed, buffer, selstart, len);
    ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:455:5: note: expected 'unsigned char *' but argument is of type 'char *'
+/Users/jolive/LuaOS/sys/edit.c:455:5: note: expected 'unsigned char *' but argument is of type 'char *'
  int copy(struct editor *ed, unsigned char *buf, int pos, int len) {
      ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'prompt':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:975:15: warning: pointer targets in initialization differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c: In function 'prompt':
+/Users/jolive/LuaOS/sys/edit.c:975:15: warning: pointer targets in initialization differ in signedness [-Wpointer-sign]
    char *buf = ed->env->linebuf;
                ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:986:5: warning: pointer targets in passing argument 1 of 'outbuf' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c:986:5: warning: pointer targets in passing argument 1 of 'outbuf' differ in signedness [-Wpointer-sign]
      outbuf(buf, len);
      ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:754:6: note: expected 'unsigned char *' but argument is of type 'char *'
+/Users/jolive/LuaOS/sys/edit.c:754:6: note: expected 'unsigned char *' but argument is of type 'char *'
  void outbuf(unsigned char *buf, int len) {
       ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'draw_full_statusline':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1034:3: warning: pointer targets in passing argument 1 of 'sprintf' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c: In function 'draw_full_statusline':
+/Users/jolive/LuaOS/sys/edit.c:1034:3: warning: pointer targets in passing argument 1 of 'sprintf' differ in signedness [-Wpointer-sign]
    sprintf(env->linebuf, STATUS_COLOR "%*.*sCtrl+Y=Help %c Ln %-6dCol %-4d" CLREOL TEXT_COLOR, -namewidth, namewidth, ed->filename, ed->dirty ? '*' : ' ', ed->line + 1, column(ed, ed->linepos, ed->col) + 1);
    ^
 In file included from ../../../libc/platform/pic32mz/include/signal.h:4:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/edit.c:38:
+                 from /Users/jolive/LuaOS/sys/edit.c:38:
 ../../../libc/platform/pic32mz/include/stdio.h:226:12: note: expected 'char *' but argument is of type 'unsigned char *'
  int _EXFUN(sprintf, (char *, const char *, ...)
             ^
 ../../../libc/platform/pic32mz/include/_ansi.h:67:30: note: in definition of macro '_EXFUN'
  #define _EXFUN(name, proto)  name proto
                               ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1035:3: warning: pointer targets in passing argument 1 of 'outstr' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c:1035:3: warning: pointer targets in passing argument 1 of 'outstr' differ in signedness [-Wpointer-sign]
    outstr(env->linebuf);
    ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:758:6: note: expected 'char *' but argument is of type 'unsigned char *'
+/Users/jolive/LuaOS/sys/edit.c:758:6: note: expected 'char *' but argument is of type 'unsigned char *'
  void outstr(char *str) {
       ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'draw_statusline':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1040:3: warning: pointer targets in passing argument 1 of 'sprintf' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c: In function 'draw_statusline':
+/Users/jolive/LuaOS/sys/edit.c:1040:3: warning: pointer targets in passing argument 1 of 'sprintf' differ in signedness [-Wpointer-sign]
    sprintf(ed->env->linebuf, STATUS_COLOR "%c Ln %-6dCol %-4d" CLREOL TEXT_COLOR, ed->dirty ? '*' : ' ', ed->line + 1, column(ed, ed->linepos, ed->col) + 1);
    ^
 In file included from ../../../libc/platform/pic32mz/include/signal.h:4:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/edit.c:38:
+                 from /Users/jolive/LuaOS/sys/edit.c:38:
 ../../../libc/platform/pic32mz/include/stdio.h:226:12: note: expected 'char *' but argument is of type 'unsigned char *'
  int _EXFUN(sprintf, (char *, const char *, ...)
             ^
 ../../../libc/platform/pic32mz/include/_ansi.h:67:30: note: in definition of macro '_EXFUN'
  #define _EXFUN(name, proto)  name proto
                               ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1041:3: warning: pointer targets in passing argument 1 of 'outstr' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c:1041:3: warning: pointer targets in passing argument 1 of 'outstr' differ in signedness [-Wpointer-sign]
    outstr(ed->env->linebuf);
    ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:758:6: note: expected 'char *' but argument is of type 'unsigned char *'
+/Users/jolive/LuaOS/sys/edit.c:758:6: note: expected 'char *' but argument is of type 'unsigned char *'
  void outstr(char *str) {
       ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'wordchar':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1255:20: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+/Users/jolive/LuaOS/sys/edit.c: In function 'wordchar':
+/Users/jolive/LuaOS/sys/edit.c:1255:20: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
    return ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z' || ch >= '0' && ch <= '9';
                     ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1255:72: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
+/Users/jolive/LuaOS/sys/edit.c:1255:72: warning: suggest parentheses around '&&' within '||' [-Wparentheses]
    return ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z' || ch >= '0' && ch <= '9';
                                                                         ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'newline':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1427:3: warning: pointer targets in passing argument 3 of 'insert' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c: In function 'newline':
+/Users/jolive/LuaOS/sys/edit.c:1427:3: warning: pointer targets in passing argument 3 of 'insert' differ in signedness [-Wpointer-sign]
    insert(ed, ed->linepos + ed->col, "\r\n", 2);
    ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:537:6: note: expected 'unsigned char *' but argument is of type 'char *'
+/Users/jolive/LuaOS/sys/edit.c:537:6: note: expected 'unsigned char *' but argument is of type 'char *'
  void insert(struct editor *ed, int pos, unsigned char *buf, int bufsize) {
       ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'indent':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1507:3: warning: pointer targets in passing argument 1 of 'strlen' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c: In function 'indent':
+/Users/jolive/LuaOS/sys/edit.c:1507:3: warning: pointer targets in passing argument 1 of 'strlen' differ in signedness [-Wpointer-sign]
    int width = strlen(indentation);
    ^
 In file included from ../../../libc/platform/pic32mz/include/signal.h:4:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/edit.c:38:
+                 from /Users/jolive/LuaOS/sys/edit.c:38:
 ../../../libc/platform/pic32mz/include/string.h:34:16: note: expected 'const char *' but argument is of type 'unsigned char *'
  size_t  _EXFUN(strlen,(const char *));
                 ^
 ../../../libc/platform/pic32mz/include/_ansi.h:67:30: note: in definition of macro '_EXFUN'
  #define _EXFUN(name, proto)  name proto
                               ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'unindent':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1563:3: warning: pointer targets in passing argument 1 of 'strlen' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c: In function 'unindent':
+/Users/jolive/LuaOS/sys/edit.c:1563:3: warning: pointer targets in passing argument 1 of 'strlen' differ in signedness [-Wpointer-sign]
    int width = strlen(indentation);
    ^
 In file included from ../../../libc/platform/pic32mz/include/signal.h:4:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/edit.c:38:
+                 from /Users/jolive/LuaOS/sys/edit.c:38:
 ../../../libc/platform/pic32mz/include/string.h:34:16: note: expected 'const char *' but argument is of type 'unsigned char *'
  size_t  _EXFUN(strlen,(const char *));
                 ^
 ../../../libc/platform/pic32mz/include/_ansi.h:67:30: note: in definition of macro '_EXFUN'
  #define _EXFUN(name, proto)  name proto
                               ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'open_editor':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1679:12: warning: pointer targets in assignment differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c: In function 'open_editor':
+/Users/jolive/LuaOS/sys/edit.c:1679:12: warning: pointer targets in assignment differ in signedness [-Wpointer-sign]
    filename = ed->env->linebuf;
             ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'read_from_stdin':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1709:5: warning: pointer targets in passing argument 3 of 'insert' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c: In function 'read_from_stdin':
+/Users/jolive/LuaOS/sys/edit.c:1709:5: warning: pointer targets in passing argument 3 of 'insert' differ in signedness [-Wpointer-sign]
      insert(ed, pos, buffer, n);
      ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:537:6: note: expected 'unsigned char *' but argument is of type 'char *'
+/Users/jolive/LuaOS/sys/edit.c:537:6: note: expected 'unsigned char *' but argument is of type 'char *'
  void insert(struct editor *ed, int pos, unsigned char *buf, int bufsize) {
       ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'save_editor':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1728:5: warning: pointer targets in passing argument 1 of 'access' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c: In function 'save_editor':
+/Users/jolive/LuaOS/sys/edit.c:1728:5: warning: pointer targets in passing argument 1 of 'access' differ in signedness [-Wpointer-sign]
      if (access(ed->env->linebuf, F_OK) == 0) {
      ^
 In file included from ../../../libc/platform/pic32mz/include/signal.h:4:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/edit.c:38:
+                 from /Users/jolive/LuaOS/sys/edit.c:38:
 ../../../libc/platform/pic32mz/include/sys/unistd.h:19:12: note: expected 'const char *' but argument is of type 'unsigned char *'
  int _EXFUN(access,(const char *__path, int __amode ));
             ^
 ../../../libc/platform/pic32mz/include/_ansi.h:67:30: note: in definition of macro '_EXFUN'
  #define _EXFUN(name, proto)  name proto
                               ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1735:5: warning: pointer targets in passing argument 2 of 'strcpy' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c:1735:5: warning: pointer targets in passing argument 2 of 'strcpy' differ in signedness [-Wpointer-sign]
      strcpy(ed->filename, ed->env->linebuf);
      ^
 In file included from ../../../libc/platform/pic32mz/include/signal.h:4:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/edit.c:38:
+                 from /Users/jolive/LuaOS/sys/edit.c:38:
 ../../../libc/platform/pic32mz/include/string.h:31:15: note: expected 'const char *' but argument is of type 'unsigned char *'
  char  *_EXFUN(strcpy,(char *, const char *));
                ^
 ../../../libc/platform/pic32mz/include/_ansi.h:67:30: note: in definition of macro '_EXFUN'
  #define _EXFUN(name, proto)  name proto
                               ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'find_text':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1778:5: warning: pointer targets in passing argument 1 of 'strdup' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c: In function 'find_text':
+/Users/jolive/LuaOS/sys/edit.c:1778:5: warning: pointer targets in passing argument 1 of 'strdup' differ in signedness [-Wpointer-sign]
      ed->env->search = strdup(ed->env->linebuf);
      ^
 In file included from ../../../libc/platform/pic32mz/include/signal.h:4:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/edit.c:38:
+                 from /Users/jolive/LuaOS/sys/edit.c:38:
 ../../../libc/platform/pic32mz/include/string.h:65:15: note: expected 'const char *' but argument is of type 'unsigned char *'
  char  *_EXFUN(strdup,(const char *));
                ^
 ../../../libc/platform/pic32mz/include/_ansi.h:67:30: note: in definition of macro '_EXFUN'
  #define _EXFUN(name, proto)  name proto
                               ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1778:21: warning: pointer targets in assignment differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c:1778:21: warning: pointer targets in assignment differ in signedness [-Wpointer-sign]
      ed->env->search = strdup(ed->env->linebuf);
                      ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1782:3: warning: pointer targets in passing argument 1 of 'strlen' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c:1782:3: warning: pointer targets in passing argument 1 of 'strlen' differ in signedness [-Wpointer-sign]
    slen = strlen(ed->env->search);
    ^
 In file included from ../../../libc/platform/pic32mz/include/signal.h:4:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/edit.c:38:
+                 from /Users/jolive/LuaOS/sys/edit.c:38:
 ../../../libc/platform/pic32mz/include/string.h:34:16: note: expected 'const char *' but argument is of type 'unsigned char *'
  size_t  _EXFUN(strlen,(const char *));
                 ^
 ../../../libc/platform/pic32mz/include/_ansi.h:67:30: note: in definition of macro '_EXFUN'
  #define _EXFUN(name, proto)  name proto
                               ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1787:5: warning: pointer targets in passing argument 1 of 'strstr' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c:1787:5: warning: pointer targets in passing argument 1 of 'strstr' differ in signedness [-Wpointer-sign]
      match = strstr(ed->start + ed->linepos + ed->col, ed->env->search);
      ^
 In file included from ../../../libc/platform/pic32mz/include/signal.h:4:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/edit.c:38:
+                 from /Users/jolive/LuaOS/sys/edit.c:38:
 ../../../libc/platform/pic32mz/include/string.h:41:15: note: expected 'const char *' but argument is of type 'unsigned char *'
  char  *_EXFUN(strstr,(const char *, const char *));
                ^
 ../../../libc/platform/pic32mz/include/_ansi.h:67:30: note: in definition of macro '_EXFUN'
  #define _EXFUN(name, proto)  name proto
                               ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1787:5: warning: pointer targets in passing argument 2 of 'strstr' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c:1787:5: warning: pointer targets in passing argument 2 of 'strstr' differ in signedness [-Wpointer-sign]
      match = strstr(ed->start + ed->linepos + ed->col, ed->env->search);
      ^
 In file included from ../../../libc/platform/pic32mz/include/signal.h:4:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/edit.c:38:
+                 from /Users/jolive/LuaOS/sys/edit.c:38:
 ../../../libc/platform/pic32mz/include/string.h:41:15: note: expected 'const char *' but argument is of type 'unsigned char *'
  char  *_EXFUN(strstr,(const char *, const char *));
                ^
 ../../../libc/platform/pic32mz/include/_ansi.h:67:30: note: in definition of macro '_EXFUN'
  #define _EXFUN(name, proto)  name proto
                               ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1787:11: warning: pointer targets in assignment differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c:1787:11: warning: pointer targets in assignment differ in signedness [-Wpointer-sign]
      match = strstr(ed->start + ed->linepos + ed->col, ed->env->search);
            ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'goto_line':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1804:5: warning: pointer targets in passing argument 1 of 'atoi' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c: In function 'goto_line':
+/Users/jolive/LuaOS/sys/edit.c:1804:5: warning: pointer targets in passing argument 1 of 'atoi' differ in signedness [-Wpointer-sign]
      lineno = atoi(ed->env->linebuf);
      ^
 In file included from ../../../libc/platform/pic32mz/include/signal.h:4:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/edit.c:38:
+                 from /Users/jolive/LuaOS/sys/edit.c:38:
 ../../../libc/platform/pic32mz/include/stdlib.h:69:12: note: expected 'const char *' but argument is of type 'unsigned char *'
  int _EXFUN(atoi,(const char *__nptr));
             ^
 ../../../libc/platform/pic32mz/include/_ansi.h:67:30: note: in definition of macro '_EXFUN'
  #define _EXFUN(name, proto)  name proto
                               ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c: In function 'edit':
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:2029:9: warning: pointer targets in passing argument 2 of 'indent' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c: In function 'edit':
+/Users/jolive/LuaOS/sys/edit.c:2029:9: warning: pointer targets in passing argument 2 of 'indent' differ in signedness [-Wpointer-sign]
          case KEY_TAB: indent(ed, INDENT); break;
          ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1503:6: note: expected 'unsigned char *' but argument is of type 'char *'
+/Users/jolive/LuaOS/sys/edit.c:1503:6: note: expected 'unsigned char *' but argument is of type 'char *'
  void indent(struct editor *ed, unsigned char *indentation) {
       ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:2030:9: warning: pointer targets in passing argument 2 of 'unindent' differ in signedness [-Wpointer-sign]
+/Users/jolive/LuaOS/sys/edit.c:2030:9: warning: pointer targets in passing argument 2 of 'unindent' differ in signedness [-Wpointer-sign]
          case KEY_SHIFT_TAB: unindent(ed, INDENT); break;
          ^
-/Users/jaumeolivepetrus/LuaOS/sys/edit.c:1560:6: note: expected 'unsigned char *' but argument is of type 'char *'
+/Users/jolive/LuaOS/sys/edit.c:1560:6: note: expected 'unsigned char *' but argument is of type 'char *'
  void unindent(struct editor *ed, unsigned char *indentation) {
       ^
-/Users/jaumeolivepetrus/LuaOS/sys/syscalls/fat_ops.c: In function 'fat_seek':
-/Users/jaumeolivepetrus/LuaOS/sys/syscalls/fat_ops.c:270:18: warning: 'off' may be used uninitialized in this function [-Wmaybe-uninitialized]
+/Users/jolive/LuaOS/sys/syscalls/fat_ops.c: In function 'fat_seek':
+/Users/jolive/LuaOS/sys/syscalls/fat_ops.c:270:18: warning: 'off' may be used uninitialized in this function [-Wmaybe-uninitialized]
      res = f_lseek(((FIL *)fp->f_fs), off);
                   ^
-/Users/jaumeolivepetrus/LuaOS/sys/syscalls/sigblock.c:5:48: warning: 'struct sigvec' declared inside parameter list [enabled by default]
+/Users/jolive/LuaOS/sys/syscalls/sigblock.c:5:48: warning: 'struct sigvec' declared inside parameter list [enabled by default]
  int sigvec(int sig, struct sigvec *vec, struct sigvec *ovec) {
                                                 ^
-/Users/jaumeolivepetrus/LuaOS/sys/syscalls/sigblock.c:5:48: warning: its scope is only this definition or declaration, which is probably not what you want [enabled by default]
+/Users/jolive/LuaOS/sys/syscalls/sigblock.c:5:48: warning: its scope is only this definition or declaration, which is probably not what you want [enabled by default]
 In file included from ../../../sys/file.h:40:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/syscalls/tty_ops.c:37:
+                 from /Users/jolive/LuaOS/sys/syscalls/tty_ops.c:37:
 ../../../libc/platform/pic32mz/include/sys/unistd.h:497:0: warning: "MAXPATHLEN" redefined [enabled by default]
  # define MAXPATHLEN 1024
  ^
-In file included from /Users/jaumeolivepetrus/LuaOS/sys/syscalls/tty_ops.c:34:0:
+In file included from /Users/jolive/LuaOS/sys/syscalls/tty_ops.c:34:0:
 ../../../libc/platform/pic32mz/include/sys/param.h:24:0: note: this is the location of the previous definition
  #define MAXPATHLEN PATH_MAX
  ^
-/Users/jaumeolivepetrus/LuaOS/sys/list/list.c: In function 'list_add':
-/Users/jaumeolivepetrus/LuaOS/sys/list/list.c:79:13: warning: implicit declaration of function 'bcopy' [-Wimplicit-function-declaration]
+/Users/jolive/LuaOS/sys/list/list.c: In function 'list_add':
+/Users/jolive/LuaOS/sys/list/list.c:79:13: warning: implicit declaration of function 'bcopy' [-Wimplicit-function-declaration]
              bcopy(list->index, indexa, sizeof(struct list_index) * (list->indexes - 1));
              ^
-/Users/jaumeolivepetrus/LuaOS/sys/drivers/lora.c: In function 'lora_response':
-/Users/jaumeolivepetrus/LuaOS/sys/drivers/lora.c:174:13: warning: implicit declaration of function 'sscanf' [-Wimplicit-function-declaration]
+/Users/jolive/LuaOS/sys/drivers/lora.c: In function 'lora_response':
+/Users/jolive/LuaOS/sys/drivers/lora.c:174:13: warning: implicit declaration of function 'sscanf' [-Wimplicit-function-declaration]
              sscanf(buffer,"mac_rx %d %s", &port, payload);
              ^
-/Users/jaumeolivepetrus/LuaOS/sys/drivers/lora.c: In function 'lora_reset':
-/Users/jaumeolivepetrus/LuaOS/sys/drivers/lora.c:252:2: warning: implicit declaration of function 'sprintf' [-Wimplicit-function-declaration]
+/Users/jolive/LuaOS/sys/drivers/lora.c: In function 'lora_reset':
+/Users/jolive/LuaOS/sys/drivers/lora.c:252:2: warning: implicit declaration of function 'sprintf' [-Wimplicit-function-declaration]
   sprintf(buff, "%d", current_band);
   ^
-/Users/jaumeolivepetrus/LuaOS/sys/drivers/platform/pic32mz/adc.c:46:15: warning: missing braces around initializer [-Wmissing-braces]
+/Users/jolive/LuaOS/sys/drivers/lmic/aes.c: In function 'os_aes':
+/Users/jolive/LuaOS/sys/drivers/lmic/aes.c:277:29: warning: 't1' may be used uninitialized in this function [-Wmaybe-uninitialized]
+                     t1 = (t1<<8) | ((t0<len) ? buf[t0] : (t0==len) ? 0x80 : 0x00);
+                             ^
+/Users/jolive/LuaOS/sys/drivers/lmic/aes.c:288:24: warning: 'a2' may be used uninitialized in this function [-Wmaybe-uninitialized]
+                     a2 ^= AESAUX[2];
+                        ^
+/Users/jolive/LuaOS/sys/drivers/lmic/aes.c:286:24: warning: 'a0' may be used uninitialized in this function [-Wmaybe-uninitialized]
+                     a0 ^= AESAUX[0];
+                        ^
+/Users/jolive/LuaOS/sys/drivers/lmic/lmic.c: In function 'processJoinAccept':
+/Users/jolive/LuaOS/sys/drivers/lmic/lmic.c:1367:10: warning: unused variable 'mic' [-Wunused-variable]
+     u4_t mic  = os_rlsbf4(&LMIC.frame[dlen-4]); // safe before modified by encrypt!
+          ^
+/Users/jolive/LuaOS/sys/drivers/lmic/oslmic.c: In function 'os_clearCallback':
+/Users/jolive/LuaOS/sys/drivers/lmic/oslmic.c:61:39: warning: value computed is not used [-Wunused-value]
+     unlinkjob(&OS.scheduledjobs, job) || unlinkjob(&OS.runnablejobs, job);
+                                       ^
+/Users/jolive/LuaOS/sys/drivers/platform/pic32mz/adc.c:46:15: warning: missing braces around initializer [-Wmissing-braces]
  static struct adc adc[NADC] = {0};
                ^
-/Users/jaumeolivepetrus/LuaOS/sys/drivers/platform/pic32mz/adc.c:46:15: warning: (near initialization for 'adc[0]') [-Wmissing-braces]
-/Users/jaumeolivepetrus/LuaOS/sys/drivers/platform/pic32mz/dma.c: In function 'dma_intr':
-/Users/jaumeolivepetrus/LuaOS/sys/drivers/platform/pic32mz/dma.c:213:25: warning: variable 'mreg' set but not used [-Wunused-but-set-variable]
-     struct dma_mod_reg *mreg;
-                         ^
-/Users/jaumeolivepetrus/LuaOS/sys/drivers/platform/pic32mz/cpu.c: In function 'cpu_reset':
-/Users/jaumeolivepetrus/LuaOS/sys/drivers/platform/pic32mz/cpu.c:381:18: warning: unused variable 'dummy' [-Wunused-variable]
+/Users/jolive/LuaOS/sys/drivers/platform/pic32mz/adc.c:46:15: warning: (near initialization for 'adc[0]') [-Wmissing-braces]
+/Users/jolive/LuaOS/sys/drivers/platform/pic32mz/cpu.c: In function 'cpu_reset':
+/Users/jolive/LuaOS/sys/drivers/platform/pic32mz/cpu.c:385:18: warning: unused variable 'dummy' [-Wunused-variable]
      unsigned int dummy = RSWRST;
                   ^
-/Users/jaumeolivepetrus/LuaOS/sys/drivers/platform/pic32mz/rtc.c: In function 'rtc_update_clock':
-/Users/jaumeolivepetrus/LuaOS/sys/drivers/platform/pic32mz/rtc.c:191:5: warning: implicit declaration of function 'set_time_s' [-Wimplicit-function-declaration]
+/Users/jolive/LuaOS/sys/drivers/platform/pic32mz/gpio.c: In function 'gpio_pin_input_mask':
+/Users/jolive/LuaOS/sys/drivers/platform/pic32mz/gpio.c:202:5: warning: implicit declaration of function 'cpu_port_adc_pin_mask' [-Wimplicit-function-declaration]
+     adcmask = cpu_port_adc_pin_mask(port + 1);
+     ^
+/Users/jolive/LuaOS/sys/drivers/platform/pic32mz/dma.c: In function 'dma_intr':
+/Users/jolive/LuaOS/sys/drivers/platform/pic32mz/dma.c:213:25: warning: variable 'mreg' set but not used [-Wunused-but-set-variable]
+     struct dma_mod_reg *mreg;
+                         ^
+/Users/jolive/LuaOS/sys/drivers/platform/pic32mz/rtc.c: In function 'rtc_update_clock':
+/Users/jolive/LuaOS/sys/drivers/platform/pic32mz/rtc.c:191:5: warning: implicit declaration of function 'set_time_s' [-Wimplicit-function-declaration]
      set_time_s(mktime(&info));
      ^
 In file included from ../../../libc/platform/pic32mz/include/unistd.h:4:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/unix/getcwd.c:50:
+                 from /Users/jolive/LuaOS/sys/unix/getcwd.c:50:
 ../../../libc/platform/pic32mz/include/sys/unistd.h:497:0: warning: "MAXPATHLEN" redefined [enabled by default]
  # define MAXPATHLEN 1024
  ^
-In file included from /Users/jaumeolivepetrus/LuaOS/sys/unix/getcwd.c:41:0:
+In file included from /Users/jolive/LuaOS/sys/unix/getcwd.c:41:0:
 ../../../libc/platform/pic32mz/include/sys/param.h:24:0: note: this is the location of the previous definition
  #define MAXPATHLEN PATH_MAX
  ^
 In file included from ../../../sys/file.h:40:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/unix/opendir.c:37:
+                 from /Users/jolive/LuaOS/sys/unix/opendir.c:37:
 ../../../libc/platform/pic32mz/include/sys/unistd.h:497:0: warning: "MAXPATHLEN" redefined [enabled by default]
  # define MAXPATHLEN 1024
  ^
-In file included from /Users/jaumeolivepetrus/LuaOS/sys/unix/opendir.c:32:0:
+In file included from /Users/jolive/LuaOS/sys/unix/opendir.c:32:0:
 ../../../libc/platform/pic32mz/include/sys/param.h:24:0: note: this is the location of the previous definition
  #define MAXPATHLEN PATH_MAX
  ^
 In file included from ../../../sys/file.h:40:0,
-                 from /Users/jaumeolivepetrus/LuaOS/sys/unix/readdir.c:37:
+                 from /Users/jolive/LuaOS/sys/unix/readdir.c:37:
 ../../../libc/platform/pic32mz/include/sys/unistd.h:497:0: warning: "MAXPATHLEN" redefined [enabled by default]
  # define MAXPATHLEN 1024
  ^
-In file included from /Users/jaumeolivepetrus/LuaOS/sys/unix/readdir.c:32:0:
+In file included from /Users/jolive/LuaOS/sys/unix/readdir.c:32:0:
 ../../../libc/platform/pic32mz/include/sys/param.h:24:0: note: this is the location of the previous definition
  #define MAXPATHLEN PATH_MAX
  ^
-/Users/jaumeolivepetrus/LuaOS/pthread/pthread.c: In function '_pthread_create':
-/Users/jaumeolivepetrus/LuaOS/pthread/pthread.c:115:9: warning: implicit declaration of function 'bcopy' [-Wimplicit-function-declaration]
+/Users/jolive/LuaOS/pthread/pthread.c: In function '_pthread_create':
+/Users/jolive/LuaOS/pthread/pthread.c:115:9: warning: implicit declaration of function 'bcopy' [-Wimplicit-function-declaration]
          bcopy(parent_thread->signals, thread->signals, sizeof(sig_t) * PTHREAD_NSIG);
          ^
+In file included from ../../../Lua/adds/luaconf.h:261:0,
+                 from /Users/jolive/LuaOS/Lua/src/lua.h:489,
+                 from /Users/jolive/LuaOS/Lua/src/liolib.c:20:
+../../../Lua/modules/liolib_adds.inc: In function 'f_receive':
+../../../Lua/modules/liolib_adds.inc:80:13: warning: pointer targets in passing argument 2 of 'uart_read' differ in signedness [-Wpointer-sign]
+             if (!uart_read(CONSOLE_UART, &chunk_size, 1000)) {
+             ^
+In file included from ../../../sys/drivers/uart.h:7:0,
+                 from ../../../Lua/modules/liolib_adds.inc:11,
+                 from ../../../Lua/adds/luaconf.h:261,
+                 from /Users/jolive/LuaOS/Lua/src/lua.h:489,
+                 from /Users/jolive/LuaOS/Lua/src/liolib.c:20:
+../../../sys/drivers/platform/pic32mz/uart.h:45:9: note: expected 'char *' but argument is of type 'unsigned char *'
+ u8_t    uart_read(u8_t unit, char *c, uint32_t timeout);
+         ^
+In file included from ../../../Lua/adds/luaconf.h:261:0,
+                 from /Users/jolive/LuaOS/Lua/src/lua.h:489,
+                 from /Users/jolive/LuaOS/Lua/src/liolib.c:20:
+../../../Lua/modules/liolib_adds.inc:93:17: warning: pointer targets in passing argument 2 of 'uart_read' differ in signedness [-Wpointer-sign]
+                 if (!uart_read(CONSOLE_UART, cchunk++, 1000)) {
+                 ^
+In file included from ../../../sys/drivers/uart.h:7:0,
+                 from ../../../Lua/modules/liolib_adds.inc:11,
+                 from ../../../Lua/adds/luaconf.h:261,
+                 from /Users/jolive/LuaOS/Lua/src/lua.h:489,
+                 from /Users/jolive/LuaOS/Lua/src/liolib.c:20:
+../../../sys/drivers/platform/pic32mz/uart.h:45:9: note: expected 'char *' but argument is of type 'unsigned char *'
+ u8_t    uart_read(u8_t unit, char *c, uint32_t timeout);
+         ^
 In file included from ../../../Lua/adds/luaconf.h:267:0,
-                 from /Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h:489,
-                 from /Users/jaumeolivepetrus/LuaOS/Lua/src/loslib.c:19:
+                 from /Users/jolive/LuaOS/Lua/src/lua.h:489,
+                 from /Users/jolive/LuaOS/Lua/src/loslib.c:19:
 ../../../Lua/modules/loslib_adds.inc: In function 'os_ls':
 ../../../Lua/modules/loslib_adds.inc:238:16: warning: unused variable 'tm_info' [-Wunused-variable]
      struct tm *tm_info;
