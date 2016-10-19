@@ -378,8 +378,6 @@ static int l_unpack(lua_State *L) {
         }
     }
     
-    free(pack);
-
     if (unpack_first) {
         if (total > 1) {
             lua_getglobal(L, "pack"); 
