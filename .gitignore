@@ -1,0 +1,9 @@
+/platform/esp8266/build
+/platform/esp8266/firmware
+/platform/pic32mz/build
+/platform/pic32mz/firmware
+*.dis
+*.elf
+*.hex
+*.map
+**/.DS_Store
