@@ -5,24 +5,24 @@ CFLAGS += -mips32r2 -EL -mhard-float -fno-short-double -mfp64
 #
 # LuaOS configuration
 # 
-CFLAGS += -DCPU_HZ=200000000L                # CPU frequency in hertz
-CFLAGS += -DCORE_TIMER_HZ=CPU_HZ             # CPU core timer frequency
-CFLAGS += -D_CLOCKS_PER_SEC_=1000            # Number of interrupt ticks for reach 1 second
-CFLAGS += -DUSE_NETWORKING=0                 # Networking is used (1 = yes, 0 = not)
-CFLAGS += -DMTX_USE_EVENTS=0                 # Use event groups in mtx implementation (experimental)
+CFLAGS += -DCPU_HZ=200000000L                    # CPU frequency in hertz
+CFLAGS += -DCORE_TIMER_HZ=CPU_HZ                 # CPU core timer frequency
+CFLAGS += -D_CLOCKS_PER_SEC_=configTICK_RATE_HZ  # Number of interrupt ticks for reach 1 second
+CFLAGS += -DUSE_NETWORKING=0                	 # Networking is used (1 = yes, 0 = not)
+CFLAGS += -DMTX_USE_EVENTS=0                 	 # Use event groups in mtx implementation (experimental)
 
-CFLAGS += -DluaTaskStack=192*10              # Stck size assigned to lua thread
-CFLAGS += -DtskDEF_PRIORITY=0U				 # Default task priority
-CFLAGS += -DtskDEFStack=192*10				 # Default task priority
+CFLAGS += -DluaTaskStack=192*10              	 # Stck size assigned to lua thread
+CFLAGS += -DtskDEF_PRIORITY=0U				 	 # Default task priority
+CFLAGS += -DtskDEFStack=192*10				 	 # Default task priority
 CFLAGS += -DdefaultThreadStack=192*10
 
-CFLAGS += -DPBCLK2_HZ=100000000L 			 # System frequency for PMP/I2C/UART/SPI
-CFLAGS += -DPBCLK3_HZ=40000000L 			 # System frequency for TIMERS
-CFLAGS += -DPBCLK4_HZ=200000000L			 # System frequency for PORTS
-CFLAGS += -DPBCLK5_HZ=40000000L 			 # System frequency for CAN
+CFLAGS += -DPBCLK2_HZ=100000000L 			 	 # System frequency for PMP/I2C/UART/SPI
+CFLAGS += -DPBCLK3_HZ=40000000L 			 	 # System frequency for TIMERS
+CFLAGS += -DPBCLK4_HZ=200000000L			 	 # System frequency for PORTS
+CFLAGS += -DPBCLK5_HZ=40000000L 			 	 # System frequency for CAN
 
-CFLAGS += -DUSE_RTC=0						 # Enable RTC
-CFLAGS += -DLED_ACT=0x63					 # GPIO for activity led (0 if not led)
+CFLAGS += -DUSE_RTC=0						 	 # Enable RTC
+CFLAGS += -DLED_ACT=0x63					 	 # GPIO for activity led (0 if not led)
 
 #
 # SPI map

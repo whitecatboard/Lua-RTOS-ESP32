@@ -282,11 +282,35 @@ static void prvTaskExitError( void )
  */
 __attribute__(( weak )) void vApplicationSetupTickTimerInterrupt( void )
 {
-const uint32_t ulCompareMatch = ( (configPERIPHERAL_CLOCK_HZ / portTIMER_PRESCALE) / configTICK_RATE_HZ ) - 1;
+	// WHITECAT BEGIN
+	// const uint32_t ulCompareMatch = ( (configPERIPHERAL_CLOCK_HZ / portTIMER_PRESCALE) / configTICK_RATE_HZ ) - 1;
+
+	// T1CON = 0x0000;
+	// T1CON = (portPRESCALE_BITS << 4);
+	// PR1 = ulCompareMatch;
+
+    unsigned int pr;
+    unsigned int preescaler;
+    unsigned int preescaler_bits;
+
+    // Computes most lower preescaler for current frequency and period value
+    preescaler_bits = 0;
+    for(preescaler=1;preescaler <= 256;preescaler = preescaler * 2) {
+        if (preescaler != 128) {
+            pr = ( (configPERIPHERAL_CLOCK_HZ / preescaler) / configTICK_RATE_HZ ) - 1;
+            if (pr <= 0xffff) {
+                break;
+            }
+            
+            preescaler_bits++;
+        }
+    }
 	T1CON = 0x0000;
-	T1CON = (portPRESCALE_BITS << 4);
-	PR1 = ulCompareMatch;
-	
+	T1CON = (preescaler_bits << 4);
+	PR1 = pr;
+
+	// WHITECAT END
+		
 	IPCCLR(PIC32_IRQ_T1 >> 2) = 0xf << (8 * (PIC32_IRQ_T1 & 0x03));
 	IPCSET(PIC32_IRQ_T1 >> 2) = (configKERNEL_INTERRUPT_PRIORITY << 2) << (8 * (PIC32_IRQ_T1 & 0x03));
     	
