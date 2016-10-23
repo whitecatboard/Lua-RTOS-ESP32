@@ -481,6 +481,11 @@ int lora_mac_set(const char command, const char *value) {
 			break;
 		
 		case LORA_MAC_SET_LINKCHK:
+			if (strcmp(value, "on")) {
+				LMIC_setLinkCheckMode(1);
+			} else {
+				LMIC_setLinkCheckMode(0);
+			}
 			break;
 	}
 
