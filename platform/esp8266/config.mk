@@ -38,6 +38,9 @@ CFLAGS += -DCONSOLE_BUFFER_LEN=255     # Console buffer length in bytes
 #
 # LoraWAN driver connfiguration for RN2483
 #
+CFLAGS += -DUSE_LMIC=0
+CFLAGS += -DUSE_RN2483=1
+
 CFLAGS += -DLORA_UART=3				   # RN2483 UART unit
 CFLAGS += -DLORA_UART_BR=57600         # RN2483 UART speed
 CFLAGS += -DLORA_UART_BUFF_SIZE=255    # Buffer size for RX

@@ -30,7 +30,7 @@
 #include "whitecat.h"
 
 #if LUA_USE_LORA
-
+#if USE_RN2483
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -615,4 +615,5 @@ void lora_set_rx_callback(lora_rx *callback) {
     lora_rx_callback = callback;
 }
 
+#endif
 #endif

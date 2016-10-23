@@ -202,8 +202,8 @@ void mach_init() {
     
     PMD7 = 0xffffffff;
 	
-	_resource_init();
     _mtx_init();
+	_resource_init();
     _pthread_init();
     _clock_init();
     _syscalls_init();

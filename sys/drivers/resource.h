@@ -31,7 +31,7 @@
 #define RESOURCE_H
 
 typedef enum {RES_GPIO, RES_TIMER, RES_LORA} tresource_type;
-typedef enum {RES_FREE, RES_SYSTEM, RES_STEPPER, RES_PWM, RES_UART, RES_SPI, RES_I2C} tresource_owner;
+typedef enum {RES_FREE, RES_SYSTEM, RES_STEPPER, RES_PWM, RES_UART, RES_SPI, RES_I2C, RES_LMIC} tresource_owner;
 
 typedef struct {
     tresource_type type;

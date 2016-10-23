@@ -1,32 +1,20 @@
-/*
- * Copyright (c) 2014-2016 IBM Corporation.
- * All rights reserved.
+/*******************************************************************************
+ * Copyright (c) 2014-2015 IBM Corporation.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
  *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are met:
- *  * Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *  * Neither the name of the <organization> nor the
- *    names of its contributors may be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+ * Contributors:
+ *    IBM Zurich Research Lab - initial API, implementation and documentation
+ *******************************************************************************/
 
 #ifndef _lorabase_h_
 #define _lorabase_h_
+
+#ifdef __cplusplus
+extern "C"{
+#endif
 
 // ================================================================================
 // BEG: Keep in sync with lorabase.hpp
@@ -78,16 +66,16 @@ enum { DR_PAGE = DR_PAGE_EU868 };
 
 // Default frequency plan for EU 868MHz ISM band
 // Bands:
-//  g1 :   1%  14dBm  
-//  g2 : 0.1%  14dBm  
-//  g3 :  10%  27dBm  
+//  g1 :   1%  14dBm
+//  g2 : 0.1%  14dBm
+//  g3 :  10%  27dBm
 //                 freq             band     datarates
-enum { EU868_F1 = 868100000,      // g1   SF7-12 
-       EU868_F2 = 868300000,      // g1   SF7-12 FSK SF7/250         
-       EU868_F3 = 868500000,      // g1   SF7-12         
-       EU868_F4 = 868850000,      // g2   SF7-12         
-       EU868_F5 = 869050000,      // g2   SF7-12         
-       EU868_F6 = 869525000,      // g3   SF7-12         
+enum { EU868_F1 = 868100000,      // g1   SF7-12
+       EU868_F2 = 868300000,      // g1   SF7-12 FSK SF7/250
+       EU868_F3 = 868500000,      // g1   SF7-12
+       EU868_F4 = 868850000,      // g2   SF7-12
+       EU868_F5 = 869050000,      // g2   SF7-12
+       EU868_F6 = 869525000,      // g3   SF7-12
        EU868_J4 = 864100000,      // g2   SF7-12  used during join
        EU868_J5 = 864300000,      // g2   SF7-12   ditto
        EU868_J6 = 864500000,      // g2   SF7-12   ditto
@@ -97,7 +85,7 @@ enum { EU868_FREQ_MIN = 863000000,
 
 enum { CHNL_PING         = 5 };
 enum { FREQ_PING         = EU868_F6 };  // default ping freq
-enum { DR_PING           = SF9 };       // default ping DR
+enum { DR_PING           = DR_SF9 };       // default ping DR
 enum { CHNL_DNW2         = 5 };
 enum { FREQ_DNW2         = EU868_F6 };
 enum { DR_DNW2           = DR_SF12 };
@@ -108,7 +96,7 @@ enum { AIRTIME_BCN       = 144384 };  // micros
 
 enum {
     // Beacon frame format EU SF9
-    OFF_BCN_NETID    = 0,         
+    OFF_BCN_NETID    = 0,
     OFF_BCN_TIME     = 3,
     OFF_BCN_CRC1     = 7,
     OFF_BCN_INFO     = 8,
@@ -149,7 +137,7 @@ enum { AIRTIME_BCN       = 72192 };  // micros
 
 enum {
     // Beacon frame format US SF10
-    OFF_BCN_NETID    = 0,         
+    OFF_BCN_NETID    = 0,
     OFF_BCN_TIME     = 3,
     OFF_BCN_CRC1     = 7,
     OFF_BCN_INFO     = 9,
@@ -370,18 +358,18 @@ inline rps_t makeRps (sf_t sf, bw_t bw, cr_t cr, int ih, int nocrc) {
     return sf | (bw<<3) | (cr<<5) | (nocrc?(1<<7):0) | ((ih&0xFF)<<8);
 }
 #define MAKERPS(sf,bw,cr,ih,nocrc) ((rps_t)((sf) | ((bw)<<3) | ((cr)<<5) | ((nocrc)?(1<<7):0) | ((ih&0xFF)<<8)))
-// Two frames with params r1/r2 would interfere on air: same SFx + BWx 
+// Two frames with params r1/r2 would interfere on air: same SFx + BWx
 inline int sameSfBw(rps_t r1, rps_t r2) { return ((r1^r2)&0x1F) == 0; }
 
-extern const u1_t _DR2RPS_CRC[];
-inline rps_t updr2rps (dr_t dr) { return (rps_t)_DR2RPS_CRC[dr+1]; }
+extern CONST_TABLE(u1_t, _DR2RPS_CRC)[];
+inline rps_t updr2rps (dr_t dr) { return (rps_t)TABLE_GET_U1(_DR2RPS_CRC, dr+1); }
 inline rps_t dndr2rps (dr_t dr) { return setNocrc(updr2rps(dr),1); }
 inline int isFasterDR (dr_t dr1, dr_t dr2) { return dr1 > dr2; }
 inline int isSlowerDR (dr_t dr1, dr_t dr2) { return dr1 < dr2; }
-inline dr_t  incDR    (dr_t dr) { return _DR2RPS_CRC[dr+2]==ILLEGAL_RPS ? dr : (dr_t)(dr+1); } // increase data rate
-inline dr_t  decDR    (dr_t dr) { return _DR2RPS_CRC[dr  ]==ILLEGAL_RPS ? dr : (dr_t)(dr-1); } // decrease data rate
-inline dr_t  assertDR (dr_t dr) { return _DR2RPS_CRC[dr+1]==ILLEGAL_RPS ? DR_DFLTMIN : dr; }   // force into a valid DR
-inline bit_t validDR  (dr_t dr) { return _DR2RPS_CRC[dr+1]!=ILLEGAL_RPS; } // in range
+inline dr_t  incDR    (dr_t dr) { return TABLE_GET_U1(_DR2RPS_CRC, dr+2)==ILLEGAL_RPS ? dr : (dr_t)(dr+1); } // increase data rate
+inline dr_t  decDR    (dr_t dr) { return TABLE_GET_U1(_DR2RPS_CRC, dr  )==ILLEGAL_RPS ? dr : (dr_t)(dr-1); } // decrease data rate
+inline dr_t  assertDR (dr_t dr) { return TABLE_GET_U1(_DR2RPS_CRC, dr+1)==ILLEGAL_RPS ? DR_DFLTMIN : dr; }   // force into a valid DR
+inline bit_t validDR  (dr_t dr) { return TABLE_GET_U1(_DR2RPS_CRC, dr+1)!=ILLEGAL_RPS; } // in range
 inline dr_t  lowerDR  (dr_t dr, u1_t n) { while(n--){dr=decDR(dr);} return dr; } // decrease data rate by n steps
 
 //
@@ -396,5 +384,8 @@ ostime_t calcAirTime (rps_t rps, u1_t plen);
 // Sensitivity at given SF/BW
 int getSensitivity (rps_t rps);
 
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif // _lorabase_h_

@@ -86,12 +86,6 @@
         
 #define LBASELIB_OPEN_ADDS 
 
-#if LUA_USE_PIO
-    #define LINIT_REG_PIO {AUXLIB_PIO, luaopen_pio},
-#else
-    #define LINIT_REG_PIO
-#endif
-
 #if LUA_USE_TMR
     #define LINIT_REG_TMR {AUXLIB_TMR, luaopen_tmr},
 #else

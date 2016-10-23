@@ -57,13 +57,35 @@
 #define LORA_INVALID_ARGUMENT                    (1 << 20)
 #define LORA_NO_MEM								 (1 << 21)
 
+#define LORA_MAC_SET_DEVADDR		0
+#define LORA_MAC_SET_DEVEUI			1
+#define LORA_MAC_SET_APPEUI			2
+#define LORA_MAC_SET_NWKSKEY		3
+#define LORA_MAC_SET_APPSKEY		4
+#define LORA_MAC_SET_APPKEY			5
+#define LORA_MAC_SET_DR				6
+#define LORA_MAC_SET_ADR			7
+#define LORA_MAC_SET_RETX			8
+#define LORA_MAC_SET_AR				9
+#define LORA_MAC_SET_LINKCHK	   10
+
+#define LORA_MAC_GET_DEVADDR	   11
+#define LORA_MAC_GET_DEVEUI		   12
+#define LORA_MAC_GET_APPEUI		   13
+#define LORA_MAC_GET_DR			   14
+#define LORA_MAC_GET_ADR		   15
+#define LORA_MAC_GET_RETX		   16
+#define LORA_MAC_GET_AR			   17
+#define LORA_MAC_GET_MRGN		   18
+
+	
 typedef void (lora_rx)(int port, char *payload);
 
-tdriver_error *lora_setup(int band, int rx_listener);
-int lora_mac_set(const char *command, const char *value);
+tdriver_error *lora_setup(int band);
+int lora_mac_set(const char command, const char *value);
 int lora_sys(const char *command, const char *value);
 char *lora_sys_get(const char *command);
-char *lora_mac_get(const char *command);
+char *lora_mac_get(const char command);
 int lora_join_otaa();
 int lora_tx(int cnf, int port, const char *data);
 void lora_set_rx_callback(lora_rx *callback);

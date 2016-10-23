@@ -35,6 +35,7 @@
 
 extern void vPortIncrementTick();
 extern char stepper_timer;
+extern char lmic_timer;
 
 typedef enum {
         EXCEP_IRQ = 0, 	/* interrupt */
@@ -107,7 +108,13 @@ void interrupt() {
                 stepper_intr(PIC32_IRQ_T2);
             }
             #endif
-            break;
+			
+			#if USE_LMIC
+			if (lmic_timer == 2) {
+			    lmic_intr(PIC32_IRQ_T2);
+			}
+			#endif
+			break;
                 
         case PIC32_IRQ_T3:    
             #if USE_STEPPER
@@ -115,6 +122,12 @@ void interrupt() {
                 stepper_intr(PIC32_IRQ_T3);
             }
             #endif
+
+			#if USE_LMIC
+			if (lmic_timer == 3) {
+			    lmic_intr(PIC32_IRQ_T3);
+			}
+			#endif
             break;
 
         case PIC32_IRQ_T4: 
@@ -131,6 +144,12 @@ void interrupt() {
                 stepper_intr(PIC32_IRQ_T5);
             }
             #endif
+
+			#if USE_LMIC
+			if (lmic_timer == 5) {
+			    lmic_intr(PIC32_IRQ_T5);
+			}
+			#endif
             break;
 
         case PIC32_IRQ_T6:    
@@ -139,6 +158,12 @@ void interrupt() {
                 stepper_intr(PIC32_IRQ_T6);
             }
             #endif
+
+			#if USE_LMIC
+			if (lmic_timer == 6) {
+			    lmic_intr(PIC32_IRQ_T6);
+			}
+			#endif
             break;
 
         case PIC32_IRQ_T7:    
@@ -147,6 +172,12 @@ void interrupt() {
                 stepper_intr(PIC32_IRQ_T7);
             }
             #endif
+
+			#if USE_LMIC
+			if (lmic_timer == 7) {
+			    lmic_intr(PIC32_IRQ_T7);
+			}
+			#endif
             break;
 
         case PIC32_IRQ_T8:    
@@ -155,6 +186,12 @@ void interrupt() {
                 stepper_intr(PIC32_IRQ_T8);
             }
             #endif
+
+			#if USE_LMIC
+			if (lmic_timer == 8) {
+			    lmic_intr(PIC32_IRQ_T8);
+			}
+			#endif
             break;
 
         case PIC32_IRQ_T9:    
@@ -163,6 +200,12 @@ void interrupt() {
                 stepper_intr(PIC32_IRQ_T9);
             }
             #endif
+
+			#if USE_LMIC
+			if (lmic_timer == 9) {
+			    lmic_intr(PIC32_IRQ_T9);
+			}
+			#endif
             break;
 
         /* UART */
