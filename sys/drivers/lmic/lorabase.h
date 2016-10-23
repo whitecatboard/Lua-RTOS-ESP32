@@ -12,6 +12,9 @@
 #ifndef _lorabase_h_
 #define _lorabase_h_
 
+#if LUA_USE_LORA
+#if USE_LMIC
+
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -386,6 +389,9 @@ int getSensitivity (rps_t rps);
 
 #ifdef __cplusplus
 } // extern "C"
+#endif
+
+#endif
 #endif
 
 #endif // _lorabase_h_

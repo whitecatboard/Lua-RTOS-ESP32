@@ -34,7 +34,6 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
-#include "timers.h"
 
 #include <unistd.h>
 #include <string.h>
@@ -88,9 +87,6 @@
 #define LORA_TX_END_COMMAND  \
     (LORA_TX_OK | LORA_TRANSMISSION_FAIL_ACK_NOT_RECEIVED | \
      LORA_INVALID_DATA_LEN)
-
-// Timer handle for Lora
-static TimerHandle_t loraTimer = NULL;
 
 static int joined = 0;       // Are joined?
 static int otaa = 0;        // Las join were by OTAA?
@@ -196,16 +192,6 @@ static int lora_response(char *outBuffer, int timeout) {
     }
 }
 
-void lora_timer(void *arg) {
-    UNUSED_ARG(arg);
-  
-    if (joined) {
-        syslog(LOG_DEBUG, "lora: timer");
-
-        lora_tx(0, 1, "01");
-    }
-}
-
 // Do a hardware reset
 static int lora_hw_reset() {
 	// HW reset sequence
@@ -257,90 +243,90 @@ tdriver_error *lora_reset() {
         // Default channel configuration
         // This channels must be implemented in every EU868MHz end-device
         // DR0 to DR5, 1% duty cycle
-        lora_mac_set("ch status","0 off");    
-        lora_mac_set("ch dcycle","0 99");
-        lora_mac_set("ch drrange","0 0 5");
-        lora_mac_set("ch status","0 on");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"0 off");    
+        lora_mac_set(LORA_MAC_SET_CH_DCYCLE,"0 99");
+        lora_mac_set(LORA_MAC_SET_CH_DRRANGE,"0 0 5");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"0 on");
 
-        lora_mac_set("ch status","1 off");    
-        lora_mac_set("ch dcycle","1 99");
-        lora_mac_set("ch drrange","1 0 5");
-        lora_mac_set("ch status","1 on");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"1 off");    
+        lora_mac_set(LORA_MAC_SET_CH_DCYCLE,"1 99");
+        lora_mac_set(LORA_MAC_SET_CH_DRRANGE,"1 0 5");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"1 on");
 
-        lora_mac_set("ch status","2 off");    
-        lora_mac_set("ch dcycle","2 99");
-        lora_mac_set("ch drrange","2 0 5");
-        lora_mac_set("ch status","2 on");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"2 off");    
+        lora_mac_set(LORA_MAC_SET_CH_DCYCLE,"2 99");
+        lora_mac_set(LORA_MAC_SET_CH_DRRANGE,"2 0 5");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"2 on");
 
         // Other channels, in concordance with supported gateways
         // 1% duty cycle
-        lora_mac_set("ch freq","3 867100000");
-        lora_mac_set("ch dcycle","3 99");
-        lora_mac_set("ch drrange","3 0 5");
-        lora_mac_set("ch status","3 on");
+        lora_mac_set(LORA_MAC_SET_CH_FREQ,"3 867100000");
+        lora_mac_set(LORA_MAC_SET_CH_DCYCLE,"3 99");
+        lora_mac_set(LORA_MAC_SET_CH_DRRANGE,"3 0 5");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"3 on");
 
-        lora_mac_set("ch freq","4 867300000");
-        lora_mac_set("ch dcycle","4 99");
-        lora_mac_set("ch drrange","4 0 5");
-        lora_mac_set("ch status","4 on");
+        lora_mac_set(LORA_MAC_SET_CH_FREQ,"4 867300000");
+        lora_mac_set(LORA_MAC_SET_CH_DCYCLE,"4 99");
+        lora_mac_set(LORA_MAC_SET_CH_DRRANGE,"4 0 5");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"4 on");
 
-        lora_mac_set("ch freq","5 867500000");
-        lora_mac_set("ch dcycle","5 99");
-        lora_mac_set("ch drrange","5 0 5");
-        lora_mac_set("ch status","5 on");
+        lora_mac_set(LORA_MAC_SET_CH_FREQ,"5 867500000");
+        lora_mac_set(LORA_MAC_SET_CH_DCYCLE,"5 99");
+        lora_mac_set(LORA_MAC_SET_CH_DRRANGE,"5 0 5");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"5 on");
 
-        lora_mac_set("ch freq","6 867700000");
-        lora_mac_set("ch dcycle","6 99");
-        lora_mac_set("ch drrange","6 0 5");
-        lora_mac_set("ch status","6 on");
+        lora_mac_set(LORA_MAC_SET_CH_FREQ,"6 867700000");
+        lora_mac_set(LORA_MAC_SET_CH_DCYCLE,"6 99");
+        lora_mac_set(LORA_MAC_SET_CH_DRRANGE,"6 0 5");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"6 on");
 
-        lora_mac_set("ch freq","7 867900000");
-        lora_mac_set("ch dcycle","7 99");
-        lora_mac_set("ch drrange","7 0 5");
-        lora_mac_set("ch status","7 on");
+        lora_mac_set(LORA_MAC_SET_CH_FREQ,"7 867900000");
+        lora_mac_set(LORA_MAC_SET_CH_DCYCLE,"7 99");
+        lora_mac_set(LORA_MAC_SET_CH_DRRANGE,"7 0 5");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"7 on");
     
-        lora_mac_set("pwridx","1");
+        lora_mac_set(LORA_MAC_SET_PWRIDX,"1");
     } else {
         // Default channel configuration
         // This channels must be implemented in every EU433 end-device
         // DR0 to DR5, 1% duty cycle
-        lora_mac_set("ch status","0 off");    
-        lora_mac_set("ch freq","0 433175000");
-        lora_mac_set("ch dcycle","0 99");
-        lora_mac_set("ch drrange","0 0 5");
-        lora_mac_set("ch status","0 on");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"0 off");    
+        lora_mac_set(LORA_MAC_SET_CH_FREQ,"0 433175000");
+        lora_mac_set(LORA_MAC_SET_CH_DCYCLE,"0 99");
+        lora_mac_set(LORA_MAC_SET_CH_DRRANGE,"0 0 5");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"0 on");
 
-        lora_mac_set("ch status","1 off");    
-        lora_mac_set("ch freq","1 433375000");
-        lora_mac_set("ch dcycle","1 99");
-        lora_mac_set("ch drrange","1 0 5");
-        lora_mac_set("ch status","1 on");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"1 off");    
+        lora_mac_set(LORA_MAC_SET_CH_FREQ,"1 433375000");
+        lora_mac_set(LORA_MAC_SET_CH_DCYCLE,"1 99");
+        lora_mac_set(LORA_MAC_SET_CH_DRRANGE,"1 0 5");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"1 on");
 
-        lora_mac_set("ch status","2 off");    
-        lora_mac_set("ch freq","2 433575000");
-        lora_mac_set("ch dcycle","2 99");
-        lora_mac_set("ch drrange","2 0 5");
-        lora_mac_set("ch status","2 on");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"2 off");    
+        lora_mac_set(LORA_MAC_SET_CH_FREQ,"2 433575000");
+        lora_mac_set(LORA_MAC_SET_CH_DCYCLE,"2 99");
+        lora_mac_set(LORA_MAC_SET_CH_DRRANGE,"2 0 5");
+        lora_mac_set(LORA_MAC_SET_CH_STATUS,"2 on");
         
-        lora_mac_set("pwridx","0");
+        lora_mac_set(LORA_MAC_SET_PWRIDX,"0");
     }
     
-    lora_mac_set("adr", "off");
-    lora_mac_set("ar", "on");
-    lora_mac_set("dr", "0");
+    lora_mac_set(LORA_MAC_SET_ADR, "off");
+    lora_mac_set(LORA_MAC_SET_AR, "on");
+    lora_mac_set(LORA_MAC_SET_DR, "0");
 
     // Set deveui with hweui value
     resp = lora_sys_get("hweui");
-    lora_mac_set("deveui", resp);
+    lora_mac_set(LORA_MAC_SET_DEVEUI, resp);
     free(resp);
     
     return NULL;
 }
 
 // Setup driver
-tdriver_error *lora_setup(int band, int rx_listener) {
+tdriver_error *lora_setup(int band) {
     // TO DO: check resources
-    syslog(LOG_DEBUG, "lora: setup, band %d, rx listener %d", band, rx_listener);
+    syslog(LOG_DEBUG, "lora: setup, band %d", band);
 
     if (!setup) {
         gpio_pin_output(LORA_RST_PIN);
@@ -349,15 +335,6 @@ tdriver_error *lora_setup(int band, int rx_listener) {
         // Init the UART where RN2483 is attached
 		uart_init(LORA_UART, LORA_UART_BR, 0, LORA_UART_BUFF_SIZE);
 		uart_init_interrupts(LORA_UART);
-
-        if (!loraTimer && rx_listener) {
-            loraTimer = xTimerCreate("loraTimer", LORA_TIMER_FREQ, pdTRUE, (void *) 0, lora_timer);
-            if(loraTimer != NULL ){
-                xTimerStart(loraTimer, 0);
-
-                syslog(LOG_DEBUG, "lora: timer created");
-            }
-        }
 
         uart_setup = 1;
     }
@@ -438,7 +415,7 @@ int lora_sys(const char *command, const char *value) {
     return resp;
 }
 
-int lora_mac_set(const char *command, const char *value) {
+int lora_mac_set(const char command, const char *value) {
     int resp;
     char buffer[64];
 
@@ -449,8 +426,73 @@ int lora_mac_set(const char *command, const char *value) {
         return LORA_NOT_SETUP;
     }
 
-    sprintf(buffer, "mac set %s %s\r\n", command, value);
+	switch(command) {
+		case LORA_MAC_SET_DEVADDR:
+			sprintf(buffer, "mac set adr %s\r\n", value);
+			break;
+		
+		case LORA_MAC_SET_DEVEUI:
+			sprintf(buffer, "mac set deveui %s\r\n", value);
+			break;
+		
+		case LORA_MAC_SET_APPEUI:
+			sprintf(buffer, "mac set appeui %s\r\n", value);
+			break;
+		
+		case LORA_MAC_SET_NWKSKEY:
+			sprintf(buffer, "mac set nwkskey %s\r\n", value);
+			break;
+		
+		case LORA_MAC_SET_APPSKEY:
+			sprintf(buffer, "mac set appsKey %s\r\n", value);
+			break;
+		
+		case LORA_MAC_SET_APPKEY:
+			sprintf(buffer, "mac set appkey %s\r\n", value);
+			break;
+		
+		case LORA_MAC_SET_DR:
+			sprintf(buffer, "mac set dr %s\r\n", value);
+			break;
+		
+		case LORA_MAC_SET_ADR:
+			sprintf(buffer, "mac set adr %s\r\n", value);
+			break;
+		
+		case LORA_MAC_SET_RETX:
+			sprintf(buffer, "mac set retx %s\r\n", value);
+			break;
+		
+		case LORA_MAC_SET_AR:
+			sprintf(buffer, "mac set ar %s\r\n", value);
+			break;
+		
+		case LORA_MAC_SET_LINKCHK:
+			sprintf(buffer, "mac set linkchk %s\r\n", value);
+			break;
 
+		case LORA_MAC_SET_CH_STATUS:
+			sprintf(buffer, "mac set ch status %s\r\n", value);
+			break;
+
+		case LORA_MAC_SET_CH_FREQ:
+			sprintf(buffer, "mac set ch freq %s\r\n", value);
+			break;
+
+		case LORA_MAC_SET_CH_DCYCLE:
+			sprintf(buffer, "mac set ch dcycle %s\r\n", value);
+			break;
+
+		case LORA_MAC_SET_CH_DRRANGE:
+			sprintf(buffer, "mac set ch drrange %s\r\n", value);
+			break;
+			
+		case LORA_MAC_SET_PWRIDX:
+			sprintf(buffer, "mac set pwridx %s\r\n", value);
+			break;
+			
+	}
+		
     syslog(LOG_DEBUG, "lora: %s", buffer);
     uart_writes(LORA_UART, buffer);    
     resp = lora_response(NULL, portMAX_DELAY);
@@ -465,12 +507,40 @@ int lora_mac_set(const char *command, const char *value) {
     return resp;
 }
 
-char *lora_mac_get(const char *command) {
+char *lora_mac_get(const char command) {
     int resp;
     char buffer[64];
     
-    sprintf(buffer, "mac get %s\r\n", command);
-    
+	switch(command) {
+		case LORA_MAC_GET_DEVADDR:
+	    	sprintf(buffer, "mac get devaddr\r\n");
+			break;
+		
+		case LORA_MAC_GET_DEVEUI:
+			sprintf(buffer, "mac get deveui\r\n");
+			break;
+		
+		case LORA_MAC_GET_APPEUI:
+			sprintf(buffer, "mac get appeui\r\n");
+			break;
+		
+		case LORA_MAC_GET_DR:
+			sprintf(buffer, "mac get dr\r\n");
+			break;
+		
+		case LORA_MAC_GET_ADR:
+			sprintf(buffer, "mac get adr\r\n");
+			break;
+		
+		case LORA_MAC_GET_RETX:
+			sprintf(buffer, "mac get retx\r\n");
+			break;
+		
+		case LORA_MAC_GET_AR:
+			sprintf(buffer, "mac get ar\r\n");
+			break;
+	}
+	    
     mtx_lock(&lora_mtx);
     
     syslog(LOG_DEBUG, "lora: %s", buffer);

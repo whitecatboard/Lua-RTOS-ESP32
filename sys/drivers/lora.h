@@ -68,15 +68,30 @@
 #define LORA_MAC_SET_RETX			8
 #define LORA_MAC_SET_AR				9
 #define LORA_MAC_SET_LINKCHK	   10
+#define LORA_MAC_SET_CH_STATUS	   11
+#define LORA_MAC_SET_CH_FREQ	   12
+#define LORA_MAC_SET_CH_DCYCLE	   13
+#define LORA_MAC_SET_CH_DRRANGE	   14
+#define LORA_MAC_SET_PWRIDX		   15
+	
+#define LORA_MAC_GET_DEVADDR	   50
+#define LORA_MAC_GET_DEVEUI		   51
+#define LORA_MAC_GET_APPEUI		   52
+#define LORA_MAC_GET_DR			   53
+#define LORA_MAC_GET_ADR		   54
+#define LORA_MAC_GET_RETX		   55
+#define LORA_MAC_GET_AR			   56
+#define LORA_MAC_GET_MRGN		   57
+#define LORA_MAC_GET_CH_STATUS	   58
+#define LORA_MAC_GET_CH_FREQ	   59
+#define LORA_MAC_GET_CH_DCYCLE	   60
+#define LORA_MAC_GET_CH_SDRANGE	   61
+#define LORA_MAC_GET_PWRIDX		   62
 
-#define LORA_MAC_GET_DEVADDR	   11
-#define LORA_MAC_GET_DEVEUI		   12
-#define LORA_MAC_GET_APPEUI		   13
-#define LORA_MAC_GET_DR			   14
-#define LORA_MAC_GET_ADR		   15
-#define LORA_MAC_GET_RETX		   16
-#define LORA_MAC_GET_AR			   17
-#define LORA_MAC_GET_MRGN		   18
+
+
+
+
 
 	
 typedef void (lora_rx)(int port, char *payload);

@@ -1,6 +1,9 @@
 #ifndef _lmic_config_h_
 #define _lmic_config_h_
 
+#if LUA_USE_LORA
+#if USE_LMIC
+
 // In the original LMIC code, these config values were defined on the
 // gcc commandline. Since Arduino does not allow easily modifying the
 // compiler commandline, use this file instead.
@@ -79,5 +82,8 @@
 // byte-oriented ones, making it use a lot less flash space (but it is
 // also about twice as slow as the original).
 #define USE_IDEETRON_AES
+
+#endif
+#endif
 
 #endif // _lmic_config_h_

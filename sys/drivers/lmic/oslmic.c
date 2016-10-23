@@ -9,6 +9,9 @@
  *    IBM Zurich Research Lab - initial API, implementation and documentation
  *******************************************************************************/
 
+#if LUA_USE_LORA
+#if USE_LMIC
+
 #include "lmic.h"
 
 #include "FreeRTOS.h"
@@ -123,3 +126,6 @@ void os_runloop(void *pvParameters) {
 void os_resume_nunloop() {
 	vTaskResume(xRunLoop);
 }
+
+#endif
+#endif

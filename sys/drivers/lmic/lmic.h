@@ -15,6 +15,9 @@
 #ifndef _lmic_h_
 #define _lmic_h_
 
+#if LUA_USE_LORA
+#if USE_LMIC
+
 #include "oslmic.h"
 #include "lorabase.h"
 
@@ -315,6 +318,9 @@ DECL_ON_LMIC_EVENT;
 
 #ifdef __cplusplus
 } // extern "C"
+#endif
+
+#endif
 #endif
 
 #endif // _lmic_h_

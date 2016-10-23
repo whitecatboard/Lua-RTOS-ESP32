@@ -12,6 +12,9 @@
 #ifndef _hal_hpp_
 #define _hal_hpp_
 
+#if LUA_USE_LORA
+#if USE_LMIC
+
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -86,6 +89,9 @@ void hal_failed (char *file, int line);
 
 #ifdef __cplusplus
 } // extern "C"
+#endif
+
+#endif
 #endif
 
 #endif // _hal_hpp_

@@ -13,6 +13,9 @@
 #ifndef _oslmic_h_
 #define _oslmic_h_
 
+#if LUA_USE_LORA
+#if USE_LMIC
+
 // Dependencies required for the LoRa MAC in C to run.
 // These settings can be adapted to the underlying system.
 // You should not, however, change the lmic.[hc]
@@ -278,6 +281,9 @@ u4_t os_aes (u1_t mode, xref2u1_t buf, u2_t len);
 
 #ifdef __cplusplus
 } // extern "C"
+#endif
+
+#endif
 #endif
 
 #endif // _oslmic_h_

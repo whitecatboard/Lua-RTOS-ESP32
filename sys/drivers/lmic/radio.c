@@ -9,6 +9,9 @@
  *    IBM Zurich Research Lab - initial API, implementation and documentation
  *******************************************************************************/
 
+#if LUA_USE_LORA
+#if USE_LMIC
+
 #include "lmic.h"
 
 // ----------------------------------------
@@ -846,3 +849,6 @@ void os_radio (u1_t mode) {
     }
     hal_enableIRQs();
 }
+
+#endif
+#endif

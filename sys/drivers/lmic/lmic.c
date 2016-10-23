@@ -10,6 +10,9 @@
  *******************************************************************************/
 
 //! \file
+#if LUA_USE_LORA
+#if USE_LMIC
+
 #include "lmic.h"
 
 #if defined(DISABLE_BEACONS) && !defined(DISABLE_PING)
@@ -2339,3 +2342,6 @@ void LMIC_setLinkCheckMode (bit_t enabled) {
 void LMIC_setClockError(u2_t error) {
     LMIC.clockError = error;
 }
+
+#endif
+#endif
