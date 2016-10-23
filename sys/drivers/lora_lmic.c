@@ -521,6 +521,17 @@ char *lora_mac_get(const char command) {
 			break;
 		
 		case LORA_MAC_GET_ADR:
+			if (LMIC.adrEnabled) {
+				result = (char *)malloc(3);
+				if (result) {
+					strcpy(result, "on");
+				}
+			} else {
+				result = (char *)malloc(4);
+				if (result) {
+					strcpy(result, "off");
+				}				
+			}
 			break;
 		
 		case LORA_MAC_GET_RETX:
