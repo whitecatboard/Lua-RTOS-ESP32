@@ -66,10 +66,8 @@ unsigned exception(statusReg, causeReg, vadr, pc, args)
     
     exception = (causeReg & 0x0000007C) >> 2;
 
-    uart_writes(1,"exception\r\n");
-    
     // Write exception information
-/*
+
     printf("rtos: exception, code = %d, adress = 0x%08x. ", exception, vadr);
 
     switch (exception) {
@@ -87,7 +85,6 @@ unsigned exception(statusReg, causeReg, vadr, pc, args)
     }
     
     printf(".\r\n");
-*/
     
     for(;;) {}
 }
