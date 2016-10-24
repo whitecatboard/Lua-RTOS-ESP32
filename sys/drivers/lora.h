@@ -88,11 +88,6 @@
 #define LORA_MAC_GET_CH_SDRANGE	   61
 #define LORA_MAC_GET_PWRIDX		   62
 
-
-
-
-
-
 	
 typedef void (lora_rx)(int port, char *payload);
 
@@ -106,6 +101,13 @@ int lora_tx(int cnf, int port, const char *data);
 void lora_set_rx_callback(lora_rx *callback);
 int lora_mac(const char *command, const char *value);
 tdriver_error *lora_reset();
+
+#if USE_LMIC
+#include <stdint.h>
+
+tdriver_error *lmic_setup_timer();
+void lmic_intr(u8_t irq);
+#endif
 
 #endif
 

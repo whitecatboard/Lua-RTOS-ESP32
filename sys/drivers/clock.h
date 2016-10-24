@@ -32,14 +32,8 @@
 
 #include <sys/types.h>
 
-//
-//void     set_time_ymdhms(u16_t year, u8_t month, u8_t day, u8_t hours, u8_t minutes, u8_t seconds);
-
-//void     set_time_s(uint32_t seconds);
-//long long ticks();
-
-//uint32_t get_time();
-void     newTick(void);
+void newTick(void);
+void set_time_s(u32_t secs);
 
 #endif	/* CLOCK_H */
 

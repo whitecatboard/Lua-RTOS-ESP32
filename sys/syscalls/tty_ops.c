@@ -31,7 +31,15 @@
 #include <sys/cdefs.h>
 #include <stdlib.h>
 #include <sys/types.h>
+
+#if PLATFORM_ESP8266
 #include <sys/param.h>
+#endif
+
+#if PLATFORM_PIC32MZ
+#include <limits.h>
+#endif
+
 #include <sys/filedesc.h>
 #include <sys/uio.h>
 #include <sys/file.h>

@@ -29,9 +29,12 @@
 
 #include "whitecat.h"
 
+#include <stdio.h>
+
 #include <machine/pic32mz.h>
 #include <sys/drivers/gpio.h>
 #include <sys/drivers/uart.h>
+#include <sys/drivers/lora.h>
 
 extern void vPortIncrementTick();
 extern char stepper_timer;

@@ -259,10 +259,9 @@ int fat_stat(struct file *fp, struct stat *sb) {
 
 off_t fat_seek(struct file *fp, off_t offset, int where) {
     FRESULT res;
-    long long off;
+    long long off = offset;
     
     switch (where) {
-        case SEEK_SET: off = offset;break;
         case SEEK_CUR: off = ((FIL *)fp->f_fs)->fptr + offset;break;
         case SEEK_END: off = ((FIL *)fp->f_fs)->fsize - offset;break;
     }

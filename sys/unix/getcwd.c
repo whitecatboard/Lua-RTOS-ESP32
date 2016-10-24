@@ -38,7 +38,14 @@
 static char sccsid[] = "@(#)getcwd.c	8.5 (Berkeley) 2/7/95";
 #endif /* LIBC_SCCS and not lint */
 
+#if PLATFORM_ESP8266
 #include <sys/param.h>
+#endif
+
+#if PLATFORM_PIC32MZ
+#include <limits.h>
+#endif
+
 #include <sys/stat.h>
 
 #include <sys/dirent.h>

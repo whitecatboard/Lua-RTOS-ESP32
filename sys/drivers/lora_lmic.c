@@ -38,6 +38,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <sys/syslog.h>
 #include <sys/mutex.h>
@@ -251,14 +252,14 @@ void onEvent (ev_t ev) {
 			  u8_t *payload = (u8_t *)malloc(LMIC.dataLen);
 			  if (payload) {
 				  #if LORA_DEBUG_LEVEL > 0
-				  printf("call to lora_rx_callback\r\n", LMIC.dataLen);	
+				  printf("call to lora_rx_callback\r\n");	
 				  #endif
 				  
 				  // Coding payload into an hex string
 				  val_to_hex_string((char *)payload, (char *)&LMIC.frame[LMIC.dataBeg], LMIC.dataLen, 0);
 				  payload[LMIC.dataLen * 2] = 0x00;
 
-				  lora_rx_callback(1, payload);
+				  lora_rx_callback(1, (char *)payload);
 			  }
 	      }
 	      break;
@@ -361,72 +362,11 @@ tdriver_error *lora_setup(int band) {
     return NULL;
 }
 
-int lora_mac(const char *command, const char *value) {
-    int resp;
-    char buffer[64];
-
-   // mtx_lock(&lora_mtx);
-	/*
-    if (!uart_setup) {
-        mtx_unlock(&lora_mtx);
-        return LORA_NOT_SETUP;
-    }
-
-    if (value) {
-        sprintf(buffer, "mac %s %s\r\n", command, value);
-    } else {
-        sprintf(buffer, "mac %s\r\n", command);
-    }
-
-    syslog(LOG_DEBUG, "lora: %s", buffer);
-    uart_writes(LORA_UART, buffer);    
-    resp = lora_response(NULL, portMAX_DELAY);
-    if (resp & (LORA_OK)) {
-        mtx_unlock(&lora_mtx);
-
-        return LORA_OK;
-    }
-
-    mtx_unlock(&lora_mtx);
-
-    return resp;
-	*/
-	
+int lora_mac(const char *command, const char *value) {	
 	return LORA_OK;
 }
 
 int lora_sys(const char *command, const char *value) {
-    int resp;
-    char buffer[64];
-
-   // mtx_lock(&lora_mtx);
-
-	/*
-    if (!uart_setup) {
-        mtx_unlock(&lora_mtx);
-        return LORA_NOT_SETUP;
-    }
-
-    if (value) {
-        sprintf(buffer, "sys %s %s\r\n", command, value);
-    } else {
-        sprintf(buffer, "sys %s\r\n", command);
-    }
-    
-    syslog(LOG_DEBUG, "lora: %s", buffer);
-    uart_writes(LORA_UART, buffer);    
-    resp = lora_response(NULL, portMAX_DELAY);
-    if (resp & (LORA_OK | LORA_OTHER)) {
-        mtx_unlock(&lora_mtx);
-
-        return LORA_OK;
-    }
-
-    mtx_unlock(&lora_mtx);
-
-    return resp;
-	*/
-	
 	return LORA_OK;
 }
 
@@ -501,7 +441,7 @@ char *lora_mac_get(const char command) {
 
     if (!setup) {
         mtx_unlock(&lora_mtx);
-        return LORA_NOT_SETUP;
+        return NULL;
     }
 	
 	switch(command) {
@@ -555,30 +495,6 @@ char *lora_mac_get(const char command) {
 }
 
 char *lora_sys_get(const char *command) {
-    int resp;
-    char buffer[64];
-    
-	/*
-    sprintf(buffer, "sys get %s\r\n", command);
-    
-    mtx_lock(&lora_mtx);
-    
-    syslog(LOG_DEBUG, "lora: %s", buffer);
-    uart_writes(LORA_UART, buffer); 
-    resp = lora_response(buffer, portMAX_DELAY);
-    if (resp & (LORA_OTHER)) {
-        char *result = (char *)malloc(strlen(buffer) + 1);
-        strcpy(result, buffer);
-
-        mtx_unlock(&lora_mtx);
-
-        return result;
-    }
-    
-    mtx_unlock(&lora_mtx);
-
-    return NULL;
-	*/
 	return NULL;
 }
 

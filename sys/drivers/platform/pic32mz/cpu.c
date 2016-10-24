@@ -384,6 +384,9 @@ void cpu_reset() {
     /* read RSWRST register to trigger reset */
     unsigned int dummy = RSWRST;
 
+	// This is for avoid a compilation warning
+	dummy++;
+	
     /* prevent any unwanted code execution until reset occurs*/
     while(1);
 }

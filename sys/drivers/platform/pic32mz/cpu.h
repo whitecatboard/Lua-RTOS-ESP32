@@ -192,5 +192,6 @@ void _cpu_init();
 unsigned int cpu_port_number(unsigned int pin);
 unsigned int cpu_has_port(unsigned int port);
 unsigned int cpu_has_gpio(unsigned int port, unsigned int bit);
+unsigned int cpu_port_adc_pin_mask(unsigned int port);
 
 #endif

@@ -77,7 +77,7 @@ static int f_receive (lua_State *L) {
 
         for(;;) {
             // Wait for chunk size
-            if (!uart_read(CONSOLE_UART, &chunk_size, 1000)) {
+            if (!uart_read(CONSOLE_UART, (char *)&chunk_size, 1000)) {
                 break;
             }
 
@@ -90,7 +90,7 @@ static int f_receive (lua_State *L) {
             // Read chunk
             cchunk = chunk;
             for(i=0; i < chunk_size; i++) {
-                if (!uart_read(CONSOLE_UART, cchunk++, 1000)) {
+                if (!uart_read(CONSOLE_UART, (char *)cchunk++, 1000)) {
                     break;
                 }
             }

@@ -43,7 +43,7 @@ struct adc {
     unsigned int configured;
 };
 
-static struct adc adc[NADC] = {0};
+static struct adc adc[NADC] = {{0}};
 
 // Map adc channel to pin number
 static int pin_map(int channel) {

@@ -175,7 +175,7 @@ void vAssertCalled( const char * pcFile, unsigned long ulLine ) {
     ( void ) pcFileName;
     ulLineNumber = ulLine;
 
-    printf("assert: at %s, line %d\n", pcFileName, ulLine);
+    printf("assert: at %s, line %lu\n", pcFileName, ulLine);
 
     /* Set ulLineNumber to 0 in the debugger to break out of this loop and
     return to the line that triggered the assert. */

@@ -43,7 +43,6 @@
 #define gpio_pin_inv(gpio) if (GPIO.OUT & BIT(gpio)) {gpio_pin_clr(gpio);} else {gpio_pin_set(gpio);}
 #define gpio_pin_get(gpio) ((GPIO.IN & BIT(gpio))?1:0)
 
-
 #define gpio_pin_pullup(gpio) iomux_set_pullup_flags(gpio_to_iomux(gpio), IOMUX_PIN_PULLUP)
 #define gpio_pin_pulldwn(gpio) iomux_set_pullup_flags(gpio_to_iomux(gpio), IOMUX_PIN_PULLDOWN)
 #define gpio_pin_nopull(gpio) iomux_set_pullup_flags(gpio_to_iomux(gpio), 0)

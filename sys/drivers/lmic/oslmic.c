@@ -30,17 +30,13 @@ static struct {
 } OS;
 
 void os_init () {
-	BaseType_t xResult;
-	
     memset(&OS, 0x00, sizeof(OS));
     hal_init();
     radio_init();
     LMIC_init();
 
 	// Run os_runloop in a FreeRTOS task
-	if (xTaskCreate(os_runloop, "lmic", tskDEFStack * 10, NULL, tskIDLE_PRIORITY, &xRunLoop) != pdPASS) {
-		printf("error creating task\r\n");
-	}
+	xTaskCreate(os_runloop, "lmic", tskDEFStack * 10, NULL, tskIDLE_PRIORITY, &xRunLoop);
 }
 
 static u1_t unlinkjob (osjob_t** pnext, osjob_t* job) {
