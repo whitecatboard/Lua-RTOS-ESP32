@@ -8,8 +8,8 @@ CFLAGS += -mips32r2 -EL -mhard-float -fno-short-double -mfp64
 CFLAGS += -DCPU_HZ=200000000L                    # CPU frequency in hertz
 CFLAGS += -DCORE_TIMER_HZ=CPU_HZ                 # CPU core timer frequency
 
-CFLAGS += -DBASE_TIMER_HZ=1000                 # TIMER1 at 1000000 Hz (T = 10 usec)
-CFLAGS += -DBASE_TIMER_TICK_RATE=1             # Generate a FreeRTOS ticks every 100 TIMER1 ticks (T = 1 msec)
+CFLAGS += -DBASE_TIMER_HZ=100000                 # TIMER1 at 1000000 Hz (T = 10 usec)
+CFLAGS += -DBASE_TIMER_TICK_RATE=100             # Generate a FreeRTOS ticks every 100 TIMER1 ticks (T = 1 msec)
 
 CFLAGS += -D_CLOCKS_PER_SEC_=configTICK_RATE_HZ  # Number of interrupt ticks for reach 1 second
 CFLAGS += -DUSE_NETWORKING=0                	 # Networking is used (1 = yes, 0 = not)
