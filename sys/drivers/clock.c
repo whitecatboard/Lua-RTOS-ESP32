@@ -83,6 +83,7 @@ void newTick(void) {
     // Increment delta ticks
     tdelta++;
     if (tdelta == configTICK_RATE_HZ) {
+			uart_writes(CONSOLE_UART,"tick\r\n");
         // 1 second since last second
         tdelta = 0;
         tuseconds = 0;

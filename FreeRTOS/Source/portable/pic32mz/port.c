@@ -297,7 +297,7 @@ __attribute__(( weak )) void vApplicationSetupTickTimerInterrupt( void )
     preescaler_bits = 0;
     for(preescaler=1;preescaler <= 256;preescaler = preescaler * 2) {
         if (preescaler != 128) {
-            pr = ( (configPERIPHERAL_CLOCK_HZ / preescaler) / configTICK_RATE_HZ ) - 1;
+            pr = ( (configPERIPHERAL_CLOCK_HZ / preescaler) / BASE_TIMER_HZ ) - 1;
             if (pr <= 0xffff) {
                 break;
             }
@@ -318,7 +318,7 @@ __attribute__(( weak )) void vApplicationSetupTickTimerInterrupt( void )
 	IFSCLR(PIC32_IRQ_T1 >> 5) = 1 << (PIC32_IRQ_T1 & 31);
 
 	/* Enable the interrupt. */
-        IECSET(PIC32_IRQ_T1 >> 5) = 1 << (PIC32_IRQ_T1 & 31);    
+    IECSET(PIC32_IRQ_T1 >> 5) = 1 << (PIC32_IRQ_T1 & 31);    
 
 	/* Start the timer. */
 	T1CONSET = (1 << 15);	
