@@ -38,3 +38,11 @@
 pid_t __getpid(struct _reent *r) {
     return (pid_t)uxTaskGetTaskNumber(NULL);
 }
+
+#if ((PLATFORM_ESP32 != 1) && (PLATFORM_ESP8266 != 1))
+
+pid_t getpid() {
+	return __getpid(_GLOBAL_REENT);
+}
+
+#endif

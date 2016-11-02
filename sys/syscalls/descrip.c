@@ -67,7 +67,7 @@ const struct device devs[] = {
          NULL, NULL, NULL, NULL, NULL, NULL}
     },
 #endif
-#if USE_SD
+#if USE_FAT
     {
         "sd",
         {fat_open, fat_read, fat_write, NULL, NULL, fat_stat, fat_close, 

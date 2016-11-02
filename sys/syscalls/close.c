@@ -71,3 +71,11 @@ int __close(struct _reent *r, int fd) {
     
     return 0;
 }
+
+#if ((PLATFORM_ESP32 != 1) && (PLATFORM_ESP8266 != 1))
+
+int close(int fd) {
+	return __close(_GLOBAL_REENT, fd);	
+}
+
+#endif

@@ -88,7 +88,7 @@ void _sys_init() {
     printf("/_____________\\\n");
     printf("W H I T E C A T\n\n");
 		
-    printf("LuaOS %s build %d Copyright (C) 2015 - 2016 whitecatboard.org\n\n", LUA_OS_VER, BUILD_TIME);
+    printf("Lua RTOS %s build %d Copyright (C) 2015 - 2016 whitecatboard.org\n\n", LUA_OS_VER, BUILD_TIME);
     
     openlog(__progname, LOG_CONS | LOG_NDELAY, LOG_LOCAL1);
 	
@@ -101,7 +101,7 @@ void _sys_init() {
 		}
     #endif
 
-    #if USE_SD
+    #if USE_FAT
         if (sd_init(0)) {
             if (fat_init()) {
                 mount_set_mounted("sd", 1);

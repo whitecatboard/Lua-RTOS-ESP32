@@ -27,6 +27,8 @@
  * this software.
  */
 
+#if USE_FAT
+
 #include <sys/fat/ff.h>
 
 #include <limits.h>
@@ -45,8 +47,6 @@
 
 #include <sys/drivers/cpu.h>
 #include <sys/drivers/sd.h>
-
-#if USE_FAT
 
 #define	EACCESS	5 // Permission denied
 
@@ -418,3 +418,4 @@ int fat_format() {
 }
 
 #endif
+

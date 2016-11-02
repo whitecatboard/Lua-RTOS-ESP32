@@ -40,6 +40,7 @@
 extern void luaC_fullgc (lua_State *L, int isemergency);
 
 #if !PLATFORM_ESP32
+
 // If memory cannot be allocated, launch Lua garbage collector and
 // try again with the hope that then more memory will be available
 // WRAP for malloc
@@ -106,6 +107,45 @@ void* __wrap_realloc(void *ptr, size_t bytes) {
 extern void __real_free(void *ptr);
 void __wrap_free(void *ptr) {
 	__real_free(ptr);
+}
+
+extern void *xPortSupervisorStackPointer;
+static char *heap_end = NULL;
+    
+void *_sbrk_r (struct _reent *r, ptrdiff_t incr) {
+    extern char   _heap_start; /* linker script defined */
+	register int  stackptr asm("sp"); 
+    char 		 *prev_heap_end;
+
+    if (heap_end == NULL)
+		heap_end = &_heap_start;
+		
+    prev_heap_end = heap_end;
+
+    intptr_t sp = (intptr_t)xPortSupervisorStackPointer;
+    if(sp == 0) /* scheduler not started */
+        sp = stackptr;
+
+    if ((intptr_t)heap_end + incr >= sp) {
+        r->_errno = ENOMEM;
+        return (caddr_t)-1;
+    }
+
+    heap_end += incr;
+
+    return (caddr_t) prev_heap_end;
+}
+
+void *sbrk(int incr) {
+	return (void *)_sbrk_r (_GLOBAL_REENT, incr);
+}
+
+int _isatty_r(struct _reent *r, int fd) {
+	return (fd < 3);
+} 
+
+int isatty(int fd) {
+	return _isatty_r(_GLOBAL_REENT, fd);
 }
 #endif
 

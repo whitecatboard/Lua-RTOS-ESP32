@@ -7,6 +7,7 @@ CFLAGS += -DPLATFORM_ESP8266
 CFLAGS += -DCPU_HZ=80000000L                    # CPU frequency in hertz
 CFLAGS += -DCORE_TIMER_HZ=CPU_HZ                # CPU core timer frequency
 CFLAGS += -D_CLOCKS_PER_SEC_=configTICK_RATE_HZ # Number of interrupt ticks for reach 1 second
+CFLAGS += -DBASE_TIMER_TICK_RATE=100            # Generate a FreeRTOS ticks every 100 TIMER1 ticks (T = 1 msec)
 CFLAGS += -DUSE_NETWORKING=0                    # Networking is used (1 = yes, 0 = not)
 CFLAGS += -DMTX_USE_EVENTS=0                    # Use event groups in mtx implementation (experimental)
 
@@ -50,6 +51,15 @@ CFLAGS += -DLORA_UART=3				   # RN2483 UART unit
 CFLAGS += -DLORA_UART_BR=57600         # RN2483 UART speed
 CFLAGS += -DLORA_UART_BUFF_SIZE=255    # Buffer size for RX
 CFLAGS += -DLORA_RST_PIN=14			   # RN2483 hardware reset pin
+
+#
+# I2C driver configuration
+#
+CFLAGS += -DI2C1_PINS=0
+CFLAGS += -DI2C2_PINS=0
+CFLAGS += -DI2C3_PINS=0
+CFLAGS += -DI2C4_PINS=0
+CFLAGS += -DI2C5_PINS=0
 
 #
 # Lua configuration

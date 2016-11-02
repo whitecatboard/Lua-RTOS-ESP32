@@ -72,3 +72,11 @@ int __read(struct _reent *r, int fd, void *buf, size_t nbyte) {
     
     return cnt;
 }
+
+#if ((PLATFORM_ESP32 != 1) && (PLATFORM_ESP8266 != 1))
+
+int read(int fd, void *buf, size_t nbyte) {
+	return __read(_GLOBAL_REENT, fd, buf, nbyte);
+}
+
+#endif

@@ -17,4 +17,6 @@
 #endif
 #endif
 
+#include <platform/pic32mz/machine/endian.h>
+
 #endif /* __MACHINE_ENDIAN_H__ */

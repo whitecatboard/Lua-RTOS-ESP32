@@ -32,6 +32,8 @@
 
 #define LUA_OS_VER "beta 0.1"
 
+#if 0
+
 #define UNUSED_ARG(x) (void)(x)
 	
 // ---------------------------------------------------------------------------
@@ -47,24 +49,6 @@
 //#define PBCLK3_DIV ((CPU_HZ / PBCLK3_HZ) - 1)
 //#define PBCLK4_DIV ((CPU_HZ / PBCLK4_HZ) - 1)
 //#define PBCLK5_DIV ((CPU_HZ / PBCLK5_HZ) - 1)
-
-#define USE_LORA             0
-#define USE_RTC              0
-#define USE_ETHERNET         0
-#define USE_WIFI             0
-#define USE_GPRS             0
-#define USE_GPS              0
-#define USE_SD               0
-#define USE_DISPLAY          0
-#define USE_CAN              0
-#define USE_STEPPER          0
-
-// ---------------------------------------------------------------------------
-// Leds
-// ---------------------------------------------------------------------------
-#define LED_1   0
-#define LED_ACT LED_1
-#define LED_NET LED_1
 
 // ---------------------------------------------------------------------------
 // LORAWAN
@@ -145,21 +129,7 @@
 // -----------------------------------------------------------------------------
 // I2C
 // -----------------------------------------------------------------------------
-#define I2C1_PINS     0x4a49    // scl=D10, sda=D9
-#define I2C2_PINS     0x0000
-#define I2C3_PINS     0x0000
-#define I2C4_PINS     0x7877    // scl=RG8, sda=RG7
-#define I2C5_PINS     0x0000
 
-// -----------------------------------------------------------------------------
-// UARTS
-// -----------------------------------------------------------------------------
-#define UART1_PINS    0x6465    // rx=RF4 , tx=RF5
-#define UART2_PINS    0x2726    // rx=RB7 , tx=RB6
-#define UART3_PINS    0x3d3e    // rx=RC13, tx=RC14
-#define UART4_PINS    0x4544    // rx=RD5 , tx=RD4
-#define UART5_PINS    0x0000    // NOT USED
-#define UART6_PINS    0x0000    // NOT USED
 
 // ---------------------------------------------------------------------------
 // SPI
@@ -279,3 +249,15 @@
 #endif
 
 #endif
+
+#endif
+
+// -----------------------------------------------------------------------------
+// UARTS
+// -----------------------------------------------------------------------------
+#define UART1_PINS    0x6465    // rx=RF4 , tx=RF5
+#define UART2_PINS    0x2726    // rx=RB7 , tx=RB6
+#define UART3_PINS    0x3d3e    // rx=RC13, tx=RC14
+#define UART4_PINS    0x4544    // rx=RD5 , tx=RD4
+#define UART5_PINS    0x0000    // NOT USED
+#define UART6_PINS    0x0000    // NOT USED

@@ -70,3 +70,15 @@ int __stat(struct _reent *r, const char *str, struct stat *sb) {
 int lstat(const char *str, struct stat *sb) {
     return stat(str, sb);
 }
+
+#if ((PLATFORM_ESP32 != 1) && (PLATFORM_ESP8266 != 1))
+
+int stat(const char *str, struct stat *sb) {
+	return __stat(_GLOBAL_REENT, str, sb);
+}
+
+int fstat(int fd, struct stat *sb) {
+	return __fstat(_GLOBAL_REENT, fd, sb);
+}
+
+#endif

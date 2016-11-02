@@ -445,8 +445,10 @@ void cpu_sleep(int seconds) {
     T1CONSET = (1 << 13);
     T1CONSET = (1 << 15);
 
+#if USE_RTC
     rtc_alarm_at(now + seconds);
-    
+#endif
+	
     asm ("wait"); // Enter in selected power-saving mode
 
     RCONCLR = (1 << 4);

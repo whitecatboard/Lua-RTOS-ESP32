@@ -110,7 +110,7 @@ COMPONENTS ?= main pthread Lua sys
 endif
 
 ifeq ($(PLATFORM),pic32mz)
-COMPONENTS ?= $(EXTRA_COMPONENTS) FreeRTOS sys sys/drivers/lmic pthread Lua platform/$(PLATFORM)/quad
+COMPONENTS ?= $(EXTRA_COMPONENTS) FreeRTOS sys sys/drivers/lmic pthread Lua main main/platform/$(PLATFORM)/quad
 endif
 
 
@@ -203,7 +203,7 @@ LINKER_SCRIPTS += $(ROOT)main/platform/$(PLATFORM)/ld/esp32.common.ld $(ROOT)mai
 endif
 
 ifeq ($(PLATFORM),pic32mz)
-LINKER_SCRIPTS += $(ROOT)platform/$(PLATFORM)/ld/program.ld
+LINKER_SCRIPTS += $(ROOT)main/platform/$(PLATFORM)/ld/program.ld
 endif
 
 ifeq ($(WARNINGS_AS_ERRORS),1)

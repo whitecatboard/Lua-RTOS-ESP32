@@ -35,7 +35,6 @@
 
 #ifndef _ENDIAN_H_
 #define _ENDIAN_H_
-
 /*
  * Define the order of 32-bit words in 64-bit words.
  */

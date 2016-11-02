@@ -131,8 +131,7 @@ void *lua_start(void *arg) {
 
 #if PLATFORM_ESP8266
 void user_init(void) {	
-#endif
-#if PLATFORM_ESP32
+#else
 void app_main(void) {	
 #endif
 	_sys_init();

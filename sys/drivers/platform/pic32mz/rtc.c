@@ -32,7 +32,7 @@
  * this software.
  */
 
-#include "whitecat.h"
+#if USE_RTC
 
 #include <time.h>
 #include <sys/syslog.h>
@@ -195,3 +195,5 @@ void rtc_intr(void) {
     // Clear RTCC flag
     IFSCLR(PIC32_IRQ_RTCC >> 5) = 1 << (PIC32_IRQ_RTCC & 31);     
 }
+
+#endif

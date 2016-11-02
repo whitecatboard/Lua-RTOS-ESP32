@@ -74,3 +74,11 @@ int __write(struct _reent *r, int fd, const void *buf, size_t nbyte) {
     
     return cnt;
 }
+
+#if ((PLATFORM_ESP32 != 1) && (PLATFORM_ESP8266 != 1))
+
+int write(int fd, const void *buf, size_t nbyte) {
+	return __write(_GLOBAL_REENT, fd, buf, nbyte);
+}
+
+#endif

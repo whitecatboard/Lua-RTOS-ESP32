@@ -10,13 +10,17 @@ fi
 if [[ " ${platforms[@]} " =~ " $1 " ]]; then
 	
   if [[ " $1 " =~ " pic32mz " ]]; then
-	make -f platform/pic32mz/main/Makefile.asm FOLDER=platform/pic32mz/main/ asm
-	make -f platform/pic32mz/main/Makefile.asm FOLDER=FreeRTOS/source/portable/pic32mz asm
+	make -f main/platform/pic32mz/init/Makefile.asm FOLDER=main/platform/pic32mz/init/ asm
+	make -f main/platform/pic32mz/init/Makefile.asm FOLDER=FreeRTOS/source/portable/pic32mz asm
   fi
 		
   source ./main/platform/$1/env
   
-  make $2 -j4 -C main/platform/$1 UARTPORT=$uartdef
+  if [[ " $1 " =~ " pic32mz " ]]; then
+	  make $2 -j4 -C main/platform/$1/init UARTPORT=$uartdef
+  else
+	  make $2 -j4 -C main/platform/$1 UARTPORT=$uartdef
+  fi
   
 else
   echo "Unsupported platform"

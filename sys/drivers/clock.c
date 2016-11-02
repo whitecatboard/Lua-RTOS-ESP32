@@ -33,13 +33,17 @@
 #include <sys/time.h>
 #include <sys/drivers/gpio.h>
 
+#define ATTR
+
 #if PLATFORM_ESP32
 #include "esp_attr.h"
 
+#undef ATTR
 #define ATTR IRAM_ATTR
 #endif
 
 #if PLATFORM_ESP8266
+#undef ATTR
 #define ATTR IRAM
 #endif
 

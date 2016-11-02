@@ -27,6 +27,8 @@
  * this software.
  */
 
+#if USE_SPIFFS
+
 #include <limits.h>
 
 #include <string.h>
@@ -41,8 +43,6 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/syslog.h>
-
-#if USE_SPIFFS
 
 #include <sys/drivers/cfi.h>
 

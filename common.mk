@@ -151,7 +151,7 @@ $(1)_OBJ_FILES = $$(patsubst $$($(1)_REAL_ROOT)%.S,$$($(1)_OBJ_DIR)%.o,$$($(1)_O
 endif
 
 ifeq ($(PLATFORM),pic32mz)
-$(1)_OBJ_FILES = $$(patsubst $$($(1)_REAL_ROOT)%.S,$$($(1)_OBJ_DIR)%.o,$$($(1)_OBJ_FILES_C)) $(ROOT)platform/pic32mz/main/locore.o $(ROOT)FreeRTOS/Source/portable/pic32mz/port_asm.o
+$(1)_OBJ_FILES = $$(patsubst $$($(1)_REAL_ROOT)%.S,$$($(1)_OBJ_DIR)%.o,$$($(1)_OBJ_FILES_C)) $(ROOT)main/platform/pic32mz/init/locore.o $(ROOT)FreeRTOS/Source/portable/pic32mz/port_asm.o
 endif
 
 # the last included makefile is our component's component.mk makefile (rebuild the component if it changes)

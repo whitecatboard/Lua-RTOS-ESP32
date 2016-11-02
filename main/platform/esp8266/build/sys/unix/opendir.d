@@ -15,8 +15,8 @@
  ../../../libc/platform/esp8266/include/sys/_types.h \
  ../../../libc/platform/esp8266/include/sys/lock.h \
  ../../../libc/platform/esp8266/include/machine/types.h \
- ../../../sys/mount.h ../../../libc/platform/esp8266/include/sys/queue.h \
- ../../../libc/platform/esp8266/include/sys/cdefs.h \
+ ../../../libc/platform/esp8266/include/sys/cdefs.h ../../../sys/mount.h \
+ ../../../libc/platform/esp8266/include/sys/queue.h \
  ../../../sys/syscalls/mount.h \
  ../../../libc/platform/esp8266/include/sys/stat.h \
  ../../../libc/platform/esp8266/include/time.h \

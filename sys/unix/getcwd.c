@@ -42,6 +42,7 @@ static char sccsid[] = "@(#)getcwd.c	8.5 (Berkeley) 2/7/95";
 
 #include <sys/stat.h>
 
+#include <sys/cdefs.h>
 #include <sys/dirent.h>
 #include <errno.h>
 #include <fcntl.h>

@@ -31,6 +31,7 @@
  
 #include <stdint.h>
 #include <sys/types.h>
+#include <sys/cdefs.h>
 #include <sys/mount.h>
 #include <sys/syscalls/mount.h>
 #include <sys/stat.h>

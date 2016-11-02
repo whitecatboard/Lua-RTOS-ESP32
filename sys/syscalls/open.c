@@ -176,3 +176,19 @@ int __open(struct _reent *r, const char *path, int flags, ...) {
     
     return fd;
 }
+
+#if ((PLATFORM_ESP32 != 1) && (PLATFORM_ESP8266 != 1))
+
+#include <stdarg.h>
+int open(const char *path, int flags, ...) {
+	va_list ap;
+	int ret;
+	
+	va_start(ap, flags);
+	ret = __open(_GLOBAL_REENT, path, flags, ap);	
+	va_end(ap);
+	
+	return ret;
+}
+
+#endif

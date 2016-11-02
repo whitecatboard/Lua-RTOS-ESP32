@@ -19,8 +19,8 @@
  ../../../libc/platform/esp32/include/sys/lock.h \
  ../../../main/platform/esp32/stddef.h \
  ../../../libc/platform/esp32/include/machine/types.h \
- ../../../sys/mount.h ../../../libc/platform/esp32/include/sys/queue.h \
- ../../../libc/platform/esp32/include/sys/cdefs.h \
+ ../../../libc/platform/esp32/include/sys/cdefs.h ../../../sys/mount.h \
+ ../../../libc/platform/esp32/include/sys/queue.h \
  ../../../sys/syscalls/mount.h \
  ../../../libc/platform/esp32/include/sys/stat.h \
  ../../../libc/platform/esp32/include/time.h \
@@ -79,11 +79,11 @@
 
 ../../../libc/platform/esp32/include/machine/types.h:
 
+../../../libc/platform/esp32/include/sys/cdefs.h:
+
 ../../../sys/mount.h:
 
 ../../../libc/platform/esp32/include/sys/queue.h:
-
-../../../libc/platform/esp32/include/sys/cdefs.h:
 
 ../../../sys/syscalls/mount.h:
 

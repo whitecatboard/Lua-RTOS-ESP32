@@ -27,6 +27,8 @@
  * this software.
  */
 
+#if LUA_USE_PWM
+
 #include "whitecat.h"
 
 #include <sys/syslog.h>
@@ -482,3 +484,5 @@ void pwm_pins(int unit, unsigned char *pin) {
             break;
     }
 }
+
+#endif
