@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/lua//src/lauxlib.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lauxlib.c \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lauxlib.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h \
  ../../../libc/platform/esp32/include/errno.h \
  ../../../libc/platform/esp32/include/sys/errno.h \
  ../../../libc/platform/esp32/include/sys/reent.h \
@@ -27,8 +27,8 @@
  ../../../libc/platform/esp32/include/alloca.h \
  ../../../libc/platform/esp32/include/string.h \
  ../../../libc/platform/esp32/include/sys/string.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \
  ../../../libc/platform/esp32/include/limits.h \
@@ -39,9 +39,9 @@
  ../../../Lua/modules/auxmods.h ../../../Lua/src/lua.h \
  ../../../libc/platform/esp32/include/unistd.h \
  ../../../libc/platform/esp32/include/sys/unistd.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lauxlib.h
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lauxlib.h
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h:
 
 ../../../libc/platform/esp32/include/errno.h:
 
@@ -95,9 +95,9 @@
 
 ../../../libc/platform/esp32/include/sys/string.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h:
 
 ../../../main/platform/esp32/limits.h:
 
@@ -123,4 +123,4 @@
 
 ../../../libc/platform/esp32/include/sys/unistd.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lauxlib.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lauxlib.h:

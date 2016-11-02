@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/lua//src/loslib.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/loslib.c \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/loslib.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h \
  ../../../libc/platform/esp32/include/errno.h \
  ../../../libc/platform/esp32/include/sys/errno.h \
  ../../../libc/platform/esp32/include/sys/reent.h \
@@ -27,9 +27,9 @@
  ../../../libc/platform/esp32/include/machine/time.h \
  ../../../libc/platform/esp32/include/sys/types.h \
  ../../../libc/platform/esp32/include/machine/types.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h \
  ../../../main/platform/esp32/stdarg.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \
  ../../../libc/platform/esp32/include/limits.h \
@@ -95,13 +95,13 @@
  ../../../main/platform/esp32/esp-idf/components/esp32/include/soc/uart_reg.h \
  ../../../main/platform/esp32/esp-idf/components/esp32/include/soc/soc.h \
  ../../../main/platform/esp32/esp-idf/components/esp32/include/soc/io_mux_reg.h \
- ../../../main/build.h /Users/jaumeolivepetrus/LuaOS/Lua/src/lauxlib.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lualib.h \
+ ../../../main/build.h /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lauxlib.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lualib.h \
  ../../../Lua/adds/modules.h ../../../Lua/adds/lrodefs.h \
  ../../../Lua/adds/lrotable.h ../../../Lua/src/llimits.h \
  ../../../Lua/src/lobject.h ../../../Lua/adds/luaconf.h
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h:
 
 ../../../libc/platform/esp32/include/errno.h:
 
@@ -155,11 +155,11 @@
 
 ../../../libc/platform/esp32/include/machine/types.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h:
 
 ../../../main/platform/esp32/stdarg.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h:
 
 ../../../main/platform/esp32/limits.h:
 
@@ -323,9 +323,9 @@
 
 ../../../main/build.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lauxlib.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lauxlib.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lualib.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lualib.h:
 
 ../../../Lua/adds/modules.h:
 

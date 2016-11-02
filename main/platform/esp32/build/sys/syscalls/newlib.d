@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//syscalls/newlib.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/syscalls/newlib.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/newlib.c \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  ../../../main/platform/esp32/stddef.h \
  ../../../libc/platform/esp32/include/sys/reent.h \
@@ -48,7 +48,7 @@
  ../../../libc/platform/esp32/include/limits.h \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/list.h \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/./../../../../../freertos/tasks_adds.h \
- /Users/jaumeolivepetrus/LuaOS/sys/syscalls/syscalls.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/syscalls.h \
  ../../../libc/platform/esp32/include/sys/cdefs.h \
  ../../../libc/platform/esp32/include/unistd.h \
  ../../../libc/platform/esp32/include/sys/unistd.h \
@@ -187,7 +187,7 @@
 
 ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/./../../../../../freertos/tasks_adds.h:
 
-/Users/jaumeolivepetrus/LuaOS/sys/syscalls/syscalls.h:
+/Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/syscalls.h:
 
 ../../../libc/platform/esp32/include/sys/cdefs.h:
 

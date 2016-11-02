@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//syscalls/exit.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/syscalls/exit.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/exit.c \
  ../../../libc/platform/esp32/include/reent.h \
  ../../../libc/platform/esp32/include/sys/reent.h \
  ../../../libc/platform/esp32/include/_ansi.h \

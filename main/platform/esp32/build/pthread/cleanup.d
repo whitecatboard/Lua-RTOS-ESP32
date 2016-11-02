@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/pthread//cleanup.o: \
- /Users/jaumeolivepetrus/LuaOS/pthread/cleanup.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/pthread/cleanup.c \
  ../../../include/pthread.h \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  ../../../main/platform/esp32/stddef.h \

@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//panic.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/panic.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/panic.c \
  ../../../libc/platform/esp32/include/stdio.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/newlib.h \

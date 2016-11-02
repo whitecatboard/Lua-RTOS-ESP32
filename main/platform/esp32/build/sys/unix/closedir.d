@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//unix/closedir.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/unix/closedir.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/unix/closedir.c \
  ../../../libc/platform/esp32/include/sys/cdefs.h \
  ../../../libc/platform/esp32/include/machine/_default_types.h \
  ../../../libc/platform/esp32/include/sys/features.h \

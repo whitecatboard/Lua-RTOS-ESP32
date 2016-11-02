@@ -1,8 +1,8 @@
 ../../../main/platform/esp32/build/sys//spiffs/spiffs_hydrogen.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/spiffs/spiffs_hydrogen.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/spiffs_hydrogen.c \
  ../../../sys/drivers/console.h \
- /Users/jaumeolivepetrus/LuaOS/sys/spiffs/spiffs.h \
- /Users/jaumeolivepetrus/LuaOS/sys/spiffs/spiffs_config.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/spiffs.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/spiffs_config.h \
  ../../../libc/platform/esp32/include/stdio.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/newlib.h \
@@ -31,14 +31,14 @@
  ../../../libc/platform/esp32/include/stdint.h \
  ../../../libc/platform/esp32/include/sys/_intsup.h \
  ../../../libc/platform/esp32/include/ctype.h \
- /Users/jaumeolivepetrus/LuaOS/sys/spiffs/platform/esp32/esp_spiffs.h \
- /Users/jaumeolivepetrus/LuaOS/sys/spiffs/spiffs_nucleus.h
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/platform/esp32/esp_spiffs.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/spiffs_nucleus.h
 
 ../../../sys/drivers/console.h:
 
-/Users/jaumeolivepetrus/LuaOS/sys/spiffs/spiffs.h:
+/Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/spiffs.h:
 
-/Users/jaumeolivepetrus/LuaOS/sys/spiffs/spiffs_config.h:
+/Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/spiffs_config.h:
 
 ../../../libc/platform/esp32/include/stdio.h:
 
@@ -96,6 +96,6 @@
 
 ../../../libc/platform/esp32/include/ctype.h:
 
-/Users/jaumeolivepetrus/LuaOS/sys/spiffs/platform/esp32/esp_spiffs.h:
+/Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/platform/esp32/esp_spiffs.h:
 
-/Users/jaumeolivepetrus/LuaOS/sys/spiffs/spiffs_nucleus.h:
+/Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/spiffs_nucleus.h:

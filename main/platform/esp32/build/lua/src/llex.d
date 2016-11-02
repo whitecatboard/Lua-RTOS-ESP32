@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/lua//src/llex.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/llex.c \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/llex.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h \
  ../../../libc/platform/esp32/include/locale.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/newlib.h \
@@ -18,9 +18,9 @@
  ../../../libc/platform/esp32/include/sys/lock.h \
  ../../../libc/platform/esp32/include/sys/cdefs.h \
  ../../../libc/platform/esp32/include/sys/string.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h \
  ../../../main/platform/esp32/stdarg.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \
  ../../../libc/platform/esp32/include/limits.h \
@@ -33,23 +33,23 @@
  ../../../libc/platform/esp32/include/sys/unistd.h \
  ../../../libc/platform/esp32/include/sys/types.h \
  ../../../libc/platform/esp32/include/machine/types.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lctype.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lctype.h \
  ../../../libc/platform/esp32/include/ctype.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/ldebug.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lstate.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lobject.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/llimits.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/ltm.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lzio.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lmem.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/ldo.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lgc.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/llex.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lparser.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lstring.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/ltable.h
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/ldebug.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lstate.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lobject.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/llimits.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/ltm.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lzio.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lmem.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/ldo.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lgc.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/llex.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lparser.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lstring.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/ltable.h
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h:
 
 ../../../libc/platform/esp32/include/locale.h:
 
@@ -85,11 +85,11 @@
 
 ../../../libc/platform/esp32/include/sys/string.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h:
 
 ../../../main/platform/esp32/stdarg.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h:
 
 ../../../main/platform/esp32/limits.h:
 
@@ -119,32 +119,32 @@
 
 ../../../libc/platform/esp32/include/machine/types.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lctype.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lctype.h:
 
 ../../../libc/platform/esp32/include/ctype.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/ldebug.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/ldebug.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lstate.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lstate.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lobject.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lobject.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/llimits.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/llimits.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/ltm.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/ltm.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lzio.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lzio.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lmem.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lmem.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/ldo.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/ldo.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lgc.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lgc.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/llex.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/llex.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lparser.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lparser.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lstring.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lstring.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/ltable.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/ltable.h:

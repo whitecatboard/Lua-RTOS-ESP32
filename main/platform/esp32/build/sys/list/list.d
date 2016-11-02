@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/sys//list/list.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/list/list.c \
- /Users/jaumeolivepetrus/LuaOS/sys/list/list.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/list/list.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/list/list.h \
  ../../../main/platform/esp32/stdint.h \
  ../../../libc/platform/esp32/include/stdint.h \
  ../../../libc/platform/esp32/include/machine/_default_types.h \
@@ -55,7 +55,7 @@
  ../../../libc/platform/esp32/include/machine/stdlib.h \
  ../../../libc/platform/esp32/include/alloca.h
 
-/Users/jaumeolivepetrus/LuaOS/sys/list/list.h:
+/Users/jaumeolivepetrus/Lua-RTOS/sys/list/list.h:
 
 ../../../main/platform/esp32/stdint.h:
 

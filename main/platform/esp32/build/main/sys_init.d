@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/main//sys_init.o: \
- /Users/jaumeolivepetrus/LuaOS/main/sys_init.c \
- /Users/jaumeolivepetrus/LuaOS/main/build.h ../../../Lua/src/lua.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/main/sys_init.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/main/build.h ../../../Lua/src/lua.h \
  ../../../main/platform/esp32/stdarg.h \
  ../../../main/platform/esp32/stddef.h ../../../Lua/src/luaconf.h \
  ../../../main/platform/esp32/limits.h \
@@ -35,7 +35,7 @@
  ../../../sys/drivers/console.h ../../../sys/drivers/cpu.h \
  ../../../sys/drivers/platform/esp32/cpu.h ../../../sys/syscalls/mount.h
 
-/Users/jaumeolivepetrus/LuaOS/main/build.h:
+/Users/jaumeolivepetrus/Lua-RTOS/main/build.h:
 
 ../../../Lua/src/lua.h:
 

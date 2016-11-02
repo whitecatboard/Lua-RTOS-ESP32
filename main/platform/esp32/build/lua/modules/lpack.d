@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/lua//modules/lpack.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/modules/lpack.c ../../../Lua/src/lua.h \
- ../../../main/platform/esp32/stdarg.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/modules/lpack.c \
+ ../../../Lua/src/lua.h ../../../main/platform/esp32/stdarg.h \
  ../../../main/platform/esp32/stddef.h ../../../Lua/src/luaconf.h \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \

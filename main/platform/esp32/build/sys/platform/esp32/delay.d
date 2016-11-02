@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//platform/esp32/delay.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/platform/esp32/delay.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/platform/esp32/delay.c \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  ../../../main/platform/esp32/stddef.h \
  ../../../libc/platform/esp32/include/sys/reent.h \

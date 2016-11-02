@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//drivers/console.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/drivers/console.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/drivers/console.c \
  ../../../libc/platform/esp32/include/stdio.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/newlib.h \

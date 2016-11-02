@@ -1,13 +1,13 @@
 ../../../main/platform/esp32/build/sys//spiffs/platform/esp32/esp_spiffs.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/spiffs/platform/esp32/esp_spiffs.c \
- /Users/jaumeolivepetrus/LuaOS/sys/spiffs/platform/esp32/esp_spiffs.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/platform/esp32/esp_spiffs.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/platform/esp32/esp_spiffs.h \
  ../../../main/platform/esp32/stdint.h \
  ../../../libc/platform/esp32/include/stdint.h \
  ../../../libc/platform/esp32/include/machine/_default_types.h \
  ../../../libc/platform/esp32/include/sys/features.h \
  ../../../libc/platform/esp32/include/sys/_intsup.h \
- /Users/jaumeolivepetrus/LuaOS/sys/spiffs/platform/esp32/../../spiffs.h \
- /Users/jaumeolivepetrus/LuaOS/sys/spiffs/platform/esp32/../../spiffs_config.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/platform/esp32/../../spiffs.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/platform/esp32/../../spiffs_config.h \
  ../../../libc/platform/esp32/include/stdio.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/newlib.h \
@@ -31,13 +31,13 @@
  ../../../libc/platform/esp32/include/string.h \
  ../../../libc/platform/esp32/include/sys/string.h \
  ../../../libc/platform/esp32/include/ctype.h \
- /Users/jaumeolivepetrus/LuaOS/sys/spiffs/platform/esp32/../../platform/esp32/esp_spiffs.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/platform/esp32/../../platform/esp32/esp_spiffs.h \
  ../../../main/platform/esp32/esp-idf/components/spi_flash/include/esp_spi_flash.h \
  ../../../main/platform/esp32/esp-idf/components/esp32/include/esp_err.h \
  ../../../libc/platform/esp32/include/assert.h \
  ../../../main/platform/esp32/sdkconfig.h
 
-/Users/jaumeolivepetrus/LuaOS/sys/spiffs/platform/esp32/esp_spiffs.h:
+/Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/platform/esp32/esp_spiffs.h:
 
 ../../../main/platform/esp32/stdint.h:
 
@@ -49,9 +49,9 @@
 
 ../../../libc/platform/esp32/include/sys/_intsup.h:
 
-/Users/jaumeolivepetrus/LuaOS/sys/spiffs/platform/esp32/../../spiffs.h:
+/Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/platform/esp32/../../spiffs.h:
 
-/Users/jaumeolivepetrus/LuaOS/sys/spiffs/platform/esp32/../../spiffs_config.h:
+/Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/platform/esp32/../../spiffs_config.h:
 
 ../../../libc/platform/esp32/include/stdio.h:
 
@@ -99,7 +99,7 @@
 
 ../../../libc/platform/esp32/include/ctype.h:
 
-/Users/jaumeolivepetrus/LuaOS/sys/spiffs/platform/esp32/../../platform/esp32/esp_spiffs.h:
+/Users/jaumeolivepetrus/Lua-RTOS/sys/spiffs/platform/esp32/../../platform/esp32/esp_spiffs.h:
 
 ../../../main/platform/esp32/esp-idf/components/spi_flash/include/esp_spi_flash.h:
 

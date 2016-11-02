@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/lua//common/y.tab.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/common/y.tab.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/common/y.tab.c \
  ../../../main/whitecat.h ../../../Lua/src/lua.h \
  ../../../main/platform/esp32/stdarg.h \
  ../../../main/platform/esp32/stddef.h ../../../Lua/src/luaconf.h \

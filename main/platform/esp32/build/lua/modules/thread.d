@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/lua//modules/thread.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/modules/thread.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/modules/thread.c \
  ../../../main/whitecat.h ../../../Lua/src/lua.h \
  ../../../main/platform/esp32/stdarg.h \
  ../../../main/platform/esp32/stddef.h ../../../Lua/src/luaconf.h \
@@ -34,7 +34,7 @@
  ../../../libc/platform/esp32/include/sys/reent.h \
  ../../../libc/platform/esp32/include/sys/stdio.h ../../../Lua/src/lgc.h \
  ../../../Lua/src/lmem.h ../../../Lua/src/ldo.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/modules/thread.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/modules/thread.h \
  ../../../Lua/src/lstate.h ../../../include/pthread.h \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
@@ -173,7 +173,7 @@
 
 ../../../Lua/src/ldo.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/modules/thread.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/modules/thread.h:
 
 ../../../Lua/src/lstate.h:
 

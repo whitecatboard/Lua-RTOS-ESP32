@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/lua//src/liolib.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/liolib.c \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/liolib.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h \
  ../../../libc/platform/esp32/include/ctype.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/newlib.h \
@@ -29,8 +29,8 @@
  ../../../libc/platform/esp32/include/alloca.h \
  ../../../libc/platform/esp32/include/string.h \
  ../../../libc/platform/esp32/include/sys/string.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \
  ../../../libc/platform/esp32/include/limits.h \
@@ -85,14 +85,14 @@
  ../../../main/platform/esp32/esp-idf/components/esp32/include/soc/soc.h \
  ../../../main/platform/esp32/esp-idf/components/esp32/include/soc/io_mux_reg.h \
  ../../../sys/syscalls/mount.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lauxlib.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lualib.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lauxlib.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lualib.h \
  ../../../Lua/adds/lrotable.h ../../../Lua/src/llimits.h \
  ../../../Lua/src/lobject.h ../../../Lua/src/llimits.h \
  ../../../Lua/adds/luaconf.h ../../../Lua/adds/lrodefs.h \
  ../../../Lua/adds/lrotable.h ../../../Lua/adds/modules.h
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h:
 
 ../../../libc/platform/esp32/include/ctype.h:
 
@@ -150,9 +150,9 @@
 
 ../../../libc/platform/esp32/include/sys/string.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h:
 
 ../../../main/platform/esp32/limits.h:
 
@@ -274,9 +274,9 @@
 
 ../../../sys/syscalls/mount.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lauxlib.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lauxlib.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lualib.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lualib.h:
 
 ../../../Lua/adds/lrotable.h:
 

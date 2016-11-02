@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//unix/readdir.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/unix/readdir.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/unix/readdir.c \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \
  ../../../libc/platform/esp32/include/limits.h \

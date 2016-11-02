@@ -1,2 +1,2 @@
 ../../../main/platform/esp32/build/lua//modules/pio.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/modules/pio.c
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/modules/pio.c

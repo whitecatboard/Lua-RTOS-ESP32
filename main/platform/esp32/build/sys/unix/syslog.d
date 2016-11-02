@@ -1,5 +1,6 @@
 ../../../main/platform/esp32/build/sys//unix/syslog.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/unix/syslog.c ../../../main/whitecat.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/unix/syslog.c \
+ ../../../main/whitecat.h \
  ../../../libc/platform/esp32/include/sys/types.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/newlib.h \

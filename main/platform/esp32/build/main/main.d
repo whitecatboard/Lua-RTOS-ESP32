@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/main//main.o: \
- /Users/jaumeolivepetrus/LuaOS/main/main.c \
- /Users/jaumeolivepetrus/LuaOS/main/whitecat.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/main/main.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/main/whitecat.h \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  ../../../main/platform/esp32/stddef.h \
  ../../../libc/platform/esp32/include/sys/reent.h \
@@ -90,7 +90,7 @@
  ../../../libc/platform/esp32/include/string.h \
  ../../../libc/platform/esp32/include/sys/string.h
 
-/Users/jaumeolivepetrus/LuaOS/main/whitecat.h:
+/Users/jaumeolivepetrus/Lua-RTOS/main/whitecat.h:
 
 ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOS.h:
 

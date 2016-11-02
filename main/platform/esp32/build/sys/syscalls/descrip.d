@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/sys//syscalls/descrip.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/syscalls/descrip.c \
- /Users/jaumeolivepetrus/LuaOS/sys/syscalls/syscalls.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/descrip.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/syscalls.h \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \
  ../../../libc/platform/esp32/include/limits.h \
@@ -83,7 +83,7 @@
  ../../../main/platform/esp32/esp-idf/components/esp32/include/soc/spi_reg.h \
  ../../../main/platform/esp32/esp-idf/components/esp32/include/soc/soc.h
 
-/Users/jaumeolivepetrus/LuaOS/sys/syscalls/syscalls.h:
+/Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/syscalls.h:
 
 ../../../main/platform/esp32/limits.h:
 

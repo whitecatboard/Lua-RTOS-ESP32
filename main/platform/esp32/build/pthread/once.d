@@ -1,5 +1,6 @@
 ../../../main/platform/esp32/build/pthread//once.o: \
- /Users/jaumeolivepetrus/LuaOS/pthread/once.c ../../../include/pthread.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/pthread/once.c \
+ ../../../include/pthread.h \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  ../../../main/platform/esp32/stddef.h \
  ../../../libc/platform/esp32/include/sys/reent.h \

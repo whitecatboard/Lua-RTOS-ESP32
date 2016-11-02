@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//syscalls/mutex.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/syscalls/mutex.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/mutex.c \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  ../../../main/platform/esp32/stddef.h \
  ../../../libc/platform/esp32/include/sys/reent.h \

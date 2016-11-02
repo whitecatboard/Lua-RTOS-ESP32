@@ -1,16 +1,16 @@
 ../../../main/platform/esp32/build/lua//src/lopcodes.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lopcodes.c \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lopcodes.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h \
  ../../../main/platform/esp32/stddef.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lopcodes.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/llimits.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lopcodes.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/llimits.h \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \
  ../../../libc/platform/esp32/include/limits.h \
  ../../../libc/platform/esp32/include/newlib.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h \
  ../../../main/platform/esp32/stdarg.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h \
  ../../../main/platform/esp32/stdint.h \
  ../../../libc/platform/esp32/include/stdint.h \
  ../../../libc/platform/esp32/include/machine/_default_types.h \
@@ -31,13 +31,13 @@
  ../../../libc/platform/esp32/include/sys/lock.h \
  ../../../libc/platform/esp32/include/machine/types.h
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h:
 
 ../../../main/platform/esp32/stddef.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lopcodes.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lopcodes.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/llimits.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/llimits.h:
 
 ../../../main/platform/esp32/limits.h:
 
@@ -47,11 +47,11 @@
 
 ../../../libc/platform/esp32/include/newlib.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h:
 
 ../../../main/platform/esp32/stdarg.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h:
 
 ../../../main/platform/esp32/stdint.h:
 

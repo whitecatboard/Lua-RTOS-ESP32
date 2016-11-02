@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/lua//common/lrotable.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/common/lrotable.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/common/lrotable.c \
  ../../../Lua/src/lua.h ../../../main/platform/esp32/stdarg.h \
  ../../../main/platform/esp32/stddef.h ../../../Lua/src/luaconf.h \
  ../../../main/platform/esp32/limits.h \

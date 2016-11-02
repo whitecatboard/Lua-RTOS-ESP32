@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/lua//modules/linit.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/modules/linit.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/modules/linit.c \
  ../../../Lua/src/lprefix.h ../../../main/platform/esp32/stddef.h \
  ../../../libc/platform/esp32/include/string.h \
  ../../../libc/platform/esp32/include/_ansi.h \

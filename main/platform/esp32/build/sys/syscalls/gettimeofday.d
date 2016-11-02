@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//syscalls/gettimeofday.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/syscalls/gettimeofday.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/gettimeofday.c \
  ../../../libc/platform/esp32/include/time.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/newlib.h \

@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//drivers/resource.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/drivers/resource.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/drivers/resource.c \
  ../../../Lua/src/lua.h ../../../main/platform/esp32/stdarg.h \
  ../../../main/platform/esp32/stddef.h ../../../Lua/src/luaconf.h \
  ../../../main/platform/esp32/limits.h \

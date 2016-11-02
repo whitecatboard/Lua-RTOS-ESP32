@@ -1,5 +1,6 @@
 ../../../main/platform/esp32/build/pthread//join.o: \
- /Users/jaumeolivepetrus/LuaOS/pthread/join.c ../../../include/pthread.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/pthread/join.c \
+ ../../../include/pthread.h \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  ../../../main/platform/esp32/stddef.h \
  ../../../libc/platform/esp32/include/sys/reent.h \

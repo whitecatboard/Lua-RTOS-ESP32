@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/sys//syscalls/e_remainder.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/syscalls/e_remainder.c \
- /Users/jaumeolivepetrus/LuaOS/sys/syscalls/fdlibm.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/e_remainder.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/fdlibm.h \
  ../../../libc/platform/esp32/include/math.h \
  ../../../libc/platform/esp32/include/sys/reent.h \
  ../../../libc/platform/esp32/include/_ansi.h \
@@ -18,7 +18,7 @@
  ../../../libc/platform/esp32/include/sys/types.h \
  ../../../libc/platform/esp32/include/machine/types.h
 
-/Users/jaumeolivepetrus/LuaOS/sys/syscalls/fdlibm.h:
+/Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/fdlibm.h:
 
 ../../../libc/platform/esp32/include/math.h:
 

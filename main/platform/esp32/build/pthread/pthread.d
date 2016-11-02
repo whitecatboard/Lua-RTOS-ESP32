@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/pthread//pthread.o: \
- /Users/jaumeolivepetrus/LuaOS/pthread/pthread.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/pthread/pthread.c \
  ../../../include/pthread.h \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  ../../../main/platform/esp32/stddef.h \

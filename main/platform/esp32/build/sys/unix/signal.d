@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//unix/signal.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/unix/signal.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/unix/signal.c \
  ../../../libc/platform/esp32/include/signal.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/newlib.h \

@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//syscalls/tty_ops.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/syscalls/tty_ops.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/tty_ops.c \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \
  ../../../libc/platform/esp32/include/limits.h \

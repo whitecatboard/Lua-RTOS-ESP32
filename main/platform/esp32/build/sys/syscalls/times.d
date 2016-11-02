@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//syscalls/times.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/syscalls/times.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/times.c \
  ../../../libc/platform/esp32/include/time.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/newlib.h \

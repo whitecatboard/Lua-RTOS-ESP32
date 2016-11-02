@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//drivers/error.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/drivers/error.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/drivers/error.c \
  ../../../libc/platform/esp32/include/stdlib.h \
  ../../../libc/platform/esp32/include/machine/ieeefp.h \
  ../../../libc/platform/esp32/include/_ansi.h \

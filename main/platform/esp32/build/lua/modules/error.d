@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/lua//modules/error.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/modules/error.c \
- /Users/jaumeolivepetrus/LuaOS/Lua/modules/error.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/modules/error.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/modules/error.h \
  ../../../Lua/src/lstate.h ../../../Lua/src/lua.h \
  ../../../main/platform/esp32/stdarg.h \
  ../../../main/platform/esp32/stddef.h ../../../Lua/src/luaconf.h \
@@ -40,7 +40,7 @@
  ../../../libc/platform/esp32/include/machine/stdlib.h \
  ../../../libc/platform/esp32/include/alloca.h
 
-/Users/jaumeolivepetrus/LuaOS/Lua/modules/error.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/modules/error.h:
 
 ../../../Lua/src/lstate.h:
 

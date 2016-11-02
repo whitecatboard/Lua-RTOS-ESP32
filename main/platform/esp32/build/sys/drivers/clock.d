@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//drivers/clock.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/drivers/clock.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/drivers/clock.c \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  ../../../main/platform/esp32/stddef.h \
  ../../../libc/platform/esp32/include/sys/reent.h \

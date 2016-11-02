@@ -1,10 +1,10 @@
 ../../../main/platform/esp32/build/lua//src/lbitlib.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lbitlib.c \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lbitlib.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h \
  ../../../main/platform/esp32/stdarg.h \
  ../../../main/platform/esp32/stddef.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \
  ../../../libc/platform/esp32/include/limits.h \
@@ -28,22 +28,22 @@
  ../../../libc/platform/esp32/include/sys/_types.h \
  ../../../libc/platform/esp32/include/sys/lock.h \
  ../../../libc/platform/esp32/include/machine/types.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lauxlib.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lauxlib.h \
  ../../../libc/platform/esp32/include/stdio.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/sys/reent.h \
  ../../../libc/platform/esp32/include/sys/stdio.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lualib.h
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lualib.h
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h:
 
 ../../../main/platform/esp32/stdarg.h:
 
 ../../../main/platform/esp32/stddef.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h:
 
 ../../../main/platform/esp32/limits.h:
 
@@ -95,7 +95,7 @@
 
 ../../../libc/platform/esp32/include/machine/types.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lauxlib.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lauxlib.h:
 
 ../../../libc/platform/esp32/include/stdio.h:
 
@@ -105,4 +105,4 @@
 
 ../../../libc/platform/esp32/include/sys/stdio.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lualib.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lualib.h:

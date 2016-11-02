@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/lua//modules/lora.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/modules/lora.c ../../../Lua/src/lua.h \
- ../../../main/platform/esp32/stdarg.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/modules/lora.c \
+ ../../../Lua/src/lua.h ../../../main/platform/esp32/stdarg.h \
  ../../../main/platform/esp32/stddef.h ../../../Lua/src/luaconf.h \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \
@@ -34,7 +34,7 @@
  ../../../Lua/adds/lrotable.h ../../../Lua/src/llimits.h \
  ../../../Lua/src/lobject.h ../../../Lua/src/llimits.h \
  ../../../Lua/adds/luaconf.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/modules/error.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/modules/error.h \
  ../../../Lua/src/lstate.h ../../../Lua/src/lobject.h \
  ../../../Lua/src/ltm.h ../../../Lua/src/lzio.h ../../../Lua/src/lmem.h \
  ../../../sys/drivers/error.h ../../../sys/drivers/resource.h
@@ -123,7 +123,7 @@
 
 ../../../Lua/adds/luaconf.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/modules/error.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/modules/error.h:
 
 ../../../Lua/src/lstate.h:
 

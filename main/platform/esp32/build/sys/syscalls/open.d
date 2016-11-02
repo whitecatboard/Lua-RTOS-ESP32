@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/sys//syscalls/open.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/syscalls/open.c \
- /Users/jaumeolivepetrus/LuaOS/sys/syscalls/syscalls.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/open.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/syscalls.h \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \
  ../../../libc/platform/esp32/include/limits.h \
@@ -76,7 +76,7 @@
  ../../../sys/mount.h ../../../libc/platform/esp32/include/reent.h \
  ../../../sys/syscalls/mount.h
 
-/Users/jaumeolivepetrus/LuaOS/sys/syscalls/syscalls.h:
+/Users/jaumeolivepetrus/Lua-RTOS/sys/syscalls/syscalls.h:
 
 ../../../main/platform/esp32/limits.h:
 

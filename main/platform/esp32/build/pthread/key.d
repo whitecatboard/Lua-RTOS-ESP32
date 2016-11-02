@@ -1,5 +1,6 @@
 ../../../main/platform/esp32/build/pthread//key.o: \
- /Users/jaumeolivepetrus/LuaOS/pthread/key.c ../../../include/pthread.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/pthread/key.c \
+ ../../../include/pthread.h \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  ../../../main/platform/esp32/stddef.h \
  ../../../libc/platform/esp32/include/sys/reent.h \

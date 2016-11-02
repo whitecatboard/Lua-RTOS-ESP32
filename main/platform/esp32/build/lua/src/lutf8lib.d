@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/lua//src/lutf8lib.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lutf8lib.c \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lutf8lib.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h \
  ../../../libc/platform/esp32/include/assert.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/newlib.h \
@@ -24,9 +24,9 @@
  ../../../libc/platform/esp32/include/alloca.h \
  ../../../libc/platform/esp32/include/string.h \
  ../../../libc/platform/esp32/include/sys/string.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h \
  ../../../main/platform/esp32/stdarg.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h \
  ../../../main/platform/esp32/stdint.h \
  ../../../libc/platform/esp32/include/stdint.h \
  ../../../libc/platform/esp32/include/sys/_intsup.h \
@@ -36,12 +36,12 @@
  ../../../libc/platform/esp32/include/sys/unistd.h \
  ../../../libc/platform/esp32/include/sys/types.h \
  ../../../libc/platform/esp32/include/machine/types.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lauxlib.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lauxlib.h \
  ../../../libc/platform/esp32/include/stdio.h \
  ../../../libc/platform/esp32/include/sys/stdio.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lualib.h
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lualib.h
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h:
 
 ../../../libc/platform/esp32/include/assert.h:
 
@@ -89,11 +89,11 @@
 
 ../../../libc/platform/esp32/include/sys/string.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h:
 
 ../../../main/platform/esp32/stdarg.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h:
 
 ../../../main/platform/esp32/stdint.h:
 
@@ -117,10 +117,10 @@
 
 ../../../libc/platform/esp32/include/machine/types.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lauxlib.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lauxlib.h:
 
 ../../../libc/platform/esp32/include/stdio.h:
 
 ../../../libc/platform/esp32/include/sys/stdio.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lualib.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lualib.h:

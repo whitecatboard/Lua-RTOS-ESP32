@@ -1,6 +1,6 @@
 ../../../main/platform/esp32/build/lua//src/ldblib.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/ldblib.c \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/ldblib.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h \
  ../../../libc/platform/esp32/include/stdio.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/newlib.h \
@@ -25,8 +25,8 @@
  ../../../libc/platform/esp32/include/alloca.h \
  ../../../libc/platform/esp32/include/string.h \
  ../../../libc/platform/esp32/include/sys/string.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \
  ../../../libc/platform/esp32/include/limits.h \
@@ -37,14 +37,14 @@
  ../../../Lua/modules/auxmods.h ../../../Lua/src/lua.h \
  ../../../libc/platform/esp32/include/unistd.h \
  ../../../libc/platform/esp32/include/sys/unistd.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lauxlib.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/src/lualib.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lauxlib.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lualib.h \
  ../../../Lua/adds/modules.h ../../../Lua/adds/lrodefs.h \
  ../../../Lua/adds/lrotable.h ../../../Lua/src/llimits.h \
  ../../../Lua/src/lua.h ../../../Lua/src/lobject.h \
  ../../../Lua/src/llimits.h ../../../Lua/adds/luaconf.h
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lprefix.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lprefix.h:
 
 ../../../libc/platform/esp32/include/stdio.h:
 
@@ -94,9 +94,9 @@
 
 ../../../libc/platform/esp32/include/sys/string.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lua.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lua.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/luaconf.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/luaconf.h:
 
 ../../../main/platform/esp32/limits.h:
 
@@ -122,9 +122,9 @@
 
 ../../../libc/platform/esp32/include/sys/unistd.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lauxlib.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lauxlib.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/src/lualib.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/src/lualib.h:
 
 ../../../Lua/adds/modules.h:
 

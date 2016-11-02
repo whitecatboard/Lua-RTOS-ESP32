@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/lua//common/lex.yy.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/common/lex.yy.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/common/lex.yy.c \
  ../../../main/whitecat.h ../../../libc/platform/esp32/include/stdio.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/newlib.h \
@@ -30,7 +30,7 @@
  ../../../libc/platform/esp32/include/sys/_intsup.h \
  ../../../main/platform/esp32/stdint.h \
  ../../../libc/platform/esp32/include/stdint.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/common/y.tab.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/common/y.tab.h \
  ../../../libc/platform/esp32/include/unistd.h \
  ../../../libc/platform/esp32/include/sys/unistd.h
 
@@ -96,7 +96,7 @@
 
 ../../../libc/platform/esp32/include/stdint.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/common/y.tab.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/common/y.tab.h:
 
 ../../../libc/platform/esp32/include/unistd.h:
 

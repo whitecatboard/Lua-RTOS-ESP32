@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/lua//common/linenoise.o: \
- /Users/jaumeolivepetrus/LuaOS/Lua/common/linenoise.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/common/linenoise.c \
  ../../../main/whitecat.h ../../../libc/platform/esp32/include/stdio.h \
  ../../../libc/platform/esp32/include/_ansi.h \
  ../../../libc/platform/esp32/include/newlib.h \
@@ -66,7 +66,7 @@
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/list.h \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/./../../../../../freertos/tasks_adds.h \
  ../../../sys/syscalls/mount.h \
- /Users/jaumeolivepetrus/LuaOS/Lua/common/linenoise.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/Lua/common/linenoise.h \
  ../../../Lua/src/lua.h ../../../Lua/src/luaconf.h \
  ../../../Lua/adds/luaconf.h ../../../Lua/modules/auxmods.h
 
@@ -206,7 +206,7 @@
 
 ../../../sys/syscalls/mount.h:
 
-/Users/jaumeolivepetrus/LuaOS/Lua/common/linenoise.h:
+/Users/jaumeolivepetrus/Lua-RTOS/Lua/common/linenoise.h:
 
 ../../../Lua/src/lua.h:
 

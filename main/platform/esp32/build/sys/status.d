@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//status.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/status.c ../../../sys/status.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/status.c ../../../sys/status.h \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  ../../../main/platform/esp32/stddef.h \
  ../../../libc/platform/esp32/include/sys/reent.h \

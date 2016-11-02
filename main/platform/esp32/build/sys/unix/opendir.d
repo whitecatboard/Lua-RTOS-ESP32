@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//unix/opendir.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/unix/opendir.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/unix/opendir.c \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \
  ../../../libc/platform/esp32/include/limits.h \

@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//unix/getcwd.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/unix/getcwd.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/unix/getcwd.c \
  ../../../main/platform/esp32/limits.h \
  ../../../main/platform/esp32/syslimits.h \
  ../../../libc/platform/esp32/include/limits.h \

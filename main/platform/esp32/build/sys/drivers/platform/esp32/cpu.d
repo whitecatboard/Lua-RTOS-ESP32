@@ -1,5 +1,5 @@
 ../../../main/platform/esp32/build/sys//drivers/platform/esp32/cpu.o: \
- /Users/jaumeolivepetrus/LuaOS/sys/drivers/platform/esp32/cpu.c \
+ /Users/jaumeolivepetrus/Lua-RTOS/sys/drivers/platform/esp32/cpu.c \
  ../../../main/whitecat.h \
  ../../../main/platform/esp32/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  ../../../main/platform/esp32/stddef.h \
