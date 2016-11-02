@@ -1,5 +1,6 @@
 /*
- * 
+ * Lua RTOS, file descriptor implementation
+ *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
  *
@@ -48,15 +49,16 @@
 #include <sys/panic.h>
 #include <sys/status.h>
 
-/*
- * File descriptor structure
- */
-struct  filedesc *p_fd; 
+#if PLATFORM_ESP32
+#include <rom/spi_flash.h>
+#endif
+	
+struct  filedesc *p_fd;     // File descriptor structure
+static int nfiles = 0;      // Current number of open files
+struct filelist filehead;   // Head of list of open files
 
-static int nfiles = 0;        // Actual number of open files
-
-struct filelist filehead;   /* head of list of open files */
-
+// This is the device structure. Take note that this structure is hard-coded defined
+// for save RAM space in all platforms.
 const struct device devs[] = {
 #if USE_CONSOLE
     {
@@ -73,7 +75,7 @@ const struct device devs[] = {
          fat_format}
     },
 #endif
-#if USE_CFI
+#if USE_SPIFFS
     {
         "cfi",
         {spiffs_open_op, spiffs_read_op, spiffs_write_op, NULL, NULL, 
@@ -91,11 +93,15 @@ const struct device devs[] = {
 #endif
 };
 
+// Number of defined devices
 const int ndevs = sizeof(devs) / sizeof(struct device);
 
 // Do some initializations for sys calls
 //   * initialization of file descriptor structure
 //   * creation of file drscriptor mutex
+// 
+// This function must be called before any syscall invocation, and it's called
+// during the Lua RTOS booting process in mach_init function.
 void _syscalls_init() {
     nfiles = 0;
     
@@ -120,10 +126,10 @@ void _syscalls_init() {
     // Create file descriptor mutex
     mtx_init(&fd_mtx, NULL, NULL, 0);
 	
-	status_set(STATUS_SYSCALLS_INITED);
+	status_set(STATUS_SYSCALLS_INITED);	
 }
 
-// Get number of open files (thread-safe)
+// Get number of open files
 static int get_nfiles() {
     int files;
     
@@ -134,14 +140,14 @@ static int get_nfiles() {
     return files;
 }
 
-// Increment number of open files (thread-safe)
+// Increment number of open files
 static void inc_nfiles() {
     mtx_lock(&fd_mtx);
     nfiles++;
     mtx_unlock(&fd_mtx);
 }
 
-// Decrement number of open files (thread-safe)
+// Decrement number of open files
 static void dec_nfiles() {
     mtx_lock(&fd_mtx);
     nfiles--;
@@ -317,37 +323,7 @@ int closef(fp)
 
     if (fp == NULL)
         return (0);
-    /*
-     * POSIX record locking dictates that any close releases ALL
-     * locks owned by this process.  This is handled by setting
-     * a flag in the unlock to free ONLY locks obeying POSIX
-     * semantics, and not to free BSD-style file locks.
-     * If the descriptor was in a message, POSIX-style locks
-     * aren't passed with the descriptor.
-     */
-/*
-    if (p && (p->p_flag & P_ADVLOCK) && fp->f_type == DTYPE_VNODE) {
-        lf.l_whence = SEEK_SET;
-        lf.l_start = 0;
-        lf.l_len = 0;
-        lf.l_type = F_UNLCK;
-        vp = (struct vnode *)fp->f_data;
-        (void) VOP_ADVLOCK(vp, (caddr_t)p, F_UNLCK, &lf, F_POSIX);
-    }
-    if (--fp->f_count > 0)
-        return (0);
-    if (fp->f_count < 0)
-        panic("closef: count < 0");
-    if ((fp->f_flag & FHASLOCK) && fp->f_type == DTYPE_VNODE) {
-        lf.l_whence = SEEK_SET;
-        lf.l_start = 0;
-        lf.l_len = 0;
-        lf.l_type = F_UNLCK;
-        vp = (struct vnode *)fp->f_data;
-        (void) VOP_ADVLOCK(vp, (caddr_t)fp, F_UNLCK, &lf, F_FLOCK);
-    }
-*/
-
+	
     if (fp->f_ops)
         error = (*fp->f_ops->fo_close)(fp);
     else
@@ -420,6 +396,7 @@ int dup2(int oldfd, int newfd) {
         mtx_unlock(&fd_mtx);
         error = fdalloc(new, &i);
         if (error) {
+			mtx_unlock(&fd_mtx);
             errno = error;
             return -1;
         }
@@ -439,44 +416,6 @@ int dup2(int oldfd, int newfd) {
     finishdup(fdp, (int)old, (int)new, &retval);
     
     return retval;
-}
-
-/*
- * Close a file descriptor.
- */
-int close(int fd) {
-    register struct filedesc *fdp = p_fd;
-    register struct file *fp;
-    register u_char *pf;
-    int error;
-
-    mtx_lock(&fd_mtx);
-    if ((u_int)fd >= fdp->fd_nfiles ||
-        (fp = fdp->fd_ofiles[fd]) == NULL) {
-        mtx_unlock(&fd_mtx);
-        errno = EBADF;
-        return -1;
-    }
-
-    pf = (u_char *)&fdp->fd_ofileflags[fd];
-    if (*pf & UF_MAPPED)
-        (void) munmapfd(fd);
-    fdp->fd_ofiles[fd] = NULL;
-    while (fdp->fd_lastfile > 0 && fdp->fd_ofiles[fdp->fd_lastfile] == NULL)
-        fdp->fd_lastfile--;
-    if (fd < fdp->fd_freefile)
-        fdp->fd_freefile = fd;
-    *pf = 0;
-    
-    mtx_unlock(&fd_mtx);
-    
-    error = closef(fp);
-    if (error) {
-        errno = error;
-        return -1;
-    }
-    
-    return 0;
 }
 
 int fcntl(int fd, int cmd, ... ) {

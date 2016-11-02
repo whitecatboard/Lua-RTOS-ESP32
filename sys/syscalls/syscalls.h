@@ -8,15 +8,13 @@
 #ifndef SYSCALLS_H
 #define	SYSCALLS_H
 
-#include "whitecat.h"
+#include <limits.h>
 
 #include <sys/cdefs.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/param.h>
 
 #include <errno.h>
 #include <sys/ucred.h>
@@ -27,6 +25,8 @@
 #include <sys/syscalls/device.h>
 #include <sys/mutex.h>
 #include <sys/mount.h>
+
+#include <reent.h>
 
 typedef int32_t register_t;
 
@@ -179,6 +179,23 @@ int closef(register struct file *fp);
 //#define FD_ISSET(n, p)  ((p)->fds_bits[(n)/NFDBITS] & (1 << ((n) % NFDBITS)))
 #define FD_COPY(f, t)   bcopy(f, t, sizeof(*(f)))
 //#define FD_ZERO(p)      bzero(p, sizeof(*(p)))
+
+char *normalize_path(const char *path);
+
+int __open(struct _reent *r, const char *path, int flags, ...);
+int __read(struct _reent *r, int fd, void *buf, size_t nbyte);
+int __write(struct _reent *r, int fd, const void *buf, size_t nbyte);
+int __close(struct _reent *r, int fd);
+int __fstat(struct _reent *r, int fd, struct stat *sb);
+int __stat(struct _reent *r, const char *str, struct stat *sb);
+off_t __lseek(struct _reent *r, int fd, off_t offset, int whence);
+int __unlink(struct _reent *r, const char *path);
+int __rename(struct _reent *r, const char *old_filename, const char *new_filename);
+pid_t __getpid(struct _reent *r);
+void __attribute__((__noreturn__)) __exit(int status);
+clock_t __times(struct _reent *r, struct tms *ptms);
+clock_t __clock();
+int __gettimeofday(struct _reent *r, struct timeval *tv, void *tz);
 
 #endif	/* SYSCALLS_H */
 

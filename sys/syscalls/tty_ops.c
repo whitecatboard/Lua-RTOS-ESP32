@@ -1,5 +1,5 @@
 /*
- * Whitecat, TTY wrapper functions
+ * Lua RTOS, TTY file system operations
  * 
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -26,28 +26,27 @@
  * arising out of or in connection with the use or performance of
  * this software.
  */
-#include "whitecat.h"
 
-#include <sys/cdefs.h>
-#include <stdlib.h>
-#include <sys/types.h>
-
-#if PLATFORM_ESP8266
-#include <sys/param.h>
-#endif
-
-#if PLATFORM_PIC32MZ
 #include <limits.h>
-#endif
 
+#include <string.h>
+#include <ctype.h>
+#include <unistd.h> 
+#include <sys/dirent.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/filedesc.h>
 #include <sys/uio.h>
 #include <sys/file.h>
+#include <sys/stat.h>
+#include <sys/syslog.h>
+
 #include <pthread.h>
 
 #include <sys/drivers/uart.h>
 
-static pthread_mutex_t tty_mutex = NULL;                
+static pthread_mutex_t tty_mutex = PTHREAD_MUTEX_INITIALIZER;                
 
 #if USE_DISPLAY
 static int redirect_to_display;
@@ -91,7 +90,7 @@ int tty_read(struct file *fp, struct uio *uio, struct ucred *cred) {
 int tty_write(struct file *fp, struct uio *uio, struct ucred *cred) {
     int unit = fp->f_devunit;
     char *buf = uio->uio_iov->iov_base;
-
+	
 #if USE_DISPLAY	
     char dbuf[2];    
     dbuf[1] = '\0';
@@ -105,7 +104,7 @@ int tty_write(struct file *fp, struct uio *uio, struct ucred *cred) {
 
         pthread_mutex_init(&tty_mutex, &attr);
     }
-    
+
     pthread_mutex_lock(&tty_mutex);
 
     while (uio->uio_iov->iov_len) {

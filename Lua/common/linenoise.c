@@ -503,6 +503,7 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
         char seq[3];
 
         nread = read(l.ifd,&c,1);
+
         if (nread <= 0) return l.len;
 
         switch(c) {

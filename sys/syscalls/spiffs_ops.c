@@ -1,5 +1,5 @@
 /*
- * Whitecat, SPIFFS wrapper functions
+ * Lua RTOS, SPIFFS file system operations
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -27,7 +27,7 @@
  * this software.
  */
 
-#include "whitecat.h"
+#include <limits.h>
 
 #include <string.h>
 #include <ctype.h>
@@ -36,7 +36,6 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/param.h>
 #include <sys/filedesc.h>
 #include <sys/uio.h>
 #include <sys/file.h>
@@ -62,7 +61,7 @@ static u8_t *my_spiffs_cache;
 // Determine if path correspond to a directory entry
 int is_dir(const char *path) {
     spiffs_DIR d;
-    char npath[MAXPATHLEN];
+    char npath[PATH_MAX];
     int res = 0;
     
     struct spiffs_dirent e;
@@ -72,7 +71,7 @@ int is_dir(const char *path) {
     if (strcmp(path,"/") != 0) {
         strcat(npath,"/.");
     }
-    
+
     SPIFFS_opendir(&fs, "/", &d);   
     while (SPIFFS_readdir(&d, &e)) {
         if (strncmp(npath, (const char *)e.name, strlen(npath)) == 0) {
@@ -113,7 +112,7 @@ int spiffs_open_op(struct file *fp, int flags) {
     spiffs_file *FP;
     char *path = fp->f_path;
     int result = 0;
-	
+
     // Calculate open mode
     if (flags == O_RDONLY)
         mode |= SPIFFS_RDONLY;
@@ -147,7 +146,7 @@ int spiffs_open_op(struct file *fp, int flags) {
     if (strcmp(path,"/") == 0) {
         return 0;
     }
-    
+
     if (is_dir(path)) {
         return 0;        
     }
@@ -230,10 +229,14 @@ int spiffs_stat_op(struct file *fp, struct stat *sb) {
     sb->st_blksize = SPIFFS_LOG_PAGE_SIZE;
 #endif
 
+#if PLATFORM_ESP32
+    sb->st_blksize = SPIFFS_LOG_PAGE_SIZE;
+#endif
+
 #if PLATFORM_PIC32MZ
     sb->st_blksize = cfi->pagesiz;
 #endif
-	
+
     // First test if it's a directory entry
     if (is_dir(fp->f_path)) {
         sb->st_mode = S_IFDIR;
@@ -290,7 +293,7 @@ int spiffs_unlink_op(struct file *fp) {
 
     res = spiffs_fd_get(&fs, fh, &fd);
     if (res == SPIFFS_ERR_BAD_DESCRIPTOR) {
-        char npath[MAXPATHLEN];
+        char npath[PATH_MAX];
 
         strcpy(npath, fp->f_path);
 
@@ -316,7 +319,7 @@ int spiffs_opendir_op(struct file *fp) {
     if (!fp->f_dir) {
         return ENOMEM;
     }
-    
+
     if (!SPIFFS_opendir(&fs, fp->f_path, fp->f_dir)) {
         free(fp->f_dir);
         
@@ -327,7 +330,7 @@ int spiffs_opendir_op(struct file *fp) {
 }
 
 int spiffs_mkdir_op(const char *path) {
-    char npath[MAXPATHLEN];
+    char npath[PATH_MAX];
 
     if (is_dir(path)) {
         return EEXIST;
@@ -357,7 +360,7 @@ int spiffs_readdir_op(struct file *fp, struct dirent *ent) {
     char *fn;
     int res = 0;
     int len = 0;
-    
+
     *ent->d_name = '\0';
     for(;;) {
         // Read directory        
@@ -441,8 +444,8 @@ int spiffs_readdir_op(struct file *fp, struct dirent *ent) {
 void spiffs_copy_image(const char *path) {
     DIR *dir = NULL;
     struct dirent *ent;
-    char npaths[MAXPATHLEN];
-    char npathd[MAXPATHLEN];
+    char npaths[PATH_MAX];
+    char npathd[PATH_MAX];
     FILE *fsrc, *fdst;
     char c;
     
@@ -481,15 +484,6 @@ void spiffs_copy_image(const char *path) {
 }
 */
 
-int spiffs_format() {    
-    SPIFFS_unmount(&fs);
-    SPIFFS_format(&fs);
-    
-    //cpu_reset();
-	
-	return 0;
-}
-
 int spiffs_mount() {
 #if PLATFORM_PIC32MZ
     struct cfi *cfi;
@@ -517,9 +511,7 @@ int spiffs_mount() {
     cfg.phys_erase_block = cfi->sectsiz;
     cfg.log_block_size = cfi->sectsiz;
     cfg.log_page_size = cfi->pagesiz;
-#endif
-
-#if PLATFORM_ESP8266
+#else
     cfg.phys_addr 		 = SPIFFS_BASE_ADDR;
     cfg.phys_size 		 = SPIFFS_SIZE;
     cfg.phys_erase_block = SPIFFS_ERASE_SIZE;
@@ -530,7 +522,7 @@ int spiffs_mount() {
            unit, cfg.phys_addr, cfg.phys_size / 1024
     );
 #endif
-		       
+
 	cfg.hal_read_f  = low_spiffs_read;
 	cfg.hal_write_f = low_spiffs_write;
 	cfg.hal_erase_f = low_spiffs_erase;
@@ -568,7 +560,7 @@ retry:
 
     res = SPIFFS_mount(
             &fs, &cfg, my_spiffs_work_buf, my_spiffs_fds,
-            fds_len, my_spiffs_cache, cache_len,NULL
+            fds_len, my_spiffs_cache, cache_len, NULL
     );
 
     if (res < 0) {
@@ -598,4 +590,15 @@ retry:
 int spiffs_init() {
     return spiffs_mount();
 }
+
+int spiffs_format() {    
+    SPIFFS_unmount(&fs);
+    SPIFFS_format(&fs);
+    
+	spiffs_mount();
+	spiffs_mkdir_op("/.");
+	
+	return 0;
+}
+
 #endif

@@ -1,5 +1,5 @@
 /*
- * Whitecat, unlink sys call implementation
+ * Lua RTOS, unlink syscall implementation
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -29,15 +29,16 @@
 
 #include "syscalls.h"
 
-extern char *normalize_path(const char *path);
+#include <reent.h>
 
-int unlink(const char *path) {
+int __unlink(struct _reent *r, const char *path) {
     struct file *fp;
     char *npath;
     int res;
     int fd;
     
     npath = normalize_path(path);
+
     if (!npath) {
         return -1;
     }

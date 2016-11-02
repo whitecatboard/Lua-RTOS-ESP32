@@ -29,11 +29,12 @@
 
 #include "pthread.h"
 #include "linenoise.h"
+
+#include <limits.h>
+
+#include <sys/status.h>
 #include <sys/debug.h>
 #include <sys/syscalls/mount.h>
-
-#include <sys/param.h>
-#include <sys/status.h>
 
 static int dofile (lua_State *L, const char *name);
 
@@ -72,7 +73,7 @@ static void get_prompt (lua_State *L, int firstline, char *path) {
 
   if (p == NULL) {
       if (firstline) {
-          if (getcwd(path, MAXPATHLEN + 10)) {
+          if (getcwd(path, PATH_MAX + 10)) {
               path = strcat(path, " ");
               path = strcat(path, LUA_PROMPT);
           }
@@ -87,7 +88,7 @@ static void get_prompt (lua_State *L, int firstline, char *path) {
 
 static int luaos_pushline (lua_State *L, int firstline) {
   char buffer[LUA_MAXINPUT];
-  char prmt[MAXPATHLEN + 20];
+  char prmt[PATH_MAX + 20];
   
   char *b = buffer;
   size_t l;

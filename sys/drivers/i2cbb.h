@@ -27,6 +27,8 @@
  * this software.
  */
 
+#if LUA_USE_I2C
+
 #ifndef I2CBB_H
 #define I2CBB_H
 
@@ -44,3 +46,4 @@ void i2c_bb_stop(i2c_t *unit);
 
 #endif /* I2CBB_H */
 
+#endif

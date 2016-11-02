@@ -27,6 +27,8 @@
  * this software.
  */
 
+#if LUA_USE_I2C
+
 #ifndef I2C_H
 #define I2C_H
 
@@ -62,3 +64,5 @@ char i2c_read(int unit);
 int  i2c_write(int unit, char data);
 
 #endif /* I2C_H */
+
+#endif

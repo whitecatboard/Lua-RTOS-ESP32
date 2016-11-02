@@ -1,7 +1,7 @@
 #include "syscalls.h"
 #include <sys/syscalls/mount.h>
 
-static char currdir[MAXPATHLEN] = "/";
+static char currdir[PATH_MAX] = "/";
 static char currdev[4] = "";
 
 extern struct file *getfile(int fd);
@@ -23,7 +23,7 @@ int chdir(const char *path) {
 
     int fd;
     
-    if (strlen(path) > MAXPATHLEN) {
+    if (strlen(path) > PATH_MAX) {
         errno = ENAMETOOLONG;
         return -1;
     }

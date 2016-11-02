@@ -1,186 +1,130 @@
 #include "syscalls.h"
-#include <stdarg.h>
 
 extern const struct filedesc *p_fd;
 
-int read(int fd, void *buf, size_t nbyte) {
-    register struct file *fp;
-    const struct filedesc *fdp = p_fd;
-    struct uio auio;
-    struct iovec aiov;
-    long cnt, error = 0;
-
-    mtx_lock(&fd_mtx);
-    if (((u_int)fd) >= fdp->fd_nfiles ||
-        (fp = fdp->fd_ofiles[fd]) == NULL ||
-        (fp->f_flag & FREAD) == 0) {
-        mtx_unlock(&fd_mtx);
-        errno = EBADF;
-        return -1;
-    }
-    mtx_unlock(&fd_mtx);
-
-    aiov.iov_base = (caddr_t)buf;
-    aiov.iov_len = nbyte;
-    auio.uio_iov = &aiov;
-    auio.uio_iovcnt = 1;
-    auio.uio_resid = nbyte;
-    auio.uio_rw = UIO_READ;
-
-    cnt = nbyte;
-    error = (*fp->f_ops->fo_read)(fp, &auio, NULL);
-    if (error && auio.uio_resid != cnt &&
-        (error == ERESTART || error == EINTR || error == EWOULDBLOCK))
-        error = 0;
-
-    cnt -= auio.uio_resid;
+// This function normalize a path passed as an argument, doing the
+// following normalization actions:
+//
+// 1) If path is a relative path, preapend the current working directory
+//
+//    example:
+//
+//		if path = "blink.lua", and current working directory is "/examples", path to
+//      normalize is "/examples/blink.lua"
+//
+// 2) Process ".." (parent directory) elements in path
+//
+//    example:
+//
+//		if path = "/examples/../autorun.lua" normalized path is "/autorun.lua"
+//
+// 3) Process "." (current directory) elements in path
+//
+//    example:
+//
+//		if path = "/./autorun.lua" normalized path is "/autorun.lua"
+char *normalize_path(const char *path) {
+    char *rpath;
+    char *cpath;
+    char *tpath;
+    char *last;
+    int maybe_is_dot = 0;
+    int maybe_is_dot_dot = 0;
+    int is_dot = 0; 
+    int is_dot_dot = 0;
+    int plen = 0;
     
-    if (error) {
-        errno = error;
-        return -1;
-    }
-    
-    return cnt;
-}
-
-int write(int fd, const void *buf, size_t nbyte) {
-    register struct file *fp;
-    const struct filedesc *fdp = p_fd;
-    struct uio auio;
-    struct iovec aiov;
-    long cnt, error = 0;
-
-    mtx_lock(&fd_mtx);
-    if (((u_int)fd) >= fdp->fd_nfiles ||
-        (fp = fdp->fd_ofiles[fd]) == NULL ||
-        (fp->f_flag & FWRITE) == 0) {
-        mtx_unlock(&fd_mtx);
-        errno = EBADF;
-        return -1;
-    }
-    mtx_unlock(&fd_mtx);
-
-    aiov.iov_base = (caddr_t)buf;
-    aiov.iov_len = nbyte;
-    auio.uio_iov = &aiov;
-    auio.uio_iovcnt = 1;
-    auio.uio_resid = nbyte;
-    auio.uio_rw = UIO_WRITE;
-
-    cnt = nbyte;
-
-    error = (*fp->f_ops->fo_write)(fp, &auio, NULL);
-    if (error) {
-        if (auio.uio_resid != cnt && (error == ERESTART ||
-            error == EINTR || error == EWOULDBLOCK))
-            error = 0;
-     //   if (error == EPIPE)
-//TO DO
-            //            psignal(p, SIGPIPE);
-    }
-    cnt -= auio.uio_resid;
-    
-    if (error) {
-        errno = error;
-        return -1;
+    rpath = malloc(PATH_MAX);
+    if (!rpath) {
+        errno = ENOMEM;
+        return NULL;
     }
     
-    return cnt;
-}
-    
-/*
- * Gather write system call
- */
-ssize_t writev(int fd, struct iovec *iovp, int iovcnt) {
-    register struct file *fp;
-    const struct filedesc *fdp = p_fd;
-    struct uio auio;
-    register struct iovec *iov;
-    struct iovec *needfree;
-    struct iovec aiov[UIO_SMALLIOV];
-    long i, cnt = 0, error = 0;
-    u_int iovlen;
-#ifdef KTRACE
-    struct iovec *ktriov = NULL;
-#endif
-
-    mtx_lock(&fd_mtx);
-    if (fd >= fdp->fd_nfiles ||
-        (fp = fdp->fd_ofiles[fd]) == NULL ||
-        (fp->f_flag & FWRITE) == 0) {
-        mtx_unlock(&fd_mtx);
-        errno = EBADF;
-        return -1;
-    }
-    mtx_unlock(&fd_mtx);
- 
-    /* note: can't use iovlen until iovcnt is validated */
-    iovlen = iovcnt * sizeof (struct iovec);
-    if (iovcnt > UIO_SMALLIOV) {
-        if (iovcnt > UIO_MAXIOV) {
-            errno = EINVAL;
-            return -1;
+    // If it's a relative path preappend current working directory
+    if (*path != '/') {
+        if (!getcwd(rpath, PATH_MAX)) {
+            free(rpath);
+            return NULL;
         }
-
-        MALLOC(iov, struct iovec *, iovlen, M_IOV, M_WAITOK);
-        needfree = iov;
+         
+        if (*(rpath + strlen(rpath) - 1) != '/') {
+            rpath = strcat(rpath, "/");  
+        }
+        
+        rpath = strcat(rpath, path);        
     } else {
-        iov = aiov;
-        needfree = NULL;
+        strcpy(rpath, path);
     }
-
-    auio.uio_iov = iov;
-    auio.uio_iovcnt = iovcnt;
-    auio.uio_rw = UIO_WRITE;
     
-    bcopy(iovp, iov, iovlen);
-
-    auio.uio_resid = 0;
-    for (i = 0; i < iovcnt; i++) {
-        if (auio.uio_resid + iov->iov_len < auio.uio_resid) {
-            error = EINVAL;
-            goto done;
+    plen = strlen(rpath);
+    if (*(rpath + plen - 1) != '/') {
+        rpath = strcat(rpath, "/");  
+        plen++;
+    }
+    
+    cpath = rpath;
+    while (*cpath) {
+        if (*cpath == '.') {
+            if (maybe_is_dot) {
+                maybe_is_dot_dot = 1;
+                maybe_is_dot = 0;
+            } else {
+                maybe_is_dot = 1;
+            }
+        } else {
+            if (*cpath == '/') {
+                is_dot_dot = maybe_is_dot_dot;
+                is_dot = maybe_is_dot && !is_dot_dot;
+            } else {
+                maybe_is_dot_dot = 0;
+                maybe_is_dot = 0;
+            }
         }
-        auio.uio_resid += iov->iov_len;
-        iov++;
-    }
 
-#ifdef KTRACE
-    /*
-     * if tracing, save a copy of iovec
-     */
-    if (KTRPOINT(p, KTR_GENIO))  {
-        MALLOC(ktriov, struct iovec *, iovlen, M_TEMP, M_WAITOK);
-        bcopy((caddr_t)auio.uio_iov, (caddr_t)ktriov, iovlen);
-    }
-#endif
-    cnt = auio.uio_resid;
-    error = (*fp->f_ops->fo_write)(fp, &auio, NULL);
-    if (error) {
-        if (auio.uio_resid != cnt && (error == ERESTART ||
-            error == EINTR || error == EWOULDBLOCK))
-            error = 0;
+        if (is_dot_dot) {
+            last = cpath + 1;
+            
+            while (*--cpath != '/');
+            while (*--cpath != '/');
+            
+            tpath = ++cpath;
+            while (*last) {
+                *tpath++ = *last++;
+            }
+            *tpath = '\0';
+            
+            is_dot_dot = 0;
+            is_dot = 0;
+            maybe_is_dot = 0;
+            maybe_is_dot_dot = 0; 
+            continue;
+        }        
+
+        if (is_dot) {
+            last = cpath + 1;
+            
+            while (*--cpath != '/');
+            
+            tpath = ++cpath;
+            while (*last) {
+                *tpath++ = *last++;
+            }
+            *tpath = '\0';
+            
+            is_dot_dot = 0;
+            is_dot = 0;
+            maybe_is_dot = 0;
+            maybe_is_dot_dot = 0; 
+            continue;
+        }        
+        
+        cpath++;           
     }
     
-    cnt -= auio.uio_resid;
-
-#ifdef KTRACE
-    if (ktriov != NULL) {
-        if (error == 0)
-            ktrgenio(p->p_tracep, SCARG(uap, fd), UIO_WRITE,
-                ktriov, cnt, error);
-        FREE(ktriov, M_TEMP);
+    cpath--;
+    if ((cpath != rpath) && (*cpath == '/')) {
+        *cpath = '\0';
     }
-#endif
-
-done:
-    if (needfree)
-        FREE(needfree, M_IOV);
-
-    if (error) {
-        errno = error;
-        return -1;
-    }
-
-    return (cnt);
+    
+    return rpath;
 }

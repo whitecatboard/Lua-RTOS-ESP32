@@ -128,6 +128,9 @@ static time_t l_checktime (lua_State *L, int arg) {
 
 
 static int os_execute (lua_State *L) {
+  return luaL_error(L, "not allowed");
+
+#if 0
   const char *cmd = luaL_optstring(L, 1, NULL);
   int stat = system(cmd);
   if (cmd != NULL)
@@ -136,6 +139,7 @@ static int os_execute (lua_State *L) {
     lua_pushboolean(L, stat);  /* true if there is a shell */
     return 1;
   }
+#endif
 }
 
 
@@ -399,7 +403,7 @@ static const LUA_REG_TYPE syslib[] =
   { LSTRKEY( "luarunning" ), LFUNCVAL( os_lua_running ) },
   { LSTRKEY( "luainterpreter" ), LFUNCVAL( os_lua_interpreter ) },
   { LSTRKEY( "resetreason" ), LFUNCVAL( os_reset_reason ) },
-#if LUA_USE_EDITOR
+#if (LUA_USE_EDITOR == 1)
   { LSTRKEY( "edit" ),       LFUNCVAL( os_edit ) },
 #endif
   { LSTRKEY( "LOG_EMERG" ),  LINTVAL( LOG_EMERG ) },

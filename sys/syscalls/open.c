@@ -1,5 +1,5 @@
 /*
- * Whitecat, minimal open syscall implementation
+ * Lua RTOS, open syscall implementation
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -29,8 +29,8 @@
 
 #include "syscalls.h"
 
+#include <reent.h>
 #include <string.h>
-#include <stdarg.h>
 
 #include <sys/syscalls/mount.h>
 
@@ -38,143 +38,35 @@ extern struct filedesc *p_fd;
 extern const struct device devs[];
 extern const int ndevs;
 
-char *normalize_path(const char *path) {
-    char *rpath;
-    char *cpath;
-    char *tpath;
-    char *last;
-    int maybe_is_dot = 0;
-    int maybe_is_dot_dot = 0;
-    int is_dot = 0; 
-    int is_dot_dot = 0;
-    int plen = 0;
-    
-    rpath = malloc(MAXPATHLEN);
-    if (!rpath) {
-        errno = ENOMEM;
-        return NULL;
-    }
-    
-    // If it's a relative path preappend current working directory
-    if (*path != '/') {
-        if (!getcwd(rpath, MAXPATHLEN)) {
-            free(rpath);
-            return NULL;
-        }
-         
-        if (*(rpath + strlen(rpath) - 1) != '/') {
-            rpath = strcat(rpath, "/");  
-        }
-        
-        rpath = strcat(rpath, path);        
-    } else {
-        strcpy(rpath, path);
-    }
-    
-    plen = strlen(rpath);
-    if (*(rpath + plen - 1) != '/') {
-        rpath = strcat(rpath, "/");  
-        plen++;
-    }
-    
-    cpath = rpath;
-    while (*cpath) {
-        if (*cpath == '.') {
-            if (maybe_is_dot) {
-                maybe_is_dot_dot = 1;
-                maybe_is_dot = 0;
-            } else {
-                maybe_is_dot = 1;
-            }
-        } else {
-            if (*cpath == '/') {
-                is_dot_dot = maybe_is_dot_dot;
-                is_dot = maybe_is_dot && !is_dot_dot;
-            } else {
-                maybe_is_dot_dot = 0;
-                maybe_is_dot = 0;
-            }
-        }
-
-        if (is_dot_dot) {
-            last = cpath + 1;
-            
-            while (*--cpath != '/');
-            while (*--cpath != '/');
-            
-            tpath = ++cpath;
-            while (*last) {
-                *tpath++ = *last++;
-            }
-            *tpath = '\0';
-            
-            is_dot_dot = 0;
-            is_dot = 0;
-            maybe_is_dot = 0;
-            maybe_is_dot_dot = 0; 
-            continue;
-        }        
-
-        if (is_dot) {
-            last = cpath + 1;
-            
-            while (*--cpath != '/');
-            
-            tpath = ++cpath;
-            while (*last) {
-                *tpath++ = *last++;
-            }
-            *tpath = '\0';
-            
-            is_dot_dot = 0;
-            is_dot = 0;
-            maybe_is_dot = 0;
-            maybe_is_dot_dot = 0; 
-            continue;
-        }        
-        
-        cpath++;           
-    }
-    
-    cpath--;
-    if ((cpath != rpath) && (*cpath == '/')) {
-        *cpath = '\0';
-    }
-    
-    return rpath;
-}
-
-int devopen(fp, fname)
-    struct file *fp;
-    char *fname;
-{
-    register char *ncp;
-    register char *c;
-    register int i;
-    int unit = 0;
-    char namebuf[20];
-
+// This function opens the device linked to a file name, and assign the
+// device low-level operations needed for access the file
+//
+// File name can belong to the device tree, or the file system
+//
+// Device tree: /dev/DDDU, where DDD is the device name, and U the device unit
+static int devopen(struct file *fp, char *fname) {
+	char tmp[PATH_MAX + 5];
+	char *dev_name;
+	int unit = 0;
+    char *c;
+	
     c = fname;
-    ncp = namebuf;
 
     if (*c != '/') {
         // File name is relative, only can belong to the file system
         goto fs;
     }
     
-    *ncp++ = *c++;
-    
+	c++;
+
     // File name is absolute, we must test if it's part of the device tree
     // or the file system
-    while ((*c != '/') && (*c != '\0')) {
-        *ncp++ = *c++;
+	while ((*c != '/') && (*c != '\0')) {
+        c++;
     }
     
     if (*c == '/') {
-        *ncp++ = *c++;
-        *ncp = '\0';
-        
-        if (strcmp(namebuf, "/dev/") == 0) {
+        if (strncmp(fname, "/dev/", (c - fname - 1)) == 0) {
             // File name is /dev/xxxx, only can belong to device tree
             goto device;
         } else {
@@ -187,77 +79,76 @@ int devopen(fp, fname)
     }
     
 device:
-    // Get the device name, and unit
-    ncp = namebuf;
+	// File name belongs to the device tree
+	dev_name = ++c;
 
+	// Get unit
     while (((*c < '0') || (*c > '9')) && (*c != '\0')) {
-        *ncp++ = *c++;
+		c++;
     }
-
-    *ncp = '\0';
 
     if ((*c >= '0') && (*c <= '9')) {
         unit = ((int)(*c)) - (int)'0';
     } else {
         return (ENXIO);
     }
-    
+
     // Store device unit
     fp->f_devunit = unit;
 
-    // namebuff has the device name, example: tty
-    // unit has the unit number of the device
-
+	c--;
+	
     goto find;
     
-fs:
-    strcpy(namebuf, mount_device(fname));
-    if (!mount_is_mounted(namebuf)) {
+fs:    
+	strcpy(tmp, mount_device(fname));
+
+    if (!mount_is_mounted(tmp)) {
         return (ENXIO);   
     }
 
-find:
-    // store device name
-    fp->f_devname = (char *)malloc(sizeof(char) * strlen(namebuf));
+	dev_name = tmp;
+	c = tmp + strlen(tmp) - 1;
+
+find:	
+    // Store device name
+    fp->f_devname = (char *)calloc(1, sizeof(char) * (c - dev_name + 2));
     if (!fp->f_devname) {
         return ENOMEM;
     }
         
-    strcpy(fp->f_devname, namebuf);
+    memcpy(fp->f_devname, dev_name, c - dev_name + 1);
 
-    // find device and get it's ops
+    // Find device and get it's ops
+	int i;
+	
     for(i=0;i < ndevs;i++) {
-        if (strcmp(devs[i].d_name, namebuf) == 0) {
+        if (strcmp(devs[i].d_name, fp->f_devname) == 0) {
             fp->f_ops = (struct fileops *)&(devs[i].d_ops);
             return 0;
         }
     }
     
-  
     return (ENXIO);        
 }
-    
-/*
- * Check permissions, allocate an open file structure,
- * and call the device open routine if any.
- */
-int open(const char *path, int flags, ...) {
+
+int __open(struct _reent *r, const char *path, int flags, ...) {
     register struct filedesc *fdp = p_fd;
     struct file *fp;
-    int indx, error;
-    
+    int fd, error;
+
     // Alloc file
-    error = falloc(&fp, &indx);
+    error = falloc(&fp, &fd);
     if (error) {
-        errno = error;
+        __errno_r(r) = error;
         return -1;
     }
     
-    // Normalize path and store into file
+    // Normalize path
     fp->f_path = normalize_path(path);
     if (!fp->f_path) {
         closef(fp);
-        fdp->fd_ofiles[indx] = NULL;
+        fdp->fd_ofiles[fd] = NULL;
         return -1;
     }
 
@@ -266,22 +157,22 @@ int open(const char *path, int flags, ...) {
     // Open device, and assign to file
     error = devopen(fp, fp->f_path);
     if (error) {
-        errno = error;
+        __errno_r(r) = error;
         closef(fp);
-        fdp->fd_ofiles[indx] = NULL;
+        fdp->fd_ofiles[fd] = NULL;
         return -1;
     }
     
     fp->f_path = mount_root(fp->f_path);
-    
+
     // Try to open 
     error = (*fp->f_ops->fo_open)(fp, flags);
     if (error) {
-        errno = error;
+        __errno_r(r) = error;
         closef(fp);
-        fdp->fd_ofiles[indx] = NULL;
+        fdp->fd_ofiles[fd] = NULL;
         return -1;
     }
     
-    return indx;
+    return fd;
 }

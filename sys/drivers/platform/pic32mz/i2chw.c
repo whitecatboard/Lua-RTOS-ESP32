@@ -27,6 +27,8 @@
  * this software.
  */
 
+#if LUA_USE_I2C
+
 #include "whitecat.h"
 
 #include <unistd.h>
@@ -142,3 +144,5 @@ void i2c_hw_stop(i2c_t *unit) {
     // Waiting for done
     while (*(&I2C1CON + unit->unit * 0x200) & (1 << 2));
 }
+
+#endif

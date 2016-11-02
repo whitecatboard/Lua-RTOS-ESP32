@@ -1,5 +1,5 @@
 /*
- * Whitecat, clock driver
+ * Lua RTOS, clock driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -30,10 +30,13 @@
 #ifndef CLOCK_H
 #define	CLOCK_H
 
-#include <sys/types.h>
+#include <time.h>
+#include <stdint.h>
 
-void newTick(void);
-void set_time_s(u32_t secs);
+void    __newTick(void);
+clock_t __ticks(void);
+uint32_t __tseconds();
+uint32_t __tuseconds();
 
 #endif	/* CLOCK_H */
 

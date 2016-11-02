@@ -27,6 +27,8 @@
  * this software.
  */
 
+#if LUA_USE_I2C
+
 #ifndef I2SHW_H
 #define I2SHW_H
 
@@ -44,3 +46,4 @@ void i2c_hw_stop(i2c_t *unit);
 
 #endif /* I2SHW_H */
 
+#endif

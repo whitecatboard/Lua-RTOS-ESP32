@@ -1,60 +1,47 @@
+/*
+ * Lua RTOS, newlib stubs
+ *
+ * Copyright (C) 2015 - 2016
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * 
+ * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ * 
+ * All rights reserved.  
+ *
+ * Permission to use, copy, modify, and distribute this software
+ * and its documentation for any purpose and without fee is hereby
+ * granted, provided that the above copyright notice appear in all
+ * copies and that both that the copyright notice and this
+ * permission notice and warranty disclaimer appear in supporting
+ * documentation, and that the name of the author not be used in
+ * advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.
+ *
+ * The author disclaim all warranties with regard to this
+ * software, including all implied warranties of merchantability
+ * and fitness.  In no event shall the author be liable for any
+ * special, indirect or consequential damages or any damages
+ * whatsoever resulting from loss of use, data or profits, whether
+ * in an action of contract, negligence or other tortious action,
+ * arising out of or in connection with the use or performance of
+ * this software.
+ */
+
 #include "FreeRTOS.h"
 #include "task.h"
 #include "syscalls.h"
-#include <stdio.h>
-#include <sys/reent.h>
-#include <sys/types.h>
-#include <sys/times.h>
-#include <sys/status.h>
+#include "lua.h"
 
+#include <sys/reent.h>
+#include <sys/status.h>
 #include <sys/drivers/clock.h>
 #include <sys/drivers/uart.h>
 
-extern int __rename(const char *old_filename, const char *new_filename);
-extern pid_t getpid(void);
 extern void luaC_fullgc (lua_State *L, int isemergency);
 
-extern int read(int fd, void *buf, size_t nbyte);
-extern int write(int fd, const void *buf, size_t nbyte);
-
-void vPortFree(void *pv);
-void *pvPortMalloc(size_t xWantedSize);
-void *pvPortRealloc(void *pv, size_t size);
-long long ticks();
-
-int __open(const char *path, int flags, ...);
-int __close(int fd);
-int __unlink(const char *path);
-int __unlink(const char *path);
-int __fstat(int fd, struct stat *sb);
-int _stat_r(struct _reent *r, const char *pathname, void *buf);
-off_t __lseek(int fd, off_t offset, int whence);
-int __read(int fd, void *buf, size_t nbyte);
-
-clock_t _clock_(void) {
-	return (clock_t)ticks();
-}
-
-int __remove_r(struct _reent *r, const char *_path) {
-	return (unlink(_path));
-}
-
-int _rename_r(struct _reent *r, const char *_old, const char *_new) {
-	return __rename(_old, _new);
-}
-
-pid_t _getpid_r(struct _reent *r) {
-	return getpid();
-}
-
-int _kill_r(struct _reent *r, int pid, int sig) {
-	return 0;
-}
-
-clock_t _times_r(struct _reent *r, struct tms *ptms) {
-	return ticks();
-}
-
+#if !PLATFORM_ESP32
+// If memory cannot be allocated, launch Lua garbage collector and
+// try again with the hope that then more memory will be available
 // WRAP for malloc
 //
 // If memory cannot be allocated, launch Lua garbage collector and
@@ -116,53 +103,64 @@ void* __wrap_realloc(void *ptr, size_t bytes) {
 	return nptr;
 }
 
-extern uint32_t _irom0_text_start;
-extern uint32_t _irom0_text_end;
-
 extern void __real_free(void *ptr);
 void __wrap_free(void *ptr) {
 	__real_free(ptr);
 }
+#endif
 
-unsigned sleep(unsigned int secs) {
-    vTaskDelay( (secs * 1000) / portTICK_PERIOD_MS );
-    
-    return 0;
-}
-
-int usleep(useconds_t usec) {
-	vTaskDelay(usec / portTICK_PERIOD_US);
+int __open_r(struct _reent *r, const char *pathname, int flags, int mode) {
+	if (status_get(STATUS_SYSCALLS_INITED)) {
+		return __open(r, pathname, flags, mode);
+	}
 	
 	return 0;
 }
- 
-int _open_r(struct _reent *r, const char *pathname, int flags, int mode) {
-	return open(pathname, flags, mode);
+
+int __close_r(struct _reent *r, int fd) {
+	return __close(r, fd);
 }
 
-int _close_r(struct _reent *r, int fd) {
-	return close(fd);
+int  __unlink_r(struct _reent *r, const char *path) {
+	return __unlink(r, path);
 }
 
-int _unlink_r(struct _reent *r, const char *path) {
-	return unlink(path);
+int __remove_r(struct _reent *r, const char *_path) {
+	return (__unlink(r, _path));
 }
 
-int _fstat_r(struct _reent *r, int fd, void *buf) {
-	return fstat(fd, buf);
+int __rename_r(struct _reent *r, const char *_old, const char *_new) {
+	return __rename(r, _old, _new);
+}
+
+int __fstat_r(struct _reent *r, int fd, struct stat * st) {
+	if (status_get(STATUS_SYSCALLS_INITED)) {
+		return __fstat(r, fd, st);		
+	}
+
+	st->st_mode = S_IFCHR;
+    return 0;	
 }	
 
-int _stat_r(struct _reent *r, const char *pathname, void *buf) {
-	return stat(pathname, buf);
+int __stat_r(struct _reent *r, const char * path, struct stat * st) {
+	return __stat(r, path, st);
 }
 
-off_t _lseek_r(struct _reent *r, int fd, off_t offset, int whence) {
-	return lseek(fd, offset, whence);
+_off_t __lseek_r(struct _reent *r, int fd, _off_t size, int mode) {
+	return __lseek(r, fd, size, mode);
 }
 
-int _write_r(struct _reent *r, int fd, const void *buf, size_t nbyte) {
+ssize_t __read_r(struct _reent *r, int fd, void *buf, size_t nbyte) {
 	if (status_get(STATUS_SYSCALLS_INITED)) {
-		return write(fd, buf, nbyte);		
+		return __read(r, fd, buf, nbyte);		
+	}
+
+	return nbyte;
+}
+
+ssize_t __write_r(struct _reent *r, int fd, const void *buf, size_t nbyte) {	
+	if (status_get(STATUS_SYSCALLS_INITED)) {
+		return __write(r, fd, buf, nbyte);		
 	} else {
 		int i = 0;
 		
@@ -175,54 +173,29 @@ int _write_r(struct _reent *r, int fd, const void *buf, size_t nbyte) {
 	return nbyte;
 }
 
-int _read_r(struct _reent *r, int fd, void *buf, size_t nbyte) {
-	if (status_get(STATUS_SYSCALLS_INITED)) {
-		return read(fd, buf, nbyte);		
-	}
-	
-	return nbyte;
+pid_t __getpid_r(struct _reent *r) {
+	return __getpid(r);
 }
 
-int _isatty_r(struct _reent *r, int fd) {
-	return (fd < 3);
-} 
-
-int isatty(int fd) {
-	return _isatty_r(_REENT, fd);
+clock_t __times_r(struct _reent *r, struct tms *ptms) {
+	return __times(r, ptms);
 }
-	
-#ifdef PLATFORM_PIC32MZ
-#include <malloc.h>
 
-extern void *xPortSupervisorStackPointer;
-static char *heap_end = NULL;
+int __gettimeofday_r(struct _reent *r, struct timeval *tv, void *tz) {
+	return __gettimeofday(r, tv, tz);
+}
+
+unsigned sleep(unsigned int secs) {
+    vTaskDelay( (secs * 1000) / ((TickType_t) 1000 / configTICK_RATE_HZ));
     
-caddr_t _sbrk_r (struct _reent *r, int incr) {
-    extern char   _heap_start; /* linker script defined */
-	register int  stackptr asm("sp"); 
-    char 		 *prev_heap_end;
-
-    if (heap_end == NULL)
-		heap_end = &_heap_start;
-		
-    prev_heap_end = heap_end;
-
-    intptr_t sp = (intptr_t)xPortSupervisorStackPointer;
-    if(sp == 0) /* scheduler not started */
-        sp = stackptr;
-
-    if ((intptr_t)heap_end + incr >= sp) {
-        r->_errno = ENOMEM;
-        return (caddr_t)-1;
-    }
-
-    heap_end += incr;
-
-    return (caddr_t) prev_heap_end;
+    return 0;
 }
 
-void *sbrk(int incr) {
-	return (void *)_sbrk_r (_REENT, incr);
+int usleep(useconds_t usec) {
+	vTaskDelay(usec / ((TickType_t) 1000000 / configTICK_RATE_HZ));
+	
+	return 0;
 }
 
-#endif
+void _newlib_init() {
+}

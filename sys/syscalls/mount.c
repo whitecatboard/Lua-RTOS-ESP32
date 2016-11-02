@@ -1,5 +1,5 @@
 /*
- * Whitecat, minimal mount capabilities. Mount are only allowed in
+ * Lua RTOS, minimal mount capabilities. Mount are only allowed in
  * the default root's directory.
  *
  * Copyright (C) 2015 - 2016
@@ -46,7 +46,7 @@ struct mountp {
 };
 
 static const struct mountp mountps[] = {
-#if USE_CFI
+#if USE_SPIFFS
 #if USE_SD
     {"/", "sd", "/sd", "cfi", "sd"},
 #endif
@@ -55,7 +55,7 @@ static const struct mountp mountps[] = {
 };
 
 struct mountd mountds[] = {
-#if USE_CFI
+#if USE_SPIFFS
     {"cfi", 0},
 #endif
 #if USE_SD
@@ -113,7 +113,7 @@ int mount_is_mounted(const char *device) {
 
 char *mount_primary_or_secondary(const char *path) {
     struct mountd *cmountd= &mountds[0];
-    char npath[MAXPATHLEN];
+    char npath[PATH_MAX];
     char *device = NULL;
     int primary;
     char *ret;
@@ -153,7 +153,7 @@ char *mount_primary_or_secondary(const char *path) {
 
 char *mount_secondary_or_primary(const char *path) {
     struct mountd *cmountd= &mountds[0];
-    char npath[MAXPATHLEN];
+    char npath[PATH_MAX];
     char *device = NULL;
     int secondary;
     char *ret;

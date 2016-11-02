@@ -27,6 +27,8 @@
  * this software.
  */
 
+#if LUA_USE_I2C
+
 #include "whitecat.h"
 
 #include <unistd.h>
@@ -130,3 +132,5 @@ int i2c_write(int unit, char data) {
 
     return i2cu->i2c_write_byte(i2cu, data);
 }
+
+#endif

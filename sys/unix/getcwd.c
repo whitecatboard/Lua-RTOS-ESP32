@@ -38,13 +38,7 @@
 static char sccsid[] = "@(#)getcwd.c	8.5 (Berkeley) 2/7/95";
 #endif /* LIBC_SCCS and not lint */
 
-#if PLATFORM_ESP8266
-#include <sys/param.h>
-#endif
-
-#if PLATFORM_PIC32MZ
 #include <limits.h>
-#endif
 
 #include <sys/stat.h>
 
@@ -75,7 +69,7 @@ getcwd(pt, size)
         
         
 /*
- * char *realpath(const char *path, char resolved_path[MAXPATHLEN]);
+ * char *realpath(const char *path, char resolved_path[PATH_MAX]);
  *
  * Find the real name of path, by removing all ".", ".." and symlink
  * components.  Returns (resolved) on success, or (NULL) on failure,
@@ -88,7 +82,7 @@ realpath(path, resolved)
 {
 	struct stat sb;
 	int fd, rootd, serrno;
-	char *p, *q, wbuf[MAXPATHLEN];
+	char *p, *q, wbuf[PATH_MAX];
 
 	/* Save the starting point. */
 	if ((fd = open(".", O_RDONLY)) < 0) {
@@ -104,8 +98,8 @@ realpath(path, resolved)
 	 *     if it is a directory, then change to that directory.
 	 * get the current directory name and append the basename.
 	 */
-	(void)strncpy(resolved, path, MAXPATHLEN - 1);
-	resolved[MAXPATHLEN - 1] = '\0';
+	(void)strncpy(resolved, path, PATH_MAX - 1);
+	resolved[PATH_MAX - 1] = '\0';
 // loop:
 	q = strrchr(resolved, '/');
 	if (q != NULL) {
@@ -128,7 +122,7 @@ realpath(path, resolved)
 	if (lstat(p, &sb) == 0) {
 		if (S_ISLNK(sb.st_mode)) {
 /*
-			n = readlink(p, resolved, MAXPATHLEN);
+			n = readlink(p, resolved, PATH_MAX);
 			if (n < 0)
 				goto err1;
 			resolved[n] = '\0';
@@ -153,7 +147,7 @@ realpath(path, resolved)
 	 * does a physical search rather than using the $PWD short-cut
 	 */
          
-        if (getcwd(resolved, MAXPATHLEN) == 0) {
+        if (getcwd(resolved, PATH_MAX) == 0) {
 		goto err1;            
         }
         
@@ -167,7 +161,7 @@ realpath(path, resolved)
 		rootd = 0;
 
 	if (*wbuf) {
-		if (strlen(resolved) + strlen(wbuf) + rootd + 1 > MAXPATHLEN) {
+		if (strlen(resolved) + strlen(wbuf) + rootd + 1 > PATH_MAX) {
 			errno = ENAMETOOLONG;
 			goto err1;
 		}

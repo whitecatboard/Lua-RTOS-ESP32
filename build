@@ -1,6 +1,6 @@
 #!/bin/bash
 
-platforms=(esp8266\ pic32mz)
+platforms=(esp32\ esp8266\ pic32mz)
 
 uartdef=$(ls /dev/tty.usbserial* 2>/dev/null)
 if [[ "$uartdef" == "" ]]; then
@@ -10,12 +10,14 @@ fi
 if [[ " ${platforms[@]} " =~ " $1 " ]]; then
 	
   if [[ " $1 " =~ " pic32mz " ]]; then
-		make -f platform/pic32mz/main/Makefile.asm FOLDER=platform/pic32mz/main/ asm
-		make -f platform/pic32mz/main/Makefile.asm FOLDER=FreeRTOS/source/portable/pic32mz asm
+	make -f platform/pic32mz/main/Makefile.asm FOLDER=platform/pic32mz/main/ asm
+	make -f platform/pic32mz/main/Makefile.asm FOLDER=FreeRTOS/source/portable/pic32mz asm
   fi
 		
-  source ./platform/$1/env
-  make $2 -j4 -C platform/$PLATFORM/main UARTPORT=$uartdef
+  source ./main/platform/$1/env
+  
+  make $2 -j4 -C main/platform/$1 UARTPORT=$uartdef
+  
 else
   echo "Unsupported platform"
 fi

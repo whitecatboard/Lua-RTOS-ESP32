@@ -30,6 +30,7 @@
 #include "list.h"
 
 #include <errno.h>
+#include <string.h>
 #include <stdlib.h>
 
 void list_init(struct list *list, int first_index) {

@@ -33,8 +33,8 @@
 
 #include "FreeRTOS.h"
 #include "whitecat.h"
-#include "sys/drivers/spi.h"
-#include "sys/drivers/gpio.h"
+#include <sys/drivers/spi.h>
+#include <sys/drivers/gpio.h>
 
 #include <sys/syslog.h>
 #include <machine/pic32mz.h>

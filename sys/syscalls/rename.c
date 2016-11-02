@@ -1,5 +1,5 @@
 /*
- * Whitecat, rename syscall implementation
+ * Lua RTOS, rename syscall implementation
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -28,11 +28,14 @@
  */
 
 #include "syscalls.h"
+
+#include <reent.h>
+
 #include "mount.h"
 
 extern char *normalize_path(const char *path);
 
-int __rename(const char *old_filename, const char *new_filename) {
+int __rename(struct _reent *r, const char *old_filename, const char *new_filename) {
     char *npathold;
     char *npathnew;
     struct file *fp;

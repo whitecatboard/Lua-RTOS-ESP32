@@ -380,12 +380,20 @@ static const LUA_REG_TYPE mathlib[] = {
   { LSTRKEY( "ldexp" ),			LFUNCVAL( math_ldexp ) },
   { LSTRKEY( "log10" ),			LFUNCVAL( math_log10 ) },
 #endif
+#if LUA_USE_ROTABLE
   /* placeholders */
   { LSTRKEY( "pi" ),			LNUMVAL( PI ) },
   { LSTRKEY( "huge" ),			LNUMVAL( (lua_Number)HUGE_VAL ) },
   { LSTRKEY( "maxinteger" ),	LINTVAL( LUA_MAXINTEGER ) },
   { LSTRKEY( "mininteger" ),	LINTVAL( LUA_MININTEGER ) },
   { LNILKEY, LNILVAL }
+#else
+  { LSTRKEY( "pi" ),			NULL },
+  { LSTRKEY( "huge" ),			NULL },
+  { LSTRKEY( "maxinteger" ),	NULL },
+  { LSTRKEY( "mininteger" ),	NULL },
+  { LNILKEY, LNILVAL }
+#endif
 };
 
 

@@ -33,6 +33,7 @@
 #include <sys/mutex.h>
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
 #include <sys/queue.h>
@@ -139,7 +140,7 @@ int _pthread_create(pthread_t *id, int stacksize, int initial_state,
             pthreadTask, "lthread", stacksize, taskArgs, 
             tskDEF_PRIORITY, &xCreatedTask
     );
-   
+
     if(res != pdPASS) {
         // Remove from thread list
         list_remove(&thread_list,*id);

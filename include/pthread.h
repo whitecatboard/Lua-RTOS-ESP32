@@ -30,8 +30,6 @@
 #ifndef PTHREAD_H
 #define	PTHREAD_H
 
-#include "whitecat.h"
-
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"

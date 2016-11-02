@@ -1,0 +1,29 @@
+../../../main/platform/esp8266/build/core//esp_spi.o: \
+ /Users/jaumeolivepetrus/LuaOS/main/platform/esp8266/core/esp_spi.c \
+ ../../../main/platform/esp8266/core/include/esp/spi.h \
+ ../../../libc/platform/esp8266/include/stdint.h \
+ ../../../libc/platform/esp8266/include/machine/_default_types.h \
+ ../../../libc/platform/esp8266/include/sys/features.h \
+ ../../../libc/platform/esp8266/include/sys/_intsup.h \
+ ../../../main/platform/esp8266/core/include/esp/spi_regs.h \
+ ../../../main/platform/esp8266/core/include/esp/types.h \
+ ../../../main/platform/esp8266/core/include/common_macros.h \
+ ../../../libc/platform/esp8266/include/sys/cdefs.h \
+ ../../../main/platform/esp8266/core/include/esp/clocks.h \
+ ../../../main/platform/esp8266/core/include/esp/iomux.h \
+ ../../../main/platform/esp8266/core/include/esp/iomux_regs.h \
+ ../../../main/platform/esp8266/core/include/esp/gpio.h \
+ ../../../main/platform/esp8266/core/include/esp/gpio_regs.h \
+ ../../../main/platform/esp8266/core/include/esp/interrupts.h \
+ ../../../FreeRTOS/Source/portable/esp8266/xtruntime.h \
+ ../../../libc/platform/esp8266/include/string.h \
+ ../../../libc/platform/esp8266/include/_ansi.h \
+ ../../../libc/platform/esp8266/include/newlib.h \
+ ../../../libc/platform/esp8266/include/sys/config.h \
+ ../../../libc/platform/esp8266/include/machine/ieeefp.h \
+ ../../../libc/platform/esp8266/include/sys/reent.h \
+ ../../../libc/platform/esp8266/include/_ansi.h \
+ ../../../libc/platform/esp8266/include/sys/_types.h \
+ ../../../libc/platform/esp8266/include/machine/_types.h \
+ ../../../libc/platform/esp8266/include/sys/lock.h \
+ ../../../libc/platform/esp8266/include/sys/string.h

@@ -1,43 +1,39 @@
-/*-
- * Copyright (c) 1993
- *  The Regents of the University of California.  All rights reserved.
+/*
+ * Lua RTOS, stat, fstat syscall implementation
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *  This product includes software developed by the University of
- *  California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
+ * Copyright (C) 2015 - 2016
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * 
+ * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ * 
+ * All rights reserved.  
  *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ * Permission to use, copy, modify, and distribute this software
+ * and its documentation for any purpose and without fee is hereby
+ * granted, provided that the above copyright notice appear in all
+ * copies and that both that the copyright notice and this
+ * permission notice and warranty disclaimer appear in supporting
+ * documentation, and that the name of the author not be used in
+ * advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.
  *
- *  @(#)stat.c  8.1 (Berkeley) 6/11/93
+ * The author disclaim all warranties with regard to this
+ * software, including all implied warranties of merchantability
+ * and fitness.  In no event shall the author be liable for any
+ * special, indirect or consequential damages or any damages
+ * whatsoever resulting from loss of use, data or profits, whether
+ * in an action of contract, negligence or other tortious action,
+ * arising out of or in connection with the use or performance of
+ * this software.
  */
 
 #include "syscalls.h"
 
+#include <reent.h>
+
 extern struct filedesc *p_fd;
 
-int fstat(int fd, struct stat *sb) {
+int __fstat(struct _reent *r, int fd, struct stat *sb) {
     register struct file *fp;
     register struct filedesc *fdp = p_fd;
     int res;
@@ -46,27 +42,27 @@ int fstat(int fd, struct stat *sb) {
     if ((u_int)fd >= fdp->fd_nfiles ||
         (fp = fdp->fd_ofiles[fd]) == NULL) {
         mtx_unlock(&fd_mtx);
-        errno = EBADF;
+        __errno_r(r) = EBADF;
         return -1;
     }
     mtx_unlock(&fd_mtx);
     
     res = (fp->f_ops->fo_stat)(fp, sb);
     if (res > 0) {
-        errno = res;
+        __errno_r(r) = res;
         return -1;
     }
     
     return (0);
 }
 
-int stat(const char *str, struct stat *sb) {
+int __stat(struct _reent *r, const char *str, struct stat *sb) {
     int fd, rv;
 
     fd = open(str, 0);
     if (fd < 0)
         return (-1);
-    rv = fstat(fd, sb);
+    rv = __fstat(r, fd, sb);
     (void)close(fd);
     return (rv);
 }

@@ -8,4 +8,5 @@
 ---------------------------------------------------
 os.loglevel(os.LOG_ERR)    -- Log only errors
 os.logcons(true)           -- Enable/disable syslog messages to console
+os.shell(false)            -- Enable/disable shell
 os.history(false)          -- Enable/disable history

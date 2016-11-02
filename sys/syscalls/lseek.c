@@ -1,5 +1,5 @@
 /*
- * Whitecat, lseek implementation
+ * Lua RTOS, lseek syscall implementation
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -29,9 +29,11 @@
 
 #include "syscalls.h"
 
+#include <reent.h>
+
 extern struct filedesc *p_fd;
 
-off_t lseek(int fd, off_t offset, int whence) {
+off_t __lseek(struct _reent *r, int fd, off_t offset, int whence) {
     register struct filedesc *fdp = p_fd;
     register struct file *fp;
     int error;
@@ -40,13 +42,13 @@ off_t lseek(int fd, off_t offset, int whence) {
     if ((u_int)fd >= fdp->fd_nfiles ||
         (fp = fdp->fd_ofiles[fd]) == NULL) {
         mtx_unlock(&fd_mtx);
-        errno = EBADF;
+        __errno_r(r) = EBADF;
         return -1;
     }
     mtx_unlock(&fd_mtx);
 
     if (fp->f_type != DTYPE_VNODE) {
-        errno = ESPIPE;
+        __errno_r(r) = ESPIPE;
         return -1;
     }
     
@@ -61,13 +63,13 @@ off_t lseek(int fd, off_t offset, int whence) {
             fp->f_offset = offset;
             break;
         default:
-            errno = EINVAL;
+            __errno_r(r) = EINVAL;
             return -1;
     }
     
     error = (*fp->f_ops->fo_seek)(fp, offset, whence);
     if (error){
-        errno = error;
+        __errno_r(r) = error;
         return -1;
     }
 

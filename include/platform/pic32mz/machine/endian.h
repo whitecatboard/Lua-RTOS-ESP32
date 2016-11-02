@@ -70,7 +70,6 @@
 #define HTONS(x)        (x)
 
 #else
-
 /*
  * Swap bytes in a word: ABCD to DCBA.
  */

@@ -1,5 +1,5 @@
 /*
- * Whitecat, FAT filesystem wrapper functions
+ * Lua RTOS, FAT file system operations
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -27,9 +27,9 @@
  * this software.
  */
 
-#include "whitecat.h"
-
 #include <sys/fat/ff.h>
+
+#include <limits.h>
 
 #include <string.h>
 #include <ctype.h>
@@ -37,7 +37,6 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/param.h>
 #include <sys/filedesc.h>
 #include <sys/uio.h>
 #include <sys/file.h>

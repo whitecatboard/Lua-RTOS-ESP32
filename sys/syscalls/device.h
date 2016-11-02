@@ -45,6 +45,8 @@
 #ifndef DEVICE_H
 #define	DEVICE_H
 
+#include <limits.h>
+
 #include <sys/cdefs.h>
 #include <sys/uio.h>
 #include <sys/file.h>

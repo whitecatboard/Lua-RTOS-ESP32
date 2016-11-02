@@ -790,6 +790,10 @@ u32_t SPIFFS_buffer_bytes_for_cache(spiffs *fs, u32_t num_pages);
 #include "platform/esp8266/esp_spiffs.h"
 #endif
 
+#if PLATFORM_ESP32
+#include "platform/esp32/esp_spiffs.h"
+#endif
+
 #if PLATFORM_PIC32MZ
 #include "platform/pic32mz/pic32mz_spiffs.h"
 #endif

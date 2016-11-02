@@ -367,7 +367,6 @@ s32_t spiffs_obj_lu_scan(
         SPIFFS_OP_T_OBJ_LU2 | SPIFFS_OP_C_READ,
         0, SPIFFS_MAGIC_PADDR(fs, bix) ,
         sizeof(spiffs_obj_id), (u8_t *)&magic);
-
     SPIFFS_CHECK_RES(res);
     if (magic != SPIFFS_MAGIC(fs, bix)) {
       if (unerased_bix == (spiffs_block_ix)-1) {
@@ -375,7 +374,7 @@ s32_t spiffs_obj_lu_scan(
         unerased_bix = bix;
       } else {
         // more than one unerased block, bail out
-       // SPIFFS_CHECK_RES(SPIFFS_ERR_NOT_A_FS);
+		SPIFFS_CHECK_RES(SPIFFS_ERR_NOT_A_FS);
       }
     }
 #endif

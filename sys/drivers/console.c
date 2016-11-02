@@ -45,7 +45,7 @@
 
 void _console_init() {	
 	// Open UART's related to the console
-	
+
 	// Default UART
     uart_init(CONSOLE_UART, CONSOLE_BR, 0, CONSOLE_BUFFER_LEN);
     uart_init_interrupts(CONSOLE_UART);
@@ -61,28 +61,40 @@ void _console_init() {
 }
 
 void console_default() {
-	// Close standard file descriptor
-	close(STDIN_FILENO);
-	close(STDOUT_FILENO);
-	close(STDERR_FILENO);
+	// Close standard streams
+	fclose(_GLOBAL_REENT->_stdin);
+	fclose(_GLOBAL_REENT->_stdout);
+	fclose(_GLOBAL_REENT->_stderr);
 
-    // Open standard file descriptors, using device related to manin console UART unit
-    open(CONSOLE_TTY, O_RDONLY); // stdin
-    open(CONSOLE_TTY, O_WRONLY); // stdout
-    open(CONSOLE_TTY, O_WRONLY); // stderr
+	// Open standard streams
+    _GLOBAL_REENT->_stdin  = fopen(CONSOLE_TTY, "r");
+    _GLOBAL_REENT->_stdout = fopen(CONSOLE_TTY, "w");
+    _GLOBAL_REENT->_stderr = fopen(CONSOLE_TTY, "w");
+	
+	// TO DO
+	// Work-arround newlib is not compiled with HAVE_BLKSIZE flag
+	setvbuf(_GLOBAL_REENT->_stdin, NULL, _IONBF, 0);
+	setvbuf(_GLOBAL_REENT->_stdout, NULL, _IONBF, 0);
+	setvbuf(_GLOBAL_REENT->_stderr, NULL, _IONBF, 0);
 }
 
 #if CONSOLE_SWAP_UART
 void console_swap() {
-	// Close standard file descriptor
-	close(STDIN_FILENO);
-	close(STDOUT_FILENO);
-	close(STDERR_FILENO);
+	// Close standard streams
+	fclose(_GLOBAL_REENT->_stdin);
+	fclose(_GLOBAL_REENT->_stdout);
+	fclose(_GLOBAL_REENT->_stderr);
 
-    // Open standard file descriptors, using device related to alternate console UART unit
-    open(CONSOLE_TTY     , O_RDONLY); // stdin (in esp 8266 we not have UART1 RX, so read from UART0)
-    open(CONSOLE_SWAP_TTY, O_WRONLY); // stdout
-    open(CONSOLE_SWAP_TTY, O_WRONLY); // stderr				
+	// Open standard streams
+    _GLOBAL_REENT->_stdin  = fopen(CONSOLE_TTY, "r");
+    _GLOBAL_REENT->_stdout = fopen(CONSOLE_SWAP_TTY, "w");
+    _GLOBAL_REENT->_stderr = fopen(CONSOLE_SWAP_TTY, "w");
+
+	// TO DO
+	// Work-arround newlib is not compiled with HAVE_BLKSIZE flag
+	setvbuf(_GLOBAL_REENT->_stdin, NULL, _IONBF, 0);
+	setvbuf(_GLOBAL_REENT->_stdout, NULL, _IONBF, 0);
+	setvbuf(_GLOBAL_REENT->_stderr, NULL, _IONBF, 0);
 }
 #endif
 

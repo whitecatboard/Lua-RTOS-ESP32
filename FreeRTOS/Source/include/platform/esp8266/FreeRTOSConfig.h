@@ -111,7 +111,7 @@
 #define configUSE_COUNTING_SEMAPHORES                           0
 #define configGENERATE_RUN_TIME_STATS                           0
 #define configUSE_TASK_FPU_SUPPORT				0
-#define configUSE_NEWLIB_REENTRANT				0
+#define configUSE_NEWLIB_REENTRANT				1
 
 /* Co-routine definitions. */
 #define configUSE_CO_ROUTINES					0

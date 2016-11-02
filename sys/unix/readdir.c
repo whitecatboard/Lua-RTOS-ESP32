@@ -26,10 +26,11 @@
  * arising out of or in connection with the use or performance of
  * this software.
  */
+
+#include <limits.h>
  
 #include <stdint.h>
 #include <sys/types.h>
-#include <sys/param.h>
 #include <sys/mount.h>
 #include <sys/syscalls/mount.h>
 #include <sys/stat.h>

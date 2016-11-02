@@ -109,7 +109,7 @@ int pthread_mutex_init(pthread_mutex_t *mut, const pthread_mutexattr_t *attr) {
 int pthread_mutex_lock(pthread_mutex_t *mut) {
     struct pthread_mutex *mutex;
     int res;
-    
+
     // Get mutex
     res = list_get(&mutex_list, *mut, (void **)&mutex);
     if (res) {

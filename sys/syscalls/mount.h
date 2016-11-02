@@ -1,5 +1,5 @@
 /*
- * Whitecat, minimal mount capabilities. Mount are only allowed in
+ * Lua RTOS, minimal mount capabilities. Mount are only allowed in
  * the default root's directory.
  *
  * Copyright (C) 2015 - 2016

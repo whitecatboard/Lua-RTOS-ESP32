@@ -1,3 +1,4 @@
+#if 0
 #include "syscalls.h"
 
 #include <sys/time.h>
@@ -93,3 +94,4 @@ int select(int nfds, fd_set *readfds, fd_set *writefds,
 
     return retval;
 }
+#endif

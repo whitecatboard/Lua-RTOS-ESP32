@@ -30,6 +30,7 @@
 #ifndef _LIST_H
 #define	_LIST_H
 
+#include <stdint.h>
 #include <sys/mutex.h>
 
 struct list {

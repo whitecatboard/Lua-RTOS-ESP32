@@ -6,8 +6,7 @@
 #include "lapi.h"
 #include "lauxlib.h"
 
-#include <sys/param.h>
-#include <sys/stat.h>
+#include <limits.h>
 
 #include <sys/dirent.h>
 #include <errno.h>
@@ -19,7 +18,6 @@
 
 #include <sys/syslog.h>
 #include <sys/status.h>
-
 #include <sys/drivers/console.h>
 #include <sys/drivers/cpu.h>
 #include <sys/syscalls/mount.h>
@@ -199,7 +197,7 @@ static int os_cd (lua_State *L) {
 }
 
 static int os_pwd (lua_State *L) {
-    char path[MAXPATHLEN];
+    char path[PATH_MAX];
     
     if (getcwd(path, (size_t)sizeof(path))) {
         lua_pushstring(L, path);
@@ -211,7 +209,7 @@ static int os_pwd (lua_State *L) {
 
 static int os_mkdir (lua_State *L) {
     const char *path = luaL_optstring(L, 1, NULL);
-    char cpath[MAXPATHLEN];
+    char cpath[PATH_MAX];
     
     // If path is not present get the current directory as path
     if (!path) {
@@ -231,8 +229,8 @@ static int os_ls (lua_State *L) {
     struct dirent *ent;
     char type;
     char size[9];
-    char cpath[MAXPATHLEN];
-    char tpath[MAXPATHLEN];
+    char cpath[PATH_MAX];
+    char tpath[PATH_MAX];
     char tbuffer[250];
     struct stat sb;
     struct tm *tm_info;
@@ -245,7 +243,7 @@ static int os_ls (lua_State *L) {
         
         path = cpath;
     }
-    
+
     // Open directory
     dir = opendir(path);
     if (!dir) {
@@ -386,7 +384,7 @@ static int os_format(lua_State *L) {
         printf("\r");
         console_erase_l();
         printf("All data in %s will be deleted. Continue? [y/n]: ", device);
-        response = getc(stdin);
+        response = fgetc(stdin);
     }
     
     printf("\n");

@@ -7,6 +7,7 @@
 
 #include "whitecat.h"
 
+#include <limits.h>
 
 #if LUA_USE_LUA_LOCK
 	void LuaLock(lua_State *L);
@@ -44,7 +45,7 @@
 #define LUA_CDIR	LUA_ROOT "lib/lua/"
 
 #undef  LUA_COPYRIGHT
-#define LUA_COPYRIGHT	"LuaOS " LUA_OS_VER " powered by " LUA_RELEASE 
+#define LUA_COPYRIGHT	"Lua RTOS " LUA_OS_VER " powered by " LUA_RELEASE 
 
 #undef  LUAI_THROW
 #define LUAI_THROW(L,c)	longjmp((c)->b, 1)

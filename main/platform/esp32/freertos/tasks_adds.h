@@ -1,0 +1,11 @@
+void enter_critical_section();
+void exit_critical_section();
+UBaseType_t uxGetTaskId();
+UBaseType_t uxGetThreadId();
+void uxSetThreadId(UBaseType_t id);
+void uxSetLuaState(void* L);
+void* pvGetLuaState();
+void uxSetSignaled(TaskHandle_t h, int s);
+uint32_t uxGetSignaled(TaskHandle_t h);
+void uxClearSignaled(TaskHandle_t h, int s);
+TaskHandle_t xGetCurrentTask();

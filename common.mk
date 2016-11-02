@@ -47,6 +47,10 @@ ifeq ($(PLATFORM),esp8266)
 	FW_FILE = $(addprefix $(FIRMWARE_DIR),$(PROGRAM).bin)
 endif
 
+ifeq ($(PLATFORM),esp32)
+	FW_FILE = $(addprefix $(FIRMWARE_DIR),$(PROGRAM).bin)
+endif
+
 ifeq ($(PLATFORM),pic32mz)
 	FW_FILE = $(addprefix $(FIRMWARE_DIR),$(PROGRAM).bin)
 endif
@@ -58,13 +62,7 @@ endif
 # programs to have their own copies of header config files for components
 # , which is useful for overriding things.
 
-ifeq ($(PLATFORM),esp8266)
-	INC_DIRS = $(PROGRAM_DIR) $(PROGRAM_DIR)include $(ROOT)include $(ROOT)include/platform/$(PLATFORM)
-endif
-
-ifeq ($(PLATFORM),pic32mz)
-	INC_DIRS = $(PROGRAM_DIR) $(PROGRAM_DIR)include $(ROOT)include $(ROOT)include/platform/$(PLATFORM) $(ROOT)
-endif
+INC_DIRS = $(ROOT)main $(ROOT)main/include $(ROOT)main/platform/$(PLATFORM) $(ROOT) $(ROOT)include
 
 ifeq ($(OWN_LIBC),1)
    INC_DIRS += $(ROOT)libc/platform/$(PLATFORM)/include
@@ -72,6 +70,20 @@ ifeq ($(OWN_LIBC),1)
    ifeq ($(PRINTF_SCANF_FLOAT_SUPPORT),1)
      LDFLAGS += -u _printf_float -u _scanf_float
    endif
+endif
+
+INC_DIRS += $(ROOT)include/platform/$(PLATFORM)
+
+ifeq ($(PLATFORM),esp32)
+	INC_DIRS += $(ROOT)main/platform/$(PLATFORM)/esp-idf/components/freertos
+	INC_DIRS += $(ROOT)main/platform/$(PLATFORM)/esp-idf/components/freertos/include
+	INC_DIRS += $(ROOT)main/platform/$(PLATFORM)/esp-idf/components/freertos/include/freertos
+	INC_DIRS += $(ROOT)main/platform/$(PLATFORM)/esp-idf/components/esp32/include
+	INC_DIRS += $(ROOT)main/platform/$(PLATFORM)/esp-idf/components/spi_flash/include
+	INC_DIRS += $(ROOT)Lua/adds
+	INC_DIRS += $(ROOT)Lua/common
+	INC_DIRS += $(ROOT)Lua/modules
+	INC_DIRS += $(ROOT)Lua/src
 endif
 
 ifeq ("$(V)","1")
@@ -85,6 +97,10 @@ endif
 .PHONY: all clean flash erase_flash test size rebuild
 
 ifeq ($(PLATFORM),esp8266)
+all: $(PROGRAM_OUT) $(FW_FILE_1) $(FW_FILE_2) $(FW_FILE)
+endif
+
+ifeq ($(PLATFORM),esp32)
 all: $(PROGRAM_OUT) $(FW_FILE_1) $(FW_FILE_2) $(FW_FILE)
 endif
 
@@ -127,6 +143,10 @@ $(1)_OBJ_FILES_CXX = $$(patsubst $$($(1)_REAL_ROOT)%.cpp,$$($(1)_OBJ_DIR)%.o,$$(
 $(1)_OBJ_FILES_C = $$(patsubst $$($(1)_REAL_ROOT)%.c,$$($(1)_OBJ_DIR)%.o,$$($(1)_OBJ_FILES_CXX))
 
 ifeq ($(PLATFORM),esp8266)
+$(1)_OBJ_FILES = $$(patsubst $$($(1)_REAL_ROOT)%.S,$$($(1)_OBJ_DIR)%.o,$$($(1)_OBJ_FILES_C))
+endif
+
+ifeq ($(PLATFORM),esp32)
 $(1)_OBJ_FILES = $$(patsubst $$($(1)_REAL_ROOT)%.S,$$($(1)_OBJ_DIR)%.o,$$($(1)_OBJ_FILES_C))
 endif
 
@@ -240,11 +260,28 @@ $(FW_FILE): $(PROGRAM_OUT) $(FIRMWARE_DIR)
 	$(Q) $(ESPTOOL) elf2image --version=2 $(ESPTOOL_ARGS) $< -o $(FW_FILE)
 endif
 
+ifeq ($(PLATFORM),esp32)
+$(FW_FILE_1) $(FW_FILE_2): $(PROGRAM_OUT) $(FIRMWARE_DIR)
+	$(vecho) "FW $@"
+	$(Q) $(ESPTOOL) --chip esp32 elf2image $(ESPTOOL_ARGS) $< -o $(FIRMWARE_DIR)
+
+$(FW_FILE): $(PROGRAM_OUT) $(FIRMWARE_DIR)
+	$(vecho) "FW $@"
+	$(Q) $(ESPTOOL) --chip esp32 elf2image --version=2 $(ESPTOOL_ARGS) $< -o $(FW_FILE)
+endif
+
 ifeq ($(PLATFORM),esp8266)
 flash: all
 	$(ESPTOOL) -p $(UARTPORT) --baud $(ESPBAUD) write_flash $(ESPTOOL_ARGS) \
 		0x0 $(RBOOT_BIN) 0x1000 $(RBOOT_CONF) 0x2000 $(FW_FILE)
 	picocom --baud $(ESPBAUD) $(UARTPORT)
+endif
+
+ifeq ($(PLATFORM),esp32)
+flash: all
+	$(ESPTOOL) -p $(UARTPORT) --baud $(ESPBAUD) write_flash $(ESPTOOL_ARGS) \
+		0x00001000 $(ROOT)lib/platform/esp32/bootloader.bin 0x00010000 $(FW_FILE) 0x00004000 $(ROOT)lib/platform/esp32/partitions_singleapp.bin
+	picocom --baud 115200 $(UARTPORT)
 endif
 
 ifeq ($(PLATFORM),pic32mz)
@@ -254,11 +291,21 @@ flash: all
 	# picocom --baud $(ESPBAUD) $(UARTPORT)
 endif
 
+ifeq ($(PLATFORM),esp8266)
 flashall: all
-	$(ROOT)mkspiffs/mkspiffs -c  $(ROOT)spiffs_image -b 8192 -p 256 -s 0x80000 $(BUILD_DIR)spiffs_image.img
+	$(ROOT)mkspiffs/mkspiffs -c $(ROOT)spiffs_image -b 8192 -p 256 -s 0x80000 $(BUILD_DIR)spiffs_image.img
 	$(ESPTOOL) -p $(UARTPORT) --baud $(ESPBAUD) write_flash $(ESPTOOL_ARGS) \
                 0x0 $(RBOOT_BIN) 0x1000 $(RBOOT_CONF) 0x2000 $(FW_FILE) $(SPIFFS_ESPTOOL_ARGS)
 	picocom --baud $(ESPBAUD) $(UARTPORT)
+endif
+
+ifeq ($(PLATFORM),esp32)
+flashall: all
+	$(ROOT)mkspiffs/mkspiffs -c $(ROOT)spiffs_image -b 8192 -p 256 -s 0x80000 $(BUILD_DIR)spiffs_image.img
+	$(ESPTOOL) -p $(UARTPORT) --baud $(ESPBAUD) write_flash $(ESPTOOL_ARGS) \
+		0x00001000 $(ROOT)lib/platform/esp32/bootloader.bin 0x00010000 $(FW_FILE) 0x00004000 $(ROOT)lib/platform/esp32/partitions_singleapp.bin $(SPIFFS_ESPTOOL_ARGS)
+	picocom --baud 115200 $(UARTPORT)
+endif
 
 erase_flash:
 	$(ESPTOOL) -p $(UARTPORT) --baud $(ESPBAUD) erase_flash
