@@ -263,6 +263,12 @@ PRIVILEGED_DATA static List_t xPendingReadyList;						/*< Tasks that have been r
 /* Other file private variables. --------------------------------*/
 PRIVILEGED_DATA static volatile UBaseType_t uxCurrentNumberOfTasks 	= ( UBaseType_t ) 0U;
 PRIVILEGED_DATA static volatile TickType_t xTickCount 				= ( TickType_t ) 0U;
+
+// WHITECAT BEGIN
+PRIVILEGED_DATA static volatile TickType_t xuTickCount 				= ( TickType_t ) 0U;
+PRIVILEGED_DATA static volatile TickType_t xRemainingTickCount 		= ( TickType_t ) (BASE_TIMER_TICK_RATE);
+// WHITECAT END
+
 PRIVILEGED_DATA static volatile UBaseType_t uxTopReadyPriority 		= tskIDLE_PRIORITY;
 PRIVILEGED_DATA static volatile BaseType_t xSchedulerRunning 		= pdFALSE;
 PRIVILEGED_DATA static volatile UBaseType_t uxPendedTicks 			= ( UBaseType_t ) 0U;
@@ -1613,7 +1619,12 @@ BaseType_t xReturn;
 		xNextTaskUnblockTime = portMAX_DELAY;
 		xSchedulerRunning = pdTRUE;
 		xTickCount = ( TickType_t ) 0U;
-
+		
+		// WHITECAT BEGIN
+		xuTickCount = ( TickType_t ) 0U;
+		xRemainingTickCount = ( TickType_t ) BASE_TIMER_TICK_RATE;
+		// WHITECAT EMD
+		
 		/* If configGENERATE_RUN_TIME_STATS is defined then the following
 		macro must be defined to configure the timer/counter used to generate
 		the run time counter time base. */
@@ -1960,16 +1971,27 @@ implementations require configUSE_TICKLESS_IDLE to be set to a value other than
 
 BaseType_t xTaskIncrementTick( void )
 {
-TCB_t * pxTCB;
-TickType_t xItemValue;
-BaseType_t xSwitchRequired = pdFALSE;
+	// WHITECAT BEGIN
+	++xuTickCount;
+	--xRemainingTickCount;
+
+	if (xRemainingTickCount != ( TickType_t )0U) {
+		return pdFALSE;
+	}
+
+	xRemainingTickCount = ( TickType_t ) BASE_TIMER_TICK_RATE;
+	// WHITECAT END
+
+	TCB_t * pxTCB;
+	TickType_t xItemValue;
+	BaseType_t xSwitchRequired = pdFALSE;
 
 	/* Called by the portable layer each time a tick interrupt occurs.
 	Increments the tick then checks to see if the new tick value will cause any
 	tasks to be unblocked. */
 	traceTASK_INCREMENT_TICK( xTickCount );
 	if( uxSchedulerSuspended == ( UBaseType_t ) pdFALSE )
-	{
+	{		
 		/* Increment the RTOS tick, switching the delayed and overflowed
 		delayed lists if it wraps to 0. */
 		++xTickCount;
