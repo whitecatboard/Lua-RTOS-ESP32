@@ -1,7 +1,9 @@
-/platform/esp8266/build
-/platform/esp8266/firmware
-/platform/pic32mz/build
-/platform/pic32mz/firmware
+/main/platform/esp8266/build
+/main/platform/esp8266/firmware
+/main/platform/esp32/build
+/main/platform/esp32/firmware
+/main/platform/pic32mz/build
+/main(/platform/pic32mz/firmware
 *.dis
 *.elf
 *.hex
