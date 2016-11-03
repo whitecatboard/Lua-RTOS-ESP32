@@ -77,7 +77,7 @@ static int f_receive (lua_State *L) {
 
         for(;;) {
             // Wait for chunk size
-            if (!uart_read(CONSOLE_UART, (char *)&chunk_size, 1000)) {
+            if (!uart_read(CONSOLE_UART, (char *)&chunk_size, 2000)) {
                 break;
             }
 
@@ -90,7 +90,7 @@ static int f_receive (lua_State *L) {
             // Read chunk
             cchunk = chunk;
             for(i=0; i < chunk_size; i++) {
-                if (!uart_read(CONSOLE_UART, (char *)cchunk++, 1000)) {
+                if (!uart_read(CONSOLE_UART, (char *)cchunk++, 2000)) {
                     break;
                 }
             }
@@ -151,10 +151,10 @@ static int f_send (lua_State *L) {
             }
             
             // Wait for C\n
-            if (!uart_read(CONSOLE_UART, &c, 1000)) {done = 0; break;}
+            if (!uart_read(CONSOLE_UART, &c, 2000)) {done = 0; break;}
             if (c != 'C') {done = 0; break;}
             
-            if (!uart_read(CONSOLE_UART, &c, 1000)) {done = 0; break;}           
+            if (!uart_read(CONSOLE_UART, &c, 2000)) {done = 0; break;}
             if (c != '\n') {done = 0; break;}
             
             // Send chunk size
@@ -173,10 +173,10 @@ static int f_send (lua_State *L) {
             // Send last chunk with size 0
 
             // Wait for C\n
-            if (!uart_read(CONSOLE_UART, &c, 1000)) {tty_unlock();return luaL_error(L, "timeout1");}
+            if (!uart_read(CONSOLE_UART, &c, 2000)) {tty_unlock();return luaL_error(L, "timeout1");}
             if (c != 'C') {tty_unlock();return luaL_error(L, "timeout1");}
             
-            if (!uart_read(CONSOLE_UART, &c, 1000)) {tty_unlock();return luaL_error(L, "timeout1");}    
+            if (!uart_read(CONSOLE_UART, &c, 2000)) {tty_unlock();return luaL_error(L, "timeout1");}
             if (c != '\n') {tty_unlock();return luaL_error(L, "timeout1");}
             
             // Send chunk size

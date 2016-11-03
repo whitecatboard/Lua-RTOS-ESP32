@@ -96,7 +96,7 @@ int tty_write(struct file *fp, struct uio *uio) {
     dbuf[1] = '\0';
 #endif
 
-    if (!tty_mutex) {
+    if (tty_mutex != PTHREAD_MUTEX_INITIALIZER) {
         pthread_mutexattr_t attr;
 
         pthread_mutexattr_init(&attr);
@@ -140,7 +140,7 @@ int tty_stat(struct file *fp, struct stat *sb) {
 }
 
 void tty_lock() {
-    if (!tty_mutex) {
+    if (tty_mutex != PTHREAD_MUTEX_INITIALIZER) {
         pthread_mutexattr_t attr;
 
         pthread_mutexattr_init(&attr);
@@ -153,7 +153,7 @@ void tty_lock() {
 }
 
 void tty_unlock() {
-    if (!tty_mutex) {
+    if (tty_mutex != PTHREAD_MUTEX_INITIALIZER) {
         pthread_mutexattr_t attr;
 
         pthread_mutexattr_init(&attr);
