@@ -1,2 +1,3 @@
-export PATH=/usr/local/gnu-mips/bin:$PATH
 export PLATFORM=pic32mz
+export HOST_PLATFORM=macosx
+export PATH=~/Lua-RTOS/tools/$HOST_PLATFORM/mips-gcc-4.8.1/bin:$PATH
