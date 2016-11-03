@@ -32,12 +32,16 @@
 #include <sys/drivers/gpio.h>
 
 void debug_led_on() {
+#if LED_DBG
 	gpio_pin_output(LED_DBG);
 	gpio_pin_set(LED_DBG);
+#endif
 }
 
 void debug_led_off() {
+#if LED_DBG
 	gpio_pin_output(LED_DBG);
 	gpio_pin_clr(LED_DBG);
+#endif
 }
 
