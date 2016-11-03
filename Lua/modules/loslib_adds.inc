@@ -301,7 +301,7 @@ static int os_clear (lua_State *L) {
 }
 
 static int os_version(lua_State *L) {
-   lua_pushstring(L, "LuaOS");   
+   lua_pushstring(L, "Lua RTOS");
    lua_pushstring(L, LUA_OS_VER);   
    lua_pushinteger(L, BUILD_TIME); 
    
