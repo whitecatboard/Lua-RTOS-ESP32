@@ -39,8 +39,16 @@
 
 #define gpio_pin_set(gpio) gpio_set_level(gpio, 1)
 #define gpio_pin_clr(gpio) gpio_set_level(gpio, 0)
-#define gpio_pin_inv(gpio) gpio_set_level(gpio, !gpio_get_level(gpio))
+
+#define gpio_pin_inv(gpio) \
+if (gpio < 32) { \
+	if (GPIO.out & (1 << gpio)) {gpio_pin_clr(gpio);} else {gpio_pin_set(gpio);} \
+} else { \
+	if (GPIO.out1.val & (1 << gpio)) {gpio_pin_clr(gpio);} else {gpio_pin_set(gpio);} \
+}
+
 #define gpio_pin_get(gpio) gpio_get_level(gpio)
+
 
 #define gpio_pin_pullup(gpio) gpio_set_pull_mode(gpio, GPIO_PULLUP_ONLY)
 #define gpio_pin_pulldwn(gpio) gpio_set_pull_mode(gpio, GPIO_PULLDOWN_ONLY)
