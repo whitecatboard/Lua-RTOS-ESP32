@@ -246,11 +246,15 @@ sig_t _pthread_signal(int s, sig_t h) {
     // Get thread
     list_get(&thread_list, pthread_self(), (void **)&thread);
     
-    // Add handler
-    prev_h = thread->signals[s];
-    thread->signals[s] = h;
-    
-    return prev_h;
+    if (thread) {
+        // Add handler
+        prev_h = thread->signals[s];
+        thread->signals[s] = h;
+
+        return prev_h;
+    }
+
+    return NULL;
 }
 
 void _pthread_queue_signal(int s) {
@@ -263,7 +267,11 @@ void _pthread_queue_signal(int s) {
         
         if (thread->thread == 1) {
             if ((thread->signals[s] != SIG_DFL) && (thread->signals[s] != SIG_IGN)) {
+				#if LUA_USE_SAFE_SIGNAL
             	uxSetSignaled(thread->task, s);
+				#else
+            	thread->signals[s](s);
+				#endif
             }         
         }
         
@@ -271,6 +279,7 @@ void _pthread_queue_signal(int s) {
     }
 }
 
+#if LUA_USE_SAFE_SIGNAL
 void _pthread_process_signal(void) {
     struct pthread *thread; // Current thread
     uint32_t s;
@@ -286,6 +295,7 @@ void _pthread_process_signal(void) {
     	}
     }
 }
+#endif
 
 int _pthread_has_signal(int s) {
     struct pthread *thread; // Current thread
