@@ -152,7 +152,7 @@ WARNINGS_AS_ERRORS ?= 0
 # Common flags for both C & C++_
 C_CXX_FLAGS ?= -Wall -Wl,-EL -nostdlib $(EXTRA_C_CXX_FLAGS)
 # Flags for C only
-CFLAGS		?= $(C_CXX_FLAGS) -std=gnu99 $(EXTRA_CFLAGS) -D__XMK__ -fno-builtin
+CFLAGS		?= $(C_CXX_FLAGS) -std=gnu99 $(EXTRA_CFLAGS) -D__XMK__ -fno-builtin -DKERNEL
 # Flags for C++ only
 CXXFLAGS	?= $(C_CXX_FLAGS) -fno-exceptions -fno-rtti $(EXTRA_CXXFLAGS)
 

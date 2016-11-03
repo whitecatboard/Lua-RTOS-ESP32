@@ -59,7 +59,7 @@ int __write(struct _reent *r, int fd, const void *buf, size_t nbyte) {
 
     cnt = nbyte;
 
-    error = (*fp->f_ops->fo_write)(fp, &auio, NULL);
+    error = (*fp->f_ops->fo_write)(fp, &auio);
     if (error) {
         if (auio.uio_resid != cnt && (error == ERESTART ||
             error == EINTR || error == EWOULDBLOCK))

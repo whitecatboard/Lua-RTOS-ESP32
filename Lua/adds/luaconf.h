@@ -6,8 +6,10 @@
 #define WLUA_CONF
 
 #include "whitecat.h"
+#include "auxmods.h"
 
 #include <limits.h>
+#include <stdint.h>
 
 #if LUA_USE_LUA_LOCK
 	void LuaLock(lua_State *L);
@@ -22,9 +24,7 @@
 	#define luai_threadyield(L) 
 #endif
 
-#include "auxmods.h"
 
-#include <unistd.h>
 
 #undef  LUA_PROMPT
 #define LUA_PROMPT		"> "

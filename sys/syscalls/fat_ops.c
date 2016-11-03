@@ -180,7 +180,7 @@ int fat_close(struct file *fp) {
     return fat_result(res);
 }
 
-int fat_read(struct file *fp, struct uio *uio, struct ucred *cred) {
+int fat_read(struct file *fp, struct uio *uio) {
     FRESULT res;
     char *buf = uio->uio_iov->iov_base;
     unsigned int size = uio->uio_iov->iov_len;
@@ -194,7 +194,7 @@ int fat_read(struct file *fp, struct uio *uio, struct ucred *cred) {
     return fat_result(res);
 }
 
-int fat_write(struct file *fp, struct uio *uio, struct ucred *cred) {
+int fat_write(struct file *fp, struct uio *uio) {
     FRESULT res;
     char *buf = uio->uio_iov->iov_base;
     unsigned int size = uio->uio_iov->iov_len;

@@ -58,7 +58,7 @@ int __read(struct _reent *r, int fd, void *buf, size_t nbyte) {
     auio.uio_rw = UIO_READ;
 
     cnt = nbyte;
-    error = (*fp->f_ops->fo_read)(fp, &auio, NULL);
+    error = (*fp->f_ops->fo_read)(fp, &auio);
     if (error && auio.uio_resid != cnt &&
         (error == ERESTART || error == EINTR || error == EWOULDBLOCK))
         error = 0;

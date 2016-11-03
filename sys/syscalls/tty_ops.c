@@ -71,7 +71,7 @@ int tty_close(struct file *fp) {
     return 0;
 }
        
-int tty_read(struct file *fp, struct uio *uio, struct ucred *cred) {
+int tty_read(struct file *fp, struct uio *uio) {
     int unit = fp->f_devunit;
     char *buf = uio->uio_iov->iov_base;
 
@@ -87,7 +87,7 @@ int tty_read(struct file *fp, struct uio *uio, struct ucred *cred) {
     return 0;
 }
 
-int tty_write(struct file *fp, struct uio *uio, struct ucred *cred) {
+int tty_write(struct file *fp, struct uio *uio) {
     int unit = fp->f_devunit;
     char *buf = uio->uio_iov->iov_base;
 	

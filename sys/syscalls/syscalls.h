@@ -17,7 +17,6 @@
 #include <string.h>
 
 #include <errno.h>
-#include <sys/ucred.h>
 #include <sys/filedesc.h>
 #include <sys/uio.h>
 #include <sys/file.h>
@@ -130,8 +129,8 @@ struct mtx fd_mtx;
 
 int tty_open(struct file *fp, int flags);
 int tty_close(struct file *fp);
-int tty_read(struct file *fp, struct uio *uio, struct ucred *cred);
-int tty_write(struct file *fp, struct uio *uio, struct ucred *cred);
+int tty_read(struct file *fp, struct uio *uio);
+int tty_write(struct file *fp, struct uio *uio);
 int tty_stat(struct file *fp, struct stat *sb);
 void tty_lock();
 void tty_unlock();
@@ -139,8 +138,8 @@ void tty_unlock();
 int fat_init();
 int fat_open(struct file *fp, int flags);
 int fat_close(struct file *fp);
-int fat_read(struct file *fp, struct uio *uio, struct ucred *cred);
-int fat_write(struct file *fp, struct uio *uio, struct ucred *cred);
+int fat_read(struct file *fp, struct uio *uio);
+int fat_write(struct file *fp, struct uio *uio);
 int fat_stat(struct file *fp, struct stat *sb);
 off_t fat_seek(struct file *fp, off_t offset, int where);
 int fat_rename(const char *old_filename, const char *new_filename);
@@ -152,16 +151,16 @@ int fat_format();
 
 int net_open(struct file *fp, int flags);
 int net_close(struct file *fp);
-int net_read(struct file *fp, struct uio *uio, struct ucred *cred);
-int net_write(struct file *fp, struct uio *uio, struct ucred *cred);
+int net_read(struct file *fp, struct uio *uio);
+int net_write(struct file *fp, struct uio *uio);
 int net_stat(struct file *fp, struct stat *sb);
 int net_select(struct file *fp, int which);
 int net_ioctl(struct file *fp, u_long com, caddr_t data);
 
 int spiffs_open_op(struct file *fp, int flags);
 int spiffs_close_op(struct file *fp);
-int spiffs_read_op(struct file *fp, struct uio *uio, struct ucred *cred);
-int spiffs_write_op(struct file *fp, struct uio *uio, struct ucred *cred);
+int spiffs_read_op(struct file *fp, struct uio *uio);
+int spiffs_write_op(struct file *fp, struct uio *uio);
 int spiffs_stat_op(struct file *fp, struct stat *sb);
 off_t spiffs_seek_op(struct file *fp, off_t offset, int where);
 int spiffs_rename_op(const char *old_filename, const char *new_filename);

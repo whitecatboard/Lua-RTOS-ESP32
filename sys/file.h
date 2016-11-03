@@ -65,10 +65,8 @@ struct file {
     struct  ucred *f_cred;  /* credentials associated with descriptor */
     struct  fileops {
         int (*fo_open) __P((struct file *fp, int flags));
-        int (*fo_read)  __P((struct file *fp, struct uio *uio,
-                            struct ucred *cred));
-        int (*fo_write) __P((struct file *fp, struct uio *uio,
-                            struct ucred *cred));
+        int (*fo_read)  __P((struct file *fp, struct uio *uio));
+        int (*fo_write) __P((struct file *fp, struct uio *uio));
         int (*fo_ioctl) __P((struct file *fp, u_long com,
                             caddr_t data));
         int (*fo_select) __P((struct file *fp, int which));

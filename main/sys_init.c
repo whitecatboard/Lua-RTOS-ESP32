@@ -28,10 +28,6 @@
  */
 
 #include "build.h"
-#include "lua.h"
-
-#include <string.h>
-#include <stdio.h>
 
 #include <sys/reent.h>
 #include <sys/syslog.h>
@@ -40,6 +36,11 @@
 #include <sys/drivers/cpu.h>
 #include <sys/syscalls/syscalls.h>
 #include <sys/syscalls/mount.h>
+
+#include <string.h>
+#include <stdio.h>
+
+#include "lua.h"
 
 extern void _clock_init();
 extern void _syscalls_init();

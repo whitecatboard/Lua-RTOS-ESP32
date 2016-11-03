@@ -184,7 +184,7 @@ int spiffs_close_op(struct file *fp) {
     return result;
 }
 
-int spiffs_read_op(struct file *fp, struct uio *uio, struct ucred *cred) {
+int spiffs_read_op(struct file *fp, struct uio *uio) {
     int res;
     char *buf = uio->uio_iov->iov_base;
     unsigned int size = uio->uio_iov->iov_len;
@@ -200,7 +200,7 @@ int spiffs_read_op(struct file *fp, struct uio *uio, struct ucred *cred) {
     return res;
 }
 
-int spiffs_write_op(struct file *fp, struct uio *uio, struct ucred *cred) {
+int spiffs_write_op(struct file *fp, struct uio *uio) {
     int res;
     char *buf = uio->uio_iov->iov_base;
     unsigned int size = uio->uio_iov->iov_len;
