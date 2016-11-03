@@ -27,8 +27,10 @@
  * this software.
  */
 
-#ifndef CPU_H
-#define	CPU_H
+#ifndef __CPU_H__
+#define	__CPU_H__
+
+#include <stdint.h>
 
 /*
  * ----------------------------------------------------------------
@@ -134,6 +136,9 @@
 
 #define GPIO_PORTS 8
 #define GPIO_PER_PORT 16
+
+typedef uint32_t gpio_port_mask_t;
+
 #define GPIO_ALL 0xffff
 
 /*

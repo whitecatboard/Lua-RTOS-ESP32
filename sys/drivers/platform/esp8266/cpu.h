@@ -30,6 +30,8 @@
 #ifndef CPU_H
 #define	CPU_H
 
+#include <stdint.h>
+
 /*
  * ----------------------------------------------------------------
  * GPIO 
@@ -86,6 +88,9 @@
 
 // ESP8266 has 16 GPIO per port
 #define GPIO_PER_PORT 16
+
+// ESP8266 needs 32 bits for port mask
+typedef uint32_t gpio_port_mask_t;
 
 #define GPIO_ALL 0b11111000000111110
 

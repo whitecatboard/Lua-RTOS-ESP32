@@ -26,10 +26,10 @@
 
 #if USE_SD
 
-#include "sys/drivers/gpio.h"
-#include "sys/drivers/spi.h"
-#include "sys/disklabel.h"
-#include "sys/drivers/sd.h"
+#include <sys/drivers/gpio.h>
+#include <sys/drivers/spi.h>
+#include <sys/disklabel.h>
+#include <sys/drivers/sd.h>
 
 #include <sys/mutex.h>
 #include <strings.h>

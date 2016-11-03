@@ -30,19 +30,20 @@
 #ifndef __GPIO_H__
 #define __GPIO_H__
 
-#include <soc/io_mux_reg.h>
+// Include esp-idf gpio driver
+#include "driver/gpio.h"
 
-#define gpio_pin_input(gpio)  GPIO.ENABLE_OUT_CLEAR = BIT(gpio);iomux_set_gpio_function(gpio, false)
-#define gpio_pin_output(gpio) GPIO.CONF[gpio] &= ~GPIO_CONF_OPEN_DRAIN;GPIO.ENABLE_OUT_SET = BIT(gpio);iomux_set_gpio_function(gpio, false)
-#define gpio_pin_opendrain(gpio) GPIO.CONF[gpio] |= GPIO_CONF_OPEN_DRAIN;GPIO.ENABLE_OUT_SET = BIT(gpio);iomux_set_gpio_function(gpio, true)
+#define gpio_pin_input(gpio) gpio_pad_select_gpio(gpio);gpio_set_direction(gpio, GPIO_MODE_INPUT)
+#define gpio_pin_output(gpio) gpio_pad_select_gpio(gpio);gpio_set_direction(gpio, GPIO_MODE_OUTPUT)
+#define gpio_pin_opendrain(gpio) gpio_pad_select_gpio(gpio);gpio_set_direction(gpio, GPIO_MODE_INPUT_OUTPUT_OD)
 
-#define gpio_pin_set(gpio) GPIO.OUT_SET = BIT(gpio)
-#define gpio_pin_clr(gpio) GPIO.OUT_CLEAR = BIT(gpio)
-#define gpio_pin_inv(gpio) if (GPIO.OUT & BIT(gpio)) {gpio_pin_clr(gpio);} else {gpio_pin_set(gpio);}
-#define gpio_pin_get(gpio) ((GPIO.IN & BIT(gpio))?1:0)
+#define gpio_pin_set(gpio) gpio_set_level(gpio, 1)
+#define gpio_pin_clr(gpio) gpio_set_level(gpio, 0)
+#define gpio_pin_inv(gpio) gpio_set_level(gpio, !gpio_get_level(gpio))
+#define gpio_pin_get(gpio) gpio_get_level(gpio)
 
-#define gpio_pin_pullup(gpio) iomux_set_pullup_flags(gpio_to_iomux(gpio), IOMUX_PIN_PULLUP)
-#define gpio_pin_pulldwn(gpio) iomux_set_pullup_flags(gpio_to_iomux(gpio), IOMUX_PIN_PULLDOWN)
-#define gpio_pin_nopull(gpio) iomux_set_pullup_flags(gpio_to_iomux(gpio), 0)
+#define gpio_pin_pullup(gpio) gpio_set_pull_mode(gpio, GPIO_PULLUP_ONLY)
+#define gpio_pin_pulldwn(gpio) gpio_set_pull_mode(gpio, GPIO_PULLDOWN_ONLY)
+#define gpio_pin_nopull(gpio) gpio_set_pull_mode(gpio, GPIO_FLOATING)
 
 #endif

@@ -30,6 +30,8 @@
 #ifndef CPU_H
 #define	CPU_H
 
+#include <stdint.h>
+
 /*
  * ----------------------------------------------------------------
  * GPIO 
@@ -52,37 +54,37 @@
 #define PIN_GPIO12 18
 #define PIN_GPIO13 20
 #define PIN_GPIO15 21
-#define PIN_GPIO02 22
-#define PIN_GPIO00 23
-#define PIN_GPIO04 24
+#define PIN_GPIO2  22
+#define PIN_GPIO0  23
+#define PIN_GPIO4  24
 #define PIN_GPIO16 25
 #define PIN_GPIO17 27
-#define PIN_GPIO09 28
+#define PIN_GPIO9  28
 #define PIN_GPIO10 29
 #define PIN_GPIO11 30
-#define PIN_GPIO06 31
-#define PIN_GPIO07 32
-#define PIN_GPIO08 33
-#define PIN_GPIO05 34
+#define PIN_GPIO6  31
+#define PIN_GPIO7  32
+#define PIN_GPIO8  33
+#define PIN_GPIO5  34
 #define PIN_GPIO18 35
 #define PIN_GPIO23 36
 #define PIN_GPIO19 38
 #define PIN_GPIO22 39
-#define PIN_GPIO03 40
-#define PIN_GPIO01 41
+#define PIN_GPIO3  40
+#define PIN_GPIO1  41
 #define PIN_GPIO21 42
 
 // ESP32 available GPIO pins
-#define GPIO00 0
-#define GPIO01 1
-#define GPIO02 2
-#define GPIO03 3
-#define GPIO04 4
-#define GPIO05 5
-#define GPIO06 6
-#define GPIO07 7
-#define GPIO08 8
-#define GPIO09 9
+#define GPIO0  0
+#define GPIO1  1
+#define GPIO2  2
+#define GPIO3  3
+#define GPIO4  4
+#define GPIO5  5
+#define GPIO6  6
+#define GPIO7  7
+#define GPIO8  8
+#define GPIO9  9
 #define GPIO10 10
 #define GPIO11 11
 #define GPIO12 12
@@ -109,16 +111,16 @@
 #define GPIO39 39
 
 // ESP32 available pin names
-#define GPIO00_NAME "GPIO00"
-#define GPIO01_NAME "GPIO01"
-#define GPIO02_NAME "GPIO02"
-#define GPIO03_NAME "GPIO03"
-#define GPIO04_NAME "GPIO04"
-#define GPIO05_NAME "GPIO05"
-#define GPIO06_NAME "GPIO06"
-#define GPIO07_NAME "GPIO07"
-#define GPIO08_NAME "GPIO08"
-#define GPIO09_NAME "GPIO09"
+#define GPIO0_NAME  "GPIO0"
+#define GPIO1_NAME  "GPIO1"
+#define GPIO2_NAME  "GPIO2"
+#define GPIO3_NAME  "GPIO3"
+#define GPIO4_NAME  "GPIO4"
+#define GPIO5_NAME  "GPIO5"
+#define GPIO6_NAME  "GPIO6"
+#define GPIO7_NAME  "GPIO7"
+#define GPIO8_NAME  "GPIO8"
+#define GPIO9_NAME  "GPIO9"
 #define GPIO10_NAME "GPIO10"
 #define GPIO11_NAME "GPIO11"
 #define GPIO12_NAME "GPIO12"
@@ -149,6 +151,10 @@
 
 // ESP32 has 16 GPIO per port
 #define GPIO_PER_PORT 39
+
+// ESP32 needs 64 bits for port mask
+typedef uint64_t gpio_port_mask_t;
+#define GPIO_ALL 0b111111110000111011101111111111111111111UL
 
 /*
  * ----------------------------------------------------------------

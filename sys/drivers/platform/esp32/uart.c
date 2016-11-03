@@ -133,8 +133,8 @@ void uart_pin_config(u8_t unit, u8_t *rx, u8_t *tx) {
 	        PIN_PULLUP_EN(PERIPHS_IO_MUX_U0RXD_U);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_U0RXD_U0RXD);
 
-			if (rx) *rx = PIN_GPIO03;
-			if (tx) *tx = PIN_GPIO01;
+			if (rx) *rx = PIN_GPIO3;
+			if (tx) *tx = PIN_GPIO1;
 			
 			break;
 						
@@ -147,7 +147,7 @@ void uart_pin_config(u8_t unit, u8_t *rx, u8_t *tx) {
 	        PIN_PULLUP_EN(PERIPHS_IO_MUX_SD_DATA2_U);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA2_U, FUNC_SD_DATA2_U1RXD);
 
-			if (rx) *rx = PIN_GPIO09;
+			if (rx) *rx = PIN_GPIO9;
 			if (tx) *tx = PIN_GPIO10;
 
 			break;

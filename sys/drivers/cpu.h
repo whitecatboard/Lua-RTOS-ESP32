@@ -1,3 +1,6 @@
+#ifndef __ROOT_CPU_H__
+#define __ROOT_CPU_H__
+
 #ifdef PLATFORM_ESP8266
 #include <sys/drivers/platform/esp8266/cpu.h>
 #endif
@@ -29,3 +32,5 @@ unsigned int cpu_has_gpio(unsigned int port, unsigned int pin);
 unsigned int cpu_has_port(unsigned int port);
 void cpu_sleep(int seconds);
 int cpu_reset_reason();
+
+#endif

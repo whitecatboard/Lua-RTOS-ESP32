@@ -80,6 +80,7 @@ ifeq ($(PLATFORM),esp32)
 	INC_DIRS += $(ROOT)main/platform/$(PLATFORM)/esp-idf/components/freertos/include/freertos
 	INC_DIRS += $(ROOT)main/platform/$(PLATFORM)/esp-idf/components/esp32/include
 	INC_DIRS += $(ROOT)main/platform/$(PLATFORM)/esp-idf/components/spi_flash/include
+	INC_DIRS += $(ROOT)main/platform/$(PLATFORM)/esp-idf/components/driver/include
 	INC_DIRS += $(ROOT)Lua/adds
 	INC_DIRS += $(ROOT)Lua/common
 	INC_DIRS += $(ROOT)Lua/modules

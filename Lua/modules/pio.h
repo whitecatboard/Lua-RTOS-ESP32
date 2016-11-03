@@ -4,8 +4,8 @@
 #include "modules.h"
 
 #include <stdint.h>
-#include "sys/drivers/gpio.h"
-#include "sys/drivers/cpu.h"
+#include <sys/drivers/gpio.h>
+#include <sys/drivers/cpu.h>
 
 enum
 {
@@ -26,6 +26,12 @@ enum
   PLATFORM_IO_PORT_DIR_INPUT,
   PLATFORM_IO_PORT_DIR_OUTPUT
 };
+
+#ifdef GPIO0
+#define PIO_GPIO0 {LSTRKEY(GPIO0_NAME), LINTVAL(GPIO0)},
+#else
+#define PIO_GPIO0
+#endif
 
 #ifdef GPIO1
 #define PIO_GPIO1 {LSTRKEY(GPIO1_NAME), LINTVAL(GPIO1)},
@@ -303,11 +309,7 @@ enum
 #define PIO_GPIO46
 #endif
 
-typedef u32_t pio_type;
-
-
-// Each i/o port are 16 bits - wide
-
+typedef gpio_port_mask_t pio_type;
 
 int platform_pio_has_port( unsigned port );
 const char* platform_pio_get_prefix( unsigned port );

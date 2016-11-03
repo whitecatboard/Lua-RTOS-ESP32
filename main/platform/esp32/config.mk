@@ -15,7 +15,7 @@ CFLAGS += -DdefaultThreadStack=10240
 CFLAGS += -DPATH_MAX=64
 
 CFLAGS += -DUSE_RTC=0						    # Enable RTC
-CFLAGS += -DLED_ACT=0					 	    # GPIO for activity led (0 if not led)
+CFLAGS += -DLED_ACT=15					 	    # GPIO for activity led (0 if not led)
 CFLAGS += -DLED_DBG=0 					 	    # GPIO for debug led (0 if not led)
 
 #
@@ -83,7 +83,7 @@ CFLAGS += -DLUA_USE_DEBUG=1 		   # debug
 # LuaOS Lua modules to include
 #
 CFLAGS += -DLUA_USE_TMR=1		       # timer
-CFLAGS += -DLUA_USE_PIO=0		       # gpio
+CFLAGS += -DLUA_USE_PIO=1		       # gpio
 CFLAGS += -DLUA_USE_LORA=0		       # lora
 CFLAGS += -DLUA_USE_PACK=1		       # pack
 CFLAGS += -DLUA_USE_THREAD=1		   # thread

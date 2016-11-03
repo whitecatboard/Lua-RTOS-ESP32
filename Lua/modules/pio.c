@@ -12,8 +12,8 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "sys/drivers/cpu.h"
-#include "sys/drivers/gpio.h"
+#include <sys/drivers/cpu.h>
+#include <sys/drivers/gpio.h>
 
 // PIO public constants
 #define PIO_DIR_OUTPUT      0
@@ -392,6 +392,7 @@ static const LUA_REG_TYPE pio_map[] = {
     { LSTRKEY( "PULLDOWN" ),		LINTVAL ( PLATFORM_IO_PIN_PULLDOWN ) },
     { LSTRKEY( "NOPULL"   ),		LINTVAL ( PLATFORM_IO_PIN_NOPULL   ) },
 
+    PIO_GPIO0
     PIO_GPIO1
     PIO_GPIO2
     PIO_GPIO3

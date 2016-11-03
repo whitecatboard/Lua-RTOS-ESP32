@@ -4,8 +4,8 @@
 #include "modules.h"
 
 #include <stdint.h>
-#include "sys/drivers/i2c.h"
-#include "sys/drivers/cpu.h"
+#include <sys/drivers/i2c.h>
+#include <sys/drivers/cpu.h>
 
 #ifdef I2C1
 #define I2C_I2C1 {LSTRKEY(I2C1_NAME), LINTVAL(I2C1)},

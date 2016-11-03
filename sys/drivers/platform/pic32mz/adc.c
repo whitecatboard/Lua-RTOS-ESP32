@@ -33,9 +33,9 @@
 #include "timers.h"
 #include "event_groups.h"
 
-#include "sys/drivers/adc.h"
-#include "sys/drivers/gpio.h"
-#include "sys/drivers/dma.h"
+#include <sys/drivers/adc.h>
+#include <sys/drivers/gpio.h>
+#include <sys/drivers/dma.h>
 
 #include <sys/syslog.h>
 

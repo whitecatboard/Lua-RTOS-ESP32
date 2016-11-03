@@ -9,8 +9,8 @@
 #include "auxmods.h"
 
 #include "Lua/modules/spi.h"
-#include "drivers/spi/spi.h"
-#include "drivers/cpu/cpu.h"
+#include <sys/drivers/spi/spi.h>
+#include <sys/drivers/cpu/cpu.h>
 
 // Lua: sson( id )
 static int lspi_select( lua_State* L ) {

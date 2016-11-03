@@ -40,8 +40,8 @@
 
 #include <machine/pic32mz.h>
 #include <pthread.h>
-#include "sys/drivers/gpio.h"
-#include "sys/drivers/uart.h"
+#include <sys/drivers/gpio.h>
+#include <sys/drivers/uart.h>
 
 #include <signal.h>
 #include <stdarg.h>
