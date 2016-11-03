@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, list data structure
+ * Lua RTOS, some debug functions
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -27,34 +27,17 @@
  * this software.
  */
 
-#ifndef _LIST_H
-#define	_LIST_H
+#include "debug.h"
 
-#include <stdint.h>
-#include <sys/mutex.h>
+#include <sys/drivers/gpio.h>
 
-struct list {
-    struct mtx mutex;
-    struct list_index *index;
-    struct list_index *free;
-    u8_t indexes;
-    u8_t first_index;
-};
+void debug_led_on() {
+	gpio_pin_output(LED_DBG);
+	gpio_pin_set(LED_DBG);
+}
 
-struct list_index {
-    void *item;
-    u8_t index;
-    u8_t deleted;
-    struct list_index *next;
-};
-
-void list_init(struct list *list, int first_index);
-int list_add(struct list *list, void *item, int *item_index);
-int list_get(struct list *list, int index, void **item);
-int list_remove(struct list *list, int index);
-int list_first(struct list *list);
-int list_next(struct list *list, int index);
-void list_destroy(struct list *list, int items);
-
-#endif	/* LIST_H */
+void debug_led_off() {
+	gpio_pin_output(LED_DBG);
+	gpio_pin_clr(LED_DBG);
+}
 

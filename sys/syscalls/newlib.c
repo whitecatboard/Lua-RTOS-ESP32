@@ -39,10 +39,57 @@
 
 extern void luaC_fullgc (lua_State *L, int isemergency);
 
-#if !PLATFORM_ESP32
+#undef  RAM_FUNC_ATTR
+#define RAM_FUNC_ATTR
 
-// If memory cannot be allocated, launch Lua garbage collector and
-// try again with the hope that then more memory will be available
+#if PLATFORM_ESP32
+#include "esp_attr.h"
+
+#undef  RAM_FUNC_ATTR
+#define RAM_FUNC_ATTR IRAM_ATTR
+#endif
+
+#if PLATFORM_ESP8266
+#undef  RAM_FUNC_ATTR
+#define RAM_FUNC_ATTR IRAM
+#endif
+
+#if !PLATFORM_ESP8266
+void* RAM_FUNC_ATTR __malloc_r(struct _reent *r, size_t size) {
+    return pvPortMalloc(size);
+}
+
+void RAM_FUNC_ATTR __free_r(struct _reent *r, void* ptr) {
+    vPortFree(ptr);
+}
+
+void* RAM_FUNC_ATTR __realloc_r(struct _reent *r, void* ptr, size_t size) {
+    void *new_chunk;
+
+    if (size == 0) {
+        if (ptr) {
+            vPortFree(ptr);
+        }
+        return NULL;
+    }
+
+    new_chunk = pvPortMalloc(size);
+    if (new_chunk && ptr) {
+        memcpy(new_chunk, ptr, size);
+        vPortFree(ptr);
+    }
+
+    return new_chunk;
+}
+
+void* RAM_FUNC_ATTR __calloc_r(struct _reent *r, size_t count, size_t size) {
+    void *result = pvPortMalloc(count * size);
+    if (result) {
+        memset(result, 0, count * size);
+    }
+    return result;
+}
+#else
 // WRAP for malloc
 //
 // If memory cannot be allocated, launch Lua garbage collector and
@@ -50,19 +97,19 @@ extern void luaC_fullgc (lua_State *L, int isemergency);
 extern void* __real_malloc(size_t bytes);
 void* __wrap_malloc(size_t bytes) {
 	void *ptr = __real_malloc(bytes);
-	
+
 	if (!ptr) {
 		lua_State *L = pvGetLuaState();
-		
+
 		if (L) {
 			lua_lock(L);
 			luaC_fullgc(L, 1);
 			lua_unlock(L);
-				
+
 			ptr = __real_malloc(bytes);
 		}
 	}
-	
+
 	return ptr;
 }
 
@@ -72,12 +119,12 @@ void* __wrap_calloc(size_t n, size_t bytes) {
 
 	if (!ptr) {
 		lua_State *L = pvGetLuaState();
-		
+
 		if (L) {
 			lua_lock(L);
 			luaC_fullgc(L, 1);
 			lua_unlock(L);
-				
+
 			ptr = __real_calloc(n, bytes);
 		}
 	}
@@ -91,58 +138,32 @@ void* __wrap_realloc(void *ptr, size_t bytes) {
 
 	if (!nptr) {
 		lua_State *L = pvGetLuaState();
-		
+
 		if (L) {
 			lua_lock(L);
 			luaC_fullgc(L, 1);
 			lua_unlock(L);
-			
+
 			nptr = __real_realloc(ptr, bytes);
 		}
 	}
-	
+
 	return nptr;
 }
+
+extern uint32_t _irom0_text_start;
+extern uint32_t _irom0_text_end;
 
 extern void __real_free(void *ptr);
 void __wrap_free(void *ptr) {
 	__real_free(ptr);
 }
+#endif
 
-extern void *xPortSupervisorStackPointer;
-static char *heap_end = NULL;
-    
-void *_sbrk_r (struct _reent *r, ptrdiff_t incr) {
-    extern char   _heap_start; /* linker script defined */
-	register int  stackptr asm("sp"); 
-    char 		 *prev_heap_end;
-
-    if (heap_end == NULL)
-		heap_end = &_heap_start;
-		
-    prev_heap_end = heap_end;
-
-    intptr_t sp = (intptr_t)xPortSupervisorStackPointer;
-    if(sp == 0) /* scheduler not started */
-        sp = stackptr;
-
-    if ((intptr_t)heap_end + incr >= sp) {
-        r->_errno = ENOMEM;
-        return (caddr_t)-1;
-    }
-
-    heap_end += incr;
-
-    return (caddr_t) prev_heap_end;
-}
-
-void *sbrk(int incr) {
-	return (void *)_sbrk_r (_GLOBAL_REENT, incr);
-}
-
+#if !PLATFORM_ESP32
 int _isatty_r(struct _reent *r, int fd) {
 	return (fd < 3);
-} 
+}
 
 int isatty(int fd) {
 	return _isatty_r(_GLOBAL_REENT, fd);
@@ -153,7 +174,7 @@ int __open_r(struct _reent *r, const char *pathname, int flags, int mode) {
 	if (status_get(STATUS_SYSCALLS_INITED)) {
 		return __open(r, pathname, flags, mode);
 	}
-	
+
 	return 0;
 }
 

@@ -101,16 +101,20 @@ const int ndevs = sizeof(devs) / sizeof(struct device);
 //   * creation of file drscriptor mutex
 // 
 // This function must be called before any syscall invocation, and it's called
-// during the Lua RTOS booting process in mach_init function.
+// during the Lua RTOS booting process.
 void _syscalls_init() {
     nfiles = 0;
     
+//    debug_led_on();
+  //  delay(2000);
+  //  debug_led_off();
+  //  delay(2000);
     // Allocate space for file descriptor structure
     p_fd = (struct filedesc *)calloc(1, sizeof(struct filedesc));
     if (!p_fd) {
         panic("Cannot allocate space for file descriptors");
     }
-    
+
     p_fd->fd_ofiles = (struct  file **)calloc(1, sizeof(struct  file *) * NDFILE);
     if (!p_fd->fd_ofiles) {
         panic("Cannot allocate space for open files");
@@ -125,7 +129,7 @@ void _syscalls_init() {
     
     // Create file descriptor mutex
     mtx_init(&fd_mtx, NULL, NULL, 0);
-	
+
 	status_set(STATUS_SYSCALLS_INITED);	
 }
 

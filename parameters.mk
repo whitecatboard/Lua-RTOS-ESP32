@@ -141,7 +141,7 @@ ENTRY_SYMBOL ?= call_user_start
 # Set this to zero if you don't want individual function & data sections
 # (some code may be slightly slower, linking will be slighty slower,
 # but compiled code size will come down a small amount.)
-SPLIT_SECTIONS ?= 0
+SPLIT_SECTIONS ?= 1
 
 # Set this to 1 to have all compiler warnings treated as errors (and stop the
 # build).  This is recommended whenever you are working on code which will be
@@ -176,7 +176,6 @@ EXTRA_LDFLAGS = -Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=realloc -Wl,--wra
 endif
 
 ifeq ($(PLATFORM),pic32mz)
-EXTRA_LDFLAGS = -Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=realloc -Wl,--wrap=free
 endif
 
 ifeq ($(PLATFORM),esp8266)

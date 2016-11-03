@@ -174,24 +174,4 @@
 #define I2CBB4_NAME  "I2CBB4"
 #define I2CBB5_NAME  "I2CBB5"
 
-void cpu_init();
-int cpu_revission();
-void cpu_model(char *buffer);
-void cpu_reset();
-void cpu_show_info();
-unsigned int cpu_pins();
-void cpu_assign_pin(unsigned int pin, unsigned int by);
-void cpu_releasEpin(unsigned int pin);
-unsigned int cpu_pin_assigned(unsigned int pin);
-unsigned int cpu_pin_number(unsigned int pin);
-unsigned int cpu_port_io_pin_mask(unsigned int port);
-unsigned int cpu_port_adCpin_mask(unsigned int port);
-void cpu_sleep(int seconds);
-const char *cpu_pin_name(unsigned int pin);
-void _cpu_init();
-unsigned int cpu_port_number(unsigned int pin);
-unsigned int cpu_has_port(unsigned int port);
-unsigned int cpu_has_gpio(unsigned int port, unsigned int bit);
-unsigned int cpu_port_adc_pin_mask(unsigned int port);
-
 #endif

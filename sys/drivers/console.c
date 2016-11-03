@@ -62,9 +62,14 @@ void _console_init() {
 
 void console_default() {
 	// Close standard streams
-	fclose(_GLOBAL_REENT->_stdin);
-	fclose(_GLOBAL_REENT->_stdout);
-	fclose(_GLOBAL_REENT->_stderr);
+	if (_GLOBAL_REENT->_stdin)
+		fclose(_GLOBAL_REENT->_stdin);
+
+	if (_GLOBAL_REENT->_stdout)
+		fclose(_GLOBAL_REENT->_stdout);
+
+	if (_GLOBAL_REENT->_stderr)
+		fclose(_GLOBAL_REENT->_stderr);
 
 	// Open standard streams
     _GLOBAL_REENT->_stdin  = fopen(CONSOLE_TTY, "r");
@@ -81,9 +86,14 @@ void console_default() {
 #if CONSOLE_SWAP_UART
 void console_swap() {
 	// Close standard streams
-	fclose(_GLOBAL_REENT->_stdin);
-	fclose(_GLOBAL_REENT->_stdout);
-	fclose(_GLOBAL_REENT->_stderr);
+	if (_GLOBAL_REENT->_stdin)
+		fclose(_GLOBAL_REENT->_stdin);
+
+	if (_GLOBAL_REENT->_stdout)
+		fclose(_GLOBAL_REENT->_stdout);
+
+	if (_GLOBAL_REENT->_stderr)
+		fclose(_GLOBAL_REENT->_stderr);
 
 	// Open standard streams
     _GLOBAL_REENT->_stdin  = fopen(CONSOLE_TTY, "r");

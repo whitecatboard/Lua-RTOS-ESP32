@@ -91,6 +91,9 @@ static const char *pin_names[] = {
 extern void sdk_system_restart_in_nmi(void);
 extern uint8_t sdk_rtc_get_reset_reason(void);
 
+void _cpu_init() {
+}
+
 /*
 
 typedef enum {
@@ -334,7 +337,7 @@ void cpu_show_info() {
 	}
 }
 
-void cpu_sleep(unsigned int seconds) {
+void cpu_sleep(int seconds) {
 	sdk_system_deep_sleep(seconds * 1000000);
 }
 

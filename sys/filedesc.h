@@ -50,6 +50,10 @@
 #define NDFILE      5
 #define NDEXTENT    0      /* 250 bytes in 256-byte alloc. */
 
+#include <limits.h>
+
+#include <sys/cdefs.h>
+
 struct filedesc {
     struct  file **fd_ofiles;   /* file structures for open files */
     char    *fd_ofileflags;     /* per-process open file flags */

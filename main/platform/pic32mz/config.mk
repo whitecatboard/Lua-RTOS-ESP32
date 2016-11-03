@@ -8,7 +8,7 @@ CFLAGS += -mips32r2 -EL -mhard-float -fno-short-double -mfp64
 CFLAGS += -DCPU_HZ=200000000L                    # CPU frequency in hertz
 CFLAGS += -DCORE_TIMER_HZ=CPU_HZ                 # CPU core timer frequency
 
-CFLAGS += -DBASE_TIMER_HZ=100000                 # TIMER1 at 1000000 Hz (T = 10 usec)
+CFLAGS += -DBASE_TIMER_HZ=1000                   # TIMER1 at 1000 Hz (T = 1 msec)
 CFLAGS += -DBASE_TIMER_TICK_RATE=1000            # Generate a FreeRTOS ticks every 1000 TIMER1 ticks (T = 1 msec)
 
 CFLAGS += -D_CLOCKS_PER_SEC_=configTICK_RATE_HZ  # Number of interrupt ticks for reach 1 second
@@ -27,6 +27,7 @@ CFLAGS += -DPBCLK5_HZ=40000000L 			 	 # System frequency for CAN
 
 CFLAGS += -DUSE_RTC=0						 	 # Enable RTC
 CFLAGS += -DLED_ACT=0x63					 	 # GPIO for activity led (0 if not led)
+CFLAGS += -DLED_DBG=0x25					 	 # GPIO for debug led (0 if not led)
 
 #
 # SPI map
@@ -66,7 +67,7 @@ CFLAGS += -DCFI_LED=LED_ACT            # LED
 #
 # File system configuration
 # 
-CFLAGS += -DUSE_FAT=0                  # Enable FAT
+CFLAGS += -DUSE_FAT=1                  # Enable FAT
 CFLAGS += -DUSE_SPIFFS=0               # Enable SPIFFS
 
 #

@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, debug functions
+ * Lua RTOS, some debug functions
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -32,6 +32,8 @@
 
 #include "FreeRTOS.h"
 
+// #include <sys/drivers/gpio.h>
+
 #if DEBUG_FREE_MEM
 #define debug_free_mem_begin(var) \
 int elapsed_begin_##var = xPortGetFreeHeapSize(); 
@@ -48,6 +50,9 @@ if (elapsed_end_##var_msg) { \
 #define debug_free_mem_begin(var)
 #define debug_free_mem_end(var, msg)
 #endif
+
+// void debug_led_on();
+// void debug_led_off();
 
 #endif /* !_SYS_DEBUG_H_ */
 

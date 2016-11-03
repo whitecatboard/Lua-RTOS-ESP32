@@ -141,7 +141,7 @@ void app_main(void) {
 		gpio_pin_output(LED_ACT);
     	gpio_pin_clr(LED_ACT);
 	#endif
-	
+
     pthread_attr_t attr;
     pthread_t thread;
     int res;

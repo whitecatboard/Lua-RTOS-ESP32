@@ -15,6 +15,10 @@ CFLAGS += -DluaTaskStack=192*5                  # Stck size assigned to lua thre
 CFLAGS += -DtskDEF_PRIORITY=0				    # Default task priority
 CFLAGS += -DdefaultThreadStack=192*5
 
+CFLAGS += -DUSE_RTC=0						    # Enable RTC
+CFLAGS += -DLED_ACT=0					 	    # GPIO for activity led (0 if not led)
+CFLAGS += -DLED_DBG=0 					 	    # GPIO for debug led (0 if not led)
+
 #
 # File system configuration
 # 

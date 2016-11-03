@@ -23,7 +23,7 @@ void gpio_disable_analog(int pin);
 #endif
 
 #ifdef PLATFORM_ESP32
-#include <sys/drivers/platform/esp32/gpio.h>
+//#include <sys/drivers/platform/esp32/gpio.h>
 #endif
 
 #ifdef PLATFORM_PIC32MZ

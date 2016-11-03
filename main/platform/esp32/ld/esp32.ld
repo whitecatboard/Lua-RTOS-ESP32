@@ -50,6 +50,12 @@ MEMORY
 }
 
 _read_core_timer = xthal_get_ccount;
+
+_malloc_r = __malloc_r;
+_free_r = __free_r;
+_calloc_r = __calloc_r;
+_realloc_r = __realloc_r;
+
 _write_r = __write_r;
 _read_r = __read_r;
 _fstat_r = __fstat_r;

@@ -40,6 +40,7 @@ void _mtx_init() {
 
 void mtx_init(struct mtx *mutex, const char *name, const char *type, int opts) {    
     mutex->sem = xSemaphoreCreateBinary();
+
     if (mutex->sem) {
         if (portIN_ISR()) {
             BaseType_t xHigherPriorityTaskWoken = pdFALSE;

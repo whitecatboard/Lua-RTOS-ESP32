@@ -35,17 +35,24 @@
 
 #include <sys/reent.h>
 #include <sys/syslog.h>
+#include <sys/drivers/sd.h>
 #include <sys/drivers/console.h>
 #include <sys/drivers/cpu.h>
+#include <sys/syscalls/syscalls.h>
 #include <sys/syscalls/mount.h>
 
 extern void _clock_init();
 extern void _syscalls_init();
 extern void _pthread_init();
 extern void _console_init();
-extern void _lora_init();
 extern void _signal_init();
 extern void _mtx_init();
+extern void _resource_init();
+extern void _cpu_init();
+
+#if LUA_USE_LORA
+extern void _lora_init();
+#endif
 
 extern void _cleanup_r(struct _reent* r);
 extern const char *__progname;
@@ -74,6 +81,8 @@ void _sys_init() {
 	_reent_init(_GLOBAL_REENT);
 #endif
 	
+	_cpu_init();
+	_resource_init();
     _mtx_init();
     _pthread_init();
     _clock_init();
@@ -81,13 +90,17 @@ void _sys_init() {
 	_console_init();
     _signal_init();
 
+#if LUA_USE_LORA
+    _lora_init();
+#endif
+
 	console_clear();
 
-    printf("  /\\       /\\\n");
+	printf("  /\\       /\\\n");
     printf(" /  \\_____/  \\\n");
     printf("/_____________\\\n");
     printf("W H I T E C A T\n\n");
-		
+
     printf("Lua RTOS %s build %d Copyright (C) 2015 - 2016 whitecatboard.org\n\n", LUA_OS_VER, BUILD_TIME);
     
     openlog(__progname, LOG_CONS | LOG_NDELAY, LOG_LOCAL1);
@@ -113,7 +126,7 @@ void _sys_init() {
         rtc_init(time(NULL));
     #endif
         
-    #if (USE_SD)
+    #if (USE_FAT)
         if (mount_is_mounted("sd")) {
             // Redirect console messages to /log/messages.log ...
             closelog();            

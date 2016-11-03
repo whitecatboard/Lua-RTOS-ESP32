@@ -102,11 +102,12 @@ asm ("_boot:    la      $ra, start");
 asm ("          jr      $ra");
 asm ("          .text");
 
-void app_main();
 
 const char *__progname = "Lua RTOS";
 
-int main(void) {      
+void app_main();
+
+int main(void) {   
 	app_main();
 	
     // Start scheluder

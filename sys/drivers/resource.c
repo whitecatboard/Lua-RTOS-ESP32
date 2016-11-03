@@ -147,6 +147,10 @@ void resource_unlock(tresource_type type, int unit) {
     
     mtx_unlock(&resource_mtx);    
 }
+#else
+void _resource_init() {
+
+}
 #endif
 
 const char *resource_name(tresource_type type) {

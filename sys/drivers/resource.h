@@ -41,7 +41,7 @@ typedef struct {
     int granted;
 } tresource_lock;
 
-void resource_init();
+void _resource_init();
 tresource_lock *resource_lock(tresource_type type, int resource_unit, tresource_owner owner, int owner_unit);
 void resource_unlock(tresource_type type, int unit);
 

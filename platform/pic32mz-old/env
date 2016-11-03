@@ -1,2 +1,0 @@
-export PATH=/usr/local/gnu-mips/bin:$PATH
-export PLATFORM=pic32mz

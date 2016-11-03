@@ -264,11 +264,6 @@ PRIVILEGED_DATA static List_t xPendingReadyList;						/*< Tasks that have been r
 PRIVILEGED_DATA static volatile UBaseType_t uxCurrentNumberOfTasks 	= ( UBaseType_t ) 0U;
 PRIVILEGED_DATA static volatile TickType_t xTickCount 				= ( TickType_t ) 0U;
 
-// WHITECAT BEGIN
-PRIVILEGED_DATA static volatile TickType_t xuTickCount 				= ( TickType_t ) 0U;
-PRIVILEGED_DATA static volatile TickType_t xRemainingTickCount 		= ( TickType_t ) (BASE_TIMER_TICK_RATE);
-// WHITECAT END
-
 PRIVILEGED_DATA static volatile UBaseType_t uxTopReadyPriority 		= tskIDLE_PRIORITY;
 PRIVILEGED_DATA static volatile BaseType_t xSchedulerRunning 		= pdFALSE;
 PRIVILEGED_DATA static volatile UBaseType_t uxPendedTicks 			= ( UBaseType_t ) 0U;
@@ -1620,11 +1615,6 @@ BaseType_t xReturn;
 		xSchedulerRunning = pdTRUE;
 		xTickCount = ( TickType_t ) 0U;
 		
-		// WHITECAT BEGIN
-		xuTickCount = ( TickType_t ) 0U;
-		xRemainingTickCount = ( TickType_t ) BASE_TIMER_TICK_RATE;
-		// WHITECAT EMD
-		
 		/* If configGENERATE_RUN_TIME_STATS is defined then the following
 		macro must be defined to configure the timer/counter used to generate
 		the run time counter time base. */
@@ -1971,17 +1961,6 @@ implementations require configUSE_TICKLESS_IDLE to be set to a value other than
 
 BaseType_t xTaskIncrementTick( void )
 {
-	// WHITECAT BEGIN
-	++xuTickCount;
-	--xRemainingTickCount;
-
-	if (xRemainingTickCount != ( TickType_t )0U) {
-		return pdFALSE;
-	}
-
-	xRemainingTickCount = ( TickType_t ) BASE_TIMER_TICK_RATE;
-	// WHITECAT END
-
 	TCB_t * pxTCB;
 	TickType_t xItemValue;
 	BaseType_t xSwitchRequired = pdFALSE;

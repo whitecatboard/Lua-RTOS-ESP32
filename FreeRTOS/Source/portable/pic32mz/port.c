@@ -448,18 +448,3 @@ void vPortClearInterruptMaskFromISR( UBaseType_t uxSavedStatusRegister )
 #endif /* __mips_hard_float == 1 */
 
 /*-----------------------------------------------------------*/
-
-
-size_t xPortGetFreeHeapSize( void )
-{
-	register int stackptr asm("sp"); 
-    struct mallinfo mi = mallinfo();
-    uint32_t brk_val = (uint32_t)sbrk(0);
-
-    intptr_t sp = (intptr_t)xPortSupervisorStackPointer;
-    if(sp == 0) /* scheduler not started */
-        sp = stackptr;
-	
-    return sp - brk_val + mi.fordblks;
-}
-

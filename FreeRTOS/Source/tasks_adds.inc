@@ -40,7 +40,7 @@ void enter_critical_section() {
 		#endif
     } else {
         taskENTER_CRITICAL();            
-    }        
+    }
 }
 
 void exit_critical_section() {

@@ -1,5 +1,5 @@
 /*
- * Whitecat, Lora WAN driver for LMIC
+ * Lua RTOS, Lora WAN driver for LMIC
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

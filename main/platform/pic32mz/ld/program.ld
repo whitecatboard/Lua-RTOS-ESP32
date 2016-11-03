@@ -17,8 +17,10 @@ MEMORY
   kseg1_data_mem    (rw!x)  : ORIGIN = 0xA0000000, LENGTH = 512K
 }
 
-pvPortMalloc = malloc;
-vPortFree = free;
+_malloc_r = __malloc_r;
+_free_r = __free_r;
+_realloc_r = __realloc_r;
+_calloc_r = __calloc_r;
 
 _write_r = __write_r;
 _read_r = __read_r;
