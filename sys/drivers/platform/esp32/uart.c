@@ -172,9 +172,9 @@ static IRAM_ATTR int queue_byte(u8_t unit, u8_t byte, int *signal) {
     if (unit == CONSOLE_UART - 1) {
         if (byte == 0x04) {
             if (!status_get(STATUS_LUA_RUNNING)) {
-                uart_writes(CONSOLE_UART, "LuaOS-booting\r\n");                   
+                uart_writes(CONSOLE_UART, "Lua RTOS-booting\r\n");
             } else {
-                uart_writes(CONSOLE_UART, "LuaOS-running\r\n");
+                uart_writes(CONSOLE_UART, "Lua RTOS-running\r\n");
             }
             
     		status_set(STATUS_LUA_ABORT_BOOT_SCRIPTS);

@@ -15,7 +15,7 @@ CFLAGS += -DdefaultThreadStack=10240
 CFLAGS += -DPATH_MAX=64
 
 CFLAGS += -DUSE_RTC=0						    # Enable RTC
-CFLAGS += -DLED_ACT=15					 	    # GPIO for activity led (0 if not led)
+CFLAGS += -DLED_ACT=12					 	    # GPIO for activity led (0 if not led)
 CFLAGS += -DLED_DBG=0 					 	    # GPIO for debug led (0 if not led)
 
 #
