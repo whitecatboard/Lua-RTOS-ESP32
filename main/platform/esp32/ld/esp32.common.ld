@@ -76,6 +76,8 @@ SECTIONS
     /* Code marked as runnning out of IRAM */
     _iram_text_start = ABSOLUTE(.);
     *(.iram1 .iram1.*)
+    *sys.a:(.literal .text .literal.* .text.*)
+    *pthread.a:(.literal .text .literal.* .text.*)
     *libfreertos.a:(.literal .text .literal.* .text.*)
     *libesp32.a:panic.o(.literal .text .literal.* .text.*)
     *libphy.a:(.literal .text .literal.* .text.*)

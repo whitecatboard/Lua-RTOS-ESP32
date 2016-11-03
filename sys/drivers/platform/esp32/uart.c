@@ -168,7 +168,7 @@ void uart_pin_config(u8_t unit, u8_t *rx, u8_t *tx) {
 	}
 }
 
-static IRAM_ATTR int queue_byte(u8_t unit, u8_t byte, int *signal) {
+static int queue_byte(u8_t unit, u8_t byte, int *signal) {
     if (unit == CONSOLE_UART - 1) {
         if (byte == 0x04) {
             if (!status_get(STATUS_LUA_RUNNING)) {
@@ -194,7 +194,7 @@ static IRAM_ATTR int queue_byte(u8_t unit, u8_t byte, int *signal) {
 	return 1;	
 }
 
-void IRAM_ATTR uart_rx_intr_handler(void *para) {
+void uart_rx_intr_handler(void *para) {
     BaseType_t xHigherPriorityTaskWoken;
     xHigherPriorityTaskWoken = pdFALSE;
 	u8_t byte;
