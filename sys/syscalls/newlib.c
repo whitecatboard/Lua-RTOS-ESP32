@@ -248,15 +248,12 @@ int __gettimeofday_r(struct _reent *r, struct timeval *tv, void *tz) {
 
 unsigned sleep(unsigned int secs) {
     vTaskDelay( (secs * 1000) / ((TickType_t) 1000 / configTICK_RATE_HZ));
-    
+
     return 0;
 }
 
 int usleep(useconds_t usec) {
 	vTaskDelay(usec / ((TickType_t) 1000000 / configTICK_RATE_HZ));
-	
-	return 0;
-}
 
-void _newlib_init() {
+	return 0;
 }

@@ -32,6 +32,7 @@
 
 #include <limits.h>
 
+#include <unistd.h>
 #include <sys/status.h>
 #include <sys/debug.h>
 #include <sys/syscalls/mount.h>
