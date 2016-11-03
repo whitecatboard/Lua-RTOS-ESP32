@@ -1,5 +1,5 @@
 /*
- * Whitecat, DMA driver
+ * Lua RTOS, DMA driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

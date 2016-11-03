@@ -1,5 +1,5 @@
 /*
- * Whitecat, Lua screen driver
+ * Lua RTOS, Lua screen driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

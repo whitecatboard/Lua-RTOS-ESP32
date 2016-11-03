@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2014 Serge Vakulenko, <serge@vak.ru>
  *
- * Whitecat, SPI driver
+ * Lua RTOS, SPI driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

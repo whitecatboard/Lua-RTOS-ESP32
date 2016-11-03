@@ -1,5 +1,5 @@
 /*
- * Whitecat, heap adds for whitecat, base implementation for Realloc and Calloc
+ * Lua RTOS, implementation for realloc and calloc using FreeRTOS heap
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

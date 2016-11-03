@@ -1,5 +1,5 @@
 /*
- * Whitecat, adds to lua.c
+ * Lua RTOS, adds to lua.c
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

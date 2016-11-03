@@ -1,5 +1,5 @@
 /*
- * Whitecat, readdir implementation
+ * Lua RTOS, readdir implementation
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

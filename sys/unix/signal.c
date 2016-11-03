@@ -1,5 +1,5 @@
 /*
- * Whitecat, minimal signal implementation
+ * Lua RTOS, minimal signal implementation
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

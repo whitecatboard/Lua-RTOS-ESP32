@@ -1,5 +1,5 @@
 /*
- * Whitecat, mutex api implementation over FreeRTOS
+ * Lua RTOS, mutex api implementation over FreeRTOS
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

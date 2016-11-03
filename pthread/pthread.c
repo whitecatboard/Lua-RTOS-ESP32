@@ -1,5 +1,5 @@
 /*
- * Whitecat, pthread implementation over FreeRTOS
+ * Lua RTOS, pthread implementation over FreeRTOS
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

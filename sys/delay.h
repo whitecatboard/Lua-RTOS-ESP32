@@ -1,5 +1,5 @@
 /*
- * Whitecat, delay functions
+ * Lua RTOS, delay functions
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

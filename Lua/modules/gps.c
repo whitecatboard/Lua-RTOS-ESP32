@@ -1,5 +1,5 @@
 /*
- * Whitecat, gps Lua module
+ * Lua RTOS, gps Lua module
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

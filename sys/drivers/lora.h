@@ -1,5 +1,5 @@
 /*
- * Whitecat, Lora WAN driver for RN2483
+ * Lua RTOS, Lora WAN driver for RN2483
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

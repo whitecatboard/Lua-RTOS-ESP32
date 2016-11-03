@@ -1,5 +1,5 @@
 /*
- * Whitecat, Common Flash Interface driver
+ * Lua RTOS, Common Flash Interface driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

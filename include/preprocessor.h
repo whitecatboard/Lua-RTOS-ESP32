@@ -1,5 +1,5 @@
 /*
- * Whitecat, some useful preprocessor macros
+ * Lua RTOS, some useful preprocessor macros
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

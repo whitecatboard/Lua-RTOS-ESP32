@@ -1,5 +1,5 @@
 /*
- * Whitecat, http server wrapper for whitecat
+ * Lua RTOS, http server wrapper
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

@@ -1,5 +1,5 @@
 /*
- * Whitecat, Lora WAN Lua Module
+ * Lua RTOS, Lora WAN Lua Module
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

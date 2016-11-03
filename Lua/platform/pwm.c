@@ -1,5 +1,5 @@
 /*
- * Whitecat, platform functions for lua PWM module
+ * Lua RTOS, platform functions for lua PWM module
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

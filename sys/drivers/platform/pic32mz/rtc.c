@@ -4,7 +4,7 @@
  * Copyright (C) 2014 Serge Vakulenko, <serge@vak.ru>
  * 
  * 
- * Whitecat, UART driver
+ * Lua RTOS, RTC driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

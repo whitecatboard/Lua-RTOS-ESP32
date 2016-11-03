@@ -1,5 +1,5 @@
 /*
- * Whitecat, pack Lua Module
+ * Lua RTOS, pack Lua Module
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

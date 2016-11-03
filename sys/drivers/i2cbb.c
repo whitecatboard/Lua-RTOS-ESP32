@@ -1,5 +1,5 @@
 /*
- * Whitecat, I2C driver, bit bang implementation
+ * Lua RTOS, I2C driver, bit bang implementation
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

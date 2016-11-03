@@ -1,5 +1,5 @@
 /*
- * Whitecat, I2C Lua module
+ * Lua RTOS, I2C Lua module
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

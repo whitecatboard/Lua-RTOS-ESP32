@@ -1,5 +1,5 @@
 /*
- * Whitecat, Lua net module
+ * Lua RTOS, Lua net module
  * 
  * This module contains elua parts
  *

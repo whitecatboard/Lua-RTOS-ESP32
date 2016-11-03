@@ -4,7 +4,7 @@
  * Copyright (C) 2014 Serge Vakulenko, <serge@vak.ru>
  * Copyright (C) 2015 - 2016 Jaume Olivé, <jolive@iberoxarxa.com>
  * 
- * Whitecat, gpio driver
+ * Lua RTOS, gpio driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

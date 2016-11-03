@@ -1,5 +1,5 @@
 /*
- * Whitecat, xc.h implementation for minimal change over FreeRTOS sources for
+ * Lua RTOS, xc.h implementation for minimal change over FreeRTOS sources for
  * compilation with gcc
  *
  * Copyright (C) 2015 - 2016

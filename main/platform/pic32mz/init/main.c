@@ -1,5 +1,5 @@
 /*
- * Whitecat, main program
+ * Lua RTOS, main program
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.

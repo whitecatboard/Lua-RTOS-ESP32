@@ -1,5 +1,5 @@
 /*
- * Whitecat, UART driver
+ * Lua RTOS, UART driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
