@@ -126,6 +126,7 @@ static int f_send (lua_State *L) {
     const char *filename = luaL_optstring(L, 1, "");
     int i;
     int done;
+    int error;
     char c;
 
     unsigned char chunk[255];
@@ -140,6 +141,7 @@ static int f_send (lua_State *L) {
         tty_lock();
        
         done = 1;
+        error = 0;
         while (!feof(f)) {
             // Read next chunk
             chunk_size = 0;
@@ -152,10 +154,10 @@ static int f_send (lua_State *L) {
             
             // Wait for C\n
             if (!uart_read(CONSOLE_UART, &c, 2000)) {done = 0; break;}
-            if (c != 'C') {done = 0; break;}
+            if (c != 'C') {done = 0; error = 1; break;}
             
             if (!uart_read(CONSOLE_UART, &c, 2000)) {done = 0; break;}
-            if (c != '\n') {done = 0; break;}
+            if (c != '\n') {done = 0; error = 1; break;}
             
             // Send chunk size
             uart_write(CONSOLE_UART, chunk_size);
@@ -173,18 +175,22 @@ static int f_send (lua_State *L) {
             // Send last chunk with size 0
 
             // Wait for C\n
-            if (!uart_read(CONSOLE_UART, &c, 2000)) {tty_unlock();return luaL_error(L, "timeout1");}
-            if (c != 'C') {tty_unlock();return luaL_error(L, "timeout1");}
+            if (!uart_read(CONSOLE_UART, &c, 2000)) {tty_unlock();return luaL_error(L, "timeout");}
+            if (c != 'C') {tty_unlock();return luaL_error(L, "unnexpected input");}
             
-            if (!uart_read(CONSOLE_UART, &c, 2000)) {tty_unlock();return luaL_error(L, "timeout1");}
-            if (c != '\n') {tty_unlock();return luaL_error(L, "timeout1");}
+            if (!uart_read(CONSOLE_UART, &c, 2000)) {tty_unlock();return luaL_error(L, "timeout");}
+            if (c != '\n') {tty_unlock();return luaL_error(L, "unnexpected input");}
             
             // Send chunk size
             chunk_size = '\0';
             uart_write(CONSOLE_UART, chunk_size);
         } else {
             tty_unlock();
-            return luaL_error(L, "timeout2");
+            if (error) {
+            	return luaL_error(L, "unnexpected input");
+            } else {
+            	return luaL_error(L, "timeout");
+            }
         }
                 
         // Unlock tty, permit other threads to write to console
