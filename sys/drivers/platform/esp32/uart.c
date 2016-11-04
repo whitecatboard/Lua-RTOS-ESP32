@@ -243,7 +243,7 @@ void  uart_rx_intr_handler(void *para) {
 	        uart_intr_status = READ_PERI_REG(UART_INT_ST_REG(unit)) ;
 	    }
 	}
-		
+
 	portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
 }
 

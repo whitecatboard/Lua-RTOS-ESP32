@@ -7,7 +7,7 @@ CFLAGS += -DCPU_HZ=240000000L                   # CPU frequency in hertz
 CFLAGS += -DCORE_TIMER_HZ=CPU_HZ                # CPU core timer frequency
 CFLAGS += -D_CLOCKS_PER_SEC_=configTICK_RATE_HZ # Number of interrupt ticks for reach 1 second
 CFLAGS += -DUSE_NETWORKING=0                    # Networking is used (1 = yes, 0 = not)
-CFLAGS += -DMTX_USE_EVENTS=0                    # Use event groups in mtx implementation (experimental)
+CFLAGS += -DMTX_USE_EVENTS=1                    # Use event groups in mtx implementation (experimental)
 
 CFLAGS += -DluaTaskStack=10240*2                # Stck size assigned to lua thread
 CFLAGS += -DtskDEF_PRIORITY=0				    # Default task priority

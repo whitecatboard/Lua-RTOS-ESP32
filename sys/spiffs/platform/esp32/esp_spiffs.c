@@ -63,7 +63,7 @@ s32_t esp32_spi_flash_read(u32_t addr, u32_t size, u8_t *dst) {
 		free(buff);
 		return SPIFFS_ERR_INTERNAL;
 	}
-	
+
 	memcpy(dst, abuff + (addr - aaddr), size);
 
 	free(buff);
@@ -108,7 +108,7 @@ s32_t esp32_spi_flash_write(u32_t addr, u32_t size, const u8_t *src) {
 		free(buff);
 		return SPIFFS_ERR_INTERNAL;
 	}
-	
+
 	free(buff);
 
     return SPIFFS_OK;
