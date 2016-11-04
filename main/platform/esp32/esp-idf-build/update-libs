@@ -30,3 +30,5 @@ cp -f ./../esp-idf/components/esp32/lib/librtc.a ./../../../../lib/platform/esp3
 cp -f ./../esp-idf/components/esp32/lib/libsmartconfig.a ./../../../../lib/platform/esp32/
 cp -f ./../esp-idf/components/esp32/lib/libwpa.a ./../../../../lib/platform/esp32/
 cp -f ./../esp-idf/components/esp32/libhal.a ./../../../../lib/platform/esp32/
+cp -f ./../esp-idf/components/newlib/lib/*.a ./../../../../libc/platform/esp32/lib/
+
