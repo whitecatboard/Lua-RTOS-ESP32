@@ -46,6 +46,9 @@ port/net.o: \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/stdlib.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/stdlib.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/alloca.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/time.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/time.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/sys/time.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_task.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/lwip/include/lwip/lwip/debug.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/lwip/include/lwip/lwip/arch.h \
@@ -95,9 +98,7 @@ port/net.o: \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/unistd.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/sys/unistd.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/lwip/include/lwip/posix/netdb.h \
- /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/lwip/include/lwip/lwip/netdb.h \
- /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/time.h \
- /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/time.h
+ /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/lwip/include/lwip/lwip/netdb.h
 
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h:
 
@@ -190,6 +191,12 @@ port/net.o: \
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/stdlib.h:
 
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/alloca.h:
+
+/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/time.h:
+
+/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/time.h:
+
+/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/sys/time.h:
 
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_task.h:
 
@@ -290,7 +297,3 @@ port/net.o: \
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/lwip/include/lwip/posix/netdb.h:
 
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/lwip/include/lwip/lwip/netdb.h:
-
-/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/time.h:
-
-/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/time.h:

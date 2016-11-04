@@ -46,7 +46,7 @@ void enter_critical_section() {
 		#endif
 
 		#ifdef PLATFORM_PIC32MZ
-		taskENTER_CRITICAL_FROM_ISR();
+		taskENTER_CRITICAL_ISR(&xTaskQueueMutex);
 		#endif
     } else {
         taskENTER_CRITICAL(&xTaskQueueMutex);            
@@ -64,7 +64,7 @@ void exit_critical_section() {
 		#endif
 
 		#ifdef PLATFORM_PIC32MZ
-		taskENTER_CRITICAL_FROM_ISR();
+		taskEXIT_CRITICAL_ISR(&xTaskQueueMutex);
 		#endif
     } else {
         taskEXIT_CRITICAL(&xTaskQueueMutex);            

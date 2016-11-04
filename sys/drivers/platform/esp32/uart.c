@@ -194,7 +194,7 @@ static int queue_byte(u8_t unit, u8_t byte, int *signal) {
 	return 1;	
 }
 
-void uart_rx_intr_handler(void *para) {
+void  uart_rx_intr_handler(void *para) {
     BaseType_t xHigherPriorityTaskWoken;
     xHigherPriorityTaskWoken = pdFALSE;
 	u8_t byte;

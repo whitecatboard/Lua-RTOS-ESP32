@@ -75,6 +75,11 @@ cpu_start.o: \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/stdlib.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/stdlib.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/alloca.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/time.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/time.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/sys/types.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/types.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/sys/time.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_task.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/lwip/include/lwip/lwip/debug.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/lwip/include/lwip/lwip/arch.h \
@@ -83,8 +88,6 @@ cpu_start.o: \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/sys/errno.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/lwip/include/lwip/port/arch/sys_arch.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/stdio.h \
- /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/sys/types.h \
- /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/types.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/sys/stdio.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/lwip/include/lwip/lwip/def.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/lwip/include/lwip/lwip/ip4_addr.h \
@@ -102,8 +105,6 @@ cpu_start.o: \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/vfs/include/esp_vfs_dev.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/vfs/include/esp_vfs.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/sys/stat.h \
- /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/time.h \
- /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/time.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/platform_include/esp_newlib.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_brownout.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_int_wdt.h \
@@ -262,6 +263,16 @@ cpu_start.o: \
 
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/alloca.h:
 
+/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/time.h:
+
+/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/time.h:
+
+/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/sys/types.h:
+
+/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/types.h:
+
+/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/sys/time.h:
+
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_task.h:
 
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/lwip/include/lwip/lwip/debug.h:
@@ -277,10 +288,6 @@ cpu_start.o: \
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/lwip/include/lwip/port/arch/sys_arch.h:
 
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/stdio.h:
-
-/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/sys/types.h:
-
-/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/types.h:
 
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/sys/stdio.h:
 
@@ -315,10 +322,6 @@ cpu_start.o: \
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/vfs/include/esp_vfs.h:
 
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/sys/stat.h:
-
-/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/time.h:
-
-/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/machine/time.h:
 
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/platform_include/esp_newlib.h:
 
