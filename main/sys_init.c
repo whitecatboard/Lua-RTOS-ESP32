@@ -40,6 +40,11 @@
 #include <string.h>
 #include <stdio.h>
 
+#if PLATFORM_ESP32
+#include "esp_system.h"
+#include "nvs_flash.h"
+#endif
+
 #include "lua.h"
 
 extern void _clock_init();
@@ -81,7 +86,12 @@ void _sys_init() {
 #if !PLATFORM_ESP32
 	_reent_init(_GLOBAL_REENT);
 #endif
-	
+
+#if PLATFORM_ESP32
+	nvs_flash_init();
+	system_init();
+#endif
+
 	_cpu_init();
 	_resource_init();
     _mtx_init();
@@ -102,12 +112,12 @@ void _sys_init() {
     printf("/_____________\\\n");
     printf("W H I T E C A T\n\n");
 
-    printf("Lua RTOS %s build %d Copyright (C) 2015 - 2016 whitecatboard.org\n\n", LUA_OS_VER, BUILD_TIME);
-    
+    printf("Lua RTOS %s build %d Copyright (C) 2015 - 2016 whitecatboard.org\r\n", LUA_OS_VER, BUILD_TIME);
+
     openlog(__progname, LOG_CONS | LOG_NDELAY, LOG_LOCAL1);
-	
+
     cpu_show_info();
-    
+
     //Init filesystem  
     #if USE_SPIFFS
 		if (spiffs_init()) {

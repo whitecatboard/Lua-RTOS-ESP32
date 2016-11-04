@@ -6,10 +6,13 @@
 #include "driver/gpio.h"
 #include "sdkconfig.h"
 
-void _newTick() {
+void IRAM_ATTR _newTick() {
 	
 }
 
 void app_main() {
-  printf("Hello world!\r\n");
+	nvs_flash_init();
+	system_init();
+
+	printf("Hello world!\r\n");
 }

@@ -136,10 +136,16 @@ int _pthread_create(pthread_t *id, int stacksize, int initial_state,
     mtx_lock(&thread->init_mtx);
 
     // Create related task
+#if PLATFORM_ESP32
+    res = xTaskCreatePinnedToCore(&pthreadTask, "lthread",
+    		stacksize, taskArgs,
+			tskDEF_PRIORITY, &xCreatedTask, 0);
+#else
     res = xTaskCreate(
-            pthreadTask, "lthread", stacksize, taskArgs, 
+            pthreadTask, "lthread", stacksize, taskArgs,
             tskDEF_PRIORITY, &xCreatedTask
     );
+#endif
 
     if(res != pdPASS) {
         // Remove from thread list
@@ -235,6 +241,8 @@ int _pthread_free(pthread_t id) {
 }
 
 sig_t _pthread_signal(int s, sig_t h) {
+    return NULL;
+
     struct pthread *thread; // Current thread
     sig_t prev_h;           // Previous handler
     

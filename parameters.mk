@@ -125,7 +125,7 @@ LIBS ?= hal gcc c m
 endif
 
 ifeq ($(PLATFORM),esp32)
-LIBS ?= esp32 driver log spi_flash nvs_flash core rtc c g hal gcc m c_rom phy freertos newlib vfs
+LIBS ?= esp32 driver log spi_flash nvs_flash core rtc c hal gcc m c_rom phy freertos newlib vfs
 endif
 
 ifeq ($(PLATFORM),pic32mz)
@@ -163,7 +163,7 @@ CPPFLAGS += -mlongcalls -mtext-section-literals
 endif
 
 ifeq ($(PLATFORM),esp32)
-CFLAGS += -nostdinc -U_POSIX_THREADS -mlongcalls -ffunction-sections -fdata-sections -fstrict-volatile-bitfields -nostdlib -MMD -MP
+CFLAGS += -DESP_PLATFORM -nostdinc -U_POSIX_THREADS -mlongcalls -ffunction-sections -fdata-sections -fstrict-volatile-bitfields -nostdlib -MMD -MP
 endif
 
 ifeq ($(PLATFORM),pic32mz)

@@ -75,8 +75,15 @@ void* RAM_FUNC_ATTR __realloc_r(struct _reent *r, void* ptr, size_t size) {
 
     new_chunk = pvPortMalloc(size);
     if (new_chunk && ptr) {
-        memcpy(new_chunk, ptr, size);
-        vPortFree(ptr);
+    	uint8_t *src = (uint8_t *)ptr;
+    	uint8_t *dst = (uint8_t *)new_chunk;
+
+    	while (size) {
+    		*dst++ = *src++;
+    		size--;
+    	}
+
+    	vPortFree(ptr);
     }
 
     return new_chunk;
@@ -85,7 +92,13 @@ void* RAM_FUNC_ATTR __realloc_r(struct _reent *r, void* ptr, size_t size) {
 void* RAM_FUNC_ATTR __calloc_r(struct _reent *r, size_t count, size_t size) {
     void *result = pvPortMalloc(count * size);
     if (result) {
-        memset(result, 0, count * size);
+    	uint8_t *src = (uint8_t *)result;
+
+    	size = count * size;
+    	while (size) {
+    		*src++ = 0x00;
+    		size--;
+    	}
     }
     return result;
 }

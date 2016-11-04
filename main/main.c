@@ -135,7 +135,7 @@ void user_init(void) {
 void app_main(void) {	
 #endif
 	_sys_init();
-	
+
 	#if LED_ACT
     	// Init leds
 		gpio_pin_output(LED_ACT);
