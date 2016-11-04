@@ -241,8 +241,6 @@ int _pthread_free(pthread_t id) {
 }
 
 sig_t _pthread_signal(int s, sig_t h) {
-    return NULL;
-
     struct pthread *thread; // Current thread
     sig_t prev_h;           // Previous handler
     
