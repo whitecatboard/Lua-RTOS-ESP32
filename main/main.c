@@ -142,23 +142,7 @@ void app_main(void) {
     	gpio_pin_clr(LED_ACT);
 	#endif
 
-#if 0
-
-	// Init spi port
-	if (spi_init(3) != 0) {
-		printf("err1\r\n");
-	}
-
-//	spi_set_cspin(spi, cfi->cs);
-	spi_set_speed(3, 10);
-for(;;) {
-	spi_select(3);
-	spi_transfer(3, 0b10101010);
-	spi_deselect(3);
-}
-	printf("configured\r\n");
-	for(;;);
-#endif
+    //spi_test();
 
     pthread_attr_t attr;
     pthread_t thread;

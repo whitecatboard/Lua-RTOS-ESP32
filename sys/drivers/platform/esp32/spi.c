@@ -36,8 +36,12 @@
  *
  */
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "soc/io_mux_reg.h"
 #include "soc/spi_reg.h"
@@ -148,189 +152,6 @@ uint32_t spiFrequencyToClockDiv(uint32_t freq) {
 #if 0
 
 
-/*
- * Set a mode setting or two - just updates the internal records,
- * the actual mode is changed next time the CS is asserted.
- */
-void spi_set(int unit, unsigned int set)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-
-    dev->mode |= set;
-}
-
-void spi_clr_and_set(int unit, unsigned int set)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-
-    dev->mode = set;
-}
-
-
-/*
- * Clear a mode setting or two - just updates the internal records,
- * the actual mode is changed next time the CS is asserted.
- */
-void spi_clr(int unit, unsigned int set)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-
-    dev->mode &= ~set;
-}
-
-/*
- * Return the current status of the SPI bus for the device in question
- * Just returns the ->stat entry in the register set.
- */
-unsigned int spi_status(int unit)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-
-    if (! dev->reg)
-        return 0;
-
-    return dev->reg->stat;
-}
-
-/*
- * Transfer one word of data, and return the read word of data.
- * The actual number of bits sent depends on the mode of the transfer.
- * This is blocking, and waits for the transfer to complete
- * before returning.  Times out after a certain period.
- */
-unsigned int spi_transfer(int unit, unsigned int data)
-{
-    unsigned int dr;
-    
-    int channel = unit - 1;
-
-    struct spi *dev = &spi[channel];
-
-    struct spireg *reg = dev->reg;
-
-    unsigned int cnt = 100000;
-
-    reg->buf = data;
-
-    while ((
-            !(reg->stat & PIC32_SPISTAT_SPIRBF) || 
-            !(reg->stat & PIC32_SPISTAT_SPITBE)
-           ) && (cnt > 0)) {
-        cnt--;
-    }
-    
-    if (cnt == 0) {
-        return -1;
-    }
-    
-    dr = reg->buf;
-    
-    return dr;
-}
-
-/*
- * Send a chunk of 8-bit data.
- */
-void spi_bulk_write(int unit, unsigned int nbytes, unsigned char *data)
-{
-    unsigned i;
-
-
-    int rup = mips_di();
-    for (i=0; i<nbytes; i++) {
-        spi_transfer(unit, *data++);
-    }
-    mtc0_Status(rup);
-}
-
-/*
- * Receive a chunk of 8-bit data.
- */
-void spi_bulk_read(int unit, unsigned int nbytes, unsigned char *data)
-{
-    unsigned i;
-
-    int rup = mips_di();
-    for(i=0; i<nbytes; i++) {
-        *data++ = spi_transfer(unit, 0xFF);
-    }
-    mtc0_Status(rup);
-}
-
-/*
- * Send and receive a chunk of 8-bit data.
- */
-void spi_bulk_rw(int unit, unsigned int nbytes, unsigned char *data)
-{
-    unsigned int i;
-
-    int rup = mips_di();
-    for(i=0; i<nbytes; i++) {
-        *data = spi_transfer(unit, *data);
-        data++;
-    }
-    mtc0_Status(rup);
-}
-
-void spi_bulk_write16(int unit, unsigned int words, short *data)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-
-    struct spireg *reg = dev->reg;
-    unsigned int nread = 0;
-    unsigned int nwrite = words;
-
-    int rup = mips_di();
-    reg->conset = PIC32_SPICON_MODE16 | PIC32_SPICON_ENHBUF;
-    while (nread < words) {
-        if (nwrite > 0 && ! (reg->stat & PIC32_SPISTAT_SPITBF)) {
-            reg->buf = *data++;
-            nwrite--;
-        }
-        if (! (reg->stat & PIC32_SPISTAT_SPIRBE)) {
-            (void) reg->buf;
-            nread++;
-        }
-    }
-    reg->con = dev->mode;
-    mtc0_Status(rup);
-}
-
-/*
- * Write a chunk of 32-bit data as fast as possible.
- * Switches in to 32-bit mode regardless, and uses the enhanced buffer mode.
- * Data should be a multiple of 32 bits.
- */
-void spi_bulk_write32(int unit, unsigned int words, int *data)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-
-    struct spireg *reg = dev->reg;
-    unsigned int nread = 0;
-    unsigned int nwrite = words;
-
-    int rup = mips_di();
-    reg->conset = PIC32_SPICON_MODE32 | PIC32_SPICON_ENHBUF;
-    while (nread < words) {
-        if (nwrite > 0 && ! (reg->stat & PIC32_SPISTAT_SPITBF)) {
-            reg->buf = *data++;
-            nwrite--;
-        }
-        if (! (reg->stat & PIC32_SPISTAT_SPIRBE)) {
-            (void) reg->buf;
-            nread++;
-        }
-    }
-    reg->con = dev->mode;
-    mtc0_Status(rup);
-}
-
 void spi_bulk_write32_be(int unit, unsigned int words, int *data)
 {
     int channel = unit - 1;
@@ -385,354 +206,8 @@ void spi_bulk_read32_be(int unit, unsigned int words, int *data)
     mtc0_Status(rup);
 }
 
-void spi_bulk_read32(int unit, unsigned int words, int *data)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
 
-    struct spireg *reg = dev->reg;
-    unsigned int nread = 0;
-    unsigned int nwrite = words;
 
-    int rup = mips_di();
-    reg->conset = PIC32_SPICON_MODE32 | PIC32_SPICON_ENHBUF;
-    while (nread < words) {
-        if (nwrite > 0 && ! (reg->stat & PIC32_SPISTAT_SPITBF)) {
-            reg->buf = ~0;
-            nwrite--;
-        }
-        if (! (reg->stat & PIC32_SPISTAT_SPIRBE)) {
-            *data++ = reg->buf;
-            nread++;
-        }
-    }
-    reg->con = dev->mode;
-    mtc0_Status(rup);
-}
-
-void spi_bulk_read16(int unit, unsigned int words, short *data)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-
-    struct spireg *reg = dev->reg;
-    unsigned int nread = 0;
-    unsigned int nwrite = words;
-
-    int rup = mips_di();
-    reg->conset = PIC32_SPICON_MODE16 | PIC32_SPICON_ENHBUF;
-    while (nread < words) {
-        if (nwrite > 0 && ! (reg->stat & PIC32_SPISTAT_SPITBF)) {
-            reg->buf = ~0;
-            nwrite--;
-        }
-        if (! (reg->stat & PIC32_SPISTAT_SPIRBE)) {
-            *data++ = __bswap16__(reg->buf);
-            nread++;
-        }
-    }
-    reg->con = dev->mode;
-    mtc0_Status(rup);
-}
-
-void spi_bulk_rw32_be(int unit, unsigned int words, int *writep)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-
-    struct spireg *reg = dev->reg;
-    int *readp = writep;
-    unsigned int nread = 0;
-    unsigned int nwrite = words;
-
-    int rup = mips_di();
-    reg->conset = PIC32_SPICON_MODE32 | PIC32_SPICON_ENHBUF;
-    while (nread < words) {
-        if (nwrite > 0 && ! (reg->stat & PIC32_SPISTAT_SPITBF)) {
-            reg->buf = *writep++;
-            nwrite--;
-        }
-        if (! (reg->stat & PIC32_SPISTAT_SPIRBE)) {
-            *readp++ = __bswap32__(reg->buf);
-            nread++;
-        }
-    }
-    reg->con = dev->mode;
-    mtc0_Status(rup);
-}
-
-void spi_bulk_rw32(int unit, unsigned int words, int *writep)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-   
-    struct spireg *reg = dev->reg;
-    int *readp = writep;
-    unsigned int nread = 0;
-    unsigned int nwrite = words;
-
-    int rup = mips_di();
-    reg->conset = PIC32_SPICON_MODE32 | PIC32_SPICON_ENHBUF;
-    while (nread < words) {
-        if (nwrite > 0 && ! (reg->stat & PIC32_SPISTAT_SPITBF)) {
-            reg->buf = *writep++;
-            nwrite--;
-        }
-        if (! (reg->stat & PIC32_SPISTAT_SPIRBE)) {
-            *readp++ = reg->buf;
-            nread++;
-        }
-    }
-    reg->con = dev->mode;
-    mtc0_Status(rup);
-}
-
-void spi_bulk_rw16(int unit, unsigned int words, short *writep)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-    
-    struct spireg *reg = dev->reg;
-    short *readp = writep;
-    unsigned int nread = 0;
-    unsigned int nwrite = words;
-
-    int rup = mips_di();
-    reg->conset = PIC32_SPICON_MODE16 | PIC32_SPICON_ENHBUF;
-    while (nread < words) {
-        if (nwrite > 0 && ! (reg->stat & PIC32_SPISTAT_SPITBF)) {
-            reg->buf = *writep++;
-            nwrite--;
-        }
-        if (! (reg->stat & PIC32_SPISTAT_SPIRBE)) {
-            *readp++ = __bswap16__(reg->buf);
-            nread++;
-        }
-    }
-    reg->con = dev->mode;
-    mtc0_Status(rup);
-}
-
-/*
- * Return the name of the SPI bus for a device.
- */
-const char *spi_name(int unit)
-{
-    static const char *name[6] = { "spi1", "spi2", "spi3", "spi4", "spi5", "spi6" };
-    return name[unit - 1];
-}
-
-/*
- * Return the port name (A-K) of the chip select pin for a device.
- */
-char spi_csname(int unit)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-
-    unsigned int n = ((dev->cs >> 4) & 15) - 1;
-
-    if (n < 10)
-        return "ABCDEFGHJK"[n];
-        
-    return '?';
-}
-
-/*
- * Return the pin index of the chip select pin for a device.
- */
-int spi_cspin(int unit)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-
-    if (!dev->cs)
-        return -1;
-
-    return dev->cs & 15;
-}
-
-/*
- * Return the speed in kHz.
- */
-unsigned int spi_get_speed(int unit)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-
-    if (! dev->reg)
-        return 0;
-
-    return ((PBCLK2_HZ / 1000L) / (2 * (dev->divisor + 1)));
-}
-
-/*
- * Assign SDIx signal to specified pin.
- */
-static void assign_sdi(int channel, int pin)
-{    
-    gpio_disable_analog(pin);
-    gpio_pin_input(pin);
-
-    switch (channel) {
-        case 0: SDI1R = gpio_input_map1(pin); break;
-        case 1: SDI2R = gpio_input_map2(pin); break;
-        case 2: SDI3R = gpio_input_map1(pin); break;
-        case 3: SDI4R = gpio_input_map2(pin); break;
-        case 4: SDI5R = gpio_input_map1(pin); break;
-        case 5: SDI6R = gpio_input_map4(pin); break;
-    }
-}
-
-static int output_map1 (unsigned channel)
-{
-    switch (channel) {
-        case 0: return 5;   // 0101 = SDO1
-        case 1: return 6;   // 0110 = SDO2
-        case 2: return 7;   // 0111 = SDO3
-        case 4: return 9;   // 1001 = SDO5
-    }
-    syslog(LOG_ERR, "spi%u cannot map SDO pin, group 1", channel);
-    return 0;
-}
-
-static int output_map2 (unsigned channel)
-{
-    switch (channel) {
-    case 0: return 5;   // 0101 = SDO1
-    case 1: return 6;   // 0110 = SDO2
-    case 2: return 7;   // 0111 = SDO3
-    case 3: return 8;   // 1000 = SDO4
-    case 4: return 9;   // 1001 = SDO5
-    }
-    syslog(LOG_ERR, "spi%u cannot map SDO pin, group 2", channel);
-    return 0;
-}
-
-static int output_map3 (unsigned channel)
-{
-    switch (channel) {
-    case 5: return 10;  // 1010 = SDO6
-    }
-    syslog(LOG_ERR, "spi%u cannot map SDO pin, group 3", channel);
-    return 0;
-}
-
-static int output_map4 (unsigned channel)
-{
-    switch (channel) {
-    case 3: return 8;   // 1000 = SDO4
-    case 5: return 10;  // 1010 = SDO6
-    }
-    syslog(LOG_ERR, "spi%u cannot map SDO pin, group 4", channel);
-    return 0;
-}
-
-/*
- * Assign SDOx signal to specified pin.
- */
-static void assign_sdo(int channel, int pin)
-{
-    switch (pin) {
-    case RP('A',14): RPA14R = output_map1(channel); return;
-    case RP('A',15): RPA15R = output_map2(channel); return;
-    case RP('B',0):  RPB0R  = output_map3(channel); return;
-    case RP('B',10): RPB10R = output_map1(channel); return;
-    case RP('B',14): RPB14R = output_map4(channel); return;
-    case RP('B',15): RPB15R = output_map3(channel); return;
-    case RP('B',1):  RPB1R  = output_map2(channel); return;
-    case RP('B',2):  RPB2R  = output_map4(channel); return;
-    case RP('B',3):  RPB3R  = output_map2(channel); return;
-    case RP('B',5):  RPB5R  = output_map1(channel); return;
-    case RP('B',6):  RPB6R  = output_map4(channel); return;
-    case RP('B',7):  RPB7R  = output_map3(channel); return;
-    case RP('B',8):  RPB8R  = output_map3(channel); return;
-    case RP('B',9):  RPB9R  = output_map1(channel); return;
-    case RP('C',13): RPC13R = output_map2(channel); return;
-    case RP('C',14): RPC14R = output_map1(channel); return;
-    case RP('C',1):  RPC1R  = output_map1(channel); return;
-    case RP('C',2):  RPC2R  = output_map4(channel); return;
-    case RP('C',3):  RPC3R  = output_map3(channel); return;
-    case RP('C',4):  RPC4R  = output_map2(channel); return;
-    case RP('D',0):  RPD0R  = output_map4(channel); return;
-    case RP('D',10): RPD10R = output_map1(channel); return;
-    case RP('D',11): RPD11R = output_map2(channel); return;
-    case RP('D',12): RPD12R = output_map3(channel); return;
-    case RP('D',14): RPD14R = output_map1(channel); return;
-    case RP('D',15): RPD15R = output_map2(channel); return;
-    case RP('D',1):  RPD1R  = output_map4(channel); return;
-    case RP('D',2):  RPD2R  = output_map1(channel); return;
-    case RP('D',3):  RPD3R  = output_map2(channel); return;
-    case RP('D',4):  RPD4R  = output_map3(channel); return;
-    case RP('D',5):  RPD5R  = output_map4(channel); return;
-    case RP('D',6):  RPD6R  = output_map1(channel); return;
-    case RP('D',7):  RPD7R  = output_map2(channel); return;
-    case RP('D',9):  RPD9R  = output_map3(channel); return;
-    case RP('E',3):  RPE3R  = output_map3(channel); return;
-    case RP('E',5):  RPE5R  = output_map2(channel); return;
-    case RP('E',8):  RPE8R  = output_map4(channel); return;
-    case RP('E',9):  RPE9R  = output_map3(channel); return;
-    case RP('F',0):  RPF0R  = output_map2(channel); return;
-    case RP('F',12): RPF12R = output_map3(channel); return;
-    case RP('F',13): RPF13R = output_map4(channel); return;
-    case RP('F',1):  RPF1R  = output_map1(channel); return;
-    case RP('F',2):  RPF2R  = output_map4(channel); return;
-    case RP('F',3):  RPF3R  = output_map4(channel); return;
-    case RP('F',4):  RPF4R  = output_map1(channel); return;
-    case RP('F',5):  RPF5R  = output_map2(channel); return;
-    case RP('F',8):  RPF8R  = output_map3(channel); return;
-    case RP('G',0):  RPG0R  = output_map2(channel); return;
-    case RP('G',1):  RPG1R  = output_map1(channel); return;
-    case RP('G',6):  RPG6R  = output_map3(channel); return;
-    case RP('G',7):  RPG7R  = output_map2(channel); return;
-    case RP('G',8):  RPG8R  = output_map1(channel); return;
-    case RP('G',9):  RPG9R  = output_map4(channel); return;
-    }
-    syslog(LOG_ERR, "spi%u cannot map SDO pin %c%d",
-        channel, gpio_portname(pin), gpio_pinno(pin));
-    
-    gpio_pin_output(pin);
-}
-
-void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char*sck) {
-    int channel = unit - 1;
-
-    switch (channel) {
-        case 0:
-            *sdi = SPI1_PINS >> 8 & 0xFF;
-            *sdo = SPI1_PINS & 0xFF;
-            break;
-        case 1:
-            *sdi = SPI2_PINS >> 8 & 0xFF;
-            *sdo = SPI2_PINS & 0xFF;
-            break;
-        case 2:
-            *sdi = SPI3_PINS >> 8 & 0xFF;
-            *sdo = SPI3_PINS & 0xFF;
-            break;
-        case 3:
-            *sdi = SPI4_PINS >> 8 & 0xFF;
-            *sdo = SPI4_PINS & 0xFF;
-            break;
-    }
-
-    static const int sck_tab[6] = {
-        RP('D',1),  /* SCK1 */
-        RP('G',6),  /* SCK2 */
-        RP('B',14), /* SCK3 */
-        RP('D',10), /* SCK4 */
-        RP('F',13), /* SCK5 */
-        RP('D',15), /* SCK6 */
-    };   
-    
-    *sck = sck_tab[channel];
-}
-
-/*
- * Test to see if device is present.
- * Return 0 if found and initialized ok.
- * SPI ports are always present, if configured.
- */
 #endif
 
 
@@ -918,6 +393,72 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
 	spi_set_cspin(unit, *cs);
 }
 
+void spi_master_op(int unit, unsigned int word_size, unsigned int len, unsigned char *out, unsigned char *in) {
+	unsigned int bytes = word_size * len; // Number of bytes to write / read
+	unsigned int idx = 0;
+
+	/*
+	 * SPI data buffers hardware registers are 32-bit size, so we use a
+	 * transfer buffer for adapt user buffers to buffers expected by hardware, this
+	 * buffer is 16-word size (64 bytes)
+	 *
+	 */
+	uint32_t buffer[16]; // Transfer buffer
+	uint32_t wd;         // Current word
+	unsigned int wdb; 	 // Current byte into current word
+
+	// This is the number of bits to transfer for current chunk
+	unsigned int bits;
+
+	bytes = word_size * len;
+	while (bytes) {
+		// Populate transfer buffer in chunks of 64 bytes
+		idx = 0;
+		bits = 0;
+		while (bytes && (idx < 16)) {
+			wd = 0;
+			wdb = 4;
+			while (bytes && wdb) {
+				wd = (wd >> 8);
+				if (out) {
+					wd |= *out << 24;
+					out++;
+				}
+				wdb--;
+				bytes--;
+				bits += 8;
+			}
+
+			while (wdb) {
+				wd = (wd >> 8);
+				wdb--;
+			}
+
+			buffer[idx] = wd;
+			idx++;
+		}
+
+		// Wait for SPI bus ready
+		while (READ_PERI_REG(SPI_CMD_REG(unit))&SPI_USR);
+
+		// Load send buffer
+	    SET_PERI_REG_BITS(SPI_MOSI_DLEN_REG(unit), SPI_USR_MOSI_DBITLEN, bits - 1, SPI_USR_MOSI_DBITLEN_S);
+	    SET_PERI_REG_BITS(SPI_MISO_DLEN_REG(unit), SPI_USR_MOSI_DBITLEN, bits - 1, SPI_USR_MISO_DBITLEN_S);
+
+	    idx = 0;
+	    while ((idx << 3) < bits) {
+		    WRITE_PERI_REG((SPI_W0_REG(unit) + (idx << 2)), buffer[idx]);
+		    idx++;
+	    }
+
+	    // Start transfer
+	    SET_PERI_REG_MASK(SPI_CMD_REG(unit), SPI_USR);
+
+		// Wait for SPI bus ready
+		while (READ_PERI_REG(SPI_CMD_REG(unit))&SPI_USR);
+	}
+}
+
 /*
  * Transfer one word of data, and return the read word of data.
  * The actual number of bits sent depends on the mode of the transfer.
@@ -925,13 +466,71 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
  * before returning.  Times out after a certain period.
  */
 unsigned int spi_transfer(int unit, unsigned int data) {
-    while (READ_PERI_REG(SPI_CMD_REG(unit))&SPI_USR);
-    SET_PERI_REG_BITS(SPI_MOSI_DLEN_REG(unit), SPI_USR_MOSI_DBITLEN, 0x7, SPI_USR_MOSI_DBITLEN_S);
-    WRITE_PERI_REG((SPI_W0_REG(unit)), (unsigned char)data);
-    SET_PERI_REG_MASK(SPI_CMD_REG(unit), SPI_USR);
-    while (READ_PERI_REG(SPI_CMD_REG(unit))&SPI_USR);
+	unsigned char read;
 
-    return READ_PERI_REG(SPI_W0_REG(unit));
+    spi_master_op(unit, 1, 1, (unsigned char *)(&data), &read);
+
+    return read & 0xff;
+}
+
+/*
+ * Send a chunk of 8-bit data.
+ */
+void spi_bulk_write(int unit, unsigned int nbytes, unsigned char *data) {
+    taskDISABLE_INTERRUPTS();
+    spi_master_op(unit, 1, nbytes, data, NULL);
+    taskENABLE_INTERRUPTS();
+}
+
+/*
+ * Receive a chunk of 8-bit data.
+ */
+void spi_bulk_read(int unit, unsigned int nbytes, unsigned char *data) {
+    taskDISABLE_INTERRUPTS();
+    spi_master_op(unit, 1, nbytes, NULL, data);
+    taskENABLE_INTERRUPTS();
+}
+
+/*
+ * Send and receive a chunk of 8-bit data.
+ */
+void spi_bulk_rw(int unit, unsigned int nbytes, unsigned char *data) {
+	unsigned char *read = (unsigned char *)malloc(nbytes);
+	if (read) {
+	    taskDISABLE_INTERRUPTS();
+	    spi_master_op(unit, 1, nbytes, data, read);
+	    taskENABLE_INTERRUPTS();
+	}
+
+	memcpy(data, read, nbytes);
+	free(read);
+}
+
+/*
+ * Send a chunk of 16-bit data.
+ */
+void spi_bulk_write16(int unit, unsigned int words, short *data) {
+    taskDISABLE_INTERRUPTS();
+    spi_master_op(unit, 2, words, (unsigned char *)data, NULL);
+    taskENABLE_INTERRUPTS();
+}
+
+/*
+ * Receive a chunk of 16-bit data.
+ */
+void spi_bulk_read16(int unit, unsigned int nbytes, unsigned char *data) {
+    taskDISABLE_INTERRUPTS();
+    spi_master_op(unit, 2, nbytes, NULL, data);
+    taskENABLE_INTERRUPTS();
+}
+
+/*
+ * Send a chunk of 32-bit data.
+ */
+void spi_bulk_write32(int unit, unsigned int words, int *data) {
+    taskDISABLE_INTERRUPTS();
+    spi_master_op(unit, 4, words, (unsigned char *)data, NULL);
+    taskENABLE_INTERRUPTS();
 }
 
 /*
@@ -960,4 +559,68 @@ int spi_init(int unit) {
     dev->dirty = 1;
     
     return 0;
+}
+
+#define SPI_TEST_SPI_TRANSFER      0
+#define SPI_TEST_SPI_BLULK_WRITE   0
+#define SPI_TEST_SPI_BLULK_WRITE16 0
+#define SPI_TEST_SPI_BLULK_WRITE32 1
+
+void spi_test() {
+	int test_unit = 3;
+
+	// Init spi port
+	if (spi_init(test_unit) != 0) {
+		printf("error when init unit %d\r\n", test_unit);
+	}
+
+	spi_set_speed(test_unit, 10);
+
+#if SPI_TEST_SPI_TRANSFER
+	spi_select(test_unit);
+	spi_transfer(test_unit, 0b10101010);
+	spi_deselect(test_unit);
+#endif
+
+#if SPI_TEST_SPI_BLULK_WRITE
+	unsigned int i;
+	unsigned char data[200];
+
+	for (i=0;i<200;i++) {
+		data[i] = i;
+	}
+
+	spi_select(test_unit);
+	spi_bulk_write(test_unit, 200, data);
+	spi_deselect(test_unit);
+#endif
+
+#if SPI_TEST_SPI_BLULK_WRITE16
+	unsigned int i;
+	short data[100];
+
+	for (i=0;i<100;i++) {
+		data[i] = i;
+	}
+
+	spi_select(test_unit);
+	spi_bulk_write16(test_unit, 100, data);
+	spi_deselect(test_unit);
+#endif
+
+#if SPI_TEST_SPI_BLULK_WRITE32
+	unsigned int i;
+	int data[50];
+
+	for (i=0;i<50;i++) {
+		data[i] = i;
+	}
+
+	spi_select(test_unit);
+	spi_bulk_write32(test_unit, 50, data);
+	spi_deselect(test_unit);
+#endif
+
+	for(;;);
+
 }
