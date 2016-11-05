@@ -7,7 +7,7 @@
 #ifndef __READBMP_H_INCLUDED__
 #define __READBMP_H_INCLUDED__
 
-#include <drivers/display/display.h>
+#include <sys/drivers/display.h>
 
 /*
  * Mid-level functions

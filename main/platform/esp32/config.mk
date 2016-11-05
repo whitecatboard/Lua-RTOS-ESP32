@@ -56,6 +56,14 @@ CFLAGS += -DLORA_UART_BUFF_SIZE=255    # Buffer size for RX
 CFLAGS += -DLORA_RST_PIN=14			   # RN2483 hardware reset pin
 
 #
+# Display driver configuration
+#
+CFLAGS += -DDISPLAY_SPI=3
+CFLAGS += -DDISPLAY_CS=0
+CFLAGS += -DDISPLAY_RE=25
+CFLAGS += -DDISPLAY_RS=26
+
+#
 # Lua configuration
 #
 CFLAGS += -DDEBUG_FREE_MEM=0           # Enable LUA free mem debug utility (only for debug purposes)
@@ -88,3 +96,4 @@ CFLAGS += -DLUA_USE_LORA=0		       # lora
 CFLAGS += -DLUA_USE_PACK=1		       # pack
 CFLAGS += -DLUA_USE_THREAD=1		   # thread
 CFLAGS += -DLUA_USE_I2C=0   		   # i2c
+CFLAGS += -DLUA_USE_SCREEN=1     	   # screen

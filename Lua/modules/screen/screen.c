@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, Lua screen driver
+ * Whitecat, Lua screen driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -40,8 +40,8 @@
 #include "endian.h"
 
 #include <errno.h>
-#include <drivers/display/display.h>
-#include <drivers/display/font.h>
+#include <sys/drivers/display.h>
+#include <sys/drivers/display/font.h>
 
 static const struct display *ddisplay = NULL;
 static int orientation;
@@ -274,24 +274,6 @@ static int screen_font(lua_State* L) {
     return 0;
 }
 
-static int screen_font_size(lua_State* L) {
-    int size;
-    
-    if (!inited) {
-        return luaL_error( L, "please, init the screen" );    
-    }
-
-    if (!font) {
-        return luaL_error( L, "please, set a font before" );            
-    }
-
-    size = luaL_checkinteger(L, 1);
-
-    display_font_size(size);
-    
-    return 0;
-}
-
 static int screen_foreground(lua_State* L) {
     if (!inited) {
         return luaL_error( L, "please, init the screen" );    
@@ -397,68 +379,41 @@ static int screen_getxy(lua_State* L) {
     return 2;
 }
 
-static int screen_tty_on(lua_State* L) {
-    if (!inited) {
-        return luaL_error( L, "please, init the screen" );    
-    }
+#include "modules.h"
 
-    if (!font) {
-        return luaL_error( L, "please, set a font before" );            
-    }
-
-    tty_to_display(1);
-    
-    display_xy(0, 0);
-    
-    return 0;
-}
-
-static int screen_tty_off(lua_State* L) {
-    if (!inited) {
-        return luaL_error( L, "please, init the screen" );    
-    }
-
-    if (!font) {
-        return luaL_error( L, "please, set a font before" );            
-    }
-
-    tty_to_display(0);
-
-    return 0;
-}
-
-static const luaL_Reg screen[] = {
-    {"init", screen_init},
-    {"width", screen_width},
-    {"height", screen_height},
-    {"rgb", screen_rgb},
-    {"clear", screen_clear},
-    {"pixel", screen_pixel},
-    {"vline", screen_vline},
-    {"hline", screen_hline},
-    {"line", screen_line},
-    {"loadimage", screen_loadimage},
-    {"setfont", screen_font},
-/*
-    {"setfontsize", screen_font_size},
-*/
-    {"setforeground", screen_foreground},
-    {"setbackground", screen_background},
-    {"setstroke", screen_stroke},
-    {"framed", screen_framed},
-    {"noframed", screen_noframed},
-    {"text", screen_text},
-    {"setxy", screen_xy},
-    {"getxy", screen_getxy},
-/*
-    {"ttyon", screen_tty_on},
-    {"ttyoff", screen_tty_off},
-*/
-    {NULL, NULL}
+static const LUA_REG_TYPE screen_map[] = {
+    { LSTRKEY( "init" ),			LFUNCVAL( screen_init ) },
+    { LSTRKEY( "width" ),			LFUNCVAL( screen_width ) },
+    { LSTRKEY( "height" ),			LFUNCVAL( screen_height ) },
+    { LSTRKEY( "rgb" ),				LFUNCVAL( screen_rgb ) },
+    { LSTRKEY( "clear" ),			LFUNCVAL( screen_clear ) },
+    { LSTRKEY( "pixel" ),			LFUNCVAL( screen_pixel ) },
+    { LSTRKEY( "vline" ),			LFUNCVAL( screen_vline ) },
+    { LSTRKEY( "hline" ),			LFUNCVAL( screen_hline ) },
+    { LSTRKEY( "line" ),			LFUNCVAL( screen_line ) },
+    { LSTRKEY( "loadimage" ),		LFUNCVAL( screen_loadimage ) },
+    { LSTRKEY( "setfont" ),			LFUNCVAL( screen_font ) },
+    { LSTRKEY( "setforeground" ),	LFUNCVAL( screen_foreground ) },
+    { LSTRKEY( "setbackground" ),	LFUNCVAL( screen_background ) },
+    { LSTRKEY( "setstroke" ),		LFUNCVAL( screen_stroke ) },
+    { LSTRKEY( "framed" ),			LFUNCVAL( screen_framed ) },
+    { LSTRKEY( "noframed" ),		LFUNCVAL( screen_noframed ) },
+    { LSTRKEY( "text" ),			LFUNCVAL( screen_text ) },
+    { LSTRKEY( "setxy" ),			LFUNCVAL( screen_xy ) },
+    { LSTRKEY( "getxy" ),			LFUNCVAL( screen_getxy ) },
+#if LUA_USE_ROTABLE
+	// Constant definitions
+    { LSTRKEY( "OrientationV0" ),   LINTVAL( 0 ) },
+    { LSTRKEY( "OrientationV1" ),	LINTVAL( 1 ) },
+    { LSTRKEY( "OrientationH0" ),	LINTVAL( 2 ) },
+    { LSTRKEY( "OrientationH1" ),	LINTVAL( 3 ) },
+#endif
+    { LNILKEY, LNILVAL }
 };
 
 int luaopen_screen(lua_State* L) {
-    luaL_newlib(L, screen);
+#if !LUA_USE_ROTABLE
+    luaL_newlib(L, screen_map);
 
     lua_pushinteger( L, 0 );
     lua_setfield( L, -2, "OrientationV0" );
@@ -473,6 +428,11 @@ int luaopen_screen(lua_State* L) {
     lua_setfield( L, -2, "OrientationH1" );
     
     return 1;
+#else
+	return 0;
+#endif
 }
+
+LUA_OS_MODULE(SCREEN, screen, screen_map);
 
 #endif

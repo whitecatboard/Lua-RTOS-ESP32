@@ -518,9 +518,9 @@ void spi_bulk_write16(int unit, unsigned int words, short *data) {
 /*
  * Receive a chunk of 16-bit data.
  */
-void spi_bulk_read16(int unit, unsigned int nbytes, unsigned char *data) {
+void spi_bulk_read16(int unit, unsigned int nbytes, short *data) {
     taskDISABLE_INTERRUPTS();
-    spi_master_op(unit, 2, nbytes, NULL, data);
+    spi_master_op(unit, 2, nbytes, NULL, (unsigned char *)data);
     taskENABLE_INTERRUPTS();
 }
 
