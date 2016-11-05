@@ -1,0 +1,5 @@
+screen.init("st7735", screen.OrientationH0)
+screen.clear(screen.rgb(0,0,0))
+screen.setfont("gohu-11")
+screen.setfontsize(1)
+screen.text(0,0,"IT WORKS!!!!")
