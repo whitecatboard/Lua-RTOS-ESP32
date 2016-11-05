@@ -149,7 +149,7 @@ void _sys_init() {
     #endif
         
     // Log only errors
-	setlogmask(LOG_ERR);
+	//setlogmask(LOG_ERR);
         
     // Continue init ...
     printf("\n");
