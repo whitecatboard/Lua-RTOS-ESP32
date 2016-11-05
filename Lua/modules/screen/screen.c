@@ -32,6 +32,7 @@
 #if LUA_USE_SCREEN
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "lua.h"
 #include "lauxlib.h"
@@ -379,6 +380,24 @@ static int screen_getxy(lua_State* L) {
     return 2;
 }
 
+static int screen_font_size(lua_State* L) {
+    int size;
+
+    if (!inited) {
+        return luaL_error( L, "please, init the screen" );
+    }
+
+    if (!font) {
+        return luaL_error( L, "please, set a font before" );
+    }
+
+    size = luaL_checkinteger(L, 1);
+
+    display_font_size(size);
+
+    return 0;
+}
+
 #include "modules.h"
 
 static const LUA_REG_TYPE screen_map[] = {
@@ -401,6 +420,7 @@ static const LUA_REG_TYPE screen_map[] = {
     { LSTRKEY( "text" ),			LFUNCVAL( screen_text ) },
     { LSTRKEY( "setxy" ),			LFUNCVAL( screen_xy ) },
     { LSTRKEY( "getxy" ),			LFUNCVAL( screen_getxy ) },
+    { LSTRKEY( "setfontsize" ),		LFUNCVAL( screen_font_size ) },
 #if LUA_USE_ROTABLE
 	// Constant definitions
     { LSTRKEY( "OrientationV0" ),   LINTVAL( 0 ) },

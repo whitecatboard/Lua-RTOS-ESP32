@@ -35,7 +35,7 @@
 #include <sys/drivers/gpio.h>
 #include <sys/delay.h>
 
-#define DISPLAY_SPEED 25000
+#define DISPLAY_SPEED 40000
 
 int tftwidth  = 128;
 int tftheight = 160;

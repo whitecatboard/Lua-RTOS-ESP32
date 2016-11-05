@@ -311,11 +311,6 @@ void spi_select(int unit) {
         CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_MISO);
         SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_MOSI);
 
-        char i;
-        for (i = 0; i < 16; ++i) {
-            WRITE_PERI_REG((SPI_W0_REG(unit) + (i << 2)), 0);
-        }
-
         dev->dirty = 0;
     }
 
@@ -380,7 +375,7 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO19_U,FUNC_GPIO19_VSPIQ);
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO23_U,FUNC_GPIO23_VSPID);
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO18_U,FUNC_GPIO18_VSPICLK);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U,FUNC_GPIO5_VSPICS0);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U,FUNC_GPIO5_GPIO5_0);
 
             *sdi = GPIO19;
             *sdo = GPIO23;

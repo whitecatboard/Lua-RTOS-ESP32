@@ -59,7 +59,7 @@ CFLAGS += -DLORA_RST_PIN=14			   # RN2483 hardware reset pin
 # Display driver configuration
 #
 CFLAGS += -DDISPLAY_SPI=3
-CFLAGS += -DDISPLAY_CS=0
+CFLAGS += -DDISPLAY_CS=5
 CFLAGS += -DDISPLAY_RE=25
 CFLAGS += -DDISPLAY_RS=26
 
