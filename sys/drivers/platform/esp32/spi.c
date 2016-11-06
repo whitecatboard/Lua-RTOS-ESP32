@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, UART driver
+ * Lua RTOS, SPI driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -56,6 +56,7 @@
 
 struct spi {
     int          cs;	  // cs pin for device (if 0 use default cs pin)
+    unsigned int speed;   // spi device speed
     unsigned int divisor; // clock divisor
     unsigned int mode;    // device spi mode
     unsigned int dirty;   // if 1 device must be reconfigured at next spi_select
@@ -231,6 +232,7 @@ void spi_set_speed(int unit, unsigned int sck) {
     int channel = unit - 1;
     struct spi *dev = &spi[channel];
 
+    dev->speed = sck;
     dev->divisor = spiFrequencyToClockDiv(sck * 1000);
     dev->dirty = 1;
 }
@@ -529,6 +531,50 @@ void spi_bulk_write32(int unit, unsigned int words, int *data) {
 }
 
 /*
+ * Return the name of the SPI bus for a device.
+ */
+const char *spi_name(int unit) {
+    static const char *name[NSPI] = { "spi1", "spi2", "spi3" };
+    return name[unit - 1];
+}
+
+/*
+ * Return the port name (A-K) of the chip select pin for a device.
+ */
+const char *spi_csname(int unit) {
+    int channel = unit - 1;
+    struct spi *dev = &spi[channel];
+
+    if (!dev->cs)
+        return NULL;
+
+    return cpu_port_name(dev->cs);
+}
+
+/*
+ * Return the pin index of the chip select pin for a device.
+ */
+int spi_cspin(int unit) {
+    int channel = unit - 1;
+    struct spi *dev = &spi[channel];
+
+    if (!dev->cs)
+        return -1;
+
+    return cpu_pin_number(dev->cs);
+}
+
+/*
+ * Return the speed in kHz.
+ */
+unsigned int spi_get_speed(int unit) {
+    int channel = unit - 1;
+    struct spi *dev = &spi[channel];
+
+    return dev->speed;
+}
+
+/*
  * Init a spi device
  */
 int spi_init(int unit) {
@@ -556,6 +602,7 @@ int spi_init(int unit) {
     return 0;
 }
 
+#if 0
 #define SPI_TEST_SPI_TRANSFER      0
 #define SPI_TEST_SPI_BLULK_WRITE   0
 #define SPI_TEST_SPI_BLULK_WRITE16 0
@@ -615,7 +662,5 @@ void spi_test() {
 	spi_bulk_write32(test_unit, 50, data);
 	spi_deselect(test_unit);
 #endif
-
-	for(;;);
-
 }
+#endif

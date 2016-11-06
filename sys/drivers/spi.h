@@ -101,7 +101,7 @@ const char *spi_name(int unit);
 /*
  * Return the port name (A-K) of the chip select pin for a device.
  */
-char spi_csname(int unit);
+const char *spi_csname(int unit);
 
 /*
  * Return the pin index of the chip select pin for a device.

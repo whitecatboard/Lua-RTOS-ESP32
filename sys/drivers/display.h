@@ -30,6 +30,8 @@
 #ifndef DISPLAY_H
 #define	DISPLAY_H
 
+#include <stdint.h>
+
 #include <sys/drivers/display/font.h>
 
 struct display_ops {  
@@ -73,6 +75,8 @@ void display_fill_rect(int x0, int y0, int w, int h, int color);
 void display_stroke(int color);
 void display_hline(int x0, int y0, int w);    
 void display_vline(int x0, int y0, int h);
+void display_line(int x0, int y0, int x1, int y1);
+void display_image(int x0, int y0, uint16_t *image, int w, int h);
 
 #endif	/* DISPLAY_H */
 

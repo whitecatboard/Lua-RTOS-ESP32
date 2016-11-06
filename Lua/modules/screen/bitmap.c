@@ -127,7 +127,7 @@ int readBitmapHeader(FILE *fp, BITMAPHEADER *bh)
      */
     if (oldFormat)
     {
-	rc = readINT16little(fp, &tempVal);
+	rc = readINT16little(fp, (INT16 *)&tempVal);
 	if (rc != 0)
 	    return rc;
 	bh->width = tempVal;
@@ -145,7 +145,7 @@ int readBitmapHeader(FILE *fp, BITMAPHEADER *bh)
     
     if (oldFormat)
     {
-	rc = readINT16little(fp, &tempVal);
+	rc = readINT16little(fp, (INT16 *)&tempVal);
 	if (rc != 0)
 	    return rc;
 	bh->height = tempVal;
@@ -395,7 +395,7 @@ int readBitsUncompressed(FILE *fp, RGB *image, const struct display *ddisplay, i
 	{
 	    for (column = width; column > 0; column -= 8)
 	    {
-		rc = readINT8little(fp, &temp);
+		rc = readINT8little(fp, (INT8 *)&temp);
 		if (rc != 0)
 		    return rc;
 		for (i=0; i < ((column < 8) ? column : 8); i++)
@@ -597,7 +597,7 @@ int readMaskBitsUncompressed(FILE *fp, char *image, int width, int height)
     {
 	for (column = width; column > 0; column -= 8)
 	{
-	    rc = readINT8little(fp, &temp);
+	    rc = readINT8little(fp, (INT8 *)&temp);
 	    if (rc != 0)
 		return rc;
 	    for (i=0; i < ((column < 8) ? column : 8); i++)
@@ -706,7 +706,7 @@ int readSingleImageBMP(FILE *fp, RGB **argb, const struct display *ddisplay, UIN
 {
     BITMAPFILEHEADER  bfh;
     BITMAPHEADER      bh;
-    RGB              *colorTable, *image;
+    RGB              *colorTable = NULL, *image;
     int               rc, depth, inverted;
     long              numColors, numPixels, endPos;
     
@@ -862,8 +862,8 @@ int readSingleImageBMP(FILE *fp, RGB **argb, const struct display *ddisplay, UIN
      * is because we're returning an array of RGB values for the image - such
      * a table would be redundant.
      */
-    if (colorTable != NULL)
-	free(colorTable);
+    if (colorTable)
+    	free(colorTable);
     
     return 0;
 }

@@ -232,7 +232,7 @@ static int screen_loadimage(lua_State* L) {
 
     fclose(fp);
 
-    display_image(x, y, rgb, w, h);
+    display_image(x, y, (uint16_t *)rgb, w, h);
     free(rgb);
    
     return 0;
@@ -311,6 +311,8 @@ static int screen_framed(lua_State* L) {
     }
 
     display_framed();
+
+    return 0;
 }
 
 static int screen_noframed(lua_State* L) {
@@ -319,6 +321,8 @@ static int screen_noframed(lua_State* L) {
     }
 
     display_noframed();
+
+    return 0;
 }
 
 static int screen_text(lua_State* L) {

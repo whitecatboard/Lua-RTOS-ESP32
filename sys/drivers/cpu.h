@@ -28,6 +28,7 @@ unsigned int cpu_port_io_pin_mask(unsigned int port);
 unsigned int cpu_port_adc_pin_mask(unsigned int port);
 void cpu_idle(int seconds);
 const char *cpu_pin_name(unsigned int pin);
+const char *cpu_port_name(int pin);
 unsigned int cpu_has_gpio(unsigned int port, unsigned int pin);
 unsigned int cpu_has_port(unsigned int port);
 void cpu_sleep(int seconds);

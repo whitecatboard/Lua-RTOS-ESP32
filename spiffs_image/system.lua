@@ -6,7 +6,7 @@
 ---------------------------------------------------
 -- Main setups
 ---------------------------------------------------
-os.loglevel(os.LOG_ERR)    -- Log only errors
-os.logcons(true)           -- Enable/disable syslog messages to console
-os.shell(false)            -- Enable/disable shell
+os.loglevel(os.LOG_INFO)   -- Log level to info
+os.logcons(true)           -- Enable/disable sys log messages to console
+os.shell(true)             -- Enable/disable shell
 os.history(false)          -- Enable/disable history

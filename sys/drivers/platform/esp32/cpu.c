@@ -208,6 +208,9 @@ unsigned int cpu_pin_number(unsigned int pin) {
 	return pin;
 }
 
+const char *cpu_port_name(int pin) {
+    return "0";
+}
 const char *cpu_pin_name(unsigned int pin) {
     return pin_names[pin];
 }

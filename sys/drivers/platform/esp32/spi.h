@@ -32,6 +32,4 @@
 
 #define NSPI 3
 
-
-
 #endif

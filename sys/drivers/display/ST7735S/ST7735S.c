@@ -120,12 +120,11 @@ int st7735_init(int orientation) {
     gpio_pin_output(DISPLAY_RS);
     gpio_pin_clr(DISPLAY_RS);
 
-    // TO DO
-//    syslog(LOG_INFO,
-  //         "tft is at port %s, pin cs=%c%d, speed %d Mhz",
-    //       spi_name(spi), spi_csname(spi), spi_cspin(spi),
-      //     spi_get_speed(spi) / 1000
-   // );
+    syslog(LOG_INFO,
+           "tft is at %s, pin cs=%s%d, speed %d Mhz",
+           spi_name(spi), spi_csname(spi), spi_cspin(spi),
+           spi_get_speed(spi) / 1000
+    );
     
     st7735_reset();
     

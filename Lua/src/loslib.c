@@ -406,6 +406,7 @@ static const LUA_REG_TYPE syslib[] =
 #if (LUA_USE_EDITOR == 1)
   { LSTRKEY( "edit" ),       LFUNCVAL( os_edit ) },
 #endif
+  { LSTRKEY( "LOG_INFO" ),   LINTVAL( LOG_INFO ) },
   { LSTRKEY( "LOG_EMERG" ),  LINTVAL( LOG_EMERG ) },
   { LSTRKEY( "LOG_ALERT" ),  LINTVAL( LOG_ALERT ) },
   { LSTRKEY( "LOG_CRIT" ),   LINTVAL( LOG_CRIT ) },
