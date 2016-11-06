@@ -10,6 +10,7 @@ CFLAGS += -DUSE_NETWORKING=0                    # Networking is used (1 = yes, 0
 CFLAGS += -DMTX_USE_EVENTS=0                    # Use event groups in mtx implementation (experimental)
 
 CFLAGS += -DluaTaskStack=1024*30                # Stck size assigned to lua thread
+CFLAGS += -DtskDEFStack=192*10				    # Default task size
 CFLAGS += -DtskDEF_PRIORITY=2				    # Default task priority
 CFLAGS += -DdefaultThreadStack=10240
 CFLAGS += -DPATH_MAX=64
@@ -50,10 +51,17 @@ CFLAGS += -DCONSOLE_BUFFER_LEN=1024    # Console buffer length in bytes
 CFLAGS += -DUSE_LMIC=0
 CFLAGS += -DUSE_RN2483=0
 
-CFLAGS += -DLORA_UART=3				   # RN2483 UART unit
-CFLAGS += -DLORA_UART_BR=57600         # RN2483 UART speed
-CFLAGS += -DLORA_UART_BUFF_SIZE=255    # Buffer size for RX
-CFLAGS += -DLORA_RST_PIN=14			   # RN2483 hardware reset pin
+CFLAGS += -DUS_PER_OSTICK=16
+CFLAGS += -DLMIC_TIMER_HZ=\(1000000/US_PER_OSTICK\)	   # 1 tick every 17us
+CFLAGS += -DOSTICKS_PER_SEC=LMIC_TIMER_HZ
+
+CFLAGS += -DLMIC_SPI=3				   # SPI unit
+CFLAGS += -DLMIC_CS=5	  		       # CS
+CFLAGS += -DLMIC_SPI_KHZ=10000
+CFLAGS += -DLMIC_RST=27
+CFLAGS += -DLMIC_DIO0=26
+CFLAGS += -DLMIC_DIO1=25
+CFLAGS += -DLMIC_DIO2=33
 
 #
 # Display driver configuration
@@ -62,6 +70,11 @@ CFLAGS += -DDISPLAY_SPI=3
 CFLAGS += -DDISPLAY_CS=5
 CFLAGS += -DDISPLAY_RE=25
 CFLAGS += -DDISPLAY_RS=26
+
+# CFLAGS += -DLORA_UART=2			   # RN2483 UART unit
+# CFLAGS += -DLORA_UART_BR=57600       # RN2483 UART speed
+# CFLAGS += -DLORA_UART_BUFF_SIZE=255  # Buffer size for RX
+# CFLAGS += -DLORA_RST_PIN=0x50		   # RN2483 hardware reset pin
 
 #
 # Lua configuration

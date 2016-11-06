@@ -102,7 +102,7 @@ OBJDUMP = $(CROSS)objdump
 # of the root, with a 'component.mk' file.
 
 ifeq ($(PLATFORM),esp8266)
-COMPONENTS ?= $(EXTRA_COMPONENTS) FreeRTOS main main/platform/$(PLATFORM)/lwip main/platform/$(PLATFORM)/core sys sys/drivers/lmic pthread Lua main/platform/$(PLATFORM)/open_esplibs
+COMPONENTS ?= $(EXTRA_COMPONENTS) FreeRTOS main main/platform/$(PLATFORM)/lwip main/platform/$(PLATFORM)/core sys pthread Lua main/platform/$(PLATFORM)/open_esplibs
 endif
 
 ifeq ($(PLATFORM),esp32)

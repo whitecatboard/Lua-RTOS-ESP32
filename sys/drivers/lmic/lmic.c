@@ -686,7 +686,7 @@ static void initJoinLoop (void) {
     LMIC.adrTxPow = 14;
     setDrJoin(DRCHG_SET, DR_SF7);
     initDefaultChannels(1);
-    ASSERT((LMIC.opmode & OP_NEXTCHNL)==0);
+    LMIC_ASSERT((LMIC.opmode & OP_NEXTCHNL)==0);
     LMIC.txend = LMIC.bands[BAND_MILLI].avail + rndDelay(8);
 }
 
@@ -769,21 +769,21 @@ void LMIC_enableChannel (u1_t channel) {
 }
 
 void  LMIC_enableSubBand (u1_t band) {
-  ASSERT(band < 8);
+  LMIC_ASSERT(band < 8);
   u1_t start = band * 8;
   u1_t end = start + 8;
   for (int channel=start; channel < end; ++channel )
       LMIC_enableChannel(channel);
 }
 void  LMIC_disableSubBand (u1_t band) {
-  ASSERT(band < 8);
+  LMIC_ASSERT(band < 8);
   u1_t start = band * 8;
   u1_t end = start + 8;
   for (int channel=start; channel < end; ++channel )
       LMIC_disableChannel(channel);
 }
 void  LMIC_selectSubBand (u1_t band) {
-  ASSERT(band < 8);
+  LMIC_ASSERT(band < 8);
   for (int b=0; b<8; ++b) {
     if (band==b)
       LMIC_enableSubBand(b);
@@ -817,7 +817,7 @@ static void updateTx (ostime_t txbeg) {
     if( chnl < 64+8 ) {
         LMIC.freq = US915_500kHz_UPFBASE + (chnl-64)*US915_500kHz_UPFSTEP;
     } else {
-        ASSERT(chnl < 64+8+MAX_XCHANNELS);
+        LMIC_ASSERT(chnl < 64+8+MAX_XCHANNELS);
         LMIC.freq = LMIC.xchFreq[chnl-72];
     }
 
@@ -875,7 +875,7 @@ static void initJoinLoop (void) {
     LMIC.chRnd = 0;
     LMIC.txChnl = 0;
     LMIC.adrTxPow = 20;
-    ASSERT((LMIC.opmode & OP_NEXTCHNL)==0);
+    LMIC_ASSERT((LMIC.opmode & OP_NEXTCHNL)==0);
     LMIC.txend = os_getTime();
     setDrJoin(DRCHG_SET, DR_SF7);
 }
@@ -981,7 +981,7 @@ static void stateJustJoined (void) {
 #if !defined(DISABLE_BEACONS)
 // Decode beacon  - do not overwrite bcninfo unless we have a match!
 static int decodeBeacon (void) {
-    ASSERT(LMIC.dataLen == LEN_BCN); // implicit header RX guarantees this
+    LMIC_ASSERT(LMIC.dataLen == LEN_BCN); // implicit header RX guarantees this
     xref2u1_t d = LMIC.frame;
     if(
 #if CFG_eu868
@@ -1233,7 +1233,7 @@ static bit_t decodeFrame (void) {
                 // Enable tracking - bcninfoTries
                 LMIC.opmode |= OP_TRACK;
                 // Cleared later in txComplete handling - triggers EV_BEACON_FOUND
-                ASSERT(LMIC.bcninfoTries!=0);
+                LMIC_ASSERT(LMIC.bcninfoTries!=0);
                 // Setup RX parameters
                 LMIC.bcninfo.txtime = (LMIC.rxtime
                                        + ms2osticks(os_rlsbf2(&opts[oidx+1]) * MCMD_BCNI_TUNIT)
@@ -1418,13 +1418,13 @@ static void onJoinFailed (xref2osjob_t osjob) {
 
 
 static bit_t processJoinAccept (void) {
-    ASSERT(LMIC.txrxFlags != TXRX_DNW1 || LMIC.dataLen != 0);
-    ASSERT((LMIC.opmode & OP_TXRXPEND)!=0);
+    LMIC_ASSERT(LMIC.txrxFlags != TXRX_DNW1 || LMIC.dataLen != 0);
+    LMIC_ASSERT((LMIC.opmode & OP_TXRXPEND)!=0);
 
     if( LMIC.dataLen == 0 ) {
       nojoinframe:
         if( (LMIC.opmode & OP_JOINING) == 0 ) {
-            ASSERT((LMIC.opmode & OP_REJOIN) != 0);
+            LMIC_ASSERT((LMIC.opmode & OP_REJOIN) != 0);
             // REJOIN attempt for roaming
             LMIC.opmode &= ~(OP_REJOIN|OP_TXRXPEND);
             if( LMIC.rejoinCnt < 10 )
@@ -1508,7 +1508,7 @@ static bit_t processJoinAccept (void) {
                                       ? EV::joininfo_t::REJOIN_ACCEPT
                                       : EV::joininfo_t::ACCEPT)));
 
-    ASSERT((LMIC.opmode & (OP_JOINING|OP_REJOIN))!=0);
+    LMIC_ASSERT((LMIC.opmode & (OP_JOINING|OP_REJOIN))!=0);
     if( (LMIC.opmode & OP_REJOIN) != 0 ) {
         // Lower DR every try below current UP DR
         LMIC.datarate = lowerDR(LMIC.datarate, LMIC.rejoinCnt);
@@ -1671,7 +1671,7 @@ static void buildDataFrame (void) {
         LMIC.snchAns = 0;
     }
 #endif // !DISABLE_MCMD_SNCH_REQ
-    ASSERT(end <= OFF_DAT_OPTS+16);
+    LMIC_ASSERT(end <= OFF_DAT_OPTS+16);
 
     u1_t flen = end + (txdata ? 5+dlen : 4);
     if( flen > MAX_LEN_FRAME ) {
@@ -1765,7 +1765,7 @@ static void onBcnRx (xref2osjob_t job) {
 // Implicitely cancels any pending TX/RX transaction.
 // Also cancels an onpoing joining procedure.
 static void startScan (void) {
-    ASSERT(LMIC.devaddr!=0 && (LMIC.opmode & OP_JOINING)==0);
+    LMIC_ASSERT(LMIC.devaddr!=0 && (LMIC.opmode & OP_JOINING)==0);
     if( (LMIC.opmode & OP_SHUTDOWN) != 0 )
         return;
     // Cancel onging TX/RX transaction
@@ -1835,7 +1835,7 @@ static void startJoining (xref2osjob_t osjob) {
 bit_t LMIC_startJoining (void) {
     if( LMIC.devaddr == 0 ) {
         // There should be no TX/RX going on
-        ASSERT((LMIC.opmode & (OP_POLL|OP_TXRXPEND)) == 0);
+        LMIC_ASSERT((LMIC.opmode & (OP_POLL|OP_TXRXPEND)) == 0);
         // Lift any previous duty limitation
         LMIC.globalDutyRate = 0;
         // Cancel scanning
@@ -1875,7 +1875,7 @@ static void processPingRx (xref2osjob_t osjob) {
 
 
 static bit_t processDnData (void) {
-    ASSERT((LMIC.opmode & OP_TXRXPEND)!=0);
+    LMIC_ASSERT((LMIC.opmode & OP_TXRXPEND)!=0);
 
     if( LMIC.dataLen == 0 ) {
       norx:
@@ -1974,7 +1974,7 @@ static void processBeacon (xref2osjob_t osjob) {
                          e_.eui    = MAIN::CDEV->getEui(),
                          e_.info   = drift,
                          e_.info2  = /*occasion BEACON*/0));
-        ASSERT((LMIC.bcninfo.flags & (BCN_PARTIAL|BCN_FULL)) != 0);
+        LMIC_ASSERT((LMIC.bcninfo.flags & (BCN_PARTIAL|BCN_FULL)) != 0);
     } else {
         ev = EV_BEACON_MISSED;
         LMIC.bcninfo.txtime += BCN_INTV_osticks - LMIC.drift;
@@ -2042,7 +2042,7 @@ static void engineUpdate (void) {
 #if !defined(DISABLE_BEACONS)
     if( (LMIC.opmode & OP_TRACK) != 0 ) {
         // We are tracking a beacon
-        ASSERT( now + RX_RAMPUP - LMIC.bcnRxtime <= 0 );
+        LMIC_ASSERT( now + RX_RAMPUP - LMIC.bcnRxtime <= 0 );
         rxtime = LMIC.bcnRxtime - RX_RAMPUP;
     }
 #endif // !DISABLE_BEACONS
@@ -2149,7 +2149,7 @@ static void engineUpdate (void) {
             LMIC.freq    = LMIC.ping.freq;
             LMIC.rps     = dndr2rps(LMIC.ping.dr);
             LMIC.dataLen = 0;
-            ASSERT(LMIC.rxtime - now+RX_RAMPUP >= 0 );
+            LMIC_ASSERT(LMIC.rxtime - now+RX_RAMPUP >= 0 );
             os_setTimedCallback(&LMIC.osjob, LMIC.rxtime - RX_RAMPUP, FUNC_ADDR(startRxPing));
             return;
         }

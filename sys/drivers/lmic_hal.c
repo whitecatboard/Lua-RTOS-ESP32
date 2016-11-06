@@ -71,7 +71,6 @@ void hal_init (void) {
     
     spi_set_cspin(LMIC_SPI, LMIC_CS);
     spi_set_speed(LMIC_SPI, LMIC_SPI_KHZ);
-    spi_set(LMIC_SPI, PIC32_SPICON_CKE);
 
     if (spi_cspin(LMIC_SPI) >= 0) {
         syslog(LOG_INFO, "lmic is at port %s, pin cs=%c%d",
