@@ -1,6 +1,9 @@
 #include "FreeRTOS.h"
+#include "timers.h"
 
+#include <stdint.h>
 #include <stdio.h>
+#include <sys/time.h>
 
 #include <sys/delay.h>
 #include <sys/drivers/gpio.h>
@@ -9,86 +12,70 @@
 
 #include <sys/syslog.h>
 
-// This variable stores the current value for DIO pins. The nth DIO pin
-// value is stored in the nth bit of this variable.
-static char dio_states = 0;
+#include <soc/gpio_reg.h>
+
 static int nested = 0;
 
-void os_resume_nunloop();
+static void dio_interrupt(void *arg1, uint32_t arg2) {
+	radio_irq_handler(0);
+}
 
-void hal_check_dio() {
-	if (LMIC_DIO0) {
-		// Check for DIO0 changes
-        if ((dio_states & (1 << 0)) != gpio_pin_get(LMIC_DIO0)) {
-			// Has changed, so store the new value, inverting its bit
-			dio_states ^= 1 << 0;
+static void d0_intr_handler(void *args) {
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-            if (dio_states & (1 << 0)) {
-				hal_disableIRQs();
-                radio_irq_handler(0);
-				hal_enableIRQs();
-			}
-        }
-	}	
+	u32_t status_l = READ_PERI_REG(GPIO_STATUS_REG) & GPIO_STATUS_INT;
+	u32_t status_h = READ_PERI_REG(GPIO_STATUS1_REG) & GPIO_STATUS1_INT;
 
-	if (LMIC_DIO1) {
-		// Check for DIO1 changes
-        if ((dio_states & (1 << 1)) != gpio_pin_get(LMIC_DIO1)) {
-			// Has changed, so store the new value, inverting its bit
-			dio_states ^= 1 << 1;
-			
-            if (dio_states & (1 << 1)) {
-				hal_disableIRQs();
-                radio_irq_handler(1);
-				hal_enableIRQs();
-			}
-        }
-	}	
+	xTimerPendFunctionCallFromISR(dio_interrupt, NULL, 0, &xHigherPriorityTaskWoken);
 
-	if (LMIC_DIO2) {
-		// Check for DIO2 changes
-        if ((dio_states & (1 << 2)) != gpio_pin_get(LMIC_DIO2)) {
-			// Has changed, so store the new value, inverting its bit
-			dio_states ^= 1 << 2;
-			
-            if (dio_states & (1 << 2)) {
-				hal_disableIRQs();
-                radio_irq_handler(1);
-				hal_enableIRQs();
-			}
-		}
-	}	
-	
-	//os_resume_nunloop();
+	WRITE_PERI_REG(GPIO_STATUS_W1TC_REG, status_l);
+	WRITE_PERI_REG(GPIO_STATUS1_W1TC_REG, status_h);
+
+	if (xHigherPriorityTaskWoken)
+		portYIELD_FROM_ISR();
 }
 
 void hal_init (void) {
+	gpio_isr_register(ETS_GPIO_INUM, &d0_intr_handler, NULL);
+
 	// Init SPI bus
     if (spi_init(LMIC_SPI) != 0) {
-        syslog(LOG_ERR, "lmic cannot open spi%u port", LMIC_SPI);
+        syslog(LOG_ERR, "lmic cannot open spi%u", LMIC_SPI);
         return;
     }
     
     spi_set_cspin(LMIC_SPI, LMIC_CS);
-    spi_set_speed(LMIC_SPI, LMIC_SPI_KHZ);
+    //spi_set_speed(LMIC_SPI, LMIC_SPI_KHZ);
+    spi_set_speed(LMIC_SPI, 1000);
 
     if (spi_cspin(LMIC_SPI) >= 0) {
-        syslog(LOG_INFO, "lmic is at port %s, pin cs=%c%d",
+        syslog(LOG_INFO, "lmic is at %s, cs=%s%d",
             spi_name(LMIC_SPI), spi_csname(LMIC_SPI), spi_cspin(LMIC_SPI));
     }
 	
 	// Init RESET pin
 	gpio_pin_output(LMIC_RST);
-	
+
+	gpio_isr_register(ETS_GPIO_INUM, &d0_intr_handler, NULL);
+
 	// Init DIO pins
-	if (LMIC_DIO0)	
+	if (LMIC_DIO0) {
 		gpio_pin_input(LMIC_DIO0);
+		gpio_set_intr_type(LMIC_DIO0, GPIO_INTR_POSEDGE);
+		gpio_intr_enable(LMIC_DIO0);
+	}
 	
-	if (LMIC_DIO1)
+	if (LMIC_DIO1) {
 		gpio_pin_input(LMIC_DIO1);
+		gpio_set_intr_type(LMIC_DIO1, GPIO_INTR_POSEDGE);
+		gpio_intr_enable(LMIC_DIO1);
+	}
 	
-	if (LMIC_DIO2)
+	if (LMIC_DIO2) {
 		gpio_pin_input(LMIC_DIO2);
+		gpio_set_intr_type(LMIC_DIO2, GPIO_INTR_POSEDGE);
+		gpio_intr_enable(LMIC_DIO2);
+	}
 }
 
 /*
@@ -96,6 +83,7 @@ void hal_init (void) {
  */
 void hal_pin_nss (u1_t val) {
 	if (!val) {
+	    spi_set_cspin(LMIC_SPI, LMIC_CS);
 		spi_select(LMIC_SPI);
 	} else {
 		spi_deselect(LMIC_SPI);	
@@ -142,13 +130,19 @@ void hal_enableIRQs (void) {
 	if (--nested == 0) {
 		nested = 0;
 		
-		hal_check_dio();
-
 		portENABLE_INTERRUPTS();
 	}	
 }
 
 void hal_sleep (void) {
+}
+
+u4_t hal_ticks () {
+	struct timeval tv;
+
+	gettimeofday(&tv, NULL);
+
+	return ((((tv.tv_sec * 1000000 + tv.tv_usec) * 15) / 100) / 3);
 }
 
 // Returns the number of ticks until time. Negative values indicate that
@@ -161,16 +155,8 @@ static s4_t delta_time(u4_t time) {
  * busy-wait until specified timestamp (in ticks) is reached.
  */
 void hal_waitUntil (u4_t time) {
-    s4_t delta = delta_time(time);
-    // From delayMicroseconds docs: Currently, the largest value that
-    // will produce an accurate delay is 16383.
-    while (delta > (16000 / US_PER_OSTICK)) {
-        udelay(16);
-        delta -= (16000 / US_PER_OSTICK);
+    while (delta_time(time) > 0) {
     }
-	
-    if (delta > 0)
-        udelay(delta * US_PER_OSTICK);	
 }
 
 /*

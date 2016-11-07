@@ -33,6 +33,8 @@
 // Include esp-idf gpio driver
 #include "driver/gpio.h"
 
+#define ETS_GPIO_INUM 4
+
 #define gpio_pin_input(gpio) gpio_pad_select_gpio(gpio);gpio_set_direction(gpio, GPIO_MODE_INPUT)
 #define gpio_pin_output(gpio) gpio_pad_select_gpio(gpio);gpio_set_direction(gpio, GPIO_MODE_OUTPUT)
 #define gpio_pin_opendrain(gpio) gpio_pad_select_gpio(gpio);gpio_set_direction(gpio, GPIO_MODE_INPUT_OUTPUT_OD)

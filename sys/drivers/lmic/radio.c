@@ -9,8 +9,8 @@
  *    IBM Zurich Research Lab - initial API, implementation and documentation
  *******************************************************************************/
 
-#if LUA_USE_LORA
-#if USE_LMIC
+#ifdef LUA_USE_LORA
+#ifdef USE_LMIC
 
 #include "lmic.h"
 

@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-#define LMIC_DEBUG_LEVEL 1
+#define LMIC_DEBUG_LEVEL 0
 #define LMIC_FAILURE_TO Serial
 
 #endif

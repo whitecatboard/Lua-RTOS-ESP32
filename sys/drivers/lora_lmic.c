@@ -47,7 +47,7 @@
  
 #include "lmic.h"
 
-#define LORA_DEBUG_LEVEL 1
+#define LORA_DEBUG_LEVEL 0
 
 #define evLORA_JOINED  	       	 ( 1 << 0 )
 #define evLORA_JOIN_DENIED     	 ( 1 << 1 )
@@ -331,8 +331,6 @@ static void lora_init(osjob_t* j) {
 
 // Setup driver
 tdriver_error *lora_setup(int band) {
-    tdriver_error *error;
-    
 	syslog(LOG_DEBUG, "lora: setup, band %d", band);
 
     current_band = band;    
@@ -341,12 +339,6 @@ tdriver_error *lora_setup(int band) {
 		// Create event group for sync driver with LMIC events
 		loraEvent = xEventGroupCreate();
 		
-		// Init timer
-		error = lmic_setup_timer();
-		if (error) {
-			return error;
-		}
-	
 		// LMIC init
 		os_init();
 

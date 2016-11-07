@@ -9,10 +9,10 @@
  *    IBM Zurich Research Lab - initial API, implementation and documentation
  *******************************************************************************/
 
-//! \file
-#if LUA_USE_LORA
-#if USE_LMIC
+#ifdef LUA_USE_LORA
+#ifdef USE_LMIC
 
+//! \file
 #include "lmic.h"
 
 #if defined(DISABLE_BEACONS) && !defined(DISABLE_PING)

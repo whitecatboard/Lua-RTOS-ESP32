@@ -48,12 +48,11 @@ CFLAGS += -DCONSOLE_BUFFER_LEN=1024    # Console buffer length in bytes
 #
 # LoraWAN driver connfiguration for RN2483
 #
-CFLAGS += -DUSE_LMIC=0
+CFLAGS += -DUSE_LMIC=1
 CFLAGS += -DUSE_RN2483=0
 
-CFLAGS += -DUS_PER_OSTICK=16
-CFLAGS += -DLMIC_TIMER_HZ=\(1000000/US_PER_OSTICK\)	   # 1 tick every 17us
-CFLAGS += -DOSTICKS_PER_SEC=LMIC_TIMER_HZ
+CFLAGS += -DUS_PER_OSTICK=20
+CFLAGS += -DOSTICKS_PER_SEC=50000
 
 CFLAGS += -DLMIC_SPI=3				   # SPI unit
 CFLAGS += -DLMIC_CS=5	  		       # CS
@@ -105,7 +104,7 @@ CFLAGS += -DLUA_USE_DEBUG=1 		   # debug
 #
 CFLAGS += -DLUA_USE_TMR=1		       # timer
 CFLAGS += -DLUA_USE_PIO=1		       # gpio
-CFLAGS += -DLUA_USE_LORA=0		       # lora
+CFLAGS += -DLUA_USE_LORA=1		       # lora
 CFLAGS += -DLUA_USE_PACK=1		       # pack
 CFLAGS += -DLUA_USE_THREAD=1		   # thread
 CFLAGS += -DLUA_USE_I2C=0   		   # i2c

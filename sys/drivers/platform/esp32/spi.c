@@ -291,8 +291,8 @@ void spi_select(int unit) {
         CLEAR_PERI_REG_MASK(SPI_CTRL_REG(unit), SPI_WR_BIT_ORDER);
         CLEAR_PERI_REG_MASK(SPI_CTRL_REG(unit), SPI_RD_BIT_ORDER);
 
-        // ??
-        CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_DOUTDIN);
+        // Enable full-duplex communication
+        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_DOUTDIN);
 
         // Configure as master
         WRITE_PERI_REG(SPI_USER1_REG(unit), 0);
@@ -302,16 +302,14 @@ void spi_select(int unit) {
         // Set clock
         WRITE_PERI_REG(SPI_CLOCK_REG(unit), dev->divisor);
 
-        // Enable MOSI
-        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CS_SETUP | SPI_CS_HOLD | SPI_USR_MOSI);
+        // Enable MOSI / MISO / CS
+        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CS_SETUP | SPI_CS_HOLD | SPI_USR_MOSI | SPI_USR_MISO);
         SET_PERI_REG_MASK(SPI_CTRL2_REG(unit), ((0x4 & SPI_MISO_DELAY_NUM) << SPI_MISO_DELAY_NUM_S));
 
         CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_COMMAND);
         SET_PERI_REG_BITS(SPI_USER2_REG(unit), SPI_USR_COMMAND_BITLEN, 0, SPI_USR_COMMAND_BITLEN_S);
         CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_ADDR);
         SET_PERI_REG_BITS(SPI_USER1_REG(unit), SPI_USR_ADDR_BITLEN, 0, SPI_USR_ADDR_BITLEN_S);
-        CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_MISO);
-        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_MOSI);
 
         dev->dirty = 0;
     }
@@ -343,13 +341,15 @@ void spi_set_cspin(int unit, int pin) {
     int channel = unit - 1;
     struct spi *dev = &spi[channel];
 
-    dev->cs = pin;
+    if (pin != dev->cs) {
+        dev->cs = pin;
 
-    if (pin) {
-        gpio_pin_output(dev->cs);
-        gpio_pin_set(dev->cs);
+        if (pin) {
+            gpio_pin_output(dev->cs);
+            gpio_pin_set(dev->cs);
 
-        dev->dirty = 1;
+            dev->dirty = 1;
+        }
     }
 }
 
@@ -390,7 +390,7 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
 	spi_set_cspin(unit, *cs);
 }
 
-void spi_master_op(int unit, unsigned int word_size, unsigned int len, unsigned char *out, unsigned char *in) {
+static void spi_master_op(int unit, unsigned int word_size, unsigned int len, unsigned char *out, unsigned char *in) {
 	unsigned int bytes = word_size * len; // Number of bytes to write / read
 	unsigned int idx = 0;
 
@@ -420,6 +420,8 @@ void spi_master_op(int unit, unsigned int word_size, unsigned int len, unsigned 
 				if (out) {
 					wd |= *out << 24;
 					out++;
+				} else {
+					wd |= 0xff << 24;
 				}
 				wdb--;
 				bytes--;
@@ -440,7 +442,7 @@ void spi_master_op(int unit, unsigned int word_size, unsigned int len, unsigned 
 
 		// Load send buffer
 	    SET_PERI_REG_BITS(SPI_MOSI_DLEN_REG(unit), SPI_USR_MOSI_DBITLEN, bits - 1, SPI_USR_MOSI_DBITLEN_S);
-	    SET_PERI_REG_BITS(SPI_MISO_DLEN_REG(unit), SPI_USR_MOSI_DBITLEN, bits - 1, SPI_USR_MISO_DBITLEN_S);
+	    SET_PERI_REG_BITS(SPI_MISO_DLEN_REG(unit), SPI_USR_MISO_DBITLEN, bits - 1, SPI_USR_MISO_DBITLEN_S);
 
 	    idx = 0;
 	    while ((idx << 3) < bits) {
@@ -453,6 +455,17 @@ void spi_master_op(int unit, unsigned int word_size, unsigned int len, unsigned 
 
 		// Wait for SPI bus ready
 		while (READ_PERI_REG(SPI_CMD_REG(unit))&SPI_USR);
+
+		if (in) {
+			// Read data
+			idx = 0;
+			while ((idx << 3) < bits) {
+				buffer[idx] = READ_PERI_REG((SPI_W0_REG(unit) + (idx << 2)));
+				idx++;
+			}
+
+			memcpy((void *)in, (void *)buffer, bits >> 3);
+		}
 	}
 }
 

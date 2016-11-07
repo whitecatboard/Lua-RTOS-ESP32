@@ -49,6 +49,10 @@ static u1_t unlinkjob (osjob_t** pnext, osjob_t* job) {
     return 0;
 }
 
+ostime_t os_getTime () {
+    return hal_ticks();
+}
+
 // clear scheduled job
 void os_clearCallback (osjob_t* job) {
     hal_disableIRQs();
