@@ -696,8 +696,14 @@ static ostime_t nextJoinState (void) {
 
     // Try 869.x and then 864.x with same DR
     // If both fail try next lower datarate
-    if( ++LMIC.txChnl == 3 )
+    if( ++LMIC.txChnl == 3 ) {
         LMIC.txChnl = 0;
+
+		#if LMIC_JOIN_FAILED_AFTER_868_864
+        return 1;
+		#endif
+    }
+
     if( (++LMIC.txCnt & 1) == 0 ) {
         // Lower DR every 2nd try (having tried 868.x and 864.x with the same DR)
         if( LMIC.datarate == DR_SF12 )
@@ -1432,6 +1438,7 @@ static bit_t processJoinAccept (void) {
             reportEvent(EV_REJOIN_FAILED);
             return 1;
         }
+
         LMIC.opmode &= ~OP_TXRXPEND;
         ostime_t delay = nextJoinState();
         EV(devCond, DEBUG, (e_.reason = EV::devCond_t::NO_JACC,
