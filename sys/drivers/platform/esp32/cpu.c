@@ -338,7 +338,7 @@ void cpu_sleep(int seconds) {
 }
 
 void cpu_reset() {
-	//cpu_sleep(1);
+	system_restart();
 }
 
 struct bootflags

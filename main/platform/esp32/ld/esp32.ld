@@ -68,6 +68,7 @@ _remove_r = __remove_r;
 _rename_r = __rename_r;
 _getpid_r = __getpid_r;
 _newTick = __newTick;
+
 /* _times_r = __times_r; */
 /* _gettimeofday_r = __gettimeofday_r; */
 
