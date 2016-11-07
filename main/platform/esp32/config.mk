@@ -111,3 +111,4 @@ CFLAGS += -DLUA_USE_PACK=1		       # pack
 CFLAGS += -DLUA_USE_THREAD=1		   # thread
 CFLAGS += -DLUA_USE_I2C=0   		   # i2c
 CFLAGS += -DLUA_USE_SCREEN=1     	   # screen
+CFLAGS += -DLUA_USE_NVS=1        	   # nvs

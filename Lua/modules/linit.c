@@ -71,6 +71,7 @@ LIB_INIT(PIO, pio, luaopen_pio);
 LIB_INIT(I2C, i2c, luaopen_i2c);
 LIB_INIT(THREAD, thread, luaopen_thread);
 LIB_INIT(SCREEN, screen, luaopen_screen);
+LIB_INIT(NVS, nvs, luaopen_nvs);
 
 LUALIB_API void luaL_openlibs (lua_State *L) {
   const luaL_Reg *lib = lua_libs1;
