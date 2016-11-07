@@ -82,6 +82,7 @@ SECTIONS
     *librtc.a:(.literal .text .literal.* .text.*)
     *libpp.a:(.literal .text .literal.* .text.*)
     *libhal.a:(.literal .text .literal.* .text.*)
+	*sys.a:(.literal .text .literal.* .text.*)
     *pthread.a:(.literal .text .literal.* .text.*)
     _iram_text_end = ABSOLUTE(.);
   } > iram0_0_seg

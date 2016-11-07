@@ -33,6 +33,7 @@
 #include "task.h"
 
 #include "sdkconfig.h"
+#include "esp_deepsleep.h"
 
 #include <soc/dport_reg.h>
 #include <sys/syslog.h>
@@ -333,7 +334,7 @@ void cpu_show_info() {
 }
 
 void cpu_sleep(int seconds) {
-	//sdk_system_deep_sleep(seconds * 1000000);
+	system_deep_sleep(seconds * 1000000);
 }
 
 void cpu_reset() {
