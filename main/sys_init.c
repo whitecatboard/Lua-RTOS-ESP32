@@ -34,6 +34,7 @@
 #include <sys/drivers/sd.h>
 #include <sys/drivers/console.h>
 #include <sys/drivers/cpu.h>
+#include <sys/status.h>
 #include <sys/syscalls/syscalls.h>
 #include <sys/syscalls/mount.h>
 
@@ -147,9 +148,6 @@ void _sys_init() {
             syslog(LOG_ERR, "can't redirect console messages to /sd/log/messages.log, insert an SDCARD");
         }   
     #endif
-        
-    // Log only errors
-	//setlogmask(LOG_ERR);
         
     // Continue init ...
     printf("\n");

@@ -104,11 +104,7 @@ const int ndevs = sizeof(devs) / sizeof(struct device);
 // during the Lua RTOS booting process.
 void _syscalls_init() {
     nfiles = 0;
-    
-//    debug_led_on();
-  //  delay(2000);
-  //  debug_led_off();
-  //  delay(2000);
+
     // Allocate space for file descriptor structure
     p_fd = (struct filedesc *)calloc(1, sizeof(struct filedesc));
     if (!p_fd) {

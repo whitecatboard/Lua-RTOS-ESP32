@@ -92,37 +92,6 @@ void dump_buffer(char *buff, int size) {
 
 void *lua_start(void *arg) {	
 	for(;;) {
-		/*
-		uint32_t buff[256];
-		int ret;
-
-		uint32_t base = 0x00180000;
-	
-		memset(buff, 0, 256);
-		ret = esp32_spi_flash_read(base, 256, buff);
-		printf("spi_flash_read %x\r\n", ret);
-		dump_buffer(buff, 256);
-
-		ret = esp32_spi_flash_erase(base, 4096);
-		printf("spi_flash_erase_sector %x\r\n", ret);
-
-		memset(buff, 0, 256);
-		ret = esp32_spi_flash_read(base, 256, buff);
-		printf("spi_flash_read %x\r\n", ret);
-		dump_buffer(buff, 256);
-
-		memset(buff, 0, 256);
-		strcpy(buff, "hola");	
-		ret = esp32_spi_flash_write(base, 256, buff);
-		printf("spi_flash_write %x\r\n", ret);
-
-		memset(buff, 0, 256);
-		ret = esp32_spi_flash_read(base, 256, buff);
-		printf("spi_flash_read %x\r\n", ret);
-		printf("%s\r\n", buff);
-
-		for(;;);
-		*/
 		luaos_main();
     }
 
@@ -141,8 +110,6 @@ void app_main(void) {
 		gpio_pin_output(LED_ACT);
     	gpio_pin_clr(LED_ACT);
 	#endif
-
-    //spi_test();
 
     pthread_attr_t attr;
     pthread_t thread;
