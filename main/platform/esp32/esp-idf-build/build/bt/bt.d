@@ -62,6 +62,7 @@ bt.o: \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_err.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/assert.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_deepsleep.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_system.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_task.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_intr.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/rom/ets_sys.h \
@@ -192,6 +193,8 @@ bt.o: \
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/newlib/include/assert.h:
 
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_deepsleep.h:
+
+/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_system.h:
 
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_task.h:
 

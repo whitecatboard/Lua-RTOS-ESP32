@@ -28,7 +28,7 @@
 
 #include <sys/drivers/gpio.h>
 #include <sys/drivers/spi.h>
-#include <sys/disklabel.h>
+#include <sys/drivers/disklabel.h>
 #include <sys/drivers/sd.h>
 
 #include <sys/mutex.h>
@@ -854,7 +854,10 @@ int sd_init(int unit) {
     
     spi_set_cspin(spi, SD_CS);
     spi_set_speed(spi, SD_KHZ);
+
+#if PLATFORM_PIC32MZ
     spi_set(spi, PIC32_SPICON_CKE);
+#endif
 
     if (spi_cspin(spi) >= 0) {
         syslog(LOG_INFO, "sd%u is at port %s, pin cs=%c%d", unit,

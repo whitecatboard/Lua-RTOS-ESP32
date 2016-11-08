@@ -129,9 +129,9 @@ void hal_disableIRQs (void) {
 void hal_enableIRQs (void) {
 	if (--nested == 0) {
 		nested = 0;
-		
+
 		portENABLE_INTERRUPTS();
-	}	
+	}
 }
 
 void hal_sleep (void) {

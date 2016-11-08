@@ -499,7 +499,7 @@ int lora_join_otaa() {
     }
 
 	// TODO: LORA_KEYS_NOT_CONFIGURED
-	
+
 	LMIC_startJoining();
 
 	// Wait for one of the expected events

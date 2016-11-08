@@ -36,7 +36,7 @@ void os_init () {
     LMIC_init();
 
 	// Run os_runloop in a FreeRTOS task
-	xTaskCreate(os_runloop, "lmic", tskDEFStack * 10, NULL, tskIDLE_PRIORITY, &xRunLoop);
+	xTaskCreate(os_runloop, "lmic", tskDEFStack, NULL, tskDEF_PRIORITY, &xRunLoop);
 }
 
 static u1_t unlinkjob (osjob_t** pnext, osjob_t* job) {
@@ -112,9 +112,9 @@ void os_runloop(void *pvParameters) {
 	    } else if(OS.scheduledjobs && hal_checkTimer(OS.scheduledjobs->deadline)) { // check for expired timed jobs
 	        j = OS.scheduledjobs;
 	        OS.scheduledjobs = j->next;
-	    }		
+	    }
 	    hal_enableIRQs();
-		
+
 	    if (j) { // run job callback
 	        j->func(j);
 	    } else {

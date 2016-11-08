@@ -97,6 +97,7 @@ cpu_start.o: \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/heap_alloc_caps.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_system.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_deepsleep.h \
+ /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_system.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/spi_flash/include/esp_spi_flash.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/nvs_flash/include/nvs_flash.h \
  /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_event.h \
@@ -307,6 +308,8 @@ cpu_start.o: \
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_system.h:
 
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_deepsleep.h:
+
+/Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/esp32/include/esp_system.h:
 
 /Users/jaumeolivepetrus/Lua-RTOS/main/platform/esp32/esp-idf/components/spi_flash/include/esp_spi_flash.h:
 

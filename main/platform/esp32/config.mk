@@ -9,20 +9,20 @@ CFLAGS += -D_CLOCKS_PER_SEC_=configTICK_RATE_HZ # Number of interrupt ticks for 
 CFLAGS += -DUSE_NETWORKING=0                    # Networking is used (1 = yes, 0 = not)
 CFLAGS += -DMTX_USE_EVENTS=0                    # Use event groups in mtx implementation (experimental)
 
-CFLAGS += -DluaTaskStack=1024*30                # Stck size assigned to lua thread
+CFLAGS += -DluaTaskStack=1024*40                # Stck size assigned to lua thread
 CFLAGS += -DtskDEFStack=192*10				    # Default task size
 CFLAGS += -DtskDEF_PRIORITY=2				    # Default task priority
 CFLAGS += -DdefaultThreadStack=10240
 CFLAGS += -DPATH_MAX=64
 
 CFLAGS += -DUSE_RTC=0						    # Enable RTC
-CFLAGS += -DLED_ACT=0					 	    # GPIO for activity led (0 if not led)
+CFLAGS += -DLED_ACT=16					 	    # GPIO for activity led (0 if not led)
 CFLAGS += -DLED_DBG=0 					 	    # GPIO for debug led (0 if not led)
 
 #
 # File system configuration
 # 
-CFLAGS += -DUSE_FAT=0                  # Enable FAT
+CFLAGS += -DUSE_FAT=1                  # Enable FAT
 CFLAGS += -DUSE_SPIFFS=1               # Enable SPIFFS
 
 #
@@ -63,6 +63,14 @@ CFLAGS += -DLMIC_RST=27
 CFLAGS += -DLMIC_DIO0=26
 CFLAGS += -DLMIC_DIO1=25
 CFLAGS += -DLMIC_DIO2=33
+
+#
+# SDCARD configuration
+# 
+CFLAGS += -DUSE_SD=1                   # Enable SDCARD
+CFLAGS += -DSD_SPI=3				   # SPI unit
+CFLAGS += -DSD_CS=5					   # CS
+CFLAGS += -DSD_LED=LED_ACT			   # LED
 
 #
 # Display driver configuration
