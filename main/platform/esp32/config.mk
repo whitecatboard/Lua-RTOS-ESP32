@@ -23,7 +23,7 @@ CFLAGS += -DLED_DBG=0 					 	    # GPIO for debug led (0 if not led)
 # File system configuration
 # 
 CFLAGS += -DUSE_FAT=1                  # Enable FAT
-CFLAGS += -DUSE_SPIFFS=1               # Enable SPIFFS
+CFLAGS += -DUSE_SPIFFS=0               # Enable SPIFFS
 
 #
 # SPIFFS file system configuration
@@ -71,7 +71,7 @@ CFLAGS += -DUSE_SD=1                   # Enable SDCARD
 CFLAGS += -DSD_SPI=2				   # SPI unit
 CFLAGS += -DSD_CS=15				   # CS
 CFLAGS += -DSD_LED=LED_ACT			   # LED
-CFLAGS += -DSD_KHZ=10000	           # Speed
+CFLAGS += -DSD_KHZ=15000	           # Speed
 
 #
 # Display driver configuration

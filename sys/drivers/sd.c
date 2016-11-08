@@ -468,15 +468,9 @@ again:
         spi_bulk_read32_be(spi, SECTSIZE/4, (int*)data);
 //printf("    %08x %08x %08x %08x ...\n",
 //((int*)data)[0], ((int*)data)[1], ((int*)data)[2], ((int*)data)[3]);
-        printf("dump1\r\n");
-        dump_buffer((unsigned char *)data,SECTSIZE);
-        printf("\r\n");
         data += SECTSIZE;
     } else {
         spi_bulk_read(spi, bcount, (unsigned char *)data);
-        printf("dump2\r\n");
-        dump_buffer((unsigned char *)data,bcount);
-        printf("\r\n");
 //printf("    %08x %08x %08x %08x ...\n",
 //((int*)data)[0], ((int*)data)[1], ((int*)data)[2], ((int*)data)[3]);
         data += bcount;
@@ -636,11 +630,7 @@ sd_setup(struct disk *u)
         return 0;
     }
 //???    splx(s);
-    printf("%x\r\n",buf[255]);
-    printf("%x\r\n",buf[254]);
-    printf("%x\r\n",buf[253]);
     if (buf[255] == MBR_MAGIC) {
-    	printf("magi!!\r\n");
         bcopy(&buf[223], &u->part[1], 64);
 #if 1
         int i;

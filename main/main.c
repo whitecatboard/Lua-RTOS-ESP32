@@ -78,7 +78,7 @@ void dump_buffer(char *buff, int size) {
 	int j = 0;
 	
 	for(i=0;i<size;i++) {
-		if (j == 32) {
+		if (j == 16) {
 			j = 0;
 			printf("\r\n");
 		}

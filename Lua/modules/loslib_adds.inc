@@ -268,6 +268,8 @@ static int os_ls (lua_State *L) {
             tbuffer[0] = '\0';
         }
         
+        tbuffer[0] = '\0';
+
         type = 'd';
         if (ent->d_type == DT_REG) {
             type = 'f';
