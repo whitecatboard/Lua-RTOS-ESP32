@@ -299,10 +299,10 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
 
     switch (channel) {
         case 0:
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO7_U, FUNC_SD_DATA0_SPIQ);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO8_U, FUNC_SD_DATA1_SPID);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO6_U, FUNC_SD_CLK_SPICLK);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO11_U,FUNC_SD_CMD_SPICS0);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA0_U, FUNC_SD_DATA0_SPIQ);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA1_U, FUNC_SD_DATA1_SPID);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_CLK_U,   FUNC_SD_CLK_SPICLK);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_CMD_U,   FUNC_SD_CMD_SPICS0);
 
             *sdi = GPIO7;
             *sdo = GPIO8;
@@ -311,10 +311,10 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
             break;
 
         case 1:
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO12_U,FUNC_MTDI_HSPIQ);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO13_U,FUNC_MTCK_HSPID);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO14_U,FUNC_MTMS_HSPICLK);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO15_U,FUNC_MTDO_HSPICS0);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_MTDI_HSPIQ);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, FUNC_MTCK_HSPID);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTMS_U, FUNC_MTMS_HSPICLK);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_MTDO_HSPICS0);
 
             *sdi = GPIO12;
             *sdo = GPIO13;
