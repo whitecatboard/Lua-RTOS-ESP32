@@ -71,6 +71,7 @@ CFLAGS += -DUSE_SD=1                   # Enable SDCARD
 CFLAGS += -DSD_SPI=2				   # SPI unit
 CFLAGS += -DSD_CS=15				   # CS
 CFLAGS += -DSD_LED=LED_ACT			   # LED
+CFLAGS += -DSD_KHZ=10000	           # Speed
 
 #
 # Display driver configuration
