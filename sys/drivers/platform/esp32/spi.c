@@ -395,7 +395,7 @@ static void spi_master_op(int unit, unsigned int word_size, unsigned int len, un
 	    SET_PERI_REG_BITS(SPI_MISO_DLEN_REG(unit), SPI_USR_MISO_DBITLEN, bits - 1, SPI_USR_MISO_DBITLEN_S);
 
 	    idx = 0;
-	    while ((idx << 3) < bits) {
+	    while ((idx << 5) < bits) {
 		    WRITE_PERI_REG((SPI_W0_REG(unit) + (idx << 2)), buffer[idx]);
 		    idx++;
 	    }
@@ -403,13 +403,13 @@ static void spi_master_op(int unit, unsigned int word_size, unsigned int len, un
 	    // Start transfer
 	    SET_PERI_REG_MASK(SPI_CMD_REG(unit), SPI_USR);
 
-		// Wait for SPI bus ready
+	    // Wait for SPI bus ready
 		while (READ_PERI_REG(SPI_CMD_REG(unit))&SPI_USR);
 
 		if (in) {
 			// Read data
 			idx = 0;
-			while ((idx << 3) < bits) {
+			while ((idx << 5) < bits) {
 				buffer[idx] = READ_PERI_REG((SPI_W0_REG(unit) + (idx << 2)));
 				idx++;
 			}
@@ -524,29 +524,17 @@ void spi_bulk_write32_be(int unit, unsigned int words, int *data) {
 // the enhanced buffer mode.
 // Data should be a multiple of 32 bits.
 void spi_bulk_read32_be(int unit, unsigned int words, int *data) {
-#if 0
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
+	int i = 0;
 
-    struct spireg *reg = dev->reg;
-    unsigned int nread = 0;
-    unsigned int nwrite = words;
+    taskDISABLE_INTERRUPTS();
 
-    int rup = mips_di();
-    reg->conset = PIC32_SPICON_MODE32 | PIC32_SPICON_ENHBUF;
-    while (nread < words) {
-        if (nwrite > 0 && ! (reg->stat & PIC32_SPISTAT_SPITBF)) {
-            reg->buf = ~0;
-            nwrite--;
-        }
-        if (! (reg->stat & PIC32_SPISTAT_SPIRBE)) {
-            *data++ = __bswap32__(reg->buf);
-            nread++;
-        }
+    spi_master_op(unit, 4, words, NULL, (unsigned char *)data);
+
+    for(;i < words;i++) {
+    	data[i] = __builtin_bswap32(data[i]);
     }
-    reg->con = dev->mode;
-    mtc0_Status(rup);
-#endif
+
+    taskENABLE_INTERRUPTS();
 }
 
 /*

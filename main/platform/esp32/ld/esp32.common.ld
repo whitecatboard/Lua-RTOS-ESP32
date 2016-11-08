@@ -84,6 +84,7 @@ SECTIONS
     *libhal.a:(.literal .text .literal.* .text.*)
 	*sys.a:uart.o(.literal .text .literal.* .text.*)
 	*sys.a:mutex.o(.literal .text .literal.* .text.*)
+	*sys.a:status.o(.literal .text .literal.* .text.*)
     *pthread.a:(.literal .text .literal.* .text.*)
     _iram_text_end = ABSOLUTE(.);
   } > iram0_0_seg

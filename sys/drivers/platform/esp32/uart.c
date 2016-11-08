@@ -169,6 +169,8 @@ void uart_pin_config(u8_t unit, u8_t *rx, u8_t *tx) {
 }
 
 static int queue_byte(u8_t unit, u8_t byte, int *signal) {
+	*signal = 0;
+
     if (unit == CONSOLE_UART - 1) {
         if (byte == 0x04) {
             if (!status_get(STATUS_LUA_RUNNING)) {
@@ -178,31 +180,39 @@ static int queue_byte(u8_t unit, u8_t byte, int *signal) {
             }
             
     		status_set(STATUS_LUA_ABORT_BOOT_SCRIPTS);
-			*signal = 0;
 			
             return 0;
         } else if (byte == 0x03) {
-            *signal = SIGINT;
-            if (_pthread_has_signal(*signal)) {
-            	return 0;
-            }
-			
-			return 1;
+        	if (status_get(STATUS_LUA_RUNNING)) {
+				*signal = SIGINT;
+				if (_pthread_has_signal(*signal)) {
+					return 0;
+				}
+
+				return 1;
+        	} else {
+        		return 0;
+        	}
         }
     }
 	
-	return 1;	
+	if (status_get(STATUS_LUA_RUNNING)) {
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 void  uart_rx_intr_handler(void *para) {
     BaseType_t xHigherPriorityTaskWoken;
     xHigherPriorityTaskWoken = pdFALSE;
+    u32_t uart_intr_status = 0;
 	u8_t byte;
 	int signal = 0;
 	int unit = 0;
-	
+
 	for(;unit < NUART;unit++) {
-		u32_t uart_intr_status = READ_PERI_REG(UART_INT_ST_REG(unit)) ;
+		uart_intr_status = READ_PERI_REG(UART_INT_ST_REG(unit)) ;
 
 	    while (uart_intr_status != 0x0) {
 	        if (UART_FRM_ERR_INT_ST == (uart_intr_status & UART_FRM_ERR_INT_ST)) {
@@ -212,7 +222,7 @@ void  uart_rx_intr_handler(void *para) {
 					byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
 					if (queue_byte(unit, byte, &signal)) {
 			            // Put byte to UART queue
-			            xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);		              			
+			            xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
 					} else {
 						if (signal) {
 							_pthread_queue_signal(signal);
@@ -226,7 +236,7 @@ void  uart_rx_intr_handler(void *para) {
 					byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
 					if (queue_byte(unit, byte, &signal)) {
 			            // Put byte to UART queue
-			            xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);		              			
+			            xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
 					} else {
 						if (signal) {
 							_pthread_queue_signal(signal);
@@ -244,7 +254,9 @@ void  uart_rx_intr_handler(void *para) {
 	    }
 	}
 
-	portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
+	if (xHigherPriorityTaskWoken) {
+		portYIELD_FROM_ISR();
+	}
 }
 
 // Inits UART
