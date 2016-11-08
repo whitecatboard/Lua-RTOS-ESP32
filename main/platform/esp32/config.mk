@@ -92,11 +92,12 @@ CFLAGS += -DDISPLAY_RS=26
 CFLAGS += -DDEBUG_FREE_MEM=0           # Enable LUA free mem debug utility (only for debug purposes)
 CFLAGS += -DLUA_USE_LUA_LOCK=0		   # Enable if Lua must use real lua_lock / lua_unlock implementation
 CFLAGS += -DLUA_USE_SAFE_SIGNAL=0      # Enable use of LuaOS safe signal (experimental)
-CFLAGS += -DSTRCACHE_N=1
-CFLAGS += -DSTRCACHE_M=1
-CFLAGS += -DMINSTRTABSIZE=32
+# CFLAGS += -DSTRCACHE_N=1
+# CFLAGS += -DSTRCACHE_M=1
+# CFLAGS += -DMINSTRTABSIZE=32
 CFLAGS += -DLUA_USE_SHELL=1
-CFLAGS += -DLUA_USE_EDITOR=0
+CFLAGS += -DLUA_USE_EDITOR=1
+CFLAGS += -DLUA_USE_HISTORY=1
 
 #
 # Standard Lua modules to include

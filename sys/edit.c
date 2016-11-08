@@ -2054,7 +2054,7 @@ int edit_main(int argc, char *argv[]) {
   struct env env;
   int rc;
   int i;
-  sigset_t blocked_sigmask, orig_sigmask;
+  //sigset_t blocked_sigmask, orig_sigmask;
 #ifdef __linux__
   struct termios tio;
   struct termios orig_tio;
@@ -2109,11 +2109,11 @@ setvbuf(stdout, NULL, 0, 8192);
 
   get_console_size(&env);
   
-  sigemptyset(&blocked_sigmask);
-  sigaddset(&blocked_sigmask, SIGINT);
-  sigaddset(&blocked_sigmask, SIGTSTP);
-  sigaddset(&blocked_sigmask, SIGABRT);
-  sigprocmask(SIG_BLOCK, &blocked_sigmask, &orig_sigmask);
+  //sigemptyset(&blocked_sigmask);
+  //sigaddset(&blocked_sigmask, SIGINT);
+  //sigaddset(&blocked_sigmask, SIGTSTP);
+  //sigaddset(&blocked_sigmask, SIGABRT);
+  //sigprocmask(SIG_BLOCK, &blocked_sigmask, &orig_sigmask);
 
   for (;;) {
     if (!env.current) break;
@@ -2134,7 +2134,7 @@ setvbuf(stdout, NULL, 0, 8192);
   if (env.linebuf) free(env.linebuf);
 
   setbuf(stdout, NULL);
-  sigprocmask(SIG_SETMASK, &orig_sigmask, NULL);
+  //sigprocmask(SIG_SETMASK, &orig_sigmask, NULL);
   return 0;
 }
 
