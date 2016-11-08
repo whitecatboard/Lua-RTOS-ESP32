@@ -68,8 +68,8 @@ CFLAGS += -DLMIC_DIO2=33
 # SDCARD configuration
 # 
 CFLAGS += -DUSE_SD=1                   # Enable SDCARD
-CFLAGS += -DSD_SPI=3				   # SPI unit
-CFLAGS += -DSD_CS=5					   # CS
+CFLAGS += -DSD_SPI=2				   # SPI unit
+CFLAGS += -DSD_CS=15				   # CS
 CFLAGS += -DSD_LED=LED_ACT			   # LED
 
 #
