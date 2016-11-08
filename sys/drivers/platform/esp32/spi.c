@@ -299,28 +299,40 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
 
     switch (channel) {
         case 0:
-            *sdi = 0;
-            *sdo = 0;
-            *sck = 0;
-            *cs = 0;
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO7_U, FUNC_SD_DATA0_SPIQ);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO8_U, FUNC_SD_DATA1_SPID);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO6_U, FUNC_SD_CLK_SPICLK);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO11_U,FUNC_SD_CMD_SPICS0);
+
+            *sdi = GPIO7;
+            *sdo = GPIO8;
+            *sck = GPIO6;
+            *cs =  GPIO11;
             break;
+
         case 1:
-            *sdi = 0;
-            *sdo = 0;
-            *sck = 0;
-            *cs = 0;
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO12_U,FUNC_MTDI_HSPIQ);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO13_U,FUNC_MTCK_HSPID);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO14_U,FUNC_MTMS_HSPICLK);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO15_U,FUNC_MTDO_HSPICS0);
+
+            *sdi = GPIO12;
+            *sdo = GPIO13;
+            *sck = GPIO14;
+            *cs =  GPIO15;
 
             break;
+
         case 2:
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO19_U,FUNC_GPIO19_VSPIQ);
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO23_U,FUNC_GPIO23_VSPID);
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO18_U,FUNC_GPIO18_VSPICLK);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U,FUNC_GPIO5_GPIO5_0);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5_GPIO5_0);
 
             *sdi = GPIO19;
             *sdo = GPIO23;
             *sck = GPIO18;
-            *cs = GPIO5;
+            *cs =  GPIO5;
             break;
     }
 
