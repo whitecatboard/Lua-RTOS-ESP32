@@ -38,6 +38,7 @@
 
 #if LUA_USE_NVS
 
+#include "xos_types.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
 #include "nvs.h"
@@ -72,7 +73,7 @@ static int l_nvs_write(lua_State *L) {
     const char *key = NULL;
     const char *nspace = NULL;
     const char *str_val = NULL;
-    int8_t val_size = 0;
+    size_t val_size = 0;
     void *val_val = NULL;
 
     // Sanity checks, and check arguments
@@ -174,7 +175,6 @@ static int l_nvs_read(lua_State *L) {
     esp_err_t err;
     const char *key = NULL;
     const char *nspace = NULL;
-    int8_t val_size = 0;
     int8_t val_type = 0;
     void *val_val = NULL;
 
@@ -200,7 +200,7 @@ static int l_nvs_read(lua_State *L) {
     }
 
     // Read key size
-    int8_t key_size = 0;
+    size_t key_size = 0;
     err = nvs_get_blob(handle_to_settings, key,NULL, &key_size);
 	if (err != ESP_OK) {
 		nvs_error(L, err);
@@ -233,7 +233,7 @@ static int l_nvs_read(lua_State *L) {
 			lua_pushnil(L);
 			break;
 		case LNVS_TYPE_STRING:
-			lua_pushstring(L, ((int *)(val_val + 1)));
+			lua_pushstring(L, ((const char *)(val_val + 1)));
 			break;
 	}
 
