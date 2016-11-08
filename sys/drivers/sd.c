@@ -860,7 +860,7 @@ int sd_init(int unit) {
 #endif
 
     if (spi_cspin(spi) >= 0) {
-        syslog(LOG_INFO, "sd%u is at port %s, pin cs=%c%d", unit,
+        syslog(LOG_INFO, "sd%u is at %s, pin cs=%s%d", unit,
             spi_name(spi), spi_csname(spi), spi_cspin(spi));
     }
     

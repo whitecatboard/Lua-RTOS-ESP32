@@ -150,68 +150,6 @@ uint32_t spiFrequencyToClockDiv(uint32_t freq) {
  * End of extracted code from arduino-esp32
  */
 
-#if 0
-
-
-void spi_bulk_write32_be(int unit, unsigned int words, int *data)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-
-    struct spireg *reg = dev->reg;
-    unsigned int nread = 0;
-    unsigned int nwrite = words;
-
-    int rup = mips_di();
-    reg->conset = PIC32_SPICON_MODE32 | PIC32_SPICON_ENHBUF;
-    while (nread < words) {
-        if (nwrite > 0 && ! (reg->stat & PIC32_SPISTAT_SPITBF)) {
-            reg->buf = __bswap32__(*data++);
-            nwrite--;
-        }
-        if (! (reg->stat & PIC32_SPISTAT_SPIRBE)) {
-            (void) reg->buf;
-            nread++;
-        }
-    }
-    reg->con = dev->mode;
-    mtc0_Status(rup);
-}
-
-// Read a huge chunk of data as fast and as efficiently as
-// possible.  Switches in to 32-bit mode regardless, and uses
-// the enhanced buffer mode.
-// Data should be a multiple of 32 bits.
-void spi_bulk_read32_be(int unit, unsigned int words, int *data)
-{
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
-
-    struct spireg *reg = dev->reg;
-    unsigned int nread = 0;
-    unsigned int nwrite = words;
-
-    int rup = mips_di();
-    reg->conset = PIC32_SPICON_MODE32 | PIC32_SPICON_ENHBUF;
-    while (nread < words) {
-        if (nwrite > 0 && ! (reg->stat & PIC32_SPISTAT_SPITBF)) {
-            reg->buf = ~0;
-            nwrite--;
-        }
-        if (! (reg->stat & PIC32_SPISTAT_SPIRBE)) {
-            *data++ = __bswap32__(reg->buf);
-            nread++;
-        }
-    }
-    reg->con = dev->mode;
-    mtc0_Status(rup);
-}
-
-
-
-#endif
-
-
 /*
  * Set the SPI mode for a device. Nothing is changed at hardware level.
  *
@@ -541,6 +479,62 @@ void spi_bulk_write32(int unit, unsigned int words, int *data) {
     taskDISABLE_INTERRUPTS();
     spi_master_op(unit, 4, words, (unsigned char *)data, NULL);
     taskENABLE_INTERRUPTS();
+}
+
+void spi_bulk_write32_be(int unit, unsigned int words, int *data) {
+#if 0
+    int channel = unit - 1;
+    struct spi *dev = &spi[channel];
+
+    struct spireg *reg = dev->reg;
+    unsigned int nread = 0;
+    unsigned int nwrite = words;
+
+    int rup = mips_di();
+    reg->conset = PIC32_SPICON_MODE32 | PIC32_SPICON_ENHBUF;
+    while (nread < words) {
+        if (nwrite > 0 && ! (reg->stat & PIC32_SPISTAT_SPITBF)) {
+            reg->buf = __bswap32__(*data++);
+            nwrite--;
+        }
+        if (! (reg->stat & PIC32_SPISTAT_SPIRBE)) {
+            (void) reg->buf;
+            nread++;
+        }
+    }
+    reg->con = dev->mode;
+    mtc0_Status(rup);
+#endif
+}
+
+// Read a huge chunk of data as fast and as efficiently as
+// possible.  Switches in to 32-bit mode regardless, and uses
+// the enhanced buffer mode.
+// Data should be a multiple of 32 bits.
+void spi_bulk_read32_be(int unit, unsigned int words, int *data) {
+#if 0
+    int channel = unit - 1;
+    struct spi *dev = &spi[channel];
+
+    struct spireg *reg = dev->reg;
+    unsigned int nread = 0;
+    unsigned int nwrite = words;
+
+    int rup = mips_di();
+    reg->conset = PIC32_SPICON_MODE32 | PIC32_SPICON_ENHBUF;
+    while (nread < words) {
+        if (nwrite > 0 && ! (reg->stat & PIC32_SPISTAT_SPITBF)) {
+            reg->buf = ~0;
+            nwrite--;
+        }
+        if (! (reg->stat & PIC32_SPISTAT_SPIRBE)) {
+            *data++ = __bswap32__(reg->buf);
+            nread++;
+        }
+    }
+    reg->con = dev->mode;
+    mtc0_Status(rup);
+#endif
 }
 
 /*
