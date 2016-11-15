@@ -1,12 +1,22 @@
-/main/platform/esp8266/build
-/main/platform/esp8266/firmware
-/main/platform/esp32/build
-/main/platform/esp32/firmware
-/main/platform/pic32mz/build
-/main(/platform/pic32mz/firmware
+.config
+*.o
+*.pyc
+
+# gtags
+GTAGS
+GRTAGS
+GPATH
+
+# emacs
+.dir-locals.el
+
+# emacs temp file suffixes
+*~
+.#*
+\#*#
+
+./build/*
 *.dis
 *.elf
-*.hex
 *.map
-*.o
 **/.DS_Store
