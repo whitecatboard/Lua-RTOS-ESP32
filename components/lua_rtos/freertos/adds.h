@@ -17,12 +17,9 @@ if (xSwitchRequired) {	  \
 	_frxt_setup_switch(); \
 }
 
-// In ESP32  vTaskEnterCritical / vTaskExitCritical are reorganizaed for allow
-// to be used from an isr, so in Lua RTOS for ESP32 enter_critical_section /
-// exit_critical_section are simply an alias for vTaskEnterCritical / vTaskExitCritical
-#define enter_critical_section()
-#define exit_critical_section()
-													
+void enter_critical_section();
+void exit_critical_section();
+
 UBaseType_t uxGetTaskId();
 UBaseType_t uxGetThreadId();
 void uxSetThreadId(UBaseType_t id);
