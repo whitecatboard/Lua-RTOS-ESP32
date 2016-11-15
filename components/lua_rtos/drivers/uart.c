@@ -166,7 +166,7 @@ void uart_pin_config(uint8_t unit, uint8_t *rx, uint8_t *tx) {
 	}
 }
 
-static int queue_byte(uint8_t unit, uint8_t byte, int *signal) {
+static int UART_IRAM_ATTR queue_byte(uint8_t unit, uint8_t byte, int *signal) {
 	*signal = 0;
 
     if (unit == CONSOLE_UART - 1) {
@@ -201,7 +201,7 @@ static int queue_byte(uint8_t unit, uint8_t byte, int *signal) {
 	}
 }
 
-void  uart_rx_intr_handler(void *para) {
+void  UART_IRAM_ATTR uart_rx_intr_handler(void *para) {
     BaseType_t xHigherPriorityTaskWoken;
     xHigherPriorityTaskWoken = pdFALSE;
     uint32_t uart_intr_status = 0;
@@ -338,7 +338,7 @@ void uart_write(uint8_t unit, char byte) {
 }
 
 // Writes a null-terminated string to the UART
-void uart_writes(uint8_t unit, char *s) {
+void UART_IRAM_ATTR uart_writes(uint8_t unit, char *s) {
     unit--;
 
     while (*s) {
