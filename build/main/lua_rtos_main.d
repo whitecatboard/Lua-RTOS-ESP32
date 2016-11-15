@@ -57,18 +57,18 @@ lua_rtos_main.o: \
  /Users/jaumeolivepetrus/esp-idf/components/nvs_flash/include/nvs_flash.h \
  /Users/jaumeolivepetrus/esp-idf/components/newlib/include/errno.h \
  /Users/jaumeolivepetrus/esp-idf/components/newlib/include/sys/errno.h \
- /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/sys/debug.h \
- /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/sys/panic.h \
- /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/pthread/pthread.h \
+ /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/./sys/debug.h \
+ /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/./sys/panic.h \
+ /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/./pthread/pthread.h \
  /Users/jaumeolivepetrus/esp-idf/components/freertos/include/freertos/queue.h \
  /Users/jaumeolivepetrus/esp-idf/components/freertos/include/freertos/semphr.h \
  /Users/jaumeolivepetrus/esp-idf/components/freertos/include/freertos/queue.h \
- /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/sys/mutex.h \
- /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/sys/list.h \
+ /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/./sys/mutex.h \
+ /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/./sys/list.h \
  /Users/jaumeolivepetrus/esp-idf/components/newlib/include/sys/time.h \
  /Users/jaumeolivepetrus/esp-idf/components/newlib/include/signal.h \
  /Users/jaumeolivepetrus/esp-idf/components/newlib/include/sys/signal.h \
- /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/sys/mount.h
+ /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/./sys/mount.h
 
 /Users/jaumeolivepetrus/esp-idf/components/newlib/include/stdlib.h:
 
@@ -184,11 +184,11 @@ lua_rtos_main.o: \
 
 /Users/jaumeolivepetrus/esp-idf/components/newlib/include/sys/errno.h:
 
-/Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/sys/debug.h:
+/Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/./sys/debug.h:
 
-/Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/sys/panic.h:
+/Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/./sys/panic.h:
 
-/Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/pthread/pthread.h:
+/Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/./pthread/pthread.h:
 
 /Users/jaumeolivepetrus/esp-idf/components/freertos/include/freertos/queue.h:
 
@@ -196,9 +196,9 @@ lua_rtos_main.o: \
 
 /Users/jaumeolivepetrus/esp-idf/components/freertos/include/freertos/queue.h:
 
-/Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/sys/mutex.h:
+/Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/./sys/mutex.h:
 
-/Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/sys/list.h:
+/Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/./sys/list.h:
 
 /Users/jaumeolivepetrus/esp-idf/components/newlib/include/sys/time.h:
 
@@ -206,4 +206,4 @@ lua_rtos_main.o: \
 
 /Users/jaumeolivepetrus/esp-idf/components/newlib/include/sys/signal.h:
 
-/Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/sys/mount.h:
+/Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/./sys/mount.h:
