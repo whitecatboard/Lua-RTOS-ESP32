@@ -1,6 +1,0 @@
-export PLATFORM=esp32
-export HOST_PLATFORM=macosx
-export PATH=~/Lua-RTOS/tools/$HOST_PLATFORM/xtensa-esp32-elf/bin:$PATH
-export LIBRARY_PATH="/usr/local/opt/gettext/lib:$LIBRARY_PATH";
-export PKG_CONFIG_PATH="/usr/local/opt/ncurses/lib/pkgconfig:$PKG_CONFIG_PATH"
-export CPATH="/usr/local/opt/gettext/include:$CPATH";

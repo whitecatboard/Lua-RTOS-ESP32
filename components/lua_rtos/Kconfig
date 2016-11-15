@@ -1,0 +1,50 @@
+menu "Lua RTOS"
+  menu "Console"
+  	config LUA_RTOS_USE_CONSOLE
+  	bool "Use console"
+  	default true
+    help 
+		Select this to enable the Lua RTOS console.
+
+	choice LUA_RTOS_CONSOLE_UART
+	depends on LUA_RTOS_USE_CONSOLE
+	prompt "UART"
+	default LUA_RTOS_CONSOLE_UART0
+	help
+		Select the uart number used by the Lua RTOS console.
+
+	config LUA_RTOS_CONSOLE_UART0
+	bool "UART 0"
+		
+	config LUA_RTOS_CONSOLE_UART1
+	bool "UART 1"
+
+	config LUA_RTOS_CONSOLE_UART2
+	bool "UART 2"
+
+	endchoice
+	
+	choice LUA_RTOS_CONSOLE_BR
+	depends on LUA_RTOS_USE_CONSOLE
+	prompt "Baud rate"
+	default LUA_RTOS_CONSOLE_BR_115200
+	help
+		Baud rate to use by the Lua RTOS console.
+
+	config LUA_RTOS_CONSOLE_BR_57200
+	bool "57200 baud"
+
+	config LUA_RTOS_CONSOLE_BR_115200
+	bool "115200 baud"
+	endchoice
+
+	config LUA_RTOS_CONSOLE_BUFFER_LEN
+	depends on LUA_RTOS_USE_CONSOLE
+    int "Buffer length"
+    range 32 2048
+    default 1024
+    help
+        Select the the buffer length used by the console, in bytes,
+        		
+  endmenu
+endmenu

@@ -1,2 +1,0 @@
-#undef ESP_SDK_VERSION
-#define ESP_SDK_VERSION 010504

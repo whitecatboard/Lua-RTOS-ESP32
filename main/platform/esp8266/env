@@ -1,4 +1,0 @@
-export PLATFORM=esp8266
-export HOST_PLATFORM=macosx
-export PATH=~/Lua-RTOS/tools/$HOST_PLATFORM/xtensa-lx106-elf/bin:$PATH
-export SDK_PATH=~/Lua-RTOS/tools/$HOST_PLATFORM/xtensa-lx106-elf/sdk/ESP8266_RTOS_SDK
