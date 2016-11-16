@@ -1,6 +1,8 @@
 .config
 *.o
 *.pyc
+*.a
+*.d
 
 # gtags
 GTAGS
@@ -15,7 +17,7 @@ GPATH
 .#*
 \#*#
 
-./build/*
+build/
 *.dis
 *.elf
 *.map
