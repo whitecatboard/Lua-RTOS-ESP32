@@ -109,7 +109,7 @@ vsyslog(pri, fmt, ap)
 	register int cnt;
 	register char *p;
 	char *tbuf;
-	
+
 	time_t now;
 	int fd;
         int has_cr_lf = 0;

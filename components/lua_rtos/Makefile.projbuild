@@ -82,6 +82,7 @@ CFLAGS += -DLMIC_DIO2=33
 
 CFLAGS += -DCFG_eu868=1
 CFLAGS += -DCFG_sx1276_radio=1
+CFLAGS += -DLMIC_DEBUG_LEVEL=1
 
 #
 # SDCARD configuration

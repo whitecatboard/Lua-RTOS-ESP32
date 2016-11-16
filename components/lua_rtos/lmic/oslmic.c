@@ -20,7 +20,7 @@
 #include "freertos/task.h"
 
 // LMIC run loop, as a FreeRTOS task
-void os_runloop(void * pvParameters);
+void os_runloop(void *pvParameters);
 
 // Task handle for LMIC run loop
 TaskHandle_t xRunLoop = NULL;
@@ -116,11 +116,10 @@ void os_runloop(void *pvParameters) {
 	        j = OS.scheduledjobs;
 	        OS.scheduledjobs = j->next;
 	    }
+
 	    hal_enableIRQs();
 
-
 	    if (j) { // run job callback
-	    	printf("run %x\r\n",(unsigned int)j->func);
 	        j->func(j);
 	    }
 	}

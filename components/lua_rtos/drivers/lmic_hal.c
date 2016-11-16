@@ -1,3 +1,32 @@
+/*
+ * Lua RTOS, LMIC hardware abstraction layer
+ *
+ * Copyright (C) 2015 - 2016
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ *
+ * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ *
+ * All rights reserved.
+ *
+ * Permission to use, copy, modify, and distribute this software
+ * and its documentation for any purpose and without fee is hereby
+ * granted, provided that the above copyright notice appear in all
+ * copies and that both that the copyright notice and this
+ * permission notice and warranty disclaimer appear in supporting
+ * documentation, and that the name of the author not be used in
+ * advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.
+ *
+ * The author disclaim all warranties with regard to this
+ * software, including all implied warranties of merchantability
+ * and fitness.  In no event shall the author be liable for any
+ * special, indirect or consequential damages or any damages
+ * whatsoever resulting from loss of use, data or profits, whether
+ * in an action of contract, negligence or other tortious action,
+ * arising out of or in connection with the use or performance of
+ * this software.
+ */
+
 #include "luartos.h"
 
 #if LUA_USE_LORA
@@ -5,41 +34,45 @@
 
 #include "lmic.h"
 
-#include "freertos/FreeRTOS.h"
+#include "freertos/FreeRtos.h"
 #include "freertos/timers.h"
 
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/time.h>
-
 #include <sys/delay.h>
-#include <drivers/gpio.h>
-#include <drivers/spi.h>
-#include <lmic/oslmic.h>
-
 #include <sys/syslog.h>
 
-#include <soc/gpio_reg.h>
+#include <drivers/gpio.h>
+#include <drivers/spi.h>
 
-static int nested = 0;
+#include "soc/gpio_reg.h"
 
-static void dio_interrupt(void *arg1, uint32_t arg2) {
+/*
+ * This is an adapter function for call radio_irq_handler from a callback
+ */
+static osjob_t dio_job;
+
+static void deferred_dio_intr_handler(osjob_t *j) {
 	radio_irq_handler(0);
 }
 
-static void d0_intr_handler(void *args) {
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
+/*
+ * This is the LMIC interrupt handler. This interrupt is attached to the transceiver
+ * DIO lines. LMIC uses only DIO0, DIO1 and DIO2 lines.
+ *
+ * When an interrupt is triggered we queue it's processing, setting an LMIC callback, which
+ * will be executed in the next iteration of the os_runloop routine.
+ *
+ */
+static void dio_intr_handler(void *args) {
 	u4_t status_l = READ_PERI_REG(GPIO_STATUS_REG) & GPIO_STATUS_INT;
 	u4_t status_h = READ_PERI_REG(GPIO_STATUS1_REG) & GPIO_STATUS1_INT;
-
-	xTimerPendFunctionCallFromISR(dio_interrupt, NULL, 0, &xHigherPriorityTaskWoken);
 
 	WRITE_PERI_REG(GPIO_STATUS_W1TC_REG, status_l);
 	WRITE_PERI_REG(GPIO_STATUS1_W1TC_REG, status_h);
 
-	if (xHigherPriorityTaskWoken)
-		portYIELD_FROM_ISR();
+	os_setCallback(&dio_job, deferred_dio_intr_handler);
 }
 
 void hal_init (void) {
@@ -60,7 +93,7 @@ void hal_init (void) {
 	// Init RESET pin
 	gpio_pin_output(LMIC_RST);
 
-	gpio_isr_register(ETS_GPIO_INUM, &d0_intr_handler, NULL);
+	gpio_isr_register(ETS_GPIO_INUM, &dio_intr_handler, NULL);
 
 	// Init DIO pins
 	if (LMIC_DIO0) {
@@ -126,15 +159,18 @@ u1_t hal_spi (u1_t outval) {
 	return spi_transfer(LMIC_SPI, outval);
 }
 
+static int nested = 0;
+
 void hal_disableIRQs (void) {
-	portDISABLE_INTERRUPTS();
+	if (nested == 0) {
+		portDISABLE_INTERRUPTS();
+	}
+
 	nested++;
 }
 
 void hal_enableIRQs (void) {
 	if (--nested == 0) {
-		nested = 0;
-
 		portENABLE_INTERRUPTS();
 	}
 }
@@ -153,14 +189,15 @@ u4_t hal_ticks () {
 // Returns the number of ticks until time. Negative values indicate that
 // time has already passed.
 static s4_t delta_time(u4_t time) {
-    return (s4_t)(time - os_getTime());
+    return (s4_t)(time - hal_ticks());
 }
 
 /*
  * busy-wait until specified timestamp (in ticks) is reached.
  */
 void hal_waitUntil (u4_t time) {
-    while (delta_time(time) > 0) {
+    while (delta_time(time)  >= 0) {
+    	udelay(1);
     }
 }
 

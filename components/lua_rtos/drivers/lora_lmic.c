@@ -51,10 +51,13 @@
 
 #define LORA_DEBUG_LEVEL 0
 
-#define evLORA_JOINED  	       	 ( 1 << 0 )
-#define evLORA_JOIN_DENIED     	 ( 1 << 1 )
-#define evLORA_TX_COMPLETE    	 ( 1 << 2 )
-#define evLORA_ACK_NOT_RECEIVED  ( 1 << 3 )
+#define evLORA_INITED 	       	 ( 1 << 0 )
+#define evLORA_JOINED  	       	 ( 1 << 1 )
+#define evLORA_JOIN_DENIED     	 ( 1 << 2 )
+#define evLORA_TX_COMPLETE    	 ( 1 << 3 )
+#define evLORA_ACK_NOT_RECEIVED  ( 1 << 4 )
+
+static int joined = 0;
 
 // Mutext for lora 
 static struct mtx lora_mtx;
@@ -199,12 +202,14 @@ void onEvent (ev_t ev) {
           #if LORA_DEBUG_LEVEL > 0
           printf("EV_JOINING\r\n");
           #endif
+          joined = 0;
 	      break;
 
 	    case EV_JOINED:
           #if LORA_DEBUG_LEVEL > 0
           printf("EV_JOINED\r\n");
           #endif
+          joined = 1;
 		  xEventGroupSetBits(loraEvent, evLORA_JOINED);
 	      break;
 
@@ -218,6 +223,7 @@ void onEvent (ev_t ev) {
           #if LORA_DEBUG_LEVEL > 0
           printf("EV_JOIN_FAILED\r\n");
           #endif
+          joined = 0;
 		  xEventGroupSetBits(loraEvent, evLORA_JOIN_DENIED);
 	      break;
 
@@ -225,6 +231,7 @@ void onEvent (ev_t ev) {
           #if LORA_DEBUG_LEVEL > 0
           printf("EV_REJOIN_FAILED\r\n");
           #endif
+          joined = 0;
 	      break;
 
 	    case EV_TXCOMPLETE:
@@ -302,7 +309,7 @@ void onEvent (ev_t ev) {
 }
 
 // LMIC first job
-static void lora_init() {
+static void lora_init(osjob_t *j) {
     // Reset MAC state
     LMIC_reset();
 
@@ -329,35 +336,39 @@ static void lora_init() {
 
     /* Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library) */
     LMIC_setDrTxpow(DR_SF12, 14);
+
+    xEventGroupSetBits(loraEvent, evLORA_INITED);
 }
 
 // Setup driver
 tdriver_error *lora_setup(int band) {
     mtx_lock(&lora_mtx);
 
-    syslog(LOG_DEBUG, "lora: setup, band %d", band);
-
     current_band = band;    
 
     if (!setup) {
-		// Create event group for sync driver with LMIC events
+        syslog(LOG_DEBUG, "lora: setup, band %d", band);
+
+        // Create event group for sync driver with LMIC events
 		loraEvent = xEventGroupCreate();
 		
 		// LMIC init
 		os_init();
 
-		lora_init();
-
 		// Set first callback, for init lora stack
-//		osjob_t *initjob = (osjob_t *)malloc(sizeof(osjob_t));
-	//	if (initjob) {
-		//	os_setCallback(initjob, lora_init);
-		//}
+		osjob_t *initjob = (osjob_t *)malloc(sizeof(osjob_t));
+		if (initjob) {
+			os_setCallback(initjob, lora_init);
+		}
+
+		// Wait for stack initialization
+	    xEventGroupWaitBits(loraEvent, evLORA_INITED, pdTRUE, pdFALSE, portMAX_DELAY);
     }
-    
+
 	setup = 1;
 
-	mtx_unlock(&lora_mtx);
+    mtx_unlock(&lora_mtx);
+    
 
     return NULL;
 }
@@ -503,10 +514,13 @@ int lora_join_otaa() {
 
     if (!setup) {
         mtx_unlock(&lora_mtx);
-        return LORA_NOT_SETUP;
+        return LORA_JOIN_ACCEPTED;
     }
 
-	// TODO: LORA_KEYS_NOT_CONFIGURED
+    if (joined) {
+        mtx_unlock(&lora_mtx);
+    	return LORA_OK;
+    }
 
 	LMIC_startJoining();
 
@@ -535,6 +549,11 @@ int lora_tx(int cnf, int port, const char *data) {
     if (!setup) {
         mtx_unlock(&lora_mtx);
         return LORA_NOT_SETUP;
+    }
+
+    if (!joined) {
+        mtx_unlock(&lora_mtx);
+        return LORA_NOT_JOINED;
     }
 	
 	payload_len = strlen(data) / 2;

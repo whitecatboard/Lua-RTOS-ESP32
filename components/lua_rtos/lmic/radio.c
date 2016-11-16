@@ -594,7 +594,7 @@ static void rxlora (u1_t rxmode) {
 
 #if LMIC_DEBUG_LEVEL > 0
     if (rxmode == RXMODE_RSSI) {
-        syslog(LOG_DEBUG, "RXMODE_RSSI\n");
+        syslog(LOG_DEBUG, "%lu: RXMODE_RSSI\n", os_getTime());
     } else {
         u1_t sf = getSf(LMIC.rps) + 6; // 1 == SF7
         u1_t bw = getBw(LMIC.rps);
