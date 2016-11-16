@@ -43,8 +43,6 @@ static void d0_intr_handler(void *args) {
 }
 
 void hal_init (void) {
-	gpio_isr_register(ETS_GPIO_INUM, &d0_intr_handler, NULL);
-
 	// Init SPI bus
     if (spi_init(LMIC_SPI) != 0) {
         syslog(LOG_ERR, "lmic cannot open spi%u", LMIC_SPI);
@@ -52,12 +50,11 @@ void hal_init (void) {
     }
     
     spi_set_cspin(LMIC_SPI, LMIC_CS);
-    //spi_set_speed(LMIC_SPI, LMIC_SPI_KHZ);
-    spi_set_speed(LMIC_SPI, 1000);
+    spi_set_speed(LMIC_SPI, LMIC_SPI_KHZ);
 
     if (spi_cspin(LMIC_SPI) >= 0) {
         syslog(LOG_INFO, "lmic is at %s, cs=%s%d",
-            spi_name(LMIC_SPI), spi_csname(LMIC_SPI), spi_cspin(LMIC_SPI));
+        spi_name(LMIC_SPI), spi_csname(LMIC_SPI), spi_cspin(LMIC_SPI));
     }
 	
 	// Init RESET pin
@@ -89,8 +86,9 @@ void hal_init (void) {
  * drive radio NSS pin (0=low, 1=high).
  */
 void hal_pin_nss (u1_t val) {
-	if (!val) {
-	    spi_set_cspin(LMIC_SPI, LMIC_CS);
+    spi_set_cspin(LMIC_SPI, LMIC_CS);
+
+    if (!val) {
 		spi_select(LMIC_SPI);
 	} else {
 		spi_deselect(LMIC_SPI);	
