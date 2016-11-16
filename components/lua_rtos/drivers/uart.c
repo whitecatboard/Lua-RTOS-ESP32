@@ -277,11 +277,6 @@ void uart_init(uint8_t unit, uint32_t brg, uint32_t mode, uint32_t qs) {
 
 	uart_pin_config(unit, &rx, &tx);
 
-	//if (!uart0_swaped) {
-	//	syslog(LOG_INFO, "%s: at pins rx=%s/tx=%s", names[unit], cpu_pin_name(rx), cpu_pin_name(tx));
-	//	syslog(LOG_INFO, "%s: speed %d bauds",names[unit], brg);  
-	//}  
-
 	uart_update_params(unit, brg, EIGHT_BITS, NONE_BITS, ONE_STOP_BIT);
 	
     uart[unit].brg = brg; 

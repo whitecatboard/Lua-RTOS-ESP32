@@ -91,12 +91,4 @@ int      uart_inited(int unit);
 
 QueueHandle_t *uart_get_queue(uint8_t unit);
 
-#if CONSOLE_SWAP_UART == 0
-#define uart0_swap()
-#define uart0_default()
-#else
-void uart0_swap();
-void uart0_default();
-#endif
-
 #endif

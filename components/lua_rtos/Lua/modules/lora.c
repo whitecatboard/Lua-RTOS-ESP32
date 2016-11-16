@@ -56,8 +56,6 @@ static void on_received(int port, char *payload) {
 }
 
 static void lora_error(lua_State* L, int code) {
-	uart0_default();
-	
     switch (code){
         case LORA_KEYS_NOT_CONFIGURED:
             luaL_error(L, "%d:keys are not configured", LORA_KEYS_NOT_CONFIGURED);break;
@@ -155,7 +153,6 @@ static int llora_setup(lua_State* L) {
     // Setup in base of frequency
     error = lora_setup(band);
     if (error) {
-		uart0_default();
         return luaL_driver_error(L, "lora can't setup", error);
     }
 	
@@ -165,13 +162,11 @@ static int llora_setup(lua_State* L) {
 static int llora_set_setDevAddr(lua_State* L) {
     char *devAddr = hex_str_pad(L, luaL_checkstring(L, 1), 8);
     
-	uart0_swap();
     int resp = lora_mac_set(LORA_MAC_SET_DEVADDR, devAddr);
     if (resp != LORA_OK) {
         free(devAddr);
         lora_error(L, resp);    
     }
-    uart0_default();
     free(devAddr);
     return 0;    
 }
@@ -179,13 +174,11 @@ static int llora_set_setDevAddr(lua_State* L) {
 static int llora_set_DevEui(lua_State* L) {
     char  *devEui = hex_str_pad(L, luaL_checkstring(L, 1), 16);
     
-	uart0_swap();
     int resp = lora_mac_set(LORA_MAC_SET_DEVEUI, devEui);
     if (resp != LORA_OK) {
         free(devEui);
         lora_error(L, resp);    
     }
-    uart0_default();
 	
     free(devEui);
     return 0;  
@@ -194,13 +187,11 @@ static int llora_set_DevEui(lua_State* L) {
 static int llora_set_AppEui(lua_State* L) {
     char  *appEui = hex_str_pad(L, luaL_checkstring(L, 1), 16);
         
-	uart0_swap();
     int resp = lora_mac_set(LORA_MAC_SET_APPEUI, appEui);
     if (resp != LORA_OK) {
         free(appEui);
         lora_error(L, resp);    
     }
-	uart0_default();
 	
     free(appEui);
     return 0;  
@@ -209,13 +200,11 @@ static int llora_set_AppEui(lua_State* L) {
 static int llora_set_NwkSKey(lua_State* L) {
     char  *nwkSKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
         
-	uart0_swap();
     int resp = lora_mac_set(LORA_MAC_SET_NWKSKEY, nwkSKey);
     if (resp != LORA_OK) {
         free(nwkSKey);
         lora_error(L, resp);    
     }
-    uart0_default();
 	
     free(nwkSKey);
     return 0;  
@@ -224,13 +213,11 @@ static int llora_set_NwkSKey(lua_State* L) {
 static int llora_set_AppSKey(lua_State* L) {
     char  *appSKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
         
-	uart0_swap();
     int resp = lora_mac_set(LORA_MAC_SET_APPSKEY, appSKey);
     if (resp != LORA_OK) {
         free(appSKey);
         lora_error(L, resp);    
     }
-	uart0_default();
 	
     free(appSKey);
     return 0;
@@ -239,13 +226,11 @@ static int llora_set_AppSKey(lua_State* L) {
 static int llora_set_AppKey(lua_State* L) {
     char  *appKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
         
-	uart0_swap();
     int resp = lora_mac_set(LORA_MAC_SET_APPKEY, appKey);
     if (resp != LORA_OK) {
         free(appKey);
         lora_error(L, resp);    
     }
-	uart0_default();
 
     free(appKey);
     return 0;
@@ -262,12 +247,10 @@ static int llora_set_Dr(lua_State* L) {
     
     sprintf(value,"%d", dr);
         
-	uart0_swap();
     int resp = lora_mac_set(LORA_MAC_SET_DR, value);
     if (resp != LORA_OK) {
         lora_error(L, resp);    
     }
-	uart0_default();
 	
     return 0;
 }
@@ -282,12 +265,10 @@ static int llora_set_Adr(lua_State* L) {
         strcpy(value, "off");
     }
     
-	uart0_swap();
     int resp = lora_mac_set(LORA_MAC_SET_ADR, value);
     if (resp != LORA_OK) {
         lora_error(L, resp);    
     }
-	uart0_default();
 
     return 0;
 }
@@ -303,12 +284,10 @@ static int llora_set_RetX(lua_State* L) {
     
     sprintf(value,"%d", rets);
         
-	uart0_swap();
     int resp = lora_mac_set(LORA_MAC_SET_RETX, value);
     if (resp != LORA_OK) {
         lora_error(L, resp);    
     }
-	uart0_default();
 	
     return 0;
 }
@@ -323,12 +302,10 @@ static int llora_set_Ar(lua_State* L) {
         strcpy(value, "off");
     }
     
-	uart0_swap();
     int resp = lora_mac_set(LORA_MAC_SET_AR, value);
     if (resp != LORA_OK) {
         lora_error(L, resp);    
     }
-	uart0_default();
     
     return 0;
 }
@@ -345,20 +322,16 @@ static int llora_set_LinkChk(lua_State* L) {
     
     sprintf(value,"%d", interval);
         
-	uart0_swap();
     int resp = lora_mac_set(LORA_MAC_SET_LINKCHK, value);
     if (resp != LORA_OK) {
         lora_error(L, resp);    
     }
-	uart0_default();
 
     return 0;
 }
 
 static int llora_get_DevAddr(lua_State* L) {
-	uart0_swap();
     char *value = lora_mac_get(LORA_MAC_GET_DEVADDR);
-    uart0_default();
 	
     lua_pushlstring(L, value, strlen(value));
     free(value);
@@ -367,9 +340,7 @@ static int llora_get_DevAddr(lua_State* L) {
 }
 
 static int llora_get_DevEui(lua_State* L) {
-	uart0_swap();
     char *value = lora_mac_get(LORA_MAC_GET_DEVEUI);
-    uart0_default();
 	
     lua_pushlstring(L, value, strlen(value));
     free(value);
@@ -378,9 +349,7 @@ static int llora_get_DevEui(lua_State* L) {
 }
 
 static int llora_get_AppEui(lua_State* L) {
-	uart0_swap();
     char *value = lora_mac_get(LORA_MAC_GET_APPEUI);
-    uart0_default();
 	
     lua_pushlstring(L, value, strlen(value));
     free(value);
@@ -389,9 +358,7 @@ static int llora_get_AppEui(lua_State* L) {
 }
 
 static int llora_get_Dr(lua_State* L) {
-	uart0_swap();
     char *value = lora_mac_get(LORA_MAC_GET_DR);
-    uart0_default();
 	
     lua_pushinteger(L, atoi(value));
     free(value);
@@ -400,9 +367,7 @@ static int llora_get_Dr(lua_State* L) {
 }
 
 static int llora_get_Adr(lua_State* L) {
-	uart0_swap();
     char *value = lora_mac_get(LORA_MAC_GET_ADR);
-    uart0_default();
 	
     if (strcmp(value,"on") == 0) {
         lua_pushboolean(L, 1);
@@ -416,9 +381,7 @@ static int llora_get_Adr(lua_State* L) {
 }
 
 static int llora_get_RetX(lua_State* L) {
-	uart0_swap();
     char *value = lora_mac_get(LORA_MAC_GET_RETX);
-    uart0_default();
 	
     lua_pushinteger(L, atoi(value));
     free(value);
@@ -427,9 +390,7 @@ static int llora_get_RetX(lua_State* L) {
 }
 
 static int llora_get_Ar(lua_State* L) {
-	uart0_swap();
     char *value = lora_mac_get(LORA_MAC_GET_AR);
-    uart0_default();
 	
     if (strcmp(value,"on") == 0) {
         lua_pushboolean(L, 1);
@@ -443,9 +404,7 @@ static int llora_get_Ar(lua_State* L) {
 }
 
 static int llora_get_Mrgn(lua_State* L) {
-	uart0_swap();
     char *value = lora_mac_get(LORA_MAC_GET_MRGN);
-    uart0_default();
 	
     lua_pushinteger(L, atoi(value));
     free(value);
@@ -466,14 +425,12 @@ static int llora_join(lua_State* L) {
         return luaL_error(L, "%d:ABP not allowed", LORA_INVALID_ARGUMENT);                
     }
     
-	uart0_swap();
     if (join_type == 1)
         resp = lora_join_otaa();
     
     if (resp != LORA_OK) {
         lora_error(L, resp);
     }
-	uart0_default();
     
     return 0;
 }
@@ -492,12 +449,10 @@ static int llora_tx(lua_State* L) {
         luaL_error(L, "%d:invalid data", LORA_INVALID_ARGUMENT);     
     }    
     
-	uart0_swap();
     int resp = lora_tx(cnf, port, data);
     if (resp != LORA_OK) {
         lora_error(L, resp);
     }
-	uart0_default();
     
     return 0;    
 }

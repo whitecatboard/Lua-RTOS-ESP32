@@ -62,15 +62,6 @@ CFLAGS += -DSPIFFS_SIZE=0x80000        # SPIFFS size
 SPIFFS_ESPTOOL_ARGS = 0x180000 $(BUILD_DIR)spiffs_image.img
 
 #
-# Console configuration
-#
-#CFLAGS += -DUSE_CONSOLE=1		       # Enable console
-#CFLAGS += -DCONSOLE_BR=115200	       # Console baud rate
-#CFLAGS += -DCONSOLE_UART=1		       # Console UART unit
-#CFLAGS += -DCONSOLE_SWAP_UART=0	       # Console alternative UART unit (0 = don't use alternative UART)
-#CFLAGS += -DCONSOLE_BUFFER_LEN=1024    # Console buffer length in bytes
-
-#
 # LoraWAN driver connfiguration for RN2483
 #
 CFLAGS += -DUSE_LMIC=1
