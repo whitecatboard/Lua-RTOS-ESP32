@@ -27,6 +27,8 @@
  * this software.
  */
 
+#include "luartos.h"
+
 #include "lua.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -62,7 +64,7 @@ void uxSetThreadId(UBaseType_t id) {
 	enter_critical_section();
 
 	// Get Lua RTOS specific TCB parts for current task
-	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, 0))) {
+	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
 		// Store thread id into Lua RTOS specific TCB parts
 		lua_rtos_tcb->threadid = id;		
 	}
@@ -77,7 +79,7 @@ UBaseType_t uxGetThreadId() {
 	enter_critical_section();
 
 	// Get Lua RTOS specific TCB parts for current task
-	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, 0))) {
+	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
 		// Get current thread od from Lua RTOS specific TCB parts
 		threadid = lua_rtos_tcb->threadid;
 	}
@@ -93,7 +95,7 @@ void uxSetLuaState(lua_State* L) {
 	enter_critical_section();
 
 	// Get Lua RTOS specific TCB parts for current task
-	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, 0))) {
+	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
 		// Store current lua state into Lua RTOS specific TCB parts
 		lua_rtos_tcb->L = L;		
 	}
@@ -108,7 +110,7 @@ lua_State* pvGetLuaState() {
 	enter_critical_section();
 
 	// Get Lua RTOS specific TCB parts for current task
-	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, 0))) {
+	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
 
 		// Get current lua state from Lua RTOS specific TCB parts
 		L = lua_rtos_tcb->L;
@@ -126,7 +128,7 @@ uint32_t uxGetSignaled(TaskHandle_t h) {
 	enter_critical_section();
 
 	// Get Lua RTOS specific TCB parts for current task
-	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, 0))) {
+	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
 		// Get current signeled mask from Lua RTOS specific TCB parts
 		signaled = lua_rtos_tcb->signaled;
 	}
@@ -142,7 +144,7 @@ void uxSetSignaled(TaskHandle_t h, int s) {
 	enter_critical_section();
 
 	// Get Lua RTOS specific TCB parts for current task
-	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, 0))) {
+	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
 		// Store current signaled mask into Lua RTOS specific TCB parts
 		lua_rtos_tcb->signaled = s;		
 	}

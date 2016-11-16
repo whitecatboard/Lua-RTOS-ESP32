@@ -56,4 +56,7 @@
 
 // We need some functions to run on IRAM ...
 #define UART_IRAM_ATTR IRAM_ATTR
+
+#define THREAD_LOCAL_STORAGE_POINTER_ID 0
+
 #endif

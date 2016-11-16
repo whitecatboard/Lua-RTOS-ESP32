@@ -1,5 +1,8 @@
 freertos/adds.o: \
  /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/freertos/adds.c \
+ /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/luartos.h \
+ /Users/jaumeolivepetrus/Lua-RTOS-ESP32/build/include/sdkconfig.h \
+ /Users/jaumeolivepetrus/esp-idf/components/esp32/include/esp_attr.h \
  /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/Lua/src/lua.h \
  /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/Lua/src/luaconf.h \
  /Users/jaumeolivepetrus/esp-idf/components/newlib/include/limits.h \
@@ -19,7 +22,6 @@ freertos/adds.o: \
  /Users/jaumeolivepetrus/esp-idf/components/newlib/include/machine/_types.h \
  /Users/jaumeolivepetrus/esp-idf/components/newlib/include/sys/lock.h \
  /Users/jaumeolivepetrus/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
- /Users/jaumeolivepetrus/Lua-RTOS-ESP32/build/include/sdkconfig.h \
  /Users/jaumeolivepetrus/esp-idf/components/freertos/include/freertos/xtensa_config.h \
  /Users/jaumeolivepetrus/esp-idf/components/esp32/include/xtensa/hal.h \
  /Users/jaumeolivepetrus/esp-idf/components/esp32/include/xtensa/config/core.h \
@@ -50,6 +52,12 @@ freertos/adds.o: \
  /Users/jaumeolivepetrus/esp-idf/components/freertos/include/freertos/task.h \
  /Users/jaumeolivepetrus/esp-idf/components/freertos/include/freertos/list.h \
  /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/freertos/adds.h
+
+/Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/luartos.h:
+
+/Users/jaumeolivepetrus/Lua-RTOS-ESP32/build/include/sdkconfig.h:
+
+/Users/jaumeolivepetrus/esp-idf/components/esp32/include/esp_attr.h:
 
 /Users/jaumeolivepetrus/Lua-RTOS-ESP32/components/lua_rtos/Lua/src/lua.h:
 
@@ -88,8 +96,6 @@ freertos/adds.o: \
 /Users/jaumeolivepetrus/esp-idf/components/newlib/include/sys/lock.h:
 
 /Users/jaumeolivepetrus/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h:
-
-/Users/jaumeolivepetrus/Lua-RTOS-ESP32/build/include/sdkconfig.h:
 
 /Users/jaumeolivepetrus/esp-idf/components/freertos/include/freertos/xtensa_config.h:
 

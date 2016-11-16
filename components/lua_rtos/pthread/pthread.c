@@ -27,6 +27,8 @@
  * this software.
  */
 
+#include "luartos.h"
+
 #include "lua.h"
 #include "thread.h"
 
@@ -390,8 +392,8 @@ void pthreadTask(void *taskArgs) {
 		abort();
 	}
 		
-	vTaskSetThreadLocalStoragePointer(NULL, 0, (void *)lua_rtos_tcb);
-		
+	vTaskSetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID, (void *)lua_rtos_tcb);
+
     // Set thread id
     uxSetThreadId(args->id);
 

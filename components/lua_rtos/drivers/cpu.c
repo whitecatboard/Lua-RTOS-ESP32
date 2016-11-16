@@ -334,7 +334,7 @@ void cpu_show_info() {
 }
 
 void cpu_sleep(int seconds) {
-	system_deep_sleep(seconds * 1000000);
+	system_deep_sleep(seconds * 1000000LL);
 }
 
 void cpu_reset() {
