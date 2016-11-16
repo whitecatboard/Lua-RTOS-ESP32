@@ -135,6 +135,15 @@ int _pthread_create(pthread_t *id, int stacksize, int initial_state,
     taskArgs->id = *id;
     thread->thread = *id;
     
+    // This is the parent thread. After the creation of the new task related to new thread
+    // we need to wait for the initialization of critical information that is provided by
+    // new thread:
+    //
+    // * Allocate Lua RTOS specific TCB parts, using local storage pointer assigned to pthreads
+    // * The thread id, stored in Lua RTOS specific TCB parts
+    // * The Lua state, stored in Lua RTOS specific TCB parts
+    //
+    // This is done by pthreadTask function, who releases the lock when this information is set
     mtx_lock(&thread->init_mtx);
 
     // Create related task
@@ -158,6 +167,7 @@ int _pthread_create(pthread_t *id, int stacksize, int initial_state,
         }
     }
 
+    // Wait for the initialization of Lua RTOS specific TCB parts
     mtx_lock(&thread->init_mtx);
     
     thread->task = xCreatedTask;
@@ -379,6 +389,8 @@ void pthreadTask(void *taskArgs) {
 	
     char c = '1';
     int index;
+
+    // This is the new thread
         
     args = (struct pthreadTaskArg *)taskArgs;
 	
@@ -404,6 +416,7 @@ void pthreadTask(void *taskArgs) {
 	}
 #endif
 		
+	// Lua RTOS specific TCB parts are set, parent thread can continue
     mtx_unlock(&thread->init_mtx);
     
     if (args->initial_state == PTHREAD_INITIAL_STATE_SUSPEND) {
