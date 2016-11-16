@@ -102,10 +102,11 @@ void os_setTimedCallback (osjob_t* job, ostime_t time, osjobcb_t cb) {
 
 // LMIC run loop, as a FreeRTOS task
 void os_runloop(void *pvParameters) {
-    osjob_t *j = NULL;
-
 	for(;;) {
+	    osjob_t *j = NULL;
+
 	    hal_disableIRQs();
+
 	    // check for runnable jobs
 		j = NULL;
 	    if(OS.runnablejobs) {
@@ -117,16 +118,12 @@ void os_runloop(void *pvParameters) {
 	    }
 	    hal_enableIRQs();
 
+
 	    if (j) { // run job callback
+	    	printf("run %x\r\n",(unsigned int)j->func);
 	        j->func(j);
-	    } else {
-	    	//vTaskSuspend(NULL);
 	    }
 	}
-}
-
-void os_resume_nunloop() {
-	vTaskResume(xRunLoop);
 }
 
 #endif

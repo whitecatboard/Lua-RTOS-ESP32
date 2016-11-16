@@ -30,8 +30,8 @@ static void dio_interrupt(void *arg1, uint32_t arg2) {
 static void d0_intr_handler(void *args) {
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-	u32_t status_l = READ_PERI_REG(GPIO_STATUS_REG) & GPIO_STATUS_INT;
-	u32_t status_h = READ_PERI_REG(GPIO_STATUS1_REG) & GPIO_STATUS1_INT;
+	u4_t status_l = READ_PERI_REG(GPIO_STATUS_REG) & GPIO_STATUS_INT;
+	u4_t status_h = READ_PERI_REG(GPIO_STATUS1_REG) & GPIO_STATUS1_INT;
 
 	xTimerPendFunctionCallFromISR(dio_interrupt, NULL, 0, &xHigherPriorityTaskWoken);
 

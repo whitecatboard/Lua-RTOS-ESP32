@@ -91,7 +91,7 @@ static size_t IRAM_ATTR vfs_tty_write(int fd, const void *data, size_t size) {
 
 	int unit = 1;
 
-    pthread_mutex_lock(&tty_mutex);
+    //pthread_mutex_lock(&tty_mutex);
 
     for (size_t i = 0; i < size; i++) {
 #if CONFIG_NEWLIB_STDOUT_ADDCR
@@ -102,7 +102,7 @@ static size_t IRAM_ATTR vfs_tty_write(int fd, const void *data, size_t size) {
         uart_write(unit, data_c[i]);
     }
 
-    pthread_mutex_unlock(&tty_mutex);
+    //pthread_mutex_unlock(&tty_mutex);
 
     return size;
 }

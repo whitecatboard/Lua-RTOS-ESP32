@@ -68,7 +68,7 @@ static u1_t DEVEUI[8] = {0,0,0,0,0,0,0,0};
 static u1_t APPKEY[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 // Current message id
-static u8_t msgid = 0;
+static u4_t msgid = 0;
 
 // If = 1 driver is setup, if = 0 is not setup
 static int setup = 0;
@@ -251,7 +251,7 @@ void onEvent (ev_t ev) {
 			  #endif
 
 			  // Make a copy of the payload and call callback function
-			  u8_t *payload = (u8_t *)malloc(LMIC.dataLen);
+			  u1_t *payload = (u1_t *)malloc(LMIC.dataLen);
 			  if (payload) {
 				  #if LORA_DEBUG_LEVEL > 0
 				  printf("call to lora_rx_callback\r\n");	
@@ -302,7 +302,7 @@ void onEvent (ev_t ev) {
 }
 
 // LMIC first job
-static void lora_init(osjob_t* j) {
+static void lora_init() {
     // Reset MAC state
     LMIC_reset();
 
@@ -333,7 +333,9 @@ static void lora_init(osjob_t* j) {
 
 // Setup driver
 tdriver_error *lora_setup(int band) {
-	syslog(LOG_DEBUG, "lora: setup, band %d", band);
+    mtx_lock(&lora_mtx);
+
+    syslog(LOG_DEBUG, "lora: setup, band %d", band);
 
     current_band = band;    
 
@@ -344,14 +346,18 @@ tdriver_error *lora_setup(int band) {
 		// LMIC init
 		os_init();
 
+		lora_init();
+
 		// Set first callback, for init lora stack
-		osjob_t *initjob = (osjob_t *)malloc(sizeof(osjob_t));
-		if (initjob) {
-			os_setCallback(initjob, lora_init);
-		}
+//		osjob_t *initjob = (osjob_t *)malloc(sizeof(osjob_t));
+	//	if (initjob) {
+		//	os_setCallback(initjob, lora_init);
+		//}
     }
     
 	setup = 1;
+
+	mtx_unlock(&lora_mtx);
 
     return NULL;
 }
