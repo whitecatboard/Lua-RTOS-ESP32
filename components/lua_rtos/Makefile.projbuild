@@ -73,7 +73,7 @@ SPIFFS_ESPTOOL_ARGS = 0x180000 $(BUILD_DIR)spiffs_image.img
 #
 # LoraWAN driver connfiguration for RN2483
 #
-CFLAGS += -DUSE_LMIC=0
+CFLAGS += -DUSE_LMIC=1
 CFLAGS += -DUSE_RN2483=0
 
 # LMIC configuration
@@ -88,6 +88,9 @@ CFLAGS += -DLMIC_RST=27
 CFLAGS += -DLMIC_DIO0=26
 CFLAGS += -DLMIC_DIO1=25
 CFLAGS += -DLMIC_DIO2=33
+
+CFLAGS += -DCFG_eu868=1
+CFLAGS += -DCFG_sx1276_radio=1
 
 #
 # SDCARD configuration
@@ -151,7 +154,7 @@ CFLAGS += -DLUA_USE_DEBUG=1 		   # debug
 #
 CFLAGS += -DLUA_USE_TMR=1		       # timer
 CFLAGS += -DLUA_USE_PIO=1		       # gpio
-CFLAGS += -DLUA_USE_LORA=0		       # lora
+CFLAGS += -DLUA_USE_LORA=1		       # lora
 CFLAGS += -DLUA_USE_PACK=1		       # pack
 CFLAGS += -DLUA_USE_THREAD=1		   # thread
 CFLAGS += -DLUA_USE_I2C=1   		   # i2c

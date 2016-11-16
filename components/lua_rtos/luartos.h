@@ -4,6 +4,21 @@
 #include "sdkconfig.h"
 #include "esp_attr.h"
 
+// This types are not defined in newlibc
+typedef signed int 		   s32_t;
+typedef unsigned int 	   u32_t;
+typedef signed short 	   s16_t;
+typedef unsigned short 	   u16_t;
+typedef signed char 	   s8_t;
+typedef unsigned char 	   u8_t;
+
+typedef unsigned char      u1_t;
+typedef   signed char      s1_t;
+typedef unsigned short     u2_t;
+typedef          short     s2_t;
+typedef unsigned int       u4_t;
+typedef          int       s4_t;
+
 /*
  *
  * UART

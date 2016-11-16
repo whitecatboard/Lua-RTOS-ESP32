@@ -38,21 +38,17 @@
 
 #include "lua.h"
 
-extern void _clock_init();
 extern void _syscalls_init();
 extern void _pthread_init();
-extern void _console_init();
 extern void _signal_init();
 extern void _mtx_init();
 extern void _resource_init();
 extern void _cpu_init();
-extern void __newlibc_init();
 
 #if LUA_USE_LORA
 extern void _lora_init();
 #endif
 
-extern void _cleanup_r(struct _reent* r);
 extern const char *__progname;
 
 #if USE_SPIFFS
@@ -60,7 +56,6 @@ extern int spiffs_init();
 #endif
 
 void vfs_tty_register();
-void vfs_spiffs_register();
 
 void _sys_init() {  	
 	_cpu_init();
@@ -68,13 +63,10 @@ void _sys_init() {
     _mtx_init();
     _pthread_init();
     _syscalls_init();
-    //_clock_init();
-	//_console_init();
-	
     _signal_init();
 
 #if LUA_USE_LORA
-    //_lora_init();
+    _lora_init();
 #endif
 	console_clear();
 

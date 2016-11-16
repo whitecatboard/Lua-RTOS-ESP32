@@ -37,9 +37,9 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <sys/drivers/error.h>
-#include <sys/drivers/lora.h>
-#include <sys/drivers/uart.h>
+#include <sys/error.h>
+#include <drivers/lora.h>
+#include <drivers/uart.h>
 
 static int rx_callback = 0;
 static lua_State* rx_callbackL;

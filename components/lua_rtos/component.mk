@@ -2,7 +2,10 @@
 # Component Makefile
 #
 
-COMPONENT_SRCDIRS := . freertos vfs editor sys unix syscalls math drivers sys/machine pthread Lua/common Lua/modules Lua/platform Lua/src
+COMPONENT_SRCDIRS := . freertos vfs editor sys unix syscalls math drivers lmic \
+					   sys/machine pthread Lua/common Lua/modules Lua/platform Lua/src
 
-COMPONENT_ADD_INCLUDEDIRS := . ./../spiffs include/freertos Lua/adds Lua/common Lua/modules Lua/platform Lua/src
+COMPONENT_ADD_INCLUDEDIRS := . ./../spiffs include/freertos Lua/adds Lua/common Lua/modules Lua/platform Lua/src \
+							   lmic
+							   
 COMPONENT_PRIV_INCLUDEDIRS := 
