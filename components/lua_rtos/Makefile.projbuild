@@ -41,7 +41,7 @@ CFLAGS += -DtskDEF_PRIORITY=2				    # Default task priority
 CFLAGS += -DdefaultThreadStack=10240
 
 CFLAGS += -DUSE_RTC=0						    # Enable RTC
-CFLAGS += -DLED_ACT=16					 	    # GPIO for activity led (0 if not led)
+CFLAGS += -DLED_ACT=4					 	    # GPIO for activity led (0 if not led)
 CFLAGS += -DLED_DBG=0 					 	    # GPIO for debug led (0 if not led)
 
 #

@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, main start program
+ * Lua RTOS, clock driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -27,61 +27,56 @@
  * this software.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
+#include "luartos.h"
 
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_system.h"
-#include "nvs_flash.h"
+#include "esp_freertos_hooks.h"
+#include "esp_attr.h"
 
-#include <errno.h>
-
-#include <sys/debug.h>
-#include <sys/panic.h>
-#include <sys/mount.h>
+#include <sys/time.h>
+#include <sys/build.h>
 
 #include <drivers/gpio.h>
 
-#include <pthread/pthread.h>
+static volatile uint64_t tticks = 0;    // Number of ticks (1 tick = configTICK_RATE_HZ)
+static volatile uint64_t tdelta = 0;    // Delta tincs from last 1000 ms
+static volatile uint32_t tseconds = 0;  // Seconds counter (from boot)
+static volatile unsigned long long tuseconds = 0; // Seconds counter (from boot)
 
-void luaos_main();
-void _sys_init();
+#if LED_ACT
+unsigned int activity = 0;
+#endif
 
-void *lua_start(void *arg) {	
-	for(;;) {
-		luaos_main();
-    }
+void newTick(void);
 
-    return NULL;
+void _clock_init(void) {
+    tseconds = BUILD_TIME;
+
+    esp_register_freertos_tick_hook(&newTick);
 }
-int linenoise(char *buf, const char *prompt);
 
-void app_main() {
-    nvs_flash_init();
-	
-	_sys_init();
+void IRAM_ATTR newTick(void) {
+	// Increment internal high tick counter
+    // This is every 1 ms
+    tticks++;
 
-	#if LED_ACT
-	// Init leds
-	gpio_pin_output(LED_ACT);
-	gpio_pin_clr(LED_ACT);
-	#endif
+    // Increment usecs
+    tuseconds = tuseconds + configTICK_RATE_HZ;
 
-	// Create and run a pthread for Lua interpreter
-	pthread_attr_t attr;
-	pthread_t thread;
-    int res;
-	
-	debug_free_mem_begin(lua_main_thread);
-    
-	pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, luaTaskStack);
+    // Increment delta ticks
+    tdelta++;
+    if (tdelta == configTICK_RATE_HZ) {
+        // 1 second since last second
+        tdelta = 0;
+        tuseconds = 0;
 
-    res = pthread_create(&thread, &attr, lua_start, NULL);
-    if (res) {
-		panic("Cannot start lua");
-	}
-	
-	debug_free_mem_end(lua_main_thread, NULL);	
+        tseconds++;
+
+		#if LED_ACT
+        	if (activity <= 0) {
+            	activity = 0;
+            	gpio_pin_inv(LED_ACT);
+        	}
+		#endif
+    }
 }

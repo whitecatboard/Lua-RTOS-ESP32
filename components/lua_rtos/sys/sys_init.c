@@ -47,6 +47,7 @@ extern void _signal_init();
 extern void _mtx_init();
 extern void _resource_init();
 extern void _cpu_init();
+extern void _clock_init();
 
 #if LUA_USE_LORA
 extern void _lora_init();
@@ -71,6 +72,7 @@ void _sys_init() {
 	settimeofday(&tv, NULL);
 
 	// Init important things for Lua RTOS
+	_clock_init();
 	_cpu_init();
 	_resource_init();
     _mtx_init();
