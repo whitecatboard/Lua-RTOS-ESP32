@@ -36,6 +36,7 @@
 
 #include <stdint.h>
 
+#if 0
 // Define a spinklock for protect critical regions in Lua RTOS
 static portMUX_TYPE luartos_spinlock = portMUX_INITIALIZER_UNLOCKED;
 
@@ -51,63 +52,50 @@ void enter_critical_section() {
 }
 
 void exit_critical_section() {
-	 if (port_interruptNesting[xPortGetCoreID()] != 0) {
+	if (port_interruptNesting[xPortGetCoreID()] != 0) {
 		 portEXIT_CRITICAL_ISR(&luartos_spinlock);
 	 } else {
 		 portEXIT_CRITICAL(&luartos_spinlock);
 	 }
 }
+#endif
 
 void uxSetThreadId(UBaseType_t id) {
-	struct lua_rtos_tcb *lua_rtos_tcb;
+	lua_rtos_tcb_t *lua_rtos_tcb;
 	
-	enter_critical_section();
-
 	// Get Lua RTOS specific TCB parts for current task
-	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
+	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle(), THREAD_LOCAL_STORAGE_POINTER_ID))) {
 		// Store thread id into Lua RTOS specific TCB parts
 		lua_rtos_tcb->threadid = id;		
 	}
-
-	exit_critical_section();
 }
 
 UBaseType_t uxGetThreadId() {
-	struct lua_rtos_tcb *lua_rtos_tcb;
+	lua_rtos_tcb_t *lua_rtos_tcb;
 	int threadid = 0;
 
-	enter_critical_section();
-
 	// Get Lua RTOS specific TCB parts for current task
-	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
+	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle(), THREAD_LOCAL_STORAGE_POINTER_ID))) {
 		// Get current thread od from Lua RTOS specific TCB parts
 		threadid = lua_rtos_tcb->threadid;
 	}
-
-	exit_critical_section();
 
 	return threadid;
 }
 
 void uxSetLuaState(lua_State* L) {
-	struct lua_rtos_tcb *lua_rtos_tcb;
-
-	enter_critical_section();
+	lua_rtos_tcb_t *lua_rtos_tcb;
 
 	// Get Lua RTOS specific TCB parts for current task
-	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
+	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle(), THREAD_LOCAL_STORAGE_POINTER_ID))) {
 		// Store current lua state into Lua RTOS specific TCB parts
 		lua_rtos_tcb->L = L;		
 	}
-
-	exit_critical_section();
 }
 
 lua_State* pvGetLuaState() {
-	struct lua_rtos_tcb *lua_rtos_tcb;
+	lua_rtos_tcb_t *lua_rtos_tcb;
 	lua_State *L = NULL;
-
-	enter_critical_section();
 
 	// Get Lua RTOS specific TCB parts for current task
 	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
@@ -116,38 +104,51 @@ lua_State* pvGetLuaState() {
 		L = lua_rtos_tcb->L;
 	}
 
-	exit_critical_section();
-
 	return L;
 }
 
 uint32_t uxGetSignaled(TaskHandle_t h) {
-	struct lua_rtos_tcb *lua_rtos_tcb;
+	lua_rtos_tcb_t *lua_rtos_tcb;
 	int signaled = 0;
 
-	enter_critical_section();
-
 	// Get Lua RTOS specific TCB parts for current task
-	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
+	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(h, THREAD_LOCAL_STORAGE_POINTER_ID))) {
 		// Get current signeled mask from Lua RTOS specific TCB parts
 		signaled = lua_rtos_tcb->signaled;
 	}
-
-	exit_critical_section();
 
 	return signaled;
 }
 
 void uxSetSignaled(TaskHandle_t h, int s) {
-	struct lua_rtos_tcb *lua_rtos_tcb;
+	lua_rtos_tcb_t *lua_rtos_tcb;
 
-	enter_critical_section();
+	// Get Lua RTOS specific TCB parts for current task
+	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(h, THREAD_LOCAL_STORAGE_POINTER_ID))) {
+		// Store current signaled mask into Lua RTOS specific TCB parts
+		lua_rtos_tcb->signaled = s;		
+	}
+}
+
+uint8_t uxGetCoreID(TaskHandle_t h) {
+	lua_rtos_tcb_t *lua_rtos_tcb;
+	int coreid = 0;
+
+	// Get Lua RTOS specific TCB parts for current task
+	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(h, THREAD_LOCAL_STORAGE_POINTER_ID))) {
+		// Get current signeled mask from Lua RTOS specific TCB parts
+		coreid = lua_rtos_tcb->coreid;
+	}
+
+	return coreid;
+}
+
+void uxSetCoreID(int core) {
+	lua_rtos_tcb_t *lua_rtos_tcb;
 
 	// Get Lua RTOS specific TCB parts for current task
 	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
 		// Store current signaled mask into Lua RTOS specific TCB parts
-		lua_rtos_tcb->signaled = s;		
+		lua_rtos_tcb->coreid = core;
 	}
-
-	exit_critical_section();
 }

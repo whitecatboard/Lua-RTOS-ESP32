@@ -164,7 +164,7 @@ static int nested = 0;
 
 void hal_disableIRQs (void) {
 	if (nested == 0) {
-		enter_critical_section();
+		portDISABLE_INTERRUPTS();
 	}
 
 	nested++;
@@ -172,7 +172,7 @@ void hal_disableIRQs (void) {
 
 void hal_enableIRQs (void) {
 	if (--nested == 0) {
-		exit_critical_section();
+		portENABLE_INTERRUPTS();
 	}
 }
 

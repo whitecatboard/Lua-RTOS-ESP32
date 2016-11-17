@@ -146,6 +146,7 @@ int _pthread_stop(pthread_t id);
 int _pthread_suspend(pthread_t id);
 int _pthread_resume(pthread_t id);
 void _pthread_mutex_free();
+int _pthread_core(pthread_t id);
 
 int pthread_attr_init(pthread_attr_t *attr);
 int pthread_attr_destroy(pthread_attr_t *attr);

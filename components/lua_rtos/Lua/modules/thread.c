@@ -205,13 +205,13 @@ static int thread_stop_pthreads(lua_State *L, int thid) {
     }
     
 	// Do a garbage collection
-	lua_lock(L);
-	luaC_fullgc(L, 1);
-	lua_unlock(L);
+	//lua_lock(L);
+	//luaC_fullgc(L, 1);
+	//lua_unlock(L);
 
 	// Delay a number of ticks for take the iddle
 	// task an opportunity for free allocated memory
-	vTaskDelay(10);	
+	//vTaskDelay(10);
 	
     return 0;
 }
@@ -236,7 +236,7 @@ static int thread_list(lua_State *L) {
         lua_pushinteger(L, n);
         return 1;
     } else {
-        printf("THID\tNAME\t\tSTATUS\tTIME\n");
+        printf("THID\tNAME\t\tSTATUS\tCORE\tTIME\n");
 
         // For each lthread in list ...
         idx = list_first(&lthread_list);
@@ -252,7 +252,7 @@ static int thread_list(lua_State *L) {
 
             }
 
-            printf("%d\t%s\t\t%s\t%d\n", idx, "", status, 0);
+            printf("%d\t%s\t\t%s\t%d\t%d\n", idx, "", status, _pthread_core(thread->thread),0);
 
             idx = list_next(&lthread_list, idx);
         }        

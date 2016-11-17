@@ -46,23 +46,17 @@
 extern uint32_t LuaOS_status[];
 
 inline void status_set(uint16_t flag) {
-	enter_critical_section();
 	LuaOS_status[(flag >> 8)] |= (1 << (flag & 0x00ff));
-	exit_critical_section();
 }
 
 inline void status_clear(uint16_t flag) {
-	enter_critical_section();
 	LuaOS_status[(flag >> 8)] &= ~(1 << (flag & 0x00ff));
-	exit_critical_section();
 }
 
 inline int status_get(uint16_t flag) {
 	int value;
 	
-	enter_critical_section();
 	value = (LuaOS_status[(flag >> 8)] & (1 << (flag & 0x00ff)));
-	exit_critical_section();
 	
 	return value;
 }

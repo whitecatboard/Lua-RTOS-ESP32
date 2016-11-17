@@ -140,6 +140,7 @@ int _pthread_create(pthread_t *id, int stacksize, int initial_state,
     // new thread:
     //
     // * Allocate Lua RTOS specific TCB parts, using local storage pointer assigned to pthreads
+    // * CPU core id when thread is running
     // * The thread id, stored in Lua RTOS specific TCB parts
     // * The Lua state, stored in Lua RTOS specific TCB parts
     //
@@ -339,11 +340,25 @@ int _pthread_stop(pthread_t id) {
         errno = res;
         return res;
     }
-    
+
     // Stop
     vTaskDelete(thread->task);
     
     return 0;
+}
+
+int _pthread_core(pthread_t id) {
+    struct pthread *thread;
+    int res;
+
+    // Get thread
+    res = list_get(&thread_list, id, (void **)&thread);
+    if (res) {
+        errno = res;
+        return res;
+    }
+
+    return (int)uxGetCoreID(thread->task);
 }
 
 int _pthread_suspend(pthread_t id) {
@@ -380,18 +395,24 @@ int _pthread_resume(pthread_t id) {
     return 0;
 }
 
+// This is the callback function for free Lua RTOS specific TCB parts
+static void pthreadLocaleStoragePointerCallback(int index, void* data) {
+	if (index == THREAD_LOCAL_STORAGE_POINTER_ID) {
+		free(data);
+	}
+}
+
 void pthreadTask(void *taskArgs) {
-    struct pthreadTaskArg *args; 		// Task arguments
-    struct pthread_join *join;   		// Current join
-    struct pthread_clean *clean; 		// Current clean
-    struct pthread *thread;      		// Current thread
-	struct lua_rtos_tcb *lua_rtos_tcb;  // Lua RTOS specific TCB parts
+    struct pthreadTaskArg *args; 		  // Task arguments
+    struct pthread_join *join;   		  // Current join
+    struct pthread_clean *clean; 	  	  // Current clean
+    struct pthread *thread;      		  // Current thread
+	lua_rtos_tcb_t *lua_rtos_tcb;         // Lua RTOS specific TCB parts
 	
     char c = '1';
     int index;
 
     // This is the new thread
-        
     args = (struct pthreadTaskArg *)taskArgs;
 	
     // Get thread
@@ -399,12 +420,15 @@ void pthreadTask(void *taskArgs) {
 
 	// Allocate and init Lua RTOS specific TCB parts, and store into a FreeRTOS
 	// local storage pointer
-	lua_rtos_tcb = (struct lua_rtos_tcb *)calloc(1, sizeof(lua_rtos_tcb));
+	lua_rtos_tcb = (lua_rtos_tcb_t *)calloc(1, sizeof(lua_rtos_tcb_t));
 	if (!lua_rtos_tcb) {
 		abort();
 	}
 		
-	vTaskSetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID, (void *)lua_rtos_tcb);
+	vTaskSetThreadLocalStoragePointerAndDelCallback(NULL, THREAD_LOCAL_STORAGE_POINTER_ID, (void *)lua_rtos_tcb, pthreadLocaleStoragePointerCallback);
+
+	// Store CPU core id when thread is running
+	uxSetCoreID(xPortGetCoreID());
 
     // Set thread id
     uxSetThreadId(args->id);
