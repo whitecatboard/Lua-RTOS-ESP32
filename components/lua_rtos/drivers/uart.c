@@ -69,6 +69,7 @@
 #include <esp_types.h>
 #include <esp_err.h>
 #include <esp_intr.h>
+#include <esp_attr.h>
 #include <freertos/xtensa_api.h>
 #include <soc/soc.h>
 
@@ -166,7 +167,7 @@ void uart_pin_config(uint8_t unit, uint8_t *rx, uint8_t *tx) {
 	}
 }
 
-static int UART_IRAM_ATTR queue_byte(uint8_t unit, uint8_t byte, int *signal) {
+static int IRAM_ATTR queue_byte(uint8_t unit, uint8_t byte, int *signal) {
 	*signal = 0;
 
     if (unit == CONSOLE_UART - 1) {
@@ -201,7 +202,7 @@ static int UART_IRAM_ATTR queue_byte(uint8_t unit, uint8_t byte, int *signal) {
 	}
 }
 
-void  UART_IRAM_ATTR uart_rx_intr_handler(void *para) {
+void  IRAM_ATTR uart_rx_intr_handler(void *para) {
     BaseType_t xHigherPriorityTaskWoken;
     xHigherPriorityTaskWoken = pdFALSE;
     uint32_t uart_intr_status = 0;
@@ -325,7 +326,7 @@ void uart_init_interrupts(uint8_t unit) {
 }
 
 // Writes a byte to the UART
-void uart_write(uint8_t unit, char byte) {
+void IRAM_ATTR uart_write(uint8_t unit, char byte) {
     unit--;
 	 
     while (((READ_PERI_REG(UART_STATUS_REG(unit)) & (UART_TXFIFO_CNT << UART_TXFIFO_CNT_S)) >> UART_TXFIFO_CNT_S & UART_TXFIFO_CNT) >= 126);
@@ -333,7 +334,7 @@ void uart_write(uint8_t unit, char byte) {
 }
 
 // Writes a null-terminated string to the UART
-void UART_IRAM_ATTR uart_writes(uint8_t unit, char *s) {
+void IRAM_ATTR uart_writes(uint8_t unit, char *s) {
     unit--;
 
     while (*s) {
@@ -343,7 +344,7 @@ void UART_IRAM_ATTR uart_writes(uint8_t unit, char *s) {
 }
 
 // Reads a byte from uart
-uint8_t uart_read(uint8_t unit, char *c, uint32_t timeout) {
+uint8_t IRAM_ATTR uart_read(uint8_t unit, char *c, uint32_t timeout) {
     unit--;
 	
     if (timeout != portMAX_DELAY) {

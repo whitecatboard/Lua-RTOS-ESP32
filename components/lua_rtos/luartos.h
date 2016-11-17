@@ -2,7 +2,6 @@
 #define LUA_RTOS_LUARTOS_H_
 
 #include "sdkconfig.h"
-#include "esp_attr.h"
 
 /*
  *
@@ -53,9 +52,6 @@
 #ifndef CONSOLE_BR
 #define CONSOLE_BR 115200
 #endif
-
-// We need some functions to run on IRAM ...
-#define UART_IRAM_ATTR IRAM_ATTR
 
 #define THREAD_LOCAL_STORAGE_POINTER_ID 0
 

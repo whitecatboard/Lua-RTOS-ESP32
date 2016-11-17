@@ -59,6 +59,9 @@
 
 static int joined = 0;
 
+// LMIC job for start LMIC stack
+static osjob_t initjob;
+
 // Mutext for lora 
 static struct mtx lora_mtx;
 
@@ -356,10 +359,7 @@ tdriver_error *lora_setup(int band) {
 		os_init();
 
 		// Set first callback, for init lora stack
-		osjob_t *initjob = (osjob_t *)malloc(sizeof(osjob_t));
-		if (initjob) {
-			os_setCallback(initjob, lora_init);
-		}
+		os_setCallback(&initjob, lora_init);
 
 		// Wait for stack initialization
 	    xEventGroupWaitBits(loraEvent, evLORA_INITED, pdTRUE, pdFALSE, portMAX_DELAY);
@@ -573,6 +573,8 @@ int lora_tx(int cnf, int port, const char *data) {
 	// Send 
     LMIC_setTxData2(port, payload, sizeof(payload), cnf);
 		
+    free(payload);
+
 	// Wait for one of the expected events
     EventBits_t uxBits = xEventGroupWaitBits(loraEvent, evLORA_TX_COMPLETE | evLORA_ACK_NOT_RECEIVED, pdTRUE, pdFALSE, portMAX_DELAY);
     if (uxBits & (evLORA_TX_COMPLETE)) {

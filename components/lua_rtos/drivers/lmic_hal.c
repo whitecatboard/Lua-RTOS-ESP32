@@ -46,6 +46,7 @@
 #include <drivers/gpio.h>
 #include <drivers/spi.h>
 
+#include "esp_attr.h"
 #include "soc/gpio_reg.h"
 
 /*
@@ -65,7 +66,7 @@ static void deferred_dio_intr_handler(osjob_t *j) {
  * will be executed in the next iteration of the os_runloop routine.
  *
  */
-static void dio_intr_handler(void *args) {
+static void IRAM_ATTR dio_intr_handler(void *args) {
 	u4_t status_l = READ_PERI_REG(GPIO_STATUS_REG) & GPIO_STATUS_INT;
 	u4_t status_h = READ_PERI_REG(GPIO_STATUS1_REG) & GPIO_STATUS1_INT;
 
@@ -163,7 +164,7 @@ static int nested = 0;
 
 void hal_disableIRQs (void) {
 	if (nested == 0) {
-		portDISABLE_INTERRUPTS();
+		enter_critical_section();
 	}
 
 	nested++;
@@ -171,7 +172,7 @@ void hal_disableIRQs (void) {
 
 void hal_enableIRQs (void) {
 	if (--nested == 0) {
-		portENABLE_INTERRUPTS();
+		exit_critical_section();
 	}
 }
 
