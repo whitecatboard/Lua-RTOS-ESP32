@@ -27,16 +27,19 @@
  * this software.
  */
 
+#include "luartos.h"
+#include "lua.h"
+
+#include <string.h>
+#include <stdio.h>
+
 #include <sys/build.h>
 #include <sys/reent.h>
 #include <sys/syslog.h>
 #include <sys/console.h>
 #include <drivers/cpu.h>
 #include <drivers/uart.h>
-#include <string.h>
-#include <stdio.h>
-
-#include "lua.h"
+#include <sys/time.h>
 
 extern void _syscalls_init();
 extern void _pthread_init();
@@ -57,7 +60,17 @@ extern int spiffs_init();
 
 void vfs_tty_register();
 
-void _sys_init() {  	
+void _sys_init() {
+	// TO DO: do this only if RTC is not set
+	// Set current time from build.h
+	struct timeval tv;
+
+	tv.tv_sec = BUILD_TIME;
+	tv.tv_usec = 0;
+
+	settimeofday(&tv, NULL);
+
+	// Init important things for Lua RTOS
 	_cpu_init();
 	_resource_init();
     _mtx_init();
@@ -96,10 +109,6 @@ void _sys_init() {
         }
     #endif
 
-    #if USE_RTC
-        rtc_init(time(NULL));
-    #endif
-        
     #if (USE_FAT)
         if (mount_is_mounted("sd")) {
             // Redirect console messages to /log/messages.log ...

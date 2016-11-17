@@ -32,13 +32,15 @@
 
 #include "esp_deepsleep.h"
 
-#include <soc/dport_reg.h>
-#include <sys/syslog.h>
+#include <string.h>
 
-#include <drivers/gpio.h>
+#include <soc/dport_reg.h>
+
+#include <sys/syslog.h>
 #include <sys/delay.h>
 
-#include <string.h>
+#include <drivers/gpio.h>
+
 
 void system_restart();
 
@@ -334,7 +336,9 @@ void cpu_show_info() {
 }
 
 void cpu_sleep(int seconds) {
-	system_deep_sleep(seconds * 1000000LL);
+    syslog(LOG_INFO, "entering deep sleep for %d seconds", seconds);
+
+    system_deep_sleep(seconds * 1000000LL);
 }
 
 void cpu_reset() {
