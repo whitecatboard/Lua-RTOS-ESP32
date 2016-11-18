@@ -95,7 +95,8 @@ For porting Lua RTOS to other platforms is only necessary to write the code for 
    * parity: none
    * terminal emulation: VT100
 
-
+   For example, if you use picocom:
+   
    ```lua
    picocom --baud 115200 /dev/tty.SLAB_USBtoUART
    ```
