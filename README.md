@@ -53,7 +53,7 @@ For porting Lua RTOS to other platforms is only necessary to write the code for 
    
 1. Compile:
 
-   First configure Lua RTOS:
+   First configure Lua RTOS options (located in Component config --> Lua RTOS):
  
    ```lua
    make menuconfig
