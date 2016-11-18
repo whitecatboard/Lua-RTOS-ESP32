@@ -33,7 +33,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <sys/build.h>
 #include <sys/reent.h>
 #include <sys/syslog.h>
 #include <sys/console.h>
@@ -63,7 +62,6 @@ void vfs_tty_register();
 
 void _sys_init() {
 	// TO DO: do this only if RTC is not set
-	// Set current time from build.h
 	struct timeval tv;
 
 	tv.tv_sec = BUILD_TIME;

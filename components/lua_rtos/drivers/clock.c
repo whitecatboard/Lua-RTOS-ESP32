@@ -34,7 +34,6 @@
 #include "esp_attr.h"
 
 #include <sys/time.h>
-#include <sys/build.h>
 
 #include <drivers/gpio.h>
 

@@ -12,15 +12,12 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <sys/build.h>
 #include <sys/stat.h>
 #include <sys/syslog.h>
 #include <sys/status.h>
 #include <sys/console.h>
 #include <drivers/cpu.h>
 #include <sys/mount.h>
-//#include <sys/syscalls/device.h>
-//#include <sys/drivers/uart.h>
 
 extern const char *__progname;
 
