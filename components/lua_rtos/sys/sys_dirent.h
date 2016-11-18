@@ -54,6 +54,7 @@ struct dirent {
     uint16_t d_reclen;             /* length of this record */
     uint8_t  d_type;               /* file type, see below */
     uint8_t  d_namlen;             /* length of string in d_name */
+    int      d_fsize;
 #ifdef _POSIX_SOURCE
     char    d_name[255 + 1];        /* name must be no longer than this */
 #else

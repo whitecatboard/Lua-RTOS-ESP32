@@ -111,6 +111,7 @@ int _getdents_spiffs(struct file *fp, void *buff, int size) {
         }
 
         ent.d_namlen = len;
+        ent.d_fsize = pe->size;
 
         strncpy(ent.d_name, fn, 255);
 
