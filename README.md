@@ -28,7 +28,7 @@ For porting Lua RTOS to other platforms is only necessary to write the code for 
 git clone --recursive https://github.com/espressif/esp-idf.git
 ```
 
-3. Clone Lua RTOS repository:
+1. Clone Lua RTOS repository:
 
 ```lua
 git clone --recursive https://github.com/whitecatboard/Lua-RTOS-ESP32
