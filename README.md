@@ -43,11 +43,29 @@ For porting Lua RTOS to other platforms is only necessary to write the code for 
    cd Lua-RTOS-ESP32
    ```
    
-   Edit the env file and change HOST_PLATFORM, PATH, IDF_PATH, LIBRARY_PATH, PKG_CONFIG_PATH, CPATH according your installation directories.
+   Edit the env file and change HOST_PLATFORM, PATH, IDF_PATH, LIBRARY_PATH, PKG_CONFIG_PATH, CPATH for fit to your installation locations.
    
    Now do:
    
    ```lua
    source ./env
    ```
+   
+1. Compile:
 
+   First configure Lua RTOS:
+ 
+   ```lua
+   make menuconfig
+   ```
+
+   Build Lua RTOS, and flash to your ESP32 board:
+
+   ```lua
+   make flash
+   ```
+
+   Flash spiffs file system image to your ESP32 board:
+   ```lua
+   make flashfs
+   ```
