@@ -15,3 +15,11 @@ Lua RTOS has a 3-layers design:
 ![](http://whitecatboard.org/git/luaos.png)
 
 For porting Lua RTOS to other platforms is only necessary to write the code for the bottom layer, because the top and the middle layer are the same for all platforms.
+
+# How to build?
+
+* Install ESP32 toolchain for your desktop platform. Please, follow the instructions provided by ESPRESSIF:
+
+[Windows] https://github.com/espressif/esp-idf/blob/master/docs/windows-setup.rst
+[Mac OS] https://github.com/espressif/esp-idf/blob/master/docs/macos-setup.rst
+[Linux] https://github.com/espressif/esp-idf/blob/master/docs/linux-setup.rst
