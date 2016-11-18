@@ -29,7 +29,6 @@ For porting Lua RTOS to other platforms is only necessary to write the code for 
    * [Linux 3.x.x](https://www.silabs.com/Support%20Documents/Software/Linux_3.x.x_VCP_Driver_Source.zip)
    * [Linux 2.6.x](https://www.silabs.com/Support%20Documents/Software/Linux_2.6.x_VCP_Driver_Source.zip)
    * [Mac OSX](https://www.silabs.com/Support%20Documents/Software/Mac_OSX_VCP_Driver.zip)
-   * [Mac OSX](https://www.silabs.com/Support%20Documents/Software/Mac_OSX_VCP_Driver.zip)
    * [Windows](https://www.silabs.com/Support%20Documents/Software/CP210x_Windows_Drivers.zip)
 
    You can get a full list of available drivers and versions [here](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx)
