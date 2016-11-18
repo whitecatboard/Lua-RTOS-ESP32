@@ -30,6 +30,24 @@ For porting Lua RTOS to other platforms is only necessary to write the code for 
    ```
 
 1. Clone Lua RTOS repository:
+
    ```lua
    git clone --recursive https://github.com/whitecatboard/Lua-RTOS-ESP32
    ```
+   
+1. Setup the build environment:
+   
+   Go to Lua-RTOS-ESP32 folder:
+   
+   ```lua
+   cd Lua-RTOS-ESP32
+   ```
+   
+   Edit the env file and change HOST_PLATFORM, PATH, IDF_PATH, LIBRARY_PATH, PKG_CONFIG_PATH, CPATH according your installation directories.
+   
+   Now do:
+   
+   ```lua
+   source ./env
+   ```
+
