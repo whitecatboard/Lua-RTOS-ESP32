@@ -13,7 +13,7 @@ LDFLAGS = -nostdlib \
 	-Wl,--end-group \
 	-Wl,-EL
 	
-CFLAGS += -Wno-error=implicit-function-declaration
+CFLAGS += -Wno-error=implicit-function-declaration -Wno-error=pointer-sign
 
 LDFLAGS += -Wl,--wrap=_open_r
 LDFLAGS += -Wl,--wrap=_unlink_r
@@ -114,7 +114,7 @@ CFLAGS += -DLUA_USE_SAFE_SIGNAL=0      # Enable use of LuaOS safe signal (experi
 # CFLAGS += -DSTRCACHE_M=1
 # CFLAGS += -DMINSTRTABSIZE=32
 CFLAGS += -DLUA_USE_SHELL=1
-CFLAGS += -DLUA_USE_EDITOR=0
+CFLAGS += -DLUA_USE_EDITOR=1
 CFLAGS += -DLUA_USE_HISTORY=0
 CFLAGS += -DLUA_USE_ROTABLE=1
 

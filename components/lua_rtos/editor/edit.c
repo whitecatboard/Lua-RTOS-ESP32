@@ -314,8 +314,9 @@ int load_file(struct editor *ed, char *filename) {
   int f;
 
   if (!realpath(filename, ed->filename)) return -1;
-    
+
   f = open(ed->filename, O_RDONLY);
+
   if (f < 0) return -1;
 
   if (fstat(f, &statbuf) < 0) goto err;
@@ -699,7 +700,7 @@ int get_selected_text(struct editor *ed, char *buffer, int size) {
   if (!get_selection(ed, &selstart, &selend)) return 0;
   len = selend - selstart;
   if (len >= size) return 0;
-  copy(ed, buffer, selstart, len);
+  copy(ed, (unsigned char *)buffer, selstart, len);
   buffer[len] = 0;
   return len;
 }
@@ -1252,7 +1253,7 @@ void right(struct editor *ed, int select) {
 }
 
 int wordchar(int ch) {
-  return ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z' || ch >= '0' && ch <= '9';
+  return (((ch >= 'A') && (ch <= 'Z')) || ((ch >= 'a') && (ch <= 'z')) || ((ch >= '0') && (ch <= '9')));
 }
 
 void wordleft(struct editor *ed, int select) {
@@ -1725,13 +1726,13 @@ void save_editor(struct editor *ed) {
       return;
     }
 
-    if (access(ed->env->linebuf, F_OK) == 0) {
+    //if (access(ed->env->linebuf, F_OK) == 0) {
       display_message(ed, "Overwrite %s (y/n)? ", ed->env->linebuf);
       if (!ask()) {
         ed->refresh = 1;
         return;
       }
-    }
+    //}
     strcpy(ed->filename, ed->env->linebuf);
     ed->newfile = 0;
   }

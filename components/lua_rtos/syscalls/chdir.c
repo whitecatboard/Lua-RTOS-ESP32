@@ -75,3 +75,13 @@ int chdir(const char *path) {
 
     return 0;
 }
+
+int fchdir(int fd) {
+    struct file *fp;
+
+    if (!(fp = get_file(fd))) {
+        return -1;
+    }
+
+    return chdir(fp->f_path);
+}
