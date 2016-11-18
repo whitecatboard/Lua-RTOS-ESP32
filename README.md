@@ -20,19 +20,19 @@ For porting Lua RTOS to other platforms is only necessary to write the code for 
 
 1. Install required drivers:
 
-Please note you need to download and install drivers for Win32 and MacOSX versions. The GNU/Linux version doesn't need any drivers, as usual ;)
+   Please note you need to download and install drivers for Win32 and MacOSX versions. The GNU/Linux version doesn't need any drivers, as usual ;)
 
-This drivers are required for connect to the Lua RTOS console through a serial port connection.
+   This drivers are required for connect to the Lua RTOS console through a serial port connection.
 
-You can download this drivers following one of this links:
+   You can download this drivers following one of this links:
 
-* [Linux 3.x.x](https://www.silabs.com/Support%20Documents/Software/Linux_3.x.x_VCP_Driver_Source.zip)
-* [Linux 2.6.x](https://www.silabs.com/Support%20Documents/Software/Linux_2.6.x_VCP_Driver_Source.zip)
-* [Mac OSX](https://www.silabs.com/Support%20Documents/Software/Mac_OSX_VCP_Driver.zip)
-* [Mac OSX](https://www.silabs.com/Support%20Documents/Software/Mac_OSX_VCP_Driver.zip)
-* [Windows](https://www.silabs.com/Support%20Documents/Software/CP210x_Windows_Drivers.zip)
+   * [Linux 3.x.x](https://www.silabs.com/Support%20Documents/Software/Linux_3.x.x_VCP_Driver_Source.zip)
+   * [Linux 2.6.x](https://www.silabs.com/Support%20Documents/Software/Linux_2.6.x_VCP_Driver_Source.zip)
+   * [Mac OSX](https://www.silabs.com/Support%20Documents/Software/Mac_OSX_VCP_Driver.zip)
+   * [Mac OSX](https://www.silabs.com/Support%20Documents/Software/Mac_OSX_VCP_Driver.zip)
+   * [Windows](https://www.silabs.com/Support%20Documents/Software/CP210x_Windows_Drivers.zip)
 
-You can get a full list of available drivers and versions [here](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx)
+   You can get a full list of available drivers and versions [here](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx)
 
 1. Install ESP32 toolchain for your desktop platform. Please, follow the instructions provided by ESPRESSIF:
    * [Windows] (https://github.com/espressif/esp-idf/blob/master/docs/windows-setup.rst)
@@ -87,13 +87,13 @@ You can get a full list of available drivers and versions [here](https://www.sil
    ```
 1. Connect to the console:
 
-You can connect to the Lua RTOS console using your favorite terminal emulator program, such as picocom, minicom, hyperterminal, putty, etc ... The connection parameters are:
+   You can connect to the Lua RTOS console using your favorite terminal emulator program, such as picocom, minicom, hyperterminal, putty, etc ... The connection parameters are:
 
-* speed: 115200 bauds
-* data bits: 8
-* stop bits: 1
-* parity: none
-* terminal emulation: VT100
+   * speed: 115200 bauds
+   * data bits: 8
+   * stop bits: 1
+   * parity: none
+   * terminal emulation: VT100
 
    ```lua
    picocom --baud 115200 /dev/tty.SLAB_USBtoUART
