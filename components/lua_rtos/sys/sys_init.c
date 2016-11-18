@@ -59,6 +59,7 @@ extern int spiffs_init();
 #endif
 
 void vfs_tty_register();
+void vfs_spiffs_register();
 
 void _sys_init() {
 	// TO DO: do this only if RTC is not set

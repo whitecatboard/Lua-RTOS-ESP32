@@ -528,7 +528,8 @@ void vfs_spiffs_register() {
         }
     } else {
         if (retries > 0) {
-            spiffs_mkdir_op("/.");
+        	// TO DO
+            //spiffs_mkdir_op("/.");
         }
     }
 

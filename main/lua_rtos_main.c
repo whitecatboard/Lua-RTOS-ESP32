@@ -49,8 +49,6 @@ void luaos_main();
 void _sys_init();
 
 void *lua_start(void *arg) {	
-	char buff[PATH_MAX];
-
 	for(;;) {
 		luaos_main();
     }

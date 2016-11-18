@@ -27,17 +27,17 @@ static int read_line (lua_State *L, FILE *f, int chop) {
 
   luaL_buffinit(L, &b);
   
-  int nl = '\n';
+  char nl = '\n';
   
   if (f == stdin) {
       nl = '\r';
   }
   
-  while (c != EOF && c != nl) {  /* repeat until end of line */
+  while ((c != (char)EOF) && (c != nl)) {  /* repeat until end of line */
     char *buff = luaL_prepbuffer(&b);  /* pre-allocate buffer */
     int i = 0;
     l_lockfile(f);  /* no memory errors can happen inside the lock */
-    while (i < LUAL_BUFFERSIZE && (c = l_getc(f)) != EOF && c != nl) {
+    while ((i < LUAL_BUFFERSIZE) && ((c = l_getc(f)) != (char)EOF) && (c != nl)) {
       buff[i++] = c;
     
       if (f == stdin) {

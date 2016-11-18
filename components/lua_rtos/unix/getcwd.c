@@ -29,6 +29,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <STDLIB.h>
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
@@ -52,10 +53,8 @@ char *getcwd(char *pt, size_t size) {
 
 char *realpath(const char *path, char *resolved) {
 	char *fpath; // Full path
-	char *rpath; // Real patj
 
 	fpath = mount_full_path(path);
-	//rpath = mount_root(fpath);
 
 	strcpy(resolved,fpath);
 

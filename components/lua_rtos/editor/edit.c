@@ -973,7 +973,7 @@ int getkey() {
 
 int prompt(struct editor *ed, char *msg, int selection) {
   int maxlen, len, ch;
-  char *buf = ed->env->linebuf;
+  char *buf = (char *)ed->env->linebuf;
 
   gotoxy(0, ed->env->lines);
   outstr(STATUS_COLOR);
@@ -984,7 +984,7 @@ int prompt(struct editor *ed, char *msg, int selection) {
   maxlen = ed->env->cols - strlen(msg) - 1;
   if (selection) {
     len = get_selected_text(ed, buf, maxlen);
-    outbuf(buf, len);
+    outbuf((unsigned char *)buf, len);
   }
 
   for (;;) {
@@ -1032,14 +1032,14 @@ void draw_full_statusline(struct editor *ed) {
   struct env *env = ed->env;
   int namewidth = env->cols - 28 - 4;
   gotoxy(0, env->lines);
-  sprintf(env->linebuf, STATUS_COLOR "%*.*sCtrl+Y=Help %c Ln %-6dCol %-4d" CLREOL TEXT_COLOR, -namewidth, namewidth, ed->filename, ed->dirty ? '*' : ' ', ed->line + 1, column(ed, ed->linepos, ed->col) + 1);
-  outstr(env->linebuf);
+  sprintf((char *)env->linebuf, STATUS_COLOR "%*.*sCtrl+Y=Help %c Ln %-6dCol %-4d" CLREOL TEXT_COLOR, -namewidth, namewidth, ed->filename, ed->dirty ? '*' : ' ', ed->line + 1, column(ed, ed->linepos, ed->col) + 1);
+  outstr((char *)env->linebuf);
 }
 
 void draw_statusline(struct editor *ed) {
   gotoxy(ed->env->cols - 20, ed->env->lines);
-  sprintf(ed->env->linebuf, STATUS_COLOR "%c Ln %-6dCol %-4d" CLREOL TEXT_COLOR, ed->dirty ? '*' : ' ', ed->line + 1, column(ed, ed->linepos, ed->col) + 1);
-  outstr(ed->env->linebuf);
+  sprintf((char *)ed->env->linebuf, STATUS_COLOR "%c Ln %-6dCol %-4d" CLREOL TEXT_COLOR, ed->dirty ? '*' : ' ', ed->line + 1, column(ed, ed->linepos, ed->col) + 1);
+  outstr((char *)ed->env->linebuf);
 }
 
 void edit_display_line(struct editor *ed, int pos, int fullline) {
@@ -1425,7 +1425,7 @@ void newline(struct editor *ed) {
 #ifdef __linux__
   insert(ed, ed->linepos + ed->col, "\n", 1);
 #else
-  insert(ed, ed->linepos + ed->col, "\r\n", 2);
+  insert(ed, ed->linepos + ed->col, (unsigned char *)"\r\n", 2);
 #endif
   ed->col = ed->lastcol = 0;
   ed->line++;
@@ -1505,7 +1505,7 @@ void indent(struct editor *ed, unsigned char *indentation) {
   int start, end, i, lines, toplines, newline, ch;
   unsigned char *buffer, *p;
   int buflen;
-  int width = strlen(indentation);
+  int width = strlen((char *)indentation);
   int pos = ed->linepos + ed->col;
 
   if (!get_selection(ed, &start, &end)) {
@@ -1561,7 +1561,7 @@ void indent(struct editor *ed, unsigned char *indentation) {
 void unindent(struct editor *ed, unsigned char *indentation) {
   int start, end, i, newline, ch, shrinkage, topofs;
   unsigned char *buffer, *p;
-  int width = strlen(indentation);
+  int width = strlen((char *)indentation);
   int pos = ed->linepos + ed->col;
 
   if (!get_selection(ed, &start, &end)) return;
@@ -1677,7 +1677,7 @@ void open_editor(struct editor *ed) {
     ed->refresh = 1;
     return;
   }
-  filename = ed->env->linebuf;
+  filename = (char *)ed->env->linebuf;
   
   ed = find_editor(ed->env, filename);
   if (ed) {
@@ -1707,7 +1707,7 @@ void read_from_stdin(struct editor *ed) {
 
   pos = 0;
   while ((n = fread(buffer, 1, sizeof(buffer), stdin)) > 0) {
-    insert(ed, pos, buffer, n);
+    insert(ed, pos, (unsigned char *)buffer, n);
     pos += n;
   }
   strcpy(ed->filename, "<stdin>");  
@@ -1733,7 +1733,7 @@ void save_editor(struct editor *ed) {
         return;
       }
     //}
-    strcpy(ed->filename, ed->env->linebuf);
+    strcpy(ed->filename, (char *)ed->env->linebuf);
     ed->newfile = 0;
   }
 
@@ -1776,16 +1776,16 @@ void find_text(struct editor *ed, int next) {
       return;
     }    
     if (ed->env->search) free(ed->env->search);
-    ed->env->search = strdup(ed->env->linebuf);
+    ed->env->search = (unsigned char *)strdup((char *)ed->env->linebuf);
   }
 
   if (!ed->env->search) return;
-  slen = strlen(ed->env->search);
+  slen = strlen((char *)ed->env->search);
   if (slen > 0) {
     unsigned char *match;
     
     close_gap(ed);
-    match = strstr(ed->start + ed->linepos + ed->col, ed->env->search);
+    match = (unsigned char *)strstr((const char *)(ed->start + ed->linepos + ed->col), (const char *)ed->env->search);
     if (match != NULL) {
       int pos = match - ed->start;
       ed->anchor = pos;
@@ -1802,7 +1802,7 @@ void goto_line(struct editor *ed) {
 
   ed->anchor = -1;
   if (prompt(ed, "Goto line: ", 1)) {
-    lineno = atoi(ed->env->linebuf);
+    lineno = atoi((char *)ed->env->linebuf);
     if (lineno > 0) {
       pos = 0;
       for (l = 0; l < lineno - 1; l++) {
@@ -2027,8 +2027,8 @@ void edit(struct editor *ed) {
 #ifdef LESS
         case KEY_ESC: done = 1; break;
 #else
-        case KEY_TAB: indent(ed, INDENT); break;
-        case KEY_SHIFT_TAB: unindent(ed, INDENT); break;
+        case KEY_TAB: indent(ed, (unsigned char *)INDENT); break;
+        case KEY_SHIFT_TAB: unindent(ed, (unsigned char *)INDENT); break;
 
         case KEY_ENTER: newline(ed); break;
         case KEY_BACKSPACE: backspace(ed); break;

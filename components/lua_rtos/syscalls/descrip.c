@@ -413,7 +413,7 @@ int fcntl(int fd, int cmd, ... ) {
     register struct filedesc *fdp = p_fd;
     register struct file *fp;
     register char *pop;
-    int i, tmp, error;
+    int i, error;
 
     int retval;
     va_list valist;
@@ -472,7 +472,7 @@ int fcntl(int fd, int cmd, ... ) {
 
         fp->f_flag &= ~FCNTLFLAGS;
         fp->f_flag |= FFLAGS(arg3) & FCNTLFLAGS;
-        tmp = fp->f_flag & FNONBLOCK;
+        //tmp = fp->f_flag & FNONBLOCK;
         // TO DO
         //error = (*fp->f_ops->fo_ioctl)(fp, FIONBIO, (caddr_t)&tmp);
         //if (error) {
