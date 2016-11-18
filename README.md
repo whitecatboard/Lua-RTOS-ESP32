@@ -30,7 +30,7 @@ git clone --recursive https://github.com/espressif/esp-idf.git
 
 3. Clone Lua RTOS repository:
 
-```shell
+```lua
 git clone --recursive https://github.com/whitecatboard/Lua-RTOS-ESP32
 ```
 
