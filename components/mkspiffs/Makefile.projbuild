@@ -1,0 +1,14 @@
+MKSPIFFS_COMPONENT_PATH := $(COMPONENT_PATH)
+MKSPIFFS_BUILD_DIR=$(abspath $(MKSPIFFS_COMPONENT_PATH)/mkspiffs)
+
+# Custom recursive make for mkspiffs sub-project
+MKSPIFFS_MAKE=+$(MAKE) -C $(MKSPIFFS_COMPONENT_PATH)/src
+
+.PHONY: flashfs clean
+
+flashfs: $(SDKCONFIG_MAKEFILE)
+	$(MKSPIFFS_MAKE) all
+
+clean: $(SDKCONFIG_MAKEFILE)
+	$(MKSPIFFS_MAKE) clean
+

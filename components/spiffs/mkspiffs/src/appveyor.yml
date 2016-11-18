@@ -1,0 +1,28 @@
+version: 0.0.{build}
+
+platform:
+    - x86
+
+skip_commits:
+  message: /\[ci skip\]/
+
+matrix:
+    fast_finish: true
+
+build_script:
+    - SET PATH=C:\MinGW\bin;C:\MinGW\msys\1.0\bin;%PATH%
+    - make dist
+
+artifacts:
+  - path: '*.zip'
+
+deploy:
+    release: $(PRODUCT_VERSION)
+    provider: GitHub
+    auth_token:
+        secure: 'PGg5fnoBpP1Omzr6f3KIYDiD8J30rretQjSl/MITRpzvSCmN88kM6VDMz1TBGZTA'
+    artifact: /.*\.zip/
+    draft: true
+    prerelease: false
+    on:
+        appveyor_repo_tag: true
