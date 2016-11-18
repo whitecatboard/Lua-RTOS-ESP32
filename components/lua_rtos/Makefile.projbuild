@@ -48,18 +48,7 @@ CFLAGS += -DLED_DBG=0 					 	    # GPIO for debug led (0 if not led)
 # File system configuration
 # 
 CFLAGS += -DUSE_FAT=0                 # Enable FAT
-CFLAGS += -DUSE_SPIFFS=1               # Enable SPIFFS
 
-#
-# SPIFFS file system configuration
-# 
-CFLAGS += -DSPIFFS_ERASE_SIZE=4096     # SPI FLASH sector size (see your flah's datasheet)
-CFLAGS += -DSPIFFS_LOG_PAGE_SIZE=256   # SPI FLASH page size (see your flah's datasheet)
-CFLAGS += -DSPIFFS_LOG_BLOCK_SIZE=8192 # Logical block size, must be a miltiple of the page size
-CFLAGS += -DSPIFFS_BASE_ADDR=0x180000  # SPI FLASH start adress for SPIFFS
-CFLAGS += -DSPIFFS_SIZE=0x80000        # SPIFFS size
-
-SPIFFS_ESPTOOL_ARGS = 0x180000 $(BUILD_DIR)spiffs_image.img
 
 #
 # LoraWAN driver connfiguration for RN2483

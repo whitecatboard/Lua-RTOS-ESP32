@@ -36,6 +36,8 @@
 #include <stdio.h>
 #include <errno.h>
 
+char *getcwd(char *buf, size_t size);
+
 // Mount device structure
 struct mountd {
     const char *device;
@@ -57,7 +59,7 @@ static const struct mountp mountps[] = {
     {"/", "fat", "/fat", "spiffs", "fat"},
 #endif
 #endif
-    {NULL, NULL, NULL, NULL}
+    {NULL, NULL, NULL, NULL, NULL}
 };
 
 struct mountd mountds[] = {

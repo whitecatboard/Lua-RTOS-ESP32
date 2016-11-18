@@ -44,7 +44,31 @@ menu "Lua RTOS"
     range 32 2048
     default 1024
     help
-        Select the the buffer length used by the console, in bytes,
-        		
+        Select the the buffer length used by the console, in bytes,    		
+  endmenu
+  menu "File Systems"
+  menu "SPIFFS"
+  		config LUA_RTOS_USE_SPIFFS
+	  	bool "Use spiffs"
+	  	default true
+
+		config LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE
+		depends on LUA_RTOS_USE_SPIFFS
+	    int "Logical block size"
+	    range 4098 65536
+	    default 8192
+
+		config LUA_RTOS_SPIFFS_BASE_ADDR
+		depends on LUA_RTOS_USE_SPIFFS
+	    hex "Base address"
+	    range 100000 1FFE000
+	    default 180000
+
+		config LUA_RTOS_SPIFFS_SIZE
+		depends on LUA_RTOS_USE_SPIFFS
+	    int "Size"
+	    range 262144 1048576
+	    default 524288
+  endmenu
   endmenu
 endmenu
