@@ -19,20 +19,17 @@ For porting Lua RTOS to other platforms is only necessary to write the code for 
 # How to build?
 
 1. Install ESP32 toolchain for your desktop platform. Please, follow the instructions provided by ESPRESSIF:
-
    * [Windows] (https://github.com/espressif/esp-idf/blob/master/docs/windows-setup.rst)
    * [Mac OS] (https://github.com/espressif/esp-idf/blob/master/docs/macos-setup.rst)
    * [Linux] (https://github.com/espressif/esp-idf/blob/master/docs/linux-setup.rst)
 
-2. Clone esp-idf repository from ESPRESSIF:
+1. Clone esp-idf repository from ESPRESSIF:
 
-```lua
-git clone --recursive https://github.com/espressif/esp-idf.git
-```
+   ```lua
+   git clone --recursive https://github.com/espressif/esp-idf.git
+   ```
 
-3. Clone Lua RTOS repository:
-
-```lua
-git clone --recursive https://github.com/whitecatboard/Lua-RTOS-ESP32
-```
-
+1. Clone Lua RTOS repository:
+   ```lua
+   git clone --recursive https://github.com/whitecatboard/Lua-RTOS-ESP32
+   ```
