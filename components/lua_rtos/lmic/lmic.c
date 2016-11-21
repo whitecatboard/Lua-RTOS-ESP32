@@ -1431,7 +1431,7 @@ static bit_t processJoinAccept (void) {
     LMIC_ASSERT((LMIC.opmode & OP_TXRXPEND)!=0);
 
     if( LMIC.dataLen == 0 ) {
-      nojoinframe:
+	nojoinframe:
         if( (LMIC.opmode & OP_JOINING) == 0 ) {
             LMIC_ASSERT((LMIC.opmode & OP_REJOIN) != 0);
             // REJOIN attempt for roaming

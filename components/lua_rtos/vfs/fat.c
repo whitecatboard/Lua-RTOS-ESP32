@@ -193,9 +193,9 @@ static size_t IRAM_ATTR vfs_fat_write(int fd, const void *data, size_t size) {
 
     res = f_write((FIL *)fp->f_fs, data, size, &bw);
     if (res == FR_OK) {
-        if (res == FR_OK) {
-            res = f_sync((FIL *)fp->f_fs);
-        }
+//        if (res == FR_OK) {
+  //          res = f_sync((FIL *)fp->f_fs);
+    //    }
 
     	return (size_t)bw;
     } else {
