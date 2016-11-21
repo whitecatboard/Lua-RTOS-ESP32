@@ -49,6 +49,7 @@ static char sccsid[] = "@(#)syslog.c	8.5 (Berkeley) 4/29/95";
 
 #include <sys/types.h>
 #include <sys/syslog.h>
+#include <sys/mount.h>
 
 #include <stdlib.h>
 #include <errno.h>
@@ -207,9 +208,13 @@ void openlog(ident, logstat, logfac)
     
     LogFile = NULL;
 
-    //if (mount_is_mounted("sd")) {
-    //    LogFile = fopen("/sd/log/messages.log","a+");
-    //}
+    if (mount_is_mounted("fat")) {
+    	if (mount_is_mounted("spiffs")) {
+        	LogFile = fopen("/sd/log/messages.log","a+");
+    	} else {
+        	LogFile = fopen("/log/messages.log","a+");
+    	}
+    }
     
     connected = (LogFile != NULL);	
     if (connected) {

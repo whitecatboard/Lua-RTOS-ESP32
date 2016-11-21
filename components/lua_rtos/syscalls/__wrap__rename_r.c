@@ -11,17 +11,17 @@
 extern int __real__rename_r(struct _reent *r, const char *src, const char *dst);
 
 int IRAM_ATTR __wrap__rename_r(struct _reent *r, const char *src, const char *dst) {
-	char *fpath_src;
-	char *fpath_dst;
+	char *ppath_src;
+	char *ppath_dst;
 	int res;
 
-	fpath_src = mount_full_path(src);
-	fpath_dst = mount_full_path(dst);
+	ppath_src = mount_resolve_to_physical(src);
+	ppath_dst = mount_resolve_to_physical(dst);
 
-	res = __real__rename_r(r, fpath_src, fpath_dst);
+	res = __real__rename_r(r, ppath_src, ppath_dst);
 
-	if (src != fpath_src) free(fpath_src);
-	if (src != fpath_dst) free(fpath_dst);
+	if (src != ppath_src) free(ppath_src);
+	if (dst != ppath_dst) free(ppath_dst);
 
 	return res;
 }

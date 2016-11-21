@@ -164,17 +164,20 @@ static int os_more(lua_State *L) {
 }
 
 static int os_dmesg(lua_State *L) {
-    char path[30];
     int res;    
-    char *fname;
+    const char *fname = NULL;
 
-    fname = mount_secondary_or_primary("/log/messages.log");
-
-    if ((res = more(fname, 1)) < 0) {
-        return luaL_fileresult(L, 0, path);
+    if (mount_is_mounted("fat")) {
+    	if (mount_is_mounted("spiffs")) {
+    		fname = "/sd/log/messages.log";
+    	} else {
+    		fname = "/log/messages.log";
+    	}
     }
 
-    free(fname);
+    if ((res = more(fname, 1)) < 0) {
+        return luaL_fileresult(L, 0, fname);
+    }
 
     return 0;
 }

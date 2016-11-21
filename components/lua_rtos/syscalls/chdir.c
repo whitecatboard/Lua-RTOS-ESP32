@@ -43,7 +43,8 @@ char currdir[PATH_MAX] = "";
 
 int chdir(const char *path) {
     struct stat statb;
-    char *fpath;
+    char *ppath;
+    char *lpath;
 	int fd;
 
     if (strlen(path) > PATH_MAX) {
@@ -51,25 +52,34 @@ int chdir(const char *path) {
         return -1;
     }
 
-    fpath = mount_full_path(path);
-
+    ppath = mount_resolve_to_physical(path);
     // Check for path existence
-    if ((fd = open(fpath, O_RDONLY)) == -1) {
-    	free(fpath);
+    if ((fd = open(ppath, O_RDONLY)) == -1) {
+    	errno = ENOTDIR;
+    	free(ppath);
         return -1;
     }
 
     // Check that path is a directory
     if (fstat(fd, &statb) || !S_ISDIR(statb.st_mode)) {
-    		free(fpath);
+    		free(ppath);
             errno = ENOTDIR;
             close(fd);
             return -1;
     }
 
-    strcpy(currdir, mount_root(fpath));
+    lpath = mount_resolve_to_logical(ppath);
+    if (!lpath) {
+    	errno = ENOTDIR;
+    	free(lpath);
+    	free(ppath);
+    	return -1;
+    }
 
-	free(fpath);
+    strcpy(currdir, lpath);
+
+    free(lpath);
+	free(ppath);
 
 	close(fd);
 

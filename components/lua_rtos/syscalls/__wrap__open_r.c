@@ -11,17 +11,16 @@
 extern int __real__open_r(struct _reent *r, const char *path, int flags, int mode);
 
 int IRAM_ATTR __wrap__open_r(struct _reent *r, const char *path, int flags, int mode) {
-	char *fpath;
+	char *ppath;
 	int res;
 
 	if ((strncmp(path,"/dev/uart/",10) == 0) || (strncmp(path,"/dev/tty/",9) == 0)) {
 		return __real__open_r(r, path, flags, mode);
 	} else {
-		fpath = mount_full_path(path);
+		ppath = mount_resolve_to_physical(path);
 
-		res = __real__open_r(r, fpath, flags, mode);
-
-		if (path != fpath) free(fpath);
+		res = __real__open_r(r, ppath, flags, mode);
+		if (path != ppath) free(ppath);
 
 		return res;
 	}

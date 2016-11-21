@@ -11,13 +11,13 @@
 extern int __real__unlink_r(struct _reent *r, const char *path);
 
 int IRAM_ATTR __wrap__unlink_r(struct _reent *r, const char *path) {
-	char *fpath;
+	char *ppath;
 	int res;
 
-	fpath = mount_full_path(path);
-	res = __real__unlink_r(r, fpath);
+	ppath = mount_resolve_to_physical(path);
+	res = __real__unlink_r(r, ppath);
 
-	if (path != fpath) free(fpath);
+	if (path != ppath) free(ppath);
 
 	return res;
 }

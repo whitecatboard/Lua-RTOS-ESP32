@@ -3,8 +3,10 @@
 #include <spiffs.h>
 #include <esp_spiffs.h>
 #include <spiffs_nucleus.h>
+#include <fat/ff.h>
 
 #include <sys/dirent.h>
+#include <sys/mount.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -31,6 +33,21 @@ int _getdents_spiffs(struct file *fp, void *buff, int size) {
 	        	errno = res;
 	        	return -1;
 	        }
+	    }
+
+	    char mdir[PATH_MAX];
+	    if (mount_readdir("spiffs", fp->f_path, 0, mdir)) {
+	    	struct dirent ent;
+
+	    	strcpy(ent.d_name, mdir);
+	        ent.d_type = DT_DIR;
+	        ent.d_reclen = sizeof(struct dirent);
+	        ent.d_ino = 1;
+	        ent.d_namlen = strlen(mdir);
+	        ent.d_fsize = 0;
+
+	        memcpy(buff, &ent, sizeof(struct dirent));
+	    	return sizeof(struct dirent);
 	    }
 	}
 
@@ -129,7 +146,118 @@ int _getdents_spiffs(struct file *fp, void *buff, int size) {
 }
 
 int _getdents_fat(struct file *fp, void *buff, int size) {
-	return 0;
+	int res = 0;
+
+	// Open directory, if needed
+	if (!fp->f_dir) {
+	    fp->f_dir = malloc(sizeof(FDIR));
+	    if (!fp->f_dir) {
+	        return ENOMEM;
+	    }
+
+	    res = f_opendir((FDIR *)fp->f_dir, fp->f_path);
+	    if (res != FR_OK) {
+	        free(fp->f_dir);
+	        errno = res;
+	        return -1;
+	    }
+
+	    char mdir[PATH_MAX];
+	    if (mount_readdir("fat", fp->f_path, 0, mdir)) {
+	    	struct dirent ent;
+
+	    	strcpy(ent.d_name, mdir);
+	        ent.d_type = DT_DIR;
+	        ent.d_reclen = sizeof(struct dirent);
+	        ent.d_ino = 1;
+	        ent.d_namlen = strlen(mdir);
+	        ent.d_fsize = 0;
+
+	        memcpy(buff, &ent, sizeof(struct dirent));
+	    	return sizeof(struct dirent);
+	    }
+	}
+
+	struct dirent ent;
+	FILINFO fno;
+    char *fn;
+    int entries = 0;
+
+    fno.lfname = malloc((_MAX_LFN + 1) * 2);
+    if (!fno.lfname) {
+        return ENOMEM;
+    }
+
+    fno.lfsize = (_MAX_LFN + 1) * 2;
+
+    ent.d_name[0] = '\0';
+    for(;;) {
+    	*(fno.lfname) = '\0';
+
+        // Read directory
+        res = f_readdir((FDIR *)fp->f_dir, &fno);
+
+        // Break condition
+        if (res != FR_OK || fno.fname[0] == 0) {
+            break;
+        }
+
+        if (fno.fname[0] == '.') {
+            if (fno.fname[1] == '.') {
+                if (!fno.fname[2]) {
+                    continue;
+                }
+            }
+
+            if (!fno.fname[1]) {
+                continue;
+            }
+        }
+
+        if (fno.fattrib & (AM_HID | AM_SYS | AM_VOL)) {
+            continue;
+        }
+
+        // Get name
+        if (*(fno.lfname)) {
+            fn = fno.lfname;
+        } else {
+            fn = fno.fname;
+        }
+
+        ent.d_type = 0;
+        ent.d_reclen = sizeof(struct dirent);
+        ent.d_ino = 1;
+
+        if (fno.fattrib & AM_DIR) {
+            ent.d_type = DT_DIR;
+            ent.d_fsize = 0;
+        }
+
+        if (fno.fattrib & AM_ARC) {
+            ent.d_type = DT_REG;
+            ent.d_fsize = fno.fsize;
+        }
+
+        ent.d_namlen = strlen(fn);
+
+        if (!ent.d_type) {
+            continue;
+        }
+
+        strcpy(ent.d_name, fn);
+
+        entries++;
+
+        break;
+    }
+
+    if (entries) {
+    	memcpy(buff, &ent, sizeof(struct dirent));
+    	return entries * sizeof(struct dirent);
+    } else {
+    	return 0;
+    }
 }
 
 int getdents (int fd, void *buff, int size) {

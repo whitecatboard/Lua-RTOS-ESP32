@@ -36,9 +36,7 @@
  * get next entry in a directory.
  */
 struct dirent *
-readdir(dirp)
-	register DIR *dirp;
-{
+readdir(DIR *dirp) {
 	  register struct dirent *dp;
 
 	  for (;;) {
@@ -56,11 +54,13 @@ readdir(dirp)
 	      dirp->dd_loc = 0;
 	      continue;
 	    }
+
 	    dp = (struct dirent *)(dirp->dd_buf + dirp->dd_loc);
 	    if (dp->d_reclen <= 0 ||
 		  dp->d_reclen > dirp->dd_len + 1 - dirp->dd_loc) {
 	      return NULL;
 	    }
+
 	    dirp->dd_loc += dp->d_reclen;
 	    if (dp->d_ino == 0)
 	      continue;

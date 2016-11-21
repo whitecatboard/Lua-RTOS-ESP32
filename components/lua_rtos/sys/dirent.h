@@ -61,9 +61,6 @@ typedef struct _dirdesc {
     long    dd_seek;    /* magic cookie returned by getdirentries */
     long    dd_rewind;  /* magic cookie for rewinding */
     int     dd_flags;   /* flags for readdir */
-    
-    int     mounted;
-    int     cmounted;
 } DIR;
 
 #define dirfd(dirp) ((dirp)->dd_fd)

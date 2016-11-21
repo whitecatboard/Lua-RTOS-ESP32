@@ -118,7 +118,7 @@
 #include <reent.h>
 
 #if LUA_USE_HISTORY
-#include <sys/syscalls/mount.h>
+#include <sys/mount.h>
 #endif
 
 #include "linenoise.h"
@@ -659,14 +659,22 @@ static int linenoiseRaw(char *buf, size_t buflen, const char *prompt) {
 #if LUA_USE_HISTORY
 static void linenoiseHistoryAdd(struct linenoiseState *l) {
     FILE *fp;
-    char *fname;
+    const char *fname;
     
     if (!status_get(STATUS_LUA_HISTORY)) return;
 
-    fname = mount_secondary_or_primary("/history");
+    if (mount_is_mounted("fat")) {
+    	if (mount_is_mounted("spiffs")) {
+    		fname = "/sd/history";
+    	} else {
+    		fname = "/history";
+    	}
+    } else {
+    	return;
+    }
+
     fp = fopen(fname,"a");
     if (!fp) {
-        free(fname);
         return;
     }
     
@@ -675,7 +683,6 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
     fputs(l->buf, fp);
     
     fclose(fp);
-    free(fname);
     
     l->history_index = -1;
 }
@@ -683,15 +690,23 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
 static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
     int pos, len, c;    
     FILE *fp;
-    char *fname;
+    const char *fname;
     
     if (!status_get(STATUS_LUA_HISTORY)) return;
     
-    fname = mount_secondary_or_primary("/history");
+    if (mount_is_mounted("fat")) {
+    	if (mount_is_mounted("spiffs")) {
+    		fname = "/sd/history";
+    	} else {
+    		fname = "/history";
+    	}
+    } else {
+    	return;
+    }
+
     fp = fopen(fname,"r");
  
     if (!fp) {
-        free(fname);
         return;
     }
     
@@ -744,8 +759,6 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
 
     refreshLine(l);
     fclose(fp);
-    
-    free(fname);
 }
 #endif
 

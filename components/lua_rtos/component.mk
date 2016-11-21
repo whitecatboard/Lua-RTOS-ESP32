@@ -6,6 +6,6 @@ COMPONENT_SRCDIRS := . luartos_build.h freertos vfs editor sys unix syscalls mat
 					   sys/machine pthread Lua/common Lua/modules Lua/platform Lua/src
 
 COMPONENT_ADD_INCLUDEDIRS := . ./../spiffs include/freertos Lua/adds Lua/common Lua/modules Lua/platform Lua/src \
-							   lmic
+							   lmic ./../
 							   
 COMPONENT_PRIV_INCLUDEDIRS := 

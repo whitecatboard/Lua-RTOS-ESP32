@@ -57,7 +57,7 @@ DIR *opendir(const char *name) {
 	int rc = 0;
 	char *fname;
 
-	fname = mount_full_path(name);
+	fname = mount_resolve_to_physical(name);
 
 	if ((fd = open(fname, 0)) == -1)
 		return NULL;

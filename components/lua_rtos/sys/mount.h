@@ -32,18 +32,17 @@
 #define	_SYSCALLS_MOUNT_H
 
 char *mount_normalize_path(const char *path);
-int mount_dirs(const char *dev, const char*path);
 char *mount_readdir(const char *dev, const char*path, int idx, char *buf);
 const char *mount_device(const char *path);
-char *mount_root(char *path);
+const char *mount_path(const char *path);
 void mount_set_mounted(const char *device, unsigned int mounted);
-char *mount_primary_or_secondary(const char *path);
-char *mount_secondary_or_primary(const char *path);
 int mount_is_mounted(const char *device);
-int primary_is_mounted();
 const char *mount_default_device();
-int primary_is_mounted();
-char *mount_full_path(const char *path);
+char *mount_resolve_to_physical(const char *path);
+char *mount_resolve_to_logical(const char *path);
+const char *mount_get_device_from_path(const char *path, char **rpath);
+const char *mount_get_mount_from_path(const char *path, char **rpath);
+int mount_is_mounted(const char *device);
 
 #endif
 

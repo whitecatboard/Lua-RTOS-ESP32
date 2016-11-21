@@ -36,9 +36,11 @@
 #include <sys/reent.h>
 #include <sys/syslog.h>
 #include <sys/console.h>
+#include <sys/mount.h>
+#include <sys/time.h>
+
 #include <drivers/cpu.h>
 #include <drivers/uart.h>
-#include <sys/time.h>
 
 extern void _syscalls_init();
 extern void _pthread_init();
@@ -60,6 +62,7 @@ extern int spiffs_init();
 
 void vfs_tty_register();
 void vfs_spiffs_register();
+void vfs_fat_register();
 
 void _sys_init() {
 	// TO DO: do this only if RTC is not set
@@ -102,22 +105,16 @@ void _sys_init() {
     	vfs_spiffs_register();
     #endif
 
-    #if USE_FAT
-        if (sd_init(0)) {
-            if (fat_init()) {
-                mount_set_mounted("sd", 1);
-            }
-        }
-    #endif
+	#if USE_FAT
+    	vfs_fat_register();
 
-    #if (USE_FAT)
-        if (mount_is_mounted("sd")) {
+    	if (mount_is_mounted("fat")) {
             // Redirect console messages to /log/messages.log ...
             closelog();
-            syslog(LOG_INFO, "redirecting console messages to /sd/log/messages.log ...");
+            syslog(LOG_INFO, "redirecting console messages to file system ...");
             openlog(__progname, LOG_NDELAY , LOG_LOCAL1);
         } else {
-        	syslog(LOG_ERR, "can't redirect console messages to /sd/log/messages.log, insert an SDCARD");
+        	syslog(LOG_ERR, "can't redirect console messages to file system, an SDCARD is needed");
         }   
     #endif
         
