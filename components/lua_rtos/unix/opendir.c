@@ -62,8 +62,6 @@ DIR *opendir(const char *name) {
 	if ((fd = open(fname, 0)) == -1)
 		return NULL;
 
-	free(fname);
-
 	rc = fcntl(fd & 0b111111111111, F_SETFD, 1);
 	if (rc == -1 ||
 	    (dirp = (DIR *)malloc(sizeof(DIR))) == NULL) {

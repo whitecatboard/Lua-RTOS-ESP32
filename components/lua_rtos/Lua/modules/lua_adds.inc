@@ -75,21 +75,21 @@ static void get_prompt (lua_State *L, int firstline, char *path) {
   if (p == NULL) {
       if (firstline) {
           if (getcwd(path, PATH_MAX + 10)) {
-              path = strcat(path, " ");
-              path = strcat(path, LUA_PROMPT);
+              path = strncat(path, " ", PATH_MAX + 10);
+              path = strncat(path, LUA_PROMPT, PATH_MAX + 10);
           }
       } else {
 		  
-		  strcpy(path, LUA_PROMPT2);
+		  strncpy(path, LUA_PROMPT2, PATH_MAX + 10);
       }
   } else {
-      strcpy(path, p);
+      strncpy(path, p, PATH_MAX + 10);
   }
 }
 
 static int luaos_pushline (lua_State *L, int firstline) {
   char buffer[LUA_MAXINPUT];
-  char prmt[PATH_MAX + 20];
+  char prmt[PATH_MAX + 21];
   
   char *b = buffer;
   size_t l;

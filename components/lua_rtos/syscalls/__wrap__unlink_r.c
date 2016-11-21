@@ -17,7 +17,7 @@ int IRAM_ATTR __wrap__unlink_r(struct _reent *r, const char *path) {
 	ppath = mount_resolve_to_physical(path);
 	res = __real__unlink_r(r, ppath);
 
-	if (path != ppath) free(ppath);
+	free(ppath);
 
 	return res;
 }

@@ -14,6 +14,7 @@
 
 extern spiffs fs;
 extern int spiffs_result(int res);
+extern int fat_result(int res);
 
 int _getdents_spiffs(struct file *fp, void *buff, int size) {
 	int res = 0;
@@ -35,11 +36,11 @@ int _getdents_spiffs(struct file *fp, void *buff, int size) {
 	        }
 	    }
 
-	    char mdir[PATH_MAX];
+	    char mdir[PATH_MAX + 1];
 	    if (mount_readdir("spiffs", fp->f_path, 0, mdir)) {
 	    	struct dirent ent;
 
-	    	strcpy(ent.d_name, mdir);
+	    	strncpy(ent.d_name, mdir, PATH_MAX);
 	        ent.d_type = DT_DIR;
 	        ent.d_reclen = sizeof(struct dirent);
 	        ent.d_ino = 1;
@@ -158,15 +159,15 @@ int _getdents_fat(struct file *fp, void *buff, int size) {
 	    res = f_opendir((FDIR *)fp->f_dir, fp->f_path);
 	    if (res != FR_OK) {
 	        free(fp->f_dir);
-	        errno = res;
+	        errno = fat_result(res);
 	        return -1;
 	    }
 
-	    char mdir[PATH_MAX];
+	    char mdir[PATH_MAX + 1];
 	    if (mount_readdir("fat", fp->f_path, 0, mdir)) {
 	    	struct dirent ent;
 
-	    	strcpy(ent.d_name, mdir);
+	    	strncpy(ent.d_name, mdir, PATH_MAX);
 	        ent.d_type = DT_DIR;
 	        ent.d_reclen = sizeof(struct dirent);
 	        ent.d_ino = 1;

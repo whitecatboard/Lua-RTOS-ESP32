@@ -71,15 +71,15 @@ static u8_t *my_spiffs_cache;
  */
 static int is_dir(const char *path) {
     spiffs_DIR d;
-    char npath[PATH_MAX];
+    char npath[PATH_MAX + 1];
     int res = 0;
 
     struct spiffs_dirent e;
 
     // Add /. to path
-    strcpy(npath, path);
+    strncpy(npath, path, PATH_MAX);
     if (strcmp(path,"/") != 0) {
-        strcat(npath,"/.");
+        strncat(npath,"/.", PATH_MAX);
     }
 
     SPIFFS_opendir(&fs, "/", &d);
@@ -412,10 +412,20 @@ static int IRAM_ATTR vfs_spiffs_stat(const char * path, struct stat * st) {
 }
 
 static int IRAM_ATTR vfs_spiffs_unlink(const char *path) {
+    char npath[PATH_MAX + 1];
 	int res = 0;
 
+    strncpy(npath, path, PATH_MAX);
+
+    if (is_dir(path)) {
+	    // Add /. to path
+	    if (strcmp(path,"/") != 0) {
+	        strncat(npath,"/.", PATH_MAX);
+	    }
+	}
+
     // Open SPIFFS file
-	spiffs_file FP = SPIFFS_open(&fs, path, SPIFFS_RDWR, 0);
+	spiffs_file FP = SPIFFS_open(&fs, npath, SPIFFS_RDWR, 0);
     if (FP < 0) {
     	res = spiffs_result(fs.err_code);
     	errno = res;

@@ -110,8 +110,8 @@ static int more(const char *path, int stop) {
     }
 
     if (stop) {
-        console_clear();
         console_size(&rows, &cols);
+        console_clear();
 
         rows--;
         lines = 0;
@@ -193,9 +193,9 @@ static int os_cd (lua_State *L) {
 }
 
 static int os_pwd (lua_State *L) {
-    char path[PATH_MAX];
+    char path[PATH_MAX + 1];
     
-    if (getcwd(path, (size_t)sizeof(path))) {
+    if (getcwd(path, PATH_MAX)) {
         lua_pushstring(L, path);
         return 1;
     } else {
@@ -205,11 +205,11 @@ static int os_pwd (lua_State *L) {
 
 static int os_mkdir (lua_State *L) {
     const char *path = luaL_optstring(L, 1, NULL);
-    char cpath[PATH_MAX];
+    char cpath[PATH_MAX + 1];
     
     // If path is not present get the current directory as path
     if (!path) {
-        if (!getcwd(cpath, (size_t)sizeof(cpath))) {
+        if (!getcwd(cpath, PATH_MAX)) {
             return luaL_fileresult(L, 0, cpath);
         }    
         
@@ -233,7 +233,7 @@ static int os_ls (lua_State *L) {
     
     // If path is not present get the current directory as path
     if (!path) {
-        if (!getcwd(cpath, (size_t)sizeof(cpath))) {
+        if (!getcwd(cpath, PATH_MAX)) {
             return luaL_fileresult(L, 0, cpath);
         }    
         
@@ -254,7 +254,7 @@ static int os_ls (lua_State *L) {
         strcat(tpath,"/");
         strcat(tpath,ent->d_name);
 
-        if (strcmp((const char *)mount_device(tpath),"sd") == 0) {
+        if (strcmp((const char *)mount_device(tpath),"fat") == 0) {
                 
             stat(tpath, &sb);
         // TO DO

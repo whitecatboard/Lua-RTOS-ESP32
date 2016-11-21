@@ -27,40 +27,113 @@
  * this software.
  */
 
+#include "syscalls.h"
+
+#include <spiffs.h>
+#include <esp_spiffs.h>
+#include <spiffs_nucleus.h>
+
+#include <fat/ff.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/stat.h> 
 #include <sys/types.h> 
+#include <sys/mount.h>
 
-// extern char *normalize_path(const char *path);
+extern spiffs fs;
+extern int fat_result(int res);
+extern int spiffs_result(int res);
 
-int mkdir(const char *path, mode_t mode) {
-/*
-    const char *device;
-    char *npath;
+static int _mkdir_fat(const char *path, mode_t mode) {
+	int res;
+
+	res = f_mkdir(path);
+	if (res != 0) {
+		errno = fat_result(res);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int _mkdir_spiffs(const char *path, mode_t mode) {
+    char npath[PATH_MAX + 1];
     int res;
-    const struct devops *ops;
-    
-    npath = normalize_path(path);
-    if (!npath) {
-        return -1;
+
+    // Add /. to path
+    strncpy(npath, path, PATH_MAX);
+    if ((strcmp(path,"/") != 0) && (strcmp(path,"/.") != 0)) {
+        strncat(npath,"/.", PATH_MAX);
     }
-    
-    // Get device, and it's ops
-    device = mount_device(npath);
-    ops = getdevops(device);
 
-    // Get root path
-    npath = mount_root(npath);
-
-    // Call op
-    res = (*ops->fo_mkdir)(npath);  
-    if (res) {
+    spiffs_file fd = SPIFFS_open(&fs, npath, SPIFFS_CREAT, 0);
+    if (fd < 0) {
+        res = spiffs_result(fs.err_code);
         errno = res;
         return -1;
     }
-*/
 
-    return 0;    
+    if (SPIFFS_close(&fs, fd) < 0) {
+        res = spiffs_result(fs.err_code);
+        errno = res;
+        return -1;
+    }
+
+    return 0;
+}
+
+int mkdir(const char *path, mode_t mode) {
+	const char *device;
+	char *ppath;
+	char *rpath;
+	int fd;
+
+	// Get physical path
+	ppath = mount_resolve_to_physical(path);
+	if (!ppath) {
+		errno = EFAULT;
+		return -1;
+	}
+
+	// Test for file existence
+	errno = 0;
+
+	if ((fd = open(ppath, 0))) {
+		if (errno == 0) {
+			// File exists
+			free(ppath);
+			close(fd);
+			errno = EEXIST;
+			return -1;
+		}
+	}
+
+	// File doesn't exists, create directory
+	close(fd);
+
+	// Get device
+	device = mount_get_device_from_path(ppath, &rpath);
+	if (!device) {
+		free(ppath);
+		errno = EFAULT;
+		return -1;
+	}
+
+	free(ppath);
+
+	if (strcmp("fat",device) == 0) {
+		return _mkdir_fat(rpath, mode);
+	} else if (strcmp("spiffs",device) == 0) {
+		return _mkdir_spiffs(rpath, mode);
+	} else {
+		errno = EFAULT;
+		return -1;
+	}
+
+	return 0;
 }
 

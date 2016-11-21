@@ -247,7 +247,7 @@ char *mount_normalize_path(const char *path) {
     int is_dot_dot = 0;
     int plen = 0;
 
-    rpath = malloc(PATH_MAX);
+    rpath = malloc(PATH_MAX + 1);
     if (!rpath) {
         errno = ENOMEM;
         return NULL;
@@ -261,17 +261,17 @@ char *mount_normalize_path(const char *path) {
         }
 
         if (*(rpath + strlen(rpath) - 1) != '/') {
-            rpath = strcat(rpath, "/");
+            rpath = strncat(rpath, "/", PATH_MAX);
         }
 
-        rpath = strcat(rpath, path);
+        rpath = strncat(rpath, path, PATH_MAX);
     } else {
-        strcpy(rpath, path);
+        strncpy(rpath, path, PATH_MAX);
     }
 
     plen = strlen(rpath);
     if (*(rpath + plen - 1) != '/') {
-        rpath = strcat(rpath, "/");
+        rpath = strncat(rpath, "/", PATH_MAX);
         plen++;
     }
 
@@ -467,28 +467,30 @@ char *mount_resolve_to_physical(const char *path) {
 		mount_get_mount_from_path(npath, &rpath);
 
 		// Allocate space for physical path, and build it
-		ppath = (char *)malloc(PATH_MAX);
+		ppath = (char *)malloc(PATH_MAX + 1);
 		if (!ppath) {
+			free(npath);
 			return NULL;
 		}
 
-		strcpy(ppath,"/");
+		strncpy(ppath,"/", PATH_MAX);
 
-		ppath = strcat(ppath,device);
+		ppath = strncat(ppath,device, PATH_MAX);
 
 		if (*rpath != '/') {
-			ppath = strcat(ppath,"/");
+			ppath = strncat(ppath,"/", PATH_MAX);
 		}
 
-		ppath = strcat(ppath,rpath);
+		ppath = strncat(ppath,rpath, PATH_MAX);
 	} else {
 		// Allocate space for physical path, and build it
-		ppath = (char *)malloc(PATH_MAX);
+		ppath = (char *)malloc(PATH_MAX + 1);
 		if (!ppath) {
+			free(npath);
 			return NULL;
 		}
 
-		strcpy(ppath, npath);
+		strncpy(ppath, npath, PATH_MAX);
 	}
 
 	free(npath);
@@ -518,32 +520,32 @@ char *mount_resolve_to_logical(const char *path) {
 	if ((device = mount_get_device_from_path(path, &rpath))) {
 		mount_path = mount_device_mount_path(device);
 		if (mount_path) {
-			lpath = (char *)malloc(PATH_MAX);
+			lpath = (char *)malloc(PATH_MAX + 1);
 			if (!lpath) {
 				free(npath);
 				return NULL;
 			}
 
-			strcpy(lpath, mount_path);
+			strncpy(lpath, mount_path, PATH_MAX);
 
 			if (*rpath != '/') {
-				lpath = strcat(lpath,"/");
+				lpath = strncat(lpath,"/", PATH_MAX);
 			}
 
-			lpath = strcat(lpath,rpath);
+			lpath = strncat(lpath,rpath, PATH_MAX);
 
 			if (*(lpath + strlen(lpath) - 1) == '/') {
 				*(lpath + strlen(lpath) - 1) = '\0';
 			}
 		}
 	} else {
-		lpath = (char *)malloc(PATH_MAX);
+		lpath = (char *)malloc(PATH_MAX + 1);
 		if (!lpath) {
 			free(npath);
 			return NULL;
 		}
 
-		strcpy(lpath, npath);
+		strncpy(lpath, npath, PATH_MAX);
 	}
 
 	free(npath);

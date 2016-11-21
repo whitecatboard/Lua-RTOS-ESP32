@@ -39,7 +39,7 @@
 
 #include <sys/mount.h>
 
-char currdir[PATH_MAX] = "";
+char currdir[PATH_MAX + 1] = "";
 
 int chdir(const char *path) {
     struct stat statb;
@@ -76,7 +76,7 @@ int chdir(const char *path) {
     	return -1;
     }
 
-    strcpy(currdir, lpath);
+    strncpy(currdir, lpath, PATH_MAX);
 
     free(lpath);
 	free(ppath);

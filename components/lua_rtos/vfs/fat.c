@@ -62,7 +62,7 @@ static FATFS sd_fs[NSD];
  * This function translate error codes from FAT to errno error codes
  *
  */
-static int IRAM_ATTR fat_result(FRESULT res) {
+int IRAM_ATTR fat_result(FRESULT res) {
     switch (res) {
         case FR_IS_DIR:
             return EISDIR;

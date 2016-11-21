@@ -20,8 +20,8 @@ int IRAM_ATTR __wrap__rename_r(struct _reent *r, const char *src, const char *ds
 
 	res = __real__rename_r(r, ppath_src, ppath_dst);
 
-	if (src != ppath_src) free(ppath_src);
-	if (dst != ppath_dst) free(ppath_dst);
+	free(ppath_src);
+	free(ppath_dst);
 
 	return res;
 }
