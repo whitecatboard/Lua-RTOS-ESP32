@@ -27,7 +27,10 @@
  * this software.
  */
 
+#include <stdlib.h>
+
 #include "esp_spiffs.h"
+#include "esp_attr.h"
 
 #include "spiffs.h"
 
@@ -114,7 +117,7 @@ s32_t esp32_spi_flash_write(u32_t addr, u32_t size, const u8_t *src) {
     return SPIFFS_OK;
 }
 
-s32_t esp32_spi_flash_erase(u32_t addr, u32_t size) {
+s32_t IRAM_ATTR esp32_spi_flash_erase(u32_t addr, u32_t size) {
 	if (spi_flash_erase_sector(addr >> 12) != 0) {
 		return SPIFFS_ERR_INTERNAL;
 	}

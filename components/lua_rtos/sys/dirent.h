@@ -45,7 +45,6 @@
 #ifdef _POSIX_SOURCE
 typedef void *  DIR;
 #else
-
 #define d_ino       d_fileno    /* backward compatibility */
 
 /* definitions for library routines operating on directories. */

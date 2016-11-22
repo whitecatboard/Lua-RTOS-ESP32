@@ -136,7 +136,7 @@ static int IRAM_ATTR vfs_spiffs_open(const char *path, int flags, int mode) {
         return -1;
     }
 
-    fp->f_fd      = fd;
+	fp->f_fd      = fd;
     fp->f_fs      = NULL;
     fp->f_dir     = NULL;
     fp->f_path 	  = NULL;

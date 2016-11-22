@@ -1,6 +1,6 @@
 #include <sys/types.h>
 
-#define NDFILE 20
+#define NDFILE 10
 
 struct filedesc {
     struct  file **fd_ofiles;   /* file structures for open files */

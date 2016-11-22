@@ -21,13 +21,13 @@ int _getdents_spiffs(struct file *fp, void *buff, int size) {
 
 	// Open directory, if needed
 	if (!fp->f_dir) {
-	    fp->f_dir = malloc(sizeof(spiffs_DIR));
-	    if (!fp->f_dir) {
+		spiffs_DIR *dir = malloc(sizeof(spiffs_DIR));
+	    if (!dir) {
 	        return ENOMEM;
 	    }
 
-	    if (!SPIFFS_opendir(&fs, fp->f_path, fp->f_dir)) {
-	        free(fp->f_dir);
+	    if (!SPIFFS_opendir(&fs, fp->f_path, dir)) {
+	        free(dir);
 
 	        res = spiffs_result(fs.err_code);
 	        if (res < 0) {
@@ -35,6 +35,9 @@ int _getdents_spiffs(struct file *fp, void *buff, int size) {
 	        	return -1;
 	        }
 	    }
+
+
+	    fp->f_dir = dir;
 
 	    char mdir[PATH_MAX + 1];
 	    if (mount_readdir("spiffs", fp->f_path, 0, mdir)) {
@@ -131,7 +134,7 @@ int _getdents_spiffs(struct file *fp, void *buff, int size) {
         ent.d_namlen = len;
         ent.d_fsize = pe->size;
 
-        strncpy(ent.d_name, fn, 255);
+        strncpy(ent.d_name, fn, MAXNAMLEN);
 
         entries++;
 
@@ -151,17 +154,20 @@ int _getdents_fat(struct file *fp, void *buff, int size) {
 
 	// Open directory, if needed
 	if (!fp->f_dir) {
-	    fp->f_dir = malloc(sizeof(FDIR));
-	    if (!fp->f_dir) {
+		FDIR *dir = malloc(sizeof(FDIR));
+	    if (!dir) {
 	        return ENOMEM;
 	    }
 
-	    res = f_opendir((FDIR *)fp->f_dir, fp->f_path);
+	    res = f_opendir(dir, fp->f_path);
 	    if (res != FR_OK) {
-	        free(fp->f_dir);
+	        free(dir);
+
 	        errno = fat_result(res);
 	        return -1;
 	    }
+
+	    fp->f_dir = dir;
 
 	    char mdir[PATH_MAX + 1];
 	    if (mount_readdir("fat", fp->f_path, 0, mdir)) {
@@ -181,14 +187,12 @@ int _getdents_fat(struct file *fp, void *buff, int size) {
 
 	struct dirent ent;
 	FILINFO fno;
+	char lfname[(_MAX_LFN + 1) * 2];
+
     char *fn;
     int entries = 0;
 
-    fno.lfname = malloc((_MAX_LFN + 1) * 2);
-    if (!fno.lfname) {
-        return ENOMEM;
-    }
-
+    fno.lfname = lfname;
     fno.lfsize = (_MAX_LFN + 1) * 2;
 
     ent.d_name[0] = '\0';
@@ -246,7 +250,7 @@ int _getdents_fat(struct file *fp, void *buff, int size) {
             continue;
         }
 
-        strcpy(ent.d_name, fn);
+        strncpy(ent.d_name, fn, MAXNAMLEN);
 
         entries++;
 

@@ -72,6 +72,9 @@
 #include <esp_attr.h>
 #include <freertos/xtensa_api.h>
 #include <soc/soc.h>
+#include <soc/uart_reg.h>
+#include <soc/io_mux_reg.h>
+#include <driver/uart.h>
 
 
 // Flags for determine some UART states
@@ -90,7 +93,7 @@ static const char *names[] = {
 
 struct uart {
     uint8_t          flags;
-    QueueHandle_t q;         // RX queue
+    QueueHandle_t q;            // RX queue
     uint16_t         qs;        // Queue size
     uint32_t         brg;       // Queue size
 };
@@ -203,34 +206,23 @@ static int IRAM_ATTR queue_byte(uint8_t unit, uint8_t byte, int *signal) {
 }
 
 void  IRAM_ATTR uart_rx_intr_handler(void *para) {
-    BaseType_t xHigherPriorityTaskWoken;
-    xHigherPriorityTaskWoken = pdFALSE;
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     uint32_t uart_intr_status = 0;
 	uint8_t byte;
 	int signal = 0;
 	int unit = 0;
 
 	for(;unit < NUART;unit++) {
+		if (!(uart[unit].flags & UART_FLAG_INIT)) continue;
+
 		uart_intr_status = READ_PERI_REG(UART_INT_ST_REG(unit)) ;
 
 	    while (uart_intr_status != 0x0) {
 	        if (UART_FRM_ERR_INT_ST == (uart_intr_status & UART_FRM_ERR_INT_ST)) {
 	            WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_FRM_ERR_INT_CLR);
 	        } else if (UART_RXFIFO_FULL_INT_ST == (uart_intr_status & UART_RXFIFO_FULL_INT_ST)) {
-	            while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT) {
-					byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
-					if (queue_byte(unit, byte, &signal)) {
-			            // Put byte to UART queue
-			            xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
-					} else {
-						if (signal) {
-							_pthread_queue_signal(signal);
-						}
-					}
-	            }
-
 	            WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_RXFIFO_FULL_INT_CLR);
-	        } else if (UART_RXFIFO_TOUT_INT_ST == (uart_intr_status & UART_RXFIFO_TOUT_INT_ST)) {
+
 	            while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT) {
 					byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
 					if (queue_byte(unit, byte, &signal)) {
@@ -242,20 +234,27 @@ void  IRAM_ATTR uart_rx_intr_handler(void *para) {
 						}
 					}
 	            }
-
+	        } else if (UART_RXFIFO_TOUT_INT_ST == (uart_intr_status & UART_RXFIFO_TOUT_INT_ST)) {
 	            WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_RXFIFO_TOUT_INT_CLR);
-	        } else if (UART_TXFIFO_EMPTY_INT_ST == (uart_intr_status & UART_TXFIFO_EMPTY_INT_ST)) {
-	            WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_TXFIFO_EMPTY_INT_CLR);
-	            CLEAR_PERI_REG_MASK(UART_INT_ENA_REG(unit), UART_TXFIFO_EMPTY_INT_ENA);
+
+	            while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT) {
+					byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
+					if (queue_byte(unit, byte, &signal)) {
+			            // Put byte to UART queue
+			            xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
+					} else {
+						if (signal) {
+							_pthread_queue_signal(signal);
+						}
+					}
+	            }
 	        }
 
 	        uart_intr_status = READ_PERI_REG(UART_INT_ST_REG(unit)) ;
 	    }
 	}
 
-	if (xHigherPriorityTaskWoken) {
-		portYIELD_FROM_ISR();
-	}
+	portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
 }
 
 // Inits UART
@@ -295,7 +294,8 @@ void uart_init_interrupts(uint8_t unit) {
     }
 
     uint32_t reg_val = 0;
-	uint32_t mask = UART_RXFIFO_TOUT_INT_ENA | UART_FRM_ERR_INT_ENA | UART_RXFIFO_FULL_INT_ENA | UART_TXFIFO_EMPTY_INT_ENA;
+	//uint32_t mask = UART_RXFIFO_TOUT_INT_ENA | UART_FRM_ERR_INT_ENA | UART_RXFIFO_FULL_INT_ENA | UART_TXFIFO_EMPTY_INT_ENA;
+	uint32_t mask = UART_RXFIFO_TOUT_INT_ENA | UART_FRM_ERR_INT_ENA | UART_RXFIFO_FULL_INT_ENA;
 		
 	ESP_INTR_DISABLE(ETS_UART_INUM);
 

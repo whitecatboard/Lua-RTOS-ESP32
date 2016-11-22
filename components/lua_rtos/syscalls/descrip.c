@@ -155,8 +155,10 @@ static int fdalloc(int want, int *result) {
 
         mtx_unlock(&fd_mtx);
 
-        return (EMFILE);
+        break;
     }
+
+    return (EMFILE);
 }
 
 /*

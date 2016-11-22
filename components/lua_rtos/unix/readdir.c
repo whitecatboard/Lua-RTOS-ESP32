@@ -35,35 +35,36 @@
 /*
  * get next entry in a directory.
  */
-struct dirent *
-readdir(DIR *dirp) {
-	  register struct dirent *dp;
+struct dirent *readdir(DIR *dirp) {
+  register struct dirent *dp;
 
-	  for (;;) {
-	    if (dirp->dd_loc == 0) {
-	      dirp->dd_size = getdents (dirp->dd_fd,
-					dirp->dd_buf,
-					dirp->dd_len);
+  for (;;) {
+	if (dirp->dd_loc == 0) {
+	  dirp->dd_size = getdents (dirp->dd_fd,
+				dirp->dd_buf,
+				dirp->dd_len);
 
-	      if (dirp->dd_size <= 0) {
-	        return NULL;
-	      }
-	    }
-
-	    if (dirp->dd_loc >= dirp->dd_size) {
-	      dirp->dd_loc = 0;
-	      continue;
-	    }
-
-	    dp = (struct dirent *)(dirp->dd_buf + dirp->dd_loc);
-	    if (dp->d_reclen <= 0 ||
-		  dp->d_reclen > dirp->dd_len + 1 - dirp->dd_loc) {
-	      return NULL;
-	    }
-
-	    dirp->dd_loc += dp->d_reclen;
-	    if (dp->d_ino == 0)
-	      continue;
-	    return (dp);
+	  if (dirp->dd_size <= 0) {
+		return NULL;
 	  }
+	}
+
+	if (dirp->dd_loc >= dirp->dd_size) {
+	  dirp->dd_loc = 0;
+	  continue;
+	}
+
+	dp = (struct dirent *)(dirp->dd_buf + dirp->dd_loc);
+	if (dp->d_reclen <= 0 ||
+	  dp->d_reclen > dirp->dd_len + 1 - dirp->dd_loc) {
+	  return NULL;
+	}
+
+	dirp->dd_loc += dp->d_reclen;
+	if (dp->d_ino == 0)
+	  continue;
+	return (dp);
+  }
+
+  return NULL;
 }

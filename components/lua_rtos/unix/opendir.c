@@ -55,12 +55,16 @@ DIR *opendir(const char *name) {
 	register DIR *dirp;
 	register int fd;
 	int rc = 0;
-	char *fname;
+	char *ppath;
 
-	fname = mount_resolve_to_physical(name);
+	ppath = mount_resolve_to_physical(name);
 
-	if ((fd = open(fname, 0)) == -1)
+	if ((fd = open(ppath, 0)) == -1) {
+		free(ppath);
 		return NULL;
+	}
+
+	free(ppath);
 
 	rc = fcntl(fd & 0b111111111111, F_SETFD, 1);
 	if (rc == -1 ||
@@ -86,9 +90,6 @@ DIR *opendir(const char *name) {
 	dirp->dd_fd = fd;
 	dirp->dd_loc = 0;
 	dirp->dd_seek = 0;
-	/*
-	 * Set up seek point for rewinddir.
-	 */
 
 	return dirp;
 }

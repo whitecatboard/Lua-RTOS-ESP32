@@ -99,7 +99,7 @@ static int IRAM_ATTR vfs_fat_open(const char *path, int flags, int mode) {
         return -1;
     }
 
-    fp->f_fd      = fd;
+	fp->f_fd      = fd;
     fp->f_fs      = NULL;
     fp->f_dir     = NULL;
     fp->f_path 	  = NULL;
@@ -316,15 +316,20 @@ static off_t IRAM_ATTR vfs_fat_lseek(int fd, off_t size, int mode) {
 	int res;
     int off = size;
 
-	// Get file from file descriptor
+    // Get file from file descriptor
 	if (!(fp = get_file(fd))) {
 		errno = EBADF;
 		return -1;
 	}
 
     switch (mode) {
-        case SEEK_CUR: off = ((FIL *)fp->f_fs)->fptr + size;break;
-        case SEEK_END: off = ((FIL *)fp->f_fs)->fsize - size;break;
+        case SEEK_CUR:
+        	off = ((FIL *)fp->f_fs)->fptr + size;break;
+
+        case SEEK_END:
+        	off = ((FIL *)fp->f_fs)->fsize - size;
+        	f_sync((FIL *)fp->f_fs);
+        	break;
     }
 
     res = f_lseek(((FIL *)fp->f_fs), off);
