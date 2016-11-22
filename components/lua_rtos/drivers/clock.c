@@ -51,7 +51,7 @@ void newTick(void);
 void _clock_init(void) {
     tseconds = BUILD_TIME;
 
-    esp_register_freertos_tick_hook(&newTick);
+    //esp_register_freertos_tick_hook(&newTick);
 }
 
 void IRAM_ATTR newTick(void) {
