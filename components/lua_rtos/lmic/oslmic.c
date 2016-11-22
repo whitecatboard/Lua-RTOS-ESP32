@@ -20,9 +20,6 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 
-#define evLMIC_IQR ( 1 << 0 )
-extern EventGroupHandle_t lmicIrqEvent;
-
 // LMIC run loop, as a FreeRTOS task
 void os_runloop(void *pvParameters);
 
@@ -125,10 +122,6 @@ void os_runloop(void *pvParameters) {
 
 	    if (j) { // run job callback
 	        j->func(j);
-	    } else {
-	    	if (!OS.runnablejobs && !OS.scheduledjobs) {
-	    		xEventGroupWaitBits(lmicIrqEvent, evLMIC_IQR, pdTRUE, pdFALSE, portMAX_DELAY);
-	    	}
 	    }
 	}
 }

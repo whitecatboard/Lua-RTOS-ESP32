@@ -51,22 +51,12 @@
 #include "soc/gpio_reg.h"
 
 /*
- * This is an event group handler for resume os_runloop.
- * When os_runloop has nothing to do waits for an event, set when interrupt
- * on dio lines are triggered.
- */
-#define evLMIC_IQR ( 1 << 0 )
-
-EventGroupHandle_t lmicIrqEvent;
-
-/*
  * This is an adapter function for call radio_irq_handler from a callback
  */
 static osjob_t dio_job;
 
 static void deferred_dio_intr_handler(osjob_t *j) {
 	radio_irq_handler(0);
-	xEventGroupSetBits(lmicIrqEvent, evLMIC_IQR);
 }
 
 /*
@@ -125,9 +115,6 @@ void hal_init (void) {
 		gpio_set_intr_type(LMIC_DIO2, GPIO_INTR_POSEDGE);
 		gpio_intr_enable(LMIC_DIO2);
 	}
-
-    // Create lmicIrqEvent
-	lmicIrqEvent = xEventGroupCreate();
 }
 
 /*
@@ -178,7 +165,6 @@ void hal_disableIRQs (void) {
 }
 
 void hal_enableIRQs (void) {
-	xEventGroupSetBits(lmicIrqEvent, evLMIC_IQR);
 }
 
 void hal_sleep (void) {
