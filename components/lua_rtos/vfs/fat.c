@@ -28,6 +28,9 @@
  */
 
 #include "luartos.h"
+
+#if USE_FAT
+
 #include "freertos/FreeRTOS.h"
 #include "esp_vfs.h"
 #include "esp_attr.h"
@@ -410,3 +413,5 @@ void vfs_fat_register() {
     }
 
 }
+
+#endif

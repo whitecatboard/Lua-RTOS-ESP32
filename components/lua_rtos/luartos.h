@@ -144,6 +144,27 @@
 #define LMIC_DIO2 33
 #endif
 
+// SD Card / FAT
+#if CONFIG_LUA_RTOS_USE_FAT
+#define USE_FAT 1
+#define USE_SD 1
+#else
+#define USE_FAT 0
+#define USE_SD 0
+#endif
+
+#ifdef CONFIG_LUA_RTOS_SD_SPI
+#define SD_SPI CONFIG_LUA_RTOS_SD_SPI
+#else
+#define SD_SPI 2
+#endif
+
+#ifdef CONFIG_LUA_RTOS_SD_CS
+#define SD_CS CONFIG_LUA_RTOS_SD_CS
+#else
+#define SD_CS 15
+#endif
+
 #define THREAD_LOCAL_STORAGE_POINTER_ID 0
 
 #endif

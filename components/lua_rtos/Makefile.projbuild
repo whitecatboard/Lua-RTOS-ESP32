@@ -45,12 +45,6 @@ CFLAGS += -DLED_ACT=4					 	    # GPIO for activity led (0 if not led)
 CFLAGS += -DLED_DBG=0 					 	    # GPIO for debug led (0 if not led)
 CFLAGS += -DPATH_MAX=64
 
-#
-# File system configuration
-# 
-CFLAGS += -DUSE_FAT=1                 # Enable FAT
-
-
 # LMIC configuration
 CFLAGS += -DUS_PER_OSTICK=20
 CFLAGS += -DOSTICKS_PER_SEC=50000			
@@ -62,9 +56,6 @@ CFLAGS += -DLMIC_DEBUG_LEVEL=1
 #
 # SDCARD configuration
 # 
-CFLAGS += -DUSE_SD=USE_FAT             # Enable SDCARD
-CFLAGS += -DSD_SPI=2				   # SPI unit
-CFLAGS += -DSD_CS=15				   # CS
 CFLAGS += -DSD_LED=LED_ACT			   # LED
 CFLAGS += -DSD_KHZ=15000	           # Speed
 

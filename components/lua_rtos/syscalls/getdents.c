@@ -1,3 +1,5 @@
+#include "luartos.h"
+
 #include <syscalls/syscalls.h>
 
 #include <spiffs.h>
@@ -16,6 +18,7 @@ extern spiffs fs;
 extern int spiffs_result(int res);
 extern int fat_result(int res);
 
+#if USE_SPIFFS
 int _getdents_spiffs(struct file *fp, void *buff, int size) {
 	int res = 0;
 
@@ -148,7 +151,9 @@ int _getdents_spiffs(struct file *fp, void *buff, int size) {
     	return 0;
     }
 }
+#endif
 
+#if USE_FAT
 int _getdents_fat(struct file *fp, void *buff, int size) {
 	int res = 0;
 
@@ -264,6 +269,7 @@ int _getdents_fat(struct file *fp, void *buff, int size) {
     	return 0;
     }
 }
+#endif
 
 int getdents (int fd, void *buff, int size) {
 	struct file *fp;
@@ -274,11 +280,17 @@ int getdents (int fd, void *buff, int size) {
 		return -1;
 	}
 
+#if USE_SPIFFS
 	if (fp->f_fs_type == FS_SPIFFS) {
 		return _getdents_spiffs(fp, buff, size);
-	} else if (fp->f_fs_type == FS_FAT) {
-		return _getdents_fat(fp, buff, size);
-	} else {
-		return -1;
 	}
+#endif
+
+#if USE_FAT
+	if (fp->f_fs_type == FS_FAT) {
+		return _getdents_fat(fp, buff, size);
+	}
+#endif
+
+	return -1;
 }

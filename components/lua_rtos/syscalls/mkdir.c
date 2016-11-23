@@ -27,6 +27,8 @@
  * this software.
  */
 
+#include "luartos.h"
+
 #include "syscalls.h"
 
 #include <spiffs.h>
@@ -49,6 +51,7 @@ extern spiffs fs;
 extern int fat_result(int res);
 extern int spiffs_result(int res);
 
+#if USE_FAT
 static int _mkdir_fat(const char *path, mode_t mode) {
 	int res;
 
@@ -60,7 +63,9 @@ static int _mkdir_fat(const char *path, mode_t mode) {
 
 	return 0;
 }
+#endif
 
+#if USE_SPIFFS
 static int _mkdir_spiffs(const char *path, mode_t mode) {
     char npath[PATH_MAX + 1];
     int res;
@@ -86,6 +91,7 @@ static int _mkdir_spiffs(const char *path, mode_t mode) {
 
     return 0;
 }
+#endif
 
 int mkdir(const char *path, mode_t mode) {
 	const char *device;
@@ -126,15 +132,18 @@ int mkdir(const char *path, mode_t mode) {
 
 	free(ppath);
 
+#if USE_FAT
 	if (strcmp("fat",device) == 0) {
 		return _mkdir_fat(rpath, mode);
-	} else if (strcmp("spiffs",device) == 0) {
+	}
+#endif
+
+#if USE_SPIFFS
+	if (strcmp("spiffs",device) == 0) {
 		return _mkdir_spiffs(rpath, mode);
-	} else {
-		errno = EFAULT;
-		return -1;
 	}
 
-	return 0;
+	errno = EFAULT;
+	return -1;
+#endif
 }
-

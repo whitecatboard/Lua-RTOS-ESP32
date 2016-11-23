@@ -51,6 +51,8 @@ menu "Lua RTOS"
   		config LUA_RTOS_USE_SPIFFS
 	  	bool "Use spiffs"
 	  	default true
+	  	help
+	  		Select for enable SPIFFS file system support. SPIFFS uses the ESP32 board flash memory.
 
 		config LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE
 		depends on LUA_RTOS_USE_SPIFFS
@@ -69,6 +71,28 @@ menu "Lua RTOS"
 	    int "Size"
 	    range 262144 1048576
 	    default 524288
+  endmenu
+  menu "FAT"
+  		config LUA_RTOS_USE_FAT
+	  	bool "Use FAT"
+	  	default false
+	  	help
+	  		Select for enable FAT file system support. Enabling this implies that you have an SD Card
+	  		appropriately connected to your ESP32 board.
+
+		config LUA_RTOS_SD_SPI
+		depends on LUA_RTOS_USE_FAT
+	    int "SDCARD SPI port"
+	    range 1 2
+	    default 2
+		help
+			Select the SPI port number where SD Card is attached
+	
+		config LUA_RTOS_SD_CS
+		depends on LUA_RTOS_USE_FAT
+	    int "SDCARD SPI CS pin"
+	    range 0 39
+	    default 15
   endmenu
   endmenu
   menu "LoRa Wan"
@@ -104,7 +128,7 @@ menu "Lua RTOS"
 	bool "sx1272"
 	endchoice
 
-	config LMIC_SPI
+	config LUA_RTOS_LMIC_SPI
 	depends on LUA_RTOS_USE_LMIC
     int "PHY SPI port"
     range 1 3
@@ -112,31 +136,31 @@ menu "Lua RTOS"
 	help
 		Select the SPI port number where phy is attached
 
-	config LMIC_CS
+	config LUA_RTOS_LMIC_CS
 	depends on LUA_RTOS_USE_LMIC
     int "PHY SPI CS pin"
     range 0 39
     default 5
 
-	config LMIC_RST
+	config LUA_RTOS_LMIC_RST
 	depends on LUA_RTOS_USE_LMIC
     int "PHY RST pin"
     range 0 39
     default 27
 
-	config LMIC_DIO0
+	config LUA_RTOS_LMIC_DIO0
 	depends on LUA_RTOS_USE_LMIC
     int "PHY DIO0 pin"
     range 0 39
     default 26
 
-	config LMIC_DIO1
+	config LUA_RTOS_LMIC_DIO1
 	depends on LUA_RTOS_USE_LMIC
     int "PHY DIO1 pin"
     range 0 39
     default 25
 
-	config LMIC_DIO2
+	config LUA_RTOS_LMIC_DIO2
 	depends on LUA_RTOS_USE_LMIC
     int "PHY DIO2 pin"
     range 0 39

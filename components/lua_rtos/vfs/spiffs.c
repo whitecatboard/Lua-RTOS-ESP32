@@ -28,6 +28,9 @@
  */
 
 #include "luartos.h"
+
+#if USE_SPIFFS
+
 #include <syscalls/syscalls.h>
 
 #include <freertos/FreeRTOS.h>
@@ -547,3 +550,5 @@ void vfs_spiffs_register() {
 
     syslog(LOG_INFO, "spiffs%d mounted", unit);
 }
+
+#endif
