@@ -25,6 +25,7 @@
 #define LRO_INTVAL(v)   {{.i = v}, LUA_TNUMINT}
 #define LRO_ROVAL(v)    {{.p = (void*)v}, LUA_TROTABLE}
 #define LRO_NILVAL      {{.p = NULL}, LUA_TNIL}
+#define LRO_STRVAL(v)   {{.i = v}, LUA_TSTRING}
 #else // #ifndef LUA_PACK_VALUE
 #define LRO_NUMVAL(v)   {.value.n = v}
 #define LRO_INTVAL(v)   {.value.i = v}

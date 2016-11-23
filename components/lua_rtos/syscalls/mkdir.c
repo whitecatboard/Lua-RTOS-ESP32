@@ -142,8 +142,8 @@ int mkdir(const char *path, mode_t mode) {
 	if (strcmp("spiffs",device) == 0) {
 		return _mkdir_spiffs(rpath, mode);
 	}
+#endif
 
 	errno = EFAULT;
 	return -1;
-#endif
 }

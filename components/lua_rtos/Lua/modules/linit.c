@@ -39,17 +39,6 @@
 ** these libs are loaded by lua.c and are readily available to any Lua
 ** program
 */
-//static const luaL_Reg loadedlibs[] = {
-//  {LUA_LOADLIBNAME, luaopen_package},
-//  {LUA_COLIBNAME, luaopen_coroutine},
-//  {LUA_UTF8LIBNAME, luaopen_utf8},
-//  {LUA_DBLIBNAME, luaopen_debug},
-//#if defined(LUA_COMPAT_BITLIB)
-//  {LUA_BITLIBNAME, luaopen_bit32},
-//#endif
-//  LINIT_REG_ADDS
-//  {NULL, NULL}
-//};
 
 #include "modules.h"
 #include <sys/debug.h>
@@ -64,6 +53,8 @@ LIB_INIT(IO, io, luaopen_io);
 LIB_INIT(STRING, string, luaopen_string);
 LIB_INIT(COROUTINE, coroutine, luaopen_coroutine);
 LIB_INIT(DEBUG, debug, luaopen_debug);
+LIB_INIT(UTF8, utf8, luaopen_utf8);
+LIB_INIT(PACKAGE, package, luaopen_package);
 
 LIB_INIT(LORA, lora, luaopen_lora);
 LIB_INIT(PACK, pack, luaopen_pack);
