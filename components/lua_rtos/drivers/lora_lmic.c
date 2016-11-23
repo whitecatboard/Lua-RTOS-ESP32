@@ -85,6 +85,17 @@ static int current_band = 868;
 // Callback function to call when data is received
 static lora_rx *lora_rx_callback = NULL;
 
+// Table for translate numeric datarates (from 0 to 7) to LMIC definitions
+static const u1_t data_rates[] = {
+	DR_SF12, DR_SF11, DR_SF10, DR_SF9, DR_SF8, DR_SF7, DR_SF7B, DR_FSK
+};
+
+// Current datarate set by user
+static u1_t current_dr = 0;
+
+// ADR active?
+static u1_t adr = 0;
+
 // This function is called from mach_dev
 void _lora_init() {
     // Create lora mutex
@@ -332,13 +343,15 @@ static void lora_init(osjob_t *j) {
     LMIC_setLinkCheckMode(0);
 
     /* adr disabled */
+    adr = 0;
     LMIC_setAdrMode(0);
 
     /* TTN uses SF9 for its RX2 window. */
     LMIC.dn2Dr = DR_SF9;
 
     /* Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library) */
-    LMIC_setDrTxpow(DR_SF12, 14);
+    current_dr = DR_SF12;
+    LMIC_setDrTxpow(current_dr, 14);
 
     xEventGroupSetBits(loraEvent, evLORA_INITED);
 }
@@ -369,16 +382,7 @@ tdriver_error *lora_setup(int band) {
 
     mtx_unlock(&lora_mtx);
     
-
     return NULL;
-}
-
-int lora_mac(const char *command, const char *value) {	
-	return LORA_OK;
-}
-
-int lora_sys(const char *command, const char *value) {
-	return LORA_OK;
 }
 
 int lora_mac_set(const char command, const char *value) {
@@ -415,24 +419,26 @@ int lora_mac_set(const char command, const char *value) {
 			break;
 		
 		case LORA_MAC_SET_DR:
+			current_dr = data_rates[atoi((char *)value)];
+
+			if (!adr) {
+				LMIC_setDrTxpow(current_dr, 14);
+			}
+
 			break;
 		
 		case LORA_MAC_SET_ADR:
-			if (strcmp(value, "on")) {
+			if (strcmp(value, "on") == 0) {
+				adr = 1;
 				LMIC_setAdrMode(1);
 			} else {
+				adr = 0;
 				LMIC_setAdrMode(0);
 			}
 			break;
 		
-		case LORA_MAC_SET_RETX:
-			break;
-		
-		case LORA_MAC_SET_AR:
-			break;
-		
 		case LORA_MAC_SET_LINKCHK:
-			if (strcmp(value, "on")) {
+			if (strcmp(value, "on") == 0) {
 				LMIC_setLinkCheckMode(1);
 			} else {
 				LMIC_setLinkCheckMode(0);
@@ -446,15 +452,10 @@ int lora_mac_set(const char command, const char *value) {
 }
 
 char *lora_mac_get(const char command) {
-	char *result;
+	char *result = NULL;
 
     mtx_lock(&lora_mtx);
 
-    if (!setup) {
-        mtx_unlock(&lora_mtx);
-        return NULL;
-    }
-	
 	switch(command) {
 		case LORA_MAC_GET_DEVADDR:
 			break;
@@ -474,6 +475,10 @@ char *lora_mac_get(const char command) {
 			break;
 
 		case LORA_MAC_GET_DR:
+			result = (char *)malloc(2);
+			if (result) {
+				sprintf(result,"%d",current_dr);
+			}
 			break;
 		
 		case LORA_MAC_GET_ADR:
@@ -489,24 +494,11 @@ char *lora_mac_get(const char command) {
 				}				
 			}
 			break;
-		
-		case LORA_MAC_GET_RETX:
-			break;
-		
-		case LORA_MAC_GET_AR:
-			break;
-		
-		case LORA_MAC_GET_MRGN:
-			break;
 	}
 
     mtx_unlock(&lora_mtx);
 
-	return NULL;
-}
-
-char *lora_sys_get(const char *command) {
-	return NULL;
+	return result;
 }
 
 int lora_join_otaa() {
@@ -520,6 +512,11 @@ int lora_join_otaa() {
     if (joined) {
         mtx_unlock(&lora_mtx);
     	return LORA_OK;
+    }
+
+    // Set DR
+    if (!adr) {
+        LMIC_setDrTxpow(current_dr, 14);
     }
 
 	LMIC_startJoining();
@@ -569,6 +566,11 @@ int lora_tx(int cnf, int port, const char *data) {
 
 	// Put message id
 	payload[payload_len] = msgid++;
+
+	// Set DR
+	if (!adr) {
+		LMIC_setDrTxpow(current_dr, 14);
+	}
 
 	// Send 
     LMIC_setTxData2(port, payload, sizeof(payload), cnf);

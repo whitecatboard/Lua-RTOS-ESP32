@@ -30,7 +30,7 @@
 #ifndef _SPI_H_
 #define _SPI_H_
 
-#define NSPI 3
+#define NSPI 4
 
 int spi_init(int unit);
 

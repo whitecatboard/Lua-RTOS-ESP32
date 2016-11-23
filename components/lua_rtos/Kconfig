@@ -71,4 +71,75 @@ menu "Lua RTOS"
 	    default 524288
   endmenu
   endmenu
+  menu "LoRa Wan"
+	config LUA_RTOS_USE_LMIC
+  	bool "Use LIMC stack"
+  	default true
+
+	choice LUA_RTOS_LORAWAN_BAND
+	depends on LUA_RTOS_USE_LMIC
+	prompt "ISM band"
+	default LUA_RTOS_LORAWAN_BAND_EU868
+	help
+		Select the ISM band to use. Please, select band allowed for your regions according to ISM regulations.
+
+	config LUA_RTOS_LORAWAN_BAND_EU868
+	bool "Europe - 868 Mhz"
+
+	config LUA_RTOS_LORAWAN_BAND_US915
+	bool "United States - 915 Mhz"
+	endchoice
+	
+	choice LUA_RTOS_LORAWAN_RADIO
+	depends on LUA_RTOS_USE_LMIC
+	prompt "PHY Type"
+	default LUA_RTOS_LORAWAN_RADIO_SX1276
+	help
+		Select the phy radio type
+
+	config LUA_RTOS_LORAWAN_RADIO_SX1276
+	bool "sx1276"
+
+	config LUA_RTOS_LORAWAN_RADIO_SX1272
+	bool "sx1272"
+	endchoice
+
+	config LMIC_SPI
+	depends on LUA_RTOS_USE_LMIC
+    int "PHY SPI port"
+    range 1 3
+    default 3
+	help
+		Select the SPI port number where phy is attached
+
+	config LMIC_CS
+	depends on LUA_RTOS_USE_LMIC
+    int "PHY SPI CS pin"
+    range 0 39
+    default 5
+
+	config LMIC_RST
+	depends on LUA_RTOS_USE_LMIC
+    int "PHY RST pin"
+    range 0 39
+    default 27
+
+	config LMIC_DIO0
+	depends on LUA_RTOS_USE_LMIC
+    int "PHY DIO0 pin"
+    range 0 39
+    default 26
+
+	config LMIC_DIO1
+	depends on LUA_RTOS_USE_LMIC
+    int "PHY DIO1 pin"
+    range 0 39
+    default 25
+
+	config LMIC_DIO2
+	depends on LUA_RTOS_USE_LMIC
+    int "PHY DIO2 pin"
+    range 0 39
+    default 33
+  endmenu
 endmenu

@@ -81,7 +81,68 @@
 #define SPIFFS_SIZE 524288
 #endif
 
+// LoRa WAN
+#if CONFIG_LUA_RTOS_USE_LMIC
+#define USE_LMIC 1
+#else
+#define USE_LMIC 0
+#endif
 
+#if CONFIG_LUA_RTOS_LORAWAN_RADIO_SX1276
+	#define CFG_sx1276_radio 1
+#else
+	#if CONFIG_LUA_RTOS_LORAWAN_RADIO_SX1272
+		#define CFG_sx1272_radio 1
+	#else
+		#define CFG_sx1276_radio 1
+	#endif
+#endif
+
+#if CONFIG_LUA_RTOS_LORAWAN_BAND_EU868
+	#define CFG_eu868 1
+#else
+	#if CONFIG_LUA_RTOS_LORAWAN_BAND_US915
+		#define CFG_us915 1
+	#else
+		#define CFG_eu868 1
+	#endif
+#endif
+
+#ifdef CONFIG_LUA_RTOS_LMIC_SPI
+#define LMIC_SPI CONFIG_LUA_RTOS_LMIC_SPI
+#else
+#define LMIC_SPI 3
+#endif
+
+#ifdef CONFIG_LUA_RTOS_LMIC_RST
+#define LMIC_RST CONFIG_LUA_RTOS_LMIC_RST
+#else
+#define LMIC_RST 27
+#endif
+
+#ifdef CONFIG_LUA_RTOS_LMIC_CS
+#define LMIC_CS CONFIG_LUA_RTOS_LMIC_CS
+#else
+#define LMIC_CS 5
+#endif
+
+#ifdef CONFIG_LUA_RTOS_LMIC_DIO0
+#define LMIC_DIO0 CONFIG_LUA_RTOS_LMIC_DIO0
+#else
+#define LMIC_DIO0 26
+#endif
+
+#ifdef CONFIG_LUA_RTOS_LMIC_DIO1
+#define LMIC_DIO1 CONFIG_LUA_RTOS_LMIC_DIO1
+#else
+#define LMIC_DIO1 25
+#endif
+
+#ifdef CONFIG_LUA_RTOS_LMIC_DIO2
+#define LMIC_DIO2 CONFIG_LUA_RTOS_LMIC_DIO2
+#else
+#define LMIC_DIO2 33
+#endif
 
 #define THREAD_LOCAL_STORAGE_POINTER_ID 0
 

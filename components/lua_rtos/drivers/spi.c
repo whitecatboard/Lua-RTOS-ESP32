@@ -71,6 +71,9 @@ struct spi spi[NSPI] = {
 	},
 	{
 		0,0,0,0,0
+	},
+	{
+		0,0,0,0,0
 	}
 };
 
@@ -155,8 +158,7 @@ uint32_t spiFrequencyToClockDiv(uint32_t freq) {
  *
  */
 void spi_set_mode(int unit, int mode) {
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
+    struct spi *dev = &spi[unit];
 
     dev->mode = mode;
     dev->dirty = 1;
@@ -167,8 +169,7 @@ void spi_set_mode(int unit, int mode) {
  * for this bit rate. Nothing is changed at hardware level.
  */
 void spi_set_speed(int unit, unsigned int sck) {
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
+    struct spi *dev = &spi[unit];
 
     dev->speed = sck;
     dev->divisor = spiFrequencyToClockDiv(sck * 1000);
@@ -180,8 +181,7 @@ void spi_set_speed(int unit, unsigned int sck) {
  * to the required settings.
  */
 void spi_select(int unit) {
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
+    struct spi *dev = &spi[unit];
 
     if (dev->dirty) {
         // Complete operations, if pending
@@ -261,8 +261,7 @@ void spi_select(int unit) {
  * Deselect the device
  */
 void spi_deselect(int unit) {
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
+    struct spi *dev = &spi[unit];
 
     if (dev->cs) {
         gpio_pin_set(dev->cs);
@@ -275,8 +274,7 @@ void spi_deselect(int unit) {
  * (device is not select)
  */
 void spi_set_cspin(int unit, int pin) {
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
+    struct spi *dev = &spi[unit];
 
     if (pin != dev->cs) {
         dev->cs = pin;
@@ -294,10 +292,8 @@ void spi_set_cspin(int unit, int pin) {
  * Init pins for a device, and return used pins
  */
 void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs) {
-    int channel = unit - 1;
-
-    switch (channel) {
-        case 0:
+    switch (unit) {
+        case 1:
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA0_U, FUNC_SD_DATA0_SPIQ);
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA1_U, FUNC_SD_DATA1_SPID);
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_CLK_U,   FUNC_SD_CLK_SPICLK);
@@ -309,7 +305,7 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
             *cs =  GPIO11;
             break;
 
-        case 1:
+        case 2:
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_MTDI_HSPIQ);
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, FUNC_MTCK_HSPID);
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTMS_U, FUNC_MTMS_HSPICLK);
@@ -322,7 +318,7 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
 
             break;
 
-        case 2:
+        case 3:
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO19_U,FUNC_GPIO19_VSPIQ);
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO23_U,FUNC_GPIO23_VSPID);
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO18_U,FUNC_GPIO18_VSPICLK);
@@ -533,16 +529,15 @@ void spi_bulk_read32_be(int unit, unsigned int words, int *data) {
  * Return the name of the SPI bus for a device.
  */
 const char *spi_name(int unit) {
-    static const char *name[NSPI] = { "spi1", "spi2", "spi3" };
-    return name[unit - 1];
+    static const char *name[NSPI] = { "spi0", "spi1", "spi2", "spi3" };
+    return name[unit];
 }
 
 /*
  * Return the port name (A-K) of the chip select pin for a device.
  */
 const char *spi_csname(int unit) {
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
+    struct spi *dev = &spi[unit];
 
     if (!dev->cs)
         return NULL;
@@ -554,8 +549,7 @@ const char *spi_csname(int unit) {
  * Return the pin index of the chip select pin for a device.
  */
 int spi_cspin(int unit) {
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
+    struct spi *dev = &spi[unit];
 
     if (!dev->cs)
         return -1;
@@ -567,8 +561,7 @@ int spi_cspin(int unit) {
  * Return the speed in kHz.
  */
 unsigned int spi_get_speed(int unit) {
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
+    struct spi *dev = &spi[unit];
 
     return dev->speed;
 }
@@ -577,11 +570,10 @@ unsigned int spi_get_speed(int unit) {
  * Init a spi device
  */
 int spi_init(int unit) {
-    int channel = unit - 1;
-    struct spi *dev = &spi[channel];
+    struct spi *dev = &spi[unit];
     unsigned char sdi, sdo, sck, cs;
 
-    if (channel < 0 || channel >= NSPI)
+    if (unit <= 0 || unit > NSPI)
         return 1;
 
     spi_pins(unit, &sdi, &sdo, &sck, &cs);

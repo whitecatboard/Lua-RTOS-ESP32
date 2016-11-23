@@ -273,63 +273,6 @@ static int llora_set_Adr(lua_State* L) {
     return 0;
 }
 
-static int llora_set_RetX(lua_State* L) {
-    int rets = luaL_checkinteger(L, 1);
-    
-    if ((rets < 0) || (rets > 255)) {
-        return luaL_error(L, "%d:invalid retransmissions value (0 to 255)", LORA_INVALID_ARGUMENT); 
-    }
-    
-    char value[2];
-    
-    sprintf(value,"%d", rets);
-        
-    int resp = lora_mac_set(LORA_MAC_SET_RETX, value);
-    if (resp != LORA_OK) {
-        lora_error(L, resp);    
-    }
-	
-    return 0;
-}
-
-static int llora_set_Ar(lua_State* L) {
-    char value[4];
-
-    luaL_checktype(L, 1, LUA_TBOOLEAN);
-    if (lua_toboolean( L, 1 )) {
-        strcpy(value, "on");
-    } else {
-        strcpy(value, "off");
-    }
-    
-    int resp = lora_mac_set(LORA_MAC_SET_AR, value);
-    if (resp != LORA_OK) {
-        lora_error(L, resp);    
-    }
-    
-    return 0;
-}
-
-
-static int llora_set_LinkChk(lua_State* L) {
-    int interval = luaL_checkinteger(L, 1);
-    
-    if ((interval < 0) || (interval > 65535)) {
-        return luaL_error(L, "%d:invalid interval (0 to 65535)", LORA_INVALID_ARGUMENT); 
-    }
-    
-    char value[6];
-    
-    sprintf(value,"%d", interval);
-        
-    int resp = lora_mac_set(LORA_MAC_SET_LINKCHK, value);
-    if (resp != LORA_OK) {
-        lora_error(L, resp);    
-    }
-
-    return 0;
-}
-
 static int llora_get_DevAddr(lua_State* L) {
     char *value = lora_mac_get(LORA_MAC_GET_DEVADDR);
 	
@@ -375,38 +318,6 @@ static int llora_get_Adr(lua_State* L) {
         lua_pushboolean(L, 0);        
     }
 
-    free(value);
-    
-    return 1;    
-}
-
-static int llora_get_RetX(lua_State* L) {
-    char *value = lora_mac_get(LORA_MAC_GET_RETX);
-	
-    lua_pushinteger(L, atoi(value));
-    free(value);
-    
-    return 1;    
-}
-
-static int llora_get_Ar(lua_State* L) {
-    char *value = lora_mac_get(LORA_MAC_GET_AR);
-	
-    if (strcmp(value,"on") == 0) {
-        lua_pushboolean(L, 1);
-    } else {
-        lua_pushboolean(L, 0);        
-    }
-
-    free(value);
-    
-    return 1;    
-}
-
-static int llora_get_Mrgn(lua_State* L) {
-    char *value = lora_mac_get(LORA_MAC_GET_MRGN);
-	
-    lua_pushinteger(L, atoi(value));
     free(value);
     
     return 1;    
@@ -469,10 +380,6 @@ static int llora_rx(lua_State* L) {
     return 0;
 }
 
-static int llora_nothing(lua_State* L) {
-    return luaL_error(L, "%d:not implemented", LORA_INVALID_ARGUMENT);    
-}
-
 static const LUA_REG_TYPE lora_error_map[] = {
 	{ LSTRKEY( "KeysNotConfigured" ),	 LINTVAL( LORA_KEYS_NOT_CONFIGURED ) },
 	{ LSTRKEY( "AllChannelsBusy" ),		 LINTVAL( LORA_ALL_CHANNELS_BUSY ) },
@@ -501,30 +408,11 @@ static const LUA_REG_TYPE lora_map[] = {
     { LSTRKEY( "setAppKey" ),    LFUNCVAL( llora_set_AppKey ) }, 
     { LSTRKEY( "setDr" ),        LFUNCVAL( llora_set_Dr ) }, 
     { LSTRKEY( "setAdr" ),       LFUNCVAL( llora_set_Adr ) }, 
-    { LSTRKEY( "setRetX" ),      LFUNCVAL( llora_set_RetX ) }, 
-    { LSTRKEY( "setLinkChk" ),   LFUNCVAL( llora_set_LinkChk ) }, // MUST DO
-    { LSTRKEY( "setRxDelay1" ),  LFUNCVAL( llora_nothing ) }, 
-    { LSTRKEY( "setAr" ),        LFUNCVAL( llora_set_Ar ) }, 
-    { LSTRKEY( "setRx2" ),       LFUNCVAL( llora_nothing ) }, // MUST DO
-    { LSTRKEY( "setChFreq" ),    LFUNCVAL( llora_nothing ) }, // MUST DO
-    { LSTRKEY( "setChFCycle" ),  LFUNCVAL( llora_nothing ) }, 
-    { LSTRKEY( "setChDrrange" ), LFUNCVAL( llora_nothing ) }, // MUST DO
-    { LSTRKEY( "setChStatus" ),  LFUNCVAL( llora_nothing ) }, 
     { LSTRKEY( "getDevAddr" ),   LFUNCVAL( llora_get_DevAddr ) }, 
     { LSTRKEY( "getDevEui" ),    LFUNCVAL( llora_get_DevEui ) }, 
     { LSTRKEY( "getAppEui" ),    LFUNCVAL( llora_get_AppEui ) }, 
     { LSTRKEY( "getDr" ),        LFUNCVAL( llora_get_Dr ) }, 
     { LSTRKEY( "getAdr" ),       LFUNCVAL( llora_get_Adr ) }, 
-    { LSTRKEY( "getRetX" ),      LFUNCVAL( llora_get_RetX ) }, 
-    { LSTRKEY( "getRxDelay1" ),  LFUNCVAL( llora_nothing ) }, 
-    { LSTRKEY( "getRxDelay2" ),  LFUNCVAL( llora_nothing ) },
-    { LSTRKEY( "getAr" ),        LFUNCVAL( llora_get_Ar ) }, 
-    { LSTRKEY( "getRx2" ),       LFUNCVAL( llora_nothing ) }, 
-    { LSTRKEY( "getDCyclePs" ),  LFUNCVAL( llora_nothing ) }, 
-    { LSTRKEY( "getMrgn" ),      LFUNCVAL( llora_get_Mrgn ) }, 
-    { LSTRKEY( "getGwNb" ),      LFUNCVAL( llora_nothing ) }, 
-    { LSTRKEY( "getStatus" ),    LFUNCVAL( llora_nothing ) }, 
-    { LSTRKEY( "getCha" ),       LFUNCVAL( llora_nothing ) }, 
     { LSTRKEY( "join" ),         LFUNCVAL( llora_join ) }, 
     { LSTRKEY( "tx" ),           LFUNCVAL( llora_tx ) },
     { LSTRKEY( "whenReceived" ), LFUNCVAL( llora_rx ) },
