@@ -93,7 +93,7 @@ typedef void (lora_rx)(int port, char *payload);
 tdriver_error *lora_setup(int band);
 int lora_mac_set(const char command, const char *value);
 char *lora_mac_get(const char command);
-int lora_join_otaa();
+int lora_join();
 int lora_tx(int cnf, int port, const char *data);
 void lora_set_rx_callback(lora_rx *callback);
 tdriver_error *lora_reset();

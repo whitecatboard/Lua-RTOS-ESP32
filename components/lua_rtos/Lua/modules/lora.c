@@ -326,18 +326,7 @@ static int llora_get_Adr(lua_State* L) {
 static int llora_join(lua_State* L) {
     int resp = 0;
     
-    int join_type = luaL_checkinteger(L, 1);
-
-    if ((join_type != 1) && (join_type != 2)) {
-        return luaL_error(L, "%d:invalid join type, user lora.OTAA or lora.ABP", LORA_INVALID_ARGUMENT);                
-    }
-    
-    if (join_type == 2) {
-        return luaL_error(L, "%d:ABP not allowed", LORA_INVALID_ARGUMENT);                
-    }
-    
-    if (join_type == 1)
-        resp = lora_join_otaa();
+    resp = lora_join();
     
     if (resp != LORA_OK) {
         lora_error(L, resp);
@@ -420,8 +409,6 @@ static const LUA_REG_TYPE lora_map[] = {
 	// Constant definitions
     { LSTRKEY( "BAND868" ),		 LINTVAL( 868 ) },
     { LSTRKEY( "BAND433" ), 	 LINTVAL( 433 ) },
-    { LSTRKEY( "OTAA" ), 		 LINTVAL( 1 ) },
-    { LSTRKEY( "ABP" ), 		 LINTVAL( 2 ) },
 
 	// Error definitions
 	{LSTRKEY("error"), 			 LROVAL( lora_error_map )},

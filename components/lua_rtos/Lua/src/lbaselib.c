@@ -8,7 +8,6 @@
 
 #include "lprefix.h"  
 
-
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -466,8 +465,7 @@ static int luaB_tostring (lua_State *L) {
 #include "modules.h"
 
 static const LUA_REG_TYPE base_funcs[] = {
-//  { LSTRKEY( "dumpstack" 	  ),			LFUNCVAL( stackDump 			) },
-//  { LSTRKEY( "try" 			  ),			LFUNCVAL( luaB_try 				) }, 
+  { LSTRKEY( "try" 			  ),			LFUNCVAL( luaB_try 				) },
   { LSTRKEY( "assert" 		  ),			LFUNCVAL( luaB_assert 			) },
   { LSTRKEY( "collectgarbage" ),			LFUNCVAL( luaB_collectgarbage 	) },
   { LSTRKEY( "dofile" 		  ),			LFUNCVAL( luaB_dofile 			) },

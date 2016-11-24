@@ -501,14 +501,31 @@ char *lora_mac_get(const char command) {
 	return result;
 }
 
-int lora_join_otaa() {
+int lora_join() {
     mtx_lock(&lora_mtx);
 
+    // Sanity checks
     if (!setup) {
         mtx_unlock(&lora_mtx);
-        return LORA_JOIN_ACCEPTED;
+        return LORA_NOT_SETUP;
     }
 
+    if (memcmp(APPEUI, (u1_t[]){0,0,0,0,0,0,0,0}, 8) == 0) {
+        mtx_unlock(&lora_mtx);
+    	return LORA_KEYS_NOT_CONFIGURED;
+    }
+
+    if (memcmp(DEVEUI, (u1_t[]){0,0,0,0,0,0,0,0}, 8) == 0) {
+        mtx_unlock(&lora_mtx);
+    	return LORA_KEYS_NOT_CONFIGURED;
+    }
+
+    if (memcmp(APPKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) == 0) {
+        mtx_unlock(&lora_mtx);
+    	return LORA_KEYS_NOT_CONFIGURED;
+    }
+
+    // Join, if needed
     if (joined) {
         mtx_unlock(&lora_mtx);
     	return LORA_OK;
