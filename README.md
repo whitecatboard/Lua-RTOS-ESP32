@@ -101,8 +101,8 @@ For porting Lua RTOS to other platforms is only necessary to write the code for 
    ```
    
    ```lua
-     /\       /\
-    /  \_____/  \
+      /\       /\
+     /  \_____/  \
    /_____________\
    W H I T E C A T
 
