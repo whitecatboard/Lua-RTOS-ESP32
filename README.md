@@ -99,3 +99,29 @@ For porting Lua RTOS to other platforms is only necessary to write the code for 
    ```lua
    picocom --baud 115200 /dev/tty.SLAB_USBtoUART
    ```
+   
+   ``lua
+     /\       /\
+ /  \_____/  \
+/_____________\
+W H I T E C A T
+
+Lua RTOS beta 0.1 build 1479953238 Copyright (C) 2015 - 2016 whitecatboard.org
+cpu ESP32 at 240 Mhz
+spiffs0 start address at 0x180000, size 512 Kb
+spiffs0 mounted
+spi2 at pins sdi=012/sdo=013/sck=014/cs=015
+sd0 is at spi2, pin cs=015
+sd0 type II, size 1943552 kbytes, speed 15 Mhz
+sd0a partition type 0b, sector 227, size 1943438 kbytes
+fat init file system
+fat0 mounted
+redirecting console messages to file system ...
+
+Lua RTOS beta 0.1 powered by Lua 5.3.2
+
+Executing /system.lua ...
+Executing /autorun.lua ...
+
+/ > 
+```
