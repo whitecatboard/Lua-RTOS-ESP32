@@ -20,6 +20,8 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 
+#include "esp_attr.h"
+
 // LMIC run loop, as a FreeRTOS task
 void os_runloop(void *pvParameters);
 
@@ -52,12 +54,12 @@ static u1_t unlinkjob (osjob_t** pnext, osjob_t* job) {
     return 0;
 }
 
-ostime_t os_getTime () {
+ostime_t IRAM_ATTR os_getTime () {
     return hal_ticks();
 }
 
 // clear scheduled job
-void os_clearCallback (osjob_t* job) {
+void IRAM_ATTR os_clearCallback (osjob_t* job) {
     hal_disableIRQs();
     unlinkjob(&OS.scheduledjobs, job);
 	unlinkjob(&OS.runnablejobs, job);
@@ -65,7 +67,7 @@ void os_clearCallback (osjob_t* job) {
 }
 
 // schedule immediately runnable job
-void os_setCallback (osjob_t* job, osjobcb_t cb) {
+void IRAM_ATTR os_setCallback (osjob_t* job, osjobcb_t cb) {
     osjob_t** pnext;
     hal_disableIRQs();
     // remove if job was already queued
@@ -122,6 +124,10 @@ void os_runloop(void *pvParameters) {
 
 	    if (j) { // run job callback
 	        j->func(j);
+	    } else {
+	    	if (!OS.runnablejobs && !OS.scheduledjobs) {
+	    		hal_sleep();
+	    	}
 	    }
 	}
 }

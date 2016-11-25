@@ -61,6 +61,11 @@ void hal_disableIRQs (void);
 void hal_enableIRQs (void);
 
 /*
+ * resume sysrem and CPU
+ */
+void hal_resume(void);
+
+/*
  * put system and CPU in low-power mode, sleep until interrupt.
  */
 void hal_sleep (void);

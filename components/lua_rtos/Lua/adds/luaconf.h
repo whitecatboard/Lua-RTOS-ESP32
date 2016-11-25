@@ -245,11 +245,6 @@
   #define LOSLIB_OPEN_ADDS
 #endif
 
-#ifdef LUA_LIB
-#undef LUA_LIB
-#include <Lua/modules/lbaselib_adds.inc>
-#endif
-
 #ifdef liolib_c
 #undef liolib_c
 #include <Lua/modules/liolib_adds.inc>

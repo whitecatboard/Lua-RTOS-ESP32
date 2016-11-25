@@ -27,8 +27,11 @@
  * this software.
  */
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/adds.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/adds.h"
+
+#include "esp_attr.h"
+
 #include <sys/mutex.h>
 #include <sys/panic.h>
 
@@ -53,7 +56,7 @@ void mtx_init(struct mtx *mutex, const char *name, const char *type, int opts) {
     }    
 }
 
-void mtx_lock(struct mtx *mutex) {
+void IRAM_ATTR mtx_lock(struct mtx *mutex) {
     if (port_interruptNesting[xPortGetCoreID()] != 0) {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;        
         xSemaphoreTakeFromISR( mutex->sem, &xHigherPriorityTaskWoken );
@@ -71,7 +74,7 @@ int mtx_trylock(struct	mtx *mutex) {
     }
 }
 
-void mtx_unlock(struct mtx *mutex) {
+void IRAM_ATTR mtx_unlock(struct mtx *mutex) {
     if (port_interruptNesting[xPortGetCoreID()] != 0) {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;  
         xSemaphoreGiveFromISR( mutex->sem, &xHigherPriorityTaskWoken );  

@@ -37,6 +37,8 @@
 #include "freertos/timers.h"
 #include "freertos/event_groups.h"
 
+#include "esp_attr.h"
+
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
@@ -74,7 +76,7 @@ static u1_t DEVEUI[8] = {0,0,0,0,0,0,0,0};
 static u1_t APPKEY[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 // Current message id
-static u4_t msgid = 0;
+RTC_DATA_ATTR static u4_t msgid = 0;
 
 // If = 1 driver is setup, if = 0 is not setup
 static int setup = 0;
@@ -530,6 +532,9 @@ int lora_join() {
         mtx_unlock(&lora_mtx);
     	return LORA_OK;
     }
+
+    // If we use join, set msgid to 0
+    msgid = 0;
 
     // Set DR
     if (!adr) {

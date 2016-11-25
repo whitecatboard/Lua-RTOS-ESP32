@@ -20,6 +20,8 @@
       
 LUALIB_API void luaL_checkanytable (lua_State *L, int arg);
 
+#include <Lua/modules/lbaselib_adds.inc>
+
 static int luaB_print (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
   int i;

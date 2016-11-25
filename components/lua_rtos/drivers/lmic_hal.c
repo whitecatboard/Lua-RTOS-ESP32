@@ -38,26 +38,49 @@
 #include "freertos/timers.h"
 #include "freertos/event_groups.h"
 
+#include "esp_attr.h"
+#include "soc/gpio_reg.h"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/time.h>
 #include <sys/delay.h>
 #include <sys/syslog.h>
+#include <sys/mutex.h>
 
 #include <drivers/gpio.h>
 #include <drivers/spi.h>
 
-#include "esp_attr.h"
-#include "soc/gpio_reg.h"
+extern unsigned port_interruptNesting[portNUM_PROCESSORS];
 
 /*
- * This is an adapter function for call radio_irq_handler from a callback
+ * Mutex for protect critical regions
  */
-static osjob_t dio_job;
+static struct mtx lmic_hal_mtx;
 
-static void deferred_dio_intr_handler(osjob_t *j) {
-	radio_irq_handler(0);
-}
+/*
+ * This variables are for doing things only one time.
+ *
+ * nested is for enable / disable interrupts once.
+ * sleeped is for sleep os_runloop once.
+ * resumed is for resume os_runloop once.
+ *
+ * For example, enable / disable interrupts are done as follows:
+ *
+ *   enable - disable - enable - disable
+ *
+ */
+static int nested  = 0;
+static int sleeped = 0;
+static int resumed = 0;
+
+ /*
+  * This is an event group handler for sleep / resume os_runloop.
+  * When os_runloop has nothing to do waits for an event.
+  */
+ #define evLMIC_SLEEP ( 1 << 0 )
+
+ EventGroupHandle_t lmicSleepEvent;
 
 /*
  * This is the LMIC interrupt handler. This interrupt is attached to the transceiver
@@ -71,10 +94,15 @@ static void IRAM_ATTR dio_intr_handler(void *args) {
 	u4_t status_l = READ_PERI_REG(GPIO_STATUS_REG) & GPIO_STATUS_INT;
 	u4_t status_h = READ_PERI_REG(GPIO_STATUS1_REG) & GPIO_STATUS1_INT;
 
+	/*
+	 * Don't change the position of this code. Interrupt status must be clean
+	 * in this point.
+	 */
 	WRITE_PERI_REG(GPIO_STATUS_W1TC_REG, status_l);
 	WRITE_PERI_REG(GPIO_STATUS1_W1TC_REG, status_h);
 
-	os_setCallback(&dio_job, deferred_dio_intr_handler);
+	radio_irq_handler(0);
+	hal_resume();
 }
 
 void hal_init (void) {
@@ -115,12 +143,18 @@ void hal_init (void) {
 		gpio_set_intr_type(LMIC_DIO2, GPIO_INTR_POSEDGE);
 		gpio_intr_enable(LMIC_DIO2);
 	}
+
+	// Create lmicSleepEvent
+	lmicSleepEvent = xEventGroupCreate();
+
+	// Create mutex
+    mtx_init(&lmic_hal_mtx, NULL, NULL, 0);
 }
 
 /*
  * drive radio NSS pin (0=low, 1=high).
  */
-void hal_pin_nss (u1_t val) {
+void IRAM_ATTR hal_pin_nss (u1_t val) {
     spi_set_cspin(LMIC_SPI, LMIC_CS);
 
     if (!val) {
@@ -157,20 +191,85 @@ void hal_pin_rst (u1_t val) {
  *   - write given byte 'outval'
  *   - read byte and return value
  */
-u1_t hal_spi (u1_t outval) {
+u1_t IRAM_ATTR hal_spi (u1_t outval) {
 	return spi_transfer(LMIC_SPI, outval);
 }
 
-void hal_disableIRQs (void) {
+void IRAM_ATTR hal_disableIRQs (void) {
+	int disable = 0;
+
+	mtx_lock(&lmic_hal_mtx);
+
+	if (nested++ == 0) {
+		disable = 1;
+	}
+
+	mtx_unlock(&lmic_hal_mtx);
+
+	if (disable) {
+		portDISABLE_INTERRUPTS();
+	}
 }
 
-void hal_enableIRQs (void) {
+void IRAM_ATTR hal_enableIRQs (void) {
+	int enable = 0;
+
+	mtx_lock(&lmic_hal_mtx);
+
+	if (--nested == 0) {
+		enable = 1;
+	}
+
+	mtx_unlock(&lmic_hal_mtx);
+
+	if (enable) {
+		portENABLE_INTERRUPTS();
+	}
+}
+
+void IRAM_ATTR hal_resume (void) {
+	int resume = 0;
+
+	mtx_lock(&lmic_hal_mtx);
+
+	if (resumed == 0) {
+		sleeped = 0;
+		resumed = 1;
+		resume  = 1;
+	}
+
+	mtx_unlock(&lmic_hal_mtx);
+
+	if (resume) {
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+		if (port_interruptNesting[xPortGetCoreID()] != 0) {
+			xEventGroupSetBitsFromISR(lmicSleepEvent, evLMIC_SLEEP, &xHigherPriorityTaskWoken);
+		} else {
+			xEventGroupSetBits(lmicSleepEvent, evLMIC_SLEEP);
+		}
+	}
 }
 
 void hal_sleep (void) {
+	int sleep = 0;
+
+	mtx_lock(&lmic_hal_mtx);
+
+	if (sleeped == 0) {
+		sleeped = 1;
+		resumed = 0;
+		sleep   = 1;
+	}
+
+	mtx_unlock(&lmic_hal_mtx);
+
+	if (sleep) {
+		xEventGroupWaitBits(lmicSleepEvent, evLMIC_SLEEP, pdTRUE, pdFALSE, portMAX_DELAY);
+	}
 }
 
-u4_t hal_ticks () {
+u4_t IRAM_ATTR hal_ticks () {
 	struct timeval tv;
 
 	gettimeofday(&tv, NULL);
@@ -208,8 +307,8 @@ u1_t hal_checkTimer (u4_t targettime) {
  *   - action could be HALT or reboot
  */
 void hal_failed (char *file, int line) {
-	printf("assert: at %s, line %d\n", file, line);
-	
+	syslog(LOG_ERR, "%lu: assert at $s, line %s\n", os_getTime(), file, line);
+
 	for(;;);
 }
 

@@ -51,7 +51,7 @@ CFLAGS += -DOSTICKS_PER_SEC=50000
 CFLAGS += -DLMIC_JOIN_FAILED_AFTER_868_864=1 # JOIN_FAILED after test 868 / 864, don't try lower DR
 
 CFLAGS += -DLMIC_SPI_KHZ=10000
-CFLAGS += -DLMIC_DEBUG_LEVEL=1
+CFLAGS += -DLMIC_DEBUG_LEVEL=0
 
 #
 # SDCARD configuration
@@ -84,7 +84,7 @@ CFLAGS += -DI2C5_PINS=0
 #
 # Lua configuration
 #
-CFLAGS += -DDEBUG_FREE_MEM=1           # Enable LUA free mem debug utility (only for debug purposes)
+CFLAGS += -DDEBUG_FREE_MEM=0           # Enable LUA free mem debug utility (only for debug purposes)
 CFLAGS += -DLUA_USE_LUA_LOCK=0		   # Enable if Lua must use real lua_lock / lua_unlock implementation
 CFLAGS += -DLUA_USE_SAFE_SIGNAL=0      # Enable use of LuaOS safe signal (experimental)
 # CFLAGS += -DSTRCACHE_N=1

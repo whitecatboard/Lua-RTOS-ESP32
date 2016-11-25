@@ -14,6 +14,8 @@
 #ifdef LUA_USE_LORA
 #ifdef USE_LMIC
 
+#include "esp_attr.h"
+
 #include "lmic.h"
 #include <sys/syslog.h>
 
@@ -266,14 +268,14 @@ static u1_t randbuf[16];
 #endif
 
 
-static void writeReg (u1_t addr, u1_t data ) {
+static void IRAM_ATTR writeReg (u1_t addr, u1_t data ) {
     hal_pin_nss(0);
     hal_spi(addr | 0x80);
     hal_spi(data);
     hal_pin_nss(1);
 }
 
-static u1_t readReg (u1_t addr) {
+static u1_t IRAM_ATTR readReg (u1_t addr) {
     hal_pin_nss(0);
     hal_spi(addr & 0x7F);
     u1_t val = hal_spi(0x00);
@@ -290,7 +292,7 @@ static void writeBuf (u1_t addr, xref2u1_t buf, u1_t len) {
     hal_pin_nss(1);
 }
 
-static void readBuf (u1_t addr, xref2u1_t buf, u1_t len) {
+static void IRAM_ATTR readBuf (u1_t addr, xref2u1_t buf, u1_t len) {
     hal_pin_nss(0);
     hal_spi(addr & 0x7F);
     for (u1_t i=0; i<len; i++) {
@@ -299,7 +301,7 @@ static void readBuf (u1_t addr, xref2u1_t buf, u1_t len) {
     hal_pin_nss(1);
 }
 
-static void opmode (u1_t mode) {
+static void IRAM_ATTR opmode (u1_t mode) {
     writeReg(RegOpMode, (readReg(RegOpMode) & ~OPMODE_MASK) | mode);
 }
 

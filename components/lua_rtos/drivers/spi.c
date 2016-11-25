@@ -39,6 +39,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "esp_attr.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -335,7 +337,7 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
 	spi_set_cspin(unit, *cs);
 }
 
-static void spi_master_op(int unit, unsigned int word_size, unsigned int len, unsigned char *out, unsigned char *in) {
+static void IRAM_ATTR spi_master_op(int unit, unsigned int word_size, unsigned int len, unsigned char *out, unsigned char *in) {
 	unsigned int bytes = word_size * len; // Number of bytes to write / read
 	unsigned int idx = 0;
 
@@ -421,7 +423,7 @@ static void spi_master_op(int unit, unsigned int word_size, unsigned int len, un
  * This is blocking, and waits for the transfer to complete
  * before returning.  Times out after a certain period.
  */
-unsigned int spi_transfer(int unit, unsigned int data) {
+unsigned int IRAM_ATTR spi_transfer(int unit, unsigned int data) {
 	unsigned char read;
 
     spi_master_op(unit, 1, 1, (unsigned char *)(&data), &read);
