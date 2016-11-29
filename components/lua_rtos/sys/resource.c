@@ -40,14 +40,14 @@
 static struct mtx resource_mtx;
 
 typedef struct {
-    tresource_owner owner;
+    resource_owner_t owner;
     int unit;
-} tresource_lock_e;
+} resource_lock_t_e;
 
-static tresource_lock_e resource_timer[9];
-static tresource_lock_e resource_pin[64];
+static resource_lock_t_e resource_timer[9];
+static resource_lock_t_e resource_pin[64];
 
-static tresource_lock_e *resource_lock_array(tresource_type type) {
+static resource_lock_t_e *resource_lock_array(resource_type_t type) {
     switch (type) {
         case RES_GPIO: return resource_pin;
         case RES_TIMER: return resource_timer;
@@ -55,7 +55,7 @@ static tresource_lock_e *resource_lock_array(tresource_type type) {
     }
 }
 
-static int resource_lock_array_len(tresource_type type) {
+static int resource_lock_array_len(resource_type_t type) {
     switch (type) {
         case RES_GPIO: return 64;
         case RES_TIMER: return 9;
@@ -82,9 +82,9 @@ void _resource_init() {
     resource_timer[0].unit = 0;
 }
 
-tresource_lock *resource_lock(tresource_type type, int resource_unit, tresource_owner owner, int owner_unit) {
-    tresource_lock_e *lock_array = resource_lock_array(type);
-    tresource_lock *lock;
+resource_lock_t *resource_lock(resource_type_t type, int resource_unit, resource_owner_t owner, int owner_unit) {
+    resource_lock_t_e *lock_array = resource_lock_array(type);
+    resource_lock_t *lock;
     int granted = 0;
     
     mtx_lock(&resource_mtx);
@@ -107,7 +107,7 @@ tresource_lock *resource_lock(tresource_type type, int resource_unit, tresource_
             return NULL;
         }
 
-        lock = (tresource_lock *)malloc(sizeof(tresource_lock));
+        lock = (resource_lock_t *)malloc(sizeof(resource_lock_t));
 
         lock->owner = lock_array[resource_unit].owner;
         
@@ -123,7 +123,7 @@ tresource_lock *resource_lock(tresource_type type, int resource_unit, tresource_
                        lock_array[resource_unit].unit == owner_unit);
         }
 
-        lock = (tresource_lock *)malloc(sizeof(tresource_lock));
+        lock = (resource_lock_t *)malloc(sizeof(resource_lock_t));
     
         lock->owner = lock_array[resource_unit].owner;
         lock->owner_unit = lock_array[resource_unit].unit;
@@ -137,8 +137,8 @@ tresource_lock *resource_lock(tresource_type type, int resource_unit, tresource_
     return lock;
 }
 
-void resource_unlock(tresource_type type, int unit) {
-    tresource_lock_e *lock_array = resource_lock_array(type);
+void resource_unlock(resource_type_t type, int unit) {
+    resource_lock_t_e *lock_array = resource_lock_array(type);
     
     mtx_lock(&resource_mtx);
     
@@ -153,16 +153,15 @@ void _resource_init() {
 }
 #endif
 
-const char *resource_name(tresource_type type) {
+const char *resource_name(resource_type_t type) {
     switch (type) {
         case RES_GPIO:  return "pin";
         case RES_TIMER: return "timer";
-        case RES_LORA:  return "lora";
 		default:        return "";
     }
 }
 
-const char *resource_unit_name(tresource_type type, int unit) {
+const char *resource_unit_name(resource_type_t type, int unit) {
     switch (type) {
         case RES_GPIO:  return cpu_pin_name(unit);
         case RES_TIMER: return "timer";
@@ -170,7 +169,7 @@ const char *resource_unit_name(tresource_type type, int unit) {
     }
 }
 
-const char *owner_name(tresource_owner owner) {
+const char *owner_name(resource_owner_t owner) {
     switch (owner) {
         case RES_SYSTEM:  return "LuaOS";
         case RES_STEPPER: return "stepper";
@@ -178,10 +177,11 @@ const char *owner_name(tresource_owner owner) {
         case RES_UART:    return "uart";
         case RES_SPI:     return "spi";
         case RES_I2C:     return "i2c";
+        case RES_LORA:    return "lora";
 		default:          return "";
     }
 }
 
-int resource_granted(tresource_lock *lock) {
+int resource_granted(resource_lock_t *lock) {
     return (lock && lock->granted);
 }

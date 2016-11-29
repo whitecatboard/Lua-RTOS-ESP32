@@ -33,7 +33,6 @@
 
 #include <unistd.h>
 #include <sys/syslog.h>
-#include <sys/error.h>
 #include <sys/resource.h>
 #include <drivers/gpio.h>
 #include <drivers/i2c.h>
@@ -44,7 +43,7 @@
 static i2c_t i2c[NI2C];
 
 // Setup driver
-tdriver_error *i2c_setup(int unit, int speed, int sda, int scl) {
+driver_error_t *i2c_setup(int unit, int speed, int sda, int scl) {
     i2c_t *i2cu = &i2c[--unit];
 
     // TO DO

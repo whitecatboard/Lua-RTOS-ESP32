@@ -30,25 +30,25 @@
 #ifndef RESOURCE_H
 #define RESOURCE_H
 
-typedef enum {RES_GPIO, RES_TIMER, RES_LORA} tresource_type;
-typedef enum {RES_FREE, RES_SYSTEM, RES_STEPPER, RES_PWM, RES_UART, RES_SPI, RES_I2C, RES_LMIC} tresource_owner;
+typedef enum {RES_GPIO, RES_TIMER} resource_type_t;
+typedef enum {RES_FREE, RES_SYSTEM, RES_SPI, RES_STEPPER, RES_UART, RES_I2C, RES_PWM, RES_LORA} resource_owner_t;
 
 typedef struct {
-    tresource_type type;
-    tresource_owner owner;
+    resource_type_t type;
+    resource_owner_t owner;
     int owner_unit;
     int unit;
     int granted;
-} tresource_lock;
+} resource_lock_t;
 
 void _resource_init();
-tresource_lock *resource_lock(tresource_type type, int resource_unit, tresource_owner owner, int owner_unit);
-void resource_unlock(tresource_type type, int unit);
+resource_lock_t *resource_lock(resource_type_t type, int resource_unit, resource_owner_t owner, int owner_unit);
+void resource_unlock(resource_type_t type, int unit);
 
-const char *resource_name(tresource_type type);
-const char *resource_unit_name(tresource_type type, int unit);
-const char *owner_name(tresource_owner owner);
-int resource_granted(tresource_lock *lock);
+const char *resource_name(resource_type_t type);
+const char *resource_unit_name(resource_type_t type, int unit);
+const char *owner_name(resource_owner_t owner);
+int resource_granted(resource_lock_t *lock);
 
 #endif
 

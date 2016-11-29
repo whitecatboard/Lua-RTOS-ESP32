@@ -30,7 +30,7 @@ CFLAGS += -DLUA_C89_NUMBERS
 # LuaOS configuration
 # 
 CFLAGS += -DCPU_HZ=240000000L                   # CPU frequency in hertz
-CFLAGS += -DCORE_TIMER_HZ=CPU_HZ                # CPU core timer frequency
+CFLAGS += -DCORE_TIMER_HZ=240000000L            # CPU core timer frequency
 CFLAGS += -D_CLOCKS_PER_SEC_=configTICK_RATE_HZ # Number of interrupt ticks for reach 1 second
 CFLAGS += -DUSE_NETWORKING=0                    # Networking is used (1 = yes, 0 = not)
 CFLAGS += -DMTX_USE_EVENTS=0                    # Use event groups in mtx implementation (experimental)
@@ -51,7 +51,7 @@ CFLAGS += -DOSTICKS_PER_SEC=50000
 CFLAGS += -DLMIC_JOIN_FAILED_AFTER_868_864=1 # JOIN_FAILED after test 868 / 864, don't try lower DR
 
 CFLAGS += -DLMIC_SPI_KHZ=10000
-CFLAGS += -DLMIC_DEBUG_LEVEL=0
+CFLAGS += -DLMIC_DEBUG_LEVEL=1
 
 #
 # SDCARD configuration
@@ -118,7 +118,7 @@ CFLAGS += -DLUA_USE_PIO=1		       # gpio
 CFLAGS += -DLUA_USE_LORA=1		       # lora
 CFLAGS += -DLUA_USE_PACK=1		       # pack
 CFLAGS += -DLUA_USE_THREAD=1		   # thread
-CFLAGS += -DLUA_USE_I2C=1   		   # i2c
+CFLAGS += -DLUA_USE_I2C=0   		   # i2c
 CFLAGS += -DLUA_USE_SCREEN=0     	   # screen
 CFLAGS += -DLUA_USE_NVS=1	     	   # nvs
 

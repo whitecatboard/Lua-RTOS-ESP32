@@ -36,11 +36,10 @@
 #include "lauxlib.h"
 #include "i2c.h"
 
-#include <sys/error.h>
 #include <drivers/i2c.h>
 
 static int li2c_setup( lua_State* L ) {
-    tdriver_error *error;
+	driver_error_t *error;
 
     int total = lua_gettop(L);
     int id = luaL_checkinteger(L, 1);
@@ -73,7 +72,7 @@ static int li2c_setup( lua_State* L ) {
     
     // Setup
     if ((error = i2c_setup(id, speed, sda, scl))) {
-        return luaL_driver_error(L, "I2C can't setup", error);
+        return luaL_driver_error(L, error);
     }
 
     return 0;

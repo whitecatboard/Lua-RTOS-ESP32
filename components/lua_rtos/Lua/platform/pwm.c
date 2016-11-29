@@ -62,7 +62,7 @@ int platform_pwm_freq(lua_State* L, int id) {
 }
 
 int platform_pwm_setup_freq(lua_State* L, int id, int khz, double duty) {
-    tdriver_error *error;
+	driver_error_t *error;
     
     // Setup in base of frequency
     error = pwm_init_freq(id, khz, duty);
@@ -75,7 +75,7 @@ int platform_pwm_setup_freq(lua_State* L, int id, int khz, double duty) {
 }
 
 int platform_pwm_setup_res(lua_State* L, int id, int res, int val) {
-    tdriver_error *error;
+	driver_error_t *error;
     
     // Setup in base of resolution
     error = pwm_init_res(id, res, val);

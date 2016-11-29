@@ -34,14 +34,19 @@ static struct {
     osjob_t* runnablejobs;
 } OS;
 
-void os_init () {
+int os_init () {
     memset(&OS, 0x00, sizeof(OS));
     hal_init();
-    radio_init();
-    LMIC_init();
+    if (radio_init() == 0) {
+        LMIC_init();
 
-	// Run os_runloop in a FreeRTOS task
-	xTaskCreate(os_runloop, "lmic", tskDEFStack, NULL, tskDEF_PRIORITY, &xRunLoop);
+    	// Run os_runloop in a FreeRTOS task
+    	xTaskCreate(os_runloop, "lmic", tskDEFStack, NULL, tskDEF_PRIORITY, &xRunLoop);
+    } else {
+    	return -1;
+    }
+
+    return 0;
 }
 
 static u1_t unlinkjob (osjob_t** pnext, osjob_t* job) {
@@ -52,10 +57,6 @@ static u1_t unlinkjob (osjob_t** pnext, osjob_t* job) {
         }
     }
     return 0;
-}
-
-ostime_t IRAM_ATTR os_getTime () {
-    return hal_ticks();
 }
 
 // clear scheduled job
@@ -79,6 +80,8 @@ void IRAM_ATTR os_setCallback (osjob_t* job, osjobcb_t cb) {
     for(pnext=&OS.runnablejobs; *pnext; pnext=&((*pnext)->next));
     *pnext = job;
     hal_enableIRQs();
+
+    hal_resume();
 }
 
 // schedule timed job
@@ -101,6 +104,8 @@ void os_setTimedCallback (osjob_t* job, ostime_t time, osjobcb_t cb) {
     }
     *pnext = job;
     hal_enableIRQs();
+
+	hal_resume();
 }
 
 // LMIC run loop, as a FreeRTOS task
@@ -125,7 +130,7 @@ void os_runloop(void *pvParameters) {
 	    if (j) { // run job callback
 	        j->func(j);
 	    } else {
-	    	if (!OS.runnablejobs && !OS.scheduledjobs) {
+	    	if (!OS.scheduledjobs) {
 	    		hal_sleep();
 	    	}
 	    }

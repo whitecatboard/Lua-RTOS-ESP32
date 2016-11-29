@@ -85,9 +85,9 @@ u1_t radio_rand1 (void);
 #define DEFINE_LMIC  struct lmic_t LMIC
 #define DECLARE_LMIC extern struct lmic_t LMIC
 
-void radio_init (void);
+int  radio_init (void);
 void radio_irq_handler (u1_t dio);
-void os_init (void);
+int  os_init (void);
 void os_runloop(void * pvParameters);
 
 //================================================================================
@@ -153,7 +153,7 @@ void os_setTimedCallback (xref2osjob_t job, ostime_t time, osjobcb_t cb);
 void os_clearCallback (xref2osjob_t job);
 #endif
 #ifndef os_getTime
-ostime_t os_getTime (void);
+#define os_getTime() hal_ticks()
 #endif
 #ifndef os_getTimeSecs
 uint os_getTimeSecs (void);

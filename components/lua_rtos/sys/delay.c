@@ -28,19 +28,22 @@
  */
 
 #include "freertos/FreeRTOS.h"
+#include "esp_attr.h"
 
 #include <sys/delay.h>
  
-void delay(unsigned int msec) {
-    unsigned int tWait, tStart;
-    tWait = (CPU_HZ / (1000 * (CPU_HZ / CORE_TIMER_HZ))) * msec;
-    tStart = _read_core_timer();
-    while((_read_core_timer() - tStart) < tWait);
+void IRAM_ATTR delay(unsigned int msec) {
+    register unsigned int tTarget;
+
+    tTarget = xthal_get_ccount() + ((CPU_HZ / (1000 * (CPU_HZ / CORE_TIMER_HZ))) * msec) - 60;
+
+    while(xthal_get_ccount() < tTarget);
 }
 
-void udelay(unsigned int usec) {
-    unsigned int tWait, tStart;
-    tWait = (CPU_HZ / (1000000 * (CPU_HZ / CORE_TIMER_HZ))) * usec;
-    tStart = _read_core_timer();
-    while((_read_core_timer() - tStart) < tWait);
+void IRAM_ATTR udelay(unsigned int usec) {
+    register unsigned int tTarget;
+
+    tTarget = xthal_get_ccount() + ((CPU_HZ / (1000000 * (CPU_HZ / CORE_TIMER_HZ))) * usec) - 60;
+
+    while(xthal_get_ccount() < tTarget);
 }

@@ -68,7 +68,7 @@ static int lstepper_unit() {
 }
 
 static int lstepper_setup( lua_State* L ) {
-    tdriver_error *error;
+	driver_error_t *error;
     int pulse_width = luaL_checkinteger(L, 1); 
     
     if (pulse_width <= 0) {
@@ -85,7 +85,7 @@ static int lstepper_setup( lua_State* L ) {
 }
 
 static int lstepper_new( lua_State* L ){
-    tdriver_error *error;
+	driver_error_t *error;
     stepper_userdata *lstepper;
     int port, pin;
     int unit;

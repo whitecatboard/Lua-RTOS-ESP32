@@ -57,6 +57,94 @@ DEFINE_LMIC;
 static void engineUpdate(void);
 static void startScan (void);
 
+#if LMIC_DEBUG_LEVEL > 0
+#define LMIC_DEBUG_LEN 60
+
+static char debug_buff[LMIC_DEBUG_LEN];
+
+static char *debug_opmode(u2_t opmode) {
+	char *buff = &debug_buff[0];
+
+	memset(buff,0,LMIC_DEBUG_LEN);
+
+	if (opmode & OP_NONE) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_NONE",LMIC_DEBUG_LEN);
+	}
+
+	if (opmode & OP_SCAN) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_SCAN",LMIC_DEBUG_LEN);
+	}
+
+	if (opmode & OP_TRACK) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_TRACK",LMIC_DEBUG_LEN);
+	}
+
+	if (opmode & OP_JOINING) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_JOINING",LMIC_DEBUG_LEN);
+	}
+
+	if (opmode & OP_TXDATA) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_TXDATA",LMIC_DEBUG_LEN);
+	}
+
+	if (opmode & OP_POLL) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_POLL",LMIC_DEBUG_LEN);
+	}
+
+	if (opmode & OP_REJOIN) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_REJOIN",LMIC_DEBUG_LEN);
+	}
+
+	if (opmode & OP_SHUTDOWN) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_SHUTDOWN",LMIC_DEBUG_LEN);
+	}
+
+	if (opmode & OP_TXRXPEND) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_TXRXPEND",LMIC_DEBUG_LEN);
+	}
+
+	if (opmode & OP_RNDTX) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_RNDTX",LMIC_DEBUG_LEN);
+	}
+
+	if (opmode & OP_PINGINI) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_PINGINI",LMIC_DEBUG_LEN);
+	}
+
+	if (opmode & OP_PINGABLE) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_PINGABLE",LMIC_DEBUG_LEN);
+	}
+
+	if (opmode & OP_NEXTCHNL) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_NEXTCHNL",LMIC_DEBUG_LEN);
+	}
+
+	if (opmode & OP_LINKDEAD) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_LINKDEAD",LMIC_DEBUG_LEN);
+	}
+
+	if (opmode & OP_TESTMODE) {
+		if (*buff != '\0')  buff = strncat(buff," | ",LMIC_DEBUG_LEN);
+		buff = strncat(buff,"OP_TESTMODE",LMIC_DEBUG_LEN);
+	}
+
+	return debug_buff;
+}
+#endif
 
 // ================================================================================
 // BEG OS - default implementations for certain OS suport functions
@@ -646,18 +734,21 @@ static void updateTx (ostime_t txbeg) {
 
 static ostime_t nextTx (ostime_t now) {
     u1_t bmap=0xF;
+
     do {
         ostime_t mintime = now + /*8h*/sec2osticks(28800);
         u1_t band=0;
         for( u1_t bi=0; bi<4; bi++ ) {
-            if( (bmap & (1<<bi)) && mintime - LMIC.bands[bi].avail > 0 )
+        	if( (bmap & (1<<bi)) && mintime - LMIC.bands[bi].avail > 0 )
                 mintime = LMIC.bands[band = bi].avail;
         }
+
         // Find next channel in given band
         u1_t chnl = LMIC.bands[band].lastchnl;
         for( u1_t ci=0; ci<MAX_CHANNELS; ci++ ) {
             if( (chnl = (chnl+1)) >= MAX_CHANNELS )
                 chnl -=  MAX_CHANNELS;
+
             if( (LMIC.channelMap & (1<<chnl)) != 0  &&  // channel enabled
                 (LMIC.channelDrMap[chnl] & (1<<(LMIC.datarate&0xF))) != 0  &&
                 band == (LMIC.channelFreq[chnl] & 0x3) ) { // in selected band
@@ -697,14 +788,14 @@ static void initJoinLoop (void) {
 static ostime_t nextJoinState (void) {
     u1_t failed = 0;
 
+	#if LMIC_JOIN_FAILED_AFTER_868_864
+    return 1;
+	#endif
+
     // Try 869.x and then 864.x with same DR
     // If both fail try next lower datarate
     if( ++LMIC.txChnl == 3 ) {
         LMIC.txChnl = 0;
-
-		#if LMIC_JOIN_FAILED_AFTER_868_864
-        return 1;
-		#endif
     }
 
     if( (++LMIC.txCnt & 1) == 0 ) {
@@ -2032,7 +2123,7 @@ static void startRxPing (xref2osjob_t osjob) {
 // Decide what to do next for the MAC layer of a device
 static void engineUpdate (void) {
 #if LMIC_DEBUG_LEVEL > 0
-    syslog(LOG_DEBUG, "%lu: engineUpdate, opmode=0x%x\n", os_getTime(), LMIC.opmode);
+    syslog(LOG_DEBUG, "%lu: engineUpdate, opmode=0x%x (%s)\n", os_getTime(), LMIC.opmode, debug_opmode(LMIC.opmode));
 #endif
     // Check for ongoing state: scan or TX/RX transaction
     if( (LMIC.opmode & (OP_SCAN|OP_TXRXPEND|OP_SHUTDOWN)) != 0 )
@@ -2048,7 +2139,6 @@ static void engineUpdate (void) {
     ostime_t now    = os_getTime();
     ostime_t rxtime = 0;
     ostime_t txbeg  = 0;
-
 #if !defined(DISABLE_BEACONS)
     if( (LMIC.opmode & OP_TRACK) != 0 ) {
         // We are tracking a beacon
@@ -2056,7 +2146,6 @@ static void engineUpdate (void) {
         rxtime = LMIC.bcnRxtime - RX_RAMPUP;
     }
 #endif // !DISABLE_BEACONS
-
     if( (LMIC.opmode & (OP_JOINING|OP_REJOIN|OP_TXDATA|OP_POLL)) != 0 ) {
         // Need to TX some data...
         // Assuming txChnl points to channel which first becomes available again.
@@ -2115,7 +2204,7 @@ static void engineUpdate (void) {
                     return;
                 }
                 if( (LMIC.txCnt==0 && LMIC.seqnoUp == 0xFFFFFFFF) ) {
-                    // Roll over of up seq counter
+					// Roll over of up seq counter
                     EV(specCond, ERR, (e_.reason = EV::specCond_t::UPSEQNO_ROLL_OVER,
                                        e_.eui    = MAIN::CDEV->getEui(),
                                        e_.info2  = LMIC.seqnoUp));

@@ -47,19 +47,33 @@
 #include <sys/syslog.h>
 #include <sys/mutex.h>
 #include <sys/resource.h>
+#include <sys/driver.h>
+
 #include <drivers/lora.h>
  
 #include "lmic.h"
 
-#define LORA_DEBUG_LEVEL 0
+const char *lora_lmic_errors[11] = {
+	"",
+	"keys are not configured",
+	"join denied",
+	"unexpected response",
+	"not joined",
+	"lora is not setup, setup first",
+	"not enough memory",
+	"ABP expected",
+	"can't setup",
+	"transmission fail, ack not received",
+	"invalid argument"
+};
+
+#define LORA_DRIVER driver_get("lora")
 
 #define evLORA_INITED 	       	 ( 1 << 0 )
 #define evLORA_JOINED  	       	 ( 1 << 1 )
 #define evLORA_JOIN_DENIED     	 ( 1 << 2 )
 #define evLORA_TX_COMPLETE    	 ( 1 << 3 )
 #define evLORA_ACK_NOT_RECEIVED  ( 1 << 4 )
-
-static int joined = 0;
 
 // LMIC job for start LMIC stack
 static osjob_t initjob;
@@ -70,19 +84,29 @@ static struct mtx lora_mtx;
 // Event group handler for sync LMIC events with driver functions
 static EventGroupHandle_t loraEvent;
 
-// Current APPEU, DEVEUI, APPKEY ....
+// Data needed for OTAA
 static u1_t APPEUI[8] = {0,0,0,0,0,0,0,0};
 static u1_t DEVEUI[8] = {0,0,0,0,0,0,0,0};
 static u1_t APPKEY[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-// Current message id
+static u1_t joined = 0;
+
+// Data needed for ABP
+static u4_t DEVADDR = 0x00000000;
+static u1_t NWKSKEY[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+static u1_t APPSKEY[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+static u1_t session_init = 0;
+
+// Current message id. We put this in RTC memory for survive a deep sleep.
+// ABP needs to keep msgid in sequence between tranfers.
 RTC_DATA_ATTR static u4_t msgid = 0;
 
 // If = 1 driver is setup, if = 0 is not setup
-static int setup = 0;
+static u1_t setup = 0;
 
 // Current used band
-static int current_band = 868;
+static int current_band = 0;
 
 // Callback function to call when data is received
 static lora_rx *lora_rx_callback = NULL;
@@ -191,71 +215,42 @@ static void val_to_hex_string(char *hbuff, char *vbuff, int len, int reverse) {
 void onEvent (ev_t ev) {
     switch(ev) {
 	    case EV_SCAN_TIMEOUT:
-		  #if LORA_DEBUG_LEVEL > 0
-	 	  printf("EV_SCAN_TIMEOUT\r\n");
-          #endif
 	      break;
 
 	    case EV_BEACON_FOUND:
-          #if LORA_DEBUG_LEVEL > 0
-          printf("EV_BEACON_FOUND\r\n");
-          #endif
 	      break;
 
 	    case EV_BEACON_MISSED:
-          #if LORA_DEBUG_LEVEL > 0
-          printf("EV_BEACON_MISSED\r\n");
-          #endif
 	      break;
 
 	    case EV_BEACON_TRACKED:
-          #if LORA_DEBUG_LEVEL > 0
-          printf("EV_BEACON_TRACKED\r\n");
-          #endif
 	      break;
 
 	    case EV_JOINING:
-          #if LORA_DEBUG_LEVEL > 0
-          printf("EV_JOINING\r\n");
-          #endif
           joined = 0;
 	      break;
 
 	    case EV_JOINED:
-          #if LORA_DEBUG_LEVEL > 0
-          printf("EV_JOINED\r\n");
-          #endif
           joined = 1;
 		  xEventGroupSetBits(loraEvent, evLORA_JOINED);
+
+		  /* TTN uses SF9 for its RX2 window. */
+		  LMIC.dn2Dr = DR_SF9;
 	      break;
 
 	    case EV_RFU1:
-          #if LORA_DEBUG_LEVEL > 0
-          printf("EV_RFU1\r\n");
-          #endif
 	      break;
 
 	    case EV_JOIN_FAILED:
-          #if LORA_DEBUG_LEVEL > 0
-          printf("EV_JOIN_FAILED\r\n");
-          #endif
           joined = 0;
 		  xEventGroupSetBits(loraEvent, evLORA_JOIN_DENIED);
 	      break;
 
 	    case EV_REJOIN_FAILED:
-          #if LORA_DEBUG_LEVEL > 0
-          printf("EV_REJOIN_FAILED\r\n");
-          #endif
           joined = 0;
 	      break;
 
 	    case EV_TXCOMPLETE:
-          #if LORA_DEBUG_LEVEL > 0
-          printf("EV_TXCOMPLETE\r\n");
-          printf("LMIC.pendTxConf = %d, LMIC.txrxFlags = %x\r\n", LMIC.pendTxConf, LMIC.txrxFlags);
-          printf("EV_TXCOMPLETE\r\n");
-          #endif
 		  if (LMIC.pendTxConf) {
 			  if (LMIC.txrxFlags & TXRX_ACK) {
 		  		  xEventGroupSetBits(loraEvent, evLORA_TX_COMPLETE);
@@ -269,17 +264,9 @@ void onEvent (ev_t ev) {
 		  }
 
 	      if (LMIC.dataLen && lora_rx_callback) {
-			  #if LORA_DEBUG_LEVEL > 0
-			  printf("something received of length %d bytes\r\n", LMIC.dataLen * 2 + 1);
-			  #endif
-
 			  // Make a copy of the payload and call callback function
 			  u1_t *payload = (u1_t *)malloc(LMIC.dataLen);
 			  if (payload) {
-				  #if LORA_DEBUG_LEVEL > 0
-				  printf("call to lora_rx_callback\r\n");	
-				  #endif
-				  
 				  // Coding payload into an hex string
 				  val_to_hex_string((char *)payload, (char *)&LMIC.frame[LMIC.dataBeg], LMIC.dataLen, 0);
 				  payload[LMIC.dataLen * 2] = 0x00;
@@ -290,33 +277,18 @@ void onEvent (ev_t ev) {
 	      break;
 
 	    case EV_LOST_TSYNC:
-          #if LORA_DEBUG_LEVEL > 0
-          printf("EV_LOST_TSYNC\r\n");
-          #endif
 	      break;
 
 	    case EV_RESET:
-          #if LORA_DEBUG_LEVEL > 0
-          printf("EV_RESET\r\n");
-          #endif
 	      break;
 
 	    case EV_RXCOMPLETE:
-          #if LORA_DEBUG_LEVEL > 0
-          printf("EV_RXCOMPLETE\r\n");
-          #endif
 	      break;
 
 	    case EV_LINK_DEAD:
-          #if LORA_DEBUG_LEVEL > 0
-          printf("EV_LINK_DEAD\r\n");
-          #endif
 	      break;
 
 	    case EV_LINK_ALIVE:
-          #if LORA_DEBUG_LEVEL > 0
-          printf("EV_LINK_ALIVE\r\n");
-          #endif
 	      break;
 
 	    default:
@@ -329,7 +301,7 @@ static void lora_init(osjob_t *j) {
     // Reset MAC state
     LMIC_reset();
 
-	if (current_band == 868) {
+    if (current_band == 868) {
 	    LMIC_setupChannel(0, 868100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
 	    LMIC_setupChannel(1, 868300000, DR_RANGE_MAP(DR_SF12, DR_SF7B), BAND_CENTI);
 	    LMIC_setupChannel(2, 868500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
@@ -358,26 +330,61 @@ static void lora_init(osjob_t *j) {
     xEventGroupSetBits(loraEvent, evLORA_INITED);
 }
 
+#define lora_must_join() \
+    ( \
+		(DEVADDR == 0) && \
+		(memcmp(APPSKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) == 0) && \
+		(memcmp(APPSKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) == 0) \
+	)
+
+#define lora_can_participate_otaa() \
+	( \
+		(memcmp(APPEUI,  (u1_t[]){0,0,0,0,0,0,0,0}, 8) != 0) && \
+		(memcmp(DEVEUI, (u1_t[]){0,0,0,0,0,0,0,0}, 8) != 0) && \
+		(memcmp(APPKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) != 0) \
+	)
+
+#define lora_can_participate_abp() \
+	( \
+		(DEVADDR != 0) && \
+		(memcmp(APPSKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) != 0) && \
+		(memcmp(APPSKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) != 0) \
+	)
+
 // Setup driver
-tdriver_error *lora_setup(int band) {
+driver_error_t *lora_setup(int band) {
     mtx_lock(&lora_mtx);
 
-    current_band = band;    
+    // Sanity checks
+    if (current_band == 0) {
+        current_band = band;
+    } else {
+    	if (current_band != band) {
+    		return driver_setup_error(LORA_DRIVER, LORA_ERR_CANT_SETUP, "you must reset your board for change ISM band");
+    	}
+    }
 
     if (!setup) {
         syslog(LOG_DEBUG, "lora: setup, band %d", band);
-
-        // Create event group for sync driver with LMIC events
-		loraEvent = xEventGroupCreate();
 		
 		// LMIC init
-		os_init();
+		if (os_init() == 0) {
+	        // Create event group for sync driver with LMIC events
+			loraEvent = xEventGroupCreate();
 
-		// Set first callback, for init lora stack
-		os_setCallback(&initjob, lora_init);
+			// Set first callback, for init lora stack
+			os_setCallback(&initjob, lora_init);
 
-		// Wait for stack initialization
-	    xEventGroupWaitBits(loraEvent, evLORA_INITED, pdTRUE, pdFALSE, portMAX_DELAY);
+			// Wait for stack initialization
+		    xEventGroupWaitBits(loraEvent, evLORA_INITED, pdTRUE, pdFALSE, portMAX_DELAY);
+		} else {
+			setup = 0;
+
+			mtx_unlock(&lora_mtx);
+
+    		return driver_setup_error(LORA_DRIVER, LORA_ERR_CANT_SETUP, "radio phy not detected");
+		}
+
     }
 
 	setup = 1;
@@ -387,16 +394,17 @@ tdriver_error *lora_setup(int band) {
     return NULL;
 }
 
-int lora_mac_set(const char command, const char *value) {
+driver_error_t *lora_mac_set(const char command, const char *value) {
     mtx_lock(&lora_mtx);
 
     if (!setup) {
         mtx_unlock(&lora_mtx);
-        return LORA_NOT_SETUP;
+		return driver_operation_error(LORA_DRIVER, LORA_ERR_NOT_SETUP, NULL);
     }
 
 	switch(command) {
 		case LORA_MAC_SET_DEVADDR:
+			hex_string_to_val((char *)value, (char *)(&DEVADDR), 4, 1);
 			break;
 		
 		case LORA_MAC_SET_DEVEUI:
@@ -410,9 +418,11 @@ int lora_mac_set(const char command, const char *value) {
 			break;
 		
 		case LORA_MAC_SET_NWKSKEY:
+			hex_string_to_val((char *)value, (char *)NWKSKEY, 16, 0);
 			break;
 		
 		case LORA_MAC_SET_APPSKEY:
+			hex_string_to_val((char *)value, (char *)APPSKEY, 16, 0);
 			break;
 		
 		case LORA_MAC_SET_APPKEY:
@@ -450,10 +460,10 @@ int lora_mac_set(const char command, const char *value) {
 
     mtx_unlock(&lora_mtx);
 
-	return LORA_OK;
+	return NULL;
 }
 
-char *lora_mac_get(const char command) {
+driver_error_t *lora_mac_get(const char command, char **value) {
 	char *result = NULL;
 
     mtx_lock(&lora_mtx);
@@ -496,41 +506,52 @@ char *lora_mac_get(const char command) {
 				}				
 			}
 			break;
+
+		case LORA_MAC_GET_LINKCHK:
+			if (LMIC.adrAckReq == LINK_CHECK_INIT) {
+				result = (char *)malloc(3);
+				if (result) {
+					strcpy(result, "on");
+				}
+			} else {
+				result = (char *)malloc(4);
+				if (result) {
+					strcpy(result, "off");
+				}
+			}
+			break;
 	}
 
     mtx_unlock(&lora_mtx);
 
-	return result;
+    *value = result;
+
+	return NULL;
 }
 
-int lora_join() {
+driver_error_t *lora_join() {
     mtx_lock(&lora_mtx);
 
     // Sanity checks
     if (!setup) {
-        mtx_unlock(&lora_mtx);
-        return LORA_NOT_SETUP;
+    	mtx_unlock(&lora_mtx);
+		return driver_operation_error(LORA_DRIVER, LORA_ERR_NOT_SETUP, NULL);
     }
 
-    if (memcmp(APPEUI, (u1_t[]){0,0,0,0,0,0,0,0}, 8) == 0) {
+    if (!lora_must_join()) {
         mtx_unlock(&lora_mtx);
-    	return LORA_KEYS_NOT_CONFIGURED;
+		return driver_operation_error(LORA_DRIVER, LORA_ERR_ABP_EXPECTED, NULL);
     }
 
-    if (memcmp(DEVEUI, (u1_t[]){0,0,0,0,0,0,0,0}, 8) == 0) {
+    if (!lora_can_participate_otaa()) {
         mtx_unlock(&lora_mtx);
-    	return LORA_KEYS_NOT_CONFIGURED;
-    }
-
-    if (memcmp(APPKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) == 0) {
-        mtx_unlock(&lora_mtx);
-    	return LORA_KEYS_NOT_CONFIGURED;
+		return driver_operation_error(LORA_DRIVER, LORA_ERR_KEYS_NOT_CONFIGURED, NULL);
     }
 
     // Join, if needed
     if (joined) {
         mtx_unlock(&lora_mtx);
-    	return LORA_OK;
+    	return NULL;
     }
 
     // If we use join, set msgid to 0
@@ -547,19 +568,20 @@ int lora_join() {
     EventBits_t uxBits = xEventGroupWaitBits(loraEvent, evLORA_JOINED | evLORA_JOIN_DENIED, pdTRUE, pdFALSE, portMAX_DELAY);
     if (uxBits & (evLORA_JOINED)) {
 	    mtx_unlock(&lora_mtx);   
-		return LORA_JOIN_ACCEPTED; 	
+		return NULL;
     }
 
     if (uxBits & (evLORA_JOIN_DENIED)) {
 	    mtx_unlock(&lora_mtx);   
-		return LORA_NOT_JOINED; 	
+		return driver_operation_error(LORA_DRIVER, LORA_ERR_NOT_JOINED, NULL);
     }
 	
 	mtx_unlock(&lora_mtx);
-	return LORA_UNEXPECTED_RESPONSE;	
+
+	return driver_operation_error(LORA_DRIVER, LORA_ERR_UNEXPECTED_RESPONSE, NULL);
 }
 
-int lora_tx(int cnf, int port, const char *data) {
+driver_error_t *lora_tx(int cnf, int port, const char *data) {
 	uint8_t *payload;
 	uint8_t payload_len;
 	
@@ -567,12 +589,33 @@ int lora_tx(int cnf, int port, const char *data) {
 
     if (!setup) {
         mtx_unlock(&lora_mtx);
-        return LORA_NOT_SETUP;
+        return driver_operation_error(LORA_DRIVER, LORA_ERR_NOT_SETUP, NULL);
     }
 
-    if (!joined) {
-        mtx_unlock(&lora_mtx);
-        return LORA_NOT_JOINED;
+    if (lora_must_join()) {
+    	if (lora_can_participate_otaa()) {
+            if (!joined) {
+                mtx_unlock(&lora_mtx);
+                return driver_operation_error(LORA_DRIVER, LORA_ERR_NOT_JOINED, NULL);
+            }
+    	} else {
+            mtx_unlock(&lora_mtx);
+            return driver_operation_error(LORA_DRIVER, LORA_ERR_KEYS_NOT_CONFIGURED, NULL);
+    	}
+    } else {
+    	if (!lora_can_participate_abp()) {
+            mtx_unlock(&lora_mtx);
+            return driver_operation_error(LORA_DRIVER, LORA_ERR_KEYS_NOT_CONFIGURED, NULL);
+    	} else {
+    		if (!session_init) {
+    			LMIC_setSession (0x1, DEVADDR, NWKSKEY, APPSKEY);
+
+    		    /* TTN uses SF9 for its RX2 window. */
+    		    LMIC.dn2Dr = DR_SF9;
+
+    		    session_init = 1;
+    		}
+    	}
     }
 	
 	payload_len = strlen(data) / 2;
@@ -580,14 +623,18 @@ int lora_tx(int cnf, int port, const char *data) {
 	// Allocate buffer por payload	
 	payload = (uint8_t *)malloc(payload_len + 1);
 	if (!payload) {
-		// TO DO: not memory
+		mtx_unlock(&lora_mtx);
+		return driver_operation_error(LORA_DRIVER, LORA_ERR_NO_MEM, NULL);
 	}
 	
 	// Convert input payload (coded in hex string) into a byte buffer
 	hex_string_to_val((char *)data, (char *)payload, payload_len, 0);
 
 	// Put message id
-	payload[payload_len] = msgid++;
+	msgid++;
+
+	LMIC.seqnoUp = msgid;
+	payload[payload_len] = msgid;
 
 	// Set DR
 	if (!adr) {
@@ -603,17 +650,17 @@ int lora_tx(int cnf, int port, const char *data) {
     EventBits_t uxBits = xEventGroupWaitBits(loraEvent, evLORA_TX_COMPLETE | evLORA_ACK_NOT_RECEIVED, pdTRUE, pdFALSE, portMAX_DELAY);
     if (uxBits & (evLORA_TX_COMPLETE)) {
 	    mtx_unlock(&lora_mtx);   
-		return LORA_TX_OK; 	
+		return NULL;
     }
 
     if (uxBits & (evLORA_ACK_NOT_RECEIVED)) {
 	    mtx_unlock(&lora_mtx);   
-		return LORA_TRANSMISSION_FAIL_ACK_NOT_RECEIVED; 	
+        return driver_operation_error(LORA_DRIVER, LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED, NULL);
     }
 	
     mtx_unlock(&lora_mtx);
 
-	return LORA_UNEXPECTED_RESPONSE;
+    return driver_operation_error(LORA_DRIVER, LORA_ERR_UNEXPECTED_RESPONSE, NULL);
 }
 
 void lora_set_rx_callback(lora_rx *callback) {

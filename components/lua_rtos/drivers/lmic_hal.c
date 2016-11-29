@@ -40,6 +40,7 @@
 
 #include "esp_attr.h"
 #include "soc/gpio_reg.h"
+#include "soc/rtc_cntl_reg.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -269,12 +270,24 @@ void hal_sleep (void) {
 	}
 }
 
+/*
+ * In ESP32 RTC runs at 150.000 hz.
+ *
+ * Each RTC tick has a period of (100/15) usecs. If we factorize this value we have that
+ * (100 / 15) usecs = ((2 * 5 * 2 * 4) / (3 * 5)) usecs = (20 / 3) usecs.
+ *
+ * LMIC needs a tick period between 15.5 usecs and 100 usecs, so we have to multiply RTC ticks
+ * periods for give LMIC ticks periods. This causes, for example, that if we multiply RTC ticks
+ * periods by 3 we have an exact period time of 20 usecs (20 / 3) usecs * 3 = 20 usecs.
+ *
+ * For that reason Lua RTOS is configured to count 1 LMIC tick every 3 RTC ticks, so, for LMIC:
+ *
+ * US_PER_OSTICK = 20
+ * OSTICKS_PER_SEC = 50000
+ *
+ */
 u4_t IRAM_ATTR hal_ticks () {
-	struct timeval tv;
-
-	gettimeofday(&tv, NULL);
-
-	return ((((tv.tv_sec * 1000000 + tv.tv_usec) * 15) / 100) / 3);
+	return (system_get_time() / 20);
 }
 
 // Returns the number of ticks until time. Negative values indicate that
@@ -311,6 +324,24 @@ void hal_failed (char *file, int line) {
 
 	for(;;);
 }
+
+#if 0
+void lmic_hal_time_test() {
+	uint32_t  target = 0;
+
+	gpio_pin_output(LED_ACT);
+	gpio_pin_clr(LED_ACT);
+
+	while (1) {
+		target = hal_ticks() + us2osticks(100);
+		while (hal_ticks() < target);
+		gpio_pin_clr(LED_ACT);
+		target = hal_ticks() + us2osticks(100);
+		while (hal_ticks() < target);
+		gpio_pin_set(LED_ACT);
+	}
+}
+#endif
 
 #endif
 #endif

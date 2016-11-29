@@ -32,31 +32,23 @@
 #ifndef LORA_H
 #define LORA_H
 
-#include <sys/error.h>
-
 #if LUA_USE_LORA
-#define LORA_OK                                  (1 <<  0)
-#define LORA_JOIN_ACCEPTED                       (1 <<  2)
-#define LORA_TX_OK                               (1 <<  3)
-#define LORA_RX_OK                               (1 <<  4)
-#define LORA_OTHER                               (1 <<  5)
-#define LORA_KEYS_NOT_CONFIGURED                 (1 <<  6)
-#define LORA_ALL_CHANNELS_BUSY                   (1 <<  7)
-#define LORA_DEVICE_IN_SILENT_STATE              (1 <<  8)
-#define LORA_DEVICE_DEVICE_IS_NOT_IDLE           (1 <<  9)
-#define LORA_PAUSED                              (1 << 10)
-#define LORA_TIMEOUT                             (1 << 11)
-#define LORA_JOIN_DENIED                         (1 << 12)
-#define LORA_UNEXPECTED_RESPONSE                 (1 << 13)
-#define LORA_NOT_JOINED                          (1 << 14)
-#define LORA_REJOIN_NEEDED                       (1 << 15)
-#define LORA_INVALID_DATA_LEN                    (1 << 16)
-#define LORA_TRANSMISSION_FAIL_ACK_NOT_RECEIVED  (1 << 18)
-#define LORA_NOT_SETUP                           (1 << 19)
-#define LORA_INVALID_PARAM                       (1 << 20)
-#define LORA_INVALID_ARGUMENT                    (1 << 20)
-#define LORA_NO_MEM								 (1 << 21)
 
+#include <sys/driver.h>
+
+// Lora errors
+#define LORA_ERR_KEYS_NOT_CONFIGURED                (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  1)
+#define LORA_ERR_JOIN_DENIED                        (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  2)
+#define LORA_ERR_UNEXPECTED_RESPONSE                (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  3)
+#define LORA_ERR_NOT_JOINED                         (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  4)
+#define LORA_ERR_NOT_SETUP                          (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  5)
+#define LORA_ERR_NO_MEM					            (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  6)
+#define LORA_ERR_ABP_EXPECTED			            (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  7)
+#define LORA_ERR_CANT_SETUP				            (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  8)
+#define LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  9)
+#define LORA_ERR_INVALID_ARGUMENT                   (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) | 10)
+
+// Lora Mac set commands
 #define LORA_MAC_SET_DEVADDR		0
 #define LORA_MAC_SET_DEVEUI			1
 #define LORA_MAC_SET_APPEUI			2
@@ -65,45 +57,25 @@
 #define LORA_MAC_SET_APPKEY			5
 #define LORA_MAC_SET_DR				6
 #define LORA_MAC_SET_ADR			7
-#define LORA_MAC_SET_RETX			8
-#define LORA_MAC_SET_AR				9
-#define LORA_MAC_SET_LINKCHK	   10
-#define LORA_MAC_SET_CH_STATUS	   11
-#define LORA_MAC_SET_CH_FREQ	   12
-#define LORA_MAC_SET_CH_DCYCLE	   13
-#define LORA_MAC_SET_CH_DRRANGE	   14
-#define LORA_MAC_SET_PWRIDX		   15
-	
-#define LORA_MAC_GET_DEVADDR	   50
-#define LORA_MAC_GET_DEVEUI		   51
-#define LORA_MAC_GET_APPEUI		   52
-#define LORA_MAC_GET_DR			   53
-#define LORA_MAC_GET_ADR		   54
-#define LORA_MAC_GET_RETX		   55
-#define LORA_MAC_GET_AR			   56
-#define LORA_MAC_GET_MRGN		   57
-#define LORA_MAC_GET_CH_STATUS	   58
-#define LORA_MAC_GET_CH_FREQ	   59
-#define LORA_MAC_GET_CH_DCYCLE	   60
-#define LORA_MAC_GET_CH_SDRANGE	   61
-#define LORA_MAC_GET_PWRIDX		   62
+#define LORA_MAC_SET_LINKCHK        8
+
+// Lora Mac get commands
+#define LORA_MAC_GET_DEVADDR	   20
+#define LORA_MAC_GET_DEVEUI		   21
+#define LORA_MAC_GET_APPEUI		   22
+#define LORA_MAC_GET_DR			   23
+#define LORA_MAC_GET_ADR		   24
+#define LORA_MAC_GET_LINKCHK       25
 
 typedef void (lora_rx)(int port, char *payload);
 
-tdriver_error *lora_setup(int band);
-int lora_mac_set(const char command, const char *value);
-char *lora_mac_get(const char command);
-int lora_join();
-int lora_tx(int cnf, int port, const char *data);
+driver_error_t *lora_setup(int band);
+driver_error_t *lora_mac_set(const char command, const char *value);
+driver_error_t *lora_mac_get(const char command, char **value);
+driver_error_t *lora_join();
+driver_error_t *lora_tx(int cnf, int port, const char *data);
+
 void lora_set_rx_callback(lora_rx *callback);
-tdriver_error *lora_reset();
-
-#if USE_LMIC
-#include <stdint.h>
-
-tdriver_error *lmic_setup_timer();
-void lmic_intr(uint8_t irq);
-#endif
 
 #endif
 

@@ -37,7 +37,6 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <sys/error.h>
 #include <drivers/lora.h>
 #include <drivers/uart.h>
 
@@ -53,41 +52,6 @@ static void on_received(int port, char *payload) {
     }
     
     free(payload);
-}
-
-static void lora_error(lua_State* L, int code) {
-    switch (code){
-        case LORA_KEYS_NOT_CONFIGURED:
-            luaL_error(L, "%d:keys are not configured", LORA_KEYS_NOT_CONFIGURED);break;
-        case LORA_ALL_CHANNELS_BUSY:
-            luaL_error(L, "%d:all channels are busy", LORA_ALL_CHANNELS_BUSY);break;
-        case LORA_DEVICE_IN_SILENT_STATE:
-            luaL_error(L, "%d:device is in silent state", LORA_DEVICE_IN_SILENT_STATE);break;
-        case LORA_DEVICE_DEVICE_IS_NOT_IDLE:
-            luaL_error(L, "%d:device is not idle", LORA_DEVICE_DEVICE_IS_NOT_IDLE);break;
-        case LORA_PAUSED:
-            luaL_error(L, "%d:lora stack are paused", LORA_PAUSED);break;
-        case LORA_TIMEOUT:
-            luaL_error(L, "%d:time out", LORA_TIMEOUT);break;
-        case LORA_JOIN_DENIED:
-            luaL_error(L, "%d:join denied", LORA_JOIN_DENIED);break;
-        case LORA_UNEXPECTED_RESPONSE:
-            luaL_error(L, "%d:unexpected response", LORA_UNEXPECTED_RESPONSE);break;
-        case LORA_NOT_JOINED:
-            luaL_error(L, "%d:not joined", LORA_NOT_JOINED);break;
-        case LORA_REJOIN_NEEDED:
-            luaL_error(L, "%d:rejoin needed", LORA_REJOIN_NEEDED);break;
-        case LORA_INVALID_DATA_LEN:
-            luaL_error(L, "%d:invalid data len", LORA_INVALID_DATA_LEN);break;
-        case LORA_TRANSMISSION_FAIL_ACK_NOT_RECEIVED:
-            luaL_error(L, "%d:transmission fail, ack not received", LORA_TRANSMISSION_FAIL_ACK_NOT_RECEIVED);break;
-        case LORA_NOT_SETUP:
-            luaL_error(L, "%d:lora is not setup, setup first", LORA_NOT_SETUP);break;
-        case LORA_INVALID_PARAM:
-            luaL_error(L, "%d:invalid argument", LORA_INVALID_ARGUMENT);break;
-        case LORA_NO_MEM:
-            luaL_error(L, "%d:not enough memory", LORA_NO_MEM);break;
-    }
 }
 
 // Checks if passed strings represents a valid hex number
@@ -141,19 +105,19 @@ static char *hex_str_pad(lua_State* L, const char  *str, int len) {
 }
 
 static int llora_setup(lua_State* L) {    
-    tdriver_error *error;
+	driver_error_t *error;
     
-    int band = luaL_optinteger(L, 1, 868);
-    
+    int band = luaL_checkinteger(L, 1);
+
     // Sanity checks
     if ((band != 868) && (band != 433)) {
-        return luaL_error(L, "%d:invalid band", LORA_INVALID_ARGUMENT);
+        return luaL_error(L, "%d:invalid band", LORA_ERR_INVALID_ARGUMENT);
     }
     
     // Setup in base of frequency
     error = lora_setup(band);
     if (error) {
-        return luaL_driver_error(L, "lora can't setup", error);
+        return luaL_driver_error(L, error);
     }
 	
     return 0;
@@ -162,11 +126,12 @@ static int llora_setup(lua_State* L) {
 static int llora_set_setDevAddr(lua_State* L) {
     char *devAddr = hex_str_pad(L, luaL_checkstring(L, 1), 8);
     
-    int resp = lora_mac_set(LORA_MAC_SET_DEVADDR, devAddr);
-    if (resp != LORA_OK) {
+    driver_error_t *error = lora_mac_set(LORA_MAC_SET_DEVADDR, devAddr);
+    if (error) {
         free(devAddr);
-        lora_error(L, resp);    
+        return luaL_driver_error(L, error);
     }
+
     free(devAddr);
     return 0;    
 }
@@ -174,12 +139,12 @@ static int llora_set_setDevAddr(lua_State* L) {
 static int llora_set_DevEui(lua_State* L) {
     char  *devEui = hex_str_pad(L, luaL_checkstring(L, 1), 16);
     
-    int resp = lora_mac_set(LORA_MAC_SET_DEVEUI, devEui);
-    if (resp != LORA_OK) {
+    driver_error_t *error = lora_mac_set(LORA_MAC_SET_DEVEUI, devEui);
+    if (error) {
         free(devEui);
-        lora_error(L, resp);    
+        return luaL_driver_error(L, error);
     }
-	
+
     free(devEui);
     return 0;  
 }
@@ -187,12 +152,12 @@ static int llora_set_DevEui(lua_State* L) {
 static int llora_set_AppEui(lua_State* L) {
     char  *appEui = hex_str_pad(L, luaL_checkstring(L, 1), 16);
         
-    int resp = lora_mac_set(LORA_MAC_SET_APPEUI, appEui);
-    if (resp != LORA_OK) {
+    driver_error_t *error = lora_mac_set(LORA_MAC_SET_APPEUI, appEui);
+    if (error) {
         free(appEui);
-        lora_error(L, resp);    
+        return luaL_driver_error(L, error);
     }
-	
+
     free(appEui);
     return 0;  
 }
@@ -200,12 +165,12 @@ static int llora_set_AppEui(lua_State* L) {
 static int llora_set_NwkSKey(lua_State* L) {
     char  *nwkSKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
         
-    int resp = lora_mac_set(LORA_MAC_SET_NWKSKEY, nwkSKey);
-    if (resp != LORA_OK) {
+    driver_error_t *error = lora_mac_set(LORA_MAC_SET_NWKSKEY, nwkSKey);
+    if (error) {
         free(nwkSKey);
-        lora_error(L, resp);    
+        return luaL_driver_error(L, error);
     }
-	
+
     free(nwkSKey);
     return 0;  
 }
@@ -213,12 +178,12 @@ static int llora_set_NwkSKey(lua_State* L) {
 static int llora_set_AppSKey(lua_State* L) {
     char  *appSKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
         
-    int resp = lora_mac_set(LORA_MAC_SET_APPSKEY, appSKey);
-    if (resp != LORA_OK) {
+    driver_error_t *error = lora_mac_set(LORA_MAC_SET_APPSKEY, appSKey);
+    if (error) {
         free(appSKey);
-        lora_error(L, resp);    
+        return luaL_driver_error(L, error);
     }
-	
+
     free(appSKey);
     return 0;
 }
@@ -226,10 +191,10 @@ static int llora_set_AppSKey(lua_State* L) {
 static int llora_set_AppKey(lua_State* L) {
     char  *appKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
         
-    int resp = lora_mac_set(LORA_MAC_SET_APPKEY, appKey);
-    if (resp != LORA_OK) {
+    driver_error_t *error = lora_mac_set(LORA_MAC_SET_APPKEY, appKey);
+    if (error) {
         free(appKey);
-        lora_error(L, resp);    
+        return luaL_driver_error(L, error);
     }
 
     free(appKey);
@@ -240,16 +205,16 @@ static int llora_set_Dr(lua_State* L) {
     int dr = luaL_checkinteger(L, 1);
     
     if ((dr < 0) || (dr > 7)) {
-        return luaL_error(L, "%d:invalid data rate value (0 to 7)", LORA_INVALID_ARGUMENT); 
+        return luaL_error(L, "%d:invalid data rate value (0 to 7)", LORA_ERR_INVALID_ARGUMENT);
     }
     
     char value[2];
     
     sprintf(value,"%d", dr);
         
-    int resp = lora_mac_set(LORA_MAC_SET_DR, value);
-    if (resp != LORA_OK) {
-        lora_error(L, resp);    
+    driver_error_t *error = lora_mac_set(LORA_MAC_SET_DR, value);
+    if (error) {
+        return luaL_driver_error(L, error);
     }
 	
     return 0;
@@ -265,16 +230,21 @@ static int llora_set_Adr(lua_State* L) {
         strcpy(value, "off");
     }
     
-    int resp = lora_mac_set(LORA_MAC_SET_ADR, value);
-    if (resp != LORA_OK) {
-        lora_error(L, resp);    
+    driver_error_t *error = lora_mac_set(LORA_MAC_SET_ADR, value);
+    if (error) {
+    	return luaL_driver_error(L, error);
     }
 
     return 0;
 }
 
 static int llora_get_DevAddr(lua_State* L) {
-    char *value = lora_mac_get(LORA_MAC_GET_DEVADDR);
+    char *value;
+
+    driver_error_t *error = lora_mac_get(LORA_MAC_GET_DEVADDR, &value);
+    if (error) {
+    	return luaL_driver_error(L, error);
+    }
 	
     lua_pushlstring(L, value, strlen(value));
     free(value);
@@ -283,7 +253,12 @@ static int llora_get_DevAddr(lua_State* L) {
 }
 
 static int llora_get_DevEui(lua_State* L) {
-    char *value = lora_mac_get(LORA_MAC_GET_DEVEUI);
+    char *value;
+
+    driver_error_t *error = lora_mac_get(LORA_MAC_GET_DEVEUI, &value);
+    if (error) {
+    	return luaL_driver_error(L, error);
+    }
 	
     lua_pushlstring(L, value, strlen(value));
     free(value);
@@ -292,7 +267,12 @@ static int llora_get_DevEui(lua_State* L) {
 }
 
 static int llora_get_AppEui(lua_State* L) {
-    char *value = lora_mac_get(LORA_MAC_GET_APPEUI);
+    char *value;
+
+    driver_error_t *error = lora_mac_get(LORA_MAC_GET_APPEUI, &value);
+    if (error) {
+    	return luaL_driver_error(L, error);
+    }
 	
     lua_pushlstring(L, value, strlen(value));
     free(value);
@@ -301,7 +281,12 @@ static int llora_get_AppEui(lua_State* L) {
 }
 
 static int llora_get_Dr(lua_State* L) {
-    char *value = lora_mac_get(LORA_MAC_GET_DR);
+    char *value;
+
+    driver_error_t *error = lora_mac_get(LORA_MAC_GET_DR, &value);
+    if (error) {
+    	return luaL_driver_error(L, error);
+    }
 	
     lua_pushinteger(L, atoi(value));
     free(value);
@@ -310,7 +295,12 @@ static int llora_get_Dr(lua_State* L) {
 }
 
 static int llora_get_Adr(lua_State* L) {
-    char *value = lora_mac_get(LORA_MAC_GET_ADR);
+    char *value;
+
+    driver_error_t *error = lora_mac_get(LORA_MAC_GET_ADR, &value);
+    if (error) {
+    	return luaL_driver_error(L, error);
+    }
 	
     if (strcmp(value,"on") == 0) {
         lua_pushboolean(L, 1);
@@ -324,12 +314,9 @@ static int llora_get_Adr(lua_State* L) {
 }
 
 static int llora_join(lua_State* L) {
-    int resp = 0;
-    
-    resp = lora_join();
-    
-    if (resp != LORA_OK) {
-        lora_error(L, resp);
+    driver_error_t *error = lora_join();
+    if (error) {
+        return luaL_driver_error(L, error);
     }
     
     return 0;
@@ -342,16 +329,17 @@ static int llora_tx(lua_State* L) {
     const char *data = luaL_checkstring(L, 3);
     
     if ((port < 1) || (port > 223)) {
-        return luaL_error(L, "%d:invalid port number", LORA_INVALID_ARGUMENT);   
+        return luaL_error(L, "%d:invalid port number", LORA_ERR_INVALID_ARGUMENT);
     }
 
     if (!check_hex_str(data)) {
-        luaL_error(L, "%d:invalid data", LORA_INVALID_ARGUMENT);     
+        luaL_error(L, "%d:invalid data", LORA_ERR_INVALID_ARGUMENT);
     }    
     
-    int resp = lora_tx(cnf, port, data);
-    if (resp != LORA_OK) {
-        lora_error(L, resp);
+    driver_error_t *error = lora_tx(cnf, port, data);
+
+    if (error) {
+        return luaL_driver_error(L, error);
     }
     
     return 0;    
@@ -370,20 +358,13 @@ static int llora_rx(lua_State* L) {
 }
 
 static const LUA_REG_TYPE lora_error_map[] = {
-	{ LSTRKEY( "KeysNotConfigured" ),	 LINTVAL( LORA_KEYS_NOT_CONFIGURED ) },
-	{ LSTRKEY( "AllChannelsBusy" ),		 LINTVAL( LORA_ALL_CHANNELS_BUSY ) },
-	{ LSTRKEY( "DeviceInSilentState" ),	 LINTVAL( LORA_DEVICE_IN_SILENT_STATE ) },
-	{ LSTRKEY( "DeviceIsNotIdle" ),		 LINTVAL( LORA_DEVICE_DEVICE_IS_NOT_IDLE ) },
-	{ LSTRKEY( "Paused" ),		         LINTVAL( LORA_PAUSED ) },
-	{ LSTRKEY( "Timeout" ),		         LINTVAL( LORA_TIMEOUT ) },
-	{ LSTRKEY( "JoinDenied" ),		     LINTVAL( LORA_JOIN_DENIED ) },
-	{ LSTRKEY( "UnexpectedResponse" ),	 LINTVAL( LORA_UNEXPECTED_RESPONSE ) },
-	{ LSTRKEY( "NotJoined" ),		     LINTVAL( LORA_NOT_JOINED ) },
-	{ LSTRKEY( "RejoinNeeded" ),		 LINTVAL( LORA_REJOIN_NEEDED ) },
-	{ LSTRKEY( "InvalidDataLen" ),		 LINTVAL( LORA_INVALID_DATA_LEN ) },
-	{ LSTRKEY( "TransmissionFail" ),	 LINTVAL( LORA_TRANSMISSION_FAIL_ACK_NOT_RECEIVED ) },
-	{ LSTRKEY( "NotSetup" ),		     LINTVAL( LORA_NOT_SETUP ) },
-	{ LSTRKEY( "InvalidArgument" ),		 LINTVAL( LORA_INVALID_PARAM ) },
+	{ LSTRKEY( "KeysNotConfigured" ),	 LINTVAL( LORA_ERR_KEYS_NOT_CONFIGURED ) },
+	{ LSTRKEY( "JoinDenied" ),		     LINTVAL( LORA_ERR_JOIN_DENIED ) },
+	{ LSTRKEY( "UnexpectedResponse" ),	 LINTVAL( LORA_ERR_UNEXPECTED_RESPONSE ) },
+	{ LSTRKEY( "NotJoined" ),		     LINTVAL( LORA_ERR_NOT_JOINED ) },
+	{ LSTRKEY( "TransmissionFail" ),	 LINTVAL( LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED ) },
+	{ LSTRKEY( "NotSetup" ),		     LINTVAL( LORA_ERR_NOT_SETUP ) },
+	{ LSTRKEY( "InvalidArgument" ),		 LINTVAL( LORA_ERR_INVALID_ARGUMENT ) },
 };
 
 static const LUA_REG_TYPE lora_map[] = {

@@ -32,7 +32,6 @@
 #ifndef I2C_H
 #define I2C_H
 
-#include <sys/error.h>
 #include <drivers/cpu.h>
 
 #define NI2C (NI2CHW + NI2CBB)
@@ -56,7 +55,7 @@ typedef struct i2c {
     void (* i2c_stop)(struct i2c *unit);
 } i2c_t;
 
-tdriver_error *i2c_setup(int unit, int speed, int sda, int scl);
+driver_error_t *i2c_setup(int unit, int speed, int sda, int scl);
 void i2c_start(int unit);
 void i2c_stop(int unit);
 int  i2c_write_address(int unit, char address, int read);

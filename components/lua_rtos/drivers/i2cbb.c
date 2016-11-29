@@ -34,7 +34,6 @@
 #include <unistd.h>
 #include <sys/syslog.h>
 #include <sys/delay.h>
-#include <sys/error.h>
 #include <sys/resource.h>
 #include <drivers/i2c.h>
 #include <drivers/i2cbb.h>
