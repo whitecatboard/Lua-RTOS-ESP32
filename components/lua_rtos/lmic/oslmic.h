@@ -39,6 +39,8 @@ typedef uint16_t           u2_t;
 typedef int16_t            s2_t;
 typedef uint32_t           u4_t;
 typedef int32_t            s4_t;
+typedef uint64_t           u8_t;
+typedef int64_t            s8_t;
 typedef unsigned int       uint;
 typedef const char* str_t;
 
@@ -106,7 +108,7 @@ void os_runloop(void * pvParameters);
 #error Illegal OSTICKS_PER_SEC - must be in range [10000:64516]. One tick must be 15.5us .. 100us long.
 #endif
 
-typedef s4_t  ostime_t;
+typedef u8_t  ostime_t;
 
 #if !HAS_ostick_conv
 #define us2osticks(us)   ((ostime_t)( ((int64_t)(us) * OSTICKS_PER_SEC) / 1000000))

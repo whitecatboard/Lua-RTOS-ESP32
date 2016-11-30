@@ -88,7 +88,7 @@ void     uart_consume(uint8_t unit);
 const char  *uart_name(uint8_t unit);
 int      uart_get_br(int unit);
 int      uart_inited(int unit);
-
+void     uart_stop(int unit);
 QueueHandle_t *uart_get_queue(uint8_t unit);
 
 #endif

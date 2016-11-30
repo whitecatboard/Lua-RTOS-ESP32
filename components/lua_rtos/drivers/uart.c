@@ -514,3 +514,14 @@ int uart_inited(int unit) {
     unit--;
     return ((uart[unit].flags & UART_FLAG_INIT) && (uart[unit].flags & UART_FLAG_IRQ_INIT));
 }
+
+void uart_stop(int unit) {
+	int cunit = 0;
+	unit--;
+
+	for(cunit = 0;cunit < NUART; cunit++) {
+		if ((unit == -1) || (cunit == unit)) {
+		    WRITE_PERI_REG(UART_CONF0_REG(unit), 0);
+		}
+	}
+}

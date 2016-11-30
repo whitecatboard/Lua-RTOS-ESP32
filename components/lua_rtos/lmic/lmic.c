@@ -538,7 +538,7 @@ static void rxschedInit (xref2rxsched_t rxsched) {
 
 static bit_t rxschedNext (xref2rxsched_t rxsched, ostime_t cando) {
   again:
-    if( rxsched->rxtime - cando >= 0 )
+    if( rxsched->rxtime >= cando )
         return 1;
     u1_t slot;
     if( (slot=rxsched->slot) >= 128 )
@@ -810,7 +810,7 @@ static ostime_t nextJoinState (void) {
     // Move txend to randomize synchronized concurrent joins.
     // Duty cycle is based on txend.
     ostime_t time = os_getTime();
-    if( time - LMIC.bands[BAND_MILLI].avail < 0 )
+    if( time < LMIC.bands[BAND_MILLI].avail )
         time = LMIC.bands[BAND_MILLI].avail;
     LMIC.txend = time +
         (isTESTMODE()
@@ -1133,7 +1133,7 @@ static bit_t decodeFrame (void) {
                             e_.info2  = hdr + (dlen<<8)));
       norx:
 #if LMIC_DEBUG_LEVEL > 0
-        syslog(LOG_DEBUG, "%lu: Invalid downlink, window=%s\n", os_getTime(), window);
+        syslog(LOG_DEBUG, "%lu: Invalid downlink, window=%s\n", (u4_t)os_getTime(), window);
 #endif
         LMIC.dataLen = 0;
         return 0;
@@ -1416,7 +1416,7 @@ static bit_t decodeFrame (void) {
         LMIC.dataLen = pend-poff;
     }
 #if LMIC_DEBUG_LEVEL > 0
-    syslog(LOG_DEBUG, "%lu: Received downlink, window=%s, port=%d, ack=%d\n", os_getTime(), window, port, ackup);
+    syslog(LOG_DEBUG, "%lu: Received downlink, window=%s, port=%d, ack=%d\n", (u4_t)os_getTime(), window, port, ackup);
 #endif
     return 1;
 }
@@ -1586,7 +1586,7 @@ static bit_t processJoinAccept (void) {
             if( freq ) {
                 LMIC_setupChannel(chidx, freq, 0, -1);
 #if LMIC_DEBUG_LEVEL > 1
-                syslog(LOG_DEBUG, "%lu: Setup channel, idx=%d, freq=%lu\n", os_getTime(), chidx, (unsigned long)freq);
+                syslog(LOG_DEBUG, "%lu: Setup channel, idx=%d, freq=%lu\n", (u4_t)os_getTime(), chidx, (unsigned long)freq);
 #endif
             }
         }
@@ -2123,7 +2123,7 @@ static void startRxPing (xref2osjob_t osjob) {
 // Decide what to do next for the MAC layer of a device
 static void engineUpdate (void) {
 #if LMIC_DEBUG_LEVEL > 0
-    syslog(LOG_DEBUG, "%lu: engineUpdate, opmode=0x%x (%s)\n", os_getTime(), LMIC.opmode, debug_opmode(LMIC.opmode));
+    syslog(LOG_DEBUG, "%lu: engineUpdate, opmode=0x%x (%s)\n", (u4_t)os_getTime(), LMIC.opmode, debug_opmode(LMIC.opmode));
 #endif
     // Check for ongoing state: scan or TX/RX transaction
     if( (LMIC.opmode & (OP_SCAN|OP_TXRXPEND|OP_SHUTDOWN)) != 0 )
@@ -2158,7 +2158,7 @@ static void engineUpdate (void) {
             txbeg = LMIC.txend;
         }
         // Delayed TX or waiting for duty cycle?
-        if( (LMIC.globalDutyRate != 0 || (LMIC.opmode & OP_RNDTX) != 0)  &&  (txbeg - LMIC.globalDutyAvail) < 0 )
+        if( (LMIC.globalDutyRate != 0 || (LMIC.opmode & OP_RNDTX) != 0)  &&  (txbeg < LMIC.globalDutyAvail) )
             txbeg = LMIC.globalDutyAvail;
 #if !defined(DISABLE_BEACONS)
         // If we're tracking a beacon...
@@ -2173,7 +2173,7 @@ static void engineUpdate (void) {
         }
 #endif // !DISABLE_BEACONS
         // Earliest possible time vs overhead to setup radio
-        if( txbeg - (now + TX_RAMPUP) < 0 ) {
+        if( txbeg < (now + TX_RAMPUP) ) {
             // We could send right now!
         txbeg = now;
             dr_t txdr = (dr_t)LMIC.datarate;
@@ -2241,14 +2241,14 @@ static void engineUpdate (void) {
     if( (LMIC.opmode & OP_PINGINI) != 0 ) {
         // One more RX slot in this beacon period?
         if( rxschedNext(&LMIC.ping, now+RX_RAMPUP) ) {
-            if( txbeg != 0  &&  (txbeg - LMIC.ping.rxtime) < 0 )
+            if( txbeg != 0  &&  (txbeg < LMIC.ping.rxtime) )
                 goto txdelay;
             LMIC.rxsyms  = LMIC.ping.rxsyms;
             LMIC.rxtime  = LMIC.ping.rxtime;
             LMIC.freq    = LMIC.ping.freq;
             LMIC.rps     = dndr2rps(LMIC.ping.dr);
             LMIC.dataLen = 0;
-            LMIC_ASSERT(LMIC.rxtime - now+RX_RAMPUP >= 0 );
+            LMIC_ASSERT(LMIC.rxtime >= now+RX_RAMPUP );
             os_setTimedCallback(&LMIC.osjob, LMIC.rxtime - RX_RAMPUP, FUNC_ADDR(startRxPing));
             return;
         }
@@ -2256,13 +2256,13 @@ static void engineUpdate (void) {
     }
 #endif // !DISABLE_PING
 
-    if( txbeg != 0  &&  (txbeg - rxtime) < 0 )
+    if( txbeg != 0  &&  (txbeg < rxtime) )
         goto txdelay;
 
     setBcnRxParams();
     LMIC.rxsyms = LMIC.bcnRxsyms;
     LMIC.rxtime = LMIC.bcnRxtime;
-    if( now - rxtime >= 0 ) {
+    if( now >= rxtime ) {
         LMIC.osjob.func = FUNC_ADDR(processBeacon);
         os_radio(RADIO_RX);
         return;

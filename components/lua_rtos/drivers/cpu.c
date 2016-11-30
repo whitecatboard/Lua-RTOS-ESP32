@@ -30,7 +30,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "esp_deepsleep.h"
+#include "esp_system.h"
 
 #include <string.h>
 
@@ -40,23 +40,7 @@
 #include <sys/delay.h>
 
 #include <drivers/gpio.h>
-
-
-void system_restart();
-
-/*
-
-#include <time.h>
-#include <machine/pic32mz.h>
-#include <machine/machConst.h>
-#include <drivers/cpu/cpu.h>
-#include <drivers/gpio/gpio.h>
-#include <drivers/rtc/rtc.h>
-#include <drivers/network/network.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <syslog.h>
-*/
+#include <drivers/uart.h>
 
 static const char *pin_names[] = {
 "?",
@@ -336,13 +320,16 @@ void cpu_show_info() {
 }
 
 void cpu_sleep(int seconds) {
-    syslog(LOG_INFO, "entering deep sleep for %d seconds", seconds);
+	// Stop all UART units. This is done for prevent strangers characters
+	// on the console when CPU begins to enter in the sleep phase
+	uart_stop(0);
 
-    system_deep_sleep(seconds * 1000000LL);
+	// Put ESP32 in deep sleep mode
+    esp_deep_sleep(seconds * 1000000LL);
 }
 
 void cpu_reset() {
-	system_restart();
+	esp_restart();
 }
 
 struct bootflags

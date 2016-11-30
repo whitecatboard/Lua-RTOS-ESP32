@@ -38,6 +38,7 @@
 #include "freertos/timers.h"
 #include "freertos/event_groups.h"
 
+#include "esp_system.h"
 #include "esp_attr.h"
 #include "soc/gpio_reg.h"
 #include "soc/rtc_cntl_reg.h"
@@ -286,21 +287,32 @@ void hal_sleep (void) {
  * OSTICKS_PER_SEC = 50000
  *
  */
-u4_t IRAM_ATTR hal_ticks () {
-	return (system_get_time() / 20);
+u8_t IRAM_ATTR hal_ticks () {
+	struct timeval tv;
+	u8_t microseconds;
+
+	gettimeofday(&tv, NULL);
+
+	microseconds  = tv.tv_sec * 1000000;
+	microseconds += tv.tv_usec;
+
+	return (microseconds / US_PER_OSTICK);
 }
 
-// Returns the number of ticks until time. Negative values indicate that
-// time has already passed.
-static s4_t delta_time(u4_t time) {
-    return (s4_t)(time - hal_ticks());
+/*
+ * Return 1 if target time is closed.
+ */
+static u1_t is_close(u8_t target) {
+	u1_t res = (hal_ticks() >= target);
+
+	return res;
 }
 
 /*
  * busy-wait until specified timestamp (in ticks) is reached.
  */
-void hal_waitUntil (u4_t time) {
-    while (delta_time(time)  >= 0) {
+void hal_waitUntil (u8_t time) {
+    while (!is_close(time)) {
     	udelay(1);
     }
 }
@@ -310,8 +322,8 @@ void hal_waitUntil (u4_t time) {
  *   - return 1 if target time is close
  *   - otherwise rewind timer for target time or full period and return 0
  */
-u1_t hal_checkTimer (u4_t targettime) {
-	return delta_time(targettime) <= 0;
+u1_t hal_checkTimer (u8_t targettime) {
+	return (is_close(targettime));
 }
 
 /*
@@ -320,7 +332,7 @@ u1_t hal_checkTimer (u4_t targettime) {
  *   - action could be HALT or reboot
  */
 void hal_failed (char *file, int line) {
-	syslog(LOG_ERR, "%lu: assert at $s, line %s\n", os_getTime(), file, line);
+	syslog(LOG_ERR, "%lu: assert at $s, line %s\n", (u4_t)os_getTime(), file, line);
 
 	for(;;);
 }
