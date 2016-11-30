@@ -64,6 +64,7 @@
 #include "soc/uart_reg.h"
 #include "soc/io_mux_reg.h"
 #include "driver/uart.h"
+#include "driver/gpio.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -120,7 +121,7 @@ struct uart uart[NUART] = {
     },
 };
 
-void uart_update_params(uint8_t unit, UartBautRate brg, UartBitsNum4Char data, UartParityMode parity, UartStopBitsNum stop) {
+void uart_update_params(int8_t unit, UartBautRate brg, UartBitsNum4Char data, UartParityMode parity, UartStopBitsNum stop) {
 	wait_tx_empty(unit);
 	uart_div_modify(unit, (APB_CLK_FREQ << 4) / brg);
 
@@ -131,7 +132,7 @@ void uart_update_params(uint8_t unit, UartBautRate brg, UartBitsNum4Char data, U
                    | UART_TICK_REF_ALWAYS_ON_M));
 }
 
-void uart_pins(uint8_t unit, uint8_t *rx, uint8_t *tx) {
+void uart_pins(int8_t unit, uint8_t *rx, uint8_t *tx) {
 	switch (unit) {
 		case 0:
 			if (rx) *rx = PIN_GPIO3;
@@ -153,31 +154,31 @@ void uart_pins(uint8_t unit, uint8_t *rx, uint8_t *tx) {
 	}
 }
 
-void uart_pin_config(uint8_t unit, uint8_t *rx, uint8_t *tx) {
+void uart_pin_config(int8_t unit, uint8_t *rx, uint8_t *tx) {
 	wait_tx_empty(unit);
 
 	switch (unit) {
 		case 0:
 			// Enable UTX0
-			gpio_pullup_dis(PERIPHS_IO_MUX_U0TXD_U);
+			PIN_PULLUP_DIS(PERIPHS_IO_MUX_U0TXD_U);
 			PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD_U0TXD);
 
 			// Enable U0RX
-			gpio_pullup_en(PERIPHS_IO_MUX_U0RXD_U);
+	        PIN_PULLUP_EN(PERIPHS_IO_MUX_U0RXD_U);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_U0RXD_U0RXD);
 
 			if (rx) *rx = PIN_GPIO3;
 			if (tx) *tx = PIN_GPIO1;
-			
+
 			break;
-						
+
 		case 1:
 			// Enable U1TX
-			gpio_pullup_dis(PERIPHS_IO_MUX_SD_DATA3_U);
+			PIN_PULLUP_DIS(PERIPHS_IO_MUX_SD_DATA3_U);
 			PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA3_U, FUNC_SD_DATA3_U1TXD);
 
 			// Enable U1RX
-			gpio_pullup_en(PERIPHS_IO_MUX_SD_DATA2_U);
+	        PIN_PULLUP_EN(PERIPHS_IO_MUX_SD_DATA2_U);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA2_U, FUNC_SD_DATA2_U1RXD);
 
 			if (rx) *rx = PIN_GPIO9;
@@ -187,21 +188,20 @@ void uart_pin_config(uint8_t unit, uint8_t *rx, uint8_t *tx) {
 
 		case 2:
 			// Enable U2TX
-			gpio_pullup_dis(PERIPHS_IO_MUX_GPIO17_U);
+			PIN_PULLUP_DIS(PERIPHS_IO_MUX_GPIO17_U);
 			PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO17_U, FUNC_GPIO17_U2TXD);
 
 			// Enable U2RX
-			gpio_pullup_en(PERIPHS_IO_MUX_GPIO16_U);
+	        PIN_PULLUP_EN(PERIPHS_IO_MUX_GPIO16_U);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO16_U, FUNC_GPIO16_U2RXD);
 
 			if (rx) *rx = PIN_GPIO16;
 			if (tx) *tx = PIN_GPIO17;
 
 			break;
-	}
-}
+	}}
 
-static int IRAM_ATTR queue_byte(uint8_t unit, uint8_t byte, int *signal) {
+static int IRAM_ATTR queue_byte(int8_t unit, uint8_t byte, int *signal) {
 	*signal = 0;
 
     if (unit == CONSOLE_UART) {
@@ -291,8 +291,8 @@ void  IRAM_ATTR uart_rx_intr_handler(void *para) {
 // Init UART
 // UART is configured by setting baud rate, 8N1
 // Interrupts are not enabled in this function
-driver_error_t *uart_init(uint8_t unit, uint32_t brg, uint8_t databits, uint8_t parity, uint8_t stop_bits, uint32_t qs) {
-	if ((unit > CPU_LAST_UART) || (unit < CPU_LAST_UART)) {
+driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t parity, uint8_t stop_bits, uint32_t qs) {
+	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
 		return driver_setup_error(UART_DRIVER, UART_ERR_CANT_INIT, "invalid unit");
 	}
 
@@ -360,8 +360,8 @@ driver_error_t *uart_init(uint8_t unit, uint32_t brg, uint8_t databits, uint8_t 
 }
 
 // Enable UART interrupts
-driver_error_t *uart_setup_interrupts(uint8_t unit) {
-	if ((unit > CPU_LAST_UART) || (unit < CPU_LAST_UART)) {
+driver_error_t *uart_setup_interrupts(int8_t unit) {
+	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
 		return driver_setup_error(UART_DRIVER, UART_ERR_CANT_INIT, "invalid unit");
 	}
 
@@ -401,13 +401,13 @@ driver_error_t *uart_setup_interrupts(uint8_t unit) {
 }
 
 // Writes a byte to the UART
-void IRAM_ATTR uart_write(uint8_t unit, char byte) {
+void IRAM_ATTR uart_write(int8_t unit, char byte) {
     while (((READ_PERI_REG(UART_STATUS_REG(unit)) & (UART_TXFIFO_CNT << UART_TXFIFO_CNT_S)) >> UART_TXFIFO_CNT_S & UART_TXFIFO_CNT) >= 126);
     WRITE_PERI_REG(UART_FIFO_REG(unit), byte);
 }
 
 // Writes a null-terminated string to the UART
-void IRAM_ATTR uart_writes(uint8_t unit, char *s) {
+void IRAM_ATTR uart_writes(int8_t unit, char *s) {
     while (*s) {
 	    while (((READ_PERI_REG(UART_STATUS_REG(unit)) & (UART_TXFIFO_CNT << UART_TXFIFO_CNT_S)) >> UART_TXFIFO_CNT_S & UART_TXFIFO_CNT) >= 126);
 	    WRITE_PERI_REG(UART_FIFO_REG(unit) , *s++);
@@ -415,7 +415,7 @@ void IRAM_ATTR uart_writes(uint8_t unit, char *s) {
 }
 
 // Reads a byte from uart
-uint8_t IRAM_ATTR uart_read(uint8_t unit, char *c, uint32_t timeout) {
+uint8_t IRAM_ATTR uart_read(int8_t unit, char *c, uint32_t timeout) {
     if (timeout != portMAX_DELAY) {
         timeout = timeout / portTICK_PERIOD_MS;
     }
@@ -428,14 +428,14 @@ uint8_t IRAM_ATTR uart_read(uint8_t unit, char *c, uint32_t timeout) {
 }
 
 // Consume all received bytes, and do not nothing with them
-void uart_consume(uint8_t unit) {
+void uart_consume(int8_t unit) {
     char tmp;
     
     while(uart_read(unit,&tmp,1));
 } 
 
 // Reads a string from the UART, ended by the CR + LF character
-uint8_t uart_reads(uint8_t unit, char *buff, uint8_t crlf, uint32_t timeout) {
+uint8_t uart_reads(int8_t unit, char *buff, uint8_t crlf, uint32_t timeout) {
     char c;
 
     for (;;) {
@@ -464,7 +464,7 @@ uint8_t uart_reads(uint8_t unit, char *buff, uint8_t crlf, uint32_t timeout) {
 }
 
 // Read from the UART and waits for a response
-static uint8_t _uart_wait_response(uint8_t unit, char *command, uint8_t echo, char *ret, uint8_t substring, uint32_t timeout, int nargs, va_list pargs) {
+static uint8_t _uart_wait_response(int8_t unit, char *command, uint8_t echo, char *ret, uint8_t substring, uint32_t timeout, int nargs, va_list pargs) {
     int ok = 1;
 
     va_list args;
@@ -524,7 +524,7 @@ static uint8_t _uart_wait_response(uint8_t unit, char *command, uint8_t echo, ch
 }
 
 // Read from the UART and waits for a response
-uint8_t uart_wait_response(uint8_t unit, char *command, uint8_t echo, char *ret, uint8_t substring, uint32_t timeout, int nargs, ...) {
+uint8_t uart_wait_response(int8_t unit, char *command, uint8_t echo, char *ret, uint8_t substring, uint32_t timeout, int nargs, ...) {
     va_list pargs;
 
     va_start(pargs, nargs);
@@ -537,7 +537,7 @@ uint8_t uart_wait_response(uint8_t unit, char *command, uint8_t echo, char *ret,
 }
 
 // Sends a command to a device connected to the UART and waits for a response
-uint8_t uart_send_command(uint8_t unit, char *command, uint8_t echo, uint8_t crlf, char *ret, uint8_t substring, uint32_t timeout, int nargs, ...) {
+uint8_t uart_send_command(int8_t unit, char *command, uint8_t echo, uint8_t crlf, char *ret, uint8_t substring, uint32_t timeout, int nargs, ...) {
     uint8_t ok = 0;
 
     uart_writes(unit,command);
@@ -557,12 +557,12 @@ uint8_t uart_send_command(uint8_t unit, char *command, uint8_t echo, uint8_t crl
 }
 
 // Gets the UART name
-const char *uart_name(uint8_t unit) {
+const char *uart_name(int8_t unit) {
     return names[unit - 1];
 }
 
 // Gets the UART queue
-QueueHandle_t *uart_get_queue(uint8_t unit) {
+QueueHandle_t *uart_get_queue(int8_t unit) {
     return  uart[unit].q;
 }
 
