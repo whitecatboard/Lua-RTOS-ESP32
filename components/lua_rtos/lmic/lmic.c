@@ -1981,7 +1981,7 @@ static bit_t processDnData (void) {
     if( LMIC.dataLen == 0 ) {
       norx:
         if( LMIC.txCnt != 0 ) {
-            if( LMIC.txCnt < TXCONF_ATTEMPTS ) {
+            if( LMIC.txCnt < LMIC.txAttempts ) {
                 LMIC.txCnt += 1;
                 setDrTxpow(DRCHG_NOACK, lowerDR(LMIC.datarate, TABLE_GET_U1(DRADJUST, LMIC.txCnt)), KEEP_TXPOW);
                 // Schedule another retransmission
@@ -2336,6 +2336,7 @@ void LMIC_reset (void) {
 
 void LMIC_init (void) {
     LMIC.opmode = OP_SHUTDOWN;
+    LMIC.txAttempts = TXCONF_ATTEMPTS;
 }
 
 

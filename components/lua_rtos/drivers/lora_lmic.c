@@ -456,6 +456,10 @@ driver_error_t *lora_mac_set(const char command, const char *value) {
 				LMIC_setLinkCheckMode(0);
 			}
 			break;
+
+		case LORA_MAC_SET_RETX:
+			LMIC.txAttempts = atoi((char *)value);
+			break;
 	}
 
     mtx_unlock(&lora_mtx);
@@ -518,6 +522,13 @@ driver_error_t *lora_mac_get(const char command, char **value) {
 				if (result) {
 					strcpy(result, "off");
 				}
+			}
+			break;
+
+		case LORA_MAC_GET_RETX:
+			result = (char *)malloc(2);
+			if (result) {
+				sprintf(result,"%d",LMIC.txAttempts);
 			}
 			break;
 	}
@@ -654,7 +665,7 @@ driver_error_t *lora_tx(int cnf, int port, const char *data) {
     }
 
     if (uxBits & (evLORA_ACK_NOT_RECEIVED)) {
-	    mtx_unlock(&lora_mtx);   
+        mtx_unlock(&lora_mtx);
         return driver_operation_error(LORA_DRIVER, LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED, NULL);
     }
 	

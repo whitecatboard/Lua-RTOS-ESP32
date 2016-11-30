@@ -238,6 +238,25 @@ static int llora_set_Adr(lua_State* L) {
     return 0;
 }
 
+static int llora_set_ReTx(lua_State* L) {
+    int rets = luaL_checkinteger(L, 1);
+
+    if ((rets < 0) || (rets > 7)) {
+        return luaL_error(L, "%d:invalid data rate value (0 to 8)", LORA_ERR_INVALID_ARGUMENT);
+    }
+
+    char value[2];
+
+    sprintf(value,"%d", rets);
+
+    driver_error_t *error = lora_mac_set(LORA_MAC_SET_RETX, value);
+    if (error) {
+        return luaL_driver_error(L, error);
+    }
+
+    return 0;
+}
+
 static int llora_get_DevAddr(lua_State* L) {
     char *value;
 
@@ -313,6 +332,20 @@ static int llora_get_Adr(lua_State* L) {
     return 1;    
 }
 
+static int llora_get_ReTx(lua_State* L) {
+    char *value;
+
+    driver_error_t *error = lora_mac_get(LORA_MAC_GET_RETX, &value);
+    if (error) {
+    	return luaL_driver_error(L, error);
+    }
+
+    lua_pushinteger(L, atoi(value));
+    free(value);
+
+    return 1;
+}
+
 static int llora_join(lua_State* L) {
     driver_error_t *error = lora_join();
     if (error) {
@@ -337,7 +370,6 @@ static int llora_tx(lua_State* L) {
     }    
     
     driver_error_t *error = lora_tx(cnf, port, data);
-
     if (error) {
         return luaL_driver_error(L, error);
     }
@@ -378,11 +410,13 @@ static const LUA_REG_TYPE lora_map[] = {
     { LSTRKEY( "setAppKey" ),    LFUNCVAL( llora_set_AppKey ) }, 
     { LSTRKEY( "setDr" ),        LFUNCVAL( llora_set_Dr ) }, 
     { LSTRKEY( "setAdr" ),       LFUNCVAL( llora_set_Adr ) }, 
+    { LSTRKEY( "setReTx" ),       LFUNCVAL( llora_set_ReTx ) },
     { LSTRKEY( "getDevAddr" ),   LFUNCVAL( llora_get_DevAddr ) }, 
     { LSTRKEY( "getDevEui" ),    LFUNCVAL( llora_get_DevEui ) }, 
     { LSTRKEY( "getAppEui" ),    LFUNCVAL( llora_get_AppEui ) }, 
     { LSTRKEY( "getDr" ),        LFUNCVAL( llora_get_Dr ) }, 
     { LSTRKEY( "getAdr" ),       LFUNCVAL( llora_get_Adr ) }, 
+    { LSTRKEY( "getReTx" ),      LFUNCVAL( llora_get_ReTx ) },
     { LSTRKEY( "join" ),         LFUNCVAL( llora_join ) }, 
     { LSTRKEY( "tx" ),           LFUNCVAL( llora_tx ) },
     { LSTRKEY( "whenReceived" ), LFUNCVAL( llora_rx ) },

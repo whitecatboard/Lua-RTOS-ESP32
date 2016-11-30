@@ -58,6 +58,7 @@
 #define LORA_MAC_SET_DR				6
 #define LORA_MAC_SET_ADR			7
 #define LORA_MAC_SET_LINKCHK        8
+#define LORA_MAC_SET_RETX           9
 
 // Lora Mac get commands
 #define LORA_MAC_GET_DEVADDR	   20
@@ -66,6 +67,7 @@
 #define LORA_MAC_GET_DR			   23
 #define LORA_MAC_GET_ADR		   24
 #define LORA_MAC_GET_LINKCHK       25
+#define LORA_MAC_GET_RETX		   26
 
 typedef void (lora_rx)(int port, char *payload);
 

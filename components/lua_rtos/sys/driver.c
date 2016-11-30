@@ -56,6 +56,8 @@ const driver_t *driver_get(const char *name) {
 		if (strcmp(name, cdriver->name) == 0) {
 			return cdriver;
 		}
+
+		cdriver++;
 	}
 
 	return NULL;
@@ -108,7 +110,7 @@ driver_error_t *driver_setup_error(const driver_t *driver, unsigned int exceptio
 driver_error_t *driver_operation_error(const driver_t *driver, unsigned int exception, const char *msg) {
 	driver_error_t *error;
 
-    error = (driver_error_t *)malloc(sizeof(driver_error_t));
+	error = (driver_error_t *)malloc(sizeof(driver_error_t));
     if (error) {
         error->type = OPERATION;
         error->driver = driver;

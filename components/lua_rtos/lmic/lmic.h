@@ -260,6 +260,8 @@ struct lmic_t {
     ostime_t    bcnRxtime;
     bcninfo_t   bcninfo;      // Last received beacon info
 #endif
+
+    u1_t		txAttempts;  // When sending confirmed frames, how much retransmission attempts
 };
 //! \var struct lmic_t LMIC
 //! The state of LMIC MAC layer is encapsulated in this variable.
