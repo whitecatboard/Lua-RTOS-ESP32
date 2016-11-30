@@ -4,6 +4,11 @@
 #include "sdkconfig.h"
 
 /*
+ * SPI
+ */
+#define USE_SPI (LUA_USE_SPI || LUA_USE_LORA)
+
+/*
  *
  * UART
  *

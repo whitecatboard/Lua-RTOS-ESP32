@@ -122,6 +122,7 @@ CFLAGS += -DLUA_USE_I2C=0   		   # i2c
 CFLAGS += -DLUA_USE_SCREEN=0     	   # screen
 CFLAGS += -DLUA_USE_NVS=1	     	   # nvs
 CFLAGS += -DLUA_USE_UART=1	     	   # uart
+CFLAGS += -DLUA_USE_SPI=1	     	   # spi
 
 # Define BUILD_TIME flag, with the EPOCH time when Lua RTOS is build.
 # This is used for set system time when RTC is not set.

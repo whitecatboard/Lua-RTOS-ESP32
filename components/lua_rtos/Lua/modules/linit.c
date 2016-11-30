@@ -65,6 +65,7 @@ LIB_INIT(THREAD, thread, luaopen_thread);
 LIB_INIT(SCREEN, screen, luaopen_screen);
 LIB_INIT(NVS, nvs, luaopen_nvs);
 LIB_INIT(UART, uart, luaopen_uart);
+LIB_INIT(SPI, spi, luaopen_spi);
 
 LUALIB_API void luaL_openlibs (lua_State *L) {
   const luaL_Reg *lib = lua_libs1;

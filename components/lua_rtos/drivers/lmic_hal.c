@@ -109,7 +109,7 @@ static void IRAM_ATTR dio_intr_handler(void *args) {
 
 void hal_init (void) {
 	// Init SPI bus
-    if (spi_init(LMIC_SPI) != 0) {
+    if (spi_init(LMIC_SPI)) {
         syslog(LOG_ERR, "lmic cannot open spi%u", LMIC_SPI);
         return;
     }

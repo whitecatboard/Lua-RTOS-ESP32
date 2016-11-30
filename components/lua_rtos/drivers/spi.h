@@ -30,9 +30,14 @@
 #ifndef _SPI_H_
 #define _SPI_H_
 
+#include <sys/driver.h>
+
 #define NSPI 4
 
-int spi_init(int unit);
+// SPI errors
+#define SPI_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  1)
+
+driver_error_t *spi_init(int unit);
 
 /*
  * Setup SPI connection on a given port (0..5) with a specified chip select pin.
@@ -114,6 +119,9 @@ int spi_cspin(int unit);
  * Return the speed in kHz.
  */
 unsigned int spi_get_speed(int unit);
+
+void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs);
+void spi_pin_config(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs);
 
 /*
  * Transfer one word of data, and return the read word of data.

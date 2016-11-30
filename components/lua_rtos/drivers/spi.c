@@ -40,21 +40,21 @@
 #include "freertos/task.h"
 
 #include "esp_attr.h"
-
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-
 #include "soc/io_mux_reg.h"
 #include "soc/spi_reg.h"
 #include "soc/gpio_sig_map.h"
 #include "soc/gpio_reg.h"
 
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#include <sys/syslog.h>
+#include <sys/driver.h>
+
 #include <drivers/spi.h>
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
-
-#include <sys/syslog.h>
 
 struct spi {
     int          cs;	  // cs pin for device (if 0 use default cs pin)
@@ -63,6 +63,13 @@ struct spi {
     unsigned int mode;    // device spi mode
     unsigned int dirty;   // if 1 device must be reconfigured at next spi_select
 };
+
+const char *spi_errors[] = {
+	"",
+	"can't setup",
+};
+
+#define SPI_DRIVER driver_get("spi")
 
 struct spi spi[NSPI] = {
 	{
@@ -290,29 +297,16 @@ void spi_set_cspin(int unit, int pin) {
     }
 }
 
-/*
- * Init pins for a device, and return used pins
- */
 void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs) {
     switch (unit) {
         case 1:
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA0_U, FUNC_SD_DATA0_SPIQ);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA1_U, FUNC_SD_DATA1_SPID);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_CLK_U,   FUNC_SD_CLK_SPICLK);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_CMD_U,   FUNC_SD_CMD_SPICS0);
-
-            *sdi = GPIO7;
+        	*sdi = GPIO7;
             *sdo = GPIO8;
             *sck = GPIO6;
             *cs =  GPIO11;
             break;
 
         case 2:
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_MTDI_HSPIQ);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, FUNC_MTCK_HSPID);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTMS_U, FUNC_MTMS_HSPICLK);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_MTDO_HSPICS0);
-
             *sdi = GPIO12;
             *sdo = GPIO13;
             *sck = GPIO14;
@@ -321,15 +315,40 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
             break;
 
         case 3:
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO19_U,FUNC_GPIO19_VSPIQ);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO23_U,FUNC_GPIO23_VSPID);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO18_U,FUNC_GPIO18_VSPICLK);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5_GPIO5_0);
-
             *sdi = GPIO19;
             *sdo = GPIO23;
             *sck = GPIO18;
             *cs =  GPIO5;
+            break;
+    }
+}
+
+/*
+ * Init pins for a device, and return used pins
+ */
+void spi_pin_config(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs) {
+	spi_pins(unit, sdi, sdo, sck, cs);
+
+	switch (unit) {
+        case 1:
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA0_U, FUNC_SD_DATA0_SPIQ);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA1_U, FUNC_SD_DATA1_SPID);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_CLK_U,   FUNC_SD_CLK_SPICLK);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_CMD_U,   FUNC_SD_CMD_SPICS0);
+            break;
+
+        case 2:
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_MTDI_HSPIQ);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, FUNC_MTCK_HSPID);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTMS_U, FUNC_MTMS_HSPICLK);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_MTDO_HSPICS0);
+            break;
+
+        case 3:
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO19_U,FUNC_GPIO19_VSPIQ);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO23_U,FUNC_GPIO23_VSPID);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO18_U,FUNC_GPIO18_VSPICLK);
+            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5_GPIO5_0);
             break;
     }
 
@@ -571,16 +590,17 @@ unsigned int spi_get_speed(int unit) {
 /*
  * Init a spi device
  */
-int spi_init(int unit) {
+driver_error_t *spi_init(int unit) {
     struct spi *dev = &spi[unit];
     unsigned char sdi, sdo, sck, cs;
 
-    if (unit <= 0 || unit > NSPI)
-        return 1;
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_setup_error(SPI_DRIVER, SPI_ERR_CANT_INIT, "invalid unit");
+	}
 
-    spi_pins(unit, &sdi, &sdo, &sck, &cs);
+	spi_pin_config(unit, &sdi, &sdo, &sck, &cs);
 
-    syslog(LOG_INFO,
+	syslog(LOG_INFO,
         "spi%u at pins sdi=%c%d/sdo=%c%d/sck=%c%d/cs=%c%d", unit,
         gpio_portname(sdi), gpio_pinno(sdi),
         gpio_portname(sdo), gpio_pinno(sdo),
@@ -592,7 +612,7 @@ int spi_init(int unit) {
 
     dev->dirty = 1;
     
-    return 0;
+    return NULL;
 }
 
 #if 0

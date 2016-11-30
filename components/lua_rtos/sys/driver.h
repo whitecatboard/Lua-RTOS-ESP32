@@ -37,7 +37,8 @@
 #include <sys/resource.h>
 
 #define UART_DRIVER_ID 1
-#define LORA_DRIVER_ID 2
+#define SPI_DRIVER_ID  2
+#define LORA_DRIVER_ID 3
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 

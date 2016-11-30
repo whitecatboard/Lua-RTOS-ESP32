@@ -410,7 +410,7 @@ static const LUA_REG_TYPE lora_map[] = {
     { LSTRKEY( "setAppKey" ),    LFUNCVAL( llora_set_AppKey ) }, 
     { LSTRKEY( "setDr" ),        LFUNCVAL( llora_set_Dr ) }, 
     { LSTRKEY( "setAdr" ),       LFUNCVAL( llora_set_Adr ) }, 
-    { LSTRKEY( "setReTx" ),       LFUNCVAL( llora_set_ReTx ) },
+    { LSTRKEY( "setReTx" ),      LFUNCVAL( llora_set_ReTx ) },
     { LSTRKEY( "getDevAddr" ),   LFUNCVAL( llora_get_DevAddr ) }, 
     { LSTRKEY( "getDevEui" ),    LFUNCVAL( llora_get_DevEui ) }, 
     { LSTRKEY( "getAppEui" ),    LFUNCVAL( llora_get_AppEui ) }, 

@@ -847,7 +847,7 @@ int sd_init(int unit) {
     // Create mutex
     mtx_init(&sd_mtx, NULL, NULL, 0);
 
-    if (spi_init(spi) != 0) {
+    if (spi_init(spi)) {
         syslog(LOG_ERR, "sd%u cannot open spi%u port", unit, spi);
         return 0;
     }

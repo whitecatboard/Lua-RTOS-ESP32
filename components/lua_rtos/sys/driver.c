@@ -35,11 +35,15 @@
 #include <sys/driver.h>
 
 extern const char *uart_errors[];
+extern const char *spi_errors[];
 extern const char *lora_lmic_errors[];
 
 const driver_t drivers[] = {
 #if USE_UART
 	{"uart", DRIVER_EXCEPTION_BASE(UART_DRIVER_ID), (void *)uart_errors},
+#endif
+#if USE_SPI
+	{"spi", DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID), (void *)spi_errors},
 #endif
 #if USE_LMIC
 	{"lora", DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID), (void *)lora_lmic_errors},

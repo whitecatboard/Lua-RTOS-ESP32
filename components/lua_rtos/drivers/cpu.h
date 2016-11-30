@@ -176,6 +176,27 @@ typedef uint64_t gpio_port_mask_t;
 #define CPU_UART1_NAME  "UART1"
 #define CPU_UART2_NAME  "UART2"
 
+/*
+ * ----------------------------------------------------------------
+ * SPI
+ * ----------------------------------------------------------------
+ */
+
+// Unit bounds
+#define CPU_FIRST_SPI 1
+#define CPU_LAST_SPI  3
+
+// ESP32 available SPI units
+#define CPU_SPI0  0
+#define CPU_SPI1  1
+#define CPU_SPI2  2
+#define CPU_SPI3  3
+
+// ESP32 available SPI names
+#define CPU_SPI0_NAME  "SPI0"
+#define CPU_SPI1_NAME  "SPI1"
+#define CPU_SPI2_NAME  "SPI2"
+#define CPU_SPI3_NAME  "SPI3"
 
 /*
  * ----------------------------------------------------------------
