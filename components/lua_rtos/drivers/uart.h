@@ -54,30 +54,34 @@
 #ifndef __UART_H__
 #define __UART_H__
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/queue.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+
+#include "rom/uart.h"
+#include "rom/ets_sys.h"
+#include "soc/uart_reg.h"
+#include "soc/io_mux_reg.h"
 
 #include <stdint.h>
 
-#include <sys/delay.h>
+#include <sys/driver.h>
 
-#include <rom/uart.h>
-#include <rom/ets_sys.h>
-#include <soc/uart_reg.h>
-#include <soc/io_mux_reg.h>
-	
+// Number of UART units
 #define NUART 3
+
+// UART errors
+#define UART_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  1)
+
 	
 #define ETS_UART_INTR_ENABLE()  _xt_isr_unmask(1 << ETS_UART_INUM)
 #define ETS_UART_INTR_DISABLE() _xt_isr_mask(1 << ETS_UART_INUM)
 #define UART_INTR_MASK          0x1ff
-#define UART_LINE_INV_MASK      (0x3f<<19)
 
 #define wait_tx_empty(unit) \
 while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_TXFIFO_CNT_S) & UART_TXFIFO_CNT);delay(1);
 
-void     uart_init(uint8_t unit, uint32_t brg, uint32_t mode, uint32_t qs);
-void     uart_init_interrupts(uint8_t unit);
+driver_error_t *uart_init(uint8_t unit, uint32_t brg, uint8_t databits, uint8_t parity, uint8_t stop_bits, uint32_t qs);
+driver_error_t *uart_setup_interrupts(uint8_t unit);
 void     uart_write(uint8_t unit, char byte);
 void     uart_writes(uint8_t unit, char *s);
 uint8_t uart_read(uint8_t unit, char *c, uint32_t timeout);
@@ -87,8 +91,9 @@ uint8_t  uart_send_command(uint8_t unit, char *command, uint8_t echo, uint8_t cr
 void     uart_consume(uint8_t unit);
 const char  *uart_name(uint8_t unit);
 int      uart_get_br(int unit);
-int      uart_inited(int unit);
+int      uart_is_setup(int unit);
 void     uart_stop(int unit);
 QueueHandle_t *uart_get_queue(uint8_t unit);
+void uart_pins(uint8_t unit, uint8_t *rx, uint8_t *tx);
 
 #endif

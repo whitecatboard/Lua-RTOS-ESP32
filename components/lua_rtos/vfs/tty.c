@@ -50,7 +50,7 @@ static pthread_mutex_t tty_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int IRAM_ATTR vfs_tty_open(const char *path, int flags, int mode) {
 	struct file *fp;
 	int fd, error;
-	int unit;
+	int unit = 0;
 
 	// Get UART unit
     if (strcmp(path, "/0") == 0) {
@@ -77,21 +77,29 @@ static int IRAM_ATTR vfs_tty_open(const char *path, int flags, int mode) {
     fp->f_path 	  = NULL;
     fp->f_fs_type = FS_SPIFFS;
     fp->f_flag    = FFLAGS(flags) & FMASK;
+    fp->unit      = unit;
 
     // Init uart unit
-    uart_init(unit, CONSOLE_BR, 0, CONSOLE_BUFFER_LEN);
-    uart_init_interrupts(unit);
+    uart_init(unit, CONSOLE_BR, 8, 0, 1, CONSOLE_BUFFER_LEN);
+    uart_setup_interrupts(unit);
 
     return fd;
 }
 
 static size_t IRAM_ATTR vfs_tty_write(int fd, const void *data, size_t size) {
-    assert(fd >=0 && fd < 3);
     const char *data_c = (const char *)data;
+	struct file *fp;
+	int unit = 0;
 
-	int unit = 1;
+	// Get file from file descriptor
+	if (!(fp = get_file(fd))) {
+		errno = EBADF;
+		return -1;
+	}
 
-    //pthread_mutex_lock(&tty_mutex);
+	unit = fp->unit;
+
+	//pthread_mutex_lock(&tty_mutex);
 
     for (size_t i = 0; i < size; i++) {
 #if CONFIG_NEWLIB_STDOUT_ADDCR
@@ -109,8 +117,17 @@ static size_t IRAM_ATTR vfs_tty_write(int fd, const void *data, size_t size) {
 
 static ssize_t IRAM_ATTR vfs_tty_read(int fd, void * dst, size_t size) {
 	ssize_t remain = (ssize_t)size;
-	
-	int unit = 1;
+	struct file *fp;
+	int unit = 0;
+
+	// Get file from file descriptor
+	if (!(fp = get_file(fd))) {
+		errno = EBADF;
+		return -1;
+	}
+
+	unit = fp->unit;
+
 	while (remain) {
         if (uart_read(unit, (char *)dst, portMAX_DELAY)) {
 			remain--;
@@ -124,7 +141,6 @@ static ssize_t IRAM_ATTR vfs_tty_read(int fd, void * dst, size_t size) {
 }
 
 static int IRAM_ATTR vfs_tty_fstat(int fd, struct stat * st) {
-    assert(fd >=0 && fd < 3);
     st->st_mode = S_IFCHR;
     return 0;
 }

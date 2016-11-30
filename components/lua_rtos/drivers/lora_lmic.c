@@ -53,7 +53,7 @@
  
 #include "lmic.h"
 
-const char *lora_lmic_errors[11] = {
+const char *lora_lmic_errors[] = {
 	"",
 	"keys are not configured",
 	"join denied",

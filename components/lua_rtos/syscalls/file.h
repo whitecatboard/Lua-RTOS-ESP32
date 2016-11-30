@@ -17,6 +17,7 @@ struct file {
     void   *f_dir;			 /* this is a reference to the file systems's dir struct that this file refers */
     int     f_fd;
     int     f_fs_type;       /* type of files ystem */
+    int     unit;            /* if file is linked to a device driver, this is the unit number */
 };
 
 LIST_HEAD(filelist, file);

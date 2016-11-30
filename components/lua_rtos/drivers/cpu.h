@@ -158,9 +158,30 @@ typedef uint64_t gpio_port_mask_t;
 
 /*
  * ----------------------------------------------------------------
+ * UART
+ * ----------------------------------------------------------------
+ */
+
+// Unit bounds
+#define CPU_FIRST_UART 0
+#define CPU_LAST_UART  2
+
+// ESP32 available UART units
+#define CPU_UART0  0
+#define CPU_UART1  1
+#define CPU_UART2  2
+
+// ESP32 available UART names
+#define CPU_UART0_NAME  "UART0"
+#define CPU_UART1_NAME  "UART1"
+#define CPU_UART2_NAME  "UART2"
+
+
+/*
+ * ----------------------------------------------------------------
  * IC2 
  * ----------------------------------------------------------------
-*/
+ */
 
 // Number of I2C units (hardware / software)
 #define NI2CHW 0

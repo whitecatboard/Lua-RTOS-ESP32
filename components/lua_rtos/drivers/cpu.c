@@ -322,7 +322,7 @@ void cpu_show_info() {
 void cpu_sleep(int seconds) {
 	// Stop all UART units. This is done for prevent strangers characters
 	// on the console when CPU begins to enter in the sleep phase
-	uart_stop(0);
+	uart_stop(-1);
 
 	// Put ESP32 in deep sleep mode
     esp_deep_sleep(seconds * 1000000LL);

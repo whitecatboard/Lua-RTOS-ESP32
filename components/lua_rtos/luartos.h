@@ -8,6 +8,7 @@
  * UART
  *
  */
+#define USE_UART LUA_USE_UART
 
 // Use console?
 #ifdef CONFIG_USE_CONSOLE
@@ -18,15 +19,15 @@
 
 // Get the UART assigned to the console
 #if CONFIG_LUA_RTOS_CONSOLE_UART0
-#define CONSOLE_UART 1
+#define CONSOLE_UART 0
 #endif
 
 #if CONFIG_LUA_RTOS_CONSOLE_UART1
-#define CONSOLE_UART 2
+#define CONSOLE_UART 1
 #endif
 
 #if CONFIG_LUA_RTOS_CONSOLE_UART2
-#define CONSOLE_UART 3
+#define CONSOLE_UART 2
 #endif
 
 // Get the console baud rate

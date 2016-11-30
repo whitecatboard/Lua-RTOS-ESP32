@@ -52,30 +52,40 @@
  */
 
 #include "luartos.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+#include "freertos/xtensa_api.h"
+
+#include "esp_types.h"
+#include "esp_err.h"
+#include "esp_intr.h"
+#include "esp_attr.h"
+#include "soc/soc.h"
+#include "soc/uart_reg.h"
+#include "soc/io_mux_reg.h"
+#include "driver/uart.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 #include <signal.h>
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/queue.h>
+#include <sys/status.h>
+#include <sys/driver.h>
+#include <sys/syslog.h>
+#include <sys/delay.h>
+
 #include <pthread/pthread.h>
 #include <drivers/uart.h>
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
-#include <sys/syslog.h>
-#include <sys/status.h>
-#include <esp_types.h>
-#include <esp_err.h>
-#include <esp_intr.h>
-#include <esp_attr.h>
-#include <freertos/xtensa_api.h>
-#include <soc/soc.h>
-#include <soc/uart_reg.h>
-#include <soc/io_mux_reg.h>
-#include <driver/uart.h>
 
+const char *uart_errors[] = {
+	"",
+	"can't setup",
+};
+
+#define UART_DRIVER driver_get("uart")
 
 // Flags for determine some UART states
 #define UART_FLAG_INIT		(1 << 1)
@@ -86,9 +96,9 @@
 
 // Names for the uarts
 static const char *names[] = {
+	"uart0",
 	"uart1",
 	"uart2",
-	"uart3",
 };
 
 struct uart {
@@ -112,27 +122,48 @@ struct uart uart[NUART] = {
 
 void uart_update_params(uint8_t unit, UartBautRate brg, UartBitsNum4Char data, UartParityMode parity, UartStopBitsNum stop) {
 	wait_tx_empty(unit);
-
-	uart_div_modify(unit++, (APB_CLK_FREQ << 4) / brg);
+	uart_div_modify(unit, (APB_CLK_FREQ << 4) / brg);
 
     WRITE_PERI_REG(UART_CONF0_REG(unit),
                    ((parity == NONE_BITS) ? 0x0 : (UART_PARITY_EN | parity))
                    | (stop << UART_STOP_BIT_NUM_S)
-                   | (data << UART_BIT_NUM_S));
+                   | (data << UART_BIT_NUM_S
+                   | UART_TICK_REF_ALWAYS_ON_M));
+}
+
+void uart_pins(uint8_t unit, uint8_t *rx, uint8_t *tx) {
+	switch (unit) {
+		case 0:
+			if (rx) *rx = PIN_GPIO3;
+			if (tx) *tx = PIN_GPIO1;
+
+			break;
+
+		case 1:
+			if (rx) *rx = PIN_GPIO9;
+			if (tx) *tx = PIN_GPIO10;
+
+			break;
+
+		case 2:
+			if (rx) *rx = PIN_GPIO16;
+			if (tx) *tx = PIN_GPIO17;
+
+			break;
+	}
 }
 
 void uart_pin_config(uint8_t unit, uint8_t *rx, uint8_t *tx) {
-	wait_tx_empty(0);
-	wait_tx_empty(1);
+	wait_tx_empty(unit);
 
 	switch (unit) {
 		case 0:
 			// Enable UTX0
-			PIN_PULLUP_DIS(PERIPHS_IO_MUX_U0TXD_U);
+			gpio_pullup_dis(PERIPHS_IO_MUX_U0TXD_U);
 			PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD_U0TXD);
 
 			// Enable U0RX
-	        PIN_PULLUP_EN(PERIPHS_IO_MUX_U0RXD_U);
+			gpio_pullup_en(PERIPHS_IO_MUX_U0RXD_U);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_U0RXD_U0RXD);
 
 			if (rx) *rx = PIN_GPIO3;
@@ -142,11 +173,11 @@ void uart_pin_config(uint8_t unit, uint8_t *rx, uint8_t *tx) {
 						
 		case 1:
 			// Enable U1TX
-			PIN_PULLUP_DIS(PERIPHS_IO_MUX_SD_DATA3_U);
+			gpio_pullup_dis(PERIPHS_IO_MUX_SD_DATA3_U);
 			PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA3_U, FUNC_SD_DATA3_U1TXD);
 
 			// Enable U1RX
-	        PIN_PULLUP_EN(PERIPHS_IO_MUX_SD_DATA2_U);
+			gpio_pullup_en(PERIPHS_IO_MUX_SD_DATA2_U);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA2_U, FUNC_SD_DATA2_U1RXD);
 
 			if (rx) *rx = PIN_GPIO9;
@@ -156,11 +187,11 @@ void uart_pin_config(uint8_t unit, uint8_t *rx, uint8_t *tx) {
 
 		case 2:
 			// Enable U2TX
-			PIN_PULLUP_DIS(PERIPHS_IO_MUX_GPIO17_U);
+			gpio_pullup_dis(PERIPHS_IO_MUX_GPIO17_U);
 			PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO17_U, FUNC_GPIO17_U2TXD);
 
 			// Enable U2RX
-	        PIN_PULLUP_EN(PERIPHS_IO_MUX_GPIO16_U);
+			gpio_pullup_en(PERIPHS_IO_MUX_GPIO16_U);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO16_U, FUNC_GPIO16_U2RXD);
 
 			if (rx) *rx = PIN_GPIO16;
@@ -173,7 +204,7 @@ void uart_pin_config(uint8_t unit, uint8_t *rx, uint8_t *tx) {
 static int IRAM_ATTR queue_byte(uint8_t unit, uint8_t byte, int *signal) {
 	*signal = 0;
 
-    if (unit == CONSOLE_UART - 1) {
+    if (unit == CONSOLE_UART) {
         if (byte == 0x04) {
             if (!status_get(STATUS_LUA_RUNNING)) {
                 uart_writes(CONSOLE_UART, "Lua RTOS-booting\r\n");
@@ -257,44 +288,88 @@ void  IRAM_ATTR uart_rx_intr_handler(void *para) {
 	portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
 }
 
-// Inits UART
+// Init UART
 // UART is configured by setting baud rate, 8N1
 // Interrupts are not enabled in this function
-void uart_init(uint8_t unit, uint32_t brg, uint32_t mode, uint32_t qs) {
-	uint8_t rx, tx;
-	
-    unit--;
-	
+driver_error_t *uart_init(uint8_t unit, uint32_t brg, uint8_t databits, uint8_t parity, uint8_t stop_bits, uint32_t qs) {
+	if ((unit > CPU_LAST_UART) || (unit < CPU_LAST_UART)) {
+		return driver_setup_error(UART_DRIVER, UART_ERR_CANT_INIT, "invalid unit");
+	}
+
+	// Get data bits
+    UartBitsNum4Char esp_databits = EIGHT_BITS;
+    switch (databits) {
+    	case 5: esp_databits = FIVE_BITS; break;
+    	case 6: esp_databits = SIX_BITS; break;
+    	case 7: esp_databits = SEVEN_BITS; break;
+    	case 8: esp_databits = EIGHT_BITS; break;
+    	default:
+    		return driver_setup_error(UART_DRIVER, UART_ERR_CANT_INIT, "invalid data bits");
+    }
+
+    // Get parity
+    UartParityMode esp_parity = NONE_BITS;
+    switch (parity) {
+    	case 0: esp_parity = NONE_BITS;break;
+    	case 1: esp_parity = EVEN_BITS;break;
+    	case 2: esp_parity = ODD_BITS;break;
+    	default:
+    		return driver_setup_error(UART_DRIVER, UART_ERR_CANT_INIT, "invalid parity");
+    }
+
+    // Get stop bits
+    UartStopBitsNum esp_stop_bits = ONE_STOP_BIT;
+    switch (stop_bits) {
+    	case 0: esp_stop_bits = ONE_HALF_STOP_BIT; break;
+    	case 1: esp_stop_bits = ONE_STOP_BIT; break;
+    	case 2: esp_stop_bits = TWO_STOP_BIT; break;
+    	default:
+    		return driver_setup_error(UART_DRIVER, UART_ERR_CANT_INIT, "invalid stop bits");
+    }
+
 	// If requestes queue size is greater than current size, delete queue and create
 	// a new one
     if (qs > uart[unit].qs) {
 		if (uart[unit].q) {
 			vQueueDelete(uart[unit].q);
 		}
-		
+
 		uart[unit].q  = xQueueCreate(qs, sizeof(uint8_t));
+		if (!uart[unit].q) {
+    		return driver_setup_error(UART_DRIVER, UART_ERR_CANT_INIT, "not enough memory");
+		}
 	}
 
-	uart_pin_config(unit, &rx, &tx);
+    uint8_t rx, tx;
 
-	uart_update_params(unit, brg, EIGHT_BITS, NONE_BITS, ONE_STOP_BIT);
-	
+	uart_pin_config(unit, &rx, &tx);
+	uart_update_params(unit, brg, esp_databits, esp_parity, esp_stop_bits);
+
     uart[unit].brg = brg; 
     uart[unit].qs  = qs; 
 
     uart[unit].flags |= UART_FLAG_INIT;
+
+    syslog(LOG_INFO, "%s: at pins rx=%c%d/tx=%c%d",names[unit],
+            gpio_portname(rx), gpio_pinno(rx),
+            gpio_portname(tx), gpio_pinno(tx));
+
+    syslog(LOG_INFO, "%s: speed %d bauds", names[unit],brg);
+
+    return NULL;
 }
 
 // Enable UART interrupts
-void uart_init_interrupts(uint8_t unit) {
-    unit--;
+driver_error_t *uart_setup_interrupts(uint8_t unit) {
+	if ((unit > CPU_LAST_UART) || (unit < CPU_LAST_UART)) {
+		return driver_setup_error(UART_DRIVER, UART_ERR_CANT_INIT, "invalid unit");
+	}
 
-    if (uart[unit].flags & UART_FLAG_IRQ_INIT) {
-        return;
+	if (uart[unit].flags & UART_FLAG_IRQ_INIT) {
+        return NULL;
     }
 
     uint32_t reg_val = 0;
-	//uint32_t mask = UART_RXFIFO_TOUT_INT_ENA | UART_FRM_ERR_INT_ENA | UART_RXFIFO_FULL_INT_ENA | UART_TXFIFO_EMPTY_INT_ENA;
 	uint32_t mask = UART_RXFIFO_TOUT_INT_ENA | UART_FRM_ERR_INT_ENA | UART_RXFIFO_FULL_INT_ENA;
 		
 	ESP_INTR_DISABLE(ETS_UART_INUM);
@@ -316,27 +391,23 @@ void uart_init_interrupts(uint8_t unit) {
 	// Update INT_ENA register
     WRITE_PERI_REG(UART_INT_ENA_REG(unit), mask);
 	
-
 	intr_matrix_set(xPortGetCoreID(), UART_INTR_SOURCE(unit), ETS_UART_INUM);
 	xt_set_interrupt_handler(ETS_UART_INUM, uart_rx_intr_handler, NULL);
 	ESP_INTR_ENABLE(ETS_UART_INUM);
 	
-		//syslog(LOG_INFO, "%s: interrupts %d/%d/%d",names[unit].name,
-        //      uart[unit].irqs.rx,uart[unit].irqs.tx,uart[unit].irqs.er);
+	syslog(LOG_INFO, "%s: interrupts enabled",names[unit]);
+
+	return NULL;
 }
 
 // Writes a byte to the UART
 void IRAM_ATTR uart_write(uint8_t unit, char byte) {
-    unit--;
-	 
     while (((READ_PERI_REG(UART_STATUS_REG(unit)) & (UART_TXFIFO_CNT << UART_TXFIFO_CNT_S)) >> UART_TXFIFO_CNT_S & UART_TXFIFO_CNT) >= 126);
     WRITE_PERI_REG(UART_FIFO_REG(unit), byte);
 }
 
 // Writes a null-terminated string to the UART
 void IRAM_ATTR uart_writes(uint8_t unit, char *s) {
-    unit--;
-
     while (*s) {
 	    while (((READ_PERI_REG(UART_STATUS_REG(unit)) & (UART_TXFIFO_CNT << UART_TXFIFO_CNT_S)) >> UART_TXFIFO_CNT_S & UART_TXFIFO_CNT) >= 126);
 	    WRITE_PERI_REG(UART_FIFO_REG(unit) , *s++);
@@ -345,8 +416,6 @@ void IRAM_ATTR uart_writes(uint8_t unit, char *s) {
 
 // Reads a byte from uart
 uint8_t IRAM_ATTR uart_read(uint8_t unit, char *c, uint32_t timeout) {
-    unit--;
-	
     if (timeout != portMAX_DELAY) {
         timeout = timeout / portTICK_PERIOD_MS;
     }
@@ -494,8 +563,6 @@ const char *uart_name(uint8_t unit) {
 
 // Gets the UART queue
 QueueHandle_t *uart_get_queue(uint8_t unit) {
-    unit--;
-
     return  uart[unit].q;
 }
 
@@ -510,14 +577,12 @@ int uart_get_br(int unit) {
 	return 0;
 }
 
-int uart_inited(int unit) {
-    unit--;
+int uart_is_setup(int unit) {
     return ((uart[unit].flags & UART_FLAG_INIT) && (uart[unit].flags & UART_FLAG_IRQ_INIT));
 }
 
 void uart_stop(int unit) {
 	int cunit = 0;
-	unit--;
 
 	for(cunit = 0;cunit < NUART; cunit++) {
 		if ((unit == -1) || (cunit == unit)) {
