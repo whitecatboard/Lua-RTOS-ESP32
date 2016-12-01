@@ -1,13 +1,20 @@
 #ifndef LUA_RTOS_LUARTOS_H_
 #define LUA_RTOS_LUARTOS_H_
 
+#include "freertos/freertos.h"
+#include "esp_task.h"
 #include "sdkconfig.h"
 
 /*
  * Lua RTOS
  */
 #define LUA_TASK_PRIORITY  CONFIG_LUA_RTOS_LUA_TASK_PRIORITY
+#define LUA_TASK_STACK 	   1024*40
+#define LUA_THREAD_STACK   10240
+
 #define TASK_HIGH_PRIORITY CONFIG_LUA_RTOS_SYS_TASK_HIGH_PRIORITY
+#define TASK_STACK		   configMINIMAL_STACK_SIZE
+#define TASK_PRIORITY      (ESP_TASK_PRIO_MIN + 3)
 
 /*
  * SPI

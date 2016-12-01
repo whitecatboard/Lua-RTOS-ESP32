@@ -27,14 +27,15 @@
  * this software.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
+#include "luartos.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
 
+#include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <sys/debug.h>
@@ -69,16 +70,25 @@ void app_main() {
 	gpio_pin_clr(LED_ACT);
 	#endif
 
-	// Create and run a pthread for Lua interpreter
+	// Create and run a pthread for the Lua interpreter
 	pthread_attr_t attr;
+	struct sched_param sched;
 	pthread_t thread;
     int res;
 	
 	debug_free_mem_begin(lua_main_thread);
     
+	// Init thread attributes
 	pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, luaTaskStack);
 
+	// Set stack size
+    pthread_attr_setstacksize(&attr, LUA_TASK_STACK);
+
+    // Set priority
+    sched.sched_priority = LUA_TASK_PRIORITY;
+    pthread_attr_setschedparam(&attr, &sched);
+
+    // Create thread
     res = pthread_create(&thread, &attr, lua_start, NULL);
     if (res) {
 		panic("Cannot start lua");

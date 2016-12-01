@@ -124,6 +124,11 @@ struct pthread {
 struct pthread_attr {
     int stack_size;
     int initial_state;
+    int sched_priority;
+};
+
+struct sched_param {
+    int sched_priority;
 };
 
 typedef struct pthread_attr pthread_attr_t;
@@ -135,7 +140,7 @@ typedef struct pthread_attr pthread_attr_t;
 #define PTHREAD_CREATE_JOINABLE 2
 
 void _pthread_init();
-int _pthread_create(pthread_t *id, int stacksize, int initial_state, void *(*start_routine)(void *), void *args);
+int _pthread_create(pthread_t *id, int priority, int stacksize, int initial_state, void *(*start_routine)(void *), void *args);
 int _pthread_join(pthread_t id);
 int _pthread_free(pthread_t id);
 sig_t _pthread_signal(int s, sig_t h);
@@ -152,6 +157,8 @@ int pthread_attr_init(pthread_attr_t *attr);
 int pthread_attr_destroy(pthread_attr_t *attr);
 int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize);
 int pthread_attr_getstacksize(const pthread_attr_t *attr, size_t *stacksize);
+int pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *param);
+int pthread_attr_getschedparam(const pthread_attr_t *attr, struct sched_param *param);
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
 int pthread_setcancelstate(int state, int *oldstate);
 int pthread_attr_setinitialstate(pthread_attr_t *attr, int initial_state);

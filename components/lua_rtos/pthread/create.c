@@ -27,12 +27,15 @@
  * this software.
  */
 
+#include "luartos.h"
+
 #include <errno.h>
 #include <pthread/pthread.h>
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                           void *(*start_routine) (void *), void *args) {
     
+	int priority;
     int stacksize; // Stack size
     int initial_state; // Initial state
     int res;
@@ -48,10 +51,11 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
     } else {
         stacksize = PTHREAD_STACK_MIN;
         initial_state = PTHREAD_INITIAL_STATE_RUN;
+        priority = TASK_PRIORITY;
     }
      
     // Create a new pthread
-    res = _pthread_create(thread, stacksize, initial_state, start_routine, args);
+    res = _pthread_create(thread, priority, stacksize, initial_state, start_routine, args);
     if (res) {
         errno = res;
         return res;

@@ -70,6 +70,23 @@ int pthread_attr_getstacksize(const pthread_attr_t *attr, size_t *stacksize) {
     return 0;
 }
 
+int pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *param) {
+    if ((param->sched_priority > configMAX_PRIORITIES - 1) || (param->sched_priority < 1)) {
+        errno = EINVAL;
+        return EINVAL;
+    }
+
+    attr->sched_priority = param->sched_priority;
+
+    return 0;
+}
+
+int pthread_attr_getschedparam(const pthread_attr_t *attr, struct sched_param *param) {
+	param->sched_priority = attr->sched_priority;
+
+	return 0;
+}
+
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate) {
     return 0;
 }

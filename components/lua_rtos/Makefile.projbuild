@@ -35,10 +35,6 @@ CFLAGS += -D_CLOCKS_PER_SEC_=configTICK_RATE_HZ # Number of interrupt ticks for 
 CFLAGS += -DUSE_NETWORKING=0                    # Networking is used (1 = yes, 0 = not)
 CFLAGS += -DMTX_USE_EVENTS=0                    # Use event groups in mtx implementation (experimental)
 
-CFLAGS += -DluaTaskStack=1024*40                # Stck size assigned to lua thread
-CFLAGS += -DtskDEFStack=192*10				    # Default task size
-CFLAGS += -DtskDEF_PRIORITY=2				    # Default task priority
-CFLAGS += -DdefaultThreadStack=10240
 
 CFLAGS += -DUSE_RTC=0						    # Enable RTC
 CFLAGS += -DLED_ACT=4					 	    # GPIO for activity led (0 if not led)

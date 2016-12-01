@@ -27,6 +27,8 @@
  * this software.
  */
 
+#include "luartos.h"
+
 #if LUA_USE_THREAD
 
 #include "lua.h"
@@ -296,7 +298,7 @@ static int new_thread(lua_State* L, int run) {
 
     // Create pthread
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, defaultThreadStack);
+    pthread_attr_setstacksize(&attr, LUA_THREAD_STACK);
 
     if (run)  {
         pthread_attr_setinitialstate(&attr, PTHREAD_INITIAL_STATE_RUN);

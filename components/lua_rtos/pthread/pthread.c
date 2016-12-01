@@ -71,7 +71,7 @@ void _pthread_init() {
     list_init(&key_list, 1);
 }
 
-int _pthread_create(pthread_t *id, int stacksize, int initial_state,
+int _pthread_create(pthread_t *id, int priority, int stacksize, int initial_state,
                     void *(*start_routine)(void *), void *args
 ) {
     xTaskHandle xCreatedTask;              // Related task
@@ -150,7 +150,7 @@ int _pthread_create(pthread_t *id, int stacksize, int initial_state,
     // Create related task
     res = xTaskCreate(
             pthreadTask, "lthread", stacksize, taskArgs,
-            tskDEF_PRIORITY, &xCreatedTask
+			priority, &xCreatedTask
     );
 
     if(res != pdPASS) {
