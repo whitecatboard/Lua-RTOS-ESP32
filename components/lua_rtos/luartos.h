@@ -4,6 +4,12 @@
 #include "sdkconfig.h"
 
 /*
+ * Lua RTOS
+ */
+#define LUA_TASK_PRIORITY  CONFIG_LUA_RTOS_LUA_TASK_PRIORITY
+#define TASK_HIGH_PRIORITY CONFIG_LUA_RTOS_SYS_TASK_HIGH_PRIORITY
+
+/*
  * SPI
  */
 #define USE_SPI (LUA_USE_SPI || LUA_USE_LORA)
@@ -88,6 +94,19 @@
 #endif
 
 // LoRa WAN
+
+#define US_PER_OSTICK   20
+#define OSTICKS_PER_SEC 50000
+#define LMIC_SPI_KHZ    10000
+
+#define LMIC_DEBUG_LEVEL CONFIG_LUA_RTOS_LORAWAN_LMIC_DEBUG
+
+#if LMIC_DEBUG_LEVEL
+#define LMIC_STACK_SIZE 862
+#else
+#define LMIC_STACK_SIZE 690
+#endif
+
 #if CONFIG_LUA_RTOS_USE_LMIC
 #define USE_LMIC 1
 #else

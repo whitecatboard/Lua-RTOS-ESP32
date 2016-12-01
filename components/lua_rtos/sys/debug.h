@@ -31,8 +31,12 @@
 #define _SYS_DEBUG_H_
 
 #include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 
 #if DEBUG_FREE_MEM
+#define debug_used_stack() printf("remaining stak %d bytes\r\n", uxTaskGetStackHighWaterMark(NULL) * 4)
+
 #define debug_free_mem_begin(var) \
 int elapsed_begin_##var = xPortGetFreeHeapSize(); 
 
@@ -47,6 +51,7 @@ if (elapsed_end_##var_msg) { \
 #else
 #define debug_free_mem_begin(var)
 #define debug_free_mem_end(var, msg)
+#define debug_used_stack()
 #endif
 
 #endif /* !_SYS_DEBUG_H_ */

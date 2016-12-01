@@ -45,13 +45,6 @@ CFLAGS += -DLED_ACT=4					 	    # GPIO for activity led (0 if not led)
 CFLAGS += -DLED_DBG=0 					 	    # GPIO for debug led (0 if not led)
 CFLAGS += -DPATH_MAX=64
 
-# LMIC configuration
-CFLAGS += -DUS_PER_OSTICK=20
-CFLAGS += -DOSTICKS_PER_SEC=50000			
-CFLAGS += -DLMIC_JOIN_FAILED_AFTER_868_864=1 # JOIN_FAILED after test 868 / 864, don't try lower DR
-
-CFLAGS += -DLMIC_SPI_KHZ=10000
-CFLAGS += -DLMIC_DEBUG_LEVEL=1
 
 #
 # SDCARD configuration

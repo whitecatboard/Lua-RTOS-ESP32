@@ -1,4 +1,23 @@
 menu "Lua RTOS"
+  menu "General"
+	config LUA_RTOS_LUA_TASK_PRIORITY
+    int "Lua interpreter task priority"
+    range 5 20
+    default 5
+	help
+		Task priority assigned to the Lua interpreter. Lua RTOS has a thread-oriented programming model and
+		basically the Lua interpreter is used only for launch new threads and configure the system, so
+		it's not necessary to assing a high piority to the interpreter.
+		
+	config LUA_RTOS_SYS_TASK_HIGH_PRIORITY
+    int "High Priority system task priority"
+    range 5 20
+    default 20
+    help
+    	Some drivers in Lua RTOS create tasks that need to be executed in high priority. An example of this
+    	is the LoRa WAN driver, that need to execute an state-machine that is very sensitive to the elapsed
+    	time.
+  endmenu
   menu "Console"
   	config LUA_RTOS_USE_CONSOLE
   	bool "Use console"
@@ -99,6 +118,10 @@ menu "Lua RTOS"
 	config LUA_RTOS_USE_LMIC
   	bool "Use LIMC stack"
   	default true
+
+	config LUA_RTOS_LORAWAN_LMIC_DEBUG
+  	bool "Enable machine-state debug"
+  	default false
 
 	choice LUA_RTOS_LORAWAN_BAND
 	depends on LUA_RTOS_USE_LMIC

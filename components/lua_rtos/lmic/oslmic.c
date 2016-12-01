@@ -22,6 +22,8 @@
 
 #include "esp_attr.h"
 
+#include <sys/syslog.h>
+
 // LMIC run loop, as a FreeRTOS task
 void os_runloop(void *pvParameters);
 
@@ -41,7 +43,7 @@ int os_init () {
         LMIC_init();
 
     	// Run os_runloop in a FreeRTOS task
-    	xTaskCreate(os_runloop, "lmic", tskDEFStack, NULL, tskDEF_PRIORITY, &xRunLoop);
+    	xTaskCreate(os_runloop, "lmic", LMIC_STACK_SIZE, NULL, TASK_HIGH_PRIORITY, &xRunLoop);
     } else {
     	return -1;
     }
@@ -129,6 +131,9 @@ void os_runloop(void *pvParameters) {
 
 	    if (j) { // run job callback
 	        j->func(j);
+	        #if LMIC_DEBUG_LEVEL > 0
+	        	syslog(LOG_DEBUG, "%lu: free stack size %d\n", (u4_t)os_getTime(), uxTaskGetStackHighWaterMark(NULL) * 4);
+			#endif
 	    } else {
 	    	if (!OS.scheduledjobs) {
 	    		hal_sleep();

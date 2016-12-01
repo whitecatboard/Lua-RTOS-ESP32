@@ -17,6 +17,7 @@
 //! \file
 #include "lmic.h"
 #include <sys/syslog.h>
+#include <sys/debug.h>
 
 #if defined(DISABLE_BEACONS) && !defined(DISABLE_PING)
 #error Ping needs beacon tracking
@@ -788,9 +789,10 @@ static void initJoinLoop (void) {
 static ostime_t nextJoinState (void) {
     u1_t failed = 0;
 
-	#if LMIC_JOIN_FAILED_AFTER_868_864
+    // TO DO: review
+	//#if LMIC_JOIN_FAILED_AFTER_868_864
     return 1;
-	#endif
+	//#endif
 
     // Try 869.x and then 864.x with same DR
     // If both fail try next lower datarate
