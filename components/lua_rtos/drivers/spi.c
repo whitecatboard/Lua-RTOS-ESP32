@@ -67,6 +67,8 @@ struct spi {
 const char *spi_errors[] = {
 	"",
 	"can't setup",
+	"invalid number mode",
+	"invalid unit"
 };
 
 #define SPI_DRIVER driver_get("spi")

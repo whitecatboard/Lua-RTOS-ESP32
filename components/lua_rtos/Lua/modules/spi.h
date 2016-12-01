@@ -30,17 +30,20 @@
 #ifndef LSPI_H
 #define	LSPI_H
 
+#include "luartos.h"
+
 #include <drivers/spi.h>
+#include <drivers/cpu.h>
 
 typedef uint32_t spi_data_type;
 
 typedef struct {
     unsigned char spi;
     unsigned char cs;
-    unsigned int speed;
-    unsigned int mode;
+    unsigned int  speed;
+    unsigned int  mode;
+    unsigned int  bits;
 } spi_userdata;
-
 
 #ifdef CPU_SPI0
 #define SPI_SPI0 {LSTRKEY(CPU_SPI0_NAME), LINTVAL(CPU_SPI0)},

@@ -122,6 +122,7 @@ unsigned int spi_get_speed(int unit);
 
 void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs);
 void spi_pin_config(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs);
+void spi_set_mode(int unit, int mode);
 
 /*
  * Transfer one word of data, and return the read word of data.

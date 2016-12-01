@@ -61,7 +61,6 @@ static const TValue* luaR_auxfind(const luaR_entry *pentry, const char *strkey, 
   
   if (pentry == NULL)
     return luaO_nilobject;  
-    
   while(pentry->key.type != LUA_TNIL) {
     if ((strkey && (pentry->key.type == LUA_TSTRING) && (!strcmp(pentry->key.id.strkey, strkey))) || 
         (!strkey && ((pentry->key.type & 0b111) == LUA_TNUMBER) && ((luaR_numkey)pentry->key.id.numkey == numkey))) {

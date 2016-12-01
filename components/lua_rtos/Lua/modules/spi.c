@@ -74,8 +74,10 @@ static int lspi_select(lua_State* L) {
         return luaL_error(L, "SPI%d does not exist", spi->spi);
     }
 
+    spi_set_mode(spi->spi, spi->mode);
     spi_set_speed(spi->spi, spi->speed);
-	spi_select(spi->spi);
+    spi_set_cspin(spi->spi, spi->cs);
+    spi_deselect(spi->spi);
 
     return 0;
 }
@@ -96,9 +98,10 @@ static int lspi_deselect(lua_State*L ) {
 }
 
 static int lspi_setup(lua_State* L) {
-	int id, cpol, cpha, data_bits, is_master, cs;
+	int id, data_bits, is_master, cs;
 	driver_error_t *error;
 	uint32_t clock;
+	int spi_mode = 0;
 
 	id = luaL_checkinteger(L, 1);
 
@@ -112,28 +115,26 @@ static int lspi_setup(lua_State* L) {
 
 	cs = luaL_checkinteger(L, 3);
 	clock = luaL_checkinteger(L, 4);
-	cpol = luaL_checkinteger(L, 5);
+	data_bits = luaL_checkinteger(L, 5);
+	spi_mode = luaL_checkinteger(L, 6);
 
-	if ((cpol != 0) && (cpol != 1 ))
-		return luaL_error(L, "invalid clock polarity");
-
-	cpha = luaL_checkinteger(L, 6);
-
-	if ((cpha != 0) && (cpha != 1))
-		return luaL_error(L, "invalid clock phase");
-
-	data_bits = luaL_checkinteger(L, 7);
+	if ((spi_mode < 0) || (spi_mode > 3)) {
+		return luaL_error(L, "invalid mode number");
+	}
 
 	spi_userdata *spi = (spi_userdata *)lua_newuserdata(L, sizeof(spi_userdata));
 
 	spi->spi = id;
 	spi->cs = cs;
 	spi->speed = clock;
+	spi->mode = spi_mode;
+	spi->bits = data_bits;
 
     if ((error = spi_init(spi->spi))) {
     	return luaL_driver_error(L, error);
     }
 
+    spi_set_mode(spi->spi, spi->mode);
     spi_set_speed(spi->spi, spi->speed);
     spi_set_cspin(spi->spi, spi->cs);
     spi_deselect(spi->spi);
@@ -207,16 +208,30 @@ static const LUA_REG_TYPE spi_method_map[] = {
   { LNILKEY, LNILVAL }
 };
 
-static const luaL_Reg spi_map[] = {
-	{ NULL, NULL }
+#if LUA_USE_ROTABLE
+
+static const LUA_REG_TYPE spi_constants_map[] = {
+  { LSTRKEY( "MASTER"     ),	 LINTVAL( 1 ) },
+  { LSTRKEY( "SLAVE"      ),	 LINTVAL( 0 ) },
+  SPI_SPI0
+  SPI_SPI1
+  SPI_SPI2
+  SPI_SPI3
+  { LNILKEY, LNILVAL }
 };
 
-#if LUA_USE_ROTABLE
 static int luaL_spi_index(lua_State *L) {
-	int fres;
+	int res;
 
-	if ((fres = luaR_findfunction(L, spi_method_map)) != 0)
-		return fres;
+	if ((res = luaR_findfunction(L, spi_method_map)) != 0)
+		return res;
+
+	const char *key = luaL_checkstring(L, 2);
+	const TValue *val = luaR_findentry(spi_constants_map, key, 0, NULL);
+	if (val != luaO_nilobject) {
+		lua_pushinteger(L, val->value_.i);
+		return 1;
+	}
 
 	return (int)luaO_nilobject;
 }
@@ -225,9 +240,7 @@ static const luaL_Reg spi_load_funcs[] = {
     { "__index"    , 	luaL_spi_index },
     { NULL, NULL }
 };
-#endif
 
-#if LUA_USE_ROTABLE
 static int luaL_mspi_index(lua_State *L) {
   int fres;
   if ((fres = luaR_findfunction(L, spi_method_map)) != 0)
@@ -240,6 +253,13 @@ static const luaL_Reg mspi_load_funcs[] = {
     { "__index"    , 	luaL_mspi_index },
     { NULL, NULL }
 };
+
+#else
+
+static const luaL_Reg spi_map[] = {
+	{ NULL, NULL }
+};
+
 #endif
 
 LUALIB_API int luaopen_spi( lua_State *L ) {
