@@ -71,7 +71,7 @@ void _pthread_init() {
     list_init(&key_list, 1);
 }
 
-int _pthread_create(pthread_t *id, int priority, int stacksize, int initial_state,
+int _pthread_create(pthread_t *id, int priority, int stacksize, int cpu, int initial_state,
                     void *(*start_routine)(void *), void *args
 ) {
     xTaskHandle xCreatedTask;              // Related task
@@ -148,10 +148,11 @@ int _pthread_create(pthread_t *id, int priority, int stacksize, int initial_stat
     mtx_lock(&thread->init_mtx);
 
     // Create related task
-    res = xTaskCreate(
-            pthreadTask, "lthread", stacksize, taskArgs,
-			priority, &xCreatedTask
-    );
+    if (cpu == tskNO_AFFINITY) {
+        res = xTaskCreate(pthreadTask, "lthread", stacksize, taskArgs, priority, &xCreatedTask);
+    } else {
+        res = xTaskCreatePinnedToCore(&pthreadTask, "lthread", stacksize, taskArgs,priority, &xCreatedTask, cpu);
+    }
 
     if(res != pdPASS) {
         // Remove from thread list

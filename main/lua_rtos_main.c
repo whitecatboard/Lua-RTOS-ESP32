@@ -88,6 +88,11 @@ void app_main() {
     sched.sched_priority = LUA_TASK_PRIORITY;
     pthread_attr_setschedparam(&attr, &sched);
 
+    // Set CPU
+    cpu_set_t cpu_set = LUA_TASK_CPU;
+    pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+
+
     // Create thread
     res = pthread_create(&thread, &attr, lua_start, NULL);
     if (res) {

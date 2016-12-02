@@ -35,9 +35,11 @@
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                           void *(*start_routine) (void *), void *args) {
     
-	int priority;
-    int stacksize; // Stack size
+	int priority;      // Priority
+    int stacksize;     // Stack size
     int initial_state; // Initial state
+    int cpu;           // CPU affinity
+
     int res;
 
     // Get some arguments need for the thread creation
@@ -47,15 +49,23 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
             errno = EINVAL;
             return EINVAL;
         }
+        priority = attr->sched_priority;
         initial_state = attr->initial_state;
+        cpu = attr->cpuset;
     } else {
         stacksize = PTHREAD_STACK_MIN;
         initial_state = PTHREAD_INITIAL_STATE_RUN;
         priority = TASK_PRIORITY;
+
+        if (portNUM_PROCESSORS > 0) {
+        	cpu = 0;
+        } else {
+        	cpu = tskNO_AFFINITY;
+        }
     }
      
     // Create a new pthread
-    res = _pthread_create(thread, priority, stacksize, initial_state, start_routine, args);
+    res = _pthread_create(thread, priority, stacksize, cpu, initial_state, start_routine, args);
     if (res) {
         errno = res;
         return res;

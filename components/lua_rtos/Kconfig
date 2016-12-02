@@ -9,6 +9,14 @@ menu "Lua RTOS"
 		basically the Lua interpreter is used only for launch new threads and configure the system, so
 		it's not necessary to assing a high piority to the interpreter.
 		
+	config LUA_RTOS_LUA_TASK_CPU
+	depends on !FREERTOS_UNICORE
+    int "Lua interpreter task CPU affinity"
+    range 0 1
+    default 0
+	help
+		CPU affinity for the task assigned to the Lua interpreter.
+
 	config LUA_RTOS_SYS_TASK_HIGH_PRIORITY
     int "High Priority system task priority"
     range 5 20

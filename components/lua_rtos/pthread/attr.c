@@ -27,12 +27,18 @@
  * this software.
  */
 
+#include "luartos.h"
+
+#include "freertos/freertos.h"
+
 #include <errno.h>
 #include <pthread/pthread.h>
 
 int pthread_attr_init(pthread_attr_t *attr) {
     attr->stack_size = PTHREAD_STACK_MIN;
     attr->initial_state = PTHREAD_INITIAL_STATE_RUN;
+    attr->sched_priority = TASK_PRIORITY;
+    attr->cpuset = tskNO_AFFINITY;
     
     return 0;
 }
@@ -45,7 +51,7 @@ int pthread_attr_destroy(pthread_attr_t *attr) {
 int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize) {
     if (stacksize < PTHREAD_STACK_MIN) {
         errno = EINVAL;
-        return EINVAL;
+        return errno;
     }
     
     attr->stack_size = stacksize;
@@ -56,7 +62,7 @@ int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize) {
 int pthread_attr_setinitialstate(pthread_attr_t *attr, int initial_state) {
     if ((initial_state != PTHREAD_INITIAL_STATE_RUN) && (initial_state != PTHREAD_INITIAL_STATE_SUSPEND)) {
         errno = EINVAL;
-        return EINVAL;
+        return errno;
     }
     
     attr->initial_state = initial_state;
@@ -73,7 +79,7 @@ int pthread_attr_getstacksize(const pthread_attr_t *attr, size_t *stacksize) {
 int pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *param) {
     if ((param->sched_priority > configMAX_PRIORITIES - 1) || (param->sched_priority < 1)) {
         errno = EINVAL;
-        return EINVAL;
+        return errno;
     }
 
     attr->sched_priority = param->sched_priority;
@@ -93,4 +99,26 @@ int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate) {
 
 int pthread_setcancelstate(int state, int *oldstate) {
     return 0;
+}
+
+int pthread_attr_setaffinity_np(pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset) {
+	if ((*cpuset < 0) || (*cpuset > portNUM_PROCESSORS)) {
+		errno = EINVAL;
+		return errno;
+	}
+
+	attr->cpuset = *cpuset;
+
+	return 0;
+}
+
+int pthread_attr_getaffinity_np(const pthread_attr_t *attr, size_t cpusetsize, cpu_set_t *cpuset) {
+	if ((*cpuset < 0) || (*cpuset > portNUM_PROCESSORS)) {
+		errno = EINVAL;
+		return errno;
+	}
+
+	*cpuset = attr->cpuset;
+
+	return 0;
 }
