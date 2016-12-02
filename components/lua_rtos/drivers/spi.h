@@ -32,6 +32,15 @@
 
 #include <sys/driver.h>
 
+// Resources used by the SPI
+typedef struct {
+	uint8_t sdi;
+	uint8_t sdo;
+	uint8_t sck;
+	uint8_t cs;
+} spi_resources_t;
+
+
 #define NSPI 4
 
 // SPI errors
@@ -121,7 +130,7 @@ int spi_cspin(int unit);
 unsigned int spi_get_speed(int unit);
 
 void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs);
-void spi_pin_config(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs);
+void spi_pin_config(int unit, unsigned char sdi, unsigned char sdo, unsigned char sck, unsigned char cs);
 void spi_set_mode(int unit, int mode);
 
 /*
@@ -159,5 +168,7 @@ void spi_bulk_rw32(int unit, unsigned int nelem, int *data);
 void spi_bulk_write32_be(int unit, unsigned int nelem, int *data);
 void spi_bulk_read32_be(int unit, unsigned int nelem, int *data);
 void spi_bulk_rw32_be(int unit, unsigned int nelem, int *data);
+
+driver_error_t *spi_lock_resources(int unit, void *resources);
 
 #endif

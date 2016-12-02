@@ -23,6 +23,9 @@
 #include "esp_attr.h"
 
 #include <sys/syslog.h>
+#include <sys/driver.h>
+
+#include <drivers/lora.h>
 
 // LMIC run loop, as a FreeRTOS task
 void os_runloop(void *pvParameters);
@@ -36,19 +39,25 @@ static struct {
     osjob_t* runnablejobs;
 } OS;
 
-int os_init () {
+driver_error_t *os_init () {
+	driver_error_t *error;
+
     memset(&OS, 0x00, sizeof(OS));
-    hal_init();
+
+    if ((error = hal_init())) {
+    	return error;
+    }
+
     if (radio_init() == 0) {
         LMIC_init();
 
     	// Run os_runloop in a FreeRTOS task
     	xTaskCreate(os_runloop, "lmic", LMIC_STACK_SIZE, NULL, TASK_HIGH_PRIORITY, &xRunLoop);
     } else {
-    	return -1;
+		return driver_setup_error(LORA_DRIVER, LORA_ERR_CANT_SETUP, "radio phy not detected");
     }
 
-    return 0;
+    return NULL;
 }
 
 static u1_t unlinkjob (osjob_t** pnext, osjob_t* job) {

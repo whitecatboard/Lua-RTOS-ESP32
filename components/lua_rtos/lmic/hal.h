@@ -14,6 +14,8 @@
 
 #include "luartos.h"
 
+#include <sys/driver.h>
+
 #if LUA_USE_LORA
 #if USE_LMIC
 
@@ -24,7 +26,7 @@ extern "C"{
 /*
  * initialize hardware (IO, SPI, TIMER, IRQ).
  */
-void hal_init (void);
+driver_error_t *hal_init (void);
 
 /*
  * drive radio NSS pin (0=low, 1=high).

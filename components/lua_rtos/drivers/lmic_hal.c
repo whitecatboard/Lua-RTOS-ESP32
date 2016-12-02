@@ -49,9 +49,11 @@
 #include <sys/delay.h>
 #include <sys/syslog.h>
 #include <sys/mutex.h>
+#include <sys/driver.h>
 
 #include <drivers/gpio.h>
 #include <drivers/spi.h>
+#include <drivers/lora.h>
 
 extern unsigned port_interruptNesting[portNUM_PROCESSORS];
 
@@ -107,13 +109,52 @@ static void IRAM_ATTR dio_intr_handler(void *args) {
 	hal_resume();
 }
 
-void hal_init (void) {
+driver_error_t *lmic_lock_resources(int unit, void *resources) {
+    driver_unit_lock_error_t *lock_error = NULL;
+
+    if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, LMIC_RST))) {
+    	// Revoked lock on pin
+    	return driver_lock_error(LORA_DRIVER, lock_error);
+    }
+
+	if (LMIC_DIO0) {
+		if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, LMIC_DIO0))) {
+			// Revoked lock on pin
+			return driver_lock_error(LORA_DRIVER, lock_error);
+		}
+	}
+
+	if (LMIC_DIO1) {
+		if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, LMIC_DIO1))) {
+			// Revoked lock on pin
+			return driver_lock_error(LORA_DRIVER, lock_error);
+		}
+	}
+
+	if (LMIC_DIO2) {
+		if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, LMIC_DIO2))) {
+			// Revoked lock on pin
+			return driver_lock_error(LORA_DRIVER, lock_error);
+		}
+	}
+
+	return NULL;
+}
+
+driver_error_t *hal_init (void) {
+	driver_error_t *error;
+
 	// Init SPI bus
-    if (spi_init(LMIC_SPI)) {
+    if ((error = spi_init(LMIC_SPI))) {
         syslog(LOG_ERR, "lmic cannot open spi%u", LMIC_SPI);
-        return;
+        return error;
     }
     
+    // Lock pins
+    if ((error = lmic_lock_resources(0, NULL))) {
+    	return error;
+    }
+
     spi_set_cspin(LMIC_SPI, LMIC_CS);
     spi_set_speed(LMIC_SPI, LMIC_SPI_KHZ);
 
@@ -151,6 +192,8 @@ void hal_init (void) {
 
 	// Create mutex
     mtx_init(&lmic_hal_mtx, NULL, NULL, 0);
+
+    return NULL;
 }
 
 /*

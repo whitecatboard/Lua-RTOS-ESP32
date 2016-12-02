@@ -86,8 +86,6 @@ const char *uart_errors[] = {
 	"can't setup",
 };
 
-#define UART_DRIVER driver_get("uart")
-
 // Flags for determine some UART states
 #define UART_FLAG_INIT		(1 << 1)
 #define UART_FLAG_IRQ_INIT	(1 << 2)
@@ -154,7 +152,7 @@ void uart_pins(int8_t unit, uint8_t *rx, uint8_t *tx) {
 	}
 }
 
-void uart_pin_config(int8_t unit, uint8_t *rx, uint8_t *tx) {
+void uart_pin_config(int8_t unit, uint8_t rx, uint8_t tx) {
 	wait_tx_empty(unit);
 
 	switch (unit) {
@@ -167,9 +165,6 @@ void uart_pin_config(int8_t unit, uint8_t *rx, uint8_t *tx) {
 	        PIN_PULLUP_EN(PERIPHS_IO_MUX_U0RXD_U);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_U0RXD_U0RXD);
 
-			if (rx) *rx = PIN_GPIO3;
-			if (tx) *tx = PIN_GPIO1;
-
 			break;
 
 		case 1:
@@ -181,9 +176,6 @@ void uart_pin_config(int8_t unit, uint8_t *rx, uint8_t *tx) {
 	        PIN_PULLUP_EN(PERIPHS_IO_MUX_SD_DATA2_U);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA2_U, FUNC_SD_DATA2_U1RXD);
 
-			if (rx) *rx = PIN_GPIO9;
-			if (tx) *tx = PIN_GPIO10;
-
 			break;
 
 		case 2:
@@ -194,9 +186,6 @@ void uart_pin_config(int8_t unit, uint8_t *rx, uint8_t *tx) {
 			// Enable U2RX
 	        PIN_PULLUP_EN(PERIPHS_IO_MUX_GPIO16_U);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO16_U, FUNC_GPIO16_U2RXD);
-
-			if (rx) *rx = PIN_GPIO16;
-			if (tx) *tx = PIN_GPIO17;
 
 			break;
 	}}
@@ -288,15 +277,41 @@ void  IRAM_ATTR uart_rx_intr_handler(void *para) {
 	portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
 }
 
-// Init UART
-// UART is configured by setting baud rate, 8N1
-// Interrupts are not enabled in this function
+// Lock resources needed by the UART
+driver_error_t *uart_lock_resources(int unit, void *resources) {
+	uart_resources_t tmp_uart_resources;
+
+	if (!resources) {
+		resources = &tmp_uart_resources;
+	}
+
+	uart_resources_t *uart_resources = (uart_resources_t *)resources;
+    driver_unit_lock_error_t *lock_error = NULL;
+
+    uart_pins(unit, &uart_resources->rx, &uart_resources->tx);
+
+    // Lock this pins
+    if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart_resources->rx))) {
+    	// Revoked lock on pin
+    	return driver_lock_error(UART_DRIVER, lock_error);
+    }
+
+    if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart_resources->tx))) {
+    	// Revoked lock on pin
+    	return driver_lock_error(UART_DRIVER, lock_error);
+    }
+
+    return NULL;
+}
+
+// Init UART. Interrupts are not enabled.
 driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t parity, uint8_t stop_bits, uint32_t qs) {
+	// Sanity checks
 	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
 		return driver_setup_error(UART_DRIVER, UART_ERR_CANT_INIT, "invalid unit");
 	}
 
-	// Get data bits
+	// Get data bits, and sanity checks
     UartBitsNum4Char esp_databits = EIGHT_BITS;
     switch (databits) {
     	case 5: esp_databits = FIVE_BITS; break;
@@ -307,7 +322,7 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
     		return driver_setup_error(UART_DRIVER, UART_ERR_CANT_INIT, "invalid data bits");
     }
 
-    // Get parity
+    // Get parity, and sanity checks
     UartParityMode esp_parity = NONE_BITS;
     switch (parity) {
     	case 0: esp_parity = NONE_BITS;break;
@@ -317,7 +332,7 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
     		return driver_setup_error(UART_DRIVER, UART_ERR_CANT_INIT, "invalid parity");
     }
 
-    // Get stop bits
+    // Get stop bits, and sanity checks
     UartStopBitsNum esp_stop_bits = ONE_STOP_BIT;
     switch (stop_bits) {
     	case 0: esp_stop_bits = ONE_HALF_STOP_BIT; break;
@@ -327,7 +342,17 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
     		return driver_setup_error(UART_DRIVER, UART_ERR_CANT_INIT, "invalid stop bits");
     }
 
-	// If requestes queue size is greater than current size, delete queue and create
+    // Lock resources
+    driver_error_t *error;
+    uart_resources_t resources;
+
+    if ((error = uart_lock_resources(unit, &resources))) {
+		return error;
+	}
+
+	// There are not errors, continue with init ...
+
+    // If requestes queue size is greater than current size, delete queue and create
 	// a new one
     if (qs > uart[unit].qs) {
 		if (uart[unit].q) {
@@ -340,9 +365,7 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 		}
 	}
 
-    uint8_t rx, tx;
-
-	uart_pin_config(unit, &rx, &tx);
+    uart_pin_config(unit, resources.rx, resources.tx);
 	uart_update_params(unit, brg, esp_databits, esp_parity, esp_stop_bits);
 
     uart[unit].brg = brg; 
@@ -351,8 +374,8 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
     uart[unit].flags |= UART_FLAG_INIT;
 
     syslog(LOG_INFO, "%s: at pins rx=%c%d/tx=%c%d",names[unit],
-            gpio_portname(rx), gpio_pinno(rx),
-            gpio_portname(tx), gpio_pinno(tx));
+            gpio_portname(resources.rx), gpio_pinno(resources.rx),
+            gpio_portname(resources.tx), gpio_pinno(resources.tx));
 
     syslog(LOG_INFO, "%s: speed %d bauds", names[unit],brg);
 

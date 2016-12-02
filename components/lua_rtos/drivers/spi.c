@@ -328,9 +328,7 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
 /*
  * Init pins for a device, and return used pins
  */
-void spi_pin_config(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs) {
-	spi_pins(unit, sdi, sdo, sck, cs);
-
+void spi_pin_config(int unit, unsigned char sdi, unsigned char sdo, unsigned char sck, unsigned char cs) {
 	switch (unit) {
         case 1:
             PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA0_U, FUNC_SD_DATA0_SPIQ);
@@ -355,7 +353,7 @@ void spi_pin_config(int unit, unsigned char *sdi, unsigned char *sdo, unsigned c
     }
 
     // Set the cs pin to the default cs pin for device
-	spi_set_cspin(unit, *cs);
+	spi_set_cspin(unit, cs);
 }
 
 static void IRAM_ATTR spi_master_op(int unit, unsigned int word_size, unsigned int len, unsigned char *out, unsigned char *in) {
@@ -589,25 +587,72 @@ unsigned int spi_get_speed(int unit) {
     return dev->speed;
 }
 
-/*
- * Init a spi device
- */
+// Lock resources needed by the SPI
+driver_error_t *spi_lock_resources(int unit, void *resources) {
+	spi_resources_t tmp_spi_resources;
+
+	if (!resources) {
+		resources = &tmp_spi_resources;
+	}
+
+	spi_resources_t *spi_resources = (spi_resources_t *)resources;
+    driver_unit_lock_error_t *lock_error = NULL;
+
+    // Get needed pins
+	spi_pins(unit, &spi_resources->sdi, &spi_resources->sdo, &spi_resources->sck, &spi_resources->cs);
+
+    // Lock this pins
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->sdi))) {
+    	// Revoked lock on pin
+    	return driver_lock_error(SPI_DRIVER, lock_error);
+    }
+
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->sdo))) {
+    	// Revoked lock on pin
+    	return driver_lock_error(SPI_DRIVER, lock_error);
+    }
+
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->sck))) {
+    	// Revoked lock on pin
+    	return driver_lock_error(SPI_DRIVER, lock_error);
+    }
+
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->cs))) {
+    	// Revoked lock on pin
+    	return driver_lock_error(SPI_DRIVER, lock_error);
+    }
+
+    return NULL;
+}
+
+// Init a spi device
 driver_error_t *spi_init(int unit) {
     struct spi *dev = &spi[unit];
-    unsigned char sdi, sdo, sck, cs;
 
+	// Sanity checks
 	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
 		return driver_setup_error(SPI_DRIVER, SPI_ERR_CANT_INIT, "invalid unit");
 	}
 
-	spi_pin_config(unit, &sdi, &sdo, &sck, &cs);
+    // Lock resources
+    driver_error_t *error;
+    spi_resources_t resources;
+
+    if ((error = spi_lock_resources(unit, &resources))) {
+		return error;
+	}
+
+	// There are not errors, continue with init ...
+
+    // Cotinue with init
+	spi_pin_config(unit, resources.sdi, resources.sdo, resources.sck, resources.cs);
 
 	syslog(LOG_INFO,
         "spi%u at pins sdi=%c%d/sdo=%c%d/sck=%c%d/cs=%c%d", unit,
-        gpio_portname(sdi), gpio_pinno(sdi),
-        gpio_portname(sdo), gpio_pinno(sdo),
-        gpio_portname(sck), gpio_pinno(sck),
-        gpio_portname(cs), gpio_pinno(cs)
+        gpio_portname(resources.sdi), gpio_pinno(resources.sdi),
+        gpio_portname(resources.sdo), gpio_pinno(resources.sdo),
+        gpio_portname(resources.sck), gpio_pinno(resources.sck),
+        gpio_portname(resources.cs), gpio_pinno(resources.cs)
     );
 
     spi_set_mode(unit, 0);

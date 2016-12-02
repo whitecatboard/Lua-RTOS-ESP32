@@ -15,6 +15,8 @@
 
 #include "luartos.h"
 
+#include <sys/driver.h>
+
 #if LUA_USE_LORA
 #if USE_LMIC
 
@@ -89,7 +91,7 @@ u1_t radio_rand1 (void);
 
 int  radio_init (void);
 void radio_irq_handler (u1_t dio);
-int  os_init (void);
+driver_error_t *os_init (void);
 void os_runloop(void * pvParameters);
 
 //================================================================================

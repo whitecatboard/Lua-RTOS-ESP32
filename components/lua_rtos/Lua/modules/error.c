@@ -43,22 +43,18 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     free(error);
     
     if (err.type == LOCK) {
-        if (err.resource_unit == -1) {
-            ret_val = luaL_error(L,
-                "%s, no %s available", 
-				driver_get_err_msg(error),
-                resource_name(err.resource)
-            );                        
-        } else {
-            ret_val = luaL_error(L,
-                "%s, %s is used by %s%d", 
-				driver_get_err_msg(error),
-                resource_unit_name(err.resource, err.resource_unit),
-                owner_name(err.owner),
-                err.owner_unit + 1
-            );            
-        }
+        ret_val = luaL_error(L,
+            "%s%d, %s%d is used by %s%d",
+			err.lock_error->owner_driver->name,
+			err.lock_error->owner_unit,
+			err.lock_error->target_driver->name,
+			err.lock_error->target_unit,
+			err.lock_error->lock->owner->name,
+			err.lock_error->lock->unit
+		);
         
+        free(err.lock_error);
+
         return ret_val;
     } else if (err.type == SETUP) {
     	if (err.msg) {

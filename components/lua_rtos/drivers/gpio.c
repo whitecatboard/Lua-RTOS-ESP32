@@ -27,8 +27,19 @@
  * this software.
  */
 
+#include <string.h>
+
+#include <sys/driver.h>
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
+
+// Driver locks
+driver_unit_lock_t gpio_locks[CPU_LAST_GPIO];
+
+// Driver errors
+const char *gpio_errors[] = {
+	"",
+};
 
 // Configure gpio as input using a mask
 // If bit n on mask is set to 1 the gpio is configured
@@ -196,4 +207,9 @@ int gpio_pinno(int pin) {
 }
 void gpio_disable_analog(int pin) {
 	
+}
+
+void _gpio_init() {
+	// Init lock array
+	memset(gpio_locks, 0, sizeof(gpio_locks));
 }

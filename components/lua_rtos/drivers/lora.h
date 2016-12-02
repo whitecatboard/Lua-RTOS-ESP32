@@ -36,6 +36,8 @@
 
 #include <sys/driver.h>
 
+#define LORA_DRIVER driver_get("lora")
+
 // Lora errors
 #define LORA_ERR_KEYS_NOT_CONFIGURED                (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  1)
 #define LORA_ERR_JOIN_DENIED                        (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  2)
@@ -78,6 +80,7 @@ driver_error_t *lora_join();
 driver_error_t *lora_tx(int cnf, int port, const char *data);
 
 void lora_set_rx_callback(lora_rx *callback);
+void _lora_init();
 
 #endif
 

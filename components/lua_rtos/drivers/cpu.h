@@ -156,6 +156,9 @@
 typedef uint64_t gpio_port_mask_t;
 #define GPIO_ALL 0b111111110000111011101111111111111111111UL
 
+#define CPU_FIRST_GPIO GPIO0
+#define CPU_LAST_GPIO  GPIO39
+
 /*
  * ----------------------------------------------------------------
  * UART

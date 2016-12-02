@@ -39,6 +39,7 @@
 #include <sys/console.h>
 #include <sys/mount.h>
 #include <sys/time.h>
+#include <sys/driver.h>
 
 #include <drivers/cpu.h>
 #include <drivers/uart.h>
@@ -47,7 +48,6 @@ extern void _syscalls_init();
 extern void _pthread_init();
 extern void _signal_init();
 extern void _mtx_init();
-extern void _resource_init();
 extern void _cpu_init();
 extern void _clock_init();
 
@@ -65,6 +65,8 @@ void vfs_tty_register();
 void vfs_spiffs_register();
 void vfs_fat_register();
 
+extern driver_t drivers[];
+
 void _sys_init() {
 	// TO DO: do this only if RTC is not set
 	struct timeval tv;
@@ -77,15 +79,22 @@ void _sys_init() {
 	// Init important things for Lua RTOS
 	_clock_init();
 	_cpu_init();
-	_resource_init();
     _mtx_init();
+    _driver_init();
     _pthread_init();
     _syscalls_init();
     _signal_init();
 
-#if LUA_USE_LORA
-    _lora_init();
-#endif
+    // Init drivers
+    driver_t *cdriver = drivers;
+
+    while (cdriver->name) {
+    	if (cdriver->init) {
+    		cdriver->init();
+    	}
+    	cdriver++;
+    }
+
 	console_clear();
 
 	vfs_tty_register();

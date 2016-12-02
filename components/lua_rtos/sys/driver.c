@@ -33,22 +33,37 @@
 #include <string.h>
 
 #include <sys/driver.h>
+#include <sys/syslog.h>
+#include <sys/panic.h>
+#include <sys/mutex.h>
 
+#include <drivers/uart.h>
+#include <drivers/spi.h>
+#include <drivers/gpio.h>
+#include <drivers/lora.h>
+
+// Mutex for lock resources
+static struct mtx driver_mtx;
+
+extern const char *gpio_errors[];
 extern const char *uart_errors[];
 extern const char *spi_errors[];
 extern const char *lora_lmic_errors[];
 
+extern driver_unit_lock_t gpio_locks[];
+
 const driver_t drivers[] = {
+	{"gpio", DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID), (void *)gpio_errors, gpio_locks, _gpio_init, NULL},
 #if USE_UART
-	{"uart", DRIVER_EXCEPTION_BASE(UART_DRIVER_ID), (void *)uart_errors},
+	{"uart", DRIVER_EXCEPTION_BASE(UART_DRIVER_ID), (void *)uart_errors, NULL, NULL, uart_lock_resources},
 #endif
 #if USE_SPI
-	{"spi", DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID), (void *)spi_errors},
+	{"spi", DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID), (void *)spi_errors, NULL, NULL, spi_lock_resources},
 #endif
 #if USE_LMIC
-	{"lora", DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID), (void *)lora_lmic_errors},
+	{"lora", DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID), (void *)lora_lmic_errors, NULL, _lora_init, NULL},
 #endif
-	{NULL, 0, NULL}
+	{NULL, 0, NULL, NULL, NULL, NULL}
 };
 
 // Get driver info by it's name
@@ -78,19 +93,16 @@ const char *driver_get_name(driver_error_t *error) {
 }
 
 // Create a driver error of type lock from a lock structure
-driver_error_t *driver_lock_error(resource_lock_t *lock) {
+driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error_t *lock_error) {
 	driver_error_t *error;
 
     error = (driver_error_t *)malloc(sizeof(driver_error_t));
     if (error) {
         error->type = LOCK;
-        error->resource = lock->type;
-        error->resource_unit = lock->unit;
-        error->owner = lock->owner;
-        error->owner_unit = lock->owner_unit;
+        error->lock_error = lock_error;
     }
 
-    free(lock);
+    free(lock_error);
 
     return error;
 }
@@ -125,3 +137,119 @@ driver_error_t *driver_operation_error(const driver_t *driver, unsigned int exce
     return error;
 }
 
+// Try to obtain a lock on an unit driver
+driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit) {
+    mtx_lock(&driver_mtx);
+
+	driver_unit_lock_t *target_lock = (driver_unit_lock_t *)target_driver->lock;
+
+	#if DRIVER_LOCK_DEBUG
+	syslog(LOG_DEBUG,"driver lock by %s%d on %s%d\r\n",
+			owner_driver->name, owner_unit,
+			target_driver->name, target_unit
+	);
+	#endif
+
+	if (!target_lock) {
+		if (target_driver->lock_resources) {
+			driver_error_t *error;
+
+			mtx_unlock(&driver_mtx);
+
+			if ((error = target_driver->lock_resources(target_unit, NULL))) {
+				// Target driver has no locks, then grant access
+				#if DRIVER_LOCK_DEBUG
+				syslog(LOG_DEBUG,"driver lock by %s%d on %s%d revoked\r\n",
+						owner_driver->name, owner_unit,
+						target_driver->name, target_unit
+				);
+				#endif
+
+				return error->lock_error;
+			} else {
+				// Target driver has no locks, then grant access
+				#if DRIVER_LOCK_DEBUG
+				syslog(LOG_DEBUG,"driver lock by %s%d on %s%d granted\r\n",
+						owner_driver->name, owner_unit,
+						target_driver->name, target_unit
+				);
+				#endif
+
+				return NULL;
+			}
+		}
+
+		// Target driver has no locks, then grant access
+		#if DRIVER_LOCK_DEBUG
+		syslog(LOG_DEBUG,"driver lock by %s%d on %s%d granted\r\n",
+				owner_driver->name, owner_unit,
+				target_driver->name, target_unit
+		);
+		#endif
+
+		mtx_unlock(&driver_mtx);
+
+		return NULL;
+	}
+
+	if (target_lock[target_unit].owner) {
+		// Target unit has a lock
+
+		if ((target_lock[target_unit].owner == owner_driver) && ((target_lock[target_unit].unit == owner_unit))) {
+			// Target unit is locked by owner_driver, then grant access
+			#if DRIVER_LOCK_DEBUG
+			syslog(LOG_DEBUG,"driver lock by %s%d on %s%d granted\r\n",
+					owner_driver->name, owner_unit,
+					target_driver->name, target_unit
+			);
+			#endif
+
+			mtx_unlock(&driver_mtx);
+
+			return NULL;
+		} else {
+			// Target unit is locked by another driver, then revoke access
+			driver_unit_lock_error_t *error = (driver_unit_lock_error_t *)malloc(sizeof(driver_unit_lock_error_t));
+			if (!error) {
+				panic("not enough memory");
+			}
+
+			error->lock = &target_lock[target_unit];
+			error->owner_driver = owner_driver;
+			error->owner_unit = owner_unit;
+			error->target_driver = target_driver;
+			error->target_unit = target_unit;
+
+			#if DRIVER_LOCK_DEBUG
+			syslog(LOG_DEBUG,"driver lock by %s%d on %s%d revoked\r\n",
+					owner_driver->name, owner_unit,
+					target_driver->name, target_unit
+			);
+			#endif
+
+			mtx_unlock(&driver_mtx);
+
+			return error;
+		}
+	} else {
+		#if DRIVER_LOCK_DEBUG
+		syslog(LOG_DEBUG,"driver lock by %s%d on %s%d granted\r\n",
+				owner_driver->name, owner_unit,
+				target_driver->name, target_unit
+		);
+		#endif
+
+		// Target unit hasn't a lock, then grant access
+		target_lock[target_unit].owner = owner_driver;
+		target_lock[target_unit].unit = owner_unit;
+
+		mtx_unlock(&driver_mtx);
+
+		return NULL;
+	}
+}
+
+void _driver_init() {
+    // Create driver mutex
+    mtx_init(&driver_mtx, NULL, NULL, 0);
+}

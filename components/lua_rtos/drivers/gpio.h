@@ -77,4 +77,6 @@ unsigned int cpu_gpio_number(unsigned int pin);
 int gpio_pinno(int pin);
 void gpio_disable_analog(int pin);
 
+void _gpio_init();
+
 #endif

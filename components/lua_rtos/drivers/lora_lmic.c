@@ -67,8 +67,6 @@ const char *lora_lmic_errors[] = {
 	"invalid argument"
 };
 
-#define LORA_DRIVER driver_get("lora")
-
 #define evLORA_INITED 	       	 ( 1 << 0 )
 #define evLORA_JOINED  	       	 ( 1 << 1 )
 #define evLORA_JOIN_DENIED     	 ( 1 << 2 )
@@ -121,12 +119,6 @@ static u1_t current_dr = 0;
 
 // ADR active?
 static u1_t adr = 0;
-
-// This function is called from mach_dev
-void _lora_init() {
-    // Create lora mutex
-    mtx_init(&lora_mtx, NULL, NULL, 0);
-}
 
 // Convert a buffer coded into an hex string (hbuff) into a byte buffer (vbuff)
 // Length of byte buffer is len
@@ -368,7 +360,9 @@ driver_error_t *lora_setup(int band) {
         syslog(LOG_DEBUG, "lora: setup, band %d", band);
 		
 		// LMIC init
-		if (os_init() == 0) {
+        driver_error_t *error;
+
+		if (!(error = os_init())) {
 	        // Create event group for sync driver with LMIC events
 			loraEvent = xEventGroupCreate();
 
@@ -382,7 +376,7 @@ driver_error_t *lora_setup(int band) {
 
 			mtx_unlock(&lora_mtx);
 
-    		return driver_setup_error(LORA_DRIVER, LORA_ERR_CANT_SETUP, "radio phy not detected");
+    		return error;
 		}
 
     }
@@ -694,6 +688,11 @@ void os_getDevEui (u1_t* buf) {
 
 void os_getDevKey (u1_t* buf) { 
 	memcpy(buf, APPKEY, 16);
+}
+
+void _lora_init() {
+    // Create lora mutex
+    mtx_init(&lora_mtx, NULL, NULL, 0);
 }
 
 #endif

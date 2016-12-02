@@ -66,6 +66,12 @@
 
 #include <sys/driver.h>
 
+// Resources used by the UART
+typedef struct {
+	uint8_t rx;
+	uint8_t tx;
+} uart_resources_t;
+
 // Number of UART units
 #define NUART 3
 
@@ -95,5 +101,6 @@ int      uart_is_setup(int unit);
 void     uart_stop(int unit);
 QueueHandle_t *uart_get_queue(int8_t unit);
 void uart_pins(int8_t unit, uint8_t *rx, uint8_t *tx);
+driver_error_t *uart_lock_resources(int unit, void *resources);
 
 #endif
