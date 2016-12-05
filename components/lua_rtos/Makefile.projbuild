@@ -56,11 +56,6 @@ CFLAGS += -DDISPLAY_CS=5
 CFLAGS += -DDISPLAY_RE=25
 CFLAGS += -DDISPLAY_RS=26
 
-# CFLAGS += -DLORA_UART=2			   # RN2483 UART unit
-# CFLAGS += -DLORA_UART_BR=57600       # RN2483 UART speed
-# CFLAGS += -DLORA_UART_BUFF_SIZE=255  # Buffer size for RX
-# CFLAGS += -DLORA_RST_PIN=0x50		   # RN2483 hardware reset pin
-
 #
 # I2C driver configuration
 #
@@ -84,34 +79,6 @@ CFLAGS += -DLUA_USE_EDITOR=1
 CFLAGS += -DLUA_USE_HISTORY=1
 CFLAGS += -DLUA_USE_ROTABLE=1
 
-#
-# Standard Lua modules to include
-#
-CFLAGS += -DLUA_USE__G=1			   # base
-CFLAGS += -DLUA_USE_OS=1			   # os
-CFLAGS += -DLUA_USE_MATH=1		       # math
-CFLAGS += -DLUA_USE_TABLE=1		       # table
-CFLAGS += -DLUA_USE_IO=1		       # io
-CFLAGS += -DLUA_USE_STRING=1		   # string
-CFLAGS += -DLUA_USE_COROUTINE=1 	   # coroutine
-CFLAGS += -DLUA_USE_DEBUG=1 		   # debug
-CFLAGS += -DLUA_USE_UTF8=1
-CFLAGS += -DLUA_USE_PACKAGE=1
-CFLAGS += -DLUA_USE_DEBUG=1
-
-#
-# LuaOS Lua modules to include
-#
-CFLAGS += -DLUA_USE_TMR=1		       # timer
-CFLAGS += -DLUA_USE_PIO=1		       # gpio
-CFLAGS += -DLUA_USE_LORA=1		       # lora
-CFLAGS += -DLUA_USE_PACK=1		       # pack
-CFLAGS += -DLUA_USE_THREAD=1		   # thread
-CFLAGS += -DLUA_USE_I2C=0   		   # i2c
-CFLAGS += -DLUA_USE_SCREEN=0     	   # screen
-CFLAGS += -DLUA_USE_NVS=1	     	   # nvs
-CFLAGS += -DLUA_USE_UART=1	     	   # uart
-CFLAGS += -DLUA_USE_SPI=1	     	   # spi
 
 # Define BUILD_TIME flag, with the EPOCH time when Lua RTOS is build.
 # This is used for set system time when RTC is not set.

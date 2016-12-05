@@ -1,5 +1,7 @@
 // Module for interfacing with PIO
 
+#include "luartos.h"
+
 #if LUA_USE_PIO
 
 #include "lualib.h"

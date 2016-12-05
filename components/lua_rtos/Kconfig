@@ -1,35 +1,20 @@
 menu "Lua RTOS"
   menu "General"
-	config LUA_RTOS_LUA_TASK_PRIORITY
-    int "Lua interpreter task priority"
-    range 5 20
-    default 5
-	help
-		Task priority assigned to the Lua interpreter. Lua RTOS has a thread-oriented programming model and
-		basically the Lua interpreter is used only for launch new threads and configure the system, so
-		it's not necessary to assing a high piority to the interpreter.
-		
-	config LUA_RTOS_LUA_TASK_CPU
-	depends on !FREERTOS_UNICORE
-    int "Lua interpreter task CPU affinity"
-    range 0 1
-    default 0
-	help
-		CPU affinity for the task assigned to the Lua interpreter.
-
-	config LUA_RTOS_SYS_TASK_HIGH_PRIORITY
-    int "High Priority system task priority"
-    range 5 20
-    default 20
-    help
-    	Some drivers in Lua RTOS create tasks that need to be executed in high priority. An example of this
-    	is the LoRa WAN driver, that need to execute an state-machine that is very sensitive to the elapsed
-    	time.
+	menu "System Priorities"
+		config LUA_RTOS_SYS_TASK_HIGH_PRIORITY
+	    int "High Priority system task priority"
+	    range 5 20
+	    default 20
+	    help
+	    	Some drivers in Lua RTOS create tasks that need to be executed in high priority. An example of this
+	    	is the LoRa WAN driver, that need to execute an state-machine that is very sensitive to the elapsed
+	    	time.
+    endmenu
   endmenu
   menu "Console"
   	config LUA_RTOS_USE_CONSOLE
   	bool "Use console"
-  	default true
+  	default y
     help 
 		Select this to enable the Lua RTOS console.
 
@@ -77,7 +62,7 @@ menu "Lua RTOS"
   menu "SPIFFS"
   		config LUA_RTOS_USE_SPIFFS
 	  	bool "Use spiffs"
-	  	default true
+	  	default y
 	  	help
 	  		Select for enable SPIFFS file system support. SPIFFS uses the ESP32 board flash memory.
 
@@ -102,7 +87,7 @@ menu "Lua RTOS"
   menu "FAT"
   		config LUA_RTOS_USE_FAT
 	  	bool "Use FAT"
-	  	default false
+	  	default n
 	  	help
 	  		Select for enable FAT file system support. Enabling this implies that you have an SD Card
 	  		appropriately connected to your ESP32 board.
@@ -122,14 +107,15 @@ menu "Lua RTOS"
 	    default 15
   endmenu
   endmenu
-  menu "LoRa Wan"
+  
+    menu "LoRa Wan"
 	config LUA_RTOS_USE_LMIC
   	bool "Use LIMC stack"
-  	default true
+  	default n
 
 	config LUA_RTOS_LORAWAN_LMIC_DEBUG
   	bool "Enable machine-state debug"
-  	default false
+  	default n
 
 	choice LUA_RTOS_LORAWAN_BAND
 	depends on LUA_RTOS_USE_LMIC
@@ -196,5 +182,113 @@ menu "Lua RTOS"
     int "PHY DIO2 pin"
     range 0 39
     default 33
+  endmenu
+  
+  menu "Lua"
+	  menu "Tunning"
+		config LUA_RTOS_LUA_TASK_PRIORITY
+		int "Lua interpreter task priority"
+		range 5 20
+		default 5
+		help
+			Task priority assigned to the Lua interpreter. Lua RTOS has a thread-oriented programming model and
+			basically the Lua interpreter is used only for launch new threads and configure the system, so
+			it's not necessary to assing a high piority to the interpreter.
+			
+		config LUA_RTOS_LUA_TASK_CPU
+		depends on !FREERTOS_UNICORE
+		int "Lua interpreter task CPU affinity"
+		range 0 1
+		default 0
+		help
+			CPU affinity for the task assigned to the Lua interpreter.
+	  endmenu
+	  
+	  menu "Lua Modules"
+	  	config LUA_RTOS_LUA_USE__G
+	  	bool "Include base module in build"
+	  	default y
+
+	  	config LUA_RTOS_LUA_USE_OS
+	  	bool "Include os module in build"
+	  	default y
+
+	  	config LUA_RTOS_LUA_USE_MATH
+	  	bool "Include math module in build"
+	  	default y
+
+	  	config LUA_RTOS_LUA_USE_TABLE
+	  	bool "Include table module in build"
+	  	default y
+
+	  	config LUA_RTOS_LUA_USE_IO
+	  	bool "Include io module in build"
+	  	default y
+
+	  	config LUA_RTOS_LUA_USE_STRING
+	  	bool "Include string module in build"
+	  	default y
+
+	  	config LUA_RTOS_LUA_USE_COROUTINE
+	  	bool "Include coroutine module in build"
+	  	default y
+
+	  	config LUA_RTOS_LUA_USE_DEBUG
+	  	bool "Include debug module in build"
+	  	default y
+
+	  	config LUA_RTOS_LUA_USE_UTF8
+	  	bool "Include utf8 module in build"
+	  	default y
+
+	  	config LUA_RTOS_LUA_USE_PACKAGE
+	  	bool "Include package module in build"
+	  	default y
+	  endmenu
+	  menu "Lua RTOS Modules"
+	  	config LUA_RTOS_LUA_USE_THREAD
+	  	bool "Include thread module in build"
+	  	default y
+
+	  	config LUA_RTOS_LUA_USE_NVS
+	  	bool "Include nvs module in build"
+	  	default y
+
+	  	config LUA_RTOS_LUA_USE_PACK
+	  	bool "Include pack module in build"
+	  	default y
+
+		menu "Hardware Access Modules"
+		  	config LUA_RTOS_LUA_USE_PIO
+		  	bool "Include pio (gpio) module in build"
+		  	default y
+	
+		  	config LUA_RTOS_LUA_USE_UART
+		  	bool "Include uart module in build"
+		  	default y
+	
+		  	config LUA_RTOS_LUA_USE_SPI
+		  	bool "Include spi module in build"
+		  	default y
+	
+		  	config LUA_RTOS_LUA_USE_I2C
+		  	bool "Include i2c module in build"
+		  	default y
+	
+		  	config LUA_RTOS_LUA_USE_TMR
+		  	bool "Include tmr (timer) module in build"
+		  	default y
+
+		  	config LUA_RTOS_LUA_USE_SCREEN
+		  	bool "Include screen module in build"
+		  	default n
+		endmenu
+		menu "Communication Modules"
+		  	config LUA_RTOS_LUA_USE_LORA
+		  	depends on LUA_RTOS_USE_LMIC
+		  	bool "Include lora module in build"
+		  	default n
+		endmenu
+	  endmenu
   endmenu
 endmenu

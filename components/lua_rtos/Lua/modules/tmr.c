@@ -27,6 +27,8 @@
  * this software.
  */
 
+#include "luartos.h"
+
 #if LUA_USE_TMR
 
 #include "lua.h"
