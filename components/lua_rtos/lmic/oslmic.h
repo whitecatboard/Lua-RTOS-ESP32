@@ -24,7 +24,6 @@
 // These settings can be adapted to the underlying system.
 // You should not, however, change the lmic.[hc]
 
-#include "config.h"
 #include <stdint.h>
 
 #ifdef __cplusplus

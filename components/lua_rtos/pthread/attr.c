@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#include "freertos/freertos.h"
+#include "freertos/FreeRTOS.h"
 
 #include <errno.h>
 #include <pthread/pthread.h>

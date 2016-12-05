@@ -1,7 +1,7 @@
 #ifndef LUA_RTOS_LUARTOS_H_
 #define LUA_RTOS_LUARTOS_H_
 
-#include "freertos/freertos.h"
+#include "freertos/FreeRTOS.h"
 #include "esp_task.h"
 #include "sdkconfig.h"
 

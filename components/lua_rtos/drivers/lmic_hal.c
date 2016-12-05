@@ -34,7 +34,7 @@
 
 #include "lmic.h"
 
-#include "freertos/FreeRtos.h"
+#include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
 #include "freertos/event_groups.h"
 
