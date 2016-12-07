@@ -74,38 +74,38 @@
 
 
 // ESP-WROOM-32 available GPIO pins
-#define GPIO36	4
-#define GPIO39	5
-#define GPIO34	6
-#define GPIO35	7
-#define GPIO32	8
-#define GPIO33	9
-#define GPIO25	10
-#define GPIO26	11
-#define GPIO27	12
-#define GPIO14	13
-#define GPIO12	14
-#define GPIO13	16
-#define GPIO9	17
-#define GPIO10	18
-#define GPIO11	19
-#define GPIO6	20
-#define GPIO7	21
-#define GPIO8	22
-#define GPIO15	23
-#define GPIO2	24
-#define GPIO0	25
-#define GPIO4	26
-#define GPIO16	27
-#define GPIO17	28
-#define GPIO5	29
-#define GPIO18	30
-#define GPIO19	31
-#define GPIO21	33
-#define GPIO3	34
-#define GPIO1	35
-#define GPIO22	36
-#define GPIO23	37
+#define GPIO36	36
+#define GPIO39	39
+#define GPIO34	34
+#define GPIO35	35
+#define GPIO32	32
+#define GPIO33	33
+#define GPIO25	25
+#define GPIO26	26
+#define GPIO27	27
+#define GPIO14	14
+#define GPIO12	12
+#define GPIO13	13
+#define GPIO9	9
+#define GPIO10	10
+#define GPIO11	11
+#define GPIO6	6
+#define GPIO7	7
+#define GPIO8	8
+#define GPIO15	15
+#define GPIO2	2
+#define GPIO0	0
+#define GPIO4	4
+#define GPIO16	16
+#define GPIO17	17
+#define GPIO5	5
+#define GPIO18	18
+#define GPIO19	19
+#define GPIO21	21
+#define GPIO3	3
+#define GPIO1	1
+#define GPIO22	22
+#define GPIO23	23
 
 
 // ESP-WROOM-32 available pin names
