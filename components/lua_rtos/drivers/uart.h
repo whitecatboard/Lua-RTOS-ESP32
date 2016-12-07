@@ -103,4 +103,7 @@ QueueHandle_t *uart_get_queue(int8_t unit);
 void uart_pins(int8_t unit, uint8_t *rx, uint8_t *tx);
 driver_error_t *uart_lock_resources(int unit, void *resources);
 
+void uart_lock(int unit);
+void uart_unlock(int unit);
+
 #endif

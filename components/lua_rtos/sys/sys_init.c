@@ -40,6 +40,7 @@
 #include <sys/mount.h>
 #include <sys/time.h>
 #include <sys/driver.h>
+#include <sys/delay.h>
 
 #include <drivers/cpu.h>
 #include <drivers/uart.h>

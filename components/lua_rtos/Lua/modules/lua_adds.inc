@@ -193,7 +193,7 @@ static int luaos_pmain (lua_State *L) {
   if (!status_get(STATUS_LUA_ABORT_BOOT_SCRIPTS)) {
 	  luaos_boot_scripts(L);
   } else {
-	  printf("Lua RTOS-boot-scripts-aborted\r\n");
+	  printf("Lua RTOS-boot-scripts-aborted-ESP32\r\n");
   }
   
   status_set(STATUS_LUA_INTERPRETER);

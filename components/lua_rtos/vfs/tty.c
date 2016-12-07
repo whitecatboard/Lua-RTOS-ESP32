@@ -45,8 +45,6 @@
 
 #include <syscalls/syscalls.h>
 
-static pthread_mutex_t tty_mutex = PTHREAD_MUTEX_INITIALIZER; 
-
 static int IRAM_ATTR vfs_tty_open(const char *path, int flags, int mode) {
 	struct file *fp;
 	int fd, error;
@@ -99,7 +97,7 @@ static size_t IRAM_ATTR vfs_tty_write(int fd, const void *data, size_t size) {
 
 	unit = fp->unit;
 
-	//pthread_mutex_lock(&tty_mutex);
+	uart_lock(unit);
 
     for (size_t i = 0; i < size; i++) {
 #if CONFIG_NEWLIB_STDOUT_ADDCR
@@ -110,7 +108,7 @@ static size_t IRAM_ATTR vfs_tty_write(int fd, const void *data, size_t size) {
         uart_write(unit, data_c[i]);
     }
 
-    //pthread_mutex_unlock(&tty_mutex);
+	uart_unlock(unit);
 
     return size;
 }
@@ -160,20 +158,6 @@ static int IRAM_ATTR vfs_tty_close(int fd) {
 }
 
 int IRAM_ATTR vfs_tty_ioctl(int fd, unsigned long request, ...) {
-	switch (request) {
-		case 0x01:
-		    pthread_mutex_lock(&tty_mutex);
-		    break;
-
-		case 0x02:
-		    pthread_mutex_unlock(&tty_mutex);
-		    break;
-
-		default:
-			errno = EINVAL;
-			return -1;
-	}
-
 	return 0;
 }
 
@@ -194,16 +178,6 @@ void vfs_tty_register() {
     };
 	
     ESP_ERROR_CHECK(esp_vfs_register("/dev/tty", &vfs, NULL));
-
-    // Create a recursive mutex for protect tty access
-	if (tty_mutex == PTHREAD_MUTEX_INITIALIZER) {
-        pthread_mutexattr_t attr;
-
-        pthread_mutexattr_init(&attr);
-        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-
-        pthread_mutex_init(&tty_mutex, &attr);
-    }
 
     // Close previous standard streams
 	if (_GLOBAL_REENT->_stdin)

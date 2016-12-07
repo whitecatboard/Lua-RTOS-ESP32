@@ -93,34 +93,42 @@ const char *uart_errors[] = {
 #define ETS_UART_INUM  5
 #define UART_INTR_SOURCE(u) ((u==0)?ETS_UART0_INTR_SOURCE:( (u==1)?ETS_UART1_INTR_SOURCE:((u==2)?ETS_UART2_INTR_SOURCE:0)))
 
-// Names for the uarts
+// UART names
 static const char *names[] = {
 	"uart0",
 	"uart1",
 	"uart2",
 };
 
+// UART array
 struct uart {
     uint8_t          flags;
-    QueueHandle_t q;            // RX queue
+    QueueHandle_t    q;         // RX queue
     uint16_t         qs;        // Queue size
-    uint32_t         brg;       // Queue size
+    uint32_t         brg;       // Baud rate
+    pthread_mutex_t  mtx;		// Mutex
 };
 
-struct uart uart[NUART] = {
+static struct uart uart[NUART] = {
     {
-        0, NULL, 0, 115200
+        0, NULL, 0, 115200, PTHREAD_MUTEX_INITIALIZER
     },
     {
-        0, NULL, 0, 115200
+        0, NULL, 0, 115200, PTHREAD_MUTEX_INITIALIZER
     },
     {
-        0, NULL, 0, 115200
+        0, NULL, 0, 115200, PTHREAD_MUTEX_INITIALIZER
     },
 };
 
-void uart_update_params(int8_t unit, UartBautRate brg, UartBitsNum4Char data, UartParityMode parity, UartStopBitsNum stop) {
+/*
+ * Helper functions
+ */
+
+// Configure the UART comm parameters
+static void uart_comm_param_config(int8_t unit, UartBautRate brg, UartBitsNum4Char data, UartParityMode parity, UartStopBitsNum stop) {
 	wait_tx_empty(unit);
+
 	uart_div_modify(unit, (APB_CLK_FREQ << 4) / brg);
 
     WRITE_PERI_REG(UART_CONF0_REG(unit),
@@ -130,29 +138,8 @@ void uart_update_params(int8_t unit, UartBautRate brg, UartBitsNum4Char data, Ua
                    | UART_TICK_REF_ALWAYS_ON_M));
 }
 
-void uart_pins(int8_t unit, uint8_t *rx, uint8_t *tx) {
-	switch (unit) {
-		case 0:
-			if (rx) *rx = PIN_GPIO3;
-			if (tx) *tx = PIN_GPIO1;
-
-			break;
-
-		case 1:
-			if (rx) *rx = PIN_GPIO9;
-			if (tx) *tx = PIN_GPIO10;
-
-			break;
-
-		case 2:
-			if (rx) *rx = PIN_GPIO16;
-			if (tx) *tx = PIN_GPIO17;
-
-			break;
-	}
-}
-
-void uart_pin_config(int8_t unit, uint8_t rx, uint8_t tx) {
+// Configure the UART pins
+static void uart_pin_config(int8_t unit, uint8_t rx, uint8_t tx) {
 	wait_tx_empty(unit);
 
 	switch (unit) {
@@ -190,19 +177,24 @@ void uart_pin_config(int8_t unit, uint8_t rx, uint8_t tx) {
 			break;
 	}}
 
+// Determine if byte must be queued
 static int IRAM_ATTR queue_byte(int8_t unit, uint8_t byte, int *signal) {
 	*signal = 0;
 
     if (unit == CONSOLE_UART) {
         if (byte == 0x04) {
             if (!status_get(STATUS_LUA_RUNNING)) {
-                uart_writes(CONSOLE_UART, "Lua RTOS-booting\r\n");
+            	uart_lock(CONSOLE_UART);
+                uart_writes(CONSOLE_UART, "Lua RTOS-booting-ESP32\r\n");
+            	uart_unlock(CONSOLE_UART);
             } else {
-                uart_writes(CONSOLE_UART, "Lua RTOS-running\r\n");
+            	uart_lock(CONSOLE_UART);
+                uart_writes(CONSOLE_UART, "Lua RTOS-running-ESP32\r\n");
+            	uart_unlock(CONSOLE_UART);
             }
-            
-    		status_set(STATUS_LUA_ABORT_BOOT_SCRIPTS);
-			
+
+			status_set(STATUS_LUA_ABORT_BOOT_SCRIPTS);
+
             return 0;
         } else if (byte == 0x03) {
         	if (status_get(STATUS_LUA_RUNNING)) {
@@ -222,6 +214,40 @@ static int IRAM_ATTR queue_byte(int8_t unit, uint8_t byte, int *signal) {
 		return 1;
 	} else {
 		return 0;
+	}
+}
+
+/*
+ * Operation functions
+ */
+
+void IRAM_ATTR uart_lock(int unit) {
+	pthread_mutex_lock(&uart[unit].mtx);
+}
+
+void IRAM_ATTR uart_unlock(int unit) {
+	pthread_mutex_unlock(&uart[unit].mtx);
+}
+
+void uart_pins(int8_t unit, uint8_t *rx, uint8_t *tx) {
+	switch (unit) {
+		case 0:
+			if (rx) *rx = PIN_GPIO3;
+			if (tx) *tx = PIN_GPIO1;
+
+			break;
+
+		case 1:
+			if (rx) *rx = PIN_GPIO9;
+			if (tx) *tx = PIN_GPIO10;
+
+			break;
+
+		case 2:
+			if (rx) *rx = PIN_GPIO16;
+			if (tx) *tx = PIN_GPIO17;
+
+			break;
 	}
 }
 
@@ -365,8 +391,18 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 		}
 	}
 
+    // Init mutex, if needed
+    if (uart[unit].mtx == PTHREAD_MUTEX_INITIALIZER) {
+        pthread_mutexattr_t attr;
+
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+
+        pthread_mutex_init(&uart[unit].mtx, &attr);
+    }
+
     uart_pin_config(unit, resources.rx, resources.tx);
-	uart_update_params(unit, brg, esp_databits, esp_parity, esp_stop_bits);
+	uart_comm_param_config(unit, brg, esp_databits, esp_parity, esp_stop_bits);
 
     uart[unit].brg = brg; 
     uart[unit].qs  = qs; 
@@ -613,3 +649,4 @@ void uart_stop(int unit) {
 		}
 	}
 }
+
