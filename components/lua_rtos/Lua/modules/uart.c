@@ -54,7 +54,7 @@ static int luart_pins( lua_State* L ) {
     unsigned char rx, tx;
     int i;
 
-    for(i=CPU_FIRST_UART;i<CPU_LAST_UART;i++) {
+    for(i=CPU_FIRST_UART;i<=CPU_LAST_UART;i++) {
         uart_pins(i, &rx, &tx);
 
         if ((rx != 0) && (tx != 0)) {
@@ -277,7 +277,7 @@ int luaopen_uart(lua_State* L) {
     int i;
     char buff[6];
 
-    for(i=CPU_FIRST_UART;i<CPU_LAST_UART;i++) {
+    for(i=CPU_FIRST_UART;i<=CPU_LAST_UART;i++) {
         sprintf(buff,"UART%d",i);
         lua_pushinteger(L, i);
         lua_setfield(L, -2, buff);
