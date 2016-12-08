@@ -67,9 +67,9 @@ int platform_can_pins( lua_State* L ) {
         can_pins(i, &rx, &tx);
         
         if ((rx != 0) && (tx != 0)) {
-            sprintf((char *)tmpbuff,"can%d: rx=%c%d\t(pin %2d)\ttx=%c%d\t(pin %2d)\n", i,
-                            gpio_portname(rx), gpio_pinno(rx),cpu_pin_number(rx),
-                            gpio_portname(tx), gpio_pinno(tx),cpu_pin_number(tx)
+            sprintf((char *)tmpbuff,"can%d: rx=%s%d\t(pin %2d)\ttx=%s%d\t(pin %2d)\n", i,
+                            gpio_portname(rx), gpio_name(rx),cpu_pin_number(rx),
+                            gpio_portname(tx), gpio_name(tx),cpu_pin_number(tx)
             );
 
             memcpy(cbuff, tmpbuff, strlen((const char *)tmpbuff));

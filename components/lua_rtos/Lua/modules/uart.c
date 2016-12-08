@@ -59,9 +59,9 @@ static int luart_pins( lua_State* L ) {
 
         if ((rx != 0) && (tx != 0)) {
             printf(
-                "uart%d: rx=%c%d\t(pin %2d)\ttx=%c%d\t(pin %2d)\n", i,
-                gpio_portname(rx), gpio_pinno(rx),cpu_pin_number(rx),
-                gpio_portname(tx), gpio_pinno(tx),cpu_pin_number(tx)
+                "uart%d: rx=%s%02d\t(pin %02d)\ttx=%s%02d\t(pin %02d)\n", i,
+                gpio_portname(rx), gpio_name(rx),cpu_pin_number(rx),
+                gpio_portname(tx), gpio_name(tx),cpu_pin_number(tx)
             );
         }
     }

@@ -122,7 +122,7 @@ const char *spi_csname(int unit);
 /*
  * Return the pin index of the chip select pin for a device.
  */
-int spi_cspin(int unit);
+int spi_cs_gpio(int unit);
 
 /*
  * Return the speed in kHz.

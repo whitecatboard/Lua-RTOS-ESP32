@@ -198,12 +198,47 @@ gpio_port_mask_t gpio_port_get_mask(unsigned int port) {
 	return gpio_pin_get_mask(port, GPIO_ALL);
 }
 
-char gpio_portname(int pin) {
-    return '0';
+const char *gpio_portname(int pin) {
+    return "GPIO";
 }
 
-int gpio_pinno(int pin) {
-    return pin;
+int gpio_name(int pin) {
+	switch (pin) {
+		case PIN_GPIO36: return 36;
+		case PIN_GPIO39: return 39;
+		case PIN_GPIO34: return 34;
+		case PIN_GPIO35: return 35;
+		case PIN_GPIO32: return 32;
+		case PIN_GPIO33: return 33;
+		case PIN_GPIO25: return 25;
+		case PIN_GPIO26: return 26;
+		case PIN_GPIO27: return 27;
+		case PIN_GPIO14: return 14;
+		case PIN_GPIO12: return 12;
+		case PIN_GPIO13: return 13;
+		case PIN_GPIO9:  return 9;
+		case PIN_GPIO10: return 10;
+		case PIN_GPIO11: return 11;
+		case PIN_GPIO6:  return 6;
+		case PIN_GPIO7:  return 7;
+		case PIN_GPIO8:  return 8;
+		case PIN_GPIO15: return 15;
+		case PIN_GPIO2:  return 2;
+		case PIN_GPIO0:  return 0;
+		case PIN_GPIO4:  return 4;
+		case PIN_GPIO16: return 16;
+		case PIN_GPIO17: return 17;
+		case PIN_GPIO5:  return 5;
+		case PIN_GPIO18: return 18;
+		case PIN_GPIO19: return 19;
+		case PIN_GPIO21: return 21;
+		case PIN_GPIO3:  return 3;
+		case PIN_GPIO1:  return 1;
+		case PIN_GPIO22: return 22;
+		case PIN_GPIO23: return 23;
+	}
+
+    return -1;
 }
 void gpio_disable_analog(int pin) {
 	

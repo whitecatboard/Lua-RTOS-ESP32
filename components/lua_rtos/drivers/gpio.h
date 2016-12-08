@@ -72,9 +72,9 @@ void gpio_port_input(unsigned int port);
 void gpio_port_output(unsigned int port);
 void gpio_port_set(unsigned int port, gpio_port_mask_t mask);
 gpio_port_mask_t gpio_port_get(unsigned int port);
-char gpio_portname(int pin);
+const char *gpio_portname(int pin);
 unsigned int cpu_gpio_number(unsigned int pin);
-int gpio_pinno(int pin);
+int gpio_name(int pin);
 void gpio_disable_analog(int pin);
 
 void _gpio_init();

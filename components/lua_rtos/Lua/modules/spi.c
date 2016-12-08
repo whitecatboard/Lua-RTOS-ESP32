@@ -54,10 +54,10 @@ static int lspi_pins( lua_State* L ) {
         spi_pins(i, &sdi, &sdo, &sck, &cs);
 
         printf(
-            "spi%d: sdi=%c%d\t(pin %2d)\tsdo=%c%d\t(pin %2d)\tsck=%c%d\t(pin %2d)\n", i,
-            gpio_portname(sdi), gpio_pinno(sdi),cpu_pin_number(sdi),
-            gpio_portname(sdo), gpio_pinno(sdo),cpu_pin_number(sdo),
-            gpio_portname(sck), gpio_pinno(sck),cpu_pin_number(sck)
+            "spi%d: sdi=%s%02d\t(pin %02d)\tsdo=%s%02d\t(pin %02d)\tsck=%s%02d\t(pin %02d)\n", i,
+            gpio_portname(sdi), gpio_name(sdi),cpu_pin_number(sdi),
+            gpio_portname(sdo), gpio_name(sdo),cpu_pin_number(sdo),
+            gpio_portname(sck), gpio_name(sck),cpu_pin_number(sck)
         );
     }
 

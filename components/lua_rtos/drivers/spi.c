@@ -301,7 +301,7 @@ void spi_set_cspin(int unit, int pin) {
 
 void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs) {
     switch (unit) {
-        case 1:
+    	case 1:
         	*sdi = GPIO7;
             *sdo = GPIO8;
             *sck = GPIO6;
@@ -569,13 +569,10 @@ const char *spi_csname(int unit) {
 /*
  * Return the pin index of the chip select pin for a device.
  */
-int spi_cspin(int unit) {
+int spi_cs_gpio(int unit) {
     struct spi *dev = &spi[unit];
 
-    if (!dev->cs)
-        return -1;
-
-    return cpu_pin_number(dev->cs);
+    return dev->cs;
 }
 
 /*
@@ -648,11 +645,10 @@ driver_error_t *spi_init(int unit) {
 	spi_pin_config(unit, resources.sdi, resources.sdo, resources.sck, resources.cs);
 
 	syslog(LOG_INFO,
-        "spi%u at pins sdi=%c%d/sdo=%c%d/sck=%c%d/cs=%c%d", unit,
-        gpio_portname(resources.sdi), gpio_pinno(resources.sdi),
-        gpio_portname(resources.sdo), gpio_pinno(resources.sdo),
-        gpio_portname(resources.sck), gpio_pinno(resources.sck),
-        gpio_portname(resources.cs), gpio_pinno(resources.cs)
+        "spi%u at pins sdi=%s%d/sdo=%s%d/sck=%s%d", unit,
+        gpio_portname(resources.sdi), gpio_name(resources.sdi),
+        gpio_portname(resources.sdo), gpio_name(resources.sdo),
+        gpio_portname(resources.sck), gpio_name(resources.sck)
     );
 
     spi_set_mode(unit, 0);

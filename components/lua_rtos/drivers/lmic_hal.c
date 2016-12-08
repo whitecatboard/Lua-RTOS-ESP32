@@ -158,9 +158,9 @@ driver_error_t *hal_init (void) {
     spi_set_cspin(LMIC_SPI, LMIC_CS);
     spi_set_speed(LMIC_SPI, LMIC_SPI_KHZ);
 
-    if (spi_cspin(LMIC_SPI) >= 0) {
+    if (spi_cs_gpio(LMIC_SPI) >= 0) {
         syslog(LOG_INFO, "lmic is at %s, cs=%s%d",
-        spi_name(LMIC_SPI), spi_csname(LMIC_SPI), spi_cspin(LMIC_SPI));
+        spi_name(LMIC_SPI), gpio_portname(spi_cs_gpio(LMIC_SPI)), spi_cs_gpio(LMIC_SPI));
     }
 	
 	// Init RESET pin

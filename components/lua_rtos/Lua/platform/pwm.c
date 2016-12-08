@@ -48,8 +48,8 @@ int platform_pwm_pins(lua_State* L) {
 
         if (pin != 0) {
             printf(
-                "pwm%d: %c%d\t(pin %2d)\n", i,
-                gpio_portname(pin), gpio_pinno(pin),cpu_pin_number(pin)
+                "pwm%d: %s%d\t(pin %2d)\n", i,
+                gpio_portname(pin), gpio_name(pin),cpu_pin_number(pin)
             );            
         }
     }
