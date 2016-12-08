@@ -647,7 +647,7 @@ driver_error_t *lora_tx(int cnf, int port, const char *data) {
 	}
 
 	// Send 
-    LMIC_setTxData2(port, payload, sizeof(payload), cnf);
+    LMIC_setTxData2(port, payload, payload_len, cnf);
 		
     free(payload);
 
