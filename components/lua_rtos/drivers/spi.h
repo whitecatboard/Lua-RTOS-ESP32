@@ -115,11 +115,6 @@ unsigned int spi_status(int unit);
 const char *spi_name(int unit);
 
 /*
- * Return the port name (A-K) of the chip select pin for a device.
- */
-const char *spi_csname(int unit);
-
-/*
  * Return the pin index of the chip select pin for a device.
  */
 int spi_cs_gpio(int unit);
