@@ -257,7 +257,7 @@ void onEvent (ev_t ev) {
 
 	      if (LMIC.dataLen && lora_rx_callback) {
 			  // Make a copy of the payload and call callback function
-			  u1_t *payload = (u1_t *)malloc(LMIC.dataLen);
+			  u1_t *payload = (u1_t *)malloc(LMIC.dataLen * 2 + 1);
 			  if (payload) {
 				  // Coding payload into an hex string
 				  val_to_hex_string((char *)payload, (char *)&LMIC.frame[LMIC.dataBeg], LMIC.dataLen, 0);
