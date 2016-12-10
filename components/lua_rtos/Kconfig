@@ -259,6 +259,10 @@ menu "Lua RTOS"
 	  	default y
 
 		menu "Hardware Access Modules"
+		  	config LUA_RTOS_LUA_USE_ADC
+		  	bool "Include adc module in build"
+		  	default y
+
 		  	config LUA_RTOS_LUA_USE_PIO
 		  	bool "Include pio (gpio) module in build"
 		  	default y

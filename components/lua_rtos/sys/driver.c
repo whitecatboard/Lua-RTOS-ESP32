@@ -37,6 +37,7 @@
 #include <sys/panic.h>
 #include <sys/mutex.h>
 
+#include <drivers/adc.h>
 #include <drivers/uart.h>
 #include <drivers/spi.h>
 #include <drivers/gpio.h>
@@ -45,14 +46,17 @@
 // Mutex for lock resources
 static struct mtx driver_mtx;
 
+extern const char *adc_errors[];
 extern const char *gpio_errors[];
 extern const char *uart_errors[];
 extern const char *spi_errors[];
 extern const char *lora_lmic_errors[];
 
+extern driver_unit_lock_t adc_locks[];
 extern driver_unit_lock_t gpio_locks[];
 
 const driver_t drivers[] = {
+	{"adc", DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID), (void *)adc_errors, adc_locks, NULL, NULL},
 	{"gpio", DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID), (void *)gpio_errors, gpio_locks, _gpio_init, NULL},
 #if USE_UART
 	{"uart", DRIVER_EXCEPTION_BASE(UART_DRIVER_ID), (void *)uart_errors, NULL, NULL, uart_lock_resources},

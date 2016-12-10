@@ -27,33 +27,37 @@
  * this software.
  */
 
+#include "luartos.h"
+
 #if LUA_USE_ADC
 
+#include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
 #include "auxmods.h"
+#include "error.h"
+#include "adc.h"
+
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
 
-#include <Lua/modules/adc.h>
+#include <drivers/adc.h>
 
 static int ladc_setup( lua_State* L ) {
-    int id, ref_type, ref_voltage;
+    int id;
+	driver_error_t *error;
 
     id = luaL_checkinteger( L, 1 );
-    ref_type = luaL_checkinteger( L, 2 );
-    ref_voltage = luaL_checkinteger( L, 3 );
 
     adc_userdata *adc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
 
     adc->adc = id;
-    adc->ref_type = ref_type;
-    adc->ref_voltage = ref_voltage;
+    adc->ref_voltage = CPU_ADC_REF;
     
-    // Setup adc module
-    adc_setup(ref_type);
-        
+    if ((error = adc_setup())) {
+    	return luaL_driver_error(L, error);
+    }
+
     luaL_getmetatable(L, "adc");
     lua_setmetatable(L, -2);
 
@@ -62,40 +66,28 @@ static int ladc_setup( lua_State* L ) {
 
 static int ladc_setup_channel( lua_State* L ) {
     int channel, res;
-    int ret;
     adc_userdata *adc = NULL;
+	driver_error_t *error;
 
     adc = (adc_userdata *)luaL_checkudata(L, 1, "adc");
     luaL_argcheck(L, adc, 1, "adc expected");
 
     res = luaL_checkinteger( L, 2 );
     channel = luaL_checkinteger( L, 3 );
-        
-    if ((res != 12) && (res != 10) && (res != 8) && (res != 6)) {
-        return luaL_error( L, "invalid resulution" );
-    }
-            
-    // Setup channel
-    if ((ret = adc_setup_channel(channel)) < 0) {
-        switch (ret) {
-            case ADC_NO_MEM:
-                return luaL_error( L, "not enough memory" );
-                
-            case ADC_NOT_AVAILABLE_CHANNELS:
-                return luaL_error( L, "no more channels are available" );
-                
-            case ADC_CHANNEL_DOES_NOT_EXIST:
-                return luaL_error( L, "channel does not exist" );                
-        }
+
+    if ((error = adc_setup_channel(channel))) {
+    	return luaL_driver_error(L, error);
     }
 
     adc_userdata *nadc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
     memcpy(nadc, adc, sizeof(adc_userdata));
     
     switch (res) {
-        case 6:  nadc->max_val = 63;break;
-        case 8:  nadc->max_val = 255;break;
+        case 6:  nadc->max_val = 63;  break;
+        case 8:  nadc->max_val = 255; break;
+        case 9:  nadc->max_val = 511; break;
         case 10: nadc->max_val = 1023;break;
+        case 11: nadc->max_val = 2047;break;
         case 12: nadc->max_val = 4095;break;
     }
 
@@ -106,18 +98,21 @@ static int ladc_setup_channel( lua_State* L ) {
     lua_setmetatable(L, -2);
 
     return 1;
+#endif
+
+    return 0;
 }
 
 static int ladc_read( lua_State* L ) {
-    int channel;
     int readed;
+	driver_error_t *error;
     adc_userdata *adc = NULL;
 
     adc = (adc_userdata *)luaL_checkudata(L, 1, "adc");
     luaL_argcheck(L, adc, 1, "adc expected");
-    
-    if ((readed = adc_read(adc->chan)) < 0) {
-        return luaL_error( L, "channel is not setup" );
+
+    if ((error = adc_read(adc->chan, &readed))) {
+    	return luaL_driver_error(L, error);
     } else {
         // Normalize
         if (readed & (1 << (12 - adc->resolution - 1))) {
@@ -129,24 +124,78 @@ static int ladc_read( lua_State* L ) {
         lua_pushinteger( L, readed );
         lua_pushnumber( L, ((double)readed * (double)adc->ref_voltage) / (double)adc->max_val);
         return 2;
-    }    
-       
-    return 0;
+    }
 }
 
-const luaL_Reg adc_method_map[] = {
-  { "read", ladc_read },
-  { "setup", ladc_setup },
-  { "setupchan", ladc_setup_channel },
-  { NULL, NULL }
+#include "modules.h"
+
+static const LUA_REG_TYPE adc_method_map[] = {
+  { LSTRKEY( "read"      ),	 LFUNCVAL( ladc_read          ) },
+  { LSTRKEY( "setup"     ),	 LFUNCVAL( ladc_setup         ) },
+  { LSTRKEY( "setupchan" ),	 LFUNCVAL( ladc_setup_channel ) },
+  { LNILKEY, LNILVAL }
 };
 
-const luaL_Reg adc_map[] = {
-  { NULL, NULL }
+#if LUA_USE_ROTABLE
+
+static const LUA_REG_TYPE adc_constants_map[] = {
+	ADC_ADC0
+	ADC_ADC1
+	ADC_ADC_CH0
+	ADC_ADC_CH1
+	ADC_ADC_CH2
+	ADC_ADC_CH3
+	ADC_ADC_CH4
+	ADC_ADC_CH5
+	ADC_ADC_CH6
+	ADC_ADC_CH7
+	{ LNILKEY, LNILVAL }
 };
 
+static int luaL_adc_index(lua_State *L) {
+	int res;
+
+	if ((res = luaR_findfunction(L, adc_method_map)) != 0)
+		return res;
+
+	const char *key = luaL_checkstring(L, 2);
+	const TValue *val = luaR_findentry(adc_constants_map, key, 0, NULL);
+	if (val != luaO_nilobject) {
+		lua_pushinteger(L, val->value_.i);
+		return 1;
+	}
+
+	return (int)luaO_nilobject;
+}
+
+static const luaL_Reg adc_load_funcs[] = {
+    { "__index"    , 	luaL_adc_index },
+    { NULL, NULL }
+};
+
+static int luaL_madc_index(lua_State *L) {
+  int fres;
+  if ((fres = luaR_findfunction(L, adc_method_map)) != 0)
+    return fres;
+
+  return (int)luaO_nilobject;
+}
+
+static const luaL_Reg madc_load_funcs[] = {
+    { "__index"    , 	luaL_madc_index },
+    { NULL, NULL }
+};
+
+#else
+
+static const luaL_Reg adc_map[] = {
+	{ NULL, NULL }
+};
+
+#endif
 
 LUALIB_API int luaopen_adc( lua_State *L ) {
+#if !LUA_USE_ROTABLE
     int i;
     char buff[5];
 
@@ -159,11 +208,14 @@ LUALIB_API int luaopen_adc( lua_State *L ) {
     // create metatable for adc module
     luaL_newmetatable(L, "adc");
   
-    // Module constants  
-    MOD_REG_INTEGER( L, "AVDD", 0 );
-
-    for(i=0;i<=2;i++) {
+    // Module constants
+    for(i=CPU_FIRST_ADC;i<=CPU_FIRST_ADC;i++) {
         sprintf(buff,"ADC%d",i);
+        MOD_REG_INTEGER( L, buff, i );
+    }
+
+    for(i=CPU_FIRST_ADC_CH;i<=CPU_FIRST_ADC_CH;i++) {
+        sprintf(buff,"ADC_CH%d",i);
         MOD_REG_INTEGER( L, buff, i );
     }
 
@@ -174,8 +226,18 @@ LUALIB_API int luaopen_adc( lua_State *L ) {
     
     // Setup the methods inside metatable
     luaL_register( L, NULL, adc_method_map );
-    
+#else
+    luaL_newlib(L, adc_load_funcs);  /* new module */
+    lua_pushvalue(L, -1);
+    lua_setmetatable(L, -2);
+
+    luaL_newmetatable(L, "adc");  /* create metatable */
+    lua_pushvalue(L, -1);  /* push metatable */
+    lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
+
+    luaL_setfuncs(L, madc_load_funcs, 0);  /* add file methods to new metatable */
+    lua_pop(L, 1);  /* pop new metatable */
+#endif
+
     return 1;
 }
-
-#endif

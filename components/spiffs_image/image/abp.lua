@@ -1,0 +1,15 @@
+os.loglevel(os.LOG_ALL)
+
+lora.whenReceived(function(port, payload)
+print("port "..port)
+print("payload "..payload)
+end)
+
+lora.setup(lora.BAND868)
+lora.setDevAddr("034FE12A")
+lora.setNwksKey("E0023976D90D8DC4663EE3F5B2FE8B4D")
+lora.setAppsKey("C6AFB7C74002ADF4469E898CDB6ABD43")
+lora.setDr(5)
+lora.setReTx(0)
+lora.tx(false,1,pack.pack(25.3))
+-- os.sleep(30)

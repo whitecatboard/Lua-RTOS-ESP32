@@ -232,20 +232,20 @@ void IRAM_ATTR uart_unlock(int unit) {
 void uart_pins(int8_t unit, uint8_t *rx, uint8_t *tx) {
 	switch (unit) {
 		case 0:
-			if (rx) *rx = PIN_GPIO3;
-			if (tx) *tx = PIN_GPIO1;
+			if (rx) *rx = GPIO3;
+			if (tx) *tx = GPIO1;
 
 			break;
 
 		case 1:
-			if (rx) *rx = PIN_GPIO9;
-			if (tx) *tx = PIN_GPIO10;
+			if (rx) *rx = GPIO9;
+			if (tx) *tx = GPIO10;
 
 			break;
 
 		case 2:
-			if (rx) *rx = PIN_GPIO16;
-			if (tx) *tx = PIN_GPIO17;
+			if (rx) *rx = GPIO16;
+			if (tx) *tx = GPIO17;
 
 			break;
 	}

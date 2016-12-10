@@ -40,6 +40,8 @@
 
 // ESP-WROOM-32 pin constants
 #define PIN_GPIO36	4
+#define PIN_GPIO37	4
+#define PIN_GPIO38	4
 #define PIN_GPIO39	5
 #define PIN_GPIO34	6
 #define PIN_GPIO35	7
@@ -215,6 +217,47 @@ typedef uint64_t gpio_port_mask_t;
 #define I2CBB2_NAME  "I2CBB2"
 #define I2CBB3_NAME  "I2CBB3"
 #define I2CBB4_NAME  "I2CBB4"
+
+/*
+ * ----------------------------------------------------------------
+ * ADC
+ * ----------------------------------------------------------------
+ */
+
+// Unit bounds
+#define CPU_FIRST_ADC 1
+#define CPU_LAST_ADC  1
+
+// Channel bounds
+#define CPU_FIRST_ADC_CH 0
+#define CPU_LAST_ADC_CH  7
+
+// ADC voltage reference
+#define CPU_ADC_REF 1100
+
+// ESP32 available ADC units
+#define CPU_ADC1     1
+
+// ESP32 available ADC unit names
+#define CPU_ADC1_NAME  "ADC1"
+
+// ESP32 available ADC channels
+#define CPU_ADC_CH0  0
+#define CPU_ADC_CH3  3
+#define CPU_ADC_CH4  4
+#define CPU_ADC_CH5  5
+#define CPU_ADC_CH6  6
+#define CPU_ADC_CH7  7
+
+// ESP32 available ADC channel names
+#define CPU_ADC_CH0_NAME  "ADC_CH0"
+#define CPU_ADC_CH3_NAME  "ADC_CH3"
+#define CPU_ADC_CH4_NAME  "ADC_CH4"
+#define CPU_ADC_CH5_NAME  "ADC_CH5"
+#define CPU_ADC_CH6_NAME  "ADC_CH6"
+#define CPU_ADC_CH7_NAME  "ADC_CH7"
+
+#define CPU_ADC_ALL 0b11111001
 
 #endif
 
