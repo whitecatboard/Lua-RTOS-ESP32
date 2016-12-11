@@ -27,23 +27,23 @@
  * this software.
  */
 
+#include "luartos.h"
+
 #include "freertos/FreeRTOS.h"
 #include "esp_attr.h"
 
 #include <sys/delay.h>
  
 void IRAM_ATTR delay(unsigned int msec) {
-    register unsigned int tTarget;
-
-    tTarget = xthal_get_ccount() + ((CPU_HZ / (1000 * (CPU_HZ / CORE_TIMER_HZ))) * msec) - 60;
-
-    while(xthal_get_ccount() < tTarget);
+    unsigned int tWait, tStart;
+    tWait = (CPU_HZ / (1000 * (CPU_HZ / CORE_TIMER_HZ))) * msec;
+    tStart = xthal_get_ccount();
+    while((xthal_get_ccount() - tStart) < tWait);
 }
 
 void IRAM_ATTR udelay(unsigned int usec) {
-    register unsigned int tTarget;
-
-    tTarget = xthal_get_ccount() + ((CPU_HZ / (1000000 * (CPU_HZ / CORE_TIMER_HZ))) * usec) - 60;
-
-    while(xthal_get_ccount() < tTarget);
+    unsigned int tWait, tStart;
+    tWait = (CPU_HZ / (1000000 * (CPU_HZ / CORE_TIMER_HZ))) * usec;
+    tStart = xthal_get_ccount();
+    while((xthal_get_ccount() - tStart) < tWait);
 }

@@ -28,8 +28,8 @@
  */
 
 #include "luartos.h"
-
 #include "lua.h"
+#include "driver/periph_ctrl.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -71,6 +71,9 @@ extern driver_t drivers[];
 void _sys_init() {
 	// TO DO: do this only if RTC is not set
 	struct timeval tv;
+
+	// Disable hardware modules modules
+	periph_module_disable(PERIPH_LEDC_MODULE);
 
 	tv.tv_sec = BUILD_TIME;
 	tv.tv_usec = 0;
