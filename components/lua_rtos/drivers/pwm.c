@@ -117,7 +117,7 @@ static driver_error_t *pwm_check_unit(int8_t unit, int8_t setup) {
 
 static driver_error_t *pwm_check_channel(int8_t unit, int8_t channel, int8_t setup) {
 	switch (unit) {
-		case 1:
+		case 0:
 			if (!((1 << channel) && (CPU_PWM0_ALL))) {
 				if (setup) {
 					return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid channel");
@@ -178,7 +178,7 @@ driver_error_t *pwm_setup(int8_t unit) {
 
 	// Enable module
 	switch (unit) {
-		case 1: periph_module_enable(PERIPH_LEDC_MODULE); break;
+		case 0: periph_module_enable(PERIPH_LEDC_MODULE); break;
 	}
 
 	return NULL;
