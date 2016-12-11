@@ -261,31 +261,35 @@ menu "Lua RTOS"
 		menu "Hardware Access Modules"
 		  	config LUA_RTOS_LUA_USE_ADC
 		  	bool "Include adc module in build"
+		  	default y	
+		
+		  	config LUA_RTOS_LUA_USE_I2C
+		  	bool "Include i2c module in build"
 		  	default y
-
+	
 		  	config LUA_RTOS_LUA_USE_PIO
 		  	bool "Include pio (gpio) module in build"
 		  	default y
-	
-		  	config LUA_RTOS_LUA_USE_UART
-		  	bool "Include uart module in build"
+
+		  	config LUA_RTOS_LUA_USE_PWM
+		  	bool "Include pwm module in build"
 		  	default y
-	
+
+		  	config LUA_RTOS_LUA_USE_SCREEN
+		  	bool "Include screen module in build"
+		  	default n
+
 		  	config LUA_RTOS_LUA_USE_SPI
 		  	bool "Include spi module in build"
-		  	default y
-	
-		  	config LUA_RTOS_LUA_USE_I2C
-		  	bool "Include i2c module in build"
 		  	default y
 	
 		  	config LUA_RTOS_LUA_USE_TMR
 		  	bool "Include tmr (timer) module in build"
 		  	default y
 
-		  	config LUA_RTOS_LUA_USE_SCREEN
-		  	bool "Include screen module in build"
-		  	default n
+		  	config LUA_RTOS_LUA_USE_UART
+		  	bool "Include uart module in build"
+		  	default y
 		endmenu
 		menu "Communication Modules"
 		  	config LUA_RTOS_LUA_USE_LORA

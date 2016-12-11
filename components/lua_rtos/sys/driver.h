@@ -41,6 +41,7 @@
 #define UART_DRIVER_ID 3
 #define SPI_DRIVER_ID  4
 #define LORA_DRIVER_ID 5
+#define PWM_DRIVER_ID  6
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 

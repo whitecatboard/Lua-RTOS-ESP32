@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, pwm Lua module
+ * Lua RTOS, PWM Lua module
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -32,230 +32,237 @@
 #if LUA_USE_PWM
 
 #include "lua.h"
+#include "lualib.h"
 #include "lauxlib.h"
+#include "auxmods.h"
+#include "pwm.h"
+#include "error.h"
 
-#include <drivers/pwm/pwm.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
 
-struct pwm {
-    unsigned char configured;
-    unsigned char mode;
-    unsigned char res;
-    unsigned int  khz;
-    unsigned int  started;
-};
+#include <drivers/cpu.h>
+#include <drivers/pwm.h>
 
-static struct pwm pwm[NOC];
+static int lpwm_setup( lua_State* L ) {
+	driver_error_t *error;
+    int8_t id;
 
-static int lpwm_pins( lua_State* L ) {
-    return platform_pwm_pins(L);
-}
+    id = luaL_checkinteger( L, 1 );
 
-static int lpwm_setup(lua_State* L) {
-    double duty;
-    
-    int res, val, khz;
-    
-    res = 0;
-    khz = 0;
-    duty = 0;
-    val = 0;
-    
-    int id = luaL_checkinteger(L, 1); 
-    int mode = luaL_checkinteger(L, 2); 
-    
-    if (!platform_pwm_exists(L, id)) {
-        return luaL_error(L, "pwm%d does not exist", id);
-    }
-    
-    switch (mode) {
-        case 0:
-            khz = luaL_checkinteger(L, 3); 
-            duty = luaL_checknumber(L, 4); 
-            break;
-            
-        case 1:
-            res = luaL_checkinteger(L, 3); 
-            val = luaL_checknumber(L, 4); 
-            break;
-            
-        default:
-            return luaL_error(L, "invalid setup mode");
+    pwm_userdata *pwm = (pwm_userdata *)lua_newuserdata(L, sizeof(pwm_userdata));
+
+    pwm->unit = id;
+    pwm->channel = -1;
+
+    if ((error = pwm_setup(id))) {
+    	return luaL_driver_error(L, error);
     }
 
-    // Check for setup needed
-    if (pwm[id - 1].configured && (pwm[id - 1].mode == mode) && (pwm[id - 1].res == res) && (pwm[id - 1].khz == khz)) {
-        // No changes
-        lua_pushinteger(L, platform_pwm_freq(L, id));
-        return 1;
-    }
-    
-    // Setup is needed, if configured, stop first
-    if (pwm[id - 1].configured) {
-        platform_pwm_stop(L, id);        
-    }
-
-    // Configure
-    switch (mode) {
-        case 0:
-            lua_pushinteger(L, platform_pwm_setup_freq(L, id, khz, duty));
-            break;
-            
-        case 1:
-            lua_pushinteger(L, platform_pwm_setup_res(L, id, res, val));
-            break;
-            
-        default:
-            return luaL_error(L, "invalid setup mode");
-    }
-
-    pwm[id - 1].mode = mode;
-    pwm[id - 1].res = res;
-    pwm[id - 1].khz = khz;
-    pwm[id - 1].configured = 1;
+    luaL_getmetatable(L, "pwm");
+    lua_setmetatable(L, -2);
 
     return 1;
 }
 
-static int lpwm_down(lua_State* L) {
-    int i;
-    
-    for(i = 0; i < NOC; i++) {
-        if (pwm[i].configured) {
-            platform_pwm_end(L, i + 1);
-        }
+static int lpwm_setup_channel( lua_State* L ) {
+    int8_t channel, pin;
+    int32_t freq;
+    double duty;
 
-        pwm[i].configured = 0;
-        pwm[i].started = 0;        
+    pwm_userdata *pwm = NULL;
+	driver_error_t *error;
+
+    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm");
+    luaL_argcheck(L, pwm, 1, "pwm expected");
+
+    channel = luaL_checkinteger( L, 2 );
+    pin = luaL_checkinteger( L, 3 );
+    freq = luaL_checkinteger( L, 4 );
+    duty = luaL_checknumber(L, 5);
+
+    if ((error = pwm_setup_channel(pwm->unit, channel, pin, freq, duty))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    pwm_userdata *npwm = (pwm_userdata *)lua_newuserdata(L, sizeof(pwm_userdata));
+    memcpy(npwm, pwm, sizeof(pwm_userdata));
+
+    npwm->channel = channel;
+
+    luaL_getmetatable(L, "pwm");
+    lua_setmetatable(L, -2);
+
+    return 1;
+}
+
+static int lpwm_setduty(lua_State* L) {
+    pwm_userdata *pwm = NULL;
+	driver_error_t *error;
+	double duty;
+
+    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm");
+    luaL_argcheck(L, pwm, 1, "pwm expected");
+
+    duty = luaL_checknumber(L, 2);
+
+    if ((error = pwm_set_duty(pwm->unit, pwm->channel, duty))) {
+    	return luaL_driver_error(L, error);
     }
 
     return 0;
 }
 
 static int lpwm_start(lua_State* L) {
-    int id = luaL_checkinteger(L, 1); 
+    pwm_userdata *pwm = NULL;
+	driver_error_t *error;
 
-    if (!platform_pwm_exists(L, id)) {
-        return luaL_error(L, "pwm%d does not exist", id);
+    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm");
+    luaL_argcheck(L, pwm, 1, "pwm expected");
+
+    if ((error = pwm_start(pwm->unit, pwm->channel))) {
+    	return luaL_driver_error(L, error);
     }
-    
-    if (!pwm[id - 1].configured) {
-        return luaL_error(L, "pwm%d is not setup", id);
-    }
-    
-    platform_pwm_start(L, id);
-    
-    pwm[id - 1].started = 1;
-    
+
     return 0;
 }
 
 static int lpwm_stop(lua_State* L) {
-    int id = luaL_checkinteger(L, 1); 
+    pwm_userdata *pwm = NULL;
+	driver_error_t *error;
 
-    if (!platform_pwm_exists(L, id)) {
-        return luaL_error(L, "pwm%d does not exist", id);
+    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm");
+    luaL_argcheck(L, pwm, 1, "pwm expected");
+
+    if ((error = pwm_stop(pwm->unit, pwm->channel))) {
+    	return luaL_driver_error(L, error);
     }
 
-    if (!pwm[id - 1].configured) {
-        return luaL_error(L, "pwm%d is not setup", id);
-    }
-
-    platform_pwm_stop(L, id);
-
-    pwm[id - 1].started = 0;
-    
     return 0;
 }
 
-static int lpwm_setduty(lua_State* L) {
-    int id = luaL_checkinteger(L, 1); 
-    double duty = luaL_checknumber(L, 2); 
+#include "modules.h"
 
-    if (!platform_pwm_exists(L, id)) {
-        return luaL_error(L, "pwm%d does not exist", id);
-    }
-    
-    if (pwm[id - 1].mode != 0) {
-        return luaL_error(L, "pwm%d isn't setup in DEFAULT mode, function not allowed", id);
-    }
-
-    if (!pwm[id - 1].configured) {
-        return luaL_error(L, "pwm%d is not setup", id);
-    }
-
-    if (!pwm[id - 1].started) {
-        return luaL_error(L, "pwm%d is not started", id);
-    }
-
-    platform_pwm_set_duty(L, id, duty);
-    
-    return 0;
-}
-
-static int lpwm_write(lua_State* L) {
-    int id = luaL_checkinteger(L, 1); 
-    int val = luaL_checknumber(L, 2); 
-
-    if (!platform_pwm_exists(L, id)) {
-        return luaL_error(L, "pwm%d does not exist", id);
-    }
-    
-    if (pwm[id - 1].mode != 1) {
-        return luaL_error(L, "pwm%d isn't setup in DAC mode, function not allowed", id);
-    }
-
-    if (!pwm[id - 1].configured) {
-        return luaL_error(L, "pwm%d is not setup", id);
-    }
-
-    if (!pwm[id - 1].started) {
-        return luaL_error(L, "pwm%d is not started", id);
-    }
-
-    platform_pwm_write(L, id, pwm[id - 1].res, val);
-    
-    return 0;
-}
-
-static const luaL_Reg lpwm[] = {
-    {"pins", lpwm_pins},
-    {"setup", lpwm_setup}, 
-    {"down", lpwm_down}, 
-    {"start", lpwm_start}, 
-    {"stop", lpwm_stop}, 
-    {"setduty", lpwm_setduty}, 
-    {"write", lpwm_write}, 
-    {NULL, NULL}
+static const LUA_REG_TYPE pwm_method_map[] = {
+  { LSTRKEY( "setupchan"      ),	 LFUNCVAL( lpwm_setup_channel          ) },
+  { LSTRKEY( "setduty"        ),	 LFUNCVAL( lpwm_setduty                ) },
+  { LSTRKEY( "start"          ),	 LFUNCVAL( lpwm_start                  ) },
+  { LSTRKEY( "stop"           ),	 LFUNCVAL( lpwm_stop                   ) },
+  { LNILKEY, LNILVAL }
 };
 
-int luaopen_pwm(lua_State* L)
-{
-    luaL_newlib(L, lpwm);
+#if LUA_USE_ROTABLE
 
-    lua_pushinteger(L, 0);
-    lua_setfield(L, -2, "DEFAULT");
+static const LUA_REG_TYPE pwm_constants_map[] = {
+	PWM_PWM0
+	PWM_PWM1
+	PWM_PWM_CH0
+	PWM_PWM_CH1
+	PWM_PWM_CH2
+	PWM_PWM_CH3
+	PWM_PWM_CH4
+	PWM_PWM_CH5
+	PWM_PWM_CH6
+	PWM_PWM_CH7
+	PWM_PWM_CH8
+	PWM_PWM_CH9
+	PWM_PWM_CH10
+	PWM_PWM_CH11
+	PWM_PWM_CH12
+	PWM_PWM_CH13
+	PWM_PWM_CH14
+	PWM_PWM_CH15
+	{ LNILKEY, LNILVAL }
+};
 
-    lua_pushinteger(L, 1);
-    lua_setfield(L, -2, "DAC");
+static int luaL_pwm_index(lua_State *L) {
+	int res;
 
+	if ((res = luaR_findfunction(L, pwm_method_map)) != 0)
+		return res;
+
+	const char *key = luaL_checkstring(L, 2);
+	const TValue *val = luaR_findentry(pwm_constants_map, key, 0, NULL);
+	if (val != luaO_nilobject) {
+		lua_pushinteger(L, val->value_.i);
+		return 1;
+	}
+
+	return (int)luaO_nilobject;
+}
+
+static const luaL_Reg pwm_load_funcs[] = {
+    { "__index"    , 	luaL_pwm_index },
+    { "setup"      ,	lpwm_setup     },
+    { NULL, NULL }
+};
+
+static int luaL_mpwm_index(lua_State *L) {
+  int fres;
+  if ((fres = luaR_findfunction(L, pwm_method_map)) != 0)
+    return fres;
+
+  return (int)luaO_nilobject;
+}
+
+static const luaL_Reg mpwm_load_funcs[] = {
+    { "__index"    , 	luaL_mpwm_index },
+    { NULL, NULL }
+};
+
+#else
+
+static const luaL_Reg pwm_map[] = {
+	{ "setup"      ,	lpwm_setup     },
+	{ NULL, NULL }
+};
+
+#endif
+
+LUALIB_API int luaopen_pwm( lua_State *L ) {
+#if !LUA_USE_ROTABLE
     int i;
     char buff[5];
 
-    for(i=1;i<=NOC;i++) {
-        if (platform_pwm_exists(L, i)) {
-            sprintf(buff,"PWM%d",i);
-            lua_pushinteger(L, i);
-            lua_setfield(L, -2, buff);
-        }
+    luaL_register( L, AUXLIB_PWM, pwm_map );
+
+    // Set it as its own metatable
+    lua_pushvalue( L, -1 );
+    lua_setmetatable( L, -2 );
+
+    // create metatable for adc module
+    luaL_newmetatable(L, "pwm");
+
+    // Module constants
+    for(i=CPU_FIRST_PWM;i<=CPU_FIRST_PWM;i++) {
+        sprintf(buff,"PWM%d",i);
+        MOD_REG_INTEGER( L, buff, i );
     }
 
-    for(i=0;i<NOC;i++) {
-        pwm[i].configured = 0;
-        pwm[i].khz = 0;
-        pwm[i].mode = 0;
-        pwm[i].res = 0;
-        pwm[i].started = 0;
+    for(i=CPU_FIRST_PWM_CH;i<=CPU_LAST_PWM_CH;i++) {
+        sprintf(buff,"PWM_CH%d",i);
+        MOD_REG_INTEGER( L, buff, i );
     }
+
+    lua_pushliteral(L, "__index");
+    lua_pushvalue(L,-2);
+    lua_rawset(L,-3);
+
+    // Setup the methods inside metatable
+    luaL_register( L, NULL, pwm_method_map );
+#else
+    luaL_newlib(L, pwm_load_funcs);  /* new module */
+    lua_pushvalue(L, -1);
+    lua_setmetatable(L, -2);
+
+    luaL_newmetatable(L, "pwm");  /* create metatable */
+    lua_pushvalue(L, -1);  /* push metatable */
+    lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
+
+    luaL_setfuncs(L, mpwm_load_funcs, 0);  /* add file methods to new metatable */
+    lua_pop(L, 1);  /* pop new metatable */
+#endif
 
     return 1;
 }

@@ -259,6 +259,64 @@ typedef uint64_t gpio_port_mask_t;
 
 #define CPU_ADC_ALL 0b11111001
 
+/*
+ * ----------------------------------------------------------------
+ * PWM
+ * ----------------------------------------------------------------
+ */
+
+// Unit bounds
+#define CPU_FIRST_PWM 0
+#define CPU_LAST_PWM  0
+
+// Channel bounds
+#define CPU_FIRST_PWM_CH 0
+#define CPU_LAST_PWM_CH  15
+
+// ESP32 available PWM units
+#define CPU_PWM0     0
+
+// ESP32 available PWM unit names
+#define CPU_PWM0_NAME  "PWM0"
+
+// ESP32 available PWM channels
+#define CPU_PWM_CH0   0
+#define CPU_PWM_CH1   1
+#define CPU_PWM_CH2   2
+#define CPU_PWM_CH3   3
+#define CPU_PWM_CH4   4
+#define CPU_PWM_CH5   5
+#define CPU_PWM_CH6   6
+#define CPU_PWM_CH7   7
+#define CPU_PWM_CH8   8
+#define CPU_PWM_CH9   9
+#define CPU_PWM_CH10  10
+#define CPU_PWM_CH11  11
+#define CPU_PWM_CH12  12
+#define CPU_PWM_CH13  13
+#define CPU_PWM_CH14  14
+#define CPU_PWM_CH15  15
+
+// ESP32 available PWM channel names
+#define CPU_PWM_CH0_NAME   "PWM_CH0"
+#define CPU_PWM_CH1_NAME   "PWM_CH1"
+#define CPU_PWM_CH2_NAME   "PWM_CH2"
+#define CPU_PWM_CH3_NAME   "PWM_CH3"
+#define CPU_PWM_CH4_NAME   "PWM_CH4"
+#define CPU_PWM_CH5_NAME   "PWM_CH5"
+#define CPU_PWM_CH6_NAME   "PWM_CH6"
+#define CPU_PWM_CH7_NAME   "PWM_CH7"
+#define CPU_PWM_CH8_NAME   "PWM_CH8"
+#define CPU_PWM_CH9_NAME   "PWM_CH9"
+#define CPU_PWM_CH10_NAME  "PWM_CH10"
+#define CPU_PWM_CH11_NAME  "PWM_CH11"
+#define CPU_PWM_CH12_NAME  "PWM_CH12"
+#define CPU_PWM_CH13_NAME  "PWM_CH13"
+#define CPU_PWM_CH14_NAME  "PWM_CH14"
+#define CPU_PWM_CH15_NAME  "PWM_CH15"
+
+#define CPU_PWM0_ALL 0b1111111111111111
+
 #endif
 
 void _cpu_init();

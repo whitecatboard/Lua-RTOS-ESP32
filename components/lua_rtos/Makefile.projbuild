@@ -77,7 +77,6 @@ CFLAGS += -DLUA_USE_SAFE_SIGNAL=0      # Enable use of LuaOS safe signal (experi
 CFLAGS += -DLUA_USE_SHELL=1
 CFLAGS += -DLUA_USE_EDITOR=1
 CFLAGS += -DLUA_USE_HISTORY=1
-CFLAGS += -DLUA_USE_ROTABLE=1
 
 
 # Define BUILD_TIME flag, with the EPOCH time when Lua RTOS is build.

@@ -42,6 +42,7 @@
 #include <drivers/gpio.h>
 #include <drivers/uart.h>
 
+#if 0
 static const char *pin_names[] = {
 "?",
 "?",
@@ -76,6 +77,7 @@ static const char *pin_names[] = {
 "?",
 "?",
 };
+#endif
 
 extern void sdk_system_restart_in_nmi(void);
 extern uint8_t sdk_rtc_get_reset_reason(void);

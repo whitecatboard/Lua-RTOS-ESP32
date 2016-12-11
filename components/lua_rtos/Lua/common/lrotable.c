@@ -1,6 +1,8 @@
 /* Read-only tables for Lua */
 #define LUAC_CROSS_FILE
 
+#include "luartos.h"
+
 #if LUA_USE_ROTABLE
 
 #include "lua.h"

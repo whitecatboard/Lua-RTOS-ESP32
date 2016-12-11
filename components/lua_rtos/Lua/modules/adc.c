@@ -98,9 +98,6 @@ static int ladc_setup_channel( lua_State* L ) {
     lua_setmetatable(L, -2);
 
     return 1;
-#endif
-
-    return 0;
 }
 
 static int ladc_read( lua_State* L ) {
@@ -241,3 +238,5 @@ LUALIB_API int luaopen_adc( lua_State *L ) {
 
     return 1;
 }
+
+#endif
