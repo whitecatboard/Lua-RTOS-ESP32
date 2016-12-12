@@ -31,6 +31,13 @@
 
 #if LUA_USE_WIFI
 
+#include "esp_wifi.h"
+#include "esp_system.h"
+#include "esp_event.h"
+#include "esp_event_loop.h"
+#include "nvs_flash.h"
+
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -42,19 +49,53 @@
 
 #include "modules.h"
 
-static void lwifi_setup(lua_State* L) {
+static int8_t inited = 0;
+
+static esp_err_t event_handler(void *ctx, system_event_t *event) {
+   return ESP_OK;
 }
 
-static void lwifi_start(lua_State* L) {
+static int lwifi_init(lua_State* L) {
+	if (!inited){
+		wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+
+		esp_event_loop_init(event_handler, NULL);
+		esp_wifi_init(&cfg);
+		esp_wifi_set_storage(WIFI_STORAGE_RAM);
+		esp_wifi_set_mode(WIFI_MODE_STA);
+		esp_wifi_start();
+
+		inited = 1;
+	}
+
 	return 0;
 }
 
-static void lwifi_stop(lua_State* L) {
+static int lwifi_setup(lua_State* L) {
+	return 0;
+}
+
+static int lwifi_scan(lua_State* L) {
+	int res;
+
+	if ((res = lwifi_init(L))) {
+		return res;
+	}
+
+	return 0;
+}
+
+static int lwifi_start(lua_State* L) {
+	return 0;
+}
+
+static int lwifi_stop(lua_State* L) {
 	return 0;
 }
 
 static const LUA_REG_TYPE wifi_map[] = {
 	{ LSTRKEY( "setup"     ),	 LFUNCVAL( lwifi_setup ) },
+    { LSTRKEY( "scan "     ),	 LFUNCVAL( lwifi_scan  ) },
     { LSTRKEY( "start"     ),	 LFUNCVAL( lwifi_start ) },
     { LSTRKEY( "stop"      ),	 LFUNCVAL( lwifi_stop  ) },
 #if LUA_USE_ROTABLE
