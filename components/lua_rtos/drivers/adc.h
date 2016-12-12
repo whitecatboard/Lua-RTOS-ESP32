@@ -41,8 +41,6 @@ typedef struct {
 	uint8_t pin;
 } adc_resources_t;
 
-#define NADC CPU_LAST_ADC + 1
-
 // ADC errors
 #define ADC_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  1)
 #define ADC_ERR_INVALID_CHANNEL          (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  2)

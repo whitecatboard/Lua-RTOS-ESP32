@@ -49,7 +49,7 @@
 #define ADC_DRIVER driver_get("adc")
 
 // Driver locks
-driver_unit_lock_t adc_locks[NADC];
+driver_unit_lock_t adc_locks[CPU_LAST_ADC + 1];
 
 // Driver message errors
 const char *adc_errors[] = {
@@ -107,7 +107,7 @@ driver_error_t *adc_setup(void) {
 // Setup an ADC channel
 driver_error_t *adc_setup_channel(int8_t channel) {
 	// Sanity checks
-	if (!((channel << 1) && CPU_ADC_ALL)) {
+	if (!((1 << channel) && CPU_ADC_ALL)) {
 		return driver_setup_error(ADC_DRIVER, ADC_ERR_CANT_INIT, "invalid channel");
 	}
 
@@ -128,7 +128,7 @@ driver_error_t *adc_setup_channel(int8_t channel) {
 
 driver_error_t *adc_read(int8_t channel, int *val) {
 	// Sanity checks
-	if (!((channel << 1) && CPU_ADC_ALL)) {
+	if (!((1 << channel) && CPU_ADC_ALL)) {
 		return driver_setup_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
 	}
 
