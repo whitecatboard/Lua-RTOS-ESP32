@@ -69,26 +69,27 @@ const char *pwm_errors[] = {
 struct pwm {
     int8_t timer;
     int8_t pin;
+    int8_t setup;
 };
 
 struct pwm pwm[CPU_LAST_PWM + 1][CPU_LAST_PWM_CH + 1] = {
 	{
-		{0,-1},
-		{0,-1},
-		{1,-1},
-		{1,-1},
-		{2,-1},
-		{2,-1},
-		{3,-1},
-		{3,-1},
-		{0,-1},
-		{0,-1},
-		{1,-1},
-		{1,-1},
-		{2,-1},
-		{2,-1},
-		{3,-1},
-		{3,-1},
+		{0,-1,0},
+		{0,-1,0},
+		{1,-1,0},
+		{1,-1,0},
+		{2,-1,0},
+		{2,-1,0},
+		{3,-1,0},
+		{3,-1,0},
+		{0,-1,0},
+		{0,-1,0},
+		{1,-1,0},
+		{1,-1,0},
+		{2,-1,0},
+		{2,-1,0},
+		{3,-1,0},
+		{3,-1,0},
 	}
 };
 
@@ -118,7 +119,7 @@ static driver_error_t *pwm_check_unit(int8_t unit, int8_t setup) {
 static driver_error_t *pwm_check_channel(int8_t unit, int8_t channel, int8_t setup) {
 	switch (unit) {
 		case 0:
-			if (!((1 << channel) && (CPU_PWM0_ALL))) {
+			if (!((1 << channel) && (CPU_PWM0_ALL)) && (channel != -1)) {
 				if (setup) {
 					return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid channel");
 				} else {
@@ -184,7 +185,7 @@ driver_error_t *pwm_setup(int8_t unit) {
 	return NULL;
 }
 
-driver_error_t *pwm_setup_channel(int8_t unit, int8_t channel, int8_t pin, int32_t freq, double duty) {
+driver_error_t *pwm_setup_channel(int8_t unit, int8_t channel, int8_t pin, int32_t freq, double duty, int8_t *achannel) {
 	driver_error_t *error = NULL;
 
 	// Sanity checks
@@ -196,6 +197,21 @@ driver_error_t *pwm_setup_channel(int8_t unit, int8_t channel, int8_t pin, int32
 		return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid pin");
 	}
 
+	// If channel is -1 means that channel assignement is made by driver
+	if (channel == -1) {
+		// Get a free channel
+		int8_t cchannel;
+
+		for(cchannel=CPU_FIRST_PWM_CH;cchannel<=CPU_LAST_PWM_CH;cchannel++) {
+			if (!pwm[unit][cchannel].setup) {
+				channel = cchannel;
+				break;
+			}
+		}
+	}
+
+	*achannel = channel;
+
 	// Lock resources
     pwm_resources_t resources;
 
@@ -203,9 +219,11 @@ driver_error_t *pwm_setup_channel(int8_t unit, int8_t channel, int8_t pin, int32
     resources.timer = pwm_timer(unit, channel);
 
     if ((error = pwm_lock_resources(unit, channel, &resources))) {
+    	pwm[unit][channel].setup = 0;
 		return error;
 	}
 
+	pwm[unit][channel].setup = 1;
     pwm[unit][channel].pin = pin;
 
     // Setup timer

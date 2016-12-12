@@ -82,7 +82,7 @@ static int lpwm_setup_channel( lua_State* L ) {
     freq = luaL_checkinteger( L, 4 );
     duty = luaL_checknumber(L, 5);
 
-    if ((error = pwm_setup_channel(pwm->unit, channel, pin, freq, duty))) {
+    if ((error = pwm_setup_channel(pwm->unit, channel, pin, freq, duty, &channel))) {
     	return luaL_driver_error(L, error);
     }
 
