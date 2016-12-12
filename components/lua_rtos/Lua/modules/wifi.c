@@ -95,7 +95,7 @@ static int lwifi_stop(lua_State* L) {
 
 static const LUA_REG_TYPE wifi_map[] = {
 	{ LSTRKEY( "setup"     ),	 LFUNCVAL( lwifi_setup ) },
-    { LSTRKEY( "scan "     ),	 LFUNCVAL( lwifi_scan  ) },
+    { LSTRKEY( "scan"      ),	 LFUNCVAL( lwifi_scan  ) },
     { LSTRKEY( "start"     ),	 LFUNCVAL( lwifi_start ) },
     { LSTRKEY( "stop"      ),	 LFUNCVAL( lwifi_stop  ) },
 #if LUA_USE_ROTABLE
