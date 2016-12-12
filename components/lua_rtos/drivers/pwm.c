@@ -119,7 +119,7 @@ static driver_error_t *pwm_check_unit(int8_t unit, int8_t setup) {
 static driver_error_t *pwm_check_channel(int8_t unit, int8_t channel, int8_t setup) {
 	switch (unit) {
 		case 0:
-			if (!((1 << channel) && (CPU_PWM0_ALL)) && (channel != -1)) {
+			if (!((1 << channel) & (CPU_PWM0_ALL)) && (channel != -1)) {
 				if (setup) {
 					return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid channel");
 				} else {
@@ -193,7 +193,7 @@ driver_error_t *pwm_setup_channel(int8_t unit, int8_t channel, int8_t pin, int32
 	if ((error = pwm_check_channel(unit, channel, 1))) return error;
 	if ((error = pwm_check_duty(duty, 1))) return error;
 
-	if (!(pin && GPIO_ALL)) {
+	if (!(pin & GPIO_ALL)) {
 		return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid pin");
 	}
 
