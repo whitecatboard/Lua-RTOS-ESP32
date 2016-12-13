@@ -166,7 +166,7 @@ driver_error_t *hal_init (void) {
 	// Init RESET pin
 	gpio_pin_output(LMIC_RST);
 
-	gpio_isr_register(ETS_GPIO_INUM, &dio_intr_handler, NULL);
+	gpio_isr_register(&dio_intr_handler, NULL, 0, NULL);
 
 	// Init DIO pins
 	if (LMIC_DIO0) {
