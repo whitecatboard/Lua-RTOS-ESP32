@@ -56,7 +56,7 @@ const char *wifi_errors[] = {
 	"can't connect, review your SSID / password",
 	"general fail",
 	"not enough memory",
-	"wifi is not init",
+	"wifi is not setup",
 	"wifi is not started",
 	"interface error",
 	"mode error",
@@ -199,13 +199,17 @@ static driver_error_t *wifi_deinit() {
 driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 	driver_error_t *error;
 
-	// Attach wifi driver
-	if ((error = wifi_init(WIFI_MODE_STA))) {
-		return error;
+	if (!status_get(STATUS_WIFI_SETUP)) {
+		// Attach wifi driver
+		if ((error = wifi_init(WIFI_MODE_STA))) {
+			return error;
+		}
 	}
 
-	// Start wifi
-	if ((error = wifi_check_error(esp_wifi_start()))) return error;
+	if (!status_get(STATUS_WIFI_STARTED)) {
+		// Start wifi
+		if ((error = wifi_check_error(esp_wifi_start()))) return error;
+	}
 
 	wifi_scan_config_t conf = {
 		.ssid = NULL,
@@ -237,17 +241,23 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
     	}
     }
 
-	// Stop wifi
-	if ((error = wifi_check_error(esp_wifi_stop()))) return error;
+	if (!status_get(STATUS_WIFI_STARTED)) {
+		// Stop wifi
+		if ((error = wifi_check_error(esp_wifi_stop()))) return error;
+	}
 
-	// Detach wifi driver
-	if ((error = wifi_deinit())) return error;
+	if (!status_get(STATUS_WIFI_SETUP)) {
+		// Detach wifi driver
+		if ((error = wifi_deinit())) return error;
+	}
 
 	return NULL;
 }
 
 driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password) {
 	driver_error_t *error;
+
+	status_clear(STATUS_WIFI_SETUP);
 
 	// Attach wifi driver
 	if ((error = wifi_init(mode))) return error;
@@ -267,11 +277,17 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password) {
 		return driver_setup_error(WIFI_DRIVER, WIFI_ERR_CANT_INIT, "invalid mode");
 	}
 
+	status_set(STATUS_WIFI_SETUP);
+
 	return NULL;
 }
 
 driver_error_t *wifi_start() {
 	driver_error_t *error;
+
+	if (!status_get(STATUS_WIFI_SETUP)) {
+		return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_INIT, NULL);
+	}
 
 	if (!status_get(STATUS_WIFI_STARTED)) {
 		if ((error = wifi_check_error(esp_wifi_start()))) return error;
@@ -286,13 +302,17 @@ driver_error_t *wifi_start() {
 
 			return driver_operation_error(WIFI_DRIVER, WIFI_ERR_CANT_CONNECT, NULL);
 	    }
-}
+	}
 
 	return NULL;
 }
 
 driver_error_t *wifi_stop() {
 	driver_error_t *error;
+
+	if (!status_get(STATUS_WIFI_SETUP)) {
+		return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_INIT, NULL);
+	}
 
 	if (status_get(STATUS_WIFI_STARTED)) {
 		if ((error = wifi_check_error(esp_wifi_stop()))) return error;
