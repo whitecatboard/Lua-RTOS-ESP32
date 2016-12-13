@@ -208,7 +208,6 @@ static int lwifi_stat(lua_State* L) {
 }
 
 
-#if LUA_USE_ROTABLE
 static const LUA_REG_TYPE wifi_auth_map[] = {
 	{ LSTRKEY( "OPEN"         ), LINTVAL( WIFI_AUTH_OPEN ) },
 	{ LSTRKEY( "WEP"          ), LINTVAL( WIFI_AUTH_WEP ) },
@@ -230,11 +229,7 @@ static const LUA_REG_TYPE wifi_map[] = {
     { LSTRKEY( "start" ),	 LFUNCVAL( lwifi_start   ) },
     { LSTRKEY( "stop"  ),	 LFUNCVAL( lwifi_stop    ) },
     { LSTRKEY( "stat"  ),	 LFUNCVAL( lwifi_stat    ) },
-#if LUA_USE_ROTABLE
     { LSTRKEY( "auth"  ),	 LROVAL  ( wifi_auth_map ) },
     { LSTRKEY( "mode"  ),	 LROVAL  ( wifi_mode_map ) },
-#endif
 	{ LNILKEY, LNILVAL }
 };
-
-#endif

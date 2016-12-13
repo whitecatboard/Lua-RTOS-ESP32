@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, Lua net module
+ * Lua RTOS, network manager
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -27,9 +27,17 @@
  * this software.
  */
 
-#ifndef LNET_H_
-#define LNET_H_
+#ifndef NET_H_
+#define NET_H_
 
-#include <drivers/wifi.h>
+#include <sys/driver.h>
+#include <sys/status.h>
+
+#define NETWORK_AVAILABLE() (status_get(STATUS_WIFI_CONNECTED))
+
+// NET errors
+#define NET_ERR_NOT_AVAILABLE              (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  1)
+
+driver_error_t *net_check_connectivity();
 
 #endif

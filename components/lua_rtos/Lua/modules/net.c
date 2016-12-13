@@ -1,3 +1,32 @@
+/*
+ * Lua RTOS, Lua net module
+ *
+ * Copyright (C) 2015 - 2016
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ *
+ * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ *
+ * All rights reserved.
+ *
+ * Permission to use, copy, modify, and distribute this software
+ * and its documentation for any purpose and without fee is hereby
+ * granted, provided that the above copyright notice appear in all
+ * copies and that both that the copyright notice and this
+ * permission notice and warranty disclaimer appear in supporting
+ * documentation, and that the name of the author not be used in
+ * advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.
+ *
+ * The author disclaim all warranties with regard to this
+ * software, including all implied warranties of merchantability
+ * and fitness.  In no event shall the author be liable for any
+ * special, indirect or consequential damages or any damages
+ * whatsoever resulting from loss of use, data or profits, whether
+ * in an action of contract, negligence or other tortious action,
+ * arising out of or in connection with the use or performance of
+ * this software.
+ */
+
 #include "luartos.h"
 
 #include <stdint.h>
@@ -13,6 +42,7 @@
 #include "modules.h"
 
 #include "net_wifi.inc"
+#include "net_service_sntp.inc"
 
 
 static int lnet_stat(lua_State* L) {
@@ -53,22 +83,19 @@ static int lnet_stat(lua_State* L) {
 	return table;
 }
 
+static const LUA_REG_TYPE service_map[] = {
+	{ LSTRKEY( "sntp"    ),	 LROVAL   ( sntp_map  ) },
+};
+
 static const LUA_REG_TYPE net_map[] = {
-	{ LSTRKEY( "stat"  ),	 LFUNCVAL( lnet_stat   ) },
-#if LUA_USE_ROTABLE
-	{ LSTRKEY( "wf"    ),	 LROVAL   ( wifi_map   ) },
-#endif
+	{ LSTRKEY( "stat"       ),	 LFUNCVAL ( lnet_stat     ) },
+	{ LSTRKEY( "wf"         ),	 LROVAL   ( wifi_map      ) },
+	{ LSTRKEY( "service"    ),	 LROVAL   ( service_map   ) },
 	{ LNILKEY, LNILVAL }
 };
 
 int luaopen_net(lua_State* L) {
-#if !LUA_USE_ROTABLE
-    luaL_newlib(L, net_map);
-
-    return 1;
-#else
     return 0;
-#endif
 }
 
 LUA_OS_MODULE(NET, net, net_map);
@@ -77,8 +104,8 @@ LUA_OS_MODULE(NET, net, net_map);
 
 net.wf.setup(net.wf.mode.STA, "CITILAB","wifi@citilab")
 net.wf.start()
-a = net.stat(true)
-net.wf.stat()
-net.wf.stat(true)
+
+net.service.sntp.start()
+net.service.sntp.stop()
 
  */

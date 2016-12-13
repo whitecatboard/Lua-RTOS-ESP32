@@ -43,6 +43,7 @@
 #define LORA_DRIVER_ID  5
 #define PWM_DRIVER_ID   6
 #define WIFI_DRIVER_ID  7
+#define NET_DRIVER_ID   8
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 
