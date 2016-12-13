@@ -233,6 +233,6 @@
 #define SD_CS 15
 #endif
 
-#define THREAD_LOCAL_STORAGE_POINTER_ID 0
+#define THREAD_LOCAL_STORAGE_POINTER_ID 1
 
 #endif

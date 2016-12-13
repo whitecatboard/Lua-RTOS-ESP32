@@ -42,6 +42,10 @@
 #define STATUS_LUA_ABORT_BOOT_SCRIPTS  0x0003
 #define STATUS_LUA_HISTORY			   0x0004
 #define STATUS_LUA_SHELL			   0x0005
+#define STATUS_TCPIP_INITED            0x0006
+#define STATUS_WIFI_INITED             0x0007
+#define STATUS_WIFI_STARTED            0x0008
+#define STATUS_WIFI_CONNECTED          0x0009
 
 extern uint32_t LuaOS_status[];
 
