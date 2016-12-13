@@ -31,26 +31,15 @@
 
 #if LUA_USE_WIFI
 
-#include <stdint.h>
-#include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
-
-#include "lua.h"
-#include "lauxlib.h"
-#include "wifi.h"
-#include "error.h"
-
-#include "modules.h"
-
-#include <drivers/wifi.h>
+#include <stdio.h>
 
 static int lwifi_setup(lua_State* L) {
 	driver_error_t *error;
 
 	int mode = luaL_checkinteger(L, 1);
-    char *ssid = NULL;
-    char *password = NULL;
+    const char *ssid = NULL;
+    const char *password = NULL;
 
     // Get arguments related to desired mode
     if (mode == WIFI_MODE_STA) {
@@ -59,7 +48,7 @@ static int lwifi_setup(lua_State* L) {
     }
 
     // Setup wifi
-	if ((error = wifi_setup(mode, ssid, password))) {
+	if ((error = wifi_setup(mode, (char *)ssid, (char *)password))) {
     	return luaL_driver_error(L, error);
 	}
 
@@ -155,6 +144,69 @@ static int lwifi_stop(lua_State* L) {
 	return 0;
 }
 
+static int lwifi_stat(lua_State* L) {
+	tcpip_adapter_ip_info_t info;
+	driver_error_t *error;
+	u8_t table = 0;
+
+	// Check if user wants result as a table, or wants scan's result
+	// on the console
+	if (lua_gettop(L) == 1) {
+		luaL_checktype(L, 1, LUA_TBOOLEAN);
+		if (lua_toboolean(L, 1)) {
+			table = 1;
+		}
+	}
+
+	if ((error = wifi_stat(&info))) {
+    	return luaL_driver_error(L, error);
+	}
+
+	if (!table) {
+	    printf(
+	            "wf:\r\n"
+	    );
+
+	    printf(
+	            "   ip address %d.%d.%d.%d netmask %d.%d.%d.%d\r\n",
+	            ip4_addr1_16(&info.ip),
+	            ip4_addr2_16(&info.ip),
+	            ip4_addr3_16(&info.ip),
+	            ip4_addr4_16(&info.ip),
+	            ip4_addr1_16(&info.netmask),
+	            ip4_addr2_16(&info.netmask),
+	            ip4_addr3_16(&info.netmask),
+	            ip4_addr4_16(&info.netmask)
+	    );
+
+	    printf(
+	            "   gw address %d.%d.%d.%d\r\n",
+	            ip4_addr1_16(&info.gw),
+	            ip4_addr2_16(&info.gw),
+	            ip4_addr3_16(&info.gw),
+	            ip4_addr4_16(&info.gw)
+	    );
+	} else {
+		char tmp[17];
+
+		lua_createtable(L, 0, 3);
+
+		sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&info.ip),ip4_addr2_16(&info.ip),ip4_addr3_16(&info.ip),ip4_addr4_16(&info.ip));
+        lua_pushstring(L, tmp);
+        lua_setfield (L, -2, "ip");
+
+		sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&info.gw),ip4_addr2_16(&info.gw),ip4_addr3_16(&info.gw),ip4_addr4_16(&info.gw));
+        lua_pushstring(L, tmp);
+        lua_setfield (L, -2, "gw");
+
+		sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&info.netmask),ip4_addr2_16(&info.netmask),ip4_addr3_16(&info.netmask),ip4_addr4_16(&info.netmask));
+        lua_pushstring(L, tmp);
+        lua_setfield (L, -2, "netmask");
+	}
+
+	return table;
+}
+
 
 #if LUA_USE_ROTABLE
 static const LUA_REG_TYPE wifi_auth_map[] = {
@@ -177,6 +229,7 @@ static const LUA_REG_TYPE wifi_map[] = {
     { LSTRKEY( "scan"  ),	 LFUNCVAL( lwifi_scan    ) },
     { LSTRKEY( "start" ),	 LFUNCVAL( lwifi_start   ) },
     { LSTRKEY( "stop"  ),	 LFUNCVAL( lwifi_stop    ) },
+    { LSTRKEY( "stat"  ),	 LFUNCVAL( lwifi_stat    ) },
 #if LUA_USE_ROTABLE
     { LSTRKEY( "auth"  ),	 LROVAL  ( wifi_auth_map ) },
     { LSTRKEY( "mode"  ),	 LROVAL  ( wifi_mode_map ) },
@@ -184,23 +237,4 @@ static const LUA_REG_TYPE wifi_map[] = {
 	{ LNILKEY, LNILVAL }
 };
 
-int luaopen_wifi(lua_State* L) {
-#if !LUA_USE_ROTABLE
-    luaL_newlib(L, wifi_map);
-
-    return 1;
-#else
-    return 0;
 #endif
-}
-
-LUA_OS_MODULE(WIFI, wifi, wifi_map);
-
-#endif
-
-/*
-
-wifi.setup(wifi.mode.STA, "Xarxa Wi-Fi de JAUME","castellbisbal123")
-wifi.start()
-
- */

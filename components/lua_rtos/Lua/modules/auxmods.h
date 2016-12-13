@@ -67,9 +67,6 @@ LUALIB_API int (luaopen_pack) (lua_State* L);
 #define AUXLIB_NVS "nvs"
 LUALIB_API int (luaopen_nvs) (lua_State* L);
 
-#define AUXLIB_WIFI "wifi"
-LUALIB_API int (luaopen_wifi) (lua_State* L);
-
 // Helper macros
 #define MOD_CHECK_ID( mod, id )\
   if( !platform_ ## mod ## _exists( id ) )\

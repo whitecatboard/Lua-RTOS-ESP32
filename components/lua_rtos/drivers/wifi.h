@@ -31,6 +31,7 @@
 #define WIFI_H_
 
 #include "esp_wifi.h"
+#include "tcpip_adapter.h"
 
 #include <sys/driver.h>
 
@@ -56,5 +57,6 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list);
 driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password);
 driver_error_t *wifi_start();
 driver_error_t *wifi_stop();
+driver_error_t *wifi_stat(tcpip_adapter_ip_info_t *info);
 
 #endif

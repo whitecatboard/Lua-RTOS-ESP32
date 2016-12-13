@@ -35,6 +35,7 @@
 #include "esp_event.h"
 #include "esp_event_loop.h"
 #include "esp_phy_init.h"
+#include "tcpip_adapter.h"
 
 #include "rom/rtc.h"
 
@@ -43,8 +44,11 @@
 
 #include <sys/status.h>
 #include <sys/panic.h>
+#include <sys/syslog.h>
 
 #include <drivers/wifi.h>
+
+#define WIFI_LOG(m) syslog(LOG_DEBUG, m);
 
 // This macro gets a reference for this driver into drivers array
 #define WIFI_DRIVER driver_get("wifi")
@@ -104,16 +108,16 @@ static driver_error_t *wifi_check_error(esp_err_t error) {
 static esp_err_t event_handler(void *ctx, system_event_t *event) {
 	switch (event->event_id) {
 		case SYSTEM_EVENT_STA_START:
-			printf("SYSTEM_EVENT_STA_START\r\n");
+			WIFI_LOG("SYSTEM_EVENT_STA_START\n");
 			esp_wifi_connect();
 			break;
 
 		case SYSTEM_EVENT_STA_STOP:
-			printf("SYSTEM_EVENT_STA_STOP\r\n");
+			WIFI_LOG("SYSTEM_EVENT_STA_STOP\n");
 			break;
 
 	    case SYSTEM_EVENT_STA_DISCONNECTED:
-			printf("SYSTEM_EVENT_STA_DISCONNECTED\r\n");
+	    	WIFI_LOG("SYSTEM_EVENT_STA_DISCONNECTED\n");
 
 			if (!status_get(STATUS_WIFI_CONNECTED)) {
 				status_clear(STATUS_WIFI_CONNECTED);
@@ -127,24 +131,23 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 	    	break;
 
 		case SYSTEM_EVENT_STA_GOT_IP:
-			printf("SYSTEM_EVENT_STA_GOT_IP\r\n");
+			WIFI_LOG("SYSTEM_EVENT_STA_GOT_IP\n");
  		    xEventGroupSetBits(wifiEvent, evWIFI_CONNECTED);
 			break;
 
 		case SYSTEM_EVENT_AP_STA_GOT_IP6:
-			printf("SYSTEM_EVENT_AP_STA_GOT_IP6\r\n");
+			WIFI_LOG("SYSTEM_EVENT_AP_STA_GOT_IP6\n");
  		    xEventGroupSetBits(wifiEvent, evWIFI_CONNECTED);
 			break;
 
 		case SYSTEM_EVENT_SCAN_DONE:
-			printf("SYSTEM_EVENT_SCAN_DONE\r\n");
+			WIFI_LOG("SYSTEM_EVENT_SCAN_DONE\n");
  		    xEventGroupSetBits(wifiEvent, evWIFI_SCAN_END);
 			break;
 
 		case SYSTEM_EVENT_STA_CONNECTED:
+			WIFI_LOG("SYSTEM_EVENT_STA_CONNECTED\n");
 			status_set(STATUS_WIFI_CONNECTED);
-
-			printf("SYSTEM_EVENT_STA_CONNECTED\r\n");
 			break;
 
 		default :
@@ -319,6 +322,15 @@ driver_error_t *wifi_stop() {
 
 		status_clear(STATUS_WIFI_STARTED);
 	}
+
+	return NULL;
+}
+
+driver_error_t *wifi_stat(tcpip_adapter_ip_info_t *info) {
+	driver_error_t *error;
+
+	// Get WIFI IF info
+	if ((error = wifi_check_error(tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, info)))) return error;
 
 	return NULL;
 }
