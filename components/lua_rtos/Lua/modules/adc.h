@@ -31,7 +31,7 @@
 #define	LADC_H
 
 #include "drivers/adc.h"
-#include "drivers/CPU.h"
+#include "drivers/cpu.h"
 
 typedef struct {
     unsigned int adc;

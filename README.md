@@ -24,6 +24,7 @@ The Lua RTOS compatible boards can be programmed in two ways: using the Lua prog
 
 ![](http://whitecatboard.org/wp-content/uploads/2016/11/code-example.png)
 
+In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have more information about this.
 
 # How to build?
 
