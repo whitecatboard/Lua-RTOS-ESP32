@@ -30,10 +30,19 @@
 #ifndef NET_H_
 #define NET_H_
 
+#include "lwip/ip_addr.h"
+
 #include <sys/driver.h>
 #include <sys/status.h>
 
 #define NETWORK_AVAILABLE() (status_get(STATUS_WIFI_CONNECTED))
+
+typedef struct {
+    ip4_addr_t ip;
+    ip4_addr_t netmask;
+    ip4_addr_t gw;
+    uint8_t    mac[6];
+} ifconfig_t;
 
 // NET errors
 #define NET_ERR_NOT_AVAILABLE              (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  1)

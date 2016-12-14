@@ -145,7 +145,7 @@ static int lwifi_stop(lua_State* L) {
 }
 
 static int lwifi_stat(lua_State* L) {
-	tcpip_adapter_ip_info_t info;
+	ifconfig_t info;
 	driver_error_t *error;
 	u8_t table = 0;
 
@@ -159,39 +159,51 @@ static int lwifi_stat(lua_State* L) {
 	}
 
 	if ((error = wifi_stat(&info))) {
-    	return luaL_driver_error(L, error);
+		if (error->exception != WIFI_ERR_WIFI_NOT_INIT) {
+			return luaL_driver_error(L, error);
+		}
+
+		free(error);
+
+		memset(&info, 0, sizeof(ifconfig_t));
 	}
 
 	if (!table) {
-	    printf(
-	            "wf:\r\n"
-	    );
+			printf(
+					"wf: mac address %02x:%02x:%02x:%02x:%02x:%02x\r\n",
+					info.mac[0],info.mac[1],
+					info.mac[2],info.mac[3],
+					info.mac[4],info.mac[5]
+			);
 
-	    printf(
-	            "   ip address %d.%d.%d.%d netmask %d.%d.%d.%d\r\n",
-	            ip4_addr1_16(&info.ip),
-	            ip4_addr2_16(&info.ip),
-	            ip4_addr3_16(&info.ip),
-	            ip4_addr4_16(&info.ip),
-	            ip4_addr1_16(&info.netmask),
-	            ip4_addr2_16(&info.netmask),
-	            ip4_addr3_16(&info.netmask),
-	            ip4_addr4_16(&info.netmask)
-	    );
+			printf(
+					"   ip address %d.%d.%d.%d netmask %d.%d.%d.%d\r\n",
+					ip4_addr1_16(&info.ip),
+					ip4_addr2_16(&info.ip),
+					ip4_addr3_16(&info.ip),
+					ip4_addr4_16(&info.ip),
+					ip4_addr1_16(&info.netmask),
+					ip4_addr2_16(&info.netmask),
+					ip4_addr3_16(&info.netmask),
+					ip4_addr4_16(&info.netmask)
+			);
 
-	    printf(
-	            "   gw address %d.%d.%d.%d\r\n",
-	            ip4_addr1_16(&info.gw),
-	            ip4_addr2_16(&info.gw),
-	            ip4_addr3_16(&info.gw),
-	            ip4_addr4_16(&info.gw)
-	    );
+			printf(
+					"   gw address %d.%d.%d.%d\r\n",
+					ip4_addr1_16(&info.gw),
+					ip4_addr2_16(&info.gw),
+					ip4_addr3_16(&info.gw),
+					ip4_addr4_16(&info.gw)
+			);
 	} else {
 		char tmp[17];
 
-		lua_createtable(L, 0, 3);
+		lua_createtable(L, 0, 4);
 
-		sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&info.ip),ip4_addr2_16(&info.ip),ip4_addr3_16(&info.ip),ip4_addr4_16(&info.ip));
+        lua_pushstring(L, "wf");
+        lua_setfield (L, -2, "interface");
+
+        sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&info.ip),ip4_addr2_16(&info.ip),ip4_addr3_16(&info.ip),ip4_addr4_16(&info.ip));
         lua_pushstring(L, tmp);
         lua_setfield (L, -2, "ip");
 

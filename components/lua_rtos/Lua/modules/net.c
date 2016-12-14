@@ -44,6 +44,64 @@
 #include "net_wifi.inc"
 #include "net_service_sntp.inc"
 
+#include "lwip/err.h"
+#include "lwip/sockets.h"
+#include "lwip/sys.h"
+#include "lwip/netdb.h"
+#include "lwip/dns.h"
+
+static int lnet_lookup(lua_State* L) {
+	const char* name = luaL_checkstring( L, 1 );
+	int port = 0;
+	struct sockaddr_in address;
+	int rc = 0;
+	int raw = 0;
+
+	sa_family_t family = AF_INET;
+	struct addrinfo *result = NULL;
+	struct addrinfo hints = {0, AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, NULL, NULL, NULL};
+
+	// Check if user wants result as a raw value, or as an string
+	if (lua_gettop(L) == 2) {
+		luaL_checktype(L, 2, LUA_TBOOLEAN);
+		if (lua_toboolean(L, 2)) {
+			raw = 1;
+		}
+	}
+
+	if ((rc = getaddrinfo(name, NULL, &hints, &result)) == 0) {
+		struct addrinfo *res = result;
+		while (res) {
+			if (res->ai_family == AF_INET) {
+				result = res;
+				break;
+			}
+			res = res->ai_next;
+		}
+
+		if (result->ai_family == AF_INET) {
+			address.sin_port = htons(port);
+			address.sin_family = family = AF_INET;
+            address.sin_addr = ((struct sockaddr_in*)(result->ai_addr))->sin_addr;
+		} else {
+            rc = -1;
+        }
+
+        freeaddrinfo(result);
+	}
+
+	if (rc == 0) {
+		if (raw) {
+			lua_pushinteger( L, address.sin_addr.s_addr);
+		} else {
+		    lua_pushfstring(L, inet_ntoa(address.sin_addr.s_addr));
+		}
+	} else {
+		lua_pushnil(L);
+	}
+
+	return 1;
+}
 
 static int lnet_stat(lua_State* L) {
 	u8_t table = 0;
@@ -70,7 +128,10 @@ static int lnet_stat(lua_State* L) {
 	lua_getfield(L, -1, "wf");
 	lua_getfield(L, -1, "stat");
     lua_pushboolean(L, table);
-    lua_pcall(L, 1, 1, 0);
+
+     if (lua_pcall(L, 1, 1, 0) != LUA_OK) {
+    	 return luaL_error(L, lua_tostring(L, -1));
+     }
 
     if (table) {
     	lua_remove(L, 4);
@@ -89,6 +150,7 @@ static const LUA_REG_TYPE service_map[] = {
 
 static const LUA_REG_TYPE net_map[] = {
 	{ LSTRKEY( "stat"       ),	 LFUNCVAL ( lnet_stat     ) },
+	{ LSTRKEY( "lookup"     ),	 LFUNCVAL ( lnet_lookup   ) },
 	{ LSTRKEY( "wf"         ),	 LROVAL   ( wifi_map      ) },
 	{ LSTRKEY( "service"    ),	 LROVAL   ( service_map   ) },
 	{ LNILKEY, LNILVAL }
@@ -104,8 +166,8 @@ LUA_OS_MODULE(NET, net, net_map);
 
 net.wf.setup(net.wf.mode.STA, "CITILAB","wifi@citilab")
 net.wf.start()
-
 net.service.sntp.start()
 net.service.sntp.stop()
 
+net.lookup("whitecarboard.org")
  */

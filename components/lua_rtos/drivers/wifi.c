@@ -326,11 +326,24 @@ driver_error_t *wifi_stop() {
 	return NULL;
 }
 
-driver_error_t *wifi_stat(tcpip_adapter_ip_info_t *info) {
+driver_error_t *wifi_stat(ifconfig_t *info) {
+	tcpip_adapter_ip_info_t esp_info;
+	uint8_t mac[6];
+
 	driver_error_t *error;
 
 	// Get WIFI IF info
-	if ((error = wifi_check_error(tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, info)))) return error;
+	if ((error = wifi_check_error(tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &esp_info)))) return error;
+
+	// Get MAC info
+	if ((error = wifi_check_error(esp_wifi_get_mac(ESP_IF_WIFI_STA, mac)))) return error;
+
+	// Copy info
+	info->gw = esp_info.gw;
+	info->ip = esp_info.ip;
+	info->netmask = esp_info.netmask;
+
+	memcpy(info->mac, mac, sizeof(mac));
 
 	return NULL;
 }
