@@ -252,20 +252,21 @@ void onEvent (ev_t ev) {
 		  		  xEventGroupSetBits(loraEvent, evLORA_ACK_NOT_RECEIVED);
 			  }
 		  } else {
-	  		  xEventGroupSetBits(loraEvent, evLORA_TX_COMPLETE);
+		      if (LMIC.dataLen && lora_rx_callback) {
+				  // Make a copy of the payload and call callback function
+				  u1_t *payload = (u1_t *)malloc(LMIC.dataLen * 2 + 1);
+				  if (payload) {
+					  // Coding payload into an hex string
+					  val_to_hex_string((char *)payload, (char *)&LMIC.frame[LMIC.dataBeg], LMIC.dataLen, 0);
+					  payload[LMIC.dataLen * 2] = 0x00;
+
+					  lora_rx_callback(1, (char *)payload);
+				  }
+		      }
+
+		      xEventGroupSetBits(loraEvent, evLORA_TX_COMPLETE);
 		  }
 
-	      if (LMIC.dataLen && lora_rx_callback) {
-			  // Make a copy of the payload and call callback function
-			  u1_t *payload = (u1_t *)malloc(LMIC.dataLen);
-			  if (payload) {
-				  // Coding payload into an hex string
-				  val_to_hex_string((char *)payload, (char *)&LMIC.frame[LMIC.dataBeg], LMIC.dataLen, 0);
-				  payload[LMIC.dataLen * 2] = 0x00;
-
-				  lora_rx_callback(1, (char *)payload);
-			  }
-	      }
 	      break;
 
 	    case EV_LOST_TSYNC:
@@ -647,7 +648,7 @@ driver_error_t *lora_tx(int cnf, int port, const char *data) {
 	}
 
 	// Send 
-    LMIC_setTxData2(port, payload, sizeof(payload), cnf);
+    LMIC_setTxData2(port, payload, payload_len, cnf);
 		
     free(payload);
 

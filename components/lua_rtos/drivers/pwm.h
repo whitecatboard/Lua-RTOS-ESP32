@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, delay functions
+ * Lua RTOS, PWM driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -27,23 +27,30 @@
  * this software.
  */
 
-#include "luartos.h"
+#ifndef PWM_H
+#define	PWM_H
 
-#include "freertos/FreeRTOS.h"
-#include "esp_attr.h"
+#include <stdint.h>
 
-#include <sys/delay.h>
- 
-void IRAM_ATTR delay(unsigned int msec) {
-    unsigned int tWait, tStart;
-    tWait = (CPU_HZ / (1000 * (CPU_HZ / CORE_TIMER_HZ))) * msec;
-    tStart = xthal_get_ccount();
-    while((xthal_get_ccount() - tStart) < tWait);
-}
+#include <sys/driver.h>
 
-void IRAM_ATTR udelay(unsigned int usec) {
-    unsigned int tWait, tStart;
-    tWait = (CPU_HZ / (1000000 * (CPU_HZ / CORE_TIMER_HZ))) * usec;
-    tStart = xthal_get_ccount();
-    while((xthal_get_ccount() - tStart) < tWait);
-}
+// Resources used by PWM
+typedef struct {
+	uint8_t pin;
+	uint8_t timer;
+} pwm_resources_t;
+
+// PWM errors
+#define PWM_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID) |  1)
+#define PWM_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID) |  2)
+#define PWM_ERR_INVALID_CHANNEL          (DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID) |  3)
+#define PWM_ERR_INVALID_DUTY             (DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID) |  4)
+
+driver_error_t *pwm_setup(int8_t unit);
+driver_error_t *pwm_setup_channel(int8_t unit, int8_t channel, int8_t pin, int32_t freq, double duty, int8_t *achannel);
+driver_error_t *pwm_start(int8_t unit, int8_t channel);
+driver_error_t *pwm_stop(int8_t unit, int8_t channel);
+driver_error_t *pwm_set_duty(int8_t unit, int8_t channel, double duty);
+
+#endif	/* PWM_H */
+

@@ -12,5 +12,3 @@ SECTIONS {
 	}
 }
 INSERT AFTER .flash.rodata;
-
-_read_core_timer = xthal_get_ccount;

@@ -90,9 +90,9 @@ driver_error_t *i2c_setup(int unit, int speed, int sda, int scl) {
     i2cu->i2c_setup(i2cu);
     
     syslog(LOG_INFO,
-        "i2c%u at pins scl=%c%d/sdc=%c%d", unit + 1,
-        gpio_portname(scl), gpio_pinno(scl),
-        gpio_portname(sda), gpio_pinno(sda)
+        "i2c%u at pins scl=%s%d/sdc=%s%d", unit + 1,
+        gpio_portname(scl), gpio_name(scl),
+        gpio_portname(sda), gpio_name(sda)
     );
 
     return NULL;

@@ -22,3 +22,4 @@ build/
 *.elf
 *.map
 **/.DS_Store
+components/mkspiffs/src/mkspiffs

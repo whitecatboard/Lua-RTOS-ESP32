@@ -859,9 +859,9 @@ int sd_init(int unit) {
     spi_set(spi, PIC32_SPICON_CKE);
 #endif
 
-    if (spi_cspin(spi) >= 0) {
+    if (spi_cs_gpio(spi) >= 0) {
         syslog(LOG_INFO, "sd%u is at %s, pin cs=%s%d", unit,
-            spi_name(spi), spi_csname(spi), spi_cspin(spi));
+            spi_name(spi), gpio_portname(spi_cs_gpio(spi)), spi_cs_gpio(spi));
     }
     
     /* Assign disk index. */

@@ -88,6 +88,8 @@ struct spi spi[NSPI] = {
 	}
 };
 
+#define FUNC_SPI 1
+
 /*
  * Extracted from arduino-esp32 (cores/esp32/esp32-hal-spi.c) for get the clock divisor
  * needed for setup the SIP bus at a desired baud rate
@@ -301,7 +303,7 @@ void spi_set_cspin(int unit, int pin) {
 
 void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs) {
     switch (unit) {
-        case 1:
+    	case 1:
         	*sdi = GPIO7;
             *sdo = GPIO8;
             *sck = GPIO6;
@@ -313,7 +315,6 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
             *sdo = GPIO13;
             *sck = GPIO14;
             *cs =  GPIO15;
-
             break;
 
         case 3:
@@ -329,28 +330,11 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
  * Init pins for a device, and return used pins
  */
 void spi_pin_config(int unit, unsigned char sdi, unsigned char sdo, unsigned char sck, unsigned char cs) {
-	switch (unit) {
-        case 1:
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA0_U, FUNC_SD_DATA0_SPIQ);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA1_U, FUNC_SD_DATA1_SPID);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_CLK_U,   FUNC_SD_CLK_SPICLK);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_CMD_U,   FUNC_SD_CMD_SPICS0);
-            break;
-
-        case 2:
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_MTDI_HSPIQ);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, FUNC_MTCK_HSPID);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTMS_U, FUNC_MTMS_HSPICLK);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_MTDO_HSPICS0);
-            break;
-
-        case 3:
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO19_U,FUNC_GPIO19_VSPIQ);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO23_U,FUNC_GPIO23_VSPID);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO18_U,FUNC_GPIO18_VSPICLK);
-            PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5_GPIO5_0);
-            break;
-    }
+    // Configure pins
+	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[sdi], FUNC_SPI);
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[sdo], FUNC_SPI);
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[sck], FUNC_SPI);
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[cs ], FUNC_SPI);
 
     // Set the cs pin to the default cs pin for device
 	spi_set_cspin(unit, cs);
@@ -555,27 +539,12 @@ const char *spi_name(int unit) {
 }
 
 /*
- * Return the port name (A-K) of the chip select pin for a device.
- */
-const char *spi_csname(int unit) {
-    struct spi *dev = &spi[unit];
-
-    if (!dev->cs)
-        return NULL;
-
-    return cpu_port_name(dev->cs);
-}
-
-/*
  * Return the pin index of the chip select pin for a device.
  */
-int spi_cspin(int unit) {
+int spi_cs_gpio(int unit) {
     struct spi *dev = &spi[unit];
 
-    if (!dev->cs)
-        return -1;
-
-    return cpu_pin_number(dev->cs);
+    return dev->cs;
 }
 
 /*
@@ -648,11 +617,10 @@ driver_error_t *spi_init(int unit) {
 	spi_pin_config(unit, resources.sdi, resources.sdo, resources.sck, resources.cs);
 
 	syslog(LOG_INFO,
-        "spi%u at pins sdi=%c%d/sdo=%c%d/sck=%c%d/cs=%c%d", unit,
-        gpio_portname(resources.sdi), gpio_pinno(resources.sdi),
-        gpio_portname(resources.sdo), gpio_pinno(resources.sdo),
-        gpio_portname(resources.sck), gpio_pinno(resources.sck),
-        gpio_portname(resources.cs), gpio_pinno(resources.cs)
+        "spi%u at pins sdi=%s%d/sdo=%s%d/sck=%s%d", unit,
+        gpio_portname(resources.sdi), gpio_name(resources.sdi),
+        gpio_portname(resources.sdo), gpio_name(resources.sdo),
+        gpio_portname(resources.sck), gpio_name(resources.sck)
     );
 
     spi_set_mode(unit, 0);

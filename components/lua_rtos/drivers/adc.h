@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, delay functions
+ * Whitecat, ADC driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -27,23 +27,26 @@
  * this software.
  */
 
-#include "luartos.h"
+#ifndef ADC_H
+#define	ADC_H
 
-#include "freertos/FreeRTOS.h"
-#include "esp_attr.h"
+#include <stdint.h>
 
-#include <sys/delay.h>
- 
-void IRAM_ATTR delay(unsigned int msec) {
-    unsigned int tWait, tStart;
-    tWait = (CPU_HZ / (1000 * (CPU_HZ / CORE_TIMER_HZ))) * msec;
-    tStart = xthal_get_ccount();
-    while((xthal_get_ccount() - tStart) < tWait);
-}
+#include <drivers/cpu.h>
 
-void IRAM_ATTR udelay(unsigned int usec) {
-    unsigned int tWait, tStart;
-    tWait = (CPU_HZ / (1000000 * (CPU_HZ / CORE_TIMER_HZ))) * usec;
-    tStart = xthal_get_ccount();
-    while((xthal_get_ccount() - tStart) < tWait);
-}
+#include <sys/driver.h>
+
+// Resources used by ADC
+typedef struct {
+	uint8_t pin;
+} adc_resources_t;
+
+// ADC errors
+#define ADC_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  1)
+#define ADC_ERR_INVALID_CHANNEL          (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  2)
+
+driver_error_t *adc_setup(void);
+driver_error_t *adc_setup_channel(int8_t channel);
+driver_error_t *adc_read(int8_t channel, int *val);
+
+#endif	/* ADC_H */

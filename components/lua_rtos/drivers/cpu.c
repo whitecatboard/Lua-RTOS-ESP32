@@ -42,6 +42,7 @@
 #include <drivers/gpio.h>
 #include <drivers/uart.h>
 
+#if 0
 static const char *pin_names[] = {
 "?",
 "?",
@@ -76,6 +77,7 @@ static const char *pin_names[] = {
 "?",
 "?",
 };
+#endif
 
 extern void sdk_system_restart_in_nmi(void);
 extern uint8_t sdk_rtc_get_reset_reason(void);
@@ -195,15 +197,8 @@ unsigned int cpu_pin_number(unsigned int pin) {
 	return pin;
 }
 
-const char *cpu_port_name(int pin) {
-    return "0";
-}
-const char *cpu_pin_name(unsigned int pin) {
-    return pin_names[pin];
-}
-
-unsigned int cpu_port_io_pin_mask(unsigned int port) {
-	return 0b11111000000111110;
+gpio_port_mask_t cpu_port_io_pin_mask(unsigned int port) {
+	return GPIO_ALL;
 }
 
 unsigned int cpu_has_gpio(unsigned int port, unsigned int bit) {

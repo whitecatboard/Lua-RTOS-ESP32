@@ -9,7 +9,6 @@
 
 #include "lprefix.h"
 
-
 #include <stdarg.h>
 #include <string.h>
 

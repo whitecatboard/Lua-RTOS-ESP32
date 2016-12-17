@@ -43,6 +43,8 @@
 #include <sys/mount.h>
 
 #include <drivers/gpio.h>
+#include <drivers/adc.h>
+#include <drivers/pwm.h>
 
 #include <pthread/pthread.h>
 

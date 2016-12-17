@@ -232,20 +232,20 @@ void IRAM_ATTR uart_unlock(int unit) {
 void uart_pins(int8_t unit, uint8_t *rx, uint8_t *tx) {
 	switch (unit) {
 		case 0:
-			if (rx) *rx = PIN_GPIO3;
-			if (tx) *tx = PIN_GPIO1;
+			if (rx) *rx = GPIO3;
+			if (tx) *tx = GPIO1;
 
 			break;
 
 		case 1:
-			if (rx) *rx = PIN_GPIO9;
-			if (tx) *tx = PIN_GPIO10;
+			if (rx) *rx = GPIO9;
+			if (tx) *tx = GPIO10;
 
 			break;
 
 		case 2:
-			if (rx) *rx = PIN_GPIO16;
-			if (tx) *tx = PIN_GPIO17;
+			if (rx) *rx = GPIO16;
+			if (tx) *tx = GPIO17;
 
 			break;
 	}
@@ -409,9 +409,9 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 
     uart[unit].flags |= UART_FLAG_INIT;
 
-    syslog(LOG_INFO, "%s: at pins rx=%c%d/tx=%c%d",names[unit],
-            gpio_portname(resources.rx), gpio_pinno(resources.rx),
-            gpio_portname(resources.tx), gpio_pinno(resources.tx));
+    syslog(LOG_INFO, "%s: at pins rx=%s%d/tx=%s%d",names[unit],
+            gpio_portname(resources.rx), gpio_name(resources.rx),
+            gpio_portname(resources.tx), gpio_name(resources.tx));
 
     syslog(LOG_INFO, "%s: speed %d bauds", names[unit],brg);
 
