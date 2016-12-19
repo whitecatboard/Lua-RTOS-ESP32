@@ -36,12 +36,14 @@
 #include <sys/resource.h>
 #include <sys/driver.h>
 
-#define ADC_DRIVER_ID  1
-#define GPIO_DRIVER_ID 2
-#define UART_DRIVER_ID 3
-#define SPI_DRIVER_ID  4
-#define LORA_DRIVER_ID 5
-#define PWM_DRIVER_ID  6
+#define ADC_DRIVER_ID   1
+#define GPIO_DRIVER_ID  2
+#define UART_DRIVER_ID  3
+#define SPI_DRIVER_ID   4
+#define LORA_DRIVER_ID  5
+#define PWM_DRIVER_ID   6
+#define WIFI_DRIVER_ID  7
+#define NET_DRIVER_ID   8
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 

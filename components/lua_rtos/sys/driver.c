@@ -47,6 +47,8 @@
 // Mutex for lock resources
 static struct mtx driver_mtx;
 
+extern const char *net_errors[];
+extern const char *wifi_errors[];
 extern const char *pwm_errors[];
 extern const char *adc_errors[];
 extern const char *gpio_errors[];
@@ -59,14 +61,16 @@ extern driver_unit_lock_t adc_locks[];
 extern driver_unit_lock_t gpio_locks[];
 
 const driver_t drivers[] = {
-	{"pwm", DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID), (void *)pwm_errors, pwm_locks, NULL, NULL},
-	{"adc", DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID), (void *)adc_errors, adc_locks, NULL, NULL},
+	{"net",  DRIVER_EXCEPTION_BASE(NET_DRIVER_ID),  (void *)net_errors, NULL, NULL, NULL},
+	{"wifi", DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID), (void *)wifi_errors, NULL, NULL, NULL},
+	{"pwm",  DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID),  (void *)pwm_errors, pwm_locks, NULL, NULL},
+	{"adc",  DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID),  (void *)adc_errors, adc_locks, NULL, NULL},
 	{"gpio", DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID), (void *)gpio_errors, gpio_locks, _gpio_init, NULL},
 #if USE_UART
 	{"uart", DRIVER_EXCEPTION_BASE(UART_DRIVER_ID), (void *)uart_errors, NULL, NULL, uart_lock_resources},
 #endif
 #if USE_SPI
-	{"spi", DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID), (void *)spi_errors, NULL, NULL, spi_lock_resources},
+	{"spi",  DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID),  ( void *)spi_errors, NULL, NULL, spi_lock_resources},
 #endif
 #if USE_LMIC
 	{"lora", DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID), (void *)lora_lmic_errors, NULL, _lora_init, NULL},
@@ -92,7 +96,7 @@ const driver_t *driver_get(const char *name) {
 
 // Get error message string fom a driver error
 const char *driver_get_err_msg(driver_error_t *error) {
-	return (const char *)(*(unsigned int *)(error->driver->error + sizeof(void *) * (~error->driver->exception_base & error->exception)));
+	return (const char *)(*(unsigned int *)(error->driver->error + sizeof(void *) * (~(error->driver->exception_base) & error->exception)));
 }
 
 // Get driver name from a driver error

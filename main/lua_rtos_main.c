@@ -94,7 +94,6 @@ void app_main() {
     cpu_set_t cpu_set = LUA_TASK_CPU;
     pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
 
-
     // Create thread
     res = pthread_create(&thread, &attr, lua_start, NULL);
     if (res) {

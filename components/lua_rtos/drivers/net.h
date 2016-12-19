@@ -1,12 +1,12 @@
 /*
- * Lua RTOS, Lua RTOS status management
+ * Lua RTOS, network manager
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
- * 
+ *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- * 
- * All rights reserved.  
+ *
+ * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -27,43 +27,32 @@
  * this software.
  */
 
-#ifndef _SYS_STATUS_H_
-#define _SYS_STATUS_H_
+#ifndef NET_H_
+#define NET_H_
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/adds.h"
+#include "lwip/err.h"
+#include "lwip/sockets.h"
+#include "lwip/sys.h"
+#include "lwip/netdb.h"
+#include "lwip/dns.h"
+#include "lwip/ip_addr.h"
 
-#include <stdint.h>
+#include <sys/driver.h>
+#include <sys/status.h>
 
-#define STATUS_SYSCALLS_INITED	       0x0000
-#define STATUS_LUA_RUNNING			   0x0001
-#define STATUS_LUA_INTERPRETER  	   0x0002
-#define STATUS_LUA_ABORT_BOOT_SCRIPTS  0x0003
-#define STATUS_LUA_HISTORY			   0x0004
-#define STATUS_LUA_SHELL			   0x0005
-#define STATUS_TCPIP_INITED            0x0006
-#define STATUS_WIFI_INITED             0x0007
-#define STATUS_WIFI_SETUP              0x0008
-#define STATUS_WIFI_STARTED            0x0009
-#define STATUS_WIFI_CONNECTED          0x000a
+#define NETWORK_AVAILABLE() (status_get(STATUS_WIFI_CONNECTED))
 
-extern uint32_t LuaOS_status[];
+typedef struct {
+    ip4_addr_t ip;
+    ip4_addr_t netmask;
+    ip4_addr_t gw;
+    uint8_t    mac[6];
+} ifconfig_t;
 
-inline void status_set(uint16_t flag) {
-	LuaOS_status[(flag >> 8)] |= (1 << (flag & 0x00ff));
-}
+// NET errors
+#define NET_ERR_NOT_AVAILABLE              (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  1)
 
-inline void status_clear(uint16_t flag) {
-	LuaOS_status[(flag >> 8)] &= ~(1 << (flag & 0x00ff));
-}
+driver_error_t *net_check_connectivity();
+driver_error_t *net_lookup(const char *name, struct sockaddr_in *address);
 
-inline int status_get(uint16_t flag) {
-	int value;
-	
-	value = (LuaOS_status[(flag >> 8)] & (1 << (flag & 0x00ff)));
-	
-	return value;
-}
-
-#endif /* !_SYS_STATUS_H_ */
+#endif
