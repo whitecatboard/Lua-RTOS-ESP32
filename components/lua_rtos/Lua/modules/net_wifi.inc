@@ -169,6 +169,14 @@ static int lwifi_stat(lua_State* L) {
 	}
 
 	if (!table) {
+		    char ipa[16];
+		    char maska[16];
+		    char gwa[16];
+
+		    strcpy(ipa, inet_ntoa(info.ip));
+		    strcpy(maska, inet_ntoa(info.netmask));
+		    strcpy(gwa, inet_ntoa(info.gw));
+
 			printf(
 					"wf: mac address %02x:%02x:%02x:%02x:%02x:%02x\r\n",
 					info.mac[0],info.mac[1],
@@ -176,25 +184,8 @@ static int lwifi_stat(lua_State* L) {
 					info.mac[4],info.mac[5]
 			);
 
-			printf(
-					"   ip address %d.%d.%d.%d netmask %d.%d.%d.%d\r\n",
-					ip4_addr1_16(&info.ip),
-					ip4_addr2_16(&info.ip),
-					ip4_addr3_16(&info.ip),
-					ip4_addr4_16(&info.ip),
-					ip4_addr1_16(&info.netmask),
-					ip4_addr2_16(&info.netmask),
-					ip4_addr3_16(&info.netmask),
-					ip4_addr4_16(&info.netmask)
-			);
-
-			printf(
-					"   gw address %d.%d.%d.%d\r\n",
-					ip4_addr1_16(&info.gw),
-					ip4_addr2_16(&info.gw),
-					ip4_addr3_16(&info.gw),
-					ip4_addr4_16(&info.gw)
-			);
+			printf("   ip address %s netmask %s\r\n", ipa, maska);
+			printf("   gw address %s\r\n", gwa);
 	} else {
 		char tmp[17];
 

@@ -32,6 +32,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/esp-idf/components/freertos/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/esp-idf/components/newlib/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/esp-idf/components/driver/include}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/esp-idf/components/lwip/include/lwip}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.565641668" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>

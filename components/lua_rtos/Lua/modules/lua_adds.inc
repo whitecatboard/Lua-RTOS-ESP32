@@ -187,7 +187,7 @@ static int luaos_pmain (lua_State *L) {
   debug_free_mem_begin(luaL_openlibs);
   luaL_openlibs(L);  /* open standard libraries */
   debug_free_mem_end(luaL_openlibs, NULL);
-    
+
   print_version();
 
   if (!status_get(STATUS_LUA_ABORT_BOOT_SCRIPTS)) {

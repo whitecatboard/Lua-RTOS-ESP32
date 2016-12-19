@@ -30,6 +30,11 @@
 #ifndef NET_H_
 #define NET_H_
 
+#include "lwip/err.h"
+#include "lwip/sockets.h"
+#include "lwip/sys.h"
+#include "lwip/netdb.h"
+#include "lwip/dns.h"
 #include "lwip/ip_addr.h"
 
 #include <sys/driver.h>
@@ -48,5 +53,6 @@ typedef struct {
 #define NET_ERR_NOT_AVAILABLE              (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  1)
 
 driver_error_t *net_check_connectivity();
+driver_error_t *net_lookup(const char *name, struct sockaddr_in *address);
 
 #endif

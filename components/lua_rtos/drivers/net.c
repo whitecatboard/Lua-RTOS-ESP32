@@ -27,6 +27,10 @@
  * this software.
  */
 
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+
 #include <drivers/net.h>
 
 // This macro gets a reference for this driver into drivers array
@@ -44,4 +48,39 @@ driver_error_t *net_check_connectivity() {
 	}
 
 	return NULL;
+}
+
+driver_error_t *net_lookup(const char *name, struct sockaddr_in *address) {
+	driver_error_t *error;
+	int rc = 0;
+
+	if ((error = net_check_connectivity())) return error;
+
+	sa_family_t family = AF_INET;
+	struct addrinfo *result = NULL;
+	struct addrinfo hints = {0, AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, NULL, NULL, NULL};
+
+	if ((rc = getaddrinfo(name, NULL, &hints, &result)) == 0) {
+		struct addrinfo *res = result;
+		while (res) {
+			if (res->ai_family == AF_INET) {
+				result = res;
+				break;
+			}
+			res = res->ai_next;
+		}
+
+		if (result->ai_family == AF_INET) {
+			address->sin_port = htons(0);
+			address->sin_family = family = AF_INET;
+			address->sin_addr = ((struct sockaddr_in*)(result->ai_addr))->sin_addr;
+		}
+
+		freeaddrinfo(result);
+
+		return NULL;
+	} else {
+		printf("net_lookup error %d, errno %d (%s)\r\n",rc, errno, strerror(rc));
+		return NULL;
+	}
 }

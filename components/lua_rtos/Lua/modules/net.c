@@ -29,11 +29,6 @@
 
 #include "luartos.h"
 
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-
 #include "lua.h"
 #include "lauxlib.h"
 #include "net.h"
@@ -44,22 +39,22 @@
 #include "net_wifi.inc"
 #include "net_service_sntp.inc"
 
-#include "lwip/err.h"
-#include "lwip/sockets.h"
-#include "lwip/sys.h"
-#include "lwip/netdb.h"
-#include "lwip/dns.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include <lwip/ping.h>
+
+#include <sys/driver.h>
+#include <drivers/net.h>
 
 static int lnet_lookup(lua_State* L) {
-	const char* name = luaL_checkstring( L, 1 );
-	int port = 0;
+	driver_error_t *error;
 	struct sockaddr_in address;
-	int rc = 0;
 	int raw = 0;
 
-	sa_family_t family = AF_INET;
-	struct addrinfo *result = NULL;
-	struct addrinfo hints = {0, AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, NULL, NULL, NULL};
+	const char* name = luaL_checkstring( L, 1 );
 
 	// Check if user wants result as a raw value, or as an string
 	if (lua_gettop(L) == 2) {
@@ -69,38 +64,37 @@ static int lnet_lookup(lua_State* L) {
 		}
 	}
 
-	if ((rc = getaddrinfo(name, NULL, &hints, &result)) == 0) {
-		struct addrinfo *res = result;
-		while (res) {
-			if (res->ai_family == AF_INET) {
-				result = res;
-				break;
-			}
-			res = res->ai_next;
-		}
-
-		if (result->ai_family == AF_INET) {
-			address.sin_port = htons(port);
-			address.sin_family = family = AF_INET;
-            address.sin_addr = ((struct sockaddr_in*)(result->ai_addr))->sin_addr;
-		} else {
-            rc = -1;
-        }
-
-        freeaddrinfo(result);
+	// Resolve name
+	if ((error = net_lookup(name, &address))) {
+		return luaL_driver_error(L, error);
 	}
 
-	if (rc == 0) {
-		if (raw) {
-			lua_pushinteger( L, address.sin_addr.s_addr);
-		} else {
-		    lua_pushfstring(L, inet_ntoa(address.sin_addr.s_addr));
-		}
+	if (raw) {
+		lua_pushinteger( L, address.sin_addr.s_addr);
 	} else {
-		lua_pushnil(L);
+		lua_pushfstring(L, inet_ntoa(address.sin_addr.s_addr));
 	}
 
 	return 1;
+}
+
+static int lnet_ping(lua_State* L) {
+	const char* name = luaL_checkstring(L, 1);
+	int top = lua_gettop(L);
+	int i, count = 0, interval = 0, size = 0, timeout = 0;
+
+	for(i=1;i<=top;i++) {
+		switch (i) {
+			case 2: count    = luaL_optinteger(L, i, 0); break;
+			case 3: interval = luaL_optinteger(L, i, 0); break;
+			case 4: size     = luaL_optinteger(L, i, 0); break;
+			case 5: timeout  = luaL_optinteger(L, i, 0); break;
+		}
+	}
+
+	ping(name, count, interval, size, timeout);
+
+	return 0;
 }
 
 static int lnet_stat(lua_State* L) {
@@ -151,6 +145,7 @@ static const LUA_REG_TYPE service_map[] = {
 static const LUA_REG_TYPE net_map[] = {
 	{ LSTRKEY( "stat"       ),	 LFUNCVAL ( lnet_stat     ) },
 	{ LSTRKEY( "lookup"     ),	 LFUNCVAL ( lnet_lookup   ) },
+	{ LSTRKEY( "ping"       ),	 LFUNCVAL ( lnet_ping     ) },
 	{ LSTRKEY( "wf"         ),	 LROVAL   ( wifi_map      ) },
 	{ LSTRKEY( "service"    ),	 LROVAL   ( service_map   ) },
 	{ LNILKEY, LNILVAL }

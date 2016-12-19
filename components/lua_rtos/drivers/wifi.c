@@ -48,6 +48,7 @@
 
 #include <drivers/wifi.h>
 
+#define WIFI_CONNECT_RETRIES 1
 #define WIFI_LOG(m) syslog(LOG_DEBUG, m);
 
 // This macro gets a reference for this driver into drivers array
@@ -80,6 +81,9 @@ static EventGroupHandle_t wifiEvent;
 #define evWIFI_SCAN_END 	       	 ( 1 << 0 )
 #define evWIFI_CONNECTED 	       	 ( 1 << 1 )
 #define evWIFI_CANT_CONNECT          ( 1 << 2 )
+
+// Retries for connect
+static uint8_t retries = 0;
 
 static driver_error_t *wifi_check_error(esp_err_t error) {
 	if (error == ESP_ERR_WIFI_OK) return NULL;
@@ -120,9 +124,16 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 	    	WIFI_LOG("SYSTEM_EVENT_STA_DISCONNECTED\n");
 
 			if (!status_get(STATUS_WIFI_CONNECTED)) {
-				status_clear(STATUS_WIFI_CONNECTED);
-	 		    xEventGroupSetBits(wifiEvent, evWIFI_CANT_CONNECT);
-	 		    break;
+				if (retries > WIFI_CONNECT_RETRIES) {
+					status_clear(STATUS_WIFI_CONNECTED);
+					xEventGroupSetBits(wifiEvent, evWIFI_CANT_CONNECT);
+					break;
+				} else {
+					retries++;
+
+					status_clear(STATUS_WIFI_CONNECTED);
+					esp_wifi_connect();
+				}
 			}
 
 			status_clear(STATUS_WIFI_CONNECTED);
@@ -293,6 +304,8 @@ driver_error_t *wifi_start() {
 	}
 
 	if (!status_get(STATUS_WIFI_STARTED)) {
+		retries = 0;
+
 		if ((error = wifi_check_error(esp_wifi_start()))) return error;
 
 	    EventBits_t uxBits = xEventGroupWaitBits(wifiEvent, evWIFI_CONNECTED | evWIFI_CANT_CONNECT, pdTRUE, pdFALSE, portMAX_DELAY);
