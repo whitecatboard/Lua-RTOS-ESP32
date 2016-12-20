@@ -1,18 +1,3 @@
-LDFLAGS = -nostdlib \
-	-L$(IDF_PATH)/lib \
-	-L$(IDF_PATH)/lds \
-	-L ld \
-	-T lua-rtos.ld \
-	$(addprefix -L$(BUILD_DIR_BASE)/,$(COMPONENTS) $(SRCDIRS)) \
-	-u call_user_start_cpu0	\
-	-Wl,--gc-sections	\
-	-Wl,-static	\
-	-Wl,--start-group	\
-	$(COMPONENT_LDFLAGS) \
-	-lgcc \
-	-Wl,--end-group \
-	-Wl,-EL
-	
 CFLAGS += -DLWIP_RAW=1
 CFLAGS += -DDEFAULT_RAW_RECVMBOX_SIZE=5
 
