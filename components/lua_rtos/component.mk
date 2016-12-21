@@ -2,6 +2,8 @@
 # Component Makefile
 #
 
+COMPONENT_ADD_LDFLAGS = -l$(COMPONENT_NAME)
+
 COMPONENT_SRCDIRS := . luartos_build.h freertos vfs editor sys unix syscalls math drivers lmic \
 					   sys/machine pthread Lua/common Lua/modules Lua/platform Lua/src lwip
 

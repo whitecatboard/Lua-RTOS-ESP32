@@ -458,13 +458,12 @@ void pthreadTask(void *taskArgs) {
 
             const char *msg = lua_tostring(thread->L, -1);
             lua_writestringerror("%s\n", msg);
-            lua_pop(thread->L, 1);  
+            lua_pop(thread->L, 1);
         }
-        
+
         free(status);
     }
 #endif
-    
     // Inform from thread end to joined threads
     index = list_first(&thread->join_list);
     while (index >= 0) {
@@ -492,8 +491,8 @@ void pthreadTask(void *taskArgs) {
     _pthread_free(args->id);
 
     // Free args
-    free(taskArgs);
-        
+	free(taskArgs);
+
     // End related task
     vTaskDelete(NULL);
 }

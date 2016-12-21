@@ -3,8 +3,8 @@ menu "Lua RTOS"
 	menu "System Priorities"
 		config LUA_RTOS_SYS_TASK_HIGH_PRIORITY
 	    int "High Priority system task priority"
-	    range 5 20
-	    default 20
+	    range 12 17
+	    default 17
 	    help
 	    	Some drivers in Lua RTOS create tasks that need to be executed in high priority. An example of this
 	    	is the LoRa WAN driver, that need to execute an state-machine that is very sensitive to the elapsed
@@ -188,8 +188,8 @@ menu "Lua RTOS"
 	  menu "Tunning"
 		config LUA_RTOS_LUA_TASK_PRIORITY
 		int "Lua interpreter task priority"
-		range 5 20
-		default 5
+		range 3 11
+		default 3
 		help
 			Task priority assigned to the Lua interpreter. Lua RTOS has a thread-oriented programming model and
 			basically the Lua interpreter is used only for launch new threads and configure the system, so

@@ -69,6 +69,23 @@ void vfs_fat_register();
 
 extern driver_t drivers[];
 
+#ifdef RUN_TESTS
+#include <unity.h>
+
+#include <pthread/pthread.h>
+
+void *_sys_tests(void *arg) {
+	printf("Running tests ...\r\n\r\n");
+
+	unity_run_all_tests();
+
+	printf("\r\nTests done!");
+
+	pthread_exit(NULL);
+}
+
+#endif
+
 void _sys_init() {
 	// TO DO: do this only if RTC is not set
 	struct timeval tv;
@@ -112,6 +129,36 @@ void _sys_init() {
     printf("W H I T E C A T\r\n\r\n");
 
     printf("Lua RTOS %s build %d Copyright (C) 2015 - 2016 whitecatboard.org\r\n", LUA_OS_VER, BUILD_TIME);
+
+	#ifdef RUN_TESTS
+		// Create and run a pthread for tests
+		pthread_attr_t attr;
+		struct sched_param sched;
+		pthread_t thread;
+		int res;
+
+		// Init thread attributes
+		pthread_attr_init(&attr);
+
+		// Set stack size
+	    pthread_attr_setstacksize(&attr, LUA_TASK_STACK);
+
+	    // Set priority
+	    sched.sched_priority = LUA_TASK_PRIORITY;
+	    pthread_attr_setschedparam(&attr, &sched);
+
+	    // Set CPU
+	    cpu_set_t cpu_set = LUA_TASK_CPU;
+	    pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+
+		// Create thread
+		res = pthread_create(&thread, &attr, _sys_tests, NULL);
+		if (res) {
+			panic("Cannot start tests");
+		}
+
+		vTaskDelete(NULL);
+	#endif
 
     openlog(__progname, LOG_CONS | LOG_NDELAY, LOG_LOCAL1);
 

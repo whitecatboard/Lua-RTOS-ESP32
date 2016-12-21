@@ -43,6 +43,9 @@
 
 #include <signal.h>
 
+// Available priorities for threads
+#define PTHREAD_PRIOS 0b111111111000
+
 // Each thread maintains a signal handler copy. Typically there are around 32 defined
 // signals, but not signals are required for applications. For example, in Lua only
 // SIGINT is used.
@@ -76,8 +79,14 @@
 
 // Initializers
 #define PTHREAD_MUTEX_INITIALIZER     0
+
+#if !MTX_USE_EVENTS
 #define PTHREAD_ONCE_INIT             {NULL}
-#define PTHREAD_COND_INITIALIZER      {NULL}
+#define PTHREAD_COND_INITIALIZER      {.mutex.sem = NULL, .referenced = 0}
+#else
+#define PTHREAD_ONCE_INIT             {NULL}
+#define PTHREAD_COND_INITIALIZER      {.mutex.mtxid = -1, .referenced = 0}
+#endif
 
 // Required structures and types
 struct pthread_mutex_attr {
@@ -99,6 +108,7 @@ typedef int pthread_key_t;
 
 struct pthread_cond {
     struct mtx mutex;
+    int referenced;
 };
 
 typedef struct pthread_cond pthread_cond_t;
@@ -167,6 +177,7 @@ int   _pthread_resume(pthread_t id);
 void  _pthread_mutex_free();
 int   _pthread_core(pthread_t id);
 sig_t _pthread_signal(int s, sig_t h);
+int   _pthread_get_prio();
 
 // API functions
 int  pthread_attr_init(pthread_attr_t *attr);
@@ -192,6 +203,7 @@ int  pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr);
 int  pthread_cond_destroy(pthread_cond_t *cond);
 int  pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 int  pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime);
+int pthread_cond_signal(pthread_cond_t *cond);
 
 int  pthread_once(pthread_once_t *once_control, void (*init_routine)(void));
 void pthread_cleanup_push(void (*routine)(void *), void *arg);
@@ -206,5 +218,7 @@ pthread_t pthread_self(void);
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                           void *(*start_routine) (void *), void *args);
         
+#define pthread_exit(v) return v
+
 #endif	/* PTHREAD_H */
 
