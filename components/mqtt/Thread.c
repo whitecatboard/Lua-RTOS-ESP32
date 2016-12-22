@@ -24,9 +24,6 @@
  * Used to create platform independent threading functions
  */
 
-// WHITECAT BEGIN
-#include "whitecat.h"
-// WHITECAT END
 
 #include "Thread.h"
 #if defined(THREAD_UNIT_TESTS)
@@ -38,7 +35,10 @@
 #undef realloc
 #undef free
 
+#include "lwip/sys.h"
+
 #if !defined(WIN32) && !defined(WIN64)
+#include <stdint.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/time.h>
@@ -71,11 +71,6 @@ thread_type Thread_start(thread_fn fn, void* parameter)
 #else
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-        
-        // WHITECAT BEGIN
-        pthread_attr_setstacksize(&attr, mqttStack);
-        // WHITECAT END
-
 	if (pthread_create(&thread, &attr, fn, parameter) != 0)
 		thread = 0;
 	pthread_attr_destroy(&attr);
@@ -183,6 +178,21 @@ thread_id_type Thread_getid()
 	#endif
 }
 
+
+#if defined(USE_NAMED_SEMAPHORES)
+#define MAX_NAMED_SEMAPHORES 10
+
+static int named_semaphore_count = 0;
+
+static struct 
+{
+	sem_type sem;
+	char name[NAME_MAX-4];
+} named_semaphores[MAX_NAMED_SEMAPHORES];
+ 
+#endif
+
+
 /**
  * Create a new semaphore
  * @return the new condition variable
@@ -193,9 +203,9 @@ sem_type Thread_create_sem()
 	int rc = 0;
 
 	FUNC_ENTRY;
-    
-        rc = sys_sem_new(&sem, 0);
-            
+
+        rc = sys_sem_new((sys_sem_t *)&sem, 0);
+
 	FUNC_EXIT_RC(rc);
 	return sem;
 }
@@ -209,12 +219,12 @@ sem_type Thread_create_sem()
  */
 int Thread_wait_sem(sem_type sem, int timeout)
 {
-    u32_t rc = -1;
+    uint32_t rc = -1;
 
     FUNC_ENTRY;
-    
+
     rc = sys_arch_sem_wait(sem, timeout);
-        
+
     if (rc == 0xffffffffUL) {
         rc = -1;
     } else {
@@ -223,6 +233,7 @@ int Thread_wait_sem(sem_type sem, int timeout)
 
     FUNC_EXIT_RC((int)rc);
     return (int)rc;
+
 }
 
 
@@ -235,7 +246,7 @@ int Thread_check_sem(sem_type sem)
 {
     if (xSemaphoreTake(sem,0) == pdTRUE) {
         xSemaphoreGive(sem);
-        
+
         return 1;
     } else {
         return 0;
@@ -258,7 +269,7 @@ int Thread_post_sem(sem_type sem)
     sys_sem_signal(sem);
 
     FUNC_EXIT_RC(rc);
-    
+
     return rc;
 }
 
@@ -274,9 +285,9 @@ int Thread_destroy_sem(sem_type sem)
     FUNC_ENTRY;
 
     sys_sem_free(sem);
-    
+
     FUNC_EXIT_RC(rc);
-    
+
     return rc;
 }
 
@@ -288,16 +299,16 @@ int Thread_destroy_sem(sem_type sem)
  */
 cond_type Thread_create_cond()
 {
-//	cond_type condvar = NULL;
-//	int rc = 0;
-//
-//	FUNC_ENTRY;
-//	condvar = malloc(sizeof(cond_type_struct));
-//	rc = pthread_cond_init(&condvar->cond, NULL);
-//	rc = pthread_mutex_init(&condvar->mutex, NULL);
-//
-//	FUNC_EXIT_RC(rc);
-//	return condvar;
+	cond_type condvar = NULL;
+	int rc = 0;
+
+	FUNC_ENTRY;
+	condvar = malloc(sizeof(cond_type_struct));
+	rc = pthread_cond_init(&condvar->cond, NULL);
+	rc = pthread_mutex_init(&condvar->mutex, NULL);
+
+	FUNC_EXIT_RC(rc);
+	return condvar;
 }
 
 /**
@@ -306,13 +317,13 @@ cond_type Thread_create_cond()
  */
 int Thread_signal_cond(cond_type condvar)
 {
-//	int rc = 0;
-//
-//	pthread_mutex_lock(&condvar->mutex);
-//	rc = pthread_cond_signal(&condvar->cond);
-//	pthread_mutex_unlock(&condvar->mutex);
-//
-//	return rc;
+	int rc = 0;
+
+	pthread_mutex_lock(&condvar->mutex);
+	rc = pthread_cond_signal(&condvar->cond);
+	pthread_mutex_unlock(&condvar->mutex);
+
+	return rc;
 }
 
 /**
@@ -321,22 +332,22 @@ int Thread_signal_cond(cond_type condvar)
  */
 int Thread_wait_cond(cond_type condvar, int timeout)
 {
-//	FUNC_ENTRY;
-//	int rc = 0;
-//	struct timespec cond_timeout;
-//	struct timeval cur_time;
-//
-//	gettimeofday(&cur_time, NULL);
-//
-//	cond_timeout.tv_sec = cur_time.tv_sec + timeout;
-//	cond_timeout.tv_nsec = cur_time.tv_usec * 1000;
-//
-//	pthread_mutex_lock(&condvar->mutex);
-//	rc = pthread_cond_timedwait(&condvar->cond, &condvar->mutex, &cond_timeout);
-//	pthread_mutex_unlock(&condvar->mutex);
-//
-//	FUNC_EXIT_RC(rc);
-//	return rc;
+	FUNC_ENTRY;
+	int rc = 0;
+	struct timespec cond_timeout;
+	struct timeval cur_time;
+
+	gettimeofday(&cur_time, NULL);
+
+	cond_timeout.tv_sec = cur_time.tv_sec + timeout;
+	cond_timeout.tv_nsec = cur_time.tv_usec * 1000;
+
+	pthread_mutex_lock(&condvar->mutex);
+	rc = pthread_cond_timedwait(&condvar->cond, &condvar->mutex, &cond_timeout);
+	pthread_mutex_unlock(&condvar->mutex);
+
+	FUNC_EXIT_RC(rc);
+	return rc;
 }
 
 /**
@@ -345,12 +356,74 @@ int Thread_wait_cond(cond_type condvar, int timeout)
  */
 int Thread_destroy_cond(cond_type condvar)
 {
-//	int rc = 0;
-//
-//	rc = pthread_mutex_destroy(&condvar->mutex);
-//	rc = pthread_cond_destroy(&condvar->cond);
-//	free(condvar);
-//
-//	return rc;
+	int rc = 0;
+
+	rc = pthread_mutex_destroy(&condvar->mutex);
+	rc = pthread_cond_destroy(&condvar->cond);
+	free(condvar);
+
+	return rc;
 }
+#endif
+
+
+#if defined(THREAD_UNIT_TESTS)
+
+#include <stdio.h>
+
+thread_return_type secondary(void* n)
+{
+	int rc = 0;
+
+	/*
+	cond_type cond = n;
+
+	printf("Secondary thread about to wait\n");
+	rc = Thread_wait_cond(cond);
+	printf("Secondary thread returned from wait %d\n", rc);*/
+
+	sem_type sem = n;
+
+	printf("Secondary thread about to wait\n");
+	rc = Thread_wait_sem(sem);
+	printf("Secondary thread returned from wait %d\n", rc);
+
+	printf("Secondary thread about to wait\n");
+	rc = Thread_wait_sem(sem);
+	printf("Secondary thread returned from wait %d\n", rc);
+	printf("Secondary check sem %d\n", Thread_check_sem(sem));
+
+	return 0;
+}
+
+
+int main(int argc, char *argv[])
+{
+	int rc = 0;
+
+	sem_type sem = Thread_create_sem();
+
+	printf("check sem %d\n", Thread_check_sem(sem));
+
+	printf("post secondary\n");
+	rc = Thread_post_sem(sem);
+	printf("posted secondary %d\n", rc);
+
+	printf("check sem %d\n", Thread_check_sem(sem));
+
+	printf("Starting secondary thread\n");
+	Thread_start(secondary, (void*)sem);
+
+	sleep(3);
+	printf("check sem %d\n", Thread_check_sem(sem));
+
+	printf("post secondary\n");
+	rc = Thread_post_sem(sem);
+	printf("posted secondary %d\n", rc);
+
+	sleep(3);
+
+	printf("Main thread ending\n");
+}
+
 #endif

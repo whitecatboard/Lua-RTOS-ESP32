@@ -18,7 +18,7 @@
 #if !defined(SOCKET_H)
 #define SOCKET_H
 
-#include <sys/types.h>
+//#include <sys/types.h>
 
 #if defined(WIN32) || defined(WIN64)
 #include <winsock2.h>
@@ -37,21 +37,24 @@
 #define socklen_t int
 #else
 #define INVALID_SOCKET SOCKET_ERROR
-#include <sys/socket.h>
+#include "lwip/sockets.h"
+#include "lwip/netdb.h"
+//#include <sys/socket.h>
 //#include <sys/param.h>
+#include <limits.h>
 #include <sys/time.h>
 //#include <sys/select.h>
 //#include <netinet/in.h>
 //#include <netinet/tcp.h>
 //#include <arpa/inet.h>
+//#include <netdb.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
-
-#include "lwip/sockets.h"
-#include "lwip/netdb.h"
+//#include <sys/uio.h>
+#define ULONG size_t
 #endif
 
 /** socket operation completed successfully */
@@ -115,7 +118,7 @@ void Socket_outInitialize(void);
 void Socket_outTerminate(void);
 int Socket_getReadySocket(int more_work, struct timeval *tp);
 int Socket_getch(int socket, char* c);
-char *Socket_getdata(int socket, int bytes, int* actual_len);
+char *Socket_getdata(int socket, size_t bytes, size_t* actual_len);
 int Socket_putdatas(int socket, char* buf0, size_t buf0len, int count, char** buffers, size_t* buflens, int* frees);
 void Socket_close(int socket);
 int Socket_new(char* addr, int port, int* socket);

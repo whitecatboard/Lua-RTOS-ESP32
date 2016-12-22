@@ -38,12 +38,8 @@
 #include <time.h>
 #include <string.h>
 
-#include <sys/mount.h>
-
 #if !defined(WIN32) && !defined(WIN64)
-//WHITECAT BEGIN
-//#include <syslog.h>
-//WHITECAT END
+#include <sys/syslog.h>
 #include <sys/stat.h>
 #define GETTIMEOFDAY 1
 #else
@@ -71,7 +67,7 @@
 trace_settings_type trace_settings =
 {
 	TRACE_MINIMUM,
-	2,
+	400,
 	-1
 };
 
@@ -128,31 +124,75 @@ static mutex_type log_mutex = &log_mutex_store;
 int Log_initialize(Log_nameValue* info)
 {
 	int rc = -1;
+	char* envval = NULL;
 
-        pthread_mutexattr_t attr;
+	if ((trace_queue = malloc(sizeof(traceEntry) * trace_settings.max_trace_entries)) == NULL)
+		return rc;
+	trace_queue_size = trace_settings.max_trace_entries;
 
-        pthread_mutexattr_init(&attr);
-        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
-
-        if ((rc = pthread_mutex_init(log_mutex, &attr)) != 0)
-                printf("MQTTClient: error %d initializing log_mutex\n", rc);
-
-        //trace_destination = stdout;
-        
-        if (mount_is_mounted("sd")) {
-            trace_destination = fopen("/sd/log/mqtt.log","w");
-            if (!trace_destination) {
-                return -1;
-            }
-        } else {
-            return -1;
-        }
-
-        if ((trace_queue = malloc(sizeof(traceEntry) * trace_settings.max_trace_entries)) == NULL)
-                return rc;
-        trace_queue_size = trace_settings.max_trace_entries;
-
-        return rc;
+	if ((envval = getenv("MQTT_C_CLIENT_TRACE")) != NULL && strlen(envval) > 0)
+	{
+		if (strcmp(envval, "ON") == 0 || (trace_destination = fopen(envval, "w")) == NULL)
+			trace_destination = stdout;
+		else
+		{
+			trace_destination_name = malloc(strlen(envval) + 1);
+			strcpy(trace_destination_name, envval);
+			trace_destination_backup_name = malloc(strlen(envval) + 3);
+			sprintf(trace_destination_backup_name, "%s.0", trace_destination_name);
+		}
+	}
+	if ((envval = getenv("MQTT_C_CLIENT_TRACE_MAX_LINES")) != NULL && strlen(envval) > 0)
+	{
+		max_lines_per_file = atoi(envval);
+		if (max_lines_per_file <= 0)
+			max_lines_per_file = 1000;
+	}
+	if ((envval = getenv("MQTT_C_CLIENT_TRACE_LEVEL")) != NULL && strlen(envval) > 0)
+	{
+		if (strcmp(envval, "MAXIMUM") == 0 || strcmp(envval, "TRACE_MAXIMUM") == 0)
+			trace_settings.trace_level = TRACE_MAXIMUM;
+		else if (strcmp(envval, "MEDIUM") == 0 || strcmp(envval, "TRACE_MEDIUM") == 0)
+			trace_settings.trace_level = TRACE_MEDIUM;
+		else if (strcmp(envval, "MINIMUM") == 0 || strcmp(envval, "TRACE_MEDIUM") == 0)
+			trace_settings.trace_level = TRACE_MINIMUM;
+		else if (strcmp(envval, "PROTOCOL") == 0  || strcmp(envval, "TRACE_PROTOCOL") == 0)
+			trace_output_level = TRACE_PROTOCOL;
+		else if (strcmp(envval, "ERROR") == 0  || strcmp(envval, "TRACE_ERROR") == 0)
+			trace_output_level = LOG_ERROR;
+	}
+	Log_output(TRACE_MINIMUM, "=========================================================");
+	Log_output(TRACE_MINIMUM, "                   Trace Output");
+	if (info)
+	{
+		while (info->name)
+		{
+			snprintf(msg_buf, sizeof(msg_buf), "%s: %s", info->name, info->value);
+			Log_output(TRACE_MINIMUM, msg_buf);
+			info++;
+		}
+	}
+#if !defined(WIN32) && !defined(WIN64)
+	struct stat buf;
+	if (stat("/proc/version", &buf) != -1)
+	{
+		FILE* vfile;
+		
+		if ((vfile = fopen("/proc/version", "r")) != NULL)
+		{
+			int len;
+			
+			strcpy(msg_buf, "/proc/version: ");
+			len = strlen(msg_buf);
+			if (fgets(&msg_buf[len], sizeof(msg_buf) - len, vfile))
+				Log_output(TRACE_MINIMUM, msg_buf);
+			fclose(vfile);
+		}
+	}
+#endif
+	Log_output(TRACE_MINIMUM, "=========================================================");
+		
+	return rc;
 }
 
 

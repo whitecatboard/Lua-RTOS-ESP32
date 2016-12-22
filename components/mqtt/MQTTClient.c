@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2014 IBM Corp.
+ * Copyright (c) 2009, 2015 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -26,6 +26,9 @@
  *    Rong Xiang, Ian Craggs - C++ compatibility
  *    Ian Craggs - fix for bug 443724 - stack corruption
  *    Ian Craggs - fix for bug 447672 - simultaneous access to socket structure
+ *    Ian Craggs - fix for bug 459791 - deadlock in WaitForCompletion for bad client
+ *    Ian Craggs - fix for bug 474905 - insufficient synchronization for subscribe, unsubscribe, connect
+ *    Ian Craggs - make it clear that yield and receive are not intended for multi-threaded mode (bug 474748)
  *******************************************************************************/
 
 /**
@@ -45,8 +48,6 @@
 #include "MQTTPersistence.h"
 #endif
 
-#include <string.h>
-
 #include "utf-8.h"
 #include "MQTTProtocol.h"
 #include "MQTTProtocolOut.h"
@@ -55,17 +56,27 @@
 #include "StackTrace.h"
 #include "Heap.h"
 
+#include <string.h>
+#include <sys/time.h>
+
 #if defined(OPENSSL)
 #include <openssl/ssl.h>
 #endif
+
+#define	timersub(a, b, result)						      \
+  do {									      \
+    (result)->tv_sec = (a)->tv_sec - (b)->tv_sec;			      \
+    (result)->tv_usec = (a)->tv_usec - (b)->tv_usec;			      \
+    if ((result)->tv_usec < 0) {					      \
+      --(result)->tv_sec;						      \
+      (result)->tv_usec += 1000000;					      \
+    }									      \
+  } while (0)
 
 #define URI_TCP "tcp://"
 
 #define BUILD_TIMESTAMP "##MQTTCLIENT_BUILD_TAG##"
 #define CLIENT_VERSION  "##MQTTCLIENT_VERSION_TAG##"
-
-char* client_timestamp_eye = "MQTTClientV3_Timestamp " BUILD_TIMESTAMP;
-char* client_version_eye = "MQTTClientV3_Version " CLIENT_VERSION;
 
 static ClientStates ClientState =
 {
@@ -80,6 +91,9 @@ MQTTProtocol state;
 #if defined(WIN32) || defined(WIN64)
 static mutex_type mqttclient_mutex = NULL;
 static mutex_type socket_mutex = NULL;
+static mutex_type subscribe_mutex = NULL;
+static mutex_type unsubscribe_mutex = NULL;
+static mutex_type connect_mutex = NULL;
 extern mutex_type stack_mutex;
 extern mutex_type heap_mutex;
 extern mutex_type log_mutex;
@@ -94,6 +108,9 @@ BOOL APIENTRY DllMain(HANDLE hModule,
 			if (mqttclient_mutex == NULL)
 			{
 				mqttclient_mutex = CreateMutex(NULL, 0, NULL);
+				subscribe_mutex = CreateMutex(NULL, 0, NULL);
+				unsubscribe_mutex = CreateMutex(NULL, 0, NULL);
+				connect_mutex = CreateMutex(NULL, 0, NULL);
 				stack_mutex = CreateMutex(NULL, 0, NULL);
 				heap_mutex = CreateMutex(NULL, 0, NULL);
 				log_mutex = CreateMutex(NULL, 0, NULL);
@@ -111,8 +128,18 @@ BOOL APIENTRY DllMain(HANDLE hModule,
 #else
 static pthread_mutex_t mqttclient_mutex_store = PTHREAD_MUTEX_INITIALIZER;
 static mutex_type mqttclient_mutex = &mqttclient_mutex_store;
+
 static pthread_mutex_t socket_mutex_store = PTHREAD_MUTEX_INITIALIZER;
 static mutex_type socket_mutex = &socket_mutex_store;
+
+static pthread_mutex_t subscribe_mutex_store = PTHREAD_MUTEX_INITIALIZER;
+static mutex_type subscribe_mutex = &subscribe_mutex_store;
+
+static pthread_mutex_t unsubscribe_mutex_store = PTHREAD_MUTEX_INITIALIZER;
+static mutex_type unsubscribe_mutex = &unsubscribe_mutex_store;
+
+static pthread_mutex_t connect_mutex_store = PTHREAD_MUTEX_INITIALIZER;
+static mutex_type connect_mutex = &connect_mutex_store;
 
 void MQTTClient_init()
 {
@@ -125,6 +152,12 @@ void MQTTClient_init()
 		printf("MQTTClient: error %d initializing client_mutex\n", rc);
 	if ((rc = pthread_mutex_init(socket_mutex, &attr)) != 0)
 		printf("MQTTClient: error %d initializing socket_mutex\n", rc);
+	if ((rc = pthread_mutex_init(subscribe_mutex, &attr)) != 0)
+		printf("MQTTClient: error %d initializing subscribe_mutex\n", rc);
+	if ((rc = pthread_mutex_init(unsubscribe_mutex, &attr)) != 0)
+		printf("MQTTClient: error %d initializing unsubscribe_mutex\n", rc);
+	if ((rc = pthread_mutex_init(connect_mutex, &attr)) != 0)
+		printf("MQTTClient: error %d initializing connect_mutex\n", rc);
 }
 
 #define WINAPI
@@ -369,6 +402,7 @@ void MQTTClient_destroy(MQTTClient* handle)
 
 	FUNC_ENTRY;
 	Thread_lock_mutex(mqttclient_mutex);
+
 	if (m == NULL)
 		goto exit;
 
@@ -464,11 +498,10 @@ int clientSockCompare(void* a, void* b)
  */
 thread_return_type WINAPI connectionLost_call(void* context)
 {
-    MQTTClients* m = (MQTTClients*)context;
+	MQTTClients* m = (MQTTClients*)context;
 
-    (*(m->cl))(m->context, NULL);
-
-    return 0;
+	(*(m->cl))(m->context, NULL);
+	return 0;
 }
 
 
@@ -491,7 +524,6 @@ thread_return_type WINAPI MQTTClient_run(void* n)
 
 		Thread_unlock_mutex(mqttclient_mutex);
 		pack = MQTTClient_cycle(&sock, timeout, &rc);
-                MQTTClient_yield();
 		Thread_lock_mutex(mqttclient_mutex);
 		if (tostop)
 			break;
@@ -512,11 +544,7 @@ thread_return_type WINAPI MQTTClient_run(void* n)
 		if (rc == SOCKET_ERROR)
 		{
 			if (m->c->connected)
-			{
-				Thread_unlock_mutex(mqttclient_mutex);
 				MQTTClient_disconnect_internal(m, 0);
-				Thread_lock_mutex(mqttclient_mutex);
-			}
 			else 
 			{
 				if (m->c->connect_state == 2 && !Thread_check_sem(m->connect_sem))
@@ -602,15 +630,11 @@ thread_return_type WINAPI MQTTClient_run(void* n)
 			}
 #endif
 		}
-                
-                
 	}
-        
 	run_id = 0;
 	running = tostop = 0;
 	Thread_unlock_mutex(mqttclient_mutex);
 	FUNC_EXIT;
-    
 	return 0;
 }
 
@@ -810,7 +834,7 @@ int MQTTClient_connectURIVersion(MQTTClient handle, MQTTClient_connectOptions* o
 	if (m->c->connect_state == 1) /* TCP connect started - wait for completion */
 	{
 		Thread_unlock_mutex(mqttclient_mutex);
-		MQTTClient_waitfor(handle, CONNECT, &rc, millisecsTimeout - MQTTClient_elapsed(start));                
+		MQTTClient_waitfor(handle, CONNECT, &rc, millisecsTimeout - MQTTClient_elapsed(start));
 		Thread_lock_mutex(mqttclient_mutex);
 		if (rc != 0)
 		{
@@ -940,11 +964,7 @@ exit:
 		}
 	}
 	else
-	{
-		Thread_unlock_mutex(mqttclient_mutex);
-		MQTTClient_disconnect1(handle, 0, 0, (MQTTVersion == 3)); /* not "internal" because we don't want to call connection lost */
-		Thread_lock_mutex(mqttclient_mutex);
-	}
+		MQTTClient_disconnect1(handle, 0, 0, (MQTTVersion == 3)); /* don't want to call connection lost */
 	FUNC_EXIT_RC(rc);
   return rc;
 }
@@ -1046,6 +1066,7 @@ int MQTTClient_connect(MQTTClient handle, MQTTClient_connectOptions* options)
 	int rc = SOCKET_ERROR;
 
 	FUNC_ENTRY;
+	Thread_lock_mutex(connect_mutex);
 	Thread_lock_mutex(mqttclient_mutex);
 
 	if (options == NULL)
@@ -1120,12 +1141,16 @@ exit:
 		m->c->will = NULL;
 	}
 	Thread_unlock_mutex(mqttclient_mutex);
+	Thread_unlock_mutex(connect_mutex);
 	FUNC_EXIT_RC(rc);
 	return rc;
 }
 
 
-int MQTTClient_disconnect1(MQTTClient handle, int timeout, int internal, int stop)
+/**
+ * mqttclient_mutex must be locked when you call this function, if multi threaded
+ */
+int MQTTClient_disconnect1(MQTTClient handle, int timeout, int call_connection_lost, int stop)
 {
 	MQTTClients* m = handle;
 	START_TIME_TYPE start;
@@ -1133,8 +1158,6 @@ int MQTTClient_disconnect1(MQTTClient handle, int timeout, int internal, int sto
 	int was_connected = 0;
 
 	FUNC_ENTRY;
-	Thread_lock_mutex(mqttclient_mutex);
-
 	if (m == NULL || m->c == NULL)
 	{
 		rc = MQTTCLIENT_FAILURE;
@@ -1173,23 +1196,28 @@ int MQTTClient_disconnect1(MQTTClient handle, int timeout, int internal, int sto
 exit:
 	if (stop)
 		MQTTClient_stop();
-	if (internal && m->cl && was_connected)
+	if (call_connection_lost && m->cl && was_connected)
 	{
 		Log(TRACE_MIN, -1, "Calling connectionLost for client %s", m->c->clientID);
 		Thread_start(connectionLost_call, m);
 	}
-	Thread_unlock_mutex(mqttclient_mutex);
 	FUNC_EXIT_RC(rc);
 	return rc;
 }
 
 
+/**
+ * mqttclient_mutex must be locked when you call this function, if multi threaded
+ */
 int MQTTClient_disconnect_internal(MQTTClient handle, int timeout)
 {
 	return MQTTClient_disconnect1(handle, timeout, 1, 1);
 }
 
 
+/**
+ * mqttclient_mutex must be locked when you call this function, if multi threaded
+ */
 void MQTTProtocol_closeSession(Clients* c, int sendwill)
 {
 	MQTTClient_disconnect_internal((MQTTClient)c->context, 0);
@@ -1198,7 +1226,12 @@ void MQTTProtocol_closeSession(Clients* c, int sendwill)
 
 int MQTTClient_disconnect(MQTTClient handle, int timeout)
 {
-	return MQTTClient_disconnect1(handle, timeout, 0, 1);
+	int rc = 0;
+
+	Thread_lock_mutex(mqttclient_mutex);
+	rc = MQTTClient_disconnect1(handle, timeout, 0, 1);
+	Thread_unlock_mutex(mqttclient_mutex);
+	return rc;
 }
 
 
@@ -1220,13 +1253,14 @@ int MQTTClient_isConnected(MQTTClient handle)
 int MQTTClient_subscribeMany(MQTTClient handle, int count, char* const* topic, int* qos)
 {
 	MQTTClients* m = handle;
-	List* topics = ListInitialize();
-	List* qoss = ListInitialize();
+	List* topics = NULL;
+	List* qoss = NULL;
 	int i = 0;
 	int rc = MQTTCLIENT_FAILURE;
 	int msgid = 0;
 
 	FUNC_ENTRY;
+	Thread_lock_mutex(subscribe_mutex);
 	Thread_lock_mutex(mqttclient_mutex);
 
 	if (m == NULL || m->c == NULL)
@@ -1259,6 +1293,8 @@ int MQTTClient_subscribeMany(MQTTClient handle, int count, char* const* topic, i
 		goto exit;
 	}
 
+	topics = ListInitialize();
+	qoss = ListInitialize();
 	for (i = 0; i < count; i++)
 	{
 		ListAppend(topics, topic[i], strlen(topic[i]));
@@ -1294,16 +1330,13 @@ int MQTTClient_subscribeMany(MQTTClient handle, int count, char* const* topic, i
 	}
 
 	if (rc == SOCKET_ERROR)
-	{
-		Thread_unlock_mutex(mqttclient_mutex);
 		MQTTClient_disconnect_internal(handle, 0);
-		Thread_lock_mutex(mqttclient_mutex);
-	}
 	else if (rc == TCPSOCKET_COMPLETE)
 		rc = MQTTCLIENT_SUCCESS;
 
 exit:
 	Thread_unlock_mutex(mqttclient_mutex);
+	Thread_unlock_mutex(subscribe_mutex);
 	FUNC_EXIT_RC(rc);
 	return rc;
 }
@@ -1326,12 +1359,13 @@ int MQTTClient_subscribe(MQTTClient handle, const char* topic, int qos)
 int MQTTClient_unsubscribeMany(MQTTClient handle, int count, char* const* topic)
 {
 	MQTTClients* m = handle;
-	List* topics = ListInitialize();
+	List* topics = NULL;
 	int i = 0;
 	int rc = SOCKET_ERROR;
 	int msgid = 0;
 
 	FUNC_ENTRY;
+	Thread_lock_mutex(unsubscribe_mutex);
 	Thread_lock_mutex(mqttclient_mutex);
 
 	if (m == NULL || m->c == NULL)
@@ -1358,6 +1392,7 @@ int MQTTClient_unsubscribeMany(MQTTClient handle, int count, char* const* topic)
 		goto exit;
 	}
 
+	topics = ListInitialize();
 	for (i = 0; i < count; i++)
 		ListAppend(topics, topic[i], strlen(topic[i]));
 	rc = MQTTProtocol_unsubscribe(m->c, topics, msgid);
@@ -1380,14 +1415,11 @@ int MQTTClient_unsubscribeMany(MQTTClient handle, int count, char* const* topic)
 	}
 
 	if (rc == SOCKET_ERROR)
-	{
-		Thread_unlock_mutex(mqttclient_mutex);
 		MQTTClient_disconnect_internal(handle, 0);
-		Thread_lock_mutex(mqttclient_mutex);
-	}
 
 exit:
 	Thread_unlock_mutex(mqttclient_mutex);
+	Thread_unlock_mutex(unsubscribe_mutex);
 	FUNC_EXIT_RC(rc);
 	return rc;
 }
@@ -1484,9 +1516,7 @@ int MQTTClient_publish(MQTTClient handle, const char* topicName, int payloadlen,
 
 	if (rc == SOCKET_ERROR)
 	{
-		Thread_unlock_mutex(mqttclient_mutex);
 		MQTTClient_disconnect_internal(handle, 0);
-		Thread_lock_mutex(mqttclient_mutex);
 		/* Return success for qos > 0 as the send will be retried automatically */
 		rc = (qos > 0) ? MQTTCLIENT_SUCCESS : MQTTCLIENT_FAILURE;
 	}
@@ -1642,7 +1672,7 @@ MQTTPacket* MQTTClient_waitfor(MQTTClient handle, int packet_type, int* rc, long
 		if (packet_type == CONNECT)
 		{
 			if ((*rc = Thread_wait_sem(m->connect_sem, timeout)) == 0)
-				*rc = m->rc;                        
+				*rc = m->rc;
 		}
 		else if (packet_type == CONNACK)
 			*rc = Thread_wait_sem(m->connack_sem, timeout);
@@ -1728,7 +1758,8 @@ int MQTTClient_receive(MQTTClient handle, char** topicName, int* topicLen, MQTTC
 	MQTTClients* m = handle;
 
 	FUNC_ENTRY;
-	if (m == NULL || m->c == NULL)
+	if (m == NULL || m->c == NULL
+			|| running) /* receive is not meant to be called in a multi-thread environment */
 	{
 		rc = MQTTCLIENT_FAILURE;
 		goto exit;
@@ -1782,7 +1813,7 @@ void MQTTClient_yield(void)
 	int rc = 0;
 
 	FUNC_ENTRY;
-	if (running)
+	if (running) /* yield is not meant to be called in a multi-thread environment */
 	{
 		MQTTClient_sleep(timeout);
 		goto exit;
@@ -1793,12 +1824,14 @@ void MQTTClient_yield(void)
 	{
 		int sock = -1;
 		MQTTClient_cycle(&sock, (timeout > elapsed) ? timeout - elapsed : 0L, &rc);
+		Thread_lock_mutex(mqttclient_mutex);
 		if (rc == SOCKET_ERROR && ListFindItem(handles, &sock, clientSockCompare))
 		{
 			MQTTClients* m = (MQTTClient)(handles->current->content);
 			if (m->c->connect_state != -2)
 				MQTTClient_disconnect_internal(m, 0);
 		}
+		Thread_unlock_mutex(mqttclient_mutex);
 		elapsed = MQTTClient_elapsed(start);
 	}
 	while (elapsed < timeout);

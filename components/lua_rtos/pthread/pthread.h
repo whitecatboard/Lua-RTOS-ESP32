@@ -43,9 +43,6 @@
 
 #include <signal.h>
 
-// Available priorities for threads
-#define PTHREAD_PRIOS 0b111111111000
-
 // Each thread maintains a signal handler copy. Typically there are around 32 defined
 // signals, but not signals are required for applications. For example, in Lua only
 // SIGINT is used.
@@ -66,6 +63,8 @@
 
 // Minimal stack size per thread
 #define PTHREAD_STACK_MIN LUA_THREAD_STACK
+
+#define PTHREAD_CREATE_DETACHED 0
 
 // Initial states for a thread
 #define PTHREAD_INITIAL_STATE_RUN     1

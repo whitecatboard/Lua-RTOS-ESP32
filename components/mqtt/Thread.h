@@ -16,37 +16,35 @@
  *    Ian Craggs - fix for bug #420851
  *******************************************************************************/
 
-#ifndef THREAD_H
+#if !defined(THREAD_H)
 #define THREAD_H
 
+#if defined(WIN32) || defined(WIN64)
+	#include <windows.h>
+	#define thread_type HANDLE
+	#define thread_id_type DWORD
+	#define thread_return_type DWORD
+	#define thread_fn LPTHREAD_START_ROUTINE
+	#define mutex_type HANDLE
+	#define cond_type HANDLE
+	#define sem_type HANDLE
+#else
+	#include <pthread/pthread.h>
+	#include <sys/semaphore.h>
+	#define thread_type pthread_t
+	#define thread_id_type pthread_t
+	#define thread_return_type void*
+	typedef thread_return_type (*thread_fn)(void*);
+	#define mutex_type pthread_mutex_t*
+	typedef struct { pthread_cond_t cond; pthread_mutex_t mutex; } cond_type_struct;
+	typedef cond_type_struct *cond_type;
+	typedef sem_t *sem_type;
 
-#include "arch/sys_arch.h"
-#include "arch/cc.h"
-
-#include <pthread/pthread.h>
-
-#undef AF_INET6
-
-#define thread_type pthread_t
-#define thread_return_type void*
-
-typedef unsigned long thread_id_type;
-
-typedef thread_return_type (*thread_fn)(void *pvParameters);
-
-#define mutex_type pthread_mutex_t*
-
-typedef struct { pthread_cond_t cond; pthread_mutex_t mutex; } cond_type_struct;
-//typedef cond_type_struct *cond_type;
-
-#define cond_type void*
-
-typedef sys_sem_t *sem_type;
-
-cond_type Thread_create_cond();
-int Thread_signal_cond(cond_type);
-int Thread_wait_cond(cond_type condvar, int timeout);
-int Thread_destroy_cond(cond_type);
+	cond_type Thread_create_cond();
+	int Thread_signal_cond(cond_type);
+	int Thread_wait_cond(cond_type condvar, int timeout);
+	int Thread_destroy_cond(cond_type);
+#endif
 
 thread_type Thread_start(thread_fn, void*);
 
@@ -62,5 +60,6 @@ int Thread_wait_sem(sem_type sem, int timeout);
 int Thread_check_sem(sem_type sem);
 int Thread_post_sem(sem_type sem);
 int Thread_destroy_sem(sem_type sem);
+
 
 #endif

@@ -28,6 +28,7 @@
 
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "MQTTProtocolClient.h"
 #if !defined(NO_PERSISTENCE)
@@ -210,16 +211,21 @@ Publications* MQTTProtocol_storePublication(Publish* publish, int* len)
 	FUNC_ENTRY;
 	p->refcount = 1;
 
-	*len = strlen(publish->topic)+1;
-    //WHITECAT BEGIN
-//	if (Heap_findItem(publish->topic))
-//		p->topic = publish->topic;
-//	else
-//	{
+	*len = (int)strlen(publish->topic)+1;
+
+	/*
+	if (Heap_findItem(publish->topic))
+		p->topic = publish->topic;
+	else
+	{
 		p->topic = malloc(*len);
 		strcpy(p->topic, publish->topic);
-//	}
-    //WHITECAT END
+	}
+	*/
+
+	p->topic = malloc(*len);
+	strcpy(p->topic, publish->topic);
+
 	*len += sizeof(Publications);
 
 	p->topiclen = publish->topiclen;
@@ -515,7 +521,7 @@ void MQTTProtocol_keepalive(time_t now)
 	ListNextElement(bstate->clients, &current);
 	while (current)
 	{
-		Clients* client = (Clients*)(current->content);
+		Clients* client =	(Clients*)(current->content);
 		ListNextElement(bstate->clients, &current); 
 		if (client->connected && client->keepAliveInterval > 0 &&
 			(difftime(now, client->net.lastSent) >= client->keepAliveInterval ||
