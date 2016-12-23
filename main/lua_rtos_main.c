@@ -66,7 +66,7 @@ void app_main() {
 	
 	_sys_init();
 
-	#if LED_ACT
+	#if USE_LED_ACT
 	// Init leds
 	gpio_pin_output(LED_ACT);
 	gpio_pin_clr(LED_ACT);

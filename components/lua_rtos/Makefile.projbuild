@@ -30,15 +30,12 @@ CFLAGS += -DMTX_USE_EVENTS=0                    # Use event groups in mtx implem
 
 
 CFLAGS += -DUSE_RTC=0						    # Enable RTC
-CFLAGS += -DLED_ACT=4					 	    # GPIO for activity led (0 if not led)
-CFLAGS += -DLED_DBG=0 					 	    # GPIO for debug led (0 if not led)
 CFLAGS += -DPATH_MAX=64
 
 
 #
 # SDCARD configuration
 # 
-CFLAGS += -DSD_LED=LED_ACT			   # LED
 CFLAGS += -DSD_KHZ=15000	           # Speed
 
 #

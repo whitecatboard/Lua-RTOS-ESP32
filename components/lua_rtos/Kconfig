@@ -10,6 +10,18 @@ menu "Lua RTOS"
 	    	is the LoRa WAN driver, that need to execute an state-machine that is very sensitive to the elapsed
 	    	time.
     endmenu
+    
+  	config LUA_RTOS_USE_LED_ACT
+  	bool "Use activity led"
+  	default n
+    help 
+		Select this to enable the Lua RTOS activity led.
+
+	config LUA_RTOS_LED_ACT
+	depends on LUA_RTOS_USE_LED_ACT
+    int "Activity led GPIO number"
+    range 0 39
+    default 4
   endmenu
   menu "Console"
   	config LUA_RTOS_USE_CONSOLE
@@ -102,7 +114,7 @@ menu "Lua RTOS"
 	
 		config LUA_RTOS_SD_CS
 		depends on LUA_RTOS_USE_FAT
-	    int "SDCARD SPI CS pin"
+	    int "SDCARD SPI CS GPIO number"
 	    range 0 39
 	    default 15
   endmenu
@@ -155,31 +167,31 @@ menu "Lua RTOS"
 
 	config LUA_RTOS_LMIC_CS
 	depends on LUA_RTOS_USE_LMIC
-    int "PHY SPI CS pin"
+    int "PHY SPI CS GPIO number"
     range 0 39
     default 5
 
 	config LUA_RTOS_LMIC_RST
 	depends on LUA_RTOS_USE_LMIC
-    int "PHY RST pin"
+    int "PHY RST GPIO number"
     range 0 39
     default 27
 
 	config LUA_RTOS_LMIC_DIO0
 	depends on LUA_RTOS_USE_LMIC
-    int "PHY DIO0 pin"
+    int "PHY DIO0 GPIO number"
     range 0 39
     default 26
 
 	config LUA_RTOS_LMIC_DIO1
 	depends on LUA_RTOS_USE_LMIC
-    int "PHY DIO1 pin"
+    int "PHY DIO1 GPIO number"
     range 0 39
     default 25
 
 	config LUA_RTOS_LMIC_DIO2
 	depends on LUA_RTOS_USE_LMIC
-    int "PHY DIO2 pin"
+    int "PHY DIO2 GPIO number"
     range 0 39
     default 33
   endmenu

@@ -44,7 +44,9 @@
 #define SD_KHZ          16666           /* speed 16.66 MHz */
 #endif
 
+#if USE_LED_ACT
 extern unsigned int activity;
+#endif
 
 /*
  * The structure of a disk drive.
@@ -201,7 +203,7 @@ static int card_cmd(unsigned int unit, unsigned int cmd, unsigned int addr)
  */
 static inline void
 sd_led(int val) {
-#ifdef SD_LED
+#if USE_LED_ACT
     gpio_pin_output(SD_LED);
     if (val) {
         activity = 1;

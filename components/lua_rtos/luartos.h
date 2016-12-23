@@ -55,6 +55,16 @@
 #define TASK_STACK		   configMINIMAL_STACK_SIZE
 #define TASK_PRIORITY      (ESP_TASK_PRIO_MIN + 3)
 
+#if CONFIG_LUA_RTOS_USE_LED_ACT
+#define LED_ACT CONFIG_LUA_RTOS_LED_ACT
+#define USE_LED_ACT 1
+#else
+#define LED_ACT 0
+#define USE_LED_ACT 0
+#endif
+
+#define SD_LED LED_ACT
+
 /*
  * SPI
  */

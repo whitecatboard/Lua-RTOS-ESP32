@@ -42,7 +42,7 @@ static volatile uint64_t tdelta = 0;    // Delta tincs from last 1000 ms
 static volatile uint32_t tseconds = 0;  // Seconds counter (from boot)
 static volatile unsigned long long tuseconds = 0; // Seconds counter (from boot)
 
-#if LED_ACT
+#if USE_LED_ACT
 unsigned int activity = 0;
 #endif
 
@@ -71,7 +71,7 @@ void IRAM_ATTR newTick(void) {
 
         tseconds++;
 
-		#if LED_ACT
+		#if USE_LED_ACT
         	if (activity <= 0) {
             	activity = 0;
             	gpio_pin_inv(LED_ACT);

@@ -380,23 +380,5 @@ void hal_failed (char *file, int line) {
 	for(;;);
 }
 
-#if 0
-void lmic_hal_time_test() {
-	uint32_t  target = 0;
-
-	gpio_pin_output(LED_ACT);
-	gpio_pin_clr(LED_ACT);
-
-	while (1) {
-		target = hal_ticks() + us2osticks(100);
-		while (hal_ticks() < target);
-		gpio_pin_clr(LED_ACT);
-		target = hal_ticks() + us2osticks(100);
-		while (hal_ticks() < target);
-		gpio_pin_set(LED_ACT);
-	}
-}
-#endif
-
 #endif
 #endif
