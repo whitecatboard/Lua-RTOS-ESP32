@@ -27,6 +27,9 @@
  * this software.
  */
 
+#include "luartos.h"
+
+#if USE_ADC
 #include "freertos/FreeRTOS.h"
 
 #include "soc/soc.h"
@@ -136,3 +139,5 @@ driver_error_t *adc_read(int8_t channel, int *val) {
 
 	return NULL;
 }
+
+#endif

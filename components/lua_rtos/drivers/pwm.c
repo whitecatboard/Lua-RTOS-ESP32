@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_PWM
+#if USE_PWM
 
 #include "driver/periph_ctrl.h"
 #include "driver/ledc.h"

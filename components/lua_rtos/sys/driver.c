@@ -61,10 +61,18 @@ extern driver_unit_lock_t adc_locks[];
 extern driver_unit_lock_t gpio_locks[];
 
 const driver_t drivers[] = {
+#if USE_NET
 	{"net",  DRIVER_EXCEPTION_BASE(NET_DRIVER_ID),  (void *)net_errors, NULL, NULL, NULL},
+#endif
+#if USE_WIFI
 	{"wifi", DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID), (void *)wifi_errors, NULL, NULL, NULL},
+#endif
+#if USE_PWM
 	{"pwm",  DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID),  (void *)pwm_errors, pwm_locks, NULL, NULL},
+#endif
+#if USE_ADC
 	{"adc",  DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID),  (void *)adc_errors, adc_locks, NULL, NULL},
+#endif
 	{"gpio", DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID), (void *)gpio_errors, gpio_locks, _gpio_init, NULL},
 #if USE_UART
 	{"uart", DRIVER_EXCEPTION_BASE(UART_DRIVER_ID), (void *)uart_errors, NULL, NULL, uart_lock_resources},

@@ -37,6 +37,11 @@
 
 #define LUA_USE_WIFI LUA_USE_NET
 
+#define USE_WIFI LUA_USE_WIFI
+#define USE_NET LUA_USE_NET
+#define USE_PWM LUA_USE_PWM
+#define USE_ADC LUA_USE_ADC
+
 /*
  * Lua RTOS
  */
