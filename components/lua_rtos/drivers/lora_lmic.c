@@ -38,6 +38,7 @@
 #include "freertos/event_groups.h"
 
 #include "esp_attr.h"
+#include "esp_deep_sleep.h"
 
 #include <unistd.h>
 #include <string.h>
@@ -48,6 +49,7 @@
 #include <sys/mutex.h>
 #include <sys/resource.h>
 #include <sys/driver.h>
+#include <sys/status.h>
 
 #include <drivers/lora.h>
  
@@ -694,6 +696,9 @@ void os_getDevKey (u1_t* buf) {
 void _lora_init() {
     // Create lora mutex
     mtx_init(&lora_mtx, NULL, NULL, 0);
+
+    // LMIC need to mantain some information in RTC
+    status_set(STATUS_NEED_RTC_SLOW_MEM);
 }
 
 #endif

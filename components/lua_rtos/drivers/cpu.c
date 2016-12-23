@@ -38,6 +38,7 @@
 
 #include <sys/syslog.h>
 #include <sys/delay.h>
+#include <sys/status.h>
 
 #include <drivers/gpio.h>
 #include <drivers/uart.h>
@@ -320,6 +321,10 @@ void cpu_sleep(int seconds) {
 	uart_stop(-1);
 
 	// Put ESP32 in deep sleep mode
+	if (status_get(STATUS_NEED_RTC_SLOW_MEM)) {
+	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+	}
+
     esp_deep_sleep(seconds * 1000000LL);
 }
 
