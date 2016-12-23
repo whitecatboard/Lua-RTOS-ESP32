@@ -35,6 +35,8 @@
 #include "lauxlib.h"
 #include "auxmods.h"
 #include "modules.h"
+#include "error.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -51,8 +53,22 @@ void MQTTClient_init();
 static int lmqtt_index(lua_State *L);
 static int lmqtt_client_index(lua_State *L);
 
-// Module function map
-#define MIN_OPT_LEVEL 2
+// Module errors
+#define LUA_MQTT_ERR_CANT_CREATE_CLIENT 0
+#define LUA_MQTT_ERR_CANT_SET_CALLBACKS 1
+#define LUA_MQTT_ERR_CANT_CONNECT       2
+#define LUA_MQTT_ERR_CANT_SUBSCRIBE     3
+#define LUA_MQTT_ERR_CANT_PUBLISH       4
+#define LUA_MQTT_ERR_CANT_DISCONNECT    5
+
+static const char *mqtt_errors[] = {
+	"can't create client",
+	"can't set callbacks",
+	"can't connect",
+	"can't subscribe to topic",
+	"can't publish to topic",
+	"can't disconnect"
+};
 
 static int client_inited = 0;
 
@@ -168,12 +184,12 @@ static int lmqtt_client( lua_State* L ){
     
     rc = MQTTClient_create(&mqtt->client, url, clientId, MQTTCLIENT_PERSISTENCE_NONE, NULL);
     if (rc < 0){
-        return luaL_error( L, "can't create client" );
+    	return luaL_exception(L, MQTT, LUA_MQTT_ERR_CANT_CREATE_CLIENT, mqtt_errors);
     }
 
     rc = MQTTClient_setCallbacks(mqtt->client, mqtt, NULL, messageArrived, NULL);
     if (rc < 0){
-        return luaL_error( L, "can't set callbacks" );
+    	return luaL_exception(L, MQTT, LUA_MQTT_ERR_CANT_SET_CALLBACKS, mqtt_errors);
     }
 
    luaL_getmetatable(L, "mqtt");
@@ -217,7 +233,7 @@ retry:
     		goto retry;
     	}
 
-        return luaL_error( L, "can't connect" );
+    	return luaL_exception(L, MQTT, LUA_MQTT_ERR_CANT_CONNECT, mqtt_errors);
     }    
     
     return 0;
@@ -251,7 +267,7 @@ static int lmqtt_subscribe( lua_State* L ) {
     if (rc == 0) {
         return 0;
     } else {
-        return luaL_error( L, "can't subscribe to topic" );
+    	return luaL_exception(L, MQTT, LUA_MQTT_ERR_CANT_SUBSCRIBE, mqtt_errors);
     }
 }
 
@@ -277,7 +293,7 @@ static int lmqtt_publish( lua_State* L ) {
     if (rc == 0) {
         return 0;
     } else {
-        return luaL_error( L, "can't publish to topic" );
+    	return luaL_exception(L, MQTT, LUA_MQTT_ERR_CANT_PUBLISH, mqtt_errors);
     }
 }
 
@@ -293,7 +309,7 @@ static int lmqtt_disconnect( lua_State* L ) {
     if (rc == 0) {
         return 0;
     } else {
-        return luaL_error( L, "can't disconnect" );
+    	return luaL_exception(L, MQTT, LUA_MQTT_ERR_CANT_DISCONNECT, mqtt_errors);
     }
 }
 
@@ -337,10 +353,23 @@ static const LUA_REG_TYPE lmqtt_map[] = {
   { LNILKEY, LNILVAL }
 };
 
+static const LUA_REG_TYPE lmqtt_error_map[] = {
+	{ LSTRKEY( "CannotCreateClient" ),	 LINTVAL( LUA_EXCEPTION_CODE(MQTT, LUA_MQTT_ERR_CANT_CREATE_CLIENT )) },
+	{ LSTRKEY( "CannotSetCallbacks" ),	 LINTVAL( LUA_EXCEPTION_CODE(MQTT, LUA_MQTT_ERR_CANT_SET_CALLBACKS )) },
+	{ LSTRKEY( "CannotConnect"      ),	 LINTVAL( LUA_EXCEPTION_CODE(MQTT, LUA_MQTT_ERR_CANT_CONNECT       )) },
+	{ LSTRKEY( "CannotSubscribe"    ),	 LINTVAL( LUA_EXCEPTION_CODE(MQTT, LUA_MQTT_ERR_CANT_SUBSCRIBE     )) },
+	{ LSTRKEY( "CannotPublish"      ),	 LINTVAL( LUA_EXCEPTION_CODE(MQTT, LUA_MQTT_ERR_CANT_PUBLISH       )) },
+	{ LSTRKEY( "CannotDisconnect"   ),	 LINTVAL( LUA_EXCEPTION_CODE(MQTT, LUA_MQTT_ERR_CANT_DISCONNECT    )) },
+};
+
 static const LUA_REG_TYPE lmqtt_constants_map[] = {
 	{ LSTRKEY("QOS0"), LINTVAL(0) },
 	{ LSTRKEY("QOS1"), LINTVAL(1) },
 	{ LSTRKEY("QOS2"), LINTVAL(2) },
+
+	// Error definitions
+	{LSTRKEY("error"),  LROVAL( lmqtt_error_map )},
+
 	{ LNILKEY, LNILVAL }
 };
 
@@ -381,7 +410,11 @@ static int lmqtt_index(lua_State *L) {
 	const char *key = luaL_checkstring(L, 2);
 	const TValue *val = luaR_findentry(lmqtt_constants_map, key, 0, NULL);
 	if (val != luaO_nilobject) {
-		lua_pushinteger(L, val->value_.i);
+		if (ttnov(val) == LUA_TROTABLE) {
+			lua_pushrotable( L, val->value_.p);
+		} else {
+			lua_pushinteger(L, val->value_.i);
+		}
 		return 1;
 	}
 

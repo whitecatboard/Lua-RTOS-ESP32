@@ -34,6 +34,18 @@
 
 #include <sys/driver.h>
 
+#define LUA_MQTT_ID 30
+
+#define LUA_EXCEPTION_BASE(n) (n << 24)
+#define LUA_EXCEPTION_CODE(module, n) (LUA_EXCEPTION_BASE(LUA_##module##_ID) | n)
+
 int luaL_driver_error(lua_State* L, driver_error_t *error);
+
+#define luaL_exception(l, module, err, msgs) \
+	luaL_error(l, \
+		"%d:%s", \
+		LUA_EXCEPTION_BASE(LUA_##module##_ID), \
+		msgs[err] \
+	)
 
 #endif
