@@ -100,6 +100,7 @@ char* Messages_get(int index, int log_level)
 		msg = (index >= 0 && index < ARRAY_SIZE(protocol_message_list)) ? protocol_message_list[index] : NULL;
 	else
 		msg = (index >= 0 && index < ARRAY_SIZE(trace_message_list)) ? trace_message_list[index] : NULL;
+
 	return msg;
 }
 

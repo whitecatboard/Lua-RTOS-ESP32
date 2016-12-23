@@ -1,3 +1,32 @@
+/*
+ * Lua RTOS, Lua MQTT module
+ *
+ * Copyright (C) 2015 - 2016
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ *
+ * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ *
+ * All rights reserved.
+ *
+ * Permission to use, copy, modify, and distribute this software
+ * and its documentation for any purpose and without fee is hereby
+ * granted, provided that the above copyright notice appear in all
+ * copies and that both that the copyright notice and this
+ * permission notice and warranty disclaimer appear in supporting
+ * documentation, and that the name of the author not be used in
+ * advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.
+ *
+ * The author disclaim all warranties with regard to this
+ * software, including all implied warranties of merchantability
+ * and fitness.  In no event shall the author be liable for any
+ * special, indirect or consequential damages or any damages
+ * whatsoever resulting from loss of use, data or profits, whether
+ * in an action of contract, negligence or other tortious action,
+ * arising out of or in connection with the use or performance of
+ * this software.
+ */
+
 #include "luartos.h"
 
 #if LUA_USE_MQTT
@@ -5,15 +34,22 @@
 #include "lualib.h"
 #include "lauxlib.h"
 #include "auxmods.h"
-
-#include "mqtt/MQTTClient.h"
-#include "mqtt/MQTTClientPersistence.h"
-
-#include "FreeRTOS.h"
-#include "task.h"
+#include "modules.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include <errno.h>
+#include <string.h>
+
+#include <mqtt/MQTTClient.h>
+#include <mqtt/MQTTClientPersistence.h>
+
 #include <sys/mutex.h>
+#include <sys/delay.h>
+
+void MQTTClient_init();
+static int lmqtt_index(lua_State *L);
+static int lmqtt_client_index(lua_State *L);
 
 // Module function map
 #define MIN_OPT_LEVEL 2
@@ -34,6 +70,8 @@ typedef struct {
     MQTTClient client;
     
     mqtt_subs_callback *callbacks;
+
+    int secure;
 } mqtt_userdata;
 
 static int add_subs_callback(mqtt_userdata *mqtt, const char *topic, int call) {
@@ -65,20 +103,7 @@ static int add_subs_callback(mqtt_userdata *mqtt, const char *topic, int call) {
     return 0;
 }
 
-static int remove_subs_callback(mqtt_userdata *mqtt, const char *topic) {
-    
-}
-
-
-void connlost(void *context, char *cause) {
-    mqtt_userdata *mqtt = (mqtt_userdata *)context;
-
-    while (MQTTClient_connect(mqtt->client, &mqtt->conn_opts) < 0) {
-        delay(1000);
-    }
-}
-
-int messageArrived(void *context, char * topicName, int topicLen, MQTTClient_message* m) {
+static int messageArrived(void *context, char * topicName, int topicLen, MQTTClient_message* m) {
     mqtt_userdata *mqtt = (mqtt_userdata *)context;
     mqtt_subs_callback *callback;
     int call = 0;
@@ -108,17 +133,12 @@ int messageArrived(void *context, char * topicName, int topicLen, MQTTClient_mes
     return 1;
 }
 
-static int mqtt_connect( lua_State* L );
-static int mqtt_publish( lua_State* L );
-static int mqtt_subscribe( lua_State* L );
-
 // Lua: result = setup( id, clock )
-static int mqtt_client( lua_State* L ){
+static int lmqtt_client( lua_State* L ){
     int rc = 0;
     const char *host;
     const char *clientId;
     int port;
-    int id;
     int secure;
     size_t lenClientId, lenHost;
     mqtt_userdata *mqtt;
@@ -135,6 +155,7 @@ static int mqtt_client( lua_State* L ){
     mqtt = (mqtt_userdata *)lua_newuserdata(L, sizeof(mqtt_userdata));
     mqtt->L = L;
     mqtt->callbacks = NULL;
+    mqtt->secure = secure;
     mtx_init(&mqtt->callback_mtx, NULL, NULL, 0);
     
     // Calculate uri
@@ -152,7 +173,7 @@ static int mqtt_client( lua_State* L ){
 
     rc = MQTTClient_setCallbacks(mqtt->client, mqtt, NULL, messageArrived, NULL);
     if (rc < 0){
-        return luaL_error( L, "can't setting callbacks" );
+        return luaL_error( L, "can't set callbacks" );
     }
 
    luaL_getmetatable(L, "mqtt");
@@ -161,8 +182,9 @@ static int mqtt_client( lua_State* L ){
     return 1;
 }
 
-static int mqtt_connect( lua_State* L ) {
+static int lmqtt_connect( lua_State* L ) {
     int rc;
+    int retries = 0;
     const char *user;
     const char *password;
     mqtt_userdata *mqtt = NULL;
@@ -180,22 +202,28 @@ static int mqtt_connect( lua_State* L ) {
     conn_opts.keepAliveInterval = 60;
     conn_opts.reliable = 0;
     conn_opts.cleansession = 0;
-    conn_opts.username = "";
-    conn_opts.password = "";
+    conn_opts.username = user;
+    conn_opts.password = password;
     ssl_opts.enableServerCertAuth = 0;
     conn_opts.ssl = &ssl_opts;
 
     bcopy(&conn_opts, &mqtt->conn_opts, sizeof(MQTTClient_connectOptions));
-    
+
+retry:
     rc = MQTTClient_connect(mqtt->client, &mqtt->conn_opts);
     if (rc < 0){
+    	if (retries < 2) {
+    		retries++;
+    		goto retry;
+    	}
+
         return luaL_error( L, "can't connect" );
     }    
     
     return 0;
 }
 
-static int mqtt_subscribe( lua_State* L ) {
+static int lmqtt_subscribe( lua_State* L ) {
     int rc;
     int qos;
     const char *topic;
@@ -227,7 +255,7 @@ static int mqtt_subscribe( lua_State* L ) {
     }
 }
 
-static int mqtt_publish( lua_State* L ) {
+static int lmqtt_publish( lua_State* L ) {
     int rc;
     int qos;
     size_t payload_len;
@@ -253,7 +281,7 @@ static int mqtt_publish( lua_State* L ) {
     }
 }
 
-static int mqtt_disconnect( lua_State* L ) {
+static int lmqtt_disconnect( lua_State* L ) {
     int rc;
 
     mqtt_userdata *mqtt = NULL;
@@ -269,11 +297,11 @@ static int mqtt_disconnect( lua_State* L ) {
     }
 }
 
-static int f_gc (lua_State *L) {
+// Destructor
+static int lmqtt_client_gc (lua_State *L) {
     mqtt_userdata *mqtt = NULL;
     mqtt_subs_callback *callback;
     mqtt_subs_callback *nextcallback;
-    int call = 0;
     
     mqtt = (mqtt_userdata *)luaL_testudata(L, 1, "mqtt");    
     if (mqtt) {        
@@ -301,46 +329,89 @@ static int f_gc (lua_State *L) {
     return 0;
 }
 
-const luaL_Reg mqtt_client_map[] = 
-{
-  {"__gc", f_gc},
-  { "client",  mqtt_client },
-  { "connect",  mqtt_connect },
-  { "disconnect",  mqtt_disconnect },
-  { "subscribe",  mqtt_subscribe },
-  { "publish",  mqtt_publish },
-  { NULL, NULL}
+/*
+ * mqtt function and constant maps
+ */
+static const LUA_REG_TYPE lmqtt_map[] = {
+  { LSTRKEY( "client"      ),	 LFUNCVAL( lmqtt_client     ) },
+  { LNILKEY, LNILVAL }
 };
 
-const luaL_Reg mqtt_map[] = {
-  { NULL, NULL }
+static const LUA_REG_TYPE lmqtt_constants_map[] = {
+	{ LSTRKEY("QOS0"), LINTVAL(0) },
+	{ LSTRKEY("QOS1"), LINTVAL(1) },
+	{ LSTRKEY("QOS2"), LINTVAL(2) },
+	{ LNILKEY, LNILVAL }
 };
+
+/*
+ * mqtt client maps
+ */
+static const LUA_REG_TYPE lmqtt_client_map[] = {
+  { LSTRKEY( "connect"     ),	 LFUNCVAL( lmqtt_connect    ) },
+  { LSTRKEY( "disconnect"  ),	 LFUNCVAL( lmqtt_disconnect ) },
+  { LSTRKEY( "subscribe"   ),	 LFUNCVAL( lmqtt_subscribe  ) },
+  { LSTRKEY( "publish"     ),	 LFUNCVAL( lmqtt_publish    ) },
+  { LNILKEY, LNILVAL }
+};
+
+/*
+ * Metatables for mqtt and client instances
+ */
+static const luaL_Reg lmqtt_func[] = {
+    { "__index"    , 	lmqtt_index },
+    { NULL, NULL }
+};
+
+static const luaL_Reg lmqtt_client_func[] = {
+	{ "__gc"   , 	lmqtt_client_gc },
+    { "__index", 	lmqtt_client_index },
+    { NULL, NULL }
+};
+
+/*
+ * Do a search into rotable for mqtt
+ */
+static int lmqtt_index(lua_State *L) {
+	int res;
+
+	if ((res = luaR_findfunction(L, lmqtt_map)) != 0)
+		return res;
+
+	const char *key = luaL_checkstring(L, 2);
+	const TValue *val = luaR_findentry(lmqtt_constants_map, key, 0, NULL);
+	if (val != luaO_nilobject) {
+		lua_pushinteger(L, val->value_.i);
+		return 1;
+	}
+
+	return (int)luaO_nilobject;
+}
+
+/*
+ * Do a seach into rotable for client instances
+ */
+static int lmqtt_client_index(lua_State *L) {
+  int fres;
+  if ((fres = luaR_findfunction(L, lmqtt_client_map)) != 0)
+    return fres;
+
+  return (int)luaO_nilobject;
+}
 
 LUALIB_API int luaopen_mqtt( lua_State *L ) {
-    int n;
-    luaL_register( L, AUXLIB_MQTT, mqtt_map );
-    
-    // Set it as its own metatable
-    lua_pushvalue( L, -1 );
-    lua_setmetatable( L, -2 );
+    luaL_newlib(L, lmqtt_func);
+    lua_pushvalue(L, -1);
+    lua_setmetatable(L, -2);
 
-    // create metatable
     luaL_newmetatable(L, "mqtt");
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -2, "__index");
 
-    // Module constants  
-    MOD_REG_INTEGER( L, "QOS0", 0 );
-    MOD_REG_INTEGER( L, "QOS1", 1 );
-    MOD_REG_INTEGER( L, "QOS2", 2 );
+    luaL_setfuncs(L, lmqtt_client_func, 0);
+    lua_pop(L, 1);
 
-    
-    // metatable.__index = metatable
-    lua_pushliteral(L, "__index");
-    lua_pushvalue(L,-2);
-    lua_rawset(L,-3);
-    
-    // Setup the methods inside metatable
-    luaL_register( L, NULL, mqtt_client_map );
-
-    return 1;  
+    return 1;
 }
+
 #endif

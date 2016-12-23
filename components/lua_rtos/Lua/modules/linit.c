@@ -69,6 +69,7 @@ LIB_INIT(SPI, spi, luaopen_spi);
 LIB_INIT(ADC, adc, luaopen_adc);
 LIB_INIT(PWM, pwm, luaopen_pwm);
 LIB_INIT(NET, net, luaopen_net);
+LIB_INIT(MQTT, mqtt, luaopen_mqtt);
 
 LUALIB_API void luaL_openlibs (lua_State *L) {
   const luaL_Reg *lib = lua_libs1;

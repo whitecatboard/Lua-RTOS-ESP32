@@ -55,8 +55,9 @@
 #define LOG_INFO    6   /* informational */
 #define LOG_DEBUG   7   /* debug-level messages */
 
-#define LOG_PRIMASK 0x07    /* mask to extract priority part (internal) */
+#define LOG_PRIMASK 0x0f    /* mask to extract priority part (internal) */
                             /* extract priority */
+
 #define LOG_PRI(p)              ((p) & LOG_PRIMASK)
 #define LOG_MAKEPRI(fac, pri)   (((fac) << 3) | (pri))
 

@@ -71,7 +71,7 @@ static int 	 connected;		/* have done connect */
 static int	 LogStat = 0;		/* status bits, set by openlog() */
 static const char *LogTag = NULL;	/* string to tag the entry with */
 static int	LogFacility = LOG_USER;	/* default facility code */
-static int	LogMask = 0xff;		/* mask of priorities to be logged */
+static int	LogMask = 0b11111111;		/* mask of priorities to be logged */
 extern char	*__progname;		/* Program name, from crt0. */
 
 void vsyslog(int pri, register const char *fmt, va_list app);
@@ -90,6 +90,8 @@ syslog(pri, fmt, va_alist)
 	va_dcl
 #endif
 {
+	if (!fmt) return;
+
 	va_list ap;
 
 #if __STDC__
@@ -110,6 +112,8 @@ vsyslog(pri, fmt, ap)
 	register int cnt;
 	register char *p;
 	char *tbuf;
+
+	if (!fmt) return;
 
 	time_t now;
 	int fd;

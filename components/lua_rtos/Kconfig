@@ -292,14 +292,19 @@ menu "Lua RTOS"
 		  	default y
 		endmenu
 		menu "Communication Modules"
+		  	config LUA_RTOS_LUA_USE_NET
+		  	bool "Include net module in build"
+		  	default y
+
 		  	config LUA_RTOS_LUA_USE_LORA
 		  	depends on LUA_RTOS_USE_LMIC
 		  	bool "Include lora module in build"
 		  	default n
 
-		  	config LUA_RTOS_LUA_USE_WIFI
-		  	bool "Include wifi module in build"
-		  	default y
+		  	config LUA_RTOS_LUA_USE_MQTT
+		  	depends on LUA_RTOS_LUA_USE_NET
+		  	bool "Include MQTT module in build"
+		  	default n
 		endmenu
 	  endmenu
   endmenu

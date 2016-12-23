@@ -210,7 +210,6 @@ static int lwifi_stat(lua_State* L) {
 	return table;
 }
 
-
 static const LUA_REG_TYPE wifi_auth_map[] = {
 	{ LSTRKEY( "OPEN"         ), LINTVAL( WIFI_AUTH_OPEN ) },
 	{ LSTRKEY( "WEP"          ), LINTVAL( WIFI_AUTH_WEP ) },

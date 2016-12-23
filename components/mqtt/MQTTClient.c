@@ -298,7 +298,7 @@ int MQTTClient_create(MQTTClient* handle, const char* serverURI, const char* cli
 		#if defined(HEAP_H)
 			Heap_initialize();
 		#endif
-		Log_initialize((Log_nameValue*)MQTTClient_getVersionInfo());
+		//Log_initialize((Log_nameValue*)MQTTClient_getVersionInfo());
 		bstate->clients = ListInitialize();
 		Socket_outInitialize();
 		Socket_setWriteCompleteCallback(MQTTClient_writeComplete);

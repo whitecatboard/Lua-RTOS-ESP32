@@ -15,70 +15,38 @@
  *    Ian Craggs - updates for the async client
  *******************************************************************************/
 
+/*
+ * This file has adapted to Lua RTOS syslog
+ *
+ */
+
 #if !defined(LOG_H)
 #define LOG_H
 
-/*BE
-map LOG_LEVELS
-{
-	"TRACE_MAXIMUM" 1
-	"TRACE_MEDIUM" 2
-	"TRACE_MINIMUM" 3
-	"TRACE_PROTOCOL" 4
+#include <sys/syslog.h>
 
-	"ERROR" 5
-	"SEVERE" 6
-	"FATAL" 7
-}
-BE*/
+#define TRACE_MAX      8
+#define TRACE_MINIMUM  8
+#define TRACE_PROTOCOL 10
+#define LOG_PROTOCOL   10
 
-enum LOG_LEVELS {
-	TRACE_MAXIMUM = 1,
-	TRACE_MEDIUM,
-	TRACE_MINIMUM,
-	TRACE_PROTOCOL,
-	LOG_ERROR,
-	LOG_SEVERE,
-	LOG_FATAL,
-} Log_levels;
+#define TRACE_MIN      LOG_INFO
+#define LOG_ERROR	   LOG_ERR
+#define LOG_SEVERE     LOG_CRIT
+#define LOG_FATAL	   LOG_CRIT
 
+#define Log_initialize()
+#define Log_terminate()
 
-/*BE
-def trace_settings_type
-{
-   n32 map LOG_LEVELS "trace_level"
-   n32 dec "max_trace_entries"
-   n32 dec "trace_output_level"
-}
-BE*/
-typedef struct
-{
-	int trace_level;			/**< trace level */
-	int max_trace_entries;		/**< max no of entries in the trace buffer */
-	int trace_output_level;		/**< trace level to output to destination */
-} trace_settings_type;
-
-extern trace_settings_type trace_settings;
-
-#define LOG_PROTOCOL TRACE_PROTOCOL
-#define TRACE_MAX TRACE_MAXIMUM
-#define TRACE_MIN TRACE_MINIMUM
-#define TRACE_MED TRACE_MEDIUM
-
-typedef struct
-{
-	const char* name;
-	const char* value;
-} Log_nameValue;
-
-int Log_initialize(Log_nameValue*);
-void Log_terminate();
-
-void Log(int, int, char *, ...);
-void Log_stackTrace(int, int, int, int, const char*, int, int*);
-
-typedef void Log_traceCallback(enum LOG_LEVELS level, char* message);
-void Log_setTraceCallback(Log_traceCallback* callback);
-void Log_setTraceLevel(enum LOG_LEVELS level);
+#define Log(level, msgno, fmt, ...) \
+	do { \
+		if (msgno < 0) { \
+			syslog(level, fmt, ##__VA_ARGS__); \
+		} else { \
+			if ((level == TRACE_PROTOCOL) || (level == LOG_PROTOCOL)) { \
+				syslog(LOG_DEBUG, (const char *)Messages_get(msgno, level), ##__VA_ARGS__); \
+			} \
+		} \
+	} while (0)
 
 #endif

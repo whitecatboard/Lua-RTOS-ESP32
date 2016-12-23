@@ -414,7 +414,7 @@ static const LUA_REG_TYPE syslib[] =
   { LSTRKEY( "LOG_WARNING" ),LINTVAL( LOG_WARNING ) },
   { LSTRKEY( "LOG_NOTICE" ), LINTVAL( LOG_NOTICE ) },
   { LSTRKEY( "LOG_DEBUG" ),  LINTVAL( LOG_DEBUG ) },
-  { LSTRKEY( "LOG_ALL" ),    LINTVAL( 0xff ) },
+  { LSTRKEY( "LOG_ALL" ),    LINTVAL( 0b11111111 ) },
   { LNILKEY, LNILVAL }
 };
 
