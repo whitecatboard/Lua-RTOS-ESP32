@@ -38,6 +38,7 @@
 
 #include "net_wifi.inc"
 #include "net_service_sntp.inc"
+#include "net_service_http.inc"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -140,6 +141,7 @@ static int lnet_stat(lua_State* L) {
 
 static const LUA_REG_TYPE service_map[] = {
 	{ LSTRKEY( "sntp"    ),	 LROVAL   ( sntp_map  ) },
+	{ LSTRKEY( "http"    ),	 LROVAL   ( http_map  ) },
 };
 
 static const LUA_REG_TYPE net_map[] = {
