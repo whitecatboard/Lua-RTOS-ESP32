@@ -234,7 +234,6 @@ static ssize_t IRAM_ATTR vfs_fat_read(int fd, void * dst, size_t size) {
 static int IRAM_ATTR vfs_fat_fstat(int fd, struct stat * st) {
 	struct file *fp;
     int res;
-
     // Get file from file descriptor
 	if (!(fp = get_file(fd))) {
 		errno = EBADF;
@@ -252,7 +251,17 @@ static int IRAM_ATTR vfs_fat_fstat(int fd, struct stat * st) {
 
     res = f_stat(fp->f_path, &fno);
     if (res == FR_OK) {
+    	struct tm tm_info;
+
     	st->st_size = fno.fsize;
+
+    	tm_info.tm_year = (fno.fdate >> 9) + 80;	// year from 1980 -> year from 1900
+    	tm_info.tm_mon = (fno.fdate >> 5 & 15) - 1;	// month 1~12 -> month 0~11
+    	tm_info.tm_mday = fno.fdate & 31;
+    	tm_info.tm_hour = fno.ftime >> 11;
+    	tm_info.tm_min = fno.ftime >> 5 & 63;
+    	tm_info.tm_sec = (fno.ftime & 31) << 1;		// second * 2
+    	st->st_atime = mktime(&tm_info);
     } else {
         st->st_size = 0;
 

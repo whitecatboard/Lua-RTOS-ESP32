@@ -229,7 +229,7 @@ static int os_ls (lua_State *L) {
     char tpath[PATH_MAX];
     char tbuffer[250];
     struct stat sb;
-    //struct tm *tm_info;
+    struct tm *tm_info;
     
     // If path is not present get the current directory as path
     if (!path) {
@@ -253,18 +253,14 @@ static int os_ls (lua_State *L) {
         strcpy(tpath, path);
         strcat(tpath,"/");
         strcat(tpath,ent->d_name);
+        tbuffer[0] = '\0';
 
         if (strcmp((const char *)mount_device(tpath),"fat") == 0) {
-                
-            stat(tpath, &sb);
-        // TO DO
-     //       tm_info = localtime(&sb.st_atim.ts_sec);
-       //     strftime(tbuffer, 250, "%c", tm_info);
-        } else {
-            tbuffer[0] = '\0';
+        	if (stat(tpath, &sb) == 0) {
+				tm_info = localtime(&sb.st_atime);
+				strftime(tbuffer, 250, "%c", tm_info);
+            }
         }
-        
-        tbuffer[0] = '\0';
 
         type = 'd';
         if (ent->d_type == DT_REG) {

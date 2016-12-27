@@ -11,6 +11,7 @@ CFLAGS += -Wno-error=implicit-function-declaration -Wno-error=pointer-sign
 LDFLAGS += -Wl,--wrap=_open_r
 LDFLAGS += -Wl,--wrap=_unlink_r
 LDFLAGS += -Wl,--wrap=_rename_r
+LDFLAGS += -Wl,--wrap=_stat_r
 
 CFLAGS += -DPLATFORM_ESP32
 CFLAGS += -DKERNEL
