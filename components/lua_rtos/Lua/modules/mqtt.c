@@ -100,7 +100,7 @@ static int add_subs_callback(mqtt_userdata *mqtt, const char *topic, int call) {
         return -1;
     }
     
-    callback->topic = (char *)malloc(strlen(topic));
+    callback->topic = (char *)malloc(strlen(topic) + 1);
     if (!callback->topic) {
         errno = ENOMEM;
         free(callback);
