@@ -284,7 +284,7 @@ void ping(const char *name, int count, int interval, int size, int timeout) {
   tout.tv_usec = 0;
 
   if (setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tout, sizeof(tout)) < 0) {
-	  close(s);
+	  closesocket(s);
 	  // TODO: error
 	  return;
   }
@@ -315,7 +315,7 @@ void ping(const char *name, int count, int interval, int size, int timeout) {
     delay(interval * 1000);
   }
 
-  close(s);
+  closesocket(s);
 
   printf("%d packets transmitted, %d packets received, %.1f%% packet loss\r\n",
 		  transmitted,

@@ -13,6 +13,30 @@ LDFLAGS += -Wl,--wrap=_unlink_r
 LDFLAGS += -Wl,--wrap=_rename_r
 LDFLAGS += -Wl,--wrap=_stat_r
 
+ifdef USE_NET_VFS
+LDFLAGS += -Wl,--wrap=lwip_socket
+LDFLAGS += -Wl,--wrap=lwip_accept_r
+LDFLAGS += -Wl,--wrap=lwip_bind_r
+LDFLAGS += -Wl,--wrap=lwip_shutdown_r
+LDFLAGS += -Wl,--wrap=lwip_getpeername_r 
+LDFLAGS += -Wl,--wrap=lwip_getsockname_r
+LDFLAGS += -Wl,--wrap=lwip_getsockopt_r
+LDFLAGS += -Wl,--wrap=lwip_setsockopt_r
+LDFLAGS += -Wl,--wrap=lwip_connect_r
+LDFLAGS += -Wl,--wrap=lwip_listen_r
+LDFLAGS += -Wl,--wrap=lwip_recv_r
+LDFLAGS += -Wl,--wrap=lwip_read_r
+LDFLAGS += -Wl,--wrap=lwip_recvfrom_r
+LDFLAGS += -Wl,--wrap=lwip_send_r
+LDFLAGS += -Wl,--wrap=lwip_sendmsg_r
+LDFLAGS += -Wl,--wrap=lwip_sendto_r
+LDFLAGS += -Wl,--wrap=lwip_write_r
+LDFLAGS += -Wl,--wrap=lwip_writev_r
+LDFLAGS += -Wl,--wrap=lwip_select_r
+LDFLAGS += -Wl,--wrap=lwip_ioctl_r
+LDFLAGS += -Wl,--wrap=lwip_fcntl_r
+endif
+
 CFLAGS += -DPLATFORM_ESP32
 CFLAGS += -DKERNEL
 CFLAGS += -DLUA_USE_CTYPE

@@ -29,9 +29,11 @@
 
 #include "luartos.h"
 
-#if USE_NET
+#if USE_NET_VFS
 
 #include "freertos/FreeRTOS.h"
+#include "lwip/sockets.h"
+
 #include "esp_vfs.h"
 #include "esp_attr.h"
 
@@ -46,49 +48,87 @@
 #include <sys/mount.h>
 #include <sys/syslog.h>
 
-#include <syscalls/syscalls.h>
+#include <syscalls/filedesc.h>
+#include <syscalls/file.h>
+
+extern struct file *get_file(int fd);
+extern int closef(register struct file *fp);
 
 static int IRAM_ATTR vfs_net_open(const char *path, int flags, int mode);
 static size_t IRAM_ATTR vfs_net_write(int fd, const void *data, size_t size);
 static ssize_t IRAM_ATTR vfs_net_read(int fd, void * dst, size_t size);
-static int IRAM_ATTR vfs_net_fstat(int fd, struct stat * st);
 static int IRAM_ATTR vfs_net_close(int fd);
-static off_t IRAM_ATTR vfs_net_lseek(int fd, off_t size, int mode);
 
 static int IRAM_ATTR vfs_net_open(const char *path, int flags, int mode) {
-    return 0;
+	struct file *fp;
+	int fd, error;
+	int s;
+
+	// Allocate new file
+    error = falloc(&fp, &fd);
+    if (error) {
+        errno = error;
+        return -1;
+    }
+
+    // Get socket number
+    sscanf(path,"/%d", &s);
+
+    fp->f_fd      = fd;
+    fp->f_fs      = NULL;
+    fp->f_dir     = NULL;
+    fp->f_path 	  = NULL;
+    fp->f_fs_type = FS_SOCKET;
+    fp->f_flag    = 0;
+    fp->unit      = s;
+
+    return fd;
 }
 
 static size_t IRAM_ATTR vfs_net_write(int fd, const void *data, size_t size) {
-    return 0;
+	struct file *fp;
+	int bw;
+
+	printf("vfs_net_write %d (%d)\r\n",fd,size);
+	// Get file from file descriptor
+	if (!(fp = get_file(fd))) {
+		errno = EBADF;
+		return -1;
+	}
+
+	bw = lwip_send(fp->unit, data, size, 0);
+	return (ssize_t)bw;
 }
 
 static ssize_t IRAM_ATTR vfs_net_read(int fd, void * dst, size_t size) {
-	return 0;
-}
+	struct file *fp;
+	int br;
 
-static int IRAM_ATTR vfs_net_fstat(int fd, struct stat * st) {
-    return 0;
+	printf("vfs_net_read %d (%d)\r\n",fd,size);
+
+	// Get file from file descriptor
+	if (!(fp = get_file(fd))) {
+		errno = EBADF;
+		return -1;
+	}
+
+    br = lwip_recv(fp->unit, dst, size, 0);
+	return (ssize_t)br;
 }
 
 static int IRAM_ATTR vfs_net_close(int fd) {
+	struct file *fp;
+
+	// Get file from file descriptor
+	if (!(fp = get_file(fd))) {
+		errno = EBADF;
+		return -1;
+	}
+
+	closesocket(fp->unit);
+	closef(fp);
+
 	return 0;
-}
-
-static off_t IRAM_ATTR vfs_net_lseek(int fd, off_t size, int mode) {
-    return 0;
-}
-
-static int IRAM_ATTR vfs_net_stat(const char * path, struct stat * st) {
-    return 0;
-}
-
-static int IRAM_ATTR vfs_net_unlink(const char *path) {
-    return 0;
-}
-
-static int IRAM_ATTR vfs_net_rename(const char *src, const char *dst) {
-    return 0;
 }
 
 void vfs_net_register() {
@@ -97,17 +137,17 @@ void vfs_net_register() {
         .flags = ESP_VFS_FLAG_DEFAULT,
         .write = &vfs_net_write,
         .open = &vfs_net_open,
-        .fstat = &vfs_net_fstat,
+        .fstat = NULL,
         .close = &vfs_net_close,
         .read = &vfs_net_read,
-        .lseek = &vfs_net_lseek,
-        .stat = &vfs_net_stat,
+        .lseek = NULL,
+        .stat = NULL,
         .link = NULL,
-        .unlink = &vfs_net_unlink,
-        .rename = &vfs_net_rename
+        .unlink = NULL,
+        .rename = NULL
     };
 
-    ESP_ERROR_CHECK(esp_vfs_register("/socket", &vfs, NULL));
+    ESP_ERROR_CHECK(esp_vfs_register("/dev/socket", &vfs, NULL));
 }
 
 #endif

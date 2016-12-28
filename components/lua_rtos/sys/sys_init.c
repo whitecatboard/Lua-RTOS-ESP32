@@ -66,6 +66,7 @@ extern int spiffs_init();
 void vfs_tty_register();
 void vfs_spiffs_register();
 void vfs_fat_register();
+void vfs_net_register();
 
 extern driver_t drivers[];
 
@@ -164,7 +165,11 @@ void _sys_init() {
 
     cpu_show_info();
 
-    //Init filesystem  
+    //Init filesystems
+	#if USE_NET_VFS
+    	vfs_net_register();
+	#endif
+
     #if USE_SPIFFS
     	vfs_spiffs_register();
     #endif

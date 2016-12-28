@@ -2,6 +2,14 @@
 
 #define NDFILE 10
 
+/*
+ * File system types
+ */
+#define FS_TTY       1
+#define FS_SPIFFS    2
+#define FS_FAT       3
+#define FS_SOCKET    4
+
 struct filedesc {
     struct  file **fd_ofiles;   /* file structures for open files */
     char    *fd_ofileflags;     /* per-process open file flags */

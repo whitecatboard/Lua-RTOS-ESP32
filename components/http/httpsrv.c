@@ -132,6 +132,7 @@ int process(FILE *f) {
     method = strtok(buf, " ");
     path = strtok(NULL, " ");
     protocol = strtok(NULL, "\r");
+
     if (!method || !path || !protocol) return -1;
 
     fseek(f, 0, SEEK_CUR); // Force change of stream direction

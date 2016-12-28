@@ -23,13 +23,6 @@
 #define FCNTLFLAGS  (FAPPEND|FASYNC|FFSYNC|FNONBLOCK)
 
 /*
- * File system types
- */
-#define FS_TTY    1
-#define FS_SPIFFS 2
-#define FS_FAT    3
-
-/*
  * Function prototypes provided
  */
 int falloc(struct file **resultfp, int *resultfd);
