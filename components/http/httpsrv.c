@@ -45,8 +45,8 @@
 #include <sys/syslog.h>
 
 #define PORT           80
-#define SERVER         "httpsrv/1.0"
-#define PROTOCOL       "HTTP/1.0"
+#define SERVER         "lua-rtos-http-server/1.0"
+#define PROTOCOL       "HTTP/1.1"
 #define RFC1123FMT     "%a, %d %b %Y %H:%M:%S GMT"
 #define HTPP_BUFF_SIZE 1024
 
@@ -71,36 +71,51 @@ char *get_mime_type(char *name) {
     if (strcmp(ext, ".svg")  == 0) return "image/svg+xml";
     if (strcmp(ext, ".pdf")  == 0) return "application/pdf";
     return NULL;
-
 }
 
-void send_headers(FILE *f, int status, char *title, char *extra, char *mime, int length, time_t date) {
-    time_t now;
-    char timebuf[128];
+void send_headers(FILE *f, int status, char *title, char *extra, char *mime, int length) {
     fprintf(f, "%s %d %s\r\n", PROTOCOL, status, title);
     fprintf(f, "Server: %s\r\n", SERVER);
-    now = time(NULL);
-    strftime(timebuf, sizeof (timebuf), RFC1123FMT, gmtime(&now));
-    fprintf(f, "Date: %s\r\n", timebuf);
     if (extra) fprintf(f, "%s\r\n", extra);
     if (mime) fprintf(f, "Content-Type: %s\r\n", mime);
-    if (length >= 0) fprintf(f, "Content-Length: %d\r\n", length);
-    if (date != -1) {
-        strftime(timebuf, sizeof (timebuf), RFC1123FMT, gmtime(&date));
-        fprintf(f, "Last-Modified: %s\r\n", timebuf);
-    }
-    fprintf(f, "Connection: close\r\n");
-    fprintf(f, "\r\n");
 
+    if (length >= 0) {
+    	fprintf(f, "Content-Length: %d\r\n", length);
+    } else {
+    	fprintf(f, "Transfer-Encoding: chunked\r\n");
+    }
+
+    fprintf(f, "Connection: close\r\n");
+
+    fprintf(f, "Cache-Control: no-cache, no-store, must-revalidate\r\n");
+    fprintf(f, "no-cache\r\n");
+    fprintf(f, "0\r\n");
+
+	fprintf(f, "\r\n");
 }
 
-void send_error(FILE *f, int status, char *title, char *extra, char *text) {
-    send_headers(f, status, title, extra, "text/html", -1, -1);
-    fprintf(f, "<HTML><HEAD><TITLE>%d %s</TITLE></HEAD>\r\n", status, title);
-    fprintf(f, "<BODY><H4>%d %s</H4>\r\n", status, title);
-    fprintf(f, "%s\r\n", text);
-    fprintf(f, "</BODY></HTML>\r\n");
+#define HTTP_STATUS_LEN     3
+#define HTTP_ERROR_LINE_1   "<HTML><HEAD><TITLE>%d %s</TITLE></HEAD>\r\n"
+#define HTTP_ERROR_LINE_2   "<BODY><H4>%d %s</H4>\r\n"
+#define HTTP_ERROR_LINE_3   "%s\r\n"
+#define HTTP_ERROR_LINE_4   "</BODY></HTML>\r\n"
+#define HTTP_ERROR_VARS_LEN (2 * 5)
 
+void send_error(FILE *f, int status, char *title, char *extra, char *text) {
+	int len = strlen(title) * 2 +
+			  HTTP_STATUS_LEN * 2 +
+			  strlen(text) +
+			  strlen(HTTP_ERROR_LINE_1) +
+			  strlen(HTTP_ERROR_LINE_2) +
+			  strlen(HTTP_ERROR_LINE_3) +
+			  strlen(HTTP_ERROR_LINE_4) -
+			  HTTP_ERROR_VARS_LEN;
+
+    send_headers(f, status, title, extra, "text/html", len);
+    fprintf(f, HTTP_ERROR_LINE_1, status, title);
+    fprintf(f, HTTP_ERROR_LINE_2, status, title);
+    fprintf(f, HTTP_ERROR_LINE_3, text);
+    fprintf(f, HTTP_ERROR_LINE_4);
 }
 
 void send_file(FILE *f, char *path, struct stat *statbuf) {
@@ -112,10 +127,32 @@ void send_file(FILE *f, char *path, struct stat *statbuf) {
         send_error(f, 403, "Forbidden", NULL, "Access denied.");
     } else {
         int length = S_ISREG(statbuf->st_mode) ? statbuf->st_size : -1;
-        send_headers(f, 200, "OK", NULL, get_mime_type(path), length, statbuf->st_mtime);
+        send_headers(f, 200, "OK", NULL, get_mime_type(path), length);
         while ((n = fread(data, 1, sizeof (data), file)) > 0) fwrite(data, 1, n, f);
         fclose(file);
     }
+}
+
+
+static void chunk(FILE *f, const char *fmt, ...) {
+	char *buffer;
+	va_list args;
+
+	buffer = (char *)malloc(2048);
+	if (buffer) {
+		*buffer = '\0';
+
+		va_start(args, fmt);
+
+		vsnprintf(buffer, 2048, fmt, args);
+
+		fprintf(f, "%x\r\n", strlen(buffer));
+		fprintf(f, "%s\r\n", buffer);
+
+		va_end(args);
+
+		free(buffer);
+	}
 }
 
 int process(FILE *f) {
@@ -135,12 +172,15 @@ int process(FILE *f) {
 
     if (!method || !path || !protocol) return -1;
 
+    syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol);
+
     fseek(f, 0, SEEK_CUR); // Force change of stream direction
 
     if (strcasecmp(method, "GET") != 0) {
         send_error(f, 501, "Not supported", NULL, "Method is not supported.");
     } else if (stat(path, &statbuf) < 0) {
         send_error(f, 404, "Not Found", NULL, "File not found.");
+        syslog(LOG_DEBUG, "http: %s Not found\r", path);
     } else if (S_ISDIR(statbuf.st_mode)) {
         len = strlen(path);
         if (len == 0 || path[len - 1] != '/') {
@@ -154,37 +194,48 @@ int process(FILE *f) {
                 DIR *dir;
                 struct dirent *de;
 
-                send_headers(f, 200, "OK", NULL, "text/html", -1, statbuf.st_mtime);
-                fprintf(f, "<HTML><HEAD><TITLE>Index of %s</TITLE></HEAD>\r\n<BODY>", path);
-                fprintf(f, "<H4>Index of %s</H4>\r\n<PRE>\n", path);
-                fprintf(f, "Name                             Last Modified              Size\r\n");
-                fprintf(f, "<HR>\r\n");
-                if (len > 1) fprintf(f, "<A HREF=\"..\">..</A>\r\n");
+                send_headers(f, 200, "OK", NULL, "text/html", -1);
+                chunk(f, "<HTML><HEAD><TITLE>Index of %s</TITLE></HEAD><BODY>", path);
+                chunk(f, "<H4>Index of %s</H4>", path);
+
+                chunk(f, "<TABLE>");
+                chunk(f, "<TR>");
+                chunk(f, "<TH style=\"width: 250;text-align: left;\">Name</TH><TH style=\"width: 100px;text-align: right;\">Size</TH>");
+                chunk(f, "</TR>");
+
+                if (len > 1) {
+                    chunk(f, "<TR>");
+                	chunk(f, "<TD><A HREF=\"..\">..</A></TD><TD></TD>");
+                    chunk(f, "</TR>");
+                }
 
                 dir = opendir(path);
                 while ((de = readdir(dir)) != NULL) {
-                    char timebuf[32];
-                    struct tm *tm;
-
                     strcpy(pathbuf, path);
                     strcat(pathbuf, de->d_name);
 
                     stat(pathbuf, &statbuf);
-                    tm = gmtime(&statbuf.st_mtime);
-                    strftime(timebuf, sizeof (timebuf), "%d-%b-%Y %H:%M:%S", tm);
 
-                    fprintf(f, "<A HREF=\"%s%s\">", de->d_name, S_ISDIR(statbuf.st_mode) ? "/" : "");
-                    fprintf(f, "%s%s", de->d_name, S_ISDIR(statbuf.st_mode) ? "/</A>" : "</A> ");
-                    if (strlen(de->d_name) < 32) fprintf(f, "%*s", 32 - strlen(de->d_name), "");
-                    if (S_ISDIR(statbuf.st_mode)) {
-                        fprintf(f, "%s\r\n", timebuf);
-                    } else {
-                        fprintf(f, "%s %10d\r\n", timebuf, (int)statbuf.st_size);
+                    chunk(f, "<TR>");
+                    chunk(f, "<TD>");
+                    chunk(f, "<A HREF=\"%s%s\">", de->d_name, S_ISDIR(statbuf.st_mode) ? "/" : "");
+                    chunk(f, "%s%s", de->d_name, S_ISDIR(statbuf.st_mode) ? "/</A>" : "</A> ");
+                    chunk(f, "</TD>");
+                    chunk(f, "<TD style=\"text-align: right;\">");
+                    if (!S_ISDIR(statbuf.st_mode)) {
+                        chunk(f, "%d", (int)statbuf.st_size);
                     }
+                    chunk(f, "</TD>");
+                    chunk(f, "</TR>");
                 }
                 closedir(dir);
 
-                fprintf(f, "</PRE>\r\n<HR>\r\n<ADDRESS>%s</ADDRESS>\r\n</BODY></HTML>\r\n", SERVER);
+
+                chunk(f, "</TABLE>");
+
+                chunk(f, "</BODY></HTML>", SERVER);
+
+                fprintf(f, "0\r\n\r\n");
             }
         }
     } else {
@@ -195,29 +246,50 @@ int process(FILE *f) {
 }
 
 static void *http_thread(void *arg) {
-	int sock;
     struct sockaddr_in sin;
-    sock = socket(AF_INET, SOCK_STREAM, 0);
+	int server;
+
+	server = socket(AF_INET, SOCK_STREAM, 0);
+
 
     sin.sin_family      = AF_INET;
     sin.sin_addr.s_addr = INADDR_ANY;
     sin.sin_port        = htons(PORT);
-    bind(sock, (struct sockaddr *) &sin, sizeof (sin));
+    bind(server, (struct sockaddr *) &sin, sizeof (sin));
 
-    listen(sock, 5);
+    listen(server, 5);
     syslog(LOG_INFO, "http: server listening on port %d\n", PORT);
 
     while (1) {
-        int s;
-        FILE *f;
-        s = accept(sock, NULL, NULL);
-        if (s < 0) break;
-        f = fdopen(s, "a+");
-        process(f);
-        fclose(f);
+    	int client;
+
+    	// Wait for a request ...
+        if ((client = accept(server, NULL, NULL)) != -1) {
+        	// We waiting for send all data before close socket's stream
+        	struct linger so_linger;
+
+        	so_linger.l_onoff  = 1;
+        	so_linger.l_linger = 10;
+
+            setsockopt(client, SOL_SOCKET, SO_LINGER, &so_linger, sizeof(so_linger));
+
+            // Set a timeout for send / receive
+            struct timeval tout;
+
+            tout.tv_sec = 10;
+            tout.tv_usec = 0;
+
+            setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &tout, sizeof(tout));
+            setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &tout, sizeof(tout));
+
+            // Create the socket stream
+            FILE *stream = fdopen(client, "a+");
+            process(stream);
+            fclose(stream);
+        }
     }
 
-    close(sock);
+    close(server);
 
     pthread_exit(NULL);
 }

@@ -7,6 +7,24 @@
 
 #include <sys/queue.h>
 
+#define FFLAGS(oflags)  ((oflags) + 1)
+#define OFLAGS(fflags)  ((fflags) - 1)
+
+#ifndef FFSYNC
+#define FFSYNC FSYNC
+#endif
+
+#ifndef FNONBLOCK
+#define FNONBLOCK FNONBIO
+#endif
+
+#ifndef FIONBIO
+#define FIONBIO FNONBIO
+#endif
+
+#define FMASK       (FREAD|FWRITE|FAPPEND|FASYNC|FFSYNC|FNONBLOCK)
+#define FCNTLFLAGS  (FAPPEND|FASYNC|FFSYNC|FNONBLOCK)
+
 struct file {
 	LIST_ENTRY(file) f_list; /* list of active files */
     short   f_count;         /* reference count */

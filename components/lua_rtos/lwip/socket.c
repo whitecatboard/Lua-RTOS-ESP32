@@ -1,7 +1,6 @@
 #include "luartos.h"
 
 #if USE_NET_VFS
-
 #include "lwip/sockets.h"
 
 #include <stdio.h>

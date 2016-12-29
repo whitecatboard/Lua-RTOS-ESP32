@@ -14,14 +14,6 @@
 
 #define FREE(addr) free(addr)
 
-#define FFLAGS(oflags)  ((oflags) + 1)
-#define OFLAGS(fflags)  ((fflags) - 1)
-#define FFSYNC FSYNC
-#define FNONBLOCK FNONBIO
-#define FIONBIO FNONBIO
-#define FMASK       (FREAD|FWRITE|FAPPEND|FASYNC|FFSYNC|FNONBLOCK)
-#define FCNTLFLAGS  (FAPPEND|FASYNC|FFSYNC|FNONBLOCK)
-
 /*
  * Function prototypes provided
  */

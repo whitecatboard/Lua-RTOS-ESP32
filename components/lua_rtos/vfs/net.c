@@ -79,7 +79,7 @@ static int IRAM_ATTR vfs_net_open(const char *path, int flags, int mode) {
     fp->f_dir     = NULL;
     fp->f_path 	  = NULL;
     fp->f_fs_type = FS_SOCKET;
-    fp->f_flag    = 0;
+    fp->f_flag    = FFLAGS(flags) & FMASK;
     fp->unit      = s;
 
     return fd;
@@ -87,24 +87,18 @@ static int IRAM_ATTR vfs_net_open(const char *path, int flags, int mode) {
 
 static size_t IRAM_ATTR vfs_net_write(int fd, const void *data, size_t size) {
 	struct file *fp;
-	int bw;
 
-	printf("vfs_net_write %d (%d)\r\n",fd,size);
 	// Get file from file descriptor
 	if (!(fp = get_file(fd))) {
 		errno = EBADF;
 		return -1;
 	}
 
-	bw = lwip_send(fp->unit, data, size, 0);
-	return (ssize_t)bw;
+	return (ssize_t)lwip_send(fp->unit, data, size, 0);
 }
 
 static ssize_t IRAM_ATTR vfs_net_read(int fd, void * dst, size_t size) {
 	struct file *fp;
-	int br;
-
-	printf("vfs_net_read %d (%d)\r\n",fd,size);
 
 	// Get file from file descriptor
 	if (!(fp = get_file(fd))) {
@@ -112,8 +106,7 @@ static ssize_t IRAM_ATTR vfs_net_read(int fd, void * dst, size_t size) {
 		return -1;
 	}
 
-    br = lwip_recv(fp->unit, dst, size, 0);
-	return (ssize_t)br;
+    return (ssize_t)lwip_recv(fp->unit, dst, size, 0);
 }
 
 static int IRAM_ATTR vfs_net_close(int fd) {
