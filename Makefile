@@ -15,6 +15,7 @@ ifeq ("$(wildcard $(IDF_PATH)/components/lua_rtos)","")
 	@ln -s $(PROJECT_PATH)/main/test/lua_rtos $(IDF_PATH)/components/lua_rtos
 endif
 	@touch $(PROJECT_PATH)/components/lua_rtos/sys/sys_init.c
+	@touch $(PROJECT_PATH)/components/lua_rtos/lwip/socket.c
 	@cat ld/lua-rtos.ld > $(IDF_PATH)/components/esp32/ld/esp32.common.ld
 	@cd $(IDF_PATH)/components/lwip/api && git checkout api_msg.c
 	@patch -f $(IDF_PATH)/components/lwip/api/api_msg.c $(PROJECT_PATH)/main/patches/api_msg.patch

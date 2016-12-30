@@ -141,7 +141,9 @@ static int lnet_stat(lua_State* L) {
 
 static const LUA_REG_TYPE service_map[] = {
 	{ LSTRKEY( "sntp"    ),	 LROVAL   ( sntp_map  ) },
+#if LUA_USE_HTTP
 	{ LSTRKEY( "http"    ),	 LROVAL   ( http_map  ) },
+#endif
 };
 
 static const LUA_REG_TYPE net_map[] = {

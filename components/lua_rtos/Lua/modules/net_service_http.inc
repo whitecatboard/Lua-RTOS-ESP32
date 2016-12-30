@@ -27,6 +27,10 @@
  * this software.
  */
 
+#include "luartos.h"
+
+#if LUA_USE_HTTP
+
 #include "net.h"
 
 #include "lwip/err.h"
@@ -64,3 +68,5 @@ static const LUA_REG_TYPE http_map[] = {
     { LSTRKEY( "stop"  ),	 LFUNCVAL( lhttp_stop    ) },
 	{ LNILKEY, LNILVAL }
 };
+
+#endif
