@@ -120,7 +120,7 @@ menu "Lua RTOS"
   endmenu
   endmenu
   
-    menu "LoRa Wan"
+  menu "LoRa Wan"
 	config LUA_RTOS_USE_LMIC
   	bool "Use LIMC stack"
   	default n
@@ -195,7 +195,14 @@ menu "Lua RTOS"
     range 0 39
     default 33
   endmenu
-  
+
+  menu "HTTP server"
+	config LUA_RTOS_USE_HTTP_SERVER
+	depends on (ESP32_ENABLE_STACK_WIFI || ETHERNET) && LUA_RTOS_LUA_USE_NET
+  	bool "Enable HTTP server"
+  	default y
+  endmenu
+    
   menu "Lua"
 	  menu "Tunning"
 		config LUA_RTOS_LUA_TASK_PRIORITY
@@ -305,6 +312,7 @@ menu "Lua RTOS"
 		endmenu
 		menu "Communication Modules"
 		  	config LUA_RTOS_LUA_USE_NET
+		  	depends on ESP32_ENABLE_STACK_WIFI || ETHERNET
 		  	bool "Include net module in build"
 		  	default y
 
@@ -314,7 +322,7 @@ menu "Lua RTOS"
 		  	default n
 
 		  	config LUA_RTOS_LUA_USE_MQTT
-		  	depends on LUA_RTOS_LUA_USE_NET
+		  	depends on ESP32_ENABLE_STACK_WIFI || ETHERNET
 		  	bool "Include MQTT module in build"
 		  	default n
 		endmenu

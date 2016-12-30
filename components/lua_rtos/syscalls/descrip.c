@@ -317,7 +317,7 @@ struct file *get_file(int fd) {
     register struct filedesc *fdp = p_fd;
     register struct file *fp;
 
-    fd = fd & 0b111111111111;
+    fd = fd & ((1 << CONFIG_MAX_FD_BITS) - 1);
 
     mtx_lock(&fd_mtx);
     if ((u_int)fd >= fdp->fd_nfiles ||

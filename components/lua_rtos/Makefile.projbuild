@@ -2,12 +2,11 @@ ifneq (foo$(TEST_COMPONENTS), foo)
 CFLAGS += -DRUN_TESTS
 endif
 
+CFLAGS += -DCONFIG_MAX_FD_BITS=4
 CFLAGS += -DLWIP_IPV6=1
 CFLAGS += -DLWIP_RAW=1
 CFLAGS += -DLWIP_SO_LINGER=1
 CFLAGS += -DDEFAULT_RAW_RECVMBOX_SIZE=5
-CFLAGS += -DUSE_NET_VFS=0
-CFLAGS += -DLUA_USE_HTTP=0
 
 CFLAGS += -Wno-error=implicit-function-declaration -Wno-error=pointer-sign
 
@@ -34,7 +33,7 @@ LDFLAGS += -Wl,--wrap=lwip_sendmsg_r
 LDFLAGS += -Wl,--wrap=lwip_sendto_r
 LDFLAGS += -Wl,--wrap=lwip_write_r
 LDFLAGS += -Wl,--wrap=lwip_writev_r
-LDFLAGS += -Wl,--wrap=lwip_select_r
+LDFLAGS += -Wl,--wrap=lwip_select
 LDFLAGS += -Wl,--wrap=lwip_ioctl_r
 LDFLAGS += -Wl,--wrap=lwip_fcntl_r
 
@@ -51,7 +50,6 @@ CFLAGS += -DLUA_C89_NUMBERS
 CFLAGS += -DCPU_HZ=240000000L                   # CPU frequency in hertz
 CFLAGS += -DCORE_TIMER_HZ=240000000L            # CPU core timer frequency
 CFLAGS += -D_CLOCKS_PER_SEC_=configTICK_RATE_HZ # Number of interrupt ticks for reach 1 second
-CFLAGS += -DUSE_NETWORKING=0                    # Networking is used (1 = yes, 0 = not)
 CFLAGS += -DMTX_USE_EVENTS=0                    # Use event groups in mtx implementation (experimental)
 
 

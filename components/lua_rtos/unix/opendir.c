@@ -66,7 +66,7 @@ DIR *opendir(const char *name) {
 
 	free(ppath);
 
-	rc = fcntl(fd & 0b111111111111, F_SETFD, 1);
+	rc = fcntl(fd & ((1 << CONFIG_MAX_FD_BITS) - 1), F_SETFD, 1);
 	if (rc == -1 ||
 	    (dirp = (DIR *)malloc(sizeof(DIR))) == NULL) {
 		close (fd);

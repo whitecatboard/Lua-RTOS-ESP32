@@ -40,19 +40,6 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
-#include <limits.h>
-
-#include <fat/ff.h>
-
-#include <sys/stat.h>
-#include <sys/mount.h>
-#include <sys/syslog.h>
-
-#include <syscalls/filedesc.h>
-#include <syscalls/file.h>
-
-extern struct file *get_file(int fd);
-extern int closef(register struct file *fp);
 
 static int IRAM_ATTR vfs_net_open(const char *path, int flags, int mode);
 static size_t IRAM_ATTR vfs_net_write(int fd, const void *data, size_t size);
@@ -60,68 +47,24 @@ static ssize_t IRAM_ATTR vfs_net_read(int fd, void * dst, size_t size);
 static int IRAM_ATTR vfs_net_close(int fd);
 
 static int IRAM_ATTR vfs_net_open(const char *path, int flags, int mode) {
-	struct file *fp;
-	int fd, error;
 	int s;
 
-	// Allocate new file
-    error = falloc(&fp, &fd);
-    if (error) {
-        errno = error;
-        return -1;
-    }
+	// Get socket number
+	sscanf(path,"/%d", &s);
 
-    // Get socket number
-    sscanf(path,"/%d", &s);
-
-    fp->f_fd      = fd;
-    fp->f_fs      = NULL;
-    fp->f_dir     = NULL;
-    fp->f_path 	  = NULL;
-    fp->f_fs_type = FS_SOCKET;
-    fp->f_flag    = FFLAGS(flags) & FMASK;
-    fp->unit      = s;
-
-    return fd;
+    return s;
 }
 
 static size_t IRAM_ATTR vfs_net_write(int fd, const void *data, size_t size) {
-	struct file *fp;
-
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
-		errno = EBADF;
-		return -1;
-	}
-
-	return (ssize_t)lwip_send(fp->unit, data, size, 0);
+	return (ssize_t)lwip_send(fd, data, size, 0);
 }
 
 static ssize_t IRAM_ATTR vfs_net_read(int fd, void * dst, size_t size) {
-	struct file *fp;
-
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
-		errno = EBADF;
-		return -1;
-	}
-
-    return (ssize_t)lwip_recv(fp->unit, dst, size, 0);
+    return (ssize_t)lwip_recv(fd, dst, size, 0);
 }
 
 static int IRAM_ATTR vfs_net_close(int fd) {
-	struct file *fp;
-
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
-		errno = EBADF;
-		return -1;
-	}
-
-	closesocket(fp->unit);
-	closef(fp);
-
-	return 0;
+	return closesocket(fd);
 }
 
 void vfs_net_register() {

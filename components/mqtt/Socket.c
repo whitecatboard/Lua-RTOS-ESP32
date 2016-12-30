@@ -520,7 +520,6 @@ void Socket_clearPendingWrite(int socket)
 int Socket_close_only(int socket)
 {
 	int rc;
-
 	FUNC_ENTRY;
 #if defined(WIN32) || defined(WIN64)
 	if (shutdown(socket, SD_BOTH) == SOCKET_ERROR)

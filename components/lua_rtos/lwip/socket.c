@@ -1,3 +1,47 @@
+/*
+ * Lua RTOS, posix sockets wrappers
+ *
+ * Copyright (C) 2015 - 2016
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ *
+ * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ *
+ * All rights reserved.
+ *
+ * Permission to use, copy, modify, and distribute this software
+ * and its documentation for any purpose and without fee is hereby
+ * granted, provided that the above copyright notice appear in all
+ * copies and that both that the copyright notice and this
+ * permission notice and warranty disclaimer appear in supporting
+ * documentation, and that the name of the author not be used in
+ * advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.
+ *
+ * The author disclaim all warranties with regard to this
+ * software, including all implied warranties of merchantability
+ * and fitness.  In no event shall the author be liable for any
+ * special, indirect or consequential damages or any damages
+ * whatsoever resulting from loss of use, data or profits, whether
+ * in an action of contract, negligence or other tortious action,
+ * arising out of or in connection with the use or performance of
+ * this software.
+ */
+
+/*
+ * This wrappers are required for allow lwip sockets to work in a vfs
+ * (virtual file system). This is useful, for example, for open a file
+ * stream over an opened socket and use stdio functions for write
+ * networks apps (such as webservers, telnet servers, etc ...).
+ *
+ * The mission of this wrappers are to translate newlib file descriptors
+ * to lwip file descriptors, and vice-versa. Remember that in esp-idf
+ * vfs implementation a file descriptor is formed by 2 parts (the vfs
+ * identifier and the file descriptor number). Example:
+ *
+ * lwip fd 0 it's (vfs_id | lwip fd) in newlib
+ *
+ */
+
 #include "luartos.h"
 
 #include "lwip/sockets.h"
@@ -6,32 +50,13 @@
 #include <stdint.h>
 #include <errno.h>
 
-#include <syscalls/file.h>
-#include <syscalls/filedesc.h>
-
-extern struct file *get_file(int fd);
-
 #if USE_NET_VFS
-
-static int fd_to_socket(int fd) {
-	struct file *fp;
-
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
-		errno = EBADF;
-		return -1;
-	}
-
-	if (fp->f_fs_type != 4) {
-		errno = EBADF;
-		return -1;
-	}
-
-	return fp->unit;
-}
+#define fd_to_socket(fd) (fd & ((1 << CONFIG_MAX_FD_BITS) - 1))
 #else
 #define fd_to_socket(fd) fd
 #endif
+
+#define socket_to_fd(vfs, fd) (vfs | fd)
 
 extern int __real_lwip_accept_r(int s, struct sockaddr *addr, socklen_t *addrlen);
 extern int __real_lwip_bind_r(int s, const struct sockaddr *name, socklen_t namelen);
@@ -51,14 +76,12 @@ extern int __real_lwip_sendto_r(int s, const void *dataptr, size_t size, int fla
 extern int __real_lwip_socket(int domain, int type, int protocol);
 extern int __real_lwip_write_r(int s, const void *dataptr, size_t size);
 extern int __real_lwip_writev_r(int s, const struct iovec *iov, int iovcnt);
-extern int __real_lwip_select_r(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
+extern int __real_lwip_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
 extern int __real_lwip_ioctl_r(int s, long cmd, void *argp);
 extern int __real_lwip_fcntl_r(int s, int cmd, int val);
 
 int __wrap_lwip_accept_r(int fd, struct sockaddr *addr, socklen_t *addrlen) {
-	int s;
-
-	s = __real_lwip_accept_r(fd_to_socket(fd), addr, addrlen);
+	int s = __real_lwip_accept_r(fd_to_socket(fd), addr, addrlen);
 
 #if USE_NET_VFS
 	if (s != -1) {
@@ -68,6 +91,8 @@ int __wrap_lwip_accept_r(int fd, struct sockaddr *addr, socklen_t *addrlen) {
 		FILE *stream = fopen(device,"a+");
 		if (stream) {
 			return stream->_file;
+		} else {
+			return -1;
 		}
 	}
 #endif
@@ -138,12 +163,72 @@ int __wrap_lwip_writev_r(int fd, const struct iovec *iov, int iovcnt) {
 	return __real_lwip_writev_r(fd_to_socket(fd), iov, iovcnt);
 }
 
-int __wrap_lwip_select_r(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout) {
-	int s;
+int __wrap_lwip_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout) {
+#if USE_NET_VFS
+	int vfs = maxfdp1 & (((1 << (16 - CONFIG_MAX_FD_BITS - 1)) - 1) << CONFIG_MAX_FD_BITS);
+	int maxfdp = ((1 << CONFIG_MAX_FD_BITS) - 1);
+	int i, s;
 
-	s = __real_lwip_select_r(maxfdp1, readset, writeset, exceptset, timeout);
+    // Convert input fd sets to internal lwip sets
+    for(i=0;i<maxfdp1;i++) {
+    	if (readset) {
+    		if (FD_ISSET(i, readset)) {
+    			FD_SET(fd_to_socket(i), readset);
+    		} else {
+    			FD_CLR(fd_to_socket(i), readset);
+    		}
+    	}
 
-	return s;
+    	if (writeset) {
+    		if (FD_ISSET(i, writeset)) {
+    			FD_SET(fd_to_socket(i), writeset);
+    		} else {
+    			FD_CLR(fd_to_socket(i), writeset);
+    		}
+    	}
+
+    	if (exceptset) {
+    		if (FD_ISSET(i, exceptset)) {
+    			FD_SET(fd_to_socket(i), exceptset);
+    		} else {
+    			FD_CLR(fd_to_socket(i), exceptset);
+    		}
+    	}
+    }
+
+    s = __real_lwip_select(maxfdp, readset, writeset, exceptset, timeout);
+
+	// We need to convert lwip sets to newlib sets
+	for(i=0;i<maxfdp;i++) {
+		if (readset) {
+			if (FD_ISSET(i, readset)) {
+				FD_SET(socket_to_fd(vfs, i), readset);
+			} else {
+				FD_CLR(socket_to_fd(vfs, i), readset);
+			}
+		}
+
+		if (writeset) {
+			if (FD_ISSET(i, writeset)) {
+				FD_SET(vfs | socket_to_fd(vfs,i), writeset);
+			} else {
+				FD_CLR(socket_to_fd(vfs, i), writeset);
+			}
+		}
+
+		if (exceptset) {
+			if (FD_ISSET(i, exceptset)) {
+				FD_SET(socket_to_fd(vfs, i), exceptset);
+			} else {
+				FD_CLR(socket_to_fd(vfs, i), exceptset);
+			}
+		}
+	}
+
+    return s;
+#else
+    return __real_lwip_select(maxfdp1, readset, writeset, exceptset, timeout);
+#endif
 }
 
 int __wrap_lwip_ioctl_r(int fd, long cmd, void *argp) {
@@ -155,9 +240,7 @@ int __wrap_lwip_fcntl_r(int fd, int cmd, int val) {
 }
 
 int __wrap_lwip_socket(int domain, int type, int protocol) {
-	int s;
-
-	s = __real_lwip_socket(domain, type, protocol);
+	int s = __real_lwip_socket(domain, type, protocol);
 
 #if USE_NET_VFS
 	if (s != -1) {
@@ -167,6 +250,8 @@ int __wrap_lwip_socket(int domain, int type, int protocol) {
 		FILE *stream = fopen(device,"a+");
 		if (stream) {
 			return stream->_file;
+		} else {
+			return -1;
 		}
 	}
 #endif
