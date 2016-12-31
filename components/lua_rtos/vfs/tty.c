@@ -29,75 +29,46 @@
 
 #include "luartos.h"
 
-#include <freertos/FreeRTOS.h>
+#include "esp_vfs.h"
+#include "esp_attr.h"
 
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include <sys/stat.h>
 
-#include "esp_vfs.h"
-#include "esp_attr.h"
-#include "sys/errno.h"
-
 #include <pthread/pthread.h>
+
 #include <drivers/uart.h>
 
-#include <syscalls/syscalls.h>
-
 static int IRAM_ATTR vfs_tty_open(const char *path, int flags, int mode) {
-	struct file *fp;
-	int fd, error;
 	int unit = 0;
 
 	// Get UART unit
     if (strcmp(path, "/0") == 0) {
-		unit = 0;
+    	unit = 0;
     } else if (strcmp(path, "/1") == 0) {
-		unit = 1;
+    	unit = 1;
     } else if (strcmp(path, "/2") == 0) {
-        unit = 2;
+    	unit = 2;
     } else {
 		errno = ENOENT;
     	return -1;
 	}
 
-    // Allocate new file
-    error = falloc(&fp, &fd);
-    if (error) {
-        errno = error;
-        return -1;
-    }
-
-    fp->f_fd      = fd;
-    fp->f_fs      = NULL;
-    fp->f_dir     = NULL;
-    fp->f_path 	  = NULL;
-    fp->f_fs_type = FS_SPIFFS;
-    fp->f_flag    = FFLAGS(flags) & FMASK;
-    fp->unit      = unit;
-
     // Init uart unit
     uart_init(unit, CONSOLE_BR, 8, 0, 1, CONSOLE_BUFFER_LEN);
     uart_setup_interrupts(unit);
 
-    return fd;
+    return unit;
 }
 
 static size_t IRAM_ATTR vfs_tty_write(int fd, const void *data, size_t size) {
     const char *data_c = (const char *)data;
-	struct file *fp;
-	int unit = 0;
+    int unit = fd;
 
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
-		errno = EBADF;
-		return -1;
-	}
-
-	unit = fp->unit;
-
-	uart_lock(unit);
+    uart_lock(unit);
 
     for (size_t i = 0; i < size; i++) {
 #if CONFIG_NEWLIB_STDOUT_ADDCR
@@ -115,16 +86,7 @@ static size_t IRAM_ATTR vfs_tty_write(int fd, const void *data, size_t size) {
 
 static ssize_t IRAM_ATTR vfs_tty_read(int fd, void * dst, size_t size) {
 	ssize_t remain = (ssize_t)size;
-	struct file *fp;
-	int unit = 0;
-
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
-		errno = EBADF;
-		return -1;
-	}
-
-	unit = fp->unit;
+	int unit = fd;
 
 	while (remain) {
         if (uart_read(unit, (char *)dst, portMAX_DELAY)) {
@@ -144,16 +106,6 @@ static int IRAM_ATTR vfs_tty_fstat(int fd, struct stat * st) {
 }
 
 static int IRAM_ATTR vfs_tty_close(int fd) {
-	struct file *fp;
-
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
-		errno = EBADF;
-		return -1;
-	}
-
-	closef(fp);
-
 	return 0;
 }
 
