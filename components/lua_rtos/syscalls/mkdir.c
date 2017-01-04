@@ -31,72 +31,19 @@
 
 #include "syscalls.h"
 
-#include <spiffs.h>
-#include <esp_spiffs.h>
-#include <spiffs_nucleus.h>
-
-#include <fat/ff.h>
-
-#include <limits.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
 #include <errno.h>
-#include <sys/stat.h> 
-#include <sys/types.h> 
 #include <sys/mount.h>
 
-extern spiffs fs;
-extern int fat_result(int res);
-extern int spiffs_result(int res);
-
-#if USE_FAT
-static int _mkdir_fat(const char *path, mode_t mode) {
-	int res;
-
-	res = f_mkdir(path);
-	if (res != 0) {
-		errno = fat_result(res);
-		return -1;
-	}
-
-	return 0;
-}
-#endif
-
-#if USE_SPIFFS
-static int _mkdir_spiffs(const char *path, mode_t mode) {
-    char npath[PATH_MAX + 1];
-    int res;
-
-    // Add /. to path
-    strncpy(npath, path, PATH_MAX);
-    if ((strcmp(path,"/") != 0) && (strcmp(path,"/.") != 0)) {
-        strncat(npath,"/.", PATH_MAX);
-    }
-
-    spiffs_file fd = SPIFFS_open(&fs, npath, SPIFFS_CREAT, 0);
-    if (fd < 0) {
-        res = spiffs_result(fs.err_code);
-        errno = res;
-        return -1;
-    }
-
-    if (SPIFFS_close(&fs, fd) < 0) {
-        res = spiffs_result(fs.err_code);
-        errno = res;
-        return -1;
-    }
-
-    return 0;
-}
-#endif
+int vfs_spiffs_mkdir(const char *path, mode_t mode);
+int vfs_fat_mkdir(const char *path, mode_t mode);
 
 int mkdir(const char *path, mode_t mode) {
 	const char *device;
 	char *ppath;
 	char *rpath;
+	int res = 0;
 	int fd;
 
 	// Get physical path
@@ -130,20 +77,19 @@ int mkdir(const char *path, mode_t mode) {
 		return -1;
 	}
 
-	free(ppath);
-
 #if USE_FAT
 	if (strcmp("fat",device) == 0) {
-		return _mkdir_fat(rpath, mode);
+		res = vfs_fat_mkdir(rpath, mode);
 	}
 #endif
 
 #if USE_SPIFFS
 	if (strcmp("spiffs",device) == 0) {
-		return _mkdir_spiffs(rpath, mode);
+		res = vfs_spiffs_mkdir(rpath, mode);
 	}
 #endif
 
-	errno = EFAULT;
-	return -1;
+	free(ppath);
+
+	return res;
 }

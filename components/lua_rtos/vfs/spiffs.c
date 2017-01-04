@@ -50,6 +50,7 @@
 #include <spiffs_nucleus.h>
 #include <sys/syslog.h>
 #include <sys/mount.h>
+#include <sys/dirent.h>
 
 static int IRAM_ATTR vfs_spiffs_open(const char *path, int flags, int mode);
 static size_t IRAM_ATTR vfs_spiffs_write(int fd, const void *data, size_t size);
@@ -61,7 +62,7 @@ static off_t IRAM_ATTR vfs_spiffs_lseek(int fd, off_t size, int mode);
 /*
  * TO DO: this must be static, when vfs will support directory operations
  */
-spiffs fs;
+static spiffs fs;
 
 static u8_t *my_spiffs_work_buf;
 static u8_t *my_spiffs_fds;
@@ -461,6 +462,172 @@ static int IRAM_ATTR vfs_spiffs_rename(const char *src, const char *dst) {
     if (res < 0) {
     	errno = res;
     	return -1;
+    }
+
+    return 0;
+}
+
+int IRAM_ATTR vfs_spiffs_getdents(int fd, void *buff, int size) {
+	struct file *fp;
+	int res = 0;
+
+	// Get file from file descriptor
+	if (!(fp = get_file(fd))) {
+		errno = EBADF;
+		return -1;
+	}
+
+	// Open directory, if needed
+	if (!fp->f_dir) {
+		spiffs_DIR *dir = malloc(sizeof(spiffs_DIR));
+	    if (!dir) {
+	        return ENOMEM;
+	    }
+
+	    if (!SPIFFS_opendir(&fs, fp->f_path, dir)) {
+	        free(dir);
+
+	        res = spiffs_result(fs.err_code);
+	        if (res < 0) {
+	        	errno = res;
+	        	return -1;
+	        }
+	    }
+
+
+	    fp->f_dir = dir;
+
+	    char mdir[PATH_MAX + 1];
+	    if (mount_readdir("spiffs", fp->f_path, 0, mdir)) {
+	    	struct dirent ent;
+
+	    	strncpy(ent.d_name, mdir, PATH_MAX);
+	        ent.d_type = DT_DIR;
+	        ent.d_reclen = sizeof(struct dirent);
+	        ent.d_ino = 1;
+	        ent.d_namlen = strlen(mdir);
+	        ent.d_fsize = 0;
+
+	        memcpy(buff, &ent, sizeof(struct dirent));
+	    	return sizeof(struct dirent);
+	    }
+	}
+
+	struct dirent ent;
+	struct spiffs_dirent e;
+    struct spiffs_dirent *pe = &e;
+    char *fn;
+    int len = 0;
+    int entries = 0;
+
+    ent.d_name[0] = '\0';
+    for(;;) {
+        // Read directory
+        pe = SPIFFS_readdir((spiffs_DIR *)fp->f_dir, pe);
+        if (!pe) {
+            res = spiffs_result(fs.err_code);
+            break;
+        }
+
+        // Break condition
+        if (pe->name[0] == 0) break;
+
+        // Get name and length
+        fn = (char *)pe->name;
+        len = strlen(fn);
+
+        // Get entry type and size
+        ent.d_type = DT_REG;
+        ent.d_reclen = sizeof(struct dirent);
+        ent.d_ino = 1;
+
+        if (len >= 2) {
+            if (fn[len - 1] == '.') {
+                if (fn[len - 2] == '/') {
+                    ent.d_type = DT_DIR;
+
+                    fn[len - 2] = '\0';
+
+                    len = strlen(fn);
+
+                    // Skip root dir
+                    if (len == 0) {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        // Skip entries not belonged to path
+        if (strncmp(fn, fp->f_path, strlen(fp->f_path)) != 0) {
+            continue;
+        }
+
+        if (strlen(fp->f_path) > 1) {
+            if (*(fn + strlen(fp->f_path)) != '/') {
+                continue;
+            }
+        }
+
+        // Skip root directory
+        fn = fn + strlen(fp->f_path);
+        len = strlen(fn);
+        if (len == 0) {
+            continue;
+        }
+
+        // Skip initial /
+        if (len > 1) {
+            if (*fn == '/') {
+                fn = fn + 1;
+                len--;
+            }
+        }
+
+        // Skip subdirectories
+        if (strchr(fn,'/')) {
+            continue;
+        }
+
+        ent.d_namlen = len;
+        ent.d_fsize = pe->size;
+
+        strncpy(ent.d_name, fn, MAXNAMLEN);
+
+        entries++;
+
+        break;
+    }
+
+    if (entries) {
+    	memcpy(buff, &ent, sizeof(struct dirent));
+    	return entries * sizeof(struct dirent);
+    } else {
+    	return 0;
+    }
+}
+
+int IRAM_ATTR vfs_spiffs_mkdir(const char *path, mode_t mode) {
+    char npath[PATH_MAX + 1];
+    int res;
+
+    // Add /. to path
+    strncpy(npath, path, PATH_MAX);
+    if ((strcmp(path,"/") != 0) && (strcmp(path,"/.") != 0)) {
+        strncat(npath,"/.", PATH_MAX);
+    }
+
+    spiffs_file fd = SPIFFS_open(&fs, npath, SPIFFS_CREAT, 0);
+    if (fd < 0) {
+        res = spiffs_result(fs.err_code);
+        errno = res;
+        return -1;
+    }
+
+    if (SPIFFS_close(&fs, fd) < 0) {
+        res = spiffs_result(fs.err_code);
+        errno = res;
+        return -1;
     }
 
     return 0;

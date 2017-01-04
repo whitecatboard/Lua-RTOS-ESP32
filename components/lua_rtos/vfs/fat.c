@@ -45,6 +45,7 @@
 #include <sys/stat.h>
 #include <sys/mount.h>
 #include <sys/syslog.h>
+#include <sys/dirent.h>
 
 #include <syscalls/syscalls.h>
 
@@ -370,6 +371,141 @@ static int IRAM_ATTR vfs_fat_unlink(const char *path) {
 
 static int IRAM_ATTR vfs_fat_rename(const char *src, const char *dst) {
     return fat_result(f_rename(src, dst));
+}
+
+int IRAM_ATTR vfs_fat_getdents(int fd, void *buff, int size) {
+	struct file *fp;
+	int res = 0;
+
+	// Get file from file descriptor
+	if (!(fp = get_file(fd))) {
+		errno = EBADF;
+		return -1;
+	}
+
+	// Open directory, if needed
+	if (!fp->f_dir) {
+		FDIR *dir = malloc(sizeof(FDIR));
+	    if (!dir) {
+	        return ENOMEM;
+	    }
+
+	    res = f_opendir(dir, fp->f_path);
+	    if (res != FR_OK) {
+	        free(dir);
+
+	        errno = fat_result(res);
+	        return -1;
+	    }
+
+	    fp->f_dir = dir;
+
+	    char mdir[PATH_MAX + 1];
+	    if (mount_readdir("fat", fp->f_path, 0, mdir)) {
+	    	struct dirent ent;
+
+	    	strncpy(ent.d_name, mdir, PATH_MAX);
+	        ent.d_type = DT_DIR;
+	        ent.d_reclen = sizeof(struct dirent);
+	        ent.d_ino = 1;
+	        ent.d_namlen = strlen(mdir);
+	        ent.d_fsize = 0;
+
+	        memcpy(buff, &ent, sizeof(struct dirent));
+	    	return sizeof(struct dirent);
+	    }
+	}
+
+	struct dirent ent;
+	FILINFO fno;
+	char lfname[(_MAX_LFN + 1) * 2];
+
+    char *fn;
+    int entries = 0;
+
+    fno.lfname = lfname;
+    fno.lfsize = (_MAX_LFN + 1) * 2;
+
+    ent.d_name[0] = '\0';
+    for(;;) {
+    	*(fno.lfname) = '\0';
+
+        // Read directory
+        res = f_readdir((FDIR *)fp->f_dir, &fno);
+
+        // Break condition
+        if (res != FR_OK || fno.fname[0] == 0) {
+            break;
+        }
+
+        if (fno.fname[0] == '.') {
+            if (fno.fname[1] == '.') {
+                if (!fno.fname[2]) {
+                    continue;
+                }
+            }
+
+            if (!fno.fname[1]) {
+                continue;
+            }
+        }
+
+        if (fno.fattrib & (AM_HID | AM_SYS | AM_VOL)) {
+            continue;
+        }
+
+        // Get name
+        if (*(fno.lfname)) {
+            fn = fno.lfname;
+        } else {
+            fn = fno.fname;
+        }
+
+        ent.d_type = 0;
+        ent.d_reclen = sizeof(struct dirent);
+        ent.d_ino = 1;
+
+        if (fno.fattrib & AM_DIR) {
+            ent.d_type = DT_DIR;
+            ent.d_fsize = 0;
+        }
+
+        if (fno.fattrib & AM_ARC) {
+            ent.d_type = DT_REG;
+            ent.d_fsize = fno.fsize;
+        }
+
+        ent.d_namlen = strlen(fn);
+
+        if (!ent.d_type) {
+            continue;
+        }
+
+        strncpy(ent.d_name, fn, MAXNAMLEN);
+
+        entries++;
+
+        break;
+    }
+
+    if (entries) {
+    	memcpy(buff, &ent, sizeof(struct dirent));
+    	return entries * sizeof(struct dirent);
+    } else {
+    	return 0;
+    }
+}
+
+int IRAM_ATTR vfs_fat_mkdir(const char *path, mode_t mode) {
+	int res;
+
+	res = f_mkdir(path);
+	if (res != 0) {
+		errno = fat_result(res);
+		return -1;
+	}
+
+	return 0;
 }
 
 void vfs_fat_register() {
