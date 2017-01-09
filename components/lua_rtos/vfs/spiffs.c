@@ -31,8 +31,6 @@
 
 #if USE_SPIFFS
 
-#include <syscalls/syscalls.h>
-
 #include <freertos/FreeRTOS.h>
 
 #include <string.h>
@@ -50,14 +48,9 @@
 #include <spiffs_nucleus.h>
 #include <sys/syslog.h>
 #include <sys/mount.h>
+#include <sys/list.h>
+#include <sys/fcntl.h>
 #include <dirent.h>
-
-typedef struct {
-	DIR dir;
-	spiffs_DIR spiffs_dir;
-	char path[MAXNAMLEN + 1];
-	struct dirent ent;
-} vfs_spiffs_dir_t;
 
 static int IRAM_ATTR vfs_spiffs_open(const char *path, int flags, int mode);
 static size_t IRAM_ATTR vfs_spiffs_write(int fd, const void *data, size_t size);
@@ -66,10 +59,23 @@ static int IRAM_ATTR vfs_spiffs_fstat(int fd, struct stat * st);
 static int IRAM_ATTR vfs_spiffs_close(int fd);
 static off_t IRAM_ATTR vfs_spiffs_lseek(int fd, off_t size, int mode);
 
-/*
- * TO DO: this must be static, when vfs will support directory operations
- */
+typedef struct {
+	DIR dir;
+	spiffs_DIR spiffs_dir;
+	char path[MAXNAMLEN + 1];
+	struct dirent ent;
+	uint8_t read_mount;
+} vfs_spiffs_dir_t;
+
+typedef struct {
+	spiffs_file spiffs_file;
+	char path[MAXNAMLEN + 1];
+	uint8_t is_dir;
+} vfs_spiffs_file_t;
+
+
 static spiffs fs;
+static struct list files;
 
 static u8_t *my_spiffs_work_buf;
 static u8_t *my_spiffs_fds;
@@ -91,6 +97,8 @@ static int is_dir(const char *path) {
     strlcpy(npath, path, PATH_MAX);
     if (strcmp(path,"/") != 0) {
         strlcat(npath,"/.", PATH_MAX);
+    } else {
+    	strlcat(npath,".", PATH_MAX);
     }
 
     SPIFFS_opendir(&fs, "/", &d);
@@ -107,14 +115,10 @@ static int is_dir(const char *path) {
 }
 
 /*
- * TO DO: this must be static, when vfs will support directory operations
- */
-
-/*
  * This function translate error codes from SPIFFS to errno error codes
  *
  */
-int spiffs_result(int res) {
+static int spiffs_result(int res) {
     switch (res) {
         case SPIFFS_OK:
         case SPIFFS_ERR_END_OF_OBJECT:
@@ -137,28 +141,28 @@ int spiffs_result(int res) {
 }
 
 static int IRAM_ATTR vfs_spiffs_open(const char *path, int flags, int mode) {
-	struct file *fp;
-	int fd, error;
+	int fd, result = 0;
 
 	// Allocate new file
-    error = falloc(&fp, &fd);
-    if (error) {
-        errno = error;
-        return -1;
+	vfs_spiffs_file_t *file = calloc(1, sizeof(vfs_spiffs_file_t));
+	if (!file) {
+		errno = ENOMEM;
+		return -1;
+	}
+
+    // Add file to file list. List index is file descriptor.
+    int res = list_add(&files, file, &fd);
+    if (res) {
+    	free(file);
+    	errno = res;
+    	return -1;
     }
 
-	fp->f_fd      = fd;
-    fp->f_fs      = NULL;
-    fp->f_dir     = NULL;
-    fp->f_path 	  = NULL;
-    fp->f_fs_type = FS_SPIFFS;
-    fp->f_flag    = FFLAGS(flags) & FMASK;
+    // Make a copy of path
+	strlcpy(file->path, path, MAXNAMLEN);
 
     // Open file
     spiffs_flags spiffs_mode = 0;
-    spiffs_file *FP;
-    char *path_copy;
-    int result = 0;
 
     // Translate flags to SPIFFS flags
     if (flags == O_RDONLY)
@@ -179,46 +183,34 @@ static int IRAM_ATTR vfs_spiffs_open(const char *path, int flags, int mode) {
     if (flags & O_TRUNC)
     	spiffs_mode |= SPIFFS_TRUNC;
 
-    // Create a SPIFFS FIL structure
-    FP = (spiffs_file *)malloc(sizeof(spiffs_file));
-    if (!FP) {
-    	closef(fp);
-        errno = ENOMEM;
-        return -1;
-    }
-
-    // Store SPIFFS file
-    fp->f_fs = FP;
-
-    // Create a copy for path
-    path_copy = (char *)malloc(strlen(path) + 1);
-    if (!path_copy) {
-    	closef(fp);
-        errno = ENOMEM;
-        return -1;
-    }
-
-    strcpy(path_copy, path);
-
-    // Store a copy of file path
-    fp->f_path = path_copy;
-
-    if (strcmp(path,"/") == 0) {
-        return fd;
-    }
-
     if (is_dir(path)) {
-    	return fd;
-    }
+        char npath[PATH_MAX + 1];
 
-    // Open SPIFFS file
-    *FP = SPIFFS_open(&fs, path, spiffs_mode, 0);
-    if (*FP < 0) {
-        result = spiffs_result(fs.err_code);
+        // Add /. to path
+        strlcpy(npath, path, PATH_MAX);
+        if (strcmp(path,"/") != 0) {
+            strlcat(npath,"/.", PATH_MAX);
+        } else {
+        	strlcat(npath,".", PATH_MAX);
+        }
+
+        // Open SPIFFS file
+        file->spiffs_file = SPIFFS_open(&fs, npath, spiffs_mode, 0);
+        if (file->spiffs_file < 0) {
+            result = spiffs_result(fs.err_code);
+        }
+
+    	file->is_dir = 1;
+    } else {
+        // Open SPIFFS file
+        file->spiffs_file = SPIFFS_open(&fs, path, spiffs_mode, 0);
+        if (file->spiffs_file < 0) {
+            result = spiffs_result(fs.err_code);
+        }
     }
 
     if (result != 0) {
-    	closef(fp);
+    	list_remove(&files, fd);
     	errno = result;
     	return -1;
     }
@@ -227,25 +219,22 @@ static int IRAM_ATTR vfs_spiffs_open(const char *path, int flags, int mode) {
 }
 
 static size_t IRAM_ATTR vfs_spiffs_write(int fd, const void *data, size_t size) {
-	struct file *fp;
-
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
-		errno = EBADF;
-		return -1;
-	}
-
-	// Get SPIFFS file struct from file
-	spiffs_file FP = *(spiffs_file *)fp->f_fs;
-	if (!FP) {
-		errno = EBADF;
-		return -1;
-	}
-
-    // Write SPIFFS file
+	vfs_spiffs_file_t *file;
 	int res;
 
-	res = SPIFFS_write(&fs, *(spiffs_file *)fp->f_fs, (void *)data, size);
+    res = list_get(&files, fd, (void **)&file);
+    if (res) {
+		errno = EBADF;
+		return -1;
+    }
+
+    if (file->is_dir) {
+		errno = EBADF;
+		return -1;
+    }
+
+    // Write SPIFFS file
+	res = SPIFFS_write(&fs, file->spiffs_file, (void *)data, size);
 	if (res >= 0) {
 		return res;
 	} else {
@@ -260,25 +249,22 @@ static size_t IRAM_ATTR vfs_spiffs_write(int fd, const void *data, size_t size) 
 }
 
 static ssize_t IRAM_ATTR vfs_spiffs_read(int fd, void * dst, size_t size) {
-	struct file *fp;
-
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
-		errno = EBADF;
-		return -1;
-	}
-
-	// Get SPIFFS file struct from file
-	spiffs_file FP = *(spiffs_file *)fp->f_fs;
-	if (!FP) {
-		errno = EBADF;
-		return -1;
-	}
-
-    // Read SPIFFS file
+	vfs_spiffs_file_t *file;
 	int res;
 
-	res = SPIFFS_read(&fs, FP, dst, size);
+    res = list_get(&files, fd, (void **)&file);
+    if (res) {
+		errno = EBADF;
+		return -1;
+    }
+
+    if (file->is_dir) {
+		errno = EBADF;
+		return -1;
+    }
+
+    // Read SPIFFS file
+	res = SPIFFS_read(&fs, file->spiffs_file, dst, size);
 	if (res >= 0) {
 		return res;
 	} else {
@@ -296,27 +282,27 @@ static ssize_t IRAM_ATTR vfs_spiffs_read(int fd, void * dst, size_t size) {
 }
 
 static int IRAM_ATTR vfs_spiffs_fstat(int fd, struct stat * st) {
-	struct file *fp;
+	vfs_spiffs_file_t *file;
     spiffs_stat stat;
-    int res;
+	int res;
 
-    // Get file from file descriptor
-	if (!(fp = get_file(fd))) {
+    res = list_get(&files, fd, (void **)&file);
+    if (res) {
 		errno = EBADF;
 		return -1;
-	}
+    }
 
 	// Set block size for this file system
     st->st_blksize = SPIFFS_LOG_PAGE_SIZE;
 
     // First test if it's a directory entry
-    if (is_dir(fp->f_path)) {
+    if (file->is_dir) {
         st->st_mode = S_IFDIR;
         return 0;
     }
 
     // If is not a directory get file statistics
-    res = SPIFFS_stat(&fs, fp->f_path, &stat);
+    res = SPIFFS_stat(&fs, file->path, &stat);
     if (res == SPIFFS_OK) {
     	st->st_size = stat.size;
 	} else {
@@ -335,63 +321,44 @@ static int IRAM_ATTR vfs_spiffs_fstat(int fd, struct stat * st) {
 }
 
 static int IRAM_ATTR vfs_spiffs_close(int fd) {
-	struct file *fp;
-	int res_file = 0;
-	int res_dir = 0;
+	vfs_spiffs_file_t *file;
+	int res;
 
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
+    res = list_get(&files, fd, (void **)&file);
+    if (res) {
 		errno = EBADF;
 		return -1;
+    }
+
+	res = SPIFFS_close(&fs, file->spiffs_file);
+	if (res) {
+		res = spiffs_result(fs.err_code);
 	}
 
-	// Close SPIFFS file, if needed
-	if ((spiffs_file *)fp->f_fs) {
-		res_file = SPIFFS_close(&fs, *(spiffs_file *)fp->f_fs);
-		if (res_file) {
-			res_file = spiffs_result(fs.err_code);
-		}
-	}
-
-	// Close SPIFFS directory, if needed
-	if ((spiffs_DIR *)fp->f_dir) {
-		res_dir = SPIFFS_closedir((spiffs_DIR *)fp->f_dir);
-        if (res_dir < 0) {
-        	res_dir = spiffs_result(fs.err_code);
-        }
-	}
-
-	closef(fp);
-
-	if (res_file < 0) {
-		errno = res_file;
+	if (res < 0) {
+		errno = res;
 		return -1;
 	}
 
-	if (res_dir < 0) {
-		errno = res_dir;
-		return -1;
-	}
+	list_remove(&files, fd);
 
 	return 0;
 }
 
 static off_t IRAM_ATTR vfs_spiffs_lseek(int fd, off_t size, int mode) {
-	struct file *fp;
+	vfs_spiffs_file_t *file;
 	int res;
 
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
+    res = list_get(&files, fd, (void **)&file);
+    if (res) {
 		errno = EBADF;
 		return -1;
-	}
+    }
 
-	// Get SPIFFS file struct from file
-	spiffs_file FP = *(spiffs_file *)fp->f_fs;
-	if (!FP) {
+    if (file->is_dir) {
 		errno = EBADF;
 		return -1;
-	}
+    }
 
 	int whence = SPIFFS_SEEK_CUR;
 
@@ -401,7 +368,7 @@ static off_t IRAM_ATTR vfs_spiffs_lseek(int fd, off_t size, int mode) {
         case SEEK_END: whence = SPIFFS_SEEK_END;break;
     }
 
-    res = SPIFFS_lseek(&fs, *(spiffs_file *)fp->f_fs, size, whence);
+    res = SPIFFS_lseek(&fs, file->spiffs_file, size, whence);
     if (res < 0) {
         res = spiffs_result(fs.err_code);
         errno = res;
@@ -482,6 +449,7 @@ static DIR* vfs_spiffs_opendir(const char* name) {
 }
 
 static struct dirent* vfs_spiffs_readdir(DIR* pdir) {
+    int res = 0, len = 0, entries = 0;
 	vfs_spiffs_dir_t* dir = (vfs_spiffs_dir_t*) pdir;
 
 	struct spiffs_dirent e;
@@ -489,14 +457,31 @@ static struct dirent* vfs_spiffs_readdir(DIR* pdir) {
 
     struct dirent *ent = &dir->ent;
 
-	int res;
-
     char *fn;
-    int len = 0;
-    int entries = 0;
 
+    // Clear current dirent
     memset(ent,0,sizeof(struct dirent));
 
+    // If this is the first call to readdir for pdir, and
+    // directory is the root path, return the mounted point if any
+    if (!dir->read_mount) {
+    	if (strcmp(dir->path,"/") == 0) {
+    	    char mdir[PATH_MAX + 1];
+
+    	    if (mount_readdir("spiffs", dir->path, 0, mdir)) {
+    	    	strlcpy(ent->d_name, mdir, PATH_MAX);
+    	        ent->d_type = DT_DIR;
+    	        ent->d_fsize = 0;
+    	        dir->read_mount = 1;
+
+    	        return ent;
+    	    }
+    	}
+
+    	dir->read_mount = 1;
+    }
+
+    // Search for next entry
     for(;;) {
         // Read directory
         pe = SPIFFS_readdir(&dir->spiffs_dir, pe);
@@ -563,6 +548,8 @@ static struct dirent* vfs_spiffs_readdir(DIR* pdir) {
         if (strchr(fn,'/')) {
             continue;
         }
+
+        ent->d_fsize = pe->size;
 
         strlcpy(ent->d_name, fn, MAXNAMLEN);
 
@@ -708,6 +695,8 @@ void vfs_spiffs_register() {
     }
 
     mount_set_mounted("spiffs", 1);
+
+    list_init(&files, 0);
 
     syslog(LOG_INFO, "spiffs%d mounted", unit);
 }

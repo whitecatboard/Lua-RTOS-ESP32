@@ -1,0 +1,10 @@
+--- /Users/jaumeolivepetrus/esp-idf/components/vfs/include/sys/dirent.h	2017-01-09 22:18:29.000000000 +0100
++++ dirent.h	2017-01-09 22:18:23.000000000 +0100
+@@ -43,6 +43,7 @@
+ #define DT_REG      1
+ #define DT_DIR      2
+     char d_name[256];   /*!< zero-terminated file name */
++    uint32_t d_fsize;
+ };
+ 
+ DIR* opendir(const char* name);

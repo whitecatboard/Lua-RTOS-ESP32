@@ -41,22 +41,15 @@
 #include <stdio.h>
 #include <limits.h>
 
-#include <fat/ff.h>
-
 #include <sys/stat.h>
 #include <sys/mount.h>
 #include <sys/syslog.h>
+#include <sys/list.h>
+#include <sys/fcntl.h>
 
-#include <syscalls/syscalls.h>
+#include <fat/ff.h>
 
 #include <drivers/sd.h>
-
-typedef struct {
-	DIR dir;
-	FDIR fat_dir;
-	char path[MAXNAMLEN + 1];
-	struct dirent ent;
-} vfs_fat_dir_t;
 
 static int IRAM_ATTR vfs_fat_open(const char *path, int flags, int mode);
 static size_t IRAM_ATTR vfs_fat_write(int fd, const void *data, size_t size);
@@ -65,9 +58,24 @@ static int IRAM_ATTR vfs_fat_fstat(int fd, struct stat * st);
 static int IRAM_ATTR vfs_fat_close(int fd);
 static off_t IRAM_ATTR vfs_fat_lseek(int fd, off_t size, int mode);
 
+typedef struct {
+	DIR dir;
+	FDIR fat_dir;
+	char path[MAXNAMLEN + 1];
+	struct dirent ent;
+	uint8_t read_mount;
+} vfs_fat_dir_t;
+
+typedef struct {
+	FIL fat_file;
+	char path[MAXNAMLEN + 1];
+	uint8_t is_dir;
+} vfs_fat_file_t;
+
 #define	EACCESS	5 // Permission denied
 
 static FATFS sd_fs[NSD];
+static struct list files;
 
 /*
  * This function translate error codes from FAT to errno error codes
@@ -100,27 +108,28 @@ int IRAM_ATTR fat_result(FRESULT res) {
 }
 
 static int IRAM_ATTR vfs_fat_open(const char *path, int flags, int mode) {
-	struct file *fp;
-	int fd, error;
+	int fd;
 
 	// Allocate new file
-    error = falloc(&fp, &fd);
-    if (error) {
-        errno = error;
-        return -1;
+	vfs_fat_file_t *file = calloc(1, sizeof(vfs_fat_file_t));
+	if (!file) {
+		errno = ENOMEM;
+		return -1;
+	}
+
+    // Add file to file list. List index is file descriptor.
+    int res = list_add(&files, file, &fd);
+    if (res) {
+    	free(file);
+    	errno = res;
+    	return -1;
     }
 
-	fp->f_fd      = fd;
-    fp->f_fs      = NULL;
-    fp->f_dir     = NULL;
-    fp->f_path 	  = NULL;
-    fp->f_fs_type = FS_FAT;
-    fp->f_flag    = FFLAGS(flags) & FMASK;
+	// Make a copy of path
+	strlcpy(file->path, path, MAXNAMLEN);
 
     // Open file
     int fat_mode = 0;
-    FIL *FP;
-    char *path_copy;
     int result = 0;
 
     // Translate flags to FAT flags
@@ -151,37 +160,16 @@ static int IRAM_ATTR vfs_fat_open(const char *path, int flags, int mode) {
     	fat_mode |= FA_CREATE_ALWAYS;
     }
 
-    // Create a FAT FIL structure
-    FP = (FIL *)malloc(sizeof(FIL));
-    if (!FP) {
-        return ENOMEM;
-    }
-
-    // Store FAT file
-    fp->f_fs = FP;
-
-    // Create a copy for path
-    path_copy = (char *)malloc(strlen(path) + 1);
-    if (!path_copy) {
-    	closef(fp);
-        errno = ENOMEM;
-        return -1;
-    }
-
-    strcpy(path_copy, path);
-
-    // Store a copy of file path
-    fp->f_path = path_copy;
-
     // Open FAT file
-    result = f_open(FP, path, fat_mode);
+    result = f_open(&file->fat_file, path, fat_mode);
     result = fat_result(result);
     if ((result == EISDIR) && !(flags & O_RDONLY)) {
         result = 0;
+        file->is_dir = 1;
     }
 
     if (result != 0) {
-    	closef(fp);
+    	list_remove(&files, fd);
     	errno = result;
     	return -1;
     }
@@ -190,24 +178,25 @@ static int IRAM_ATTR vfs_fat_open(const char *path, int flags, int mode) {
 }
 
 static size_t IRAM_ATTR vfs_fat_write(int fd, const void *data, size_t size) {
-	struct file *fp;
+	vfs_fat_file_t *file;
+	int res;
 
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
+    res = list_get(&files, fd, (void **)&file);
+    if (res) {
 		errno = EBADF;
 		return -1;
-	}
+    }
+
+    if (file->is_dir) {
+		errno = EBADF;
+		return -1;
+    }
 
     // Write FAT file
-	int res;
 	unsigned int bw;
 
-    res = f_write((FIL *)fp->f_fs, data, size, &bw);
+    res = f_write(&file->fat_file, data, size, &bw);
     if (res == FR_OK) {
-//        if (res == FR_OK) {
-  //          res = f_sync((FIL *)fp->f_fs);
-    //    }
-
     	return (size_t)bw;
     } else {
     	errno = fat_result(res);
@@ -216,19 +205,24 @@ static size_t IRAM_ATTR vfs_fat_write(int fd, const void *data, size_t size) {
 }
 
 static ssize_t IRAM_ATTR vfs_fat_read(int fd, void * dst, size_t size) {
-	struct file *fp;
+	vfs_fat_file_t *file;
+	int res;
 
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
+    res = list_get(&files, fd, (void **)&file);
+    if (res) {
 		errno = EBADF;
 		return -1;
-	}
+    }
+
+    if (file->is_dir) {
+		errno = EBADF;
+		return -1;
+    }
 
     // Read FAT file
-	int res;
 	unsigned int br;
 
-    res = f_read((FIL *)fp->f_fs, dst, size, &br);
+    res = f_read(&file->fat_file, dst, size, &br);
     if (res == FR_OK) {
         return (ssize_t)br;
     } else {
@@ -240,13 +234,14 @@ static ssize_t IRAM_ATTR vfs_fat_read(int fd, void * dst, size_t size) {
 }
 
 static int IRAM_ATTR vfs_fat_fstat(int fd, struct stat * st) {
-	struct file *fp;
-    int res;
-    // Get file from file descriptor
-	if (!(fp = get_file(fd))) {
+	vfs_fat_file_t *file;
+	int res;
+
+    res = list_get(&files, fd, (void **)&file);
+    if (res) {
 		errno = EBADF;
 		return -1;
-	}
+    }
 
 	// Set block size for this file system
     st->st_blksize = 512;
@@ -257,7 +252,7 @@ static int IRAM_ATTR vfs_fat_fstat(int fd, struct stat * st) {
     fno.lfname = NULL;
     fno.lfsize = 0;
 
-    res = f_stat(fp->f_path, &fno);
+    res = f_stat(file->path, &fno);
     if (res == FR_OK) {
     	struct tm tm_info;
 
@@ -289,70 +284,60 @@ static int IRAM_ATTR vfs_fat_fstat(int fd, struct stat * st) {
 }
 
 static int IRAM_ATTR vfs_fat_close(int fd) {
-	struct file *fp;
 	int res = 0;
-	int res_file = 0;
-	int res_dir = 0;
 
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
+	vfs_fat_file_t *file;
+
+    res = list_get(&files, fd, (void **)&file);
+    if (res) {
 		errno = EBADF;
 		return -1;
+    }
+
+    // Close FAT file
+	res = f_close(&file->fat_file);
+	if (res != 0) {
+		res = fat_result(res);
 	}
 
-    // Close FAT file, if needed
-    if (fp->f_fs) {
-        res = f_close((FIL *)fp->f_fs);
-        if (res != 0) {
-        	res_file = fat_result(res);
-        }
-    }
-
-	// Close FAT directory, if needed
-    if (fp->f_dir) {
-        res = f_closedir((FDIR *)fp->f_dir);
-        if (res != 0) {
-        	res_dir = fat_result(res);
-        }
-    }
-
-	closef(fp);
-
-	if (res_file < 0) {
-		errno = res_file;
+	if (res < 0) {
+		errno = res;
 		return -1;
 	}
 
-	if (res_dir < 0) {
-		errno = res_dir;
-		return -1;
-	}
+	list_remove(&files, fd);
 
 	return 0;
 }
 
 static off_t IRAM_ATTR vfs_fat_lseek(int fd, off_t size, int mode) {
-	struct file *fp;
-	int res;
     int off = size;
 
-    // Get file from file descriptor
-	if (!(fp = get_file(fd))) {
+	vfs_fat_file_t *file;
+	int res;
+
+    res = list_get(&files, fd, (void **)&file);
+    if (res) {
 		errno = EBADF;
 		return -1;
-	}
+    }
+
+    if (file->is_dir) {
+		errno = EBADF;
+		return -1;
+    }
 
     switch (mode) {
         case SEEK_CUR:
-        	off = ((FIL *)fp->f_fs)->fptr + size;break;
+        	off = file->fat_file.fptr + size;break;
 
         case SEEK_END:
-        	off = ((FIL *)fp->f_fs)->fsize - size;
-        	f_sync((FIL *)fp->f_fs);
+        	off = file->fat_file.fsize - size;
+        	f_sync(&file->fat_file);
         	break;
     }
 
-    res = f_lseek(((FIL *)fp->f_fs), off);
+    res = f_lseek(&file->fat_file, off);
     if (res != 0) {
     	errno = fat_result(res);
     	return -1;
@@ -361,7 +346,7 @@ static off_t IRAM_ATTR vfs_fat_lseek(int fd, off_t size, int mode) {
     return 0;
 }
 
-static int IRAM_ATTR vfs_fat_stat(const char * path, struct stat * st) {
+static int IRAM_ATTR vfs_fat_stat(const char *path, struct stat * st) {
 	int fd;
 	int res;
 
@@ -379,131 +364,6 @@ static int IRAM_ATTR vfs_fat_unlink(const char *path) {
 static int IRAM_ATTR vfs_fat_rename(const char *src, const char *dst) {
     return fat_result(f_rename(src, dst));
 }
-
-#if 0
-int IRAM_ATTR vfs_fat_getdents(int fd, void *buff, int size) {
-	struct file *fp;
-	int res = 0;
-
-	// Get file from file descriptor
-	if (!(fp = get_file(fd))) {
-		errno = EBADF;
-		return -1;
-	}
-
-	// Open directory, if needed
-	if (!fp->f_dir) {
-		FDIR *dir = malloc(sizeof(FDIR));
-	    if (!dir) {
-	        return ENOMEM;
-	    }
-
-	    res = f_opendir(dir, fp->f_path);
-	    if (res != FR_OK) {
-	        free(dir);
-
-	        errno = fat_result(res);
-	        return -1;
-	    }
-
-	    fp->f_dir = dir;
-
-	    char mdir[PATH_MAX + 1];
-	    if (mount_readdir("fat", fp->f_path, 0, mdir)) {
-	    	struct dirent ent;
-
-	    	strlcpy(ent.d_name, mdir, PATH_MAX);
-	        ent.d_type = DT_DIR;
-	        ent.d_reclen = sizeof(struct dirent);
-	        ent.d_ino = 1;
-	        ent.d_namlen = strlen(mdir);
-	        ent.d_fsize = 0;
-
-	        memcpy(buff, &ent, sizeof(struct dirent));
-	    	return sizeof(struct dirent);
-	    }
-	}
-
-	struct dirent ent;
-	FILINFO fno;
-	char lfname[(_MAX_LFN + 1) * 2];
-
-    char *fn;
-    int entries = 0;
-
-    fno.lfname = lfname;
-    fno.lfsize = (_MAX_LFN + 1) * 2;
-
-    ent.d_name[0] = '\0';
-    for(;;) {
-    	*(fno.lfname) = '\0';
-
-        // Read directory
-        res = f_readdir((FDIR *)fp->f_dir, &fno);
-
-        // Break condition
-        if (res != FR_OK || fno.fname[0] == 0) {
-            break;
-        }
-
-        if (fno.fname[0] == '.') {
-            if (fno.fname[1] == '.') {
-                if (!fno.fname[2]) {
-                    continue;
-                }
-            }
-
-            if (!fno.fname[1]) {
-                continue;
-            }
-        }
-
-        if (fno.fattrib & (AM_HID | AM_SYS | AM_VOL)) {
-            continue;
-        }
-
-        // Get name
-        if (*(fno.lfname)) {
-            fn = fno.lfname;
-        } else {
-            fn = fno.fname;
-        }
-
-        ent.d_type = 0;
-        ent.d_reclen = sizeof(struct dirent);
-        ent.d_ino = 1;
-
-        if (fno.fattrib & AM_DIR) {
-            ent.d_type = DT_DIR;
-            ent.d_fsize = 0;
-        }
-
-        if (fno.fattrib & AM_ARC) {
-            ent.d_type = DT_REG;
-            ent.d_fsize = fno.fsize;
-        }
-
-        ent.d_namlen = strlen(fn);
-
-        if (!ent.d_type) {
-            continue;
-        }
-
-        strlcpy(ent.d_name, fn, MAXNAMLEN);
-
-        entries++;
-
-        break;
-    }
-
-    if (entries) {
-    	memcpy(buff, &ent, sizeof(struct dirent));
-    	return entries * sizeof(struct dirent);
-    } else {
-    	return 0;
-    }
-}
-#endif
 
 static int IRAM_ATTR vfs_fat_mkdir(const char *path, mode_t mode) {
 	int res;
@@ -541,19 +401,38 @@ static DIR* vfs_fat_opendir(const char* name) {
 static struct dirent* vfs_fat_readdir(DIR* pdir) {
 	vfs_fat_dir_t* dir = (vfs_fat_dir_t*) pdir;
     struct dirent *ent = &dir->ent;
-
-	int res = 0;
+	int res = 0, entries = 0;
 
 	FILINFO fno;
 	char lfname[(_MAX_LFN + 1) * 2];
 
     char *fn;
-    int entries = 0;
 
     fno.lfname = lfname;
     fno.lfsize = (_MAX_LFN + 1) * 2;
 
+    // Clear current dirent
     memset(ent,0,sizeof(struct dirent));
+
+    // If this is the first call to readdir for pdir, and
+    // directory is the root path, return the mounted point if any
+    if (!dir->read_mount) {
+    	if (strcmp(dir->path,"/") == 0) {
+    	    char mdir[PATH_MAX + 1];
+
+    	    if (mount_readdir("fat", dir->path, 0, mdir)) {
+    	    	strlcpy(ent->d_name, mdir, PATH_MAX);
+    	        ent->d_type = DT_DIR;
+    	        ent->d_fsize = 0;
+
+    	        dir->read_mount = 1;
+
+    	        return ent;
+    	    }
+    	}
+
+    	dir->read_mount = 1;
+    }
 
     for(;;) {
     	*(fno.lfname) = '\0';
@@ -593,12 +472,12 @@ static struct dirent* vfs_fat_readdir(DIR* pdir) {
 
         if (fno.fattrib & AM_DIR) {
             ent->d_type = DT_DIR;
-            //ent->d_fsize = 0;
+            ent->d_fsize = 0;
         }
 
         if (fno.fattrib & AM_ARC) {
             ent->d_type = DT_REG;
-            //ent->d_fsize = fno.fsize;
+            ent->d_fsize = fno.fsize;
         }
 
         if (!ent->d_type) {
@@ -685,6 +564,8 @@ void vfs_fat_register() {
         }
 
     	mount_set_mounted("fat", 1);
+
+        list_init(&files, 0);
 
         syslog(LOG_INFO, "fat%d mounted", 0);
     } else {

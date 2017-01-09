@@ -27,8 +27,6 @@
  * this software.
  */
 
-#include "syscalls.h"
-
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,6 +36,7 @@
 #include <unistd.h>
 
 #include <sys/mount.h>
+#include <sys/fcntl.h>
 
 char currdir[PATH_MAX + 1] = "";
 
@@ -84,14 +83,4 @@ int chdir(const char *path) {
 	close(fd);
 
     return 0;
-}
-
-int fchdir(int fd) {
-    struct file *fp;
-
-    if (!(fp = get_file(fd))) {
-        return -1;
-    }
-
-    return chdir(fp->f_path);
 }

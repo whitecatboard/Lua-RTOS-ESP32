@@ -59,7 +59,7 @@ CFLAGS += -DMTX_USE_EVENTS=0                    # Use event groups in mtx implem
 
 CFLAGS += -DUSE_RTC=0						    # Enable RTC
 CFLAGS += -DPATH_MAX=64
-
+CFLAGS += -DMAXNAMLEN=64
 
 #
 # SDCARD configuration

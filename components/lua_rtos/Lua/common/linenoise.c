@@ -711,12 +711,18 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
     }
     
     if (l->history_index == -1) {
-        fseek(fp, 0, SEEK_END);
+		fseek(fp, 0, SEEK_END);
         pos = ftell(fp);
     } else {       
         pos = l->history_index;
     }
     
+    if ((pos == 0) && (up)) {
+        refreshLine(l);
+        fclose(fp);
+        return;
+    }
+
     l->history_index = pos;
     
     while ((pos >= 0) && !feof(fp)) {

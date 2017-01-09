@@ -42,6 +42,7 @@
 #include <sys/time.h>
 #include <sys/driver.h>
 #include <sys/delay.h>
+#include <sys/status.h>
 
 #include <drivers/cpu.h>
 #include <drivers/uart.h>
@@ -107,7 +108,9 @@ void _sys_init() {
     _mtx_init();
     _driver_init();
     _pthread_init();
-    _syscalls_init();
+
+    status_set(STATUS_SYSCALLS_INITED);
+
     _signal_init();
 
     // Init drivers
@@ -122,6 +125,7 @@ void _sys_init() {
 
 	console_clear();
 
+	esp_vfs_unregister("/dev/uart");
 	vfs_tty_register();
 
 	printf("  /\\       /\\\r\n");

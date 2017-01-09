@@ -109,10 +109,6 @@ static int IRAM_ATTR vfs_tty_close(int fd) {
 	return 0;
 }
 
-int IRAM_ATTR vfs_tty_ioctl(int fd, unsigned long request, ...) {
-	return 0;
-}
-
 void vfs_tty_register() {
     esp_vfs_t vfs = {
         .fd_offset = 0,

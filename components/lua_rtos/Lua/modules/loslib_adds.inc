@@ -265,11 +265,10 @@ static int os_ls (lua_State *L) {
         type = 'd';
         if (ent->d_type == DT_REG) {
             type = 'f';
-            sprintf(size,"%8d", 10);
-            //TODO sprintf(size,"%8d", ent->d_fsize);
-        // TODO } else if (ent->d_type == DT_LNK) {
-            //type = 'l';
-            //TODO sprintf(size,"%8d", ent->d_fsize);
+            sprintf(size,"%8d", ent->d_fsize);
+        //} else if (ent->d_type == DT_LNK) {
+        //    type = 'l';
+        //    sprintf(size,"%8d", ent->d_fsize);
         } else {
             strcpy(size, "       -");
         }
