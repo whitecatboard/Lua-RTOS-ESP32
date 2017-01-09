@@ -35,6 +35,7 @@
 #include "esp_vfs.h"
 #include "esp_attr.h"
 
+#include <dirent.h>
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
@@ -45,11 +46,17 @@
 #include <sys/stat.h>
 #include <sys/mount.h>
 #include <sys/syslog.h>
-#include <sys/dirent.h>
 
 #include <syscalls/syscalls.h>
 
 #include <drivers/sd.h>
+
+typedef struct {
+	DIR dir;
+	FDIR fat_dir;
+	char path[MAXNAMLEN + 1];
+	struct dirent ent;
+} vfs_fat_dir_t;
 
 static int IRAM_ATTR vfs_fat_open(const char *path, int flags, int mode);
 static size_t IRAM_ATTR vfs_fat_write(int fd, const void *data, size_t size);
@@ -373,6 +380,7 @@ static int IRAM_ATTR vfs_fat_rename(const char *src, const char *dst) {
     return fat_result(f_rename(src, dst));
 }
 
+#if 0
 int IRAM_ATTR vfs_fat_getdents(int fd, void *buff, int size) {
 	struct file *fp;
 	int res = 0;
@@ -404,7 +412,7 @@ int IRAM_ATTR vfs_fat_getdents(int fd, void *buff, int size) {
 	    if (mount_readdir("fat", fp->f_path, 0, mdir)) {
 	    	struct dirent ent;
 
-	    	strncpy(ent.d_name, mdir, PATH_MAX);
+	    	strlcpy(ent.d_name, mdir, PATH_MAX);
 	        ent.d_type = DT_DIR;
 	        ent.d_reclen = sizeof(struct dirent);
 	        ent.d_ino = 1;
@@ -481,7 +489,7 @@ int IRAM_ATTR vfs_fat_getdents(int fd, void *buff, int size) {
             continue;
         }
 
-        strncpy(ent.d_name, fn, MAXNAMLEN);
+        strlcpy(ent.d_name, fn, MAXNAMLEN);
 
         entries++;
 
@@ -495,8 +503,9 @@ int IRAM_ATTR vfs_fat_getdents(int fd, void *buff, int size) {
     	return 0;
     }
 }
+#endif
 
-int IRAM_ATTR vfs_fat_mkdir(const char *path, mode_t mode) {
+static int IRAM_ATTR vfs_fat_mkdir(const char *path, mode_t mode) {
 	int res;
 
 	res = f_mkdir(path);
@@ -506,6 +515,127 @@ int IRAM_ATTR vfs_fat_mkdir(const char *path, mode_t mode) {
 	}
 
 	return 0;
+}
+
+static DIR* vfs_fat_opendir(const char* name) {
+	vfs_fat_dir_t *dir = calloc(1, sizeof(vfs_fat_dir_t));
+	int res;
+
+	if (!dir) {
+		errno = ENOMEM;
+		return NULL;
+	}
+
+    if ((res = f_opendir(&dir->fat_dir, name)) != FR_OK) {
+        free(dir);
+
+        errno = fat_result(res);
+        return NULL;
+    }
+
+	strlcpy(dir->path, name, MAXNAMLEN);
+
+	return (DIR *)dir;
+}
+
+static struct dirent* vfs_fat_readdir(DIR* pdir) {
+	vfs_fat_dir_t* dir = (vfs_fat_dir_t*) pdir;
+    struct dirent *ent = &dir->ent;
+
+	int res = 0;
+
+	FILINFO fno;
+	char lfname[(_MAX_LFN + 1) * 2];
+
+    char *fn;
+    int entries = 0;
+
+    fno.lfname = lfname;
+    fno.lfsize = (_MAX_LFN + 1) * 2;
+
+    memset(ent,0,sizeof(struct dirent));
+
+    for(;;) {
+    	*(fno.lfname) = '\0';
+
+        // Read directory
+        res = f_readdir(&dir->fat_dir, &fno);
+
+        // Break condition
+        if (res != FR_OK || fno.fname[0] == 0) {
+            break;
+        }
+
+        if (fno.fname[0] == '.') {
+            if (fno.fname[1] == '.') {
+                if (!fno.fname[2]) {
+                    continue;
+                }
+            }
+
+            if (!fno.fname[1]) {
+                continue;
+            }
+        }
+
+        if (fno.fattrib & (AM_HID | AM_SYS | AM_VOL)) {
+            continue;
+        }
+
+        // Get name
+        if (*(fno.lfname)) {
+            fn = fno.lfname;
+        } else {
+            fn = fno.fname;
+        }
+
+        ent->d_type = 0;
+
+        if (fno.fattrib & AM_DIR) {
+            ent->d_type = DT_DIR;
+            //ent->d_fsize = 0;
+        }
+
+        if (fno.fattrib & AM_ARC) {
+            ent->d_type = DT_REG;
+            //ent->d_fsize = fno.fsize;
+        }
+
+        if (!ent->d_type) {
+            continue;
+        }
+
+        strlcpy(ent->d_name, fn, MAXNAMLEN);
+
+        entries++;
+
+        break;
+    }
+
+    if (entries > 0) {
+    	return ent;
+    } else {
+    	return NULL;
+    }
+}
+
+static int IRAM_ATTR vfs_fat_closedir(DIR* pdir) {
+	vfs_fat_dir_t* dir = (vfs_fat_dir_t*) pdir;
+	int res;
+
+	if (!pdir) {
+		errno = EBADF;
+		return -1;
+	}
+
+    if ((res = f_closedir(&dir->fat_dir)) != 0) {
+    	errno = fat_result(res);
+    	return -1;
+    }
+
+	free(dir);
+
+    return 0;
 }
 
 void vfs_fat_register() {
@@ -521,7 +651,11 @@ void vfs_fat_register() {
         .stat = &vfs_fat_stat,
         .link = NULL,
         .unlink = &vfs_fat_unlink,
-        .rename = &vfs_fat_rename
+        .rename = &vfs_fat_rename,
+		.mkdir = &vfs_fat_mkdir,
+		.opendir = &vfs_fat_opendir,
+		.readdir = &vfs_fat_readdir,
+		.closedir = &vfs_fat_closedir,
     };
 	
     ESP_ERROR_CHECK(esp_vfs_register("/fat", &vfs, NULL));

@@ -14,6 +14,10 @@ LDFLAGS += -Wl,--wrap=_open_r
 LDFLAGS += -Wl,--wrap=_unlink_r
 LDFLAGS += -Wl,--wrap=_rename_r
 LDFLAGS += -Wl,--wrap=_stat_r
+LDFLAGS += -Wl,--wrap=mkdir
+LDFLAGS += -Wl,--wrap=opendir
+#LDFLAGS += -Wl,--wrap=closedir
+#LDFLAGS += -Wl,--wrap=readdir
 
 LDFLAGS += -Wl,--wrap=lwip_socket
 LDFLAGS += -Wl,--wrap=lwip_accept_r

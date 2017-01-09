@@ -44,6 +44,8 @@
  * The maximum length of a name in a directory is MAXNAMLEN.
  */
 
+#if 0
+
 #ifndef _SYS_SYS_DIRENT_H_
 #define _SYS_SYS_DIRENT_H_
 
@@ -81,5 +83,7 @@ struct dirent {
  */
 #define IFTODT(mode)    (((mode) & 0170000) >> 12)
 #define DTTOIF(dirtype) ((dirtype) << 12)
+
+#endif
 
 #endif
