@@ -51,6 +51,7 @@ extern const char *net_errors[];
 extern const char *wifi_errors[];
 extern const char *pwm_errors[];
 extern const char *adc_errors[];
+extern const char *i2c_errors[];
 extern const char *gpio_errors[];
 extern const char *uart_errors[];
 extern const char *spi_errors[];
@@ -58,6 +59,7 @@ extern const char *lora_lmic_errors[];
 
 extern driver_unit_lock_t pwm_locks[];
 extern driver_unit_lock_t adc_locks[];
+extern driver_unit_lock_t i2c_locks[];
 extern driver_unit_lock_t gpio_locks[];
 
 const driver_t drivers[] = {
@@ -72,6 +74,9 @@ const driver_t drivers[] = {
 #endif
 #if USE_ADC
 	{"adc",  DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID),  (void *)adc_errors, adc_locks, NULL, NULL},
+#endif
+#if USE_I2C
+	{"i2c",  DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID),  (void *)adc_errors, i2c_locks, NULL, NULL},
 #endif
 	{"gpio", DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID), (void *)gpio_errors, gpio_locks, _gpio_init, NULL},
 #if USE_UART

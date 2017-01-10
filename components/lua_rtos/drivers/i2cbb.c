@@ -29,6 +29,8 @@
 
 #include "luartos.h"
 
+#if 0
+
 #if LUA_USE_I2C
 
 #include <unistd.h>
@@ -201,5 +203,8 @@ void i2c_bb_stop(i2c_t *unit) {
     gpio_pin_set(unit->sda);    
     udelay(unit->delay);
 }
+
+#endif
+
 
 #endif

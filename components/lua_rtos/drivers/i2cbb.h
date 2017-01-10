@@ -29,6 +29,8 @@
 
 #include "luartos.h"
 
+#if 0
+
 #if LUA_USE_I2C
 
 #ifndef I2CBB_H
@@ -47,5 +49,7 @@ void i2c_bb_start(i2c_t *unit);
 void i2c_bb_stop(i2c_t *unit);    
 
 #endif /* I2CBB_H */
+
+#endif
 
 #endif

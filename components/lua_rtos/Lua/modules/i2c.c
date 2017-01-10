@@ -29,6 +29,7 @@
 
 #include "luartos.h"
 
+#if 0
 #if LUA_USE_I2C
 
 #include "lua.h"
@@ -213,5 +214,7 @@ int luaopen_i2c(lua_State* L) {
 }
 
 LUA_OS_MODULE(I2C, i2c, li2c);
+
+#endif
 
 #endif

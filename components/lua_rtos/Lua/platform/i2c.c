@@ -29,6 +29,7 @@
 
 #include "luartos.h"
 
+#if 0
 #if LUA_USE_I2C
 
 #include "lua.h"
@@ -41,4 +42,5 @@ int platform_i2c_exists(int id) {
     return ((id > 0) && (id <= NI2C));
 }
 
+#endif
 #endif

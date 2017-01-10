@@ -205,18 +205,13 @@ typedef uint64_t gpio_port_mask_t;
  * ----------------------------------------------------------------
  */
 
-// Number of I2C units (hardware / software)
-#define NI2CHW 0
-#define NI2CBB 4
+// Unit bounds
+#define CPU_FIRST_I2C 0
+#define CPU_LAST_I2C  1
 
-// ESP32 available bit bang i2c ids
-#define I2CBB1 4
+#define CPU_I2C_ALL 0b11
 
-// ESP32 available bit bang i2c names
-#define I2CBB1_NAME  "I2CBB1"
-#define I2CBB2_NAME  "I2CBB2"
-#define I2CBB3_NAME  "I2CBB3"
-#define I2CBB4_NAME  "I2CBB4"
+
 
 /*
  * ----------------------------------------------------------------
