@@ -112,6 +112,9 @@ TEST_CASE("i2c-master", "[i2c master]") {
 	// Write some data
 	for(i=0;i<100;i++) {
 		eeprom_24c256d_write(0x00,i,i);
+
+		// This is only for test purposes
+		// It should be done by ACKNOWLEDGE POLLING
 		delay(20);
 	}
 

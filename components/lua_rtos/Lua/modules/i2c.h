@@ -1,3 +1,32 @@
+/*
+ * Lua RTOS, I2C Lua module
+ *
+ * Copyright (C) 2015 - 2016
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ *
+ * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ *
+ * All rights reserved.
+ *
+ * Permission to use, copy, modify, and distribute this software
+ * and its documentation for any purpose and without fee is hereby
+ * granted, provided that the above copyright notice appear in all
+ * copies and that both that the copyright notice and this
+ * permission notice and warranty disclaimer appear in supporting
+ * documentation, and that the name of the author not be used in
+ * advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.
+ *
+ * The author disclaim all warranties with regard to this
+ * software, including all implied warranties of merchantability
+ * and fitness.  In no event shall the author be liable for any
+ * special, indirect or consequential damages or any damages
+ * whatsoever resulting from loss of use, data or profits, whether
+ * in an action of contract, negligence or other tortious action,
+ * arising out of or in connection with the use or performance of
+ * this software.
+ */
+
 #ifndef _LI2C_H
 #define	_LI2C_H
 
@@ -8,67 +37,17 @@
 #include <drivers/i2c.h>
 #include <drivers/cpu.h>
 
-#ifdef I2C1
-#define I2C_I2C1 {LSTRKEY(I2C1_NAME), LINTVAL(I2C1)},
+#ifdef CPU_I2C0
+#define I2C_I2C0 {LSTRKEY(CPU_I2C0_NAME), LINTVAL(CPU_I2C0)},
+#else
+#define I2C_I2C0
+#endif
+
+#ifdef CPU_I2C1
+#define I2C_I2C1 {LSTRKEY(CPU_I2C1_NAME), LINTVAL(CPU_I2C1)},
 #else
 #define I2C_I2C1
 #endif
-
-#ifdef I2C2
-#define I2C_I2C2 {LSTRKEY(I2C2_NAME), LINTVAL(I2C2)},
-#else
-#define I2C_I2C2
-#endif
-
-#ifdef I2C3
-#define I2C_I2C3 {LSTRKEY(I2C3_NAME), LINTVAL(I2C3)},
-#else
-#define I2C_I2C3
-#endif
-
-#ifdef I2C4
-#define I2C_I2C4 {LSTRKEY(I2C4_NAME), LINTVAL(I2C4)},
-#else
-#define I2C_I2C4
-#endif
-
-#ifdef I2C5
-#define I2C_I2C5 {LSTRKEY(I2C5_NAME), LINTVAL(I2C5)},
-#else
-#define I2C_I2C5
-#endif
-
-#ifdef I2CBB1
-#define I2C_I2CBB1 {LSTRKEY(I2CBB1_NAME), LINTVAL(I2CBB1)},
-#else
-#define I2C_I2CBB1
-#endif
-
-#ifdef I2CBB2
-#define I2C_I2CBB2 {LSTRKEY(I2CBB2_NAME), LINTVAL(I2CBB2)},
-#else
-#define I2C_I2CBB2
-#endif
-
-#ifdef I2CBB3
-#define I2C_I2CBB3 {LSTRKEY(I2CBB3_NAME), LINTVAL(I2CBB3)},
-#else
-#define I2C_I2CBB3
-#endif
-
-#ifdef I2CBB4
-#define I2C_I2CBB4 {LSTRKEY(I2CBB4_NAME), LINTVAL(I2CBB4)},
-#else
-#define I2C_I2CBB4
-#endif
-
-#ifdef I2CBB5
-#define I2C_I2CBB5 {LSTRKEY(I2CBB5_NAME), LINTVAL(I2CBB5)},
-#else
-#define I2C_I2CBB5
-#endif
-
-int platform_i2c_exists(int id);
 
 #endif	
 

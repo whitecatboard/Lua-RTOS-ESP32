@@ -211,6 +211,13 @@ typedef uint64_t gpio_port_mask_t;
 
 #define CPU_I2C_ALL 0b11
 
+// ESP32 available i2c units
+#define CPU_I2C0     0
+#define CPU_I2C1     1
+
+// ESP32 available i2c unit names
+#define CPU_I2C0_NAME  "I2C0"
+#define CPU_I2C1_NAME  "I2C1"
 
 
 /*
