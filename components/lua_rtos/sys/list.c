@@ -142,7 +142,7 @@ int list_get(struct list *list, int index, void **item) {
     return 0;
 }
 
-int list_remove(struct list *list, int index) {
+int list_remove(struct list *list, int index, int destroy) {
     struct list_index *cindex = NULL;
     int iindex;
 
@@ -165,7 +165,9 @@ int list_remove(struct list *list, int index) {
     
     cindex = &list->index[iindex];
     
-    free(cindex->item);
+    if (destroy) {
+    	free(cindex->item);
+    }
     
     cindex->next = list->free;
     cindex->deleted = 1;

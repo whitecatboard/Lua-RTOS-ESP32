@@ -83,6 +83,8 @@ void *_sys_tests(void *arg) {
 
 	printf("\r\nTests done!");
 
+	for(;;);
+
 	pthread_exit(NULL);
 }
 

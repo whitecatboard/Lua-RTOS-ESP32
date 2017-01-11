@@ -34,16 +34,22 @@
 #ifndef I2C_H
 #define I2C_H
 
+#include "driver/i2c.h"
+
 #include <stdint.h>
 
 #include <sys/driver.h>
+#include <sys/mutex.h>
 
 #include <drivers/cpu.h>
+
+#define I2C_TRANSACTION_INITIALIZER -1
 
 // Internal driver structure
 typedef struct i2c {
 	uint8_t mode;
 	uint8_t setup;
+	struct mtx mtx;
 } i2c_t;
 
 // Resources used by I2C
@@ -60,10 +66,18 @@ typedef struct {
 #define I2C_ERR_IS_NOT_SETUP             (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  2)
 #define I2C_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  3)
 #define I2C_ERR_INVALID_OPERATION		 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  4)
+#define I2C_ERR_NOT_ENOUGH_MEMORY		 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  5)
+#define I2C_ERR_INVALID_TRANSACTION		 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  6)
+#define I2C_ERR_NOT_ACK					 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  7)
+#define I2C_ERR_TIMEOUT					 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  8)
 
+void i2c_init();
 driver_error_t *i2c_setup(int unit, int mode, int speed, int sda, int scl, int addr10_en, int addr);
-driver_error_t *i2c_start(int unit);
-driver_error_t *i2c_stop(int unit);
+driver_error_t *i2c_start(int unit, int *transaction);
+driver_error_t *i2c_stop(int unit, int *transaction);
+driver_error_t *i2c_write_address(int unit, int *transaction, char address, int read);
+driver_error_t *i2c_write(int unit, int *transaction, char *data, int len);
+driver_error_t *i2c_read(int unit, int *transaction, char *data, int len);
 
 #endif /* I2C_H */
 

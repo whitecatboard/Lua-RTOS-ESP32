@@ -39,6 +39,7 @@
 
 #include <drivers/pwm.h>
 #include <drivers/adc.h>
+#include <drivers/i2c.h>
 #include <drivers/uart.h>
 #include <drivers/spi.h>
 #include <drivers/gpio.h>
@@ -76,7 +77,7 @@ const driver_t drivers[] = {
 	{"adc",  DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID),  (void *)adc_errors, adc_locks, NULL, NULL},
 #endif
 #if USE_I2C
-	{"i2c",  DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID),  (void *)adc_errors, i2c_locks, NULL, NULL},
+	{"i2c",  DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID),  (void *)i2c_errors, i2c_locks, i2c_init, NULL},
 #endif
 	{"gpio", DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID), (void *)gpio_errors, gpio_locks, _gpio_init, NULL},
 #if USE_UART

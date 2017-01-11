@@ -35,6 +35,8 @@
 #if !MTX_USE_EVENTS
 #include "freertos/semphr.h"
 
+#define MUTEX_INITIALIZER {.sem = 0}
+
 struct mtx {
     SemaphoreHandle_t sem;
 };

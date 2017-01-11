@@ -125,7 +125,7 @@ int pthread_key_delete(pthread_key_t k) {
         return res;
     }
     
-    list_remove(&key_list, k);
+    list_remove(&key_list, k, 1);
 
     return 0;
 }

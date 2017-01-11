@@ -169,7 +169,7 @@ static int IRAM_ATTR vfs_fat_open(const char *path, int flags, int mode) {
     }
 
     if (result != 0) {
-    	list_remove(&files, fd);
+    	list_remove(&files, fd, 1);
     	errno = result;
     	return -1;
     }
@@ -305,7 +305,7 @@ static int IRAM_ATTR vfs_fat_close(int fd) {
 		return -1;
 	}
 
-	list_remove(&files, fd);
+	list_remove(&files, fd, 1);
 
 	return 0;
 }
