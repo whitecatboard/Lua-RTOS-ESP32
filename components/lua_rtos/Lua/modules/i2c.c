@@ -42,13 +42,9 @@
 #include <drivers/cpu.h>
 
 typedef struct {
-	char *data;
+	int unit;
+	int transaction;
 } i2c_user_data_t;
-
-static int transactions[CPU_LAST_I2C + 1] = {
-		I2C_TRANSACTION_INITIALIZER,
-		I2C_TRANSACTION_INITIALIZER
-};
 
 extern char *i2c_errors[];
 
@@ -77,36 +73,45 @@ static int li2c_start( lua_State* L ) {
     if ((error = i2c_start(id, &transaction))) {
     	return luaL_driver_error(L, error);
     }
-    
-    transactions[id] = transaction;
 
-    return 0;
+    // Allocate userdata
+    i2c_user_data_t *user_data = (i2c_user_data_t *)lua_newuserdata(L, sizeof(i2c_user_data_t));
+    if (!user_data) {
+       	return luaL_exception(L, I2C, I2C_ERR_NOT_ENOUGH_MEMORY, i2c_errors);
+    }
+
+    user_data->unit = id;
+    user_data->transaction = transaction;
+
+    luaL_getmetatable(L, "i2c");
+    lua_setmetatable(L, -2);
+
+     return 1;
 }
 
 static int li2c_stop( lua_State* L ) {
 	driver_error_t *error;
-	int transaction = I2C_TRANSACTION_INITIALIZER;
+	i2c_user_data_t *user_data;
 
-    int id = luaL_checkinteger(L, 1);
+	// Get user data
+	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c");
+    luaL_argcheck(L, user_data, 1, "i2c transaction expected");
 
-    if (id < CPU_LAST_I2C + 1) {
-    	transaction = transactions[id];
-    }
-
-    if ((error = i2c_stop(id, &transaction))) {
+    if ((error = i2c_stop(user_data->unit, &user_data->transaction))) {
     	return luaL_driver_error(L, error);
     }
-
-    transactions[id] = transaction;
 
     return 0;
 }
 
 static int li2c_address( lua_State* L ) {
 	driver_error_t *error;
-	int transaction = I2C_TRANSACTION_INITIALIZER;
+	i2c_user_data_t *user_data;
 
-	int id = luaL_checkinteger(L, 1);
+	// Get user data
+	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c");
+    luaL_argcheck(L, user_data, 1, "i2c transaction expected");
+
     int address = luaL_checkinteger(L, 2);
     int read = 0;
 
@@ -115,11 +120,7 @@ static int li2c_address( lua_State* L ) {
 		read = 1;
 	}
 
-    if (id < CPU_LAST_I2C + 1) {
-    	transaction = transactions[id];
-    }
-
-    if ((error = i2c_write_address(id, &transaction, address, read))) {
+	if ((error = i2c_write_address(user_data->unit, &user_data->transaction, address, read))) {
     	return luaL_driver_error(L, error);
     }
     
@@ -128,21 +129,19 @@ static int li2c_address( lua_State* L ) {
 
 static int li2c_read( lua_State* L ) {
 	driver_error_t *error;
-	int transaction = I2C_TRANSACTION_INITIALIZER;
+	i2c_user_data_t *user_data;
 	char data;
 
-    int id = luaL_checkinteger(L, 1);
-    
-    if (id < CPU_LAST_I2C + 1) {
-    	transaction = transactions[id];
-    }
+	// Get user data
+	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c");
+    luaL_argcheck(L, user_data, 1, "i2c transaction expected");
 
-    if ((error = i2c_read(id, &transaction, &data, 1))) {
+    if ((error = i2c_read(user_data->unit, &user_data->transaction, &data, 1))) {
     	return luaL_driver_error(L, error);
     }
 
     // We need to flush because we need to return reaad data now
-    if ((error = i2c_flush(id, &transaction, 1))) {
+    if ((error = i2c_flush(user_data->unit, &user_data->transaction, 1))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -153,46 +152,131 @@ static int li2c_read( lua_State* L ) {
 
 static int li2c_write(lua_State* L) {
 	driver_error_t *error;
-	int transaction = I2C_TRANSACTION_INITIALIZER;
+	i2c_user_data_t *user_data;
 
-    int id = luaL_checkinteger(L, 1);
+	// Get user data
+	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c");
+    luaL_argcheck(L, user_data, 1, "i2c transaction expected");
+
     char data = (char)(luaL_checkinteger(L, 2) & 0xff);
     
-    if (id < CPU_LAST_I2C + 1) {
-    	transaction = transactions[id];
-    }
-
-    if ((error = i2c_write(id, &transaction, &data, sizeof(data)))) {
+    if ((error = i2c_write(user_data->unit, &user_data->transaction, &data, sizeof(data)))) {
     	return luaL_driver_error(L, error);
     }
 
     // We need to flush because data buffers are on the stack and if we
     // flush on the stop condition its values will be indeterminate
-    if ((error = i2c_flush(id, &transaction, 1))) {
+    if ((error = i2c_flush(user_data->unit, &user_data->transaction, 1))) {
     	return luaL_driver_error(L, error);
     }
 
     return 0;
 }
 
-static const LUA_REG_TYPE li2c[] = {
+// Destructor
+static int li2c_trans_gc (lua_State *L) {
+	i2c_user_data_t *user_data = NULL;
+
+    user_data = (i2c_user_data_t *)luaL_testudata(L, 1, "i2c");
+    if (user_data) {
+    }
+
+    return 0;
+}
+
+static int li2c_index(lua_State *L);
+static int li2c_trans_index(lua_State *L);
+
+static const LUA_REG_TYPE li2c_error_map[] = {
+};
+
+static const LUA_REG_TYPE li2c_map[] = {
     { LSTRKEY( "setup"   ),			LFUNCVAL( li2c_setup   ) },
     { LSTRKEY( "start"   ),			LFUNCVAL( li2c_start   ) },
-    { LSTRKEY( "stop"    ),			LFUNCVAL( li2c_stop    ) },
-    { LSTRKEY( "address" ),			LFUNCVAL( li2c_address ) },
-    { LSTRKEY( "read"    ),			LFUNCVAL( li2c_read    ) },
-    { LSTRKEY( "write"   ),			LFUNCVAL( li2c_write   ) },
-    { LSTRKEY( "MASTER"  ),			LINTVAL ( I2C_MASTER   ) },
-    { LSTRKEY( "SLAVE"   ),			LINTVAL ( I2C_SLAVE    ) },
-	I2C_I2C0
-	I2C_I2C1
     { LNILKEY, LNILVAL }
 };
 
-int luaopen_i2c(lua_State* L) {
-	return 0;
+static const LUA_REG_TYPE li2c_trans_map[] = {
+    { LSTRKEY( "address" ),			LFUNCVAL( li2c_address ) },
+    { LSTRKEY( "read"    ),			LFUNCVAL( li2c_read    ) },
+    { LSTRKEY( "write"   ),			LFUNCVAL( li2c_write   ) },
+    { LSTRKEY( "stop"    ),			LFUNCVAL( li2c_stop    ) },
+    { LNILKEY, LNILVAL }
+};
+
+static const LUA_REG_TYPE li2c_constants_map[] = {
+	{ LSTRKEY( "MASTER"  ),			LINTVAL ( I2C_MASTER   ) },
+	{ LSTRKEY( "SLAVE"   ),			LINTVAL ( I2C_SLAVE    ) },
+	I2C_I2C0
+	I2C_I2C1
+
+	// Error definitions
+	{LSTRKEY("error"),  LROVAL( li2c_error_map )},
+
+	{ LNILKEY, LNILVAL }
+};
+
+/*
+ * Metatables for i2c and trans instances
+ */
+static const luaL_Reg li2c_func[] = {
+    { "__index"    , 	li2c_index },
+    { NULL, NULL }
+};
+
+static const luaL_Reg li2c_trans_func[] = {
+	{ "__gc"   , 	li2c_trans_gc },
+    { "__index", 	li2c_trans_index },
+    { NULL, NULL }
+};
+
+/*
+ * Do a search into rotable for i2c
+ */
+static int li2c_index(lua_State *L) {
+	int res;
+
+	if ((res = luaR_findfunction(L, li2c_map)) != 0)
+		return res;
+
+	const char *key = luaL_checkstring(L, 2);
+	const TValue *val = luaR_findentry(li2c_constants_map, key, 0, NULL);
+	if (val != luaO_nilobject) {
+		if (ttnov(val) == LUA_TROTABLE) {
+			lua_pushrotable( L, val->value_.p);
+		} else {
+			lua_pushinteger(L, val->value_.i);
+		}
+		return 1;
+	}
+
+	return (int)luaO_nilobject;
 }
 
-LUA_OS_MODULE(I2C, i2c, li2c);
+/*
+ * Do a seach into rotable for trans instances
+ */
+static int li2c_trans_index(lua_State *L) {
+  int fres;
+  if ((fres = luaR_findfunction(L, li2c_trans_map)) != 0)
+    return fres;
+
+  return (int)luaO_nilobject;
+}
+
+LUALIB_API int luaopen_i2c( lua_State *L ) {
+    luaL_newlib(L, li2c_func);
+    lua_pushvalue(L, -1);
+    lua_setmetatable(L, -2);
+
+    luaL_newmetatable(L, "i2c");
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -2, "__index");
+
+    luaL_setfuncs(L, li2c_trans_func, 0);
+    lua_pop(L, 1);
+
+    return 1;
+}
 
 #endif

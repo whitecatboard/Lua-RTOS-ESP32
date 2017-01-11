@@ -10,12 +10,12 @@ i2c.setup(i2c.I2C0, i2c.MASTER, 1, pio.GPIO16, pio.GPIO4)
 
 -- Write
 for i=0,100 do
-	i2c.start(i2c.I2C0)
-	i2c.address(i2c.I2C0, 0x51, false)
-	i2c.write(i2c.I2C0, 0x00)
-	i2c.write(i2c.I2C0, i)
-	i2c.write(i2c.I2C0, i)
-	i2c.stop(i2c.I2C0)
+	eeprom = i2c.start(i2c.I2C0)
+	eeprom:address(0x51, false)
+	eeprom:write(0x00)
+	eeprom:write(i)
+	eeprom:write(i)
+	eeprom:stop()
 
 	-- This is only for test purposes
 	-- It should be done by ACKNOWLEDGE POLLING
@@ -24,15 +24,15 @@ end
 
 -- Read and test
 for i=0,100 do
-	i2c.start(i2c.I2C0)
-	i2c.address(i2c.I2C0, 0x51, false)
-	i2c.write(i2c.I2C0, 0x00)
-	i2c.write(i2c.I2C0, i)
-	i2c.start(i2c.I2C0)
-	i2c.address(i2c.I2C0, 0x51, true)
-	if (i2c.read(i2c.I2C0) ~= i) then
+	eeprom = i2c.start(i2c.I2C0)
+	eeprom:address(0x51, false)
+	eeprom:write(0x00)
+	eeprom:write(i)
+	eeprom = i2c.start(i2c.I2C0)
+	eeprom:address(0x51, true)
+	if (eeprom:read() ~= i) then
 		print("Error for "..i)
 	end
-	i2c.stop(i2c.I2C0)
+	eeprom:stop()
 end
 
