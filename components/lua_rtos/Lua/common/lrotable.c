@@ -201,4 +201,26 @@ int luaH_next_ro (lua_State *L, void *t, StkId key) {
   return ttisnil(key) ? 0 : 1;
 }
 
+int luaR_index(lua_State *L, const void *funcs, const void *consts) {
+	int res;
+
+	if ((res = luaR_findfunction(L, funcs)) != 0)
+		return res;
+
+	if (consts) {
+		const char *key = luaL_checkstring(L, 2);
+		const TValue *val = luaR_findentry(consts, key, 0, NULL);
+		if (val != luaO_nilobject) {
+			if (ttnov(val) == LUA_TROTABLE) {
+				lua_pushrotable( L, val->value_.p);
+			} else {
+				lua_pushinteger(L, val->value_.i);
+			}
+			return 1;
+		}
+	}
+
+	return (int)luaO_nilobject;
+}
+
 #endif

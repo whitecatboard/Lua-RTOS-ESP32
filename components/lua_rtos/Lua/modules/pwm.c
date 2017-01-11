@@ -37,6 +37,7 @@
 #include "auxmods.h"
 #include "pwm.h"
 #include "error.h"
+#include "modules.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -142,19 +143,19 @@ static int lpwm_stop(lua_State* L) {
     return 0;
 }
 
-#include "modules.h"
+static int lpwm_index(lua_State *L);
+static int lpwm_channel_index(lua_State *L);
 
-static const LUA_REG_TYPE pwm_method_map[] = {
-  { LSTRKEY( "setupchan"      ),	 LFUNCVAL( lpwm_setup_channel          ) },
-  { LSTRKEY( "setduty"        ),	 LFUNCVAL( lpwm_setduty                ) },
-  { LSTRKEY( "start"          ),	 LFUNCVAL( lpwm_start                  ) },
-  { LSTRKEY( "stop"           ),	 LFUNCVAL( lpwm_stop                   ) },
-  { LNILKEY, LNILVAL }
+static const LUA_REG_TYPE lpwm_map[] = {
+    { LSTRKEY("setup" )     ,	LFUNCVAL(lpwm_setup)     },
+  	{ LNILKEY, LNILVAL }
 };
 
-#if LUA_USE_ROTABLE
+static const LUA_REG_TYPE lpwm_error_map[] = {
+	{ LNILKEY, LNILVAL }
+};
 
-static const LUA_REG_TYPE pwm_constants_map[] = {
+static const LUA_REG_TYPE lpwm_constants_map[] = {
 	PWM_PWM0
 	PWM_PWM1
 	PWM_PWM_CH0
@@ -173,98 +174,51 @@ static const LUA_REG_TYPE pwm_constants_map[] = {
 	PWM_PWM_CH13
 	PWM_PWM_CH14
 	PWM_PWM_CH15
+
+	// Error definitions
+	{LSTRKEY("error"),  LROVAL( lpwm_error_map )},
+
 	{ LNILKEY, LNILVAL }
 };
 
-static int luaL_pwm_index(lua_State *L) {
-	int res;
+static const LUA_REG_TYPE lpwm_channel_map[] = {
+  { LSTRKEY( "setupchan"      ),	 LFUNCVAL( lpwm_setup_channel          ) },
+  { LSTRKEY( "setduty"        ),	 LFUNCVAL( lpwm_setduty                ) },
+  { LSTRKEY( "start"          ),	 LFUNCVAL( lpwm_start                  ) },
+  { LSTRKEY( "stop"           ),	 LFUNCVAL( lpwm_stop                   ) },
+  { LNILKEY, LNILVAL }
+};
 
-	if ((res = luaR_findfunction(L, pwm_method_map)) != 0)
-		return res;
-
-	const char *key = luaL_checkstring(L, 2);
-	const TValue *val = luaR_findentry(pwm_constants_map, key, 0, NULL);
-	if (val != luaO_nilobject) {
-		lua_pushinteger(L, val->value_.i);
-		return 1;
-	}
-
-	return (int)luaO_nilobject;
-}
-
-static const luaL_Reg pwm_load_funcs[] = {
-    { "__index"    , 	luaL_pwm_index },
-    { "setup"      ,	lpwm_setup     },
+static const luaL_Reg lpwm_func[] = {
+    { "__index"    , 	lpwm_index },
     { NULL, NULL }
 };
 
-static int luaL_mpwm_index(lua_State *L) {
-  int fres;
-  if ((fres = luaR_findfunction(L, pwm_method_map)) != 0)
-    return fres;
-
-  return (int)luaO_nilobject;
-}
-
-static const luaL_Reg mpwm_load_funcs[] = {
-    { "__index"    , 	luaL_mpwm_index },
+static const luaL_Reg lpwm_channel_func[] = {
+    { "__index", 	lpwm_channel_index },
     { NULL, NULL }
 };
 
-#else
+static int lpwm_index(lua_State *L) {
+	return luaR_index(L, lpwm_map, lpwm_constants_map);
+}
 
-static const luaL_Reg pwm_map[] = {
-	{ "setup"      ,	lpwm_setup     },
-	{ NULL, NULL }
-};
-
-#endif
+static int lpwm_channel_index(lua_State *L) {
+	return luaR_index(L, lpwm_channel_map, NULL);
+}
 
 LUALIB_API int luaopen_pwm( lua_State *L ) {
-#if !LUA_USE_ROTABLE
-    int i;
-    char buff[5];
-
-    luaL_register( L, AUXLIB_PWM, pwm_map );
-
-    // Set it as its own metatable
-    lua_pushvalue( L, -1 );
-    lua_setmetatable( L, -2 );
-
-    // create metatable for adc module
-    luaL_newmetatable(L, "pwm");
-
-    // Module constants
-    for(i=CPU_FIRST_PWM;i<=CPU_FIRST_PWM;i++) {
-        sprintf(buff,"PWM%d",i);
-        MOD_REG_INTEGER( L, buff, i );
-    }
-
-    for(i=CPU_FIRST_PWM_CH;i<=CPU_LAST_PWM_CH;i++) {
-        sprintf(buff,"PWM_CH%d",i);
-        MOD_REG_INTEGER( L, buff, i );
-    }
-
-    lua_pushliteral(L, "__index");
-    lua_pushvalue(L,-2);
-    lua_rawset(L,-3);
-
-    // Setup the methods inside metatable
-    luaL_register( L, NULL, pwm_method_map );
-#else
-    luaL_newlib(L, pwm_load_funcs);  /* new module */
+    luaL_newlib(L, lpwm_func);
     lua_pushvalue(L, -1);
     lua_setmetatable(L, -2);
 
-    luaL_newmetatable(L, "pwm");  /* create metatable */
-    lua_pushvalue(L, -1);  /* push metatable */
-    lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
+    luaL_newmetatable(L, "pwm");
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -2, "__index");
 
-    luaL_setfuncs(L, mpwm_load_funcs, 0);  /* add file methods to new metatable */
-    lua_pop(L, 1);  /* pop new metatable */
-#endif
+    luaL_setfuncs(L, lpwm_channel_func, 0);
+    lua_pop(L, 1);
 
     return 1;
 }
-
 #endif

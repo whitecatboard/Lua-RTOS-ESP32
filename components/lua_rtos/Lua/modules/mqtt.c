@@ -345,9 +345,6 @@ static int lmqtt_client_gc (lua_State *L) {
     return 0;
 }
 
-/*
- * mqtt function and constant maps
- */
 static const LUA_REG_TYPE lmqtt_map[] = {
   { LSTRKEY( "client"      ),	 LFUNCVAL( lmqtt_client     ) },
   { LNILKEY, LNILVAL }
@@ -373,9 +370,6 @@ static const LUA_REG_TYPE lmqtt_constants_map[] = {
 	{ LNILKEY, LNILVAL }
 };
 
-/*
- * mqtt client maps
- */
 static const LUA_REG_TYPE lmqtt_client_map[] = {
   { LSTRKEY( "connect"     ),	 LFUNCVAL( lmqtt_connect    ) },
   { LSTRKEY( "disconnect"  ),	 LFUNCVAL( lmqtt_disconnect ) },
@@ -384,9 +378,6 @@ static const LUA_REG_TYPE lmqtt_client_map[] = {
   { LNILKEY, LNILVAL }
 };
 
-/*
- * Metatables for mqtt and client instances
- */
 static const luaL_Reg lmqtt_func[] = {
     { "__index"    , 	lmqtt_index },
     { NULL, NULL }
@@ -398,38 +389,12 @@ static const luaL_Reg lmqtt_client_func[] = {
     { NULL, NULL }
 };
 
-/*
- * Do a search into rotable for mqtt
- */
 static int lmqtt_index(lua_State *L) {
-	int res;
-
-	if ((res = luaR_findfunction(L, lmqtt_map)) != 0)
-		return res;
-
-	const char *key = luaL_checkstring(L, 2);
-	const TValue *val = luaR_findentry(lmqtt_constants_map, key, 0, NULL);
-	if (val != luaO_nilobject) {
-		if (ttnov(val) == LUA_TROTABLE) {
-			lua_pushrotable( L, val->value_.p);
-		} else {
-			lua_pushinteger(L, val->value_.i);
-		}
-		return 1;
-	}
-
-	return (int)luaO_nilobject;
+	return luaR_index(L, lmqtt_map, lmqtt_constants_map);
 }
 
-/*
- * Do a seach into rotable for client instances
- */
 static int lmqtt_client_index(lua_State *L) {
-  int fres;
-  if ((fres = luaR_findfunction(L, lmqtt_client_map)) != 0)
-    return fres;
-
-  return (int)luaO_nilobject;
+	return luaR_index(L, lmqtt_client_map, NULL);
 }
 
 LUALIB_API int luaopen_mqtt( lua_State *L ) {
@@ -446,5 +411,4 @@ LUALIB_API int luaopen_mqtt( lua_State *L ) {
 
     return 1;
 }
-
 #endif

@@ -165,7 +165,7 @@
 #endif
 
 #if LUA_USE_I2C
-    #define LINIT_REG_I2C {AUXLIB_I2C, luaopen_i2c},
+   // #define LINIT_REG_I2C {AUXLIB_I2C, luaopen_i2c},
 #else
     #define LINIT_REG_I2C
 #endif

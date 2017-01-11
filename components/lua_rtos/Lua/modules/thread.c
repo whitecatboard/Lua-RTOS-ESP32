@@ -63,7 +63,7 @@ void thread_terminated(void *args) {
         luaL_unref(thread->PL, LUA_REGISTRYINDEX, thread->function_ref);
         luaL_unref(thread->PL, LUA_REGISTRYINDEX, thread->thread_ref);
             
-        list_remove(&lthread_list, *thid);
+        list_remove(&lthread_list, *thid, 1);
     }
 
 	// Delay a number of ticks for take the iddle
@@ -187,7 +187,7 @@ static int thread_stop_pthreads(lua_State *L, int thid) {
             luaL_unref(L, LUA_REGISTRYINDEX, thread->function_ref);
             luaL_unref(L, LUA_REGISTRYINDEX, thread->thread_ref);
 
-            list_remove(&lthread_list, idx);
+            list_remove(&lthread_list, idx, 1);
         }
 
         if (!thid) {
@@ -321,7 +321,7 @@ retry:
             goto retry;
         }
         
-        list_remove(&lthread_list, idx);
+        list_remove(&lthread_list, idx, 1);
         
         return luaL_error(L, "can't start pthread (%s)",strerror(errno));
     }

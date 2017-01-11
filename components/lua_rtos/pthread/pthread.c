@@ -156,7 +156,7 @@ int _pthread_create(pthread_t *id, int priority, int stacksize, int cpu, int ini
 
     if(res != pdPASS) {
         // Remove from thread list
-        list_remove(&thread_list,*id);
+        list_remove(&thread_list,*id, 1);
         free(taskArgs);
         free(thread);
 
@@ -243,7 +243,7 @@ int _pthread_free(pthread_t id) {
     mtx_destroy(&thread->init_mtx);    
     
     // Remove thread
-    list_remove(&thread_list, id);
+    list_remove(&thread_list, id, 1);
     
     return 0;
 }

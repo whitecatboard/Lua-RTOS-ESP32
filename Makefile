@@ -5,16 +5,23 @@
 
 PROJECT_NAME := lua_rtos
 
-all_binaries: restore-idf configure-idf-lua-rtos
+all_binaries: configure-idf-lua-rtos configure-idf-lua-rtos-tests
 
 clean: restore-idf
 
-configure-idf-lua-rtos:
-	@echo "Configure esp-idf for Lua RTOS ..."
+configure-idf-lua-rtos-tests:
+	@echo "Configure esp-idf for Lua RTOS tests ..."
+	@touch $(PROJECT_PATH)/components/lua_rtos/sys/sys_init.c
 ifeq ("$(wildcard $(IDF_PATH)/components/lua_rtos)","")
 	@ln -s $(PROJECT_PATH)/main/test/lua_rtos $(IDF_PATH)/components/lua_rtos
 endif
-	@touch $(PROJECT_PATH)/components/lua_rtos/sys/sys_init.c
+
+configure-idf-lua-rtos:
+	@echo "Configure esp-idf ..."
+	@cd $(IDF_PATH)/components/esp32/ld && git checkout esp32.common.ld
+	@cd $(IDF_PATH)/components/lwip/api && git checkout api_msg.c
+	@cd $(IDF_PATH)/components/vfs/include/sys && git checkout dirent.h
+	@echo "Configure esp-idf for Lua RTOS ..."
 	@touch $(PROJECT_PATH)/components/lua_rtos/lwip/socket.c
 	@cd $(IDF_PATH)/components/esp32/ld && git checkout esp32.common.ld
 	@cd $(IDF_PATH)/components/lwip/api && git checkout api_msg.c
@@ -24,11 +31,11 @@ endif
 
 restore-idf:
 	@echo "Restoring esp-idf ..."
-ifeq ("$(wildcard $(IDF_PATH)/components/lua_rtos)","$(IDF_PATH)/components/lua_rtos")
-	@rm $(IDF_PATH)/components/lua_rtos
-endif
 	@cd $(IDF_PATH)/components/esp32/ld && git checkout esp32.common.ld
 	@cd $(IDF_PATH)/components/lwip/api && git checkout api_msg.c
 	@cd $(IDF_PATH)/components/vfs/include/sys && git checkout dirent.h
+#ifeq ("$(wildcard $(IDF_PATH)/components/lua_rtos)","$(IDF_PATH)/components/lua_rtos")
+#	@rm $(IDF_PATH)/components/lua_rtos
+#endif
 	
 include $(IDF_PATH)/make/project.mk

@@ -27,40 +27,59 @@
  * this software.
  */
 
-#if LUA_USE_I2C
+#include "luartos.h"
+
+#if USE_I2C
 
 #ifndef I2C_H
 #define I2C_H
 
+#include "driver/i2c.h"
+
+#include <stdint.h>
+
+#include <sys/driver.h>
+#include <sys/mutex.h>
+
 #include <drivers/cpu.h>
 
-#define NI2C (NI2CHW + NI2CBB)
+#define I2C_TRANSACTION_INITIALIZER -1
 
+// Internal driver structure
 typedef struct i2c {
-    int sda;    // SDA pin
-    int scl;    // SCL pin
-    int delay;  // usecs delay for generate clock. Clock has a 4 * delay period
-    int unit;   // Unit number
-    int speed;  // Speed in hertzs
-    
-    // Low-Access Driver functions
-    void (* i2c_setup)(struct i2c *unit);
-    void (* i2c_idle)(struct i2c *unit);
-    void (* i2c_write_ack)(struct i2c *unit);
-    void (* i2c_write_nack)(struct i2c *unit);
-    int  (* i2c_read_ack)(struct i2c *unit);
-    int  (* i2c_write_byte)(struct i2c *unit, char data);
-    char (* i2c_read_byte)(struct i2c *unit);
-    void (* i2c_start)(struct i2c *unit);
-    void (* i2c_stop)(struct i2c *unit);
+	uint8_t mode;
+	uint8_t setup;
+	struct mtx mtx;
 } i2c_t;
 
-driver_error_t *i2c_setup(int unit, int speed, int sda, int scl);
-void i2c_start(int unit);
-void i2c_stop(int unit);
-int  i2c_write_address(int unit, char address, int read);
-char i2c_read(int unit);
-int  i2c_write(int unit, char data);
+// Resources used by I2C
+typedef struct {
+	uint8_t sda;
+	uint8_t scl;
+} i2c_resources_t;
+
+#define I2C_SLAVE	0
+#define I2C_MASTER	1
+
+// I2C errors
+#define I2C_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  1)
+#define I2C_ERR_IS_NOT_SETUP             (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  2)
+#define I2C_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  3)
+#define I2C_ERR_INVALID_OPERATION		 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  4)
+#define I2C_ERR_NOT_ENOUGH_MEMORY		 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  5)
+#define I2C_ERR_INVALID_TRANSACTION		 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  6)
+#define I2C_ERR_NOT_ACK					 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  7)
+#define I2C_ERR_TIMEOUT					 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  8)
+
+void i2c_init();
+
+driver_error_t *i2c_setup(int unit, int mode, int speed, int sda, int scl, int addr10_en, int addr);
+driver_error_t *i2c_start(int unit, int *transaction);
+driver_error_t *i2c_stop(int unit, int *transaction);
+driver_error_t *i2c_write_address(int unit, int *transaction, char address, int read);
+driver_error_t *i2c_write(int unit, int *transaction, char *data, int len);
+driver_error_t *i2c_read(int unit, int *transaction, char *data, int len);
+driver_error_t *i2c_flush(int unit, int *transaction, int new_transaction);
 
 #endif /* I2C_H */
 

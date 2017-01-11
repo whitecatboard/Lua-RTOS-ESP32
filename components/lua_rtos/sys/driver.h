@@ -38,12 +38,13 @@
 
 #define ADC_DRIVER_ID   1
 #define GPIO_DRIVER_ID  2
-#define UART_DRIVER_ID  3
-#define SPI_DRIVER_ID   4
-#define LORA_DRIVER_ID  5
-#define PWM_DRIVER_ID   6
-#define WIFI_DRIVER_ID  7
-#define NET_DRIVER_ID   8
+#define I2C_DRIVER_ID   3
+#define UART_DRIVER_ID  4
+#define SPI_DRIVER_ID   5
+#define LORA_DRIVER_ID  6
+#define PWM_DRIVER_ID   7
+#define WIFI_DRIVER_ID  8
+#define NET_DRIVER_ID   9
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 
@@ -107,5 +108,6 @@ void _driver_init();
 #define GPIO_DRIVER driver_get("gpio")
 #define UART_DRIVER driver_get("uart")
 #define SPI_DRIVER driver_get("spi")
+#define I2C_DRIVER driver_get("i2c")
 
 #endif

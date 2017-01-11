@@ -34,6 +34,7 @@
 
 #include <sys/driver.h>
 
+#define LUA_I2C_ID  I2C_DRIVER_ID
 #define LUA_MQTT_ID 30
 
 #define LUA_EXCEPTION_BASE(n) (n << 24)
