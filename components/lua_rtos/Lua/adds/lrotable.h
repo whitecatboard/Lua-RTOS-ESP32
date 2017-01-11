@@ -90,5 +90,7 @@ int luaH_getn_ro (void *t);
 void luaR_next(lua_State *L, void *data, TValue *key, TValue *val);
 int luaH_next_ro (lua_State *L, void *t, StkId key);
 
+int luaR_index(lua_State *L, const void *funcs, const void *consts);
+
 #endif
 

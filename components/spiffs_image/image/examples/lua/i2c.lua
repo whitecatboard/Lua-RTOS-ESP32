@@ -6,11 +6,11 @@
 -- values. 
 
 -- Setup i2c
-i2c.setup(i2c.I2C0, i2c.MASTER, 1, pio.GPIO16, pio.GPIO4)
+eeprom = i2c.setup(i2c.I2C0, i2c.MASTER, 1, pio.GPIO16, pio.GPIO4)
 
 -- Write
 for i=0,100 do
-	eeprom = i2c.start(i2c.I2C0)
+	eeprom:start()
 	eeprom:address(0x51, false)
 	eeprom:write(0x00)
 	eeprom:write(i)
@@ -24,11 +24,11 @@ end
 
 -- Read and test
 for i=0,100 do
-	eeprom = i2c.start(i2c.I2C0)
+	eeprom:start()
 	eeprom:address(0x51, false)
 	eeprom:write(0x00)
 	eeprom:write(i)
-	eeprom = i2c.start(i2c.I2C0)
+	eeprom:start()
 	eeprom:address(0x51, true)
 	if (eeprom:read() ~= i) then
 		print("Error for "..i)

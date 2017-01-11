@@ -37,6 +37,7 @@
 #include "auxmods.h"
 #include "error.h"
 #include "adc.h"
+#include "modules.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -124,18 +125,24 @@ static int ladc_read( lua_State* L ) {
     }
 }
 
-#include "modules.h"
+static int ladc_index(lua_State *L);
+static int ladc_chan_index(lua_State *L);
 
-static const LUA_REG_TYPE adc_method_map[] = {
-  { LSTRKEY( "read"      ),	 LFUNCVAL( ladc_read          ) },
-  { LSTRKEY( "setup"     ),	 LFUNCVAL( ladc_setup         ) },
-  { LSTRKEY( "setupchan" ),	 LFUNCVAL( ladc_setup_channel ) },
-  { LNILKEY, LNILVAL }
+static const LUA_REG_TYPE ladc_error_map[] = {
 };
 
-#if LUA_USE_ROTABLE
+static const LUA_REG_TYPE ladc_map[] = {
+    { LSTRKEY( "setup"   ),			LFUNCVAL( ladc_setup   ) },
+    { LNILKEY, LNILVAL }
+};
 
-static const LUA_REG_TYPE adc_constants_map[] = {
+static const LUA_REG_TYPE ladc_chan_map[] = {
+  	{ LSTRKEY( "read"      ),	 LFUNCVAL( ladc_read          ) },
+  	{ LSTRKEY( "setupchan" ),	 LFUNCVAL( ladc_setup_channel ) },
+    { LNILKEY, LNILVAL }
+};
+
+static const LUA_REG_TYPE ladc_constants_map[] = {
 	ADC_ADC0
 	ADC_ADC1
 	ADC_ADC_CH0
@@ -146,95 +153,42 @@ static const LUA_REG_TYPE adc_constants_map[] = {
 	ADC_ADC_CH5
 	ADC_ADC_CH6
 	ADC_ADC_CH7
+
+	// Error definitions
+	{LSTRKEY("error"),  LROVAL( ladc_error_map )},
+
 	{ LNILKEY, LNILVAL }
 };
 
-static int luaL_adc_index(lua_State *L) {
-	int res;
-
-	if ((res = luaR_findfunction(L, adc_method_map)) != 0)
-		return res;
-
-	const char *key = luaL_checkstring(L, 2);
-	const TValue *val = luaR_findentry(adc_constants_map, key, 0, NULL);
-	if (val != luaO_nilobject) {
-		lua_pushinteger(L, val->value_.i);
-		return 1;
-	}
-
-	return (int)luaO_nilobject;
-}
-
-static const luaL_Reg adc_load_funcs[] = {
-    { "__index"    , 	luaL_adc_index },
+static const luaL_Reg ladc_func[] = {
+    { "__index", 	ladc_index },
     { NULL, NULL }
 };
 
-static int luaL_madc_index(lua_State *L) {
-  int fres;
-  if ((fres = luaR_findfunction(L, adc_method_map)) != 0)
-    return fres;
-
-  return (int)luaO_nilobject;
-}
-
-static const luaL_Reg madc_load_funcs[] = {
-    { "__index"    , 	luaL_madc_index },
+static const luaL_Reg ladc_chan_func[] = {
+    { "__index", 	ladc_chan_index },
     { NULL, NULL }
 };
 
-#else
+static int ladc_index(lua_State *L) {
+	return luaR_index(L, ladc_map, ladc_constants_map);
+}
 
-static const luaL_Reg adc_map[] = {
-	{ NULL, NULL }
-};
-
-#endif
+static int ladc_chan_index(lua_State *L) {
+	return luaR_index(L, ladc_chan_map, NULL);
+}
 
 LUALIB_API int luaopen_adc( lua_State *L ) {
-#if !LUA_USE_ROTABLE
-    int i;
-    char buff[5];
-
-    luaL_register( L, AUXLIB_ADC, adc_map );
-    
-    // Set it as its own metatable
-    lua_pushvalue( L, -1 );
-    lua_setmetatable( L, -2 );
-
-    // create metatable for adc module
-    luaL_newmetatable(L, "adc");
-  
-    // Module constants
-    for(i=CPU_FIRST_ADC;i<=CPU_FIRST_ADC;i++) {
-        sprintf(buff,"ADC%d",i);
-        MOD_REG_INTEGER( L, buff, i );
-    }
-
-    for(i=CPU_FIRST_ADC_CH;i<=CPU_FIRST_ADC_CH;i++) {
-        sprintf(buff,"ADC_CH%d",i);
-        MOD_REG_INTEGER( L, buff, i );
-    }
-
-    // metatable.__index = metatable
-    lua_pushliteral(L, "__index");
-    lua_pushvalue(L,-2);
-    lua_rawset(L,-3);
-    
-    // Setup the methods inside metatable
-    luaL_register( L, NULL, adc_method_map );
-#else
-    luaL_newlib(L, adc_load_funcs);  /* new module */
+    luaL_newlib(L, ladc_func);
     lua_pushvalue(L, -1);
     lua_setmetatable(L, -2);
 
-    luaL_newmetatable(L, "adc");  /* create metatable */
-    lua_pushvalue(L, -1);  /* push metatable */
-    lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
+    luaL_newmetatable(L, "adc");
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -2, "__index");
 
-    luaL_setfuncs(L, madc_load_funcs, 0);  /* add file methods to new metatable */
-    lua_pop(L, 1);  /* pop new metatable */
-#endif
+    luaL_setfuncs(L, ladc_chan_func, 0);
+    lua_pop(L, 1);
 
     return 1;
 }
