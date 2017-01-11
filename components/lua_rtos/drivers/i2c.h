@@ -72,12 +72,14 @@ typedef struct {
 #define I2C_ERR_TIMEOUT					 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  8)
 
 void i2c_init();
+
 driver_error_t *i2c_setup(int unit, int mode, int speed, int sda, int scl, int addr10_en, int addr);
 driver_error_t *i2c_start(int unit, int *transaction);
 driver_error_t *i2c_stop(int unit, int *transaction);
 driver_error_t *i2c_write_address(int unit, int *transaction, char address, int read);
 driver_error_t *i2c_write(int unit, int *transaction, char *data, int len);
 driver_error_t *i2c_read(int unit, int *transaction, char *data, int len);
+driver_error_t *i2c_flush(int unit, int *transaction, int new_transaction);
 
 #endif /* I2C_H */
 

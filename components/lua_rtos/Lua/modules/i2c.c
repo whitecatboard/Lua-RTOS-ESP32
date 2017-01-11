@@ -45,7 +45,10 @@ typedef struct {
 	char *data;
 } i2c_user_data_t;
 
-static int transactions[CPU_LAST_I2C + 1];
+static int transactions[CPU_LAST_I2C + 1] = {
+		I2C_TRANSACTION_INITIALIZER,
+		I2C_TRANSACTION_INITIALIZER
+};
 
 extern char *i2c_errors[];
 
@@ -126,6 +129,7 @@ static int li2c_address( lua_State* L ) {
 static int li2c_read( lua_State* L ) {
 	driver_error_t *error;
 	int transaction = I2C_TRANSACTION_INITIALIZER;
+	char data;
 
     int id = luaL_checkinteger(L, 1);
     
@@ -133,26 +137,16 @@ static int li2c_read( lua_State* L ) {
     	transaction = transactions[id];
     }
 
-    // So i2c commands are not sent until an stop condition we allocate
-    // space for readed data. This is returned to Lua as a light userdata,
-    // that is no more than a c pointer
-    i2c_user_data_t *data = (i2c_user_data_t *)malloc(sizeof(i2c_user_data_t));
-    if (!data) {
-    	return luaL_exception(L, I2C, I2C_ERR_NOT_ENOUGH_MEMORY, i2c_errors);
-    }
-
-    data->data = (uint8_t *)malloc(1);
-    if (!data->data) {
-    	free(data);
-    	return luaL_exception(L, I2C, I2C_ERR_NOT_ENOUGH_MEMORY, i2c_errors);
-    }
-
-    if ((error = i2c_read(id, &transaction, data->data, 1))) {
+    if ((error = i2c_read(id, &transaction, &data, 1))) {
     	return luaL_driver_error(L, error);
     }
 
-    // Push data
-    lua_pushlightuserdata(L, (void *)data);
+    // We need to flush because we need to return reaad data now
+    if ((error = i2c_flush(id, &transaction, 1))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    lua_pushinteger(L, (int)data);
 
     return 1;
 }
@@ -162,7 +156,7 @@ static int li2c_write(lua_State* L) {
 	int transaction = I2C_TRANSACTION_INITIALIZER;
 
     int id = luaL_checkinteger(L, 1);
-    char data = (char)(luaL_checkinteger(L, 2) & 0x000000ff);
+    char data = (char)(luaL_checkinteger(L, 2) & 0xff);
     
     if (id < CPU_LAST_I2C + 1) {
     	transaction = transactions[id];
@@ -172,16 +166,11 @@ static int li2c_write(lua_State* L) {
     	return luaL_driver_error(L, error);
     }
 
-    return 0;
-}
-
-static int li2c_get( lua_State* L ) {
-	i2c_user_data_t *data;
-
-	luaL_checktype(L, 1, LUA_TLIGHTUSERDATA);
-	data = lua_touserdata(L, 1);
-
-	printf("%d\r\n",*(data->data));
+    // We need to flush because data buffers are on the stack and if we
+    // flush on the stop condition its values will be indeterminate
+    if ((error = i2c_flush(id, &transaction, 1))) {
+    	return luaL_driver_error(L, error);
+    }
 
     return 0;
 }
@@ -193,7 +182,6 @@ static const LUA_REG_TYPE li2c[] = {
     { LSTRKEY( "address" ),			LFUNCVAL( li2c_address ) },
     { LSTRKEY( "read"    ),			LFUNCVAL( li2c_read    ) },
     { LSTRKEY( "write"   ),			LFUNCVAL( li2c_write   ) },
-    { LSTRKEY( "get"     ),			LFUNCVAL( li2c_get     ) },
     { LSTRKEY( "MASTER"  ),			LINTVAL ( I2C_MASTER   ) },
     { LSTRKEY( "SLAVE"   ),			LINTVAL ( I2C_SLAVE    ) },
 	I2C_I2C0
@@ -208,26 +196,3 @@ int luaopen_i2c(lua_State* L) {
 LUA_OS_MODULE(I2C, i2c, li2c);
 
 #endif
-
-/*
-
-i2c.setup(i2c.I2C0, i2c.MASTER, 1, pio.GPIO16, pio.GPIO4)
-i2c.start(i2c.I2C0)
-i2c.address(i2c.I2C0, 0x51, false)
-i2c.write(i2c.I2C0, 0x00)
-i2c.write(i2c.I2C0, 0x40)
-i2c.write(i2c.I2C0, 65)
-i2c.stop(i2c.I2C0)
-
-i2c.setup(i2c.I2C0, i2c.MASTER, 1, pio.GPIO16, pio.GPIO4)
-i2c.start(i2c.I2C0)
-i2c.address(i2c.I2C0, 0x51, false)
-i2c.write(i2c.I2C0, 0x00)
-i2c.write(i2c.I2C0, 0x40)
-i2c.start(i2c.I2C0)
-i2c.address(i2c.I2C0, 0x51, true)
-val = i2c.read(i2c.I2C0)
-i2c.stop(i2c.I2C0)
-i2c.get(val)
-
-*/
