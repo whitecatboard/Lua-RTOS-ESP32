@@ -11,14 +11,14 @@
 
 #include <sys/mount.h>
 
-DIR* __real_opendir(const char* name);
+DIR* __real_readdir(const char* name);
 
-DIR* __wrap_opendir(const char* name) {
+DIR* __wrap_readdir(const char* name) {
 	char *ppath;
 	DIR *dir;
 
 	ppath = mount_resolve_to_physical(name);
-	dir = __real_opendir(ppath);
+	dir = __real_readdir(ppath);
 
 	free(ppath);
 
