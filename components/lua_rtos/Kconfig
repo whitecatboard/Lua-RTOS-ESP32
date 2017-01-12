@@ -198,7 +198,7 @@ menu "Lua RTOS"
 
   menu "HTTP server"
 	config LUA_RTOS_USE_HTTP_SERVER
-	depends on (ESP32_ENABLE_STACK_WIFI || ETHERNET) && LUA_RTOS_LUA_USE_NET
+	depends on (WIFI_ENABLED || ETHERNET) && LUA_RTOS_LUA_USE_NET
   	bool "Enable HTTP server"
   	default y
   endmenu
@@ -312,7 +312,7 @@ menu "Lua RTOS"
 		endmenu
 		menu "Communication Modules"
 		  	config LUA_RTOS_LUA_USE_NET
-		  	depends on ESP32_ENABLE_STACK_WIFI || ETHERNET
+		  	depends on WIFI_ENABLED || ETHERNET
 		  	bool "Include net module in build"
 		  	default y
 
@@ -322,7 +322,7 @@ menu "Lua RTOS"
 		  	default n
 
 		  	config LUA_RTOS_LUA_USE_MQTT
-		  	depends on ESP32_ENABLE_STACK_WIFI || ETHERNET
+		  	depends on WIFI_ENABLED || ETHERNET
 		  	bool "Include MQTT module in build"
 		  	default n
 		endmenu
