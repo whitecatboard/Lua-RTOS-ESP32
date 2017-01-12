@@ -193,4 +193,6 @@ LUALIB_API int luaopen_adc( lua_State *L ) {
     return 1;
 }
 
+LIB_INIT(ADC, adc, luaopen_adc);
+
 #endif

@@ -251,4 +251,7 @@ LUALIB_API int luaopen_i2c( lua_State *L ) {
 
     return 1;
 }
+
+LIB_INIT(I2C, i2c, luaopen_i2c);
+
 #endif

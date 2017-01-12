@@ -411,4 +411,7 @@ LUALIB_API int luaopen_mqtt( lua_State *L ) {
 
     return 1;
 }
+
+LIB_INIT(MQTT, mqtt, luaopen_mqtt);
+
 #endif

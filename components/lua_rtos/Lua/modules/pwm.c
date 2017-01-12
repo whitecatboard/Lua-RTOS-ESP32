@@ -221,4 +221,7 @@ LUALIB_API int luaopen_pwm( lua_State *L ) {
 
     return 1;
 }
+
+LIB_INIT(PWM, pwm, luaopen_pwm);
+
 #endif

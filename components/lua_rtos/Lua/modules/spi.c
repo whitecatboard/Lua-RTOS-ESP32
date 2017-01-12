@@ -310,6 +310,8 @@ LUALIB_API int luaopen_spi( lua_State *L ) {
     return 1;
 }
 
+LIB_INIT(SPI, spi, luaopen_spi);
+
 #endif
 
 
