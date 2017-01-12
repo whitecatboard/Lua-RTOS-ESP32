@@ -81,9 +81,9 @@
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
 
-const char *uart_errors[] = {
-	"",
-	"can't setup",
+static const driver_message_t uart_errors[] = {
+	{"",""},
+	{"can't setup",""},
 };
 
 // Flags for determine some UART states
@@ -650,3 +650,4 @@ void uart_stop(int unit) {
 	}
 }
 
+DRIVER_REGISTER(UART,uart,uart_errors,NULL,NULL,uart_lock_resources);

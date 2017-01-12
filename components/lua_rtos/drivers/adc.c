@@ -55,10 +55,10 @@
 driver_unit_lock_t adc_locks[CPU_LAST_ADC + 1];
 
 // Driver message errors
-const char *adc_errors[] = {
-	"",
-	"can't setup",
-	"invalid channel"
+static const driver_message_t adc_errors[] = {
+	{"",""},
+	{"can't setup",""},
+	{"invalid channel",""},
 };
 
 /*
@@ -139,5 +139,7 @@ driver_error_t *adc_read(int8_t channel, int *val) {
 
 	return NULL;
 }
+
+DRIVER_REGISTER(ADC,adc,adc_errors,adc_locks,NULL,NULL);
 
 #endif

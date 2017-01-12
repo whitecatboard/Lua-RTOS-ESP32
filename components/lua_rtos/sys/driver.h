@@ -53,6 +53,11 @@ struct driver_error;
 struct driver_unit_lock;
 struct driver_unit_lock_error;
 
+typedef struct {
+	const char *message;
+	const char *name;
+} driver_message_t;
+
 typedef enum {
     LOCK,		// Someone needs a resource which is locked
     SETUP,      // Something fails during setup
@@ -61,23 +66,24 @@ typedef enum {
 
 
 typedef struct {
-    driver_error_type    type;      // Type of error
-    const struct driver *driver;    // Driver that caused error
-    int                  unit;      // Driver unit that caused error
-    int                  exception; // Exception code
-    const char          *msg;       // Error message
+    driver_error_type       type;      // Type of error
+    const struct driver    *driver;    // Driver that caused error
+    int                     unit;      // Driver unit that caused error
+    int                     exception; // Exception code
+    const char 			   *msg;       // Error message
 
     struct driver_unit_lock_error *lock_error;
 } driver_error_t;
 
 typedef struct driver {
-	const char *name;           // Driver name
-	const int  exception_base;  // Constant for add to driver errors (from 1 to n)
-	const void *error;          // Error messages
-	const struct driver_unit_lock *lock;           // Driver lock array
-	void (*init)();             // Init function for driver that must be caller in system init
+	const char *name;           		  // Driver name
+	const int  exception_base;  	      // Constant for add to driver errors (from 1 to n)
+	const driver_message_t *error;         // Error messages
+	const struct driver_unit_lock *lock;  // Driver lock array
+	void (*init)();             		  // Init function for driver that must be caller in system init
 
-	driver_error_t *(*lock_resources)(int,void *);             // Init function for driver that must be caller in system init
+	// Driver lock function
+	driver_error_t *(*lock_resources)(int,void *);
 } driver_t;
 
 typedef struct driver_unit_lock {
@@ -110,4 +116,16 @@ void _driver_init();
 #define SPI_DRIVER driver_get("spi")
 #define I2C_DRIVER driver_get("i2c")
 
+#define DRIVER_SECTION(s) __attribute__((used,unused,section(s)))
+
+#define DRIVER_PASTER(x,y) x##y
+#define DRIVER_EVALUATOR(x,y) DRIVER_PASTER(x,y)
+#define DRIVER_CONCAT(x,y) DRIVER_EVALUATOR(x,y)
+
+#define DRIVER_TOSTRING_PASTER(x) #x
+#define DRIVER_TOSTRING_EVALUATOR(x) DRIVER_TOSTRING_PASTER(x)
+#define DRIVER_TOSTRING(x) DRIVER_TOSTRING_EVALUATOR(x)
+
+#define DRIVER_REGISTER(name,lname,errorsa,locka,initf,lockf) \
+	const DRIVER_SECTION(DRIVER_TOSTRING(.drivers)) driver_t DRIVER_CONCAT(driver_,lname) = {DRIVER_TOSTRING(lname),  DRIVER_EXCEPTION_BASE(DRIVER_CONCAT(name,_DRIVER_ID)),  (void *)errorsa, locka, initf, lockf};
 #endif

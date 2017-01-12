@@ -64,11 +64,11 @@ struct spi {
     unsigned int dirty;   // if 1 device must be reconfigured at next spi_select
 };
 
-const char *spi_errors[] = {
-	"",
-	"can't setup",
-	"invalid number mode",
-	"invalid unit"
+static const driver_message_t spi_errors[] = {
+	{"",""},
+	{"can't setup",""},
+	{"invalid number mode",""},
+	{"invalid unit"""},
 };
 
 #define SPI_DRIVER driver_get("spi")
@@ -630,65 +630,4 @@ driver_error_t *spi_init(int unit) {
     return NULL;
 }
 
-#if 0
-#define SPI_TEST_SPI_TRANSFER      0
-#define SPI_TEST_SPI_BLULK_WRITE   0
-#define SPI_TEST_SPI_BLULK_WRITE16 0
-#define SPI_TEST_SPI_BLULK_WRITE32 1
-
-void spi_test() {
-	int test_unit = 3;
-
-	// Init spi port
-	if (spi_init(test_unit) != 0) {
-		printf("error when init unit %d\r\n", test_unit);
-	}
-
-	spi_set_speed(test_unit, 10);
-
-#if SPI_TEST_SPI_TRANSFER
-	spi_select(test_unit);
-	spi_transfer(test_unit, 0b10101010);
-	spi_deselect(test_unit);
-#endif
-
-#if SPI_TEST_SPI_BLULK_WRITE
-	unsigned int i;
-	unsigned char data[200];
-
-	for (i=0;i<200;i++) {
-		data[i] = i;
-	}
-
-	spi_select(test_unit);
-	spi_bulk_write(test_unit, 200, data);
-	spi_deselect(test_unit);
-#endif
-
-#if SPI_TEST_SPI_BLULK_WRITE16
-	unsigned int i;
-	short data[100];
-
-	for (i=0;i<100;i++) {
-		data[i] = i;
-	}
-
-	spi_select(test_unit);
-	spi_bulk_write16(test_unit, 100, data);
-	spi_deselect(test_unit);
-#endif
-
-#if SPI_TEST_SPI_BLULK_WRITE32
-	unsigned int i;
-	int data[50];
-
-	for (i=0;i<50;i++) {
-		data[i] = i;
-	}
-
-	spi_select(test_unit);
-	spi_bulk_write32(test_unit, 50, data);
-	spi_deselect(test_unit);
-#endif
-}
-#endif
+DRIVER_REGISTER(SPI,spi,spi_errors,NULL,NULL,spi_lock_resources);

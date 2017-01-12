@@ -37,8 +37,8 @@
 driver_unit_lock_t gpio_locks[CPU_LAST_GPIO];
 
 // Driver errors
-const char *gpio_errors[] = {
-	"",
+static const driver_message_t gpio_errors[] = {
+	{"",""},
 };
 
 // Configure gpio as input using a mask
@@ -248,3 +248,6 @@ void _gpio_init() {
 	// Init lock array
 	memset(gpio_locks, 0, sizeof(gpio_locks));
 }
+
+DRIVER_REGISTER(GPIO,gpio,gpio_errors,gpio_locks,_gpio_init,NULL);
+

@@ -55,24 +55,24 @@
 #define WIFI_DRIVER driver_get("wifi")
 
 // Driver message errors
-const char *wifi_errors[] = {
-	"",
-	"can't setup",
-	"can't connect, review your SSID / password",
-	"general fail",
-	"not enough memory",
-	"wifi is not setup",
-	"wifi is not started",
-	"interface error",
-	"mode error",
-	"internal state error",
-	"internal control block of station or soft-AP error",
-	"internal NVS module error",
-	"invalid mac address"
-	"invalid SSID",
-	"invalid password",
-	"timeout",
-	"is in sleep state(RF closed) / wakeup fail"
+static const driver_message_t wifi_errors[] = {
+	{"",""},
+	{"can't setup",""},
+	{"can't connect, review your SSID / password",""},
+	{"general fail",""},
+	{"not enough memory",""},
+	{"wifi is not setup",""},
+	{"wifi is not started",""},
+	{"interface error",""},
+	{"mode error",""},
+	{"internal state error",""},
+	{"internal control block of station or soft-AP error",""},
+	{"internal NVS module error",""},
+	{"invalid mac address",""},
+	{"invalid SSID",""},
+	{"invalid password",""},
+	{"timeout",""},
+	{"is in sleep state(RF closed) / wakeup fail",""},
 };
 
 // FreeRTOS events used by driver
@@ -360,3 +360,5 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 
 	return NULL;
 }
+
+DRIVER_REGISTER(WIFI,wifi,wifi_errors,NULL,NULL,NULL);

@@ -57,12 +57,12 @@
 driver_unit_lock_t pwm_locks[CPU_LAST_PWM_CH + 1];
 
 // Driver message errors
-const char *pwm_errors[] = {
-	"",
-	"can't setup",
-	"invalid unit",
-	"invalid channel",
-	"invalid duty"
+static const driver_message_t pwm_errors[] = {
+	{"",""},
+	{"can't setup",""},
+	{"invalid unit",""},
+	{"invalid channel",""},
+	{"invalid duty"""},
 };
 
 // PWM structures
@@ -312,5 +312,7 @@ driver_error_t *pwm_set_duty(int8_t unit, int8_t channel, double duty) {
 
 	return NULL;
 }
+
+DRIVER_REGISTER(PWM,pwm,pwm_errors,pwm_locks,NULL,NULL);
 
 #endif

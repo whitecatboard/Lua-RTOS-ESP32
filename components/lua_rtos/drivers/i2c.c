@@ -49,16 +49,16 @@
 driver_unit_lock_t i2c_locks[CPU_LAST_I2C + 1];
 
 // Driver message errors
-const char *i2c_errors[] = {
-	"",
-	"can't setup",
-	"is not setup",
-	"invalid unit",
-	"invalid operation",
-	"not enough memory",
-	"invalid transaction",
-	"not ack received",
-	"timeout"
+const driver_message_t i2c_errors[] = {
+	{"",""},
+	{"can't setup",""},
+	{"is not setup",""},
+	{"invalid unit",""},
+	{"invalid operation",""},
+	{"not enough memory",""},
+	{"invalid transaction",""},
+	{"not ack received",""},
+	{"timeout"""},
 };
 
 // i2c info needed by driver
@@ -415,5 +415,7 @@ driver_error_t *i2c_read(int unit, int *transaction, char *data, int len) {
 
     return NULL;
 }
+
+DRIVER_REGISTER(I2C,i2c,i2c_errors,i2c_locks,i2c_init,NULL);
 
 #endif

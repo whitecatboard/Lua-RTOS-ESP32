@@ -55,18 +55,18 @@
  
 #include "lmic.h"
 
-const char *lora_lmic_errors[] = {
-	"",
-	"keys are not configured",
-	"join denied",
-	"unexpected response",
-	"not joined",
-	"lora is not setup, setup first",
-	"not enough memory",
-	"ABP expected",
-	"can't setup",
-	"transmission fail, ack not received",
-	"invalid argument"
+static const driver_message_t lora_lmic_errors[] = {
+	{"",""},
+	{"keys are not configured",""},
+	{"join denied",""},
+	{"unexpected response",""},
+	{"not joined",""},
+	{"lora is not setup, setup first",""},
+	{"not enough memory",""},
+	{"ABP expected",""},
+	{"can't setup",""},
+	{"transmission fail, ack not received",""},
+	{"invalid argument"""},
 };
 
 #define evLORA_INITED 	       	 ( 1 << 0 )
@@ -702,4 +702,7 @@ void _lora_init() {
 }
 
 #endif
+
+DRIVER_REGISTER(LORA,lora,lora_lmic_errors, NULL,_lora_init,NULL);
+
 #endif

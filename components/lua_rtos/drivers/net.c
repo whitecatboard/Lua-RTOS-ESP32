@@ -37,9 +37,9 @@
 #define NET_DRIVER driver_get("net")
 
 // Driver message errors
-const char *net_errors[] = {
-	"",
-	"network is not available"
+static const driver_message_t net_errors[] = {
+	{"",""},
+	{"network is not available",""},
 };
 
 driver_error_t *net_check_connectivity() {
@@ -84,3 +84,5 @@ driver_error_t *net_lookup(const char *name, struct sockaddr_in *address) {
 		return NULL;
 	}
 }
+
+DRIVER_REGISTER(NET,net,net_errors,NULL,NULL,NULL);
