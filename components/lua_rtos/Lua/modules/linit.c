@@ -46,30 +46,9 @@
 extern const luaL_Reg lua_libs1[];
 
 LIB_INIT(_G, _G, luaopen_base);
-LIB_INIT(TABLE, table, luaopen_table);
-LIB_INIT(OS, os, luaopen_os);
-LIB_INIT(MATH, math, luaopen_math);
 LIB_INIT(IO, io, luaopen_io);
-LIB_INIT(STRING, string, luaopen_string);
-LIB_INIT(COROUTINE, coroutine, luaopen_coroutine);
-LIB_INIT(DEBUG, debug, luaopen_debug);
 LIB_INIT(UTF8, utf8, luaopen_utf8);
 LIB_INIT(PACKAGE, package, luaopen_package);
-
-LIB_INIT(LORA, lora, luaopen_lora);
-LIB_INIT(PACK, pack, luaopen_pack);
-LIB_INIT(TMR, tmr, luaopen_tmr);
-LIB_INIT(PIO, pio, luaopen_pio);
-LIB_INIT(I2C, i2c, luaopen_i2c);
-LIB_INIT(THREAD, thread, luaopen_thread);
-LIB_INIT(SCREEN, screen, luaopen_screen);
-LIB_INIT(NVS, nvs, luaopen_nvs);
-LIB_INIT(UART, uart, luaopen_uart);
-LIB_INIT(SPI, spi, luaopen_spi);
-LIB_INIT(ADC, adc, luaopen_adc);
-LIB_INIT(PWM, pwm, luaopen_pwm);
-LIB_INIT(NET, net, luaopen_net);
-LIB_INIT(MQTT, mqtt, luaopen_mqtt);
 
 LUALIB_API void luaL_openlibs (lua_State *L) {
   const luaL_Reg *lib = lua_libs1;

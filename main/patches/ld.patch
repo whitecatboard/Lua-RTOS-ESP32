@@ -1,6 +1,6 @@
 --- /Users/jaumeolivepetrus/esp-idf/components/esp32/ld/esp32.common.ld	2017-01-09 15:53:18.000000000 +0100
 +++ /Users/jaumeolivepetrus/Lua-RTOS-ESP32/ld/lua-rtos.ld	2017-01-09 15:48:30.000000000 +0100
-@@ -163,6 +163,21 @@
+@@ -163,6 +163,20 @@
      *(.xt_except_desc_end)
      *(.dynamic)
      *(.gnu.version_d)
@@ -8,14 +8,13 @@
 +	/* Lua RTOS changes (begin) */
 +	
 +    . = ALIGN(4);
-+    /* Lua enabled modules. KEEP ensures that will not be removed */
 +    lua_libs1 = ABSOLUTE(.);
 +    KEEP (*(.lua_libs1))
-+    LONG(0) LONG(0) /* Null-terminate the array */
++    LONG(0) LONG(0)
 +
 +    lua_rotable = ABSOLUTE(.);
 +    KEEP(*(.lua_rotable1))
-+    LONG(0) LONG(0) /* Null-terminate the array */
++    LONG(0) LONG(0)
 +    
 +	/* Lua RTOS changes (end) */
 +
