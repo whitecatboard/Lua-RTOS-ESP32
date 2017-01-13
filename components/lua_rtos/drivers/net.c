@@ -39,7 +39,7 @@
 // Driver message errors
 static const driver_message_t net_errors[] = {
 	{"",""},
-	{"network is not available",""},
+	{"network is not available","NetworkNotAvailable"},
 };
 
 driver_error_t *net_check_connectivity() {

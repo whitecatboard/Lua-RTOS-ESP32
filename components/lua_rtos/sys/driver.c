@@ -238,4 +238,14 @@ driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_un
 void _driver_init() {
     // Create driver mutex
     mtx_init(&driver_mtx, NULL, NULL, 0);
+
+    // Init drivers
+    const driver_t *cdriver = drivers;
+
+    while (cdriver->name) {
+    	if (cdriver->init) {
+    		cdriver->init();
+    	}
+    	cdriver++;
+    }
 }

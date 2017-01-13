@@ -83,7 +83,7 @@
 
 static const driver_message_t uart_errors[] = {
 	{"",""},
-	{"can't setup",""},
+	{"can't setup","CannotSetup"},
 };
 
 // Flags for determine some UART states

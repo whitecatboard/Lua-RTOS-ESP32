@@ -57,8 +57,8 @@ driver_unit_lock_t adc_locks[CPU_LAST_ADC + 1];
 // Driver message errors
 static const driver_message_t adc_errors[] = {
 	{"",""},
-	{"can't setup",""},
-	{"invalid channel",""},
+	{"can't setup","CannotSetup"},
+	{"invalid channel","InvalidChannel"},
 };
 
 /*

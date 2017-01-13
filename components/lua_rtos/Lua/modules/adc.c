@@ -171,6 +171,9 @@ static const luaL_Reg ladc_chan_func[] = {
 };
 
 static int ladc_index(lua_State *L) {
+	const char *key = luaL_checkstring(L, 2);
+	printf("index %s\r\n",key);
+
 	return luaR_index(L, ladc_map, ladc_constants_map);
 }
 

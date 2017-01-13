@@ -60,10 +60,12 @@ const TValue* luaR_findglobal(const char *name, unsigned len) {
 static const TValue* luaR_auxfind(const luaR_entry *pentry, const char *strkey, luaR_numkey numkey, unsigned *ppos) {
   const TValue *res = luaO_nilobject;
   unsigned i = 0;
+  int entries = 0;
   
   if (pentry == NULL)
     return luaO_nilobject;  
   while(pentry->key.type != LUA_TNIL) {
+	  entries++;
     if ((strkey && (pentry->key.type == LUA_TSTRING) && (!strcmp(pentry->key.id.strkey, strkey))) || 
         (!strkey && ((pentry->key.type & 0b111) == LUA_TNUMBER) && ((luaR_numkey)pentry->key.id.numkey == numkey))) {
       res = &pentry->value;
@@ -71,6 +73,12 @@ static const TValue* luaR_auxfind(const luaR_entry *pentry, const char *strkey, 
     }
     i ++; pentry ++;
   }
+
+  if ((entries == 0) && (!res)) {
+	  // Special case
+	  // Search in driver error messages
+  }
+
   if (res && ppos)
     *ppos = i;   
   

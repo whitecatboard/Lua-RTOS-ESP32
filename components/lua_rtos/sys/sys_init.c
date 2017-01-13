@@ -30,8 +30,10 @@
 #include "luartos.h"
 #include "lua.h"
 #include "esp_log.h"
+#include "esp_vfs.h"
 #include "driver/periph_ctrl.h"
 
+#include <vfs.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -54,22 +56,7 @@ extern void _mtx_init();
 extern void _cpu_init();
 extern void _clock_init();
 
-#if LUA_USE_LORA
-extern void _lora_init();
-#endif
-
 extern const char *__progname;
-
-#if USE_SPIFFS
-extern int spiffs_init();
-#endif
-
-void vfs_tty_register();
-void vfs_spiffs_register();
-void vfs_fat_register();
-void vfs_net_register();
-
-extern driver_t drivers[];
 
 #ifdef RUN_TESTS
 #include <unity.h>
@@ -114,16 +101,6 @@ void _sys_init() {
     status_set(STATUS_SYSCALLS_INITED);
 
     _signal_init();
-
-    // Init drivers
-    driver_t *cdriver = drivers;
-
-    while (cdriver->name) {
-    	if (cdriver->init) {
-    		cdriver->init();
-    	}
-    	cdriver++;
-    }
 
 	console_clear();
 

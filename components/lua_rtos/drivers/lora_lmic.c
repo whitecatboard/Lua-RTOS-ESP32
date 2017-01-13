@@ -57,16 +57,16 @@
 
 static const driver_message_t lora_lmic_errors[] = {
 	{"",""},
-	{"keys are not configured",""},
-	{"join denied",""},
-	{"unexpected response",""},
-	{"not joined",""},
-	{"lora is not setup, setup first",""},
-	{"not enough memory",""},
-	{"ABP expected",""},
-	{"can't setup",""},
-	{"transmission fail, ack not received",""},
-	{"invalid argument"""},
+	{"keys are not configured","KeysNotConfigured"},
+	{"join denied","JoinDenied"},
+	{"unexpected response","UnexpectedResponse"},
+	{"not joined","NotJoined"},
+	{"lora is not setup, setup first","NotSetup"},
+	{"not enough memory","NotEnoughtMemory"},
+	{"ABP expected","ABPExpected"},
+	{"can't setup","CannotSetup"},
+	{"transmission fail, ack not received","TransmissionFail"},
+	{"invalid argument""InvalidArgument"},
 };
 
 #define evLORA_INITED 	       	 ( 1 << 0 )

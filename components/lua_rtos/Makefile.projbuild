@@ -6,7 +6,6 @@ CFLAGS += -DCONFIG_MAX_FD_BITS=4
 CFLAGS += -DLWIP_IPV6=1
 CFLAGS += -DLWIP_RAW=1
 CFLAGS += -DLWIP_SO_LINGER=1
-CFLAGS += -DDEFAULT_RAW_RECVMBOX_SIZE=5
 
 CFLAGS += -Wno-error=implicit-function-declaration -Wno-error=pointer-sign
 

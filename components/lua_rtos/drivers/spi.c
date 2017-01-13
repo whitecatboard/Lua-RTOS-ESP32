@@ -66,9 +66,9 @@ struct spi {
 
 static const driver_message_t spi_errors[] = {
 	{"",""},
-	{"can't setup",""},
-	{"invalid number mode",""},
-	{"invalid unit"""},
+	{"can't setup","CannotSetup"},
+	{"invalid number mode","InvalidMode"},
+	{"invalid unit","InvalidUnit"},
 };
 
 #define SPI_DRIVER driver_get("spi")

@@ -59,10 +59,10 @@ driver_unit_lock_t pwm_locks[CPU_LAST_PWM_CH + 1];
 // Driver message errors
 static const driver_message_t pwm_errors[] = {
 	{"",""},
-	{"can't setup",""},
-	{"invalid unit",""},
-	{"invalid channel",""},
-	{"invalid duty"""},
+	{"can't setup","CannotSetup"},
+	{"invalid unit","InvalidUnit"},
+	{"invalid channel","InvalidChannel"},
+	{"invalid duty","InvalidDuty"},
 };
 
 // PWM structures
