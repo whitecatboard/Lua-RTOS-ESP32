@@ -38,15 +38,16 @@
 #include <sys/resource.h>
 #include <sys/driver.h>
 
-#define ADC_DRIVER_ID   1
-#define GPIO_DRIVER_ID  2
-#define I2C_DRIVER_ID   3
-#define UART_DRIVER_ID  4
-#define SPI_DRIVER_ID   5
-#define LORA_DRIVER_ID  6
-#define PWM_DRIVER_ID   7
-#define WIFI_DRIVER_ID  8
-#define NET_DRIVER_ID   9
+#define ADC_DRIVER_ID    1
+#define GPIO_DRIVER_ID   2
+#define I2C_DRIVER_ID    3
+#define UART_DRIVER_ID   4
+#define SPI_DRIVER_ID    5
+#define LORA_DRIVER_ID   6
+#define PWM_DRIVER_ID    7
+#define WIFI_DRIVER_ID   8
+#define NET_DRIVER_ID    9
+#define OWIRE_DRIVER_ID 10
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 

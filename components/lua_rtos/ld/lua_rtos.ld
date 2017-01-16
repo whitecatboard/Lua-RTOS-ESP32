@@ -80,6 +80,14 @@ SECTIONS {
     KEEP(*(.net_error_map))
     LONG(0) LONG(0)
 
+    owire_errors = ABSOLUTE(.);
+    KEEP(*(.owire_errors))
+    LONG(0) LONG(0)
+
+    owire_error_map = ABSOLUTE(.);
+    KEEP(*(.owire_error_map))
+    LONG(0) LONG(0)
+
     _lua_rtos_rodata_end = ABSOLUTE(.);
   } >drom0_0_seg
 }
