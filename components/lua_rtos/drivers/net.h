@@ -50,7 +50,7 @@ typedef struct {
 } ifconfig_t;
 
 // NET errors
-#define NET_ERR_NOT_AVAILABLE              (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  1)
+#define NET_ERR_NOT_AVAILABLE              (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  0)
 
 driver_error_t *net_check_connectivity();
 driver_error_t *net_lookup(const char *name, struct sockaddr_in *address);

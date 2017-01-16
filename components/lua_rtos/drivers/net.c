@@ -34,13 +34,10 @@
 #include <drivers/net.h>
 
 // This macro gets a reference for this driver into drivers array
-#define NET_DRIVER driver_get("net")
+#define NET_DRIVER driver_get_by_name("net")
 
 // Driver message errors
-static const driver_message_t net_errors[] = {
-	{"",""},
-	{"network is not available","NetworkNotAvailable"},
-};
+DRIVER_REGISTER_ERROR(NET, net, NotAvailable, "network is not available", NET_ERR_NOT_AVAILABLE);
 
 driver_error_t *net_check_connectivity() {
 	if (!NETWORK_AVAILABLE()) {
@@ -85,4 +82,4 @@ driver_error_t *net_lookup(const char *name, struct sockaddr_in *address) {
 	}
 }
 
-DRIVER_REGISTER(NET,net,net_errors,NULL,NULL,NULL);
+DRIVER_REGISTER(NET,net,NULL,NULL,NULL);

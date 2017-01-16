@@ -44,6 +44,8 @@
 
 #include <drivers/adc.h>
 
+extern LUA_REG_TYPE adc_error_map[];
+
 static int ladc_setup( lua_State* L ) {
     int id;
 	driver_error_t *error;
@@ -128,9 +130,6 @@ static int ladc_read( lua_State* L ) {
 static int ladc_index(lua_State *L);
 static int ladc_chan_index(lua_State *L);
 
-static const LUA_REG_TYPE ladc_error_map[] = {
-};
-
 static const LUA_REG_TYPE ladc_map[] = {
     { LSTRKEY( "setup"   ),			LFUNCVAL( ladc_setup   ) },
     { LNILKEY, LNILVAL }
@@ -153,10 +152,7 @@ static const LUA_REG_TYPE ladc_constants_map[] = {
 	ADC_ADC_CH5
 	ADC_ADC_CH6
 	ADC_ADC_CH7
-
-	// Error definitions
-	{LSTRKEY("error"),  LROVAL( ladc_error_map )},
-
+	{LSTRKEY("error"), 			 LROVAL( adc_error_map )},
 	{ LNILKEY, LNILVAL }
 };
 
@@ -171,9 +167,6 @@ static const luaL_Reg ladc_chan_func[] = {
 };
 
 static int ladc_index(lua_State *L) {
-	const char *key = luaL_checkstring(L, 2);
-	printf("index %s\r\n",key);
-
 	return luaR_index(L, ladc_map, ladc_constants_map);
 }
 
@@ -196,6 +189,6 @@ LUALIB_API int luaopen_adc( lua_State *L ) {
     return 1;
 }
 
-LIB_INIT(ADC, adc, luaopen_adc);
+MODULE_REGISTER_UNMAPPED(ADC, adc, luaopen_adc);
 
 #endif

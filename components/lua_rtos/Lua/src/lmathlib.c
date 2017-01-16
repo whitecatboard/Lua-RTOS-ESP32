@@ -417,4 +417,4 @@ LUAMOD_API int luaopen_math (lua_State *L) {
 	#endif		   
 }
 
-LUA_OS_MODULE(MATH, math, mathlib);
+MODULE_REGISTER_MAPPED(MATH, math, mathlib, luaopen_math);

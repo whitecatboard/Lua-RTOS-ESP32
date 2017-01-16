@@ -41,12 +41,13 @@
 #include <drivers/i2c.h>
 #include <drivers/cpu.h>
 
+extern LUA_REG_TYPE i2c_error_map[];
+extern driver_message_t i2c_errors[];
+
 typedef struct {
 	int unit;
 	int transaction;
 } i2c_user_data_t;
-
-extern char *i2c_errors[];
 
 static int li2c_setup( lua_State* L ) {
 	driver_error_t *error;
@@ -189,9 +190,6 @@ static int li2c_trans_gc (lua_State *L) {
 static int li2c_index(lua_State *L);
 static int li2c_trans_index(lua_State *L);
 
-static const LUA_REG_TYPE li2c_error_map[] = {
-};
-
 static const LUA_REG_TYPE li2c_map[] = {
     { LSTRKEY( "setup"   ),			LFUNCVAL( li2c_setup   ) },
     { LNILKEY, LNILVAL }
@@ -213,7 +211,7 @@ static const LUA_REG_TYPE li2c_constants_map[] = {
 	I2C_I2C1
 
 	// Error definitions
-	{LSTRKEY("error"     ),         LROVAL( li2c_error_map )},
+	{LSTRKEY("error"     ),         LROVAL( i2c_error_map )},
 
 	{ LNILKEY, LNILVAL }
 };
@@ -252,6 +250,6 @@ LUALIB_API int luaopen_i2c( lua_State *L ) {
     return 1;
 }
 
-LIB_INIT(I2C, i2c, luaopen_i2c);
+MODULE_REGISTER_UNMAPPED(I2C, i2c, luaopen_i2c);
 
 #endif

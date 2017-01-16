@@ -71,7 +71,7 @@ static const driver_message_t spi_errors[] = {
 	{"invalid unit","InvalidUnit"},
 };
 
-#define SPI_DRIVER driver_get("spi")
+#define SPI_DRIVER driver_get_by_name("spi")
 
 struct spi spi[NSPI] = {
 	{
@@ -630,4 +630,4 @@ driver_error_t *spi_init(int unit) {
     return NULL;
 }
 
-DRIVER_REGISTER(SPI,spi,spi_errors,NULL,NULL,spi_lock_resources);
+DRIVER_REGISTER(SPI,spi,NULL,NULL,spi_lock_resources);

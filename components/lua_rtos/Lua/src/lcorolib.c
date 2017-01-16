@@ -171,4 +171,4 @@ LUAMOD_API int luaopen_coroutine (lua_State *L) {
 #endif
 }
 
-LUA_OS_MODULE(COROUTINE, coroutine, co_funcs);
+MODULE_REGISTER_MAPPED(COROUTINE, coroutine, co_funcs, luaopen_coroutine);

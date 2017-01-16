@@ -41,10 +41,10 @@ typedef struct {
 } pwm_resources_t;
 
 // PWM errors
-#define PWM_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID) |  1)
-#define PWM_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID) |  2)
-#define PWM_ERR_INVALID_CHANNEL          (DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID) |  3)
-#define PWM_ERR_INVALID_DUTY             (DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID) |  4)
+#define PWM_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID) |  0)
+#define PWM_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID) |  1)
+#define PWM_ERR_INVALID_CHANNEL          (DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID) |  2)
+#define PWM_ERR_INVALID_DUTY             (DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID) |  3)
 
 driver_error_t *pwm_setup(int8_t unit);
 driver_error_t *pwm_setup_channel(int8_t unit, int8_t channel, int8_t pin, int32_t freq, double duty, int8_t *achannel);

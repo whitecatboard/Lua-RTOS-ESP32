@@ -42,8 +42,8 @@ typedef struct {
 } adc_resources_t;
 
 // ADC errors
-#define ADC_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  1)
-#define ADC_ERR_INVALID_CHANNEL          (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  2)
+#define ADC_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  0)
+#define ADC_ERR_INVALID_CHANNEL          (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  1)
 
 driver_error_t *adc_setup(void);
 driver_error_t *adc_setup_channel(int8_t channel);

@@ -261,6 +261,6 @@ int luaopen_nvs(lua_State *L) {
 	#endif		   
 }
 	   
-LUA_OS_MODULE(NVS, nvs, nvs_map);
+MODULE_REGISTER_MAPPED(NVS, nvs, nvs_map, luaopen_nvs);
 
 #endif

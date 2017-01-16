@@ -33,13 +33,14 @@
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
 
+// This macro gets a reference for this driver into drivers array
+#define GPIO_DRIVER driver_get_by_name("gpio")
+
 // Driver locks
 driver_unit_lock_t gpio_locks[CPU_LAST_GPIO];
 
 // Driver errors
-static const driver_message_t gpio_errors[] = {
-	{"",""},
-};
+DRIVER_REGISTER_ERROR(GPIO, gpio, CannotSetup, "can't setup", GPIO_ERR_CANT_INIT);
 
 // Configure gpio as input using a mask
 // If bit n on mask is set to 1 the gpio is configured
@@ -249,5 +250,5 @@ void _gpio_init() {
 	memset(gpio_locks, 0, sizeof(gpio_locks));
 }
 
-DRIVER_REGISTER(GPIO,gpio,gpio_errors,gpio_locks,_gpio_init,NULL);
+DRIVER_REGISTER(GPIO,gpio,gpio_locks,_gpio_init,NULL);
 

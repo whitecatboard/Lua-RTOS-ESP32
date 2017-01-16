@@ -44,7 +44,7 @@ typedef struct {
 #define NSPI 4
 
 // SPI errors
-#define SPI_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  1)
+#define SPI_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  0)
 
 driver_error_t *spi_init(int unit);
 

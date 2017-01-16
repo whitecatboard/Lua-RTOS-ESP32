@@ -1557,4 +1557,4 @@ LUAMOD_API int luaopen_string (lua_State *L) {
 #endif
 }
 
-LUA_OS_MODULE(STRING, string, strlib);
+MODULE_REGISTER_MAPPED(STRING, string, strlib, luaopen_string);

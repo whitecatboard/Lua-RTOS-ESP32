@@ -457,6 +457,6 @@ int luaopen_screen(lua_State* L) {
 #endif
 }
 
-LUA_OS_MODULE(SCREEN, screen, screen_map);
+MODULE_REGISTER(SCREEN, screen, screen_map);
 
 #endif

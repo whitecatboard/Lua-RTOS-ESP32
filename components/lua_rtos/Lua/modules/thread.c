@@ -444,6 +444,6 @@ int luaopen_thread(lua_State* L) {
 #endif
 } 
  
-LUA_OS_MODULE(THREAD, thread, thread);
+MODULE_REGISTER_MAPPED(THREAD, thread, thread, luaopen_thread);
 
 #endif

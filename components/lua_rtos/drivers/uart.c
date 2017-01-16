@@ -650,4 +650,4 @@ void uart_stop(int unit) {
 	}
 }
 
-DRIVER_REGISTER(UART,uart,uart_errors,NULL,NULL,uart_lock_resources);
+DRIVER_REGISTER(UART,uart,NULL,NULL,uart_lock_resources);

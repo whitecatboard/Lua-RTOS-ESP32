@@ -52,28 +52,25 @@
 #define WIFI_LOG(m) syslog(LOG_DEBUG, m);
 
 // This macro gets a reference for this driver into drivers array
-#define WIFI_DRIVER driver_get("wifi")
+#define WIFI_DRIVER driver_get_by_name("wifi")
 
 // Driver message errors
-static const driver_message_t wifi_errors[] = {
-	{"",""},
-	{"can't setup","CannotSetup"},
-	{"can't connect, review your SSID / password","CannotConnect"},
-	{"general fail","GeneralFail"},
-	{"not enough memory","NotEnoughtMemory"},
-	{"wifi is not setup","NotSetup"},
-	{"wifi is not started","NotStarted"},
-	{"interface error","InterfaceError"},
-	{"mode error","ModeError"},
-	{"internal state error","InternalError"},
-	{"internal control block of station or soft-AP error","InternalControlBlockError"},
-	{"internal NVS module error","InternalNVSError"},
-	{"invalid mac address","InvalidMac"},
-	{"invalid SSID","InvalidSSID"},
-	{"invalid password","InvalidPassword"},
-	{"timeout","Timeout"},
-	{"is in sleep state(RF closed) / wakeup fail","RFClosed"},
-};
+DRIVER_REGISTER_ERROR(WIFI, wifi, CannotSetup, "can't setup", WIFI_ERR_CANT_INIT);
+DRIVER_REGISTER_ERROR(WIFI, wifi, CannotConnect, "can't connect, review your SSID / password", WIFI_ERR_CANT_CONNECT);
+DRIVER_REGISTER_ERROR(WIFI, wifi, GeneralFail, "general fail", WIFI_ERR_WIFI_FAIL);
+DRIVER_REGISTER_ERROR(WIFI, wifi, NotEnoughtMemory, "not enough memory", WIFI_ERR_WIFI_NO_MEM);
+DRIVER_REGISTER_ERROR(WIFI, wifi, NotSetup, "wifi is not setup", WIFI_ERR_WIFI_NOT_INIT);
+DRIVER_REGISTER_ERROR(WIFI, wifi, NotStarted, "wifi is not started", WIFI_ERR_WIFI_NOT_START);
+DRIVER_REGISTER_ERROR(WIFI, wifi, InterfaceError, "interface error", WIFI_ERR_WIFI_IF);
+DRIVER_REGISTER_ERROR(WIFI, wifi, ModeError, "mode error", WIFI_ERR_WIFI_MODE);
+DRIVER_REGISTER_ERROR(WIFI, wifi, InternalError, "internal state error", WIFI_ERR_WIFI_STATE);
+DRIVER_REGISTER_ERROR(WIFI, wifi, InternalControlBlockError, "internal control block of station or soft-AP error", WIFI_ERR_WIFI_CONN);
+DRIVER_REGISTER_ERROR(WIFI, wifi, InternalNVSError, "internal NVS module error", WIFI_ERR_WIFI_NVS);
+DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidMac, "invalid mac address", WIFI_ERR_WIFI_MAC);
+DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidSSID, "invalid SSID", WIFI_ERR_WIFI_SSID);
+DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidPassword, "invalid password", WIFI_ERR_WIFI_PASSWORD);
+DRIVER_REGISTER_ERROR(WIFI, wifi, Timeout, "timeout", WIFI_ERR_WIFI_TIMEOUT);
+DRIVER_REGISTER_ERROR(WIFI, wifi, RFClosed, "is in sleep state(RF closed) / wakeup fail", WIFI_ERR_WAKE_FAIL);
 
 // FreeRTOS events used by driver
 static EventGroupHandle_t wifiEvent;
@@ -361,4 +358,4 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 	return NULL;
 }
 
-DRIVER_REGISTER(WIFI,wifi,wifi_errors,NULL,NULL,NULL);
+DRIVER_REGISTER(WIFI,wifi,NULL,NULL,NULL);

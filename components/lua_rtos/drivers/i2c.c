@@ -49,17 +49,14 @@
 driver_unit_lock_t i2c_locks[CPU_LAST_I2C + 1];
 
 // Driver message errors
-const driver_message_t i2c_errors[] = {
-	{"",""},
-	{"can't setup","CannotSetup"},
-	{"is not setup","NotSetup"},
-	{"invalid unit","InvalidUnit"},
-	{"invalid operation","InvalidOperation"},
-	{"not enough memory","NotEnoughtMemory"},
-	{"invalid transaction","InvalidTransaction"},
-	{"not ack received","AckNotReceived"},
-	{"timeout","Timeout"},
-};
+DRIVER_REGISTER_ERROR(I2C, i2c, CannotSetup, "can't setup", I2C_ERR_CANT_INIT);
+DRIVER_REGISTER_ERROR(I2C, i2c, NotSetup, "is not setup", I2C_ERR_IS_NOT_SETUP);
+DRIVER_REGISTER_ERROR(I2C, i2c, InvalidUnit, "invalid unit", I2C_ERR_INVALID_UNIT);
+DRIVER_REGISTER_ERROR(I2C, i2c, InvalidOperation,"invalid operation", I2C_ERR_INVALID_OPERATION);
+DRIVER_REGISTER_ERROR(I2C, i2c, NotEnoughtMemory, "not enough memory", I2C_ERR_NOT_ENOUGH_MEMORY);
+DRIVER_REGISTER_ERROR(I2C, i2c, InvalidTransaction, "invalid transaction", I2C_ERR_INVALID_TRANSACTION);
+DRIVER_REGISTER_ERROR(I2C, i2c, AckNotReceived, "not ack received", I2C_ERR_NOT_ACK);
+DRIVER_REGISTER_ERROR(I2C, i2c, Timeout, "timeout", I2C_ERR_TIMEOUT);
 
 // i2c info needed by driver
 static i2c_t i2c[CPU_LAST_I2C + 1] = {
@@ -416,6 +413,6 @@ driver_error_t *i2c_read(int unit, int *transaction, char *data, int len) {
     return NULL;
 }
 
-DRIVER_REGISTER(I2C,i2c,i2c_errors,i2c_locks,i2c_init,NULL);
+DRIVER_REGISTER(I2C,i2c,i2c_locks,i2c_init,NULL);
 
 #endif

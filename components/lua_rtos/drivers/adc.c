@@ -49,19 +49,16 @@
 #include <drivers/adc.h>
 
 // This macro gets a reference for this driver into drivers array
-#define ADC_DRIVER driver_get("adc")
+#define ADC_DRIVER driver_get_by_name("adc")
 
 // Driver locks
 driver_unit_lock_t adc_locks[CPU_LAST_ADC + 1];
 
 // Driver message errors
-static const driver_message_t adc_errors[] = {
-	{"",""},
-	{"can't setup","CannotSetup"},
-	{"invalid channel","InvalidChannel"},
-};
+DRIVER_REGISTER_ERROR(ADC, adc, CannotSetup, "can't setup", ADC_ERR_CANT_INIT);
+DRIVER_REGISTER_ERROR(ADC, adc, InvalidChannel, "invalid channel", ADC_ERR_INVALID_CHANNEL);
 
-/*
+/*s
  * Operation functions
  *
  */
@@ -111,7 +108,7 @@ driver_error_t *adc_setup(void) {
 driver_error_t *adc_setup_channel(int8_t channel) {
 	// Sanity checks
 	if (!((1 << channel) & CPU_ADC_ALL)) {
-		return driver_setup_error(ADC_DRIVER, ADC_ERR_CANT_INIT, "invalid channel");
+		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
 	}
 
     // Lock resources
@@ -132,7 +129,7 @@ driver_error_t *adc_setup_channel(int8_t channel) {
 driver_error_t *adc_read(int8_t channel, int *val) {
 	// Sanity checks
 	if (!((1 << channel) & CPU_ADC_ALL)) {
-		return driver_setup_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
 	}
 
 	*val = adc1_get_voltage(channel);
@@ -140,6 +137,6 @@ driver_error_t *adc_read(int8_t channel, int *val) {
 	return NULL;
 }
 
-DRIVER_REGISTER(ADC,adc,adc_errors,adc_locks,NULL,NULL);
+DRIVER_REGISTER(ADC,adc,adc_locks,NULL,NULL);
 
 #endif

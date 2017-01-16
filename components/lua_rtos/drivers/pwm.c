@@ -51,19 +51,16 @@
 #define PWM_MAX_VAL 4095
 
 // This macro gets a reference for this driver into drivers array
-#define PWM_DRIVER driver_get("pwm")
+#define PWM_DRIVER driver_get_by_name("pwm")
 
 // Driver locks
 driver_unit_lock_t pwm_locks[CPU_LAST_PWM_CH + 1];
 
 // Driver message errors
-static const driver_message_t pwm_errors[] = {
-	{"",""},
-	{"can't setup","CannotSetup"},
-	{"invalid unit","InvalidUnit"},
-	{"invalid channel","InvalidChannel"},
-	{"invalid duty","InvalidDuty"},
-};
+DRIVER_REGISTER_ERROR(PWM, pwm, CannotSetup, "can't setup", PWM_ERR_CANT_INIT);
+DRIVER_REGISTER_ERROR(PWM, pwm, InvalidUnit, "invalid unit", PWM_ERR_INVALID_UNIT);
+DRIVER_REGISTER_ERROR(PWM, pwm, InvalidChannel, "invalid channel", PWM_ERR_INVALID_CHANNEL);
+DRIVER_REGISTER_ERROR(PWM, pwm, InvalidDuty, "invalid duty", PWM_ERR_INVALID_DUTY);
 
 // PWM structures
 struct pwm {
@@ -313,6 +310,6 @@ driver_error_t *pwm_set_duty(int8_t unit, int8_t channel, double duty) {
 	return NULL;
 }
 
-DRIVER_REGISTER(PWM,pwm,pwm_errors,pwm_locks,NULL,NULL);
+DRIVER_REGISTER(PWM,pwm,pwm_locks,NULL,NULL);
 
 #endif

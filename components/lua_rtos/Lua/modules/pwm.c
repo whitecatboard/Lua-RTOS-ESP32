@@ -46,6 +46,8 @@
 #include <drivers/cpu.h>
 #include <drivers/pwm.h>
 
+extern const LUA_REG_TYPE pwm_error_map[];
+
 static int lpwm_setup( lua_State* L ) {
 	driver_error_t *error;
     int8_t id;
@@ -151,10 +153,6 @@ static const LUA_REG_TYPE lpwm_map[] = {
   	{ LNILKEY, LNILVAL }
 };
 
-static const LUA_REG_TYPE lpwm_error_map[] = {
-	{ LNILKEY, LNILVAL }
-};
-
 static const LUA_REG_TYPE lpwm_constants_map[] = {
 	PWM_PWM0
 	PWM_PWM1
@@ -176,7 +174,7 @@ static const LUA_REG_TYPE lpwm_constants_map[] = {
 	PWM_PWM_CH15
 
 	// Error definitions
-	{LSTRKEY("error"),  LROVAL( lpwm_error_map )},
+	{LSTRKEY("error"),  LROVAL( pwm_error_map )},
 
 	{ LNILKEY, LNILVAL }
 };
@@ -222,6 +220,6 @@ LUALIB_API int luaopen_pwm( lua_State *L ) {
     return 1;
 }
 
-LIB_INIT(PWM, pwm, luaopen_pwm);
+MODULE_REGISTER_UNMAPPED(PWM, pwm, luaopen_pwm);
 
 #endif

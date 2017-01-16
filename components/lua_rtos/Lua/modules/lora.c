@@ -43,6 +43,8 @@
 static int rx_callback = 0;
 static lua_State* rx_callbackL;
 
+extern const LUA_REG_TYPE lora_error_map[];
+
 static void on_received(int port, char *payload) {
     if (rx_callback != LUA_NOREF) {
         lua_rawgeti(rx_callbackL, LUA_REGISTRYINDEX, rx_callback);
@@ -389,16 +391,6 @@ static int llora_rx(lua_State* L) {
     return 0;
 }
 
-static const LUA_REG_TYPE lora_error_map[] = {
-	{ LSTRKEY( "KeysNotConfigured" ),	 LINTVAL( LORA_ERR_KEYS_NOT_CONFIGURED ) },
-	{ LSTRKEY( "JoinDenied" ),		     LINTVAL( LORA_ERR_JOIN_DENIED ) },
-	{ LSTRKEY( "UnexpectedResponse" ),	 LINTVAL( LORA_ERR_UNEXPECTED_RESPONSE ) },
-	{ LSTRKEY( "NotJoined" ),		     LINTVAL( LORA_ERR_NOT_JOINED ) },
-	{ LSTRKEY( "TransmissionFail" ),	 LINTVAL( LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED ) },
-	{ LSTRKEY( "NotSetup" ),		     LINTVAL( LORA_ERR_NOT_SETUP ) },
-	{ LSTRKEY( "InvalidArgument" ),		 LINTVAL( LORA_ERR_INVALID_ARGUMENT ) },
-};
-
 static const LUA_REG_TYPE lora_map[] = {
     { LSTRKEY( "setup" ),        LFUNCVAL( llora_setup ) }, 
     { LSTRKEY( "setDevAddr" ),   LFUNCVAL( llora_set_setDevAddr ) }, 
@@ -440,6 +432,6 @@ int luaopen_lora(lua_State* L) {
 #endif		   
 }
 
-LUA_OS_MODULE(LORA, lora, lora_map);
+MODULE_REGISTER_MAPPED(LORA, lora, lora_map, luaopen_lora);
 
 #endif

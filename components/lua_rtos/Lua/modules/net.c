@@ -50,6 +50,8 @@
 #include <sys/driver.h>
 #include <drivers/net.h>
 
+extern LUA_REG_TYPE net_error_map[];
+
 static int lnet_lookup(lua_State* L) {
 	driver_error_t *error;
 	struct sockaddr_in address;
@@ -152,6 +154,7 @@ static const LUA_REG_TYPE net_map[] = {
 	{ LSTRKEY( "ping"       ),	 LFUNCVAL ( lnet_ping     ) },
 	{ LSTRKEY( "wf"         ),	 LROVAL   ( wifi_map      ) },
 	{ LSTRKEY( "service"    ),	 LROVAL   ( service_map   ) },
+	{ LSTRKEY( "error"      ),	 LROVAL   ( net_error_map ) },
 	{ LNILKEY, LNILVAL }
 };
 
@@ -159,7 +162,7 @@ int luaopen_net(lua_State* L) {
     return 0;
 }
 
-LUA_OS_MODULE(NET, net, net_map);
+MODULE_REGISTER_MAPPED(NET, net, net_map, luaopen_net);
 
 /*
 

@@ -60,23 +60,16 @@ const TValue* luaR_findglobal(const char *name, unsigned len) {
 static const TValue* luaR_auxfind(const luaR_entry *pentry, const char *strkey, luaR_numkey numkey, unsigned *ppos) {
   const TValue *res = luaO_nilobject;
   unsigned i = 0;
-  int entries = 0;
-  
+
   if (pentry == NULL)
-    return luaO_nilobject;  
+    return luaO_nilobject;
   while(pentry->key.type != LUA_TNIL) {
-	  entries++;
-    if ((strkey && (pentry->key.type == LUA_TSTRING) && (!strcmp(pentry->key.id.strkey, strkey))) || 
+    if ((strkey && (pentry->key.type == LUA_TSTRING) && (!strcmp(pentry->key.id.strkey, strkey))) ||
         (!strkey && ((pentry->key.type & 0b111) == LUA_TNUMBER) && ((luaR_numkey)pentry->key.id.numkey == numkey))) {
       res = &pentry->value;
       break;
     }
     i ++; pentry ++;
-  }
-
-  if ((entries == 0) && (!res)) {
-	  // Special case
-	  // Search in driver error messages
   }
 
   if (res && ppos)
@@ -108,35 +101,17 @@ const TValue* luaR_findentry(const void *pentry, const char *strkey, luaR_numkey
 		return luaR_auxfind(lua_rotable, strkey, numkey, ppos);				
 	}
 }
-
-#ifdef PLATFORM_ESP8266
-extern uint32_t _irom0_text_start;
-extern uint32_t _irom0_text_end;
-
-int luaR_isrotable(const void *p) {
-	return ((&_irom0_text_start) <= (uint32_t *)p && (uint32_t *)p <= (&_irom0_text_end));
-}
-#endif
-
-#ifdef PLATFORM_ESP32
 extern uint32_t _rodata_start;
 extern uint32_t _lit4_end;
+extern uint32_t _lua_rtos_rodata_start;
+extern uint32_t _lua_rtos_rodata_end;
 
 int luaR_isrotable(const void *p) {
-	//printf("%x <= %x <= %x (test %d)\r\n",&_rodata_start, p, &_lit4_end,(&_rodata_start) <= (uint32_t *)p && (uint32_t *)p <= (&_lit4_end));
-	return ((&_rodata_start) <= (uint32_t *)p && (uint32_t *)p <= (&_lit4_end));
+	return (
+			((&_rodata_start) <= (uint32_t *)p && (uint32_t *)p <= (&_lit4_end)) ||
+			((&_lua_rtos_rodata_start) <= (uint32_t *)p && (uint32_t *)p <= (&_lua_rtos_rodata_end))
+	);
 }
-#endif
-
-#ifdef PLATFORM_PIC32MZ
-extern uint32_t __rodata_start;
-extern uint32_t _etext;
-
-int luaR_isrotable(const void *p) {
-	return ((&__rodata_start) <= (uint32_t *)p && (uint32_t *)p <= (&_etext));
-}
-#endif
-
 
 /* Find the metatable of a given table */
 void* luaR_getmeta(void *data) {

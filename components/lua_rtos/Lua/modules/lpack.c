@@ -415,6 +415,6 @@ int luaopen_pack(lua_State *L) {
 	#endif		   
 }
 	   
-LUA_OS_MODULE(PACK, pack, pack_map);
+MODULE_REGISTER_MAPPED(PACK, pack, pack_map, luaopen_pack);
 
 #endif

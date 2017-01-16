@@ -25,7 +25,7 @@
 #define LRO_INTVAL(v)   {{.i = v}, LUA_TNUMINT}
 #define LRO_ROVAL(v)    {{.p = (void*)v}, LUA_TROTABLE}
 #define LRO_NILVAL      {{.p = NULL}, LUA_TNIL}
-#define LRO_STRVAL(v)   {{.i = v}, LUA_TSTRING}
+#define LRO_STRVAL(v)   {{.p = v}, LUA_TSTRING}
 #else // #ifndef LUA_PACK_VALUE
 #define LRO_NUMVAL(v)   {.value.n = v}
 #define LRO_INTVAL(v)   {.value.i = v}
@@ -91,6 +91,7 @@ void luaR_next(lua_State *L, void *data, TValue *key, TValue *val);
 int luaH_next_ro (lua_State *L, void *t, StkId key);
 
 int luaR_index(lua_State *L, const void *funcs, const void *consts);
+int luaR_error(lua_State *L);
 
 #endif
 

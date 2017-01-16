@@ -511,6 +511,6 @@ LUALIB_API int luaopen_pio(lua_State *L) {
 #endif
 }
 
-LUA_OS_MODULE(PIO, pio, pio_map);
+MODULE_REGISTER_MAPPED(PIO, pio, pio_map, luaopen_pio);
 
 #endif

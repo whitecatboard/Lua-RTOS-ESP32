@@ -55,19 +55,17 @@
  
 #include "lmic.h"
 
-static const driver_message_t lora_lmic_errors[] = {
-	{"",""},
-	{"keys are not configured","KeysNotConfigured"},
-	{"join denied","JoinDenied"},
-	{"unexpected response","UnexpectedResponse"},
-	{"not joined","NotJoined"},
-	{"lora is not setup, setup first","NotSetup"},
-	{"not enough memory","NotEnoughtMemory"},
-	{"ABP expected","ABPExpected"},
-	{"can't setup","CannotSetup"},
-	{"transmission fail, ack not received","TransmissionFail"},
-	{"invalid argument""InvalidArgument"},
-};
+// Driver message errors
+DRIVER_REGISTER_ERROR(LORA, lora, KeysNotConfigured, "keys are not configured", LORA_ERR_KEYS_NOT_CONFIGURED);
+DRIVER_REGISTER_ERROR(LORA, lora, JoinDenied, "join denied", LORA_ERR_JOIN_DENIED);
+DRIVER_REGISTER_ERROR(LORA, lora, UnexpectedResponse, "unexpected response", LORA_ERR_UNEXPECTED_RESPONSE);
+DRIVER_REGISTER_ERROR(LORA, lora, NotJoined, "not joined", LORA_ERR_NOT_JOINED);
+DRIVER_REGISTER_ERROR(LORA, lora, NotSetup, "lora is not setup, setup first", LORA_ERR_NOT_SETUP);
+DRIVER_REGISTER_ERROR(LORA, lora, NotEnoughtMemory, "not enough memory", LORA_ERR_NO_MEM);
+DRIVER_REGISTER_ERROR(LORA, lora, ABPExpected, "ABP expected", LORA_ERR_ABP_EXPECTED);
+DRIVER_REGISTER_ERROR(LORA, lora, CannotSetup, "can't setup", LORA_ERR_CANT_SETUP);
+DRIVER_REGISTER_ERROR(LORA, lora, TransmissionFail, "transmission fail, ack not received", LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED);
+DRIVER_REGISTER_ERROR(LORA, lora, InvalidArgument, "invalid argument", LORA_ERR_INVALID_ARGUMENT);
 
 #define evLORA_INITED 	       	 ( 1 << 0 )
 #define evLORA_JOINED  	       	 ( 1 << 1 )
@@ -703,6 +701,6 @@ void _lora_init() {
 
 #endif
 
-DRIVER_REGISTER(LORA,lora,lora_lmic_errors, NULL,_lora_init,NULL);
+DRIVER_REGISTER(LORA,lora, NULL,_lora_init,NULL);
 
 #endif

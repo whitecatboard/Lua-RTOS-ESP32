@@ -53,7 +53,7 @@ static struct mtx driver_mtx;
 extern const driver_t drivers[];
 
 // Get driver info by it's name
-const driver_t *driver_get(const char *name) {
+const driver_t *driver_get_by_name(const char *name) {
 	const driver_t *cdriver;
 
 	cdriver = drivers;
@@ -68,9 +68,35 @@ const driver_t *driver_get(const char *name) {
 	return NULL;
 }
 
+// Get driver info by it's exception base
+const driver_t *driver_get_by_exception_base(const int exception_base) {
+	const driver_t *cdriver;
+
+	cdriver = drivers;
+	while (cdriver->name) {
+		if (cdriver->exception_base == exception_base) {
+			return cdriver;
+		}
+
+		cdriver++;
+	}
+
+	return NULL;
+}
+
 // Get error message string fom a driver error
 const char *driver_get_err_msg(driver_error_t *error) {
-	return error->driver->error[~(error->driver->exception_base) & error->exception].message;
+	driver_message_t *msg = error->driver->error;
+
+	while (msg->message) {
+		if (msg->exception == error->exception) {
+			return msg->message;
+		}
+
+		msg++;
+	}
+
+	return NULL;
 }
 
 // Get driver name from a driver error

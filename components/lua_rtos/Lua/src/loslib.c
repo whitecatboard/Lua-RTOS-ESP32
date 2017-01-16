@@ -430,4 +430,4 @@ int luaopen_os(lua_State *L) {
 	#endif		   
 }
 
-LUA_OS_MODULE(OS, os, syslib);
+MODULE_REGISTER_MAPPED(OS, os, syslib, luaopen_os);

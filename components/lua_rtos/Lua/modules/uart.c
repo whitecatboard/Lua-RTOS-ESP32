@@ -289,6 +289,6 @@ int luaopen_uart(lua_State* L) {
 #endif
 }
 
-LUA_OS_MODULE(UART, uart, uart_map);
+MODULE_REGISTER_MAPPED(UART, uart, uart_map, luaopen_uart);
 
 #endif

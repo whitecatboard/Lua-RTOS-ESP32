@@ -31,6 +31,8 @@
 #define DRIVER_H
 
 #include "luartos.h"
+#include "lobject.h"
+#include <modules.h>
 
 #include <sys/list.h>
 #include <sys/resource.h>
@@ -54,8 +56,8 @@ struct driver_unit_lock;
 struct driver_unit_lock_error;
 
 typedef struct {
+	int exception;
 	const char *message;
-	const char *name;
 } driver_message_t;
 
 typedef enum {
@@ -101,7 +103,8 @@ typedef struct driver_unit_lock_error {
 	int target_unit;
 } driver_unit_lock_error_t;
 
-const driver_t *driver_get(const char *name);
+const driver_t *driver_get_by_name(const char *name);
+const driver_t *driver_get_by_exception_base(const int exception_base);
 const char *driver_get_err_msg(driver_error_t *error);
 const char *driver_get_name(driver_error_t *error);
 
@@ -111,10 +114,10 @@ driver_error_t *driver_operation_error(const driver_t *driver, unsigned int code
 driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit);
 void _driver_init();
 
-#define GPIO_DRIVER driver_get("gpio")
-#define UART_DRIVER driver_get("uart")
-#define SPI_DRIVER driver_get("spi")
-#define I2C_DRIVER driver_get("i2c")
+#define GPIO_DRIVER driver_get_by_name("gpio")
+#define UART_DRIVER driver_get_by_name("uart")
+#define SPI_DRIVER driver_get_by_name("spi")
+#define I2C_DRIVER driver_get_by_name("i2c")
 
 #define DRIVER_SECTION(s) __attribute__((used,unused,section(s)))
 
@@ -126,6 +129,11 @@ void _driver_init();
 #define DRIVER_TOSTRING_EVALUATOR(x) DRIVER_TOSTRING_PASTER(x)
 #define DRIVER_TOSTRING(x) DRIVER_TOSTRING_EVALUATOR(x)
 
-#define DRIVER_REGISTER(name,lname,errorsa,locka,initf,lockf) \
-	const DRIVER_SECTION(DRIVER_TOSTRING(.drivers)) driver_t DRIVER_CONCAT(driver_,lname) = {DRIVER_TOSTRING(lname),  DRIVER_EXCEPTION_BASE(DRIVER_CONCAT(name,_DRIVER_ID)),  (void *)errorsa, locka, initf, lockf};
+#define DRIVER_REGISTER(name,lname,locka,initf,lockf) \
+	const DRIVER_SECTION(DRIVER_TOSTRING(.drivers)) driver_t DRIVER_CONCAT(driver_,lname) = {DRIVER_TOSTRING(lname),  DRIVER_EXCEPTION_BASE(DRIVER_CONCAT(name,_DRIVER_ID)),  (void *)DRIVER_CONCAT(lname,_errors), locka, initf, lockf};
 #endif
+
+#define DRIVER_REGISTER_ERROR(name, lname, key, msg, exception) \
+	extern const driver_message_t DRIVER_CONCAT(lname,_errors)[]; \
+	const __attribute__((used,unused,section(DRIVER_TOSTRING(DRIVER_CONCAT(.lname,_errors))))) driver_message_t DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_errors)) = {exception, msg}; \
+	const __attribute__((used,unused,section(DRIVER_TOSTRING(DRIVER_CONCAT(.lname,_error_map))))) LUA_REG_TYPE DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_error_map)) = {LSTRKEY(DRIVER_TOSTRING(key)), LINTVAL(exception)};

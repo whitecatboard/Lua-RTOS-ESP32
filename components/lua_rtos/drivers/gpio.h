@@ -36,6 +36,9 @@
 #include "drivers/gpio.h"
 #include "drivers/cpu.h"
 
+// GPIO errors
+#define GPIO_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  0)
+
 #define ETS_GPIO_INUM 4
 
 #define gpio_pin_input(gpio) gpio_pad_select_gpio(gpio);gpio_set_direction(gpio, GPIO_MODE_INPUT)
