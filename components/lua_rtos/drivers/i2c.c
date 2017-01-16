@@ -33,6 +33,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "driver/i2c.h"
+#include "driver/periph_ctrl.h"
 
 #include <stdint.h>
 
@@ -44,6 +45,11 @@
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
 #include <drivers/i2c.h>
+
+#define ACK_CHECK_EN   0x1     /*!< I2C master will check ack from slave*/
+#define ACK_CHECK_DIS  0x0     /*!< I2C master will not check ack from slave */
+#define ACK_VAL        0x0     /*!< I2C ack value */
+#define NACK_VAL       0x1     /*!< I2C nack value */
 
 // Driver locks
 driver_unit_lock_t i2c_locks[CPU_LAST_I2C + 1];
@@ -212,6 +218,12 @@ driver_error_t *i2c_setup(int unit, int mode, int speed, int sda, int scl, int a
 	if (i2c[unit].setup) {
 		i2c_driver_delete(unit);
 
+		if (unit == 0) {
+			periph_module_disable(PERIPH_I2C0_MODULE);
+		} else {
+			periph_module_disable(PERIPH_I2C1_MODULE);
+		}
+
 		i2c[unit].setup = 0;
 	}
 
@@ -348,7 +360,7 @@ driver_error_t *i2c_write_address(int unit, int *transaction, char address, int 
 		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
     }
 
-    i2c_master_write_byte(cmd, address << 1 | (read?I2C_MASTER_READ:I2C_MASTER_WRITE), 1);
+    i2c_master_write_byte(cmd, address << 1 | (read?I2C_MASTER_READ:I2C_MASTER_WRITE), ACK_CHECK_EN);
 
     mtx_unlock(&i2c[unit].mtx);
 
@@ -377,7 +389,11 @@ driver_error_t *i2c_write(int unit, int *transaction, char *data, int len) {
 		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
     }
 
-    i2c_master_write(cmd, (uint8_t *)data, len, 1);
+    if (len > 1) {
+    	i2c_master_write(cmd, (uint8_t *)data, len, ACK_CHECK_EN);
+    } else {
+        i2c_master_write_byte(cmd, *data, ACK_CHECK_EN);
+    }
 
 	mtx_unlock(&i2c[unit].mtx);
 
@@ -406,7 +422,11 @@ driver_error_t *i2c_read(int unit, int *transaction, char *data, int len) {
 		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
     }
 
-    i2c_master_read(cmd, (uint8_t *)data, len, 1);
+    if (len > 1) {
+    	i2c_master_read(cmd, (uint8_t *)data, len - 1, ACK_VAL);
+    }
+
+   	i2c_master_read_byte(cmd, (uint8_t *)(data + len - 1), NACK_VAL);
 
     mtx_unlock(&i2c[unit].mtx);
 

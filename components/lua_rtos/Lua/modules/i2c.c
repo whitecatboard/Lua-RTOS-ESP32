@@ -163,13 +163,9 @@ static int li2c_write(lua_State* L) {
 
     char data = (char)(luaL_checkinteger(L, 2) & 0xff);
     
-    if ((error = i2c_write(user_data->unit, &user_data->transaction, &data, sizeof(data)))) {
-    	return luaL_driver_error(L, error);
-    }
+    esp_err_t i2c_master_write_byte(i2c_cmd_handle_t cmd_handle, uint8_t data, bool ack_en);
 
-    // We need to flush because data buffers are on the stack and if we
-    // flush on the stop condition its values will be indeterminate
-    if ((error = i2c_flush(user_data->unit, &user_data->transaction, 1))) {
+    if ((error = i2c_write(user_data->unit, &user_data->transaction, &data, sizeof(data)))) {
     	return luaL_driver_error(L, error);
     }
 
