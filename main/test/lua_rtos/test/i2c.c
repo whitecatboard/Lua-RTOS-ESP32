@@ -115,7 +115,7 @@ TEST_CASE("i2c-master", "[i2c master]") {
 
 		// This is only for test purposes
 		// It should be done by ACKNOWLEDGE POLLING
-		delay(20);
+		delay(30);
 	}
 
 	// Read write data and verify

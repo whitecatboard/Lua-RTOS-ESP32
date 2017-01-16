@@ -86,19 +86,19 @@ static driver_error_t *wifi_check_error(esp_err_t error) {
 	if (error == ESP_ERR_WIFI_OK) return NULL;
 
 	switch (error) {
-		case ESP_ERR_WIFI_FAIL:      return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_FAIL,NULL);
-		case ESP_ERR_WIFI_NO_MEM:    return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NO_MEM,NULL);
-		case ESP_ERR_WIFI_NOT_INIT:  return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_INIT,NULL);
-		case ESP_ERR_WIFI_NOT_START: return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_START,NULL);
-		case ESP_ERR_WIFI_IF:        return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_IF,NULL);
-		case ESP_ERR_WIFI_STATE:     return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_STATE,NULL);
-		case ESP_ERR_WIFI_CONN:      return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_CONN,NULL);
-		case ESP_ERR_WIFI_NVS:       return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NVS,NULL);
-		case ESP_ERR_WIFI_MAC:       return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_MAC,NULL);
-		case ESP_ERR_WIFI_SSID:      return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_SSID,NULL);
-		case ESP_ERR_WIFI_PASSWORD:  return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_PASSWORD,NULL);
-		case ESP_ERR_WIFI_TIMEOUT:   return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_TIMEOUT,NULL);
-		case ESP_ERR_WIFI_WAKE_FAIL: return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WAKE_FAIL,NULL);
+		case ESP_ERR_WIFI_FAIL:        return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_FAIL,NULL);
+		case ESP_ERR_WIFI_NO_MEM:      return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NO_MEM,NULL);
+		case ESP_ERR_WIFI_NOT_INIT:    return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_INIT,NULL);
+		case ESP_ERR_WIFI_NOT_STARTED: return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_START,NULL);
+		case ESP_ERR_WIFI_IF:          return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_IF,NULL);
+		case ESP_ERR_WIFI_STATE:       return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_STATE,NULL);
+		case ESP_ERR_WIFI_CONN:        return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_CONN,NULL);
+		case ESP_ERR_WIFI_NVS:         return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NVS,NULL);
+		case ESP_ERR_WIFI_MAC:         return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_MAC,NULL);
+		case ESP_ERR_WIFI_SSID:        return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_SSID,NULL);
+		case ESP_ERR_WIFI_PASSWORD:    return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_PASSWORD,NULL);
+		case ESP_ERR_WIFI_TIMEOUT:     return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_TIMEOUT,NULL);
+		case ESP_ERR_WIFI_WAKE_FAIL:   return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WAKE_FAIL,NULL);
 		default:
 			panic("missing wifi error case");
 	}
