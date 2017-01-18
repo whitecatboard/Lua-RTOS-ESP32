@@ -55,9 +55,8 @@ static int ladc_setup( lua_State* L ) {
     adc_userdata *adc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
 
     adc->adc = id;
-    adc->ref_voltage = CPU_ADC_REF;
     
-    if ((error = adc_setup())) {
+    if ((error = adc_setup(id))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -78,23 +77,13 @@ static int ladc_setup_channel( lua_State* L ) {
     res = luaL_checkinteger( L, 2 );
     channel = luaL_checkinteger( L, 3 );
 
-    if ((error = adc_setup_channel(channel))) {
+    if ((error = adc_setup_channel(channel, res))) {
     	return luaL_driver_error(L, error);
     }
 
     adc_userdata *nadc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
     memcpy(nadc, adc, sizeof(adc_userdata));
     
-    switch (res) {
-        case 6:  nadc->max_val = 63;  break;
-        case 8:  nadc->max_val = 255; break;
-        case 9:  nadc->max_val = 511; break;
-        case 10: nadc->max_val = 1023;break;
-        case 11: nadc->max_val = 2047;break;
-        case 12: nadc->max_val = 4095;break;
-    }
-
-    nadc->resolution = res;
     nadc->chan = channel;
 
     luaL_getmetatable(L, "adc");
@@ -104,25 +93,19 @@ static int ladc_setup_channel( lua_State* L ) {
 }
 
 static int ladc_read( lua_State* L ) {
-    int readed;
+    int raw;
+    double mvlots;
 	driver_error_t *error;
     adc_userdata *adc = NULL;
 
     adc = (adc_userdata *)luaL_checkudata(L, 1, "adc");
     luaL_argcheck(L, adc, 1, "adc expected");
 
-    if ((error = adc_read(adc->chan, &readed))) {
+    if ((error = adc_read(adc->chan, &raw, &mvlots))) {
     	return luaL_driver_error(L, error);
     } else {
-        // Normalize
-        if (readed & (1 << (12 - adc->resolution - 1))) {
-            readed = ((readed >> (12 - adc->resolution)) + 1) & adc->max_val;
-        } else {
-            readed =readed >> (12 - adc->resolution);
-        }    
-
-        lua_pushinteger( L, readed );
-        lua_pushnumber( L, ((double)readed * (double)adc->ref_voltage) / (double)adc->max_val);
+        lua_pushinteger( L, raw );
+        lua_pushnumber( L, mvlots);
         return 2;
     }
 }

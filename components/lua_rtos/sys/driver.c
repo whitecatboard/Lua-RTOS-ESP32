@@ -45,6 +45,8 @@
 #include <drivers/gpio.h>
 #include <drivers/lora.h>
 
+#define DRIVER_LOCK_DEBUG 0
+
 // Mutex for lock resources
 static struct mtx driver_mtx;
 
@@ -94,6 +96,27 @@ const char *driver_get_err_msg(driver_error_t *error) {
 		}
 
 		msg++;
+	}
+
+	return NULL;
+}
+
+const char *driver_get_err_msg_by_exception(int exception) {
+	const driver_t *driver;
+	driver_message_t *msg;
+
+	// Get driver by name
+	driver = driver_get_by_exception_base(exception & 0b11111111000000000000000000000000);
+	if (driver) {
+		msg = driver->error;
+
+		while (msg->message) {
+			if (msg->exception == exception) {
+				return msg->message;
+			}
+
+			msg++;
+		}
 	}
 
 	return NULL;
@@ -163,6 +186,10 @@ driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_un
 	#endif
 
 	if (!target_lock) {
+		#if DRIVER_LOCK_DEBUG
+		syslog(LOG_DEBUG,"target driver haven't lock control\r\n");
+		#endif
+
 		if (target_driver->lock_resources) {
 			driver_error_t *error;
 
@@ -202,6 +229,10 @@ driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_un
 		mtx_unlock(&driver_mtx);
 
 		return NULL;
+	} else {
+		#if DRIVER_LOCK_DEBUG
+		syslog(LOG_DEBUG,"target driver have lock control\r\n");
+		#endif
 	}
 
 	if (target_lock[target_unit].owner) {

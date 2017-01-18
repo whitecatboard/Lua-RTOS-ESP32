@@ -1,3 +1,4 @@
+#if 0
 #include "unity.h"
 
 #include <errno.h>
@@ -124,3 +125,4 @@ TEST_CASE("i2c-master", "[i2c master]") {
 		TEST_ASSERT_MESSAGE(data == i*2, "invalid read data");
 	}
 }
+#endif

@@ -33,11 +33,8 @@
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
 
-// This macro gets a reference for this driver into drivers array
-#define GPIO_DRIVER driver_get_by_name("gpio")
-
 // Driver locks
-driver_unit_lock_t gpio_locks[CPU_LAST_GPIO];
+static driver_unit_lock_t gpio_locks[CPU_LAST_GPIO + 1];
 
 // Driver errors
 DRIVER_REGISTER_ERROR(GPIO, gpio, CannotSetup, "can't setup", GPIO_ERR_CANT_INIT);
@@ -245,10 +242,5 @@ void gpio_disable_analog(int pin) {
 	
 }
 
-void _gpio_init() {
-	// Init lock array
-	memset(gpio_locks, 0, sizeof(gpio_locks));
-}
-
-DRIVER_REGISTER(GPIO,gpio,gpio_locks,_gpio_init,NULL);
+DRIVER_REGISTER(GPIO,gpio,gpio_locks,NULL,NULL);
 

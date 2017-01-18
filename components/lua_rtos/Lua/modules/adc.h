@@ -35,11 +35,7 @@
 
 typedef struct {
     unsigned int adc;
-    unsigned int ref_voltage;
     unsigned int chan;
-    unsigned int resolution;
-    unsigned int frequency;
-    unsigned int max_val;
 } adc_userdata;
 
 #ifdef CPU_ADC0

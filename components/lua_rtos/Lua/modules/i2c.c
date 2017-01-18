@@ -65,7 +65,7 @@ static int li2c_setup( lua_State* L ) {
     // Allocate userdata
     i2c_user_data_t *user_data = (i2c_user_data_t *)lua_newuserdata(L, sizeof(i2c_user_data_t));
     if (!user_data) {
-       	return luaL_exception(L, I2C, I2C_ERR_NOT_ENOUGH_MEMORY, i2c_errors);
+       	return luaL_exception(L, I2C_ERR_NOT_ENOUGH_MEMORY);
     }
 
     user_data->unit = id;

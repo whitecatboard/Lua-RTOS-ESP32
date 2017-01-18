@@ -42,6 +42,8 @@
 #define USE_PWM LUA_USE_PWM
 #define USE_ADC LUA_USE_ADC
 #define USE_OWIRE 1
+#define LUA_USE_SENSOR 1
+#define USE_SENSORS LUA_USE_SENSOR
 
 #define USE_NET_VFS USE_NET
 

@@ -227,8 +227,8 @@ typedef uint64_t gpio_port_mask_t;
  */
 
 // Unit bounds
-#define CPU_FIRST_ADC 0
-#define CPU_LAST_ADC  0
+#define CPU_FIRST_ADC 1
+#define CPU_LAST_ADC  1
 
 // Channel bounds
 #define CPU_FIRST_ADC_CH 0
@@ -238,10 +238,10 @@ typedef uint64_t gpio_port_mask_t;
 #define CPU_ADC_REF 1100
 
 // ESP32 available ADC units
-#define CPU_ADC0     0
+#define CPU_ADC1     1
 
 // ESP32 available ADC unit names
-#define CPU_ADC0_NAME  "ADC0"
+#define CPU_ADC1_NAME  "ADC1"
 
 // ESP32 available ADC channels
 #define CPU_ADC_CH0  0

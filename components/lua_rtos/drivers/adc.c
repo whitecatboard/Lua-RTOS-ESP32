@@ -48,14 +48,15 @@
 #include <drivers/cpu.h>
 #include <drivers/adc.h>
 
-// This macro gets a reference for this driver into drivers array
-#define ADC_DRIVER driver_get_by_name("adc")
+// ADC channels
+static adc_channel_t adc_channels[CPU_LAST_ADC_CH + 1];
 
 // Driver locks
 driver_unit_lock_t adc_locks[CPU_LAST_ADC + 1];
 
 // Driver message errors
 DRIVER_REGISTER_ERROR(ADC, adc, CannotSetup, "can't setup", ADC_ERR_CANT_INIT);
+DRIVER_REGISTER_ERROR(ADC, adc, InvalidUnit, "invalid unit", ADC_ERR_INVALID_UNIT);
 DRIVER_REGISTER_ERROR(ADC, adc, InvalidChannel, "invalid channel", ADC_ERR_INVALID_CHANNEL);
 
 /*s
@@ -98,41 +99,76 @@ driver_error_t *adc_lock_resources(int8_t channel, void *resources) {
 }
 
 // ADC setup
-driver_error_t *adc_setup(void) {
+driver_error_t *adc_setup(int8_t unit) {
+	// Sanity checks
+	if (unit != 1) {
+		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, NULL);
+	}
+
 	adc1_config_width(ADC_WIDTH_12Bit);
 
 	return NULL;
 }
 
 // Setup an ADC channel
-driver_error_t *adc_setup_channel(int8_t channel) {
+driver_error_t *adc_setup_channel(int8_t channel, int8_t resolution) {
 	// Sanity checks
 	if (!((1 << channel) & CPU_ADC_ALL)) {
 		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
 	}
 
-    // Lock resources
-    driver_error_t *error;
-    adc_resources_t resources;
+	if (!adc_channels[channel].setup) {
+		// Lock resources
+		driver_error_t *error;
+		adc_resources_t resources;
 
-    if ((error = adc_lock_resources(channel, &resources))) {
-		return error;
+		if ((error = adc_lock_resources(channel, &resources))) {
+			return error;
+		}
+
+		adc1_config_channel_atten(channel, ADC_ATTEN_0db);
+
+		syslog(LOG_INFO, "adc%d: at pin %s%d", channel, gpio_portname(resources.pin), gpio_name(resources.pin));
 	}
 
-    adc1_config_channel_atten(channel, ADC_ATTEN_0db);
+	adc_channels[channel].setup = 1;
+	adc_channels[channel].resolution = resolution;
 
-    syslog(LOG_INFO, "adc%d: at pin %s%d", channel, gpio_portname(resources.pin), gpio_name(resources.pin));
+    switch (resolution) {
+        case 6:  adc_channels[channel].max_val = 63;  break;
+        case 8:  adc_channels[channel].max_val = 255; break;
+        case 9:  adc_channels[channel].max_val = 511; break;
+        case 10: adc_channels[channel].max_val = 1023;break;
+        case 11: adc_channels[channel].max_val = 2047;break;
+        case 12: adc_channels[channel].max_val = 4095;break;
+    }
 
-    return NULL;
+	return NULL;
 }
 
-driver_error_t *adc_read(int8_t channel, int *val) {
+driver_error_t *adc_read(int8_t channel, int *raw, double *mvols) {
+	int val;
+
 	// Sanity checks
 	if (!((1 << channel) & CPU_ADC_ALL)) {
 		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
 	}
 
-	*val = adc1_get_voltage(channel);
+	// Get raw value
+	val = adc1_get_voltage(channel);
+
+	// Normalize to channel resolution
+	int resolution = adc_channels[channel].resolution;
+	int max_val = adc_channels[channel].max_val;
+
+	if (val & (1 << (12 - resolution - 1))) {
+    	val = ((val >> (12 - resolution)) + 1) & max_val;
+    } else {
+    	val = val >> (12 - resolution);
+    }
+
+    *raw = val;
+	*mvols = ((double)val * (double)CPU_ADC_REF) / (double)max_val;
 
 	return NULL;
 }

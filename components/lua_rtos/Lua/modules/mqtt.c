@@ -54,21 +54,19 @@ static int lmqtt_index(lua_State *L);
 static int lmqtt_client_index(lua_State *L);
 
 // Module errors
-#define LUA_MQTT_ERR_CANT_CREATE_CLIENT 0
-#define LUA_MQTT_ERR_CANT_SET_CALLBACKS 1
-#define LUA_MQTT_ERR_CANT_CONNECT       2
-#define LUA_MQTT_ERR_CANT_SUBSCRIBE     3
-#define LUA_MQTT_ERR_CANT_PUBLISH       4
-#define LUA_MQTT_ERR_CANT_DISCONNECT    5
+#define LUA_MQTT_ERR_CANT_CREATE_CLIENT (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  0)
+#define LUA_MQTT_ERR_CANT_SET_CALLBACKS (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  1)
+#define LUA_MQTT_ERR_CANT_CONNECT       (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  2)
+#define LUA_MQTT_ERR_CANT_SUBSCRIBE     (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  3)
+#define LUA_MQTT_ERR_CANT_PUBLISH       (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  4)
+#define LUA_MQTT_ERR_CANT_DISCONNECT    (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  5)
 
-static const char *mqtt_errors[] = {
-	"can't create client",
-	"can't set callbacks",
-	"can't connect",
-	"can't subscribe to topic",
-	"can't publish to topic",
-	"can't disconnect"
-};
+DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotCreateClient, "can't create client", LUA_MQTT_ERR_CANT_CREATE_CLIENT);
+DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotSetCallbacks, "can't set callbacks", LUA_MQTT_ERR_CANT_SET_CALLBACKS);
+DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotConnect, "can't connect", LUA_MQTT_ERR_CANT_CONNECT);
+DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotSubscribeToTopic, "can't subscribe to topic", LUA_MQTT_ERR_CANT_SUBSCRIBE);
+DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotPublishToTopic, "can't publish to topic", LUA_MQTT_ERR_CANT_PUBLISH);
+DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotDisconnect, "can't disconnect", LUA_MQTT_ERR_CANT_DISCONNECT);
 
 static int client_inited = 0;
 
@@ -184,12 +182,12 @@ static int lmqtt_client( lua_State* L ){
     
     rc = MQTTClient_create(&mqtt->client, url, clientId, MQTTCLIENT_PERSISTENCE_NONE, NULL);
     if (rc < 0){
-    	return luaL_exception(L, MQTT, LUA_MQTT_ERR_CANT_CREATE_CLIENT, mqtt_errors);
+    	return luaL_exception(L, LUA_MQTT_ERR_CANT_CREATE_CLIENT);
     }
 
     rc = MQTTClient_setCallbacks(mqtt->client, mqtt, NULL, messageArrived, NULL);
     if (rc < 0){
-    	return luaL_exception(L, MQTT, LUA_MQTT_ERR_CANT_SET_CALLBACKS, mqtt_errors);
+    	return luaL_exception(L, LUA_MQTT_ERR_CANT_SET_CALLBACKS);
     }
 
    luaL_getmetatable(L, "mqtt");
@@ -233,7 +231,7 @@ retry:
     		goto retry;
     	}
 
-    	return luaL_exception(L, MQTT, LUA_MQTT_ERR_CANT_CONNECT, mqtt_errors);
+    	return luaL_exception(L, LUA_MQTT_ERR_CANT_CONNECT);
     }    
     
     return 0;
@@ -267,7 +265,7 @@ static int lmqtt_subscribe( lua_State* L ) {
     if (rc == 0) {
         return 0;
     } else {
-    	return luaL_exception(L, MQTT, LUA_MQTT_ERR_CANT_SUBSCRIBE, mqtt_errors);
+    	return luaL_exception(L, LUA_MQTT_ERR_CANT_SUBSCRIBE);
     }
 }
 
@@ -293,7 +291,7 @@ static int lmqtt_publish( lua_State* L ) {
     if (rc == 0) {
         return 0;
     } else {
-    	return luaL_exception(L, MQTT, LUA_MQTT_ERR_CANT_PUBLISH, mqtt_errors);
+    	return luaL_exception(L, LUA_MQTT_ERR_CANT_PUBLISH);
     }
 }
 
@@ -309,7 +307,7 @@ static int lmqtt_disconnect( lua_State* L ) {
     if (rc == 0) {
         return 0;
     } else {
-    	return luaL_exception(L, MQTT, LUA_MQTT_ERR_CANT_DISCONNECT, mqtt_errors);
+    	return luaL_exception(L, LUA_MQTT_ERR_CANT_DISCONNECT);
     }
 }
 
@@ -413,5 +411,6 @@ LUALIB_API int luaopen_mqtt( lua_State *L ) {
 }
 
 MODULE_REGISTER_UNMAPPED(MQTT, mqtt, luaopen_mqtt);
+DRIVER_REGISTER(MQTT,mqtt,NULL,NULL,NULL);
 
 #endif

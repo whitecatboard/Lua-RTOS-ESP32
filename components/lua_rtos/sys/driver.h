@@ -47,7 +47,17 @@
 #define PWM_DRIVER_ID    7
 #define WIFI_DRIVER_ID   8
 #define NET_DRIVER_ID    9
-#define OWIRE_DRIVER_ID 10
+#define SENSOR_DRIVER_ID 10
+#define OWIRE_DRIVER_ID  11
+#define MQTT_DRIVER_ID   12
+
+#define GPIO_DRIVER driver_get_by_name("gpio")
+#define UART_DRIVER driver_get_by_name("uart")
+#define SPI_DRIVER driver_get_by_name("spi")
+#define I2C_DRIVER driver_get_by_name("i2c")
+#define SENSOR_DRIVER driver_get_by_name("sensor")
+#define ADC_DRIVER driver_get_by_name("adc")
+#define MQTT_DRIVER driver_get_by_name("mqtt")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 
@@ -107,6 +117,7 @@ typedef struct driver_unit_lock_error {
 const driver_t *driver_get_by_name(const char *name);
 const driver_t *driver_get_by_exception_base(const int exception_base);
 const char *driver_get_err_msg(driver_error_t *error);
+const char *driver_get_err_msg_by_exception(int exception);
 const char *driver_get_name(driver_error_t *error);
 
 driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error_t *lock_error);
@@ -114,11 +125,6 @@ driver_error_t *driver_setup_error(const driver_t *driver, unsigned int code, co
 driver_error_t *driver_operation_error(const driver_t *driver, unsigned int code, const char *msg);
 driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit);
 void _driver_init();
-
-#define GPIO_DRIVER driver_get_by_name("gpio")
-#define UART_DRIVER driver_get_by_name("uart")
-#define SPI_DRIVER driver_get_by_name("spi")
-#define I2C_DRIVER driver_get_by_name("i2c")
 
 #define DRIVER_SECTION(s) __attribute__((used,unused,section(s)))
 

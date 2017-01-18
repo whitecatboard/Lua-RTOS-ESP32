@@ -1,12 +1,12 @@
 /*
- * Lua RTOS, ADC driver
+ * Lua RTOS, TMP36 sensor (temperature)
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
- * 
+ *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- * 
- * All rights reserved.  
+ *
+ * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -27,34 +27,47 @@
  * this software.
  */
 
-#ifndef ADC_H
-#define	ADC_H
+#include "tmp36.h"
 
-#include <stdint.h>
-
-#include <drivers/cpu.h>
+#include <math.h>
 
 #include <sys/driver.h>
 
-// ADC channel
-typedef struct {
-	uint8_t setup;
-	uint8_t resolution;
-	uint16_t max_val;
-} adc_channel_t;
+#include <drivers/sensor.h>
+#include <drivers/adc.h>
 
-// Resources used by ADC
-typedef struct {
-	uint8_t pin;
-} adc_resources_t;
+// Sensor specification and registration
+const sensor_t __attribute__((used,unused,section(".sensors"))) tmp36_sensor = {
+	.id = "TMP36",
+	.interface = ADC_INTERFACE,
+	.data = {
+		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
+		{.id = NULL,          .type = SENSOR_NO_DATA },
+	},
+	.setup = tmp36_setup,
+	.acquire = tmp36_acquire
+};
 
-// ADC errors
-#define ADC_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  0)
-#define ADC_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  1)
-#define ADC_ERR_INVALID_CHANNEL          (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  2)
+/*
+ * Operation functions
+ */
+driver_error_t *tmp36_setup(sensor_instance_t *unit) {
+	return NULL;
+}
 
-driver_error_t *adc_setup(int8_t unit);
-driver_error_t *adc_setup_channel(int8_t channel, int8_t resolution);
-driver_error_t *adc_read(int8_t channel, int *raw, double *mvols);
+driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values) {
+	driver_error_t *error;
+	int raw = 0;
+	double mvolts = 0;
 
-#endif	/* ADC_H */
+	// Read value
+	if ((error = adc_read(unit->setup.adc.channel, &raw, &mvolts))) {
+		return error;
+	}
+
+	// Calculate temperature
+	// TMP36 has a resolution of 0.5 ºC, so round to 1 decimal place
+	values->floatd.value = floor(10.0 * (((float)mvolts - 500) / 10)) / 10.0;
+
+	return NULL;
+}
