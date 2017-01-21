@@ -102,9 +102,6 @@ static int lsensor_set_prepare( lua_State* L, const sensor_t *sensor, const char
 	return 0;
 }
 
-
-
-
 static int lsensor_setup( lua_State* L ) {
 	driver_error_t *error;
 	const sensor_t *sensor;
@@ -218,9 +215,11 @@ static int lsensor_read( lua_State* L ) {
 
 static int lsensor_list( lua_State* L ) {
 	const sensor_t *csensor = sensors;
-	uint16_t count = 0, i = 0;
+
+	uint16_t count = 0, i = 0, idx, len;
 	uint8_t table = 0;
 	char interface[7];
+	char type[7];
 
 	// Check if user wants result as a table, or wants result
 	// on the console
@@ -232,8 +231,8 @@ static int lsensor_list( lua_State* L ) {
 	}
 
 	if (!table) {
-		printf("SENSOR      INTERFACE\r\n");
-		printf("---------------------\r\n");
+		printf("SENSOR      INTERFACE   PROVIDES                    SETTINGS                   \r\n");
+		printf("-------------------------------------------------------------------------------\r\n");
 	} else {
 		lua_createtable(L, count, 0);
 	}
@@ -250,17 +249,101 @@ static int lsensor_list( lua_State* L ) {
 		}
 
 		if (!table) {
-			printf("%-10s  %-9s\r\n",csensor->id, interface);
+			printf("%-10s  %-9s   ",csensor->id, interface);
+
+			len = 0;
+			for(idx=0; idx < SENSOR_MAX_DATA; idx++) {
+				if (csensor->data[idx].id) {
+					if (len > 0) {
+						printf(",");
+						len += 1;
+					}
+
+					printf("%s", csensor->data[idx].id);
+					len += strlen(csensor->data[idx].id);
+				}
+			}
+
+			for(;len < 25;len++) printf(" ");
+
+			printf("   ");
+
+			len = 0;
+			for(idx=0; idx < SENSOR_MAX_SETTINGS; idx++) {
+				if (csensor->settings[idx].id) {
+					if (len > 0) {
+						printf(",");
+						len += 1;
+					}
+
+					printf("%s", csensor->settings[idx].id);
+					len += strlen(csensor->settings[idx].id);
+				}
+			}
+
+			printf("\r\n");
 		} else {
 			lua_pushinteger(L, i);
 
-			lua_createtable(L, 0, 2);
+			lua_createtable(L, 0, 3);
 
 	        lua_pushstring(L, (char *)csensor->id);
 	        lua_setfield (L, -2, "id");
 
 	        lua_pushstring(L, (char *)interface);
 	        lua_setfield (L, -2, "interface");
+
+	        lua_createtable(L, 0, 0);
+	        for(idx=0; idx < SENSOR_MAX_DATA; idx++) {
+				if (csensor->data[idx].id) {
+					lua_pushinteger(L, idx);
+					lua_createtable(L, 0, 2);
+
+					lua_pushstring(L, (char *)csensor->data[idx].id);
+			        lua_setfield (L, -2, "id");
+
+			    	switch (csensor->data[idx].type) {
+			    		case SENSOR_DATA_INT: strcpy(type, "int"); break;
+			    		case SENSOR_DATA_FLOAT: strcpy(type, "float"); break;
+			    		case SENSOR_DATA_DOUBLE: strcpy(type, "double"); break;
+
+			    		default:
+			    			break;
+			    	}
+
+			    	lua_pushstring(L, type);
+			        lua_setfield (L, -2, "type");
+
+			        lua_settable(L,-3);
+				}
+			}
+	        lua_setfield (L, -2, "provides");
+
+	        lua_createtable(L, 0, 0);
+	        for(idx=0; idx < SENSOR_MAX_SETTINGS; idx++) {
+				if (csensor->settings[idx].id) {
+					lua_pushinteger(L, idx);
+					lua_createtable(L, 0, 2);
+
+					lua_pushstring(L, (char *)csensor->settings[idx].id);
+			        lua_setfield (L, -2, "id");
+
+			    	switch (csensor->settings[idx].type) {
+			    		case SENSOR_DATA_INT: strcpy(type, "int"); break;
+			    		case SENSOR_DATA_FLOAT: strcpy(type, "float"); break;
+			    		case SENSOR_DATA_DOUBLE: strcpy(type, "double"); break;
+
+			    		default:
+			    			break;
+			    	}
+
+			    	lua_pushstring(L, type);
+			        lua_setfield (L, -2, "type");
+
+			        lua_settable(L,-3);
+				}
+			}
+	        lua_setfield (L, -2, "settings");
 
 	        lua_settable(L,-3);
 		}
