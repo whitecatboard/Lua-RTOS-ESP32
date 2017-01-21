@@ -68,6 +68,43 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 	}
 }
 
+static int lsensor_set_prepare( lua_State* L, const sensor_t *sensor, const char *id, sensor_value_t *setting_value ) {
+	// Initialize setting_value
+	memset(setting_value, 0, sizeof(sensor_value_t));
+
+	// Get sensor setting
+	const sensor_data_t *setting = sensor_get_setting(sensor, id);
+
+	if (!setting) {
+		return luaL_exception(L, SENSOR_ERR_NOT_FOUND);
+	}
+
+	switch (setting->type) {
+		case SENSOR_DATA_INT:
+			setting_value->type = SENSOR_DATA_INT;
+			setting_value->integerd.value = luaL_checkinteger(L, 3);
+			break;
+
+		case SENSOR_DATA_FLOAT:
+			setting_value->type = SENSOR_DATA_FLOAT;
+			setting_value->floatd.value   = luaL_checknumber(L, 3 );
+			break;
+
+		case SENSOR_DATA_DOUBLE:
+			setting_value->type = SENSOR_DATA_DOUBLE;
+			setting_value->doubled.value  = luaL_checknumber(L, 3 );
+			break;
+
+		default:
+			break;
+	}
+
+	return 0;
+}
+
+
+
+
 static int lsensor_setup( lua_State* L ) {
 	driver_error_t *error;
 	const sensor_t *sensor;
@@ -102,6 +139,30 @@ static int lsensor_setup( lua_State* L ) {
     lua_setmetatable(L, -2);
 
     return 1;
+}
+
+static int lsensor_set( lua_State* L ) {
+    sensor_userdata *udata = NULL;
+	driver_error_t *error;
+	sensor_value_t setting_value;
+	int ret;
+
+	udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor");
+    luaL_argcheck(L, udata, 1, "sensor expected");
+
+    const char *setting = luaL_checkstring( L, 2 );
+
+    // Prepara setting value
+    if ((ret = lsensor_set_prepare(L, udata->instance->sensor, setting, &setting_value))) {
+    	return ret;
+    }
+
+    // Set sensor
+	if ((error = sensor_set(udata->instance, setting, &setting_value))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    return 0;
 }
 
 static int lsensor_acquire( lua_State* L ) {
@@ -239,6 +300,7 @@ static const LUA_REG_TYPE lsensor_map[] = {
 static const LUA_REG_TYPE lsensor_ins_map[] = {
 	{ LSTRKEY( "acquire"   ),	LFUNCVAL( lsensor_acquire   ) },
   	{ LSTRKEY( "read"      ),	LFUNCVAL( lsensor_read 	    ) },
+  	{ LSTRKEY( "set"       ),	LFUNCVAL( lsensor_set 	    ) },
     { LNILKEY, LNILVAL }
 };
 
@@ -286,6 +348,15 @@ MODULE_REGISTER_UNMAPPED(SENSOR, sensor, luaopen_sensor);
 #endif
 
 /*
+
+s1 = sensor.setup("PING28015", pio.GPIO16)
+s1:set("temperature",20)
+while true do
+	s1:acquire()
+	distance = s1:read("distance")
+	print("distance "..distance)
+	tmr.delayms(500)
+end
 
 s1 = sensor.setup("TMP36", adc.ADC1, adc.ADC_CH6, 12)
 while true do

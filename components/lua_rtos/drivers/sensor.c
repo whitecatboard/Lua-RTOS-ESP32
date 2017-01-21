@@ -48,7 +48,9 @@ extern const sensor_t sensors[];
 DRIVER_REGISTER_ERROR(SENSOR, sensor, CannotSetup, "can't setup", SENSOR_ERR_CANT_INIT);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, Timeout, "timeout", SENSOR_ERR_TIMEOUT);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, NotEnoughtMemory, "not enough memory", SENSOR_ERR_NOT_ENOUGH_MEMORY);
+DRIVER_REGISTER_ERROR(SENSOR, sensor, SetupUndefined, "setup function is not defined", SENSOR_ERR_SETUP_UNDEFINED);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, AcquireUndefined, "acquire function is not defined", SENSOR_ERR_ACQUIRE_UNDEFINED);
+DRIVER_REGISTER_ERROR(SENSOR, sensor, SetUndefined, "set function is not defined", SENSOR_ERR_SET_UNDEFINED);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, NotFound, "not found", SENSOR_ERR_NOT_FOUND);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, InterfaceNotSupported, "interface not supported", SENSOR_ERR_INTERFACE_NOT_SUPPORTED);
 
@@ -94,14 +96,6 @@ static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
 	return NULL;
 }
 
-static int sensor_values(sensor_instance_t *unit) {
-	int values = 0;
-
-	values = values + (unit->sensor->data[0].id!=NULL?1:0);
-	values = values + (unit->sensor->data[1].id!=NULL?1:0);
-
-	return values;
-}
 
 /*
  * Operation functions
@@ -125,10 +119,29 @@ const sensor_t *sensor_get(const char *id) {
 	return NULL;
 }
 
+const sensor_data_t *sensor_get_setting(const sensor_t *sensor, const char *setting) {
+	int idx = 0;
+
+	for(idx=0;idx <  SENSOR_MAX_SETTINGS;idx++) {
+		if (sensor->settings[idx].id) {
+			if (strcmp(sensor->settings[idx].id,setting) == 0) {
+				return &(sensor->settings[idx]);
+			}
+		}
+	}
+
+	return NULL;
+}
+
 driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sensor_instance_t **unit) {
 	driver_error_t *error = NULL;
 	sensor_instance_t *instance = NULL;
 	int i = 0;
+
+	// Sanity checks
+	if (!sensor->acquire) {
+		return driver_setup_error(SENSOR_DRIVER, SENSOR_ERR_ACQUIRE_UNDEFINED, NULL);
+	}
 
 	// Create a sensor instance
 	if (!(instance = (sensor_instance_t *)calloc(1, sizeof(sensor_instance_t)))) {
@@ -142,8 +155,13 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 	memcpy(&instance->setup, setup, sizeof(sensor_setup_t));
 
 	// Initialize sensor data from sensor definition into instance
-	for(i=0;i<SENSOR_MAX_MALUES;i++) {
+	for(i=0;i<SENSOR_MAX_DATA;i++) {
 		instance->data[i].type = sensor->data[0].type;
+	}
+
+	// Initialize sensor settings from sensor definition into instance
+	for(i=0;i<SENSOR_MAX_SETTINGS;i++) {
+		instance->settings[i].type = sensor->settings[0].type;
 	}
 
 	// Add instance to sensor_list
@@ -187,31 +205,23 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 	driver_error_t *error = NULL;
 	sensor_value_t *value = NULL;
-	int values;
 	int i = 0;
 
 	// Allocate space for sensor data
-	values = sensor_values(unit);
-
-	if (!(value = calloc(1, sizeof(sensor_value_t) * values))) {
+	if (!(value = calloc(1, sizeof(sensor_value_t) * SENSOR_MAX_DATA))) {
 		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	// Call to specific acquire function, if any
-	if (unit->sensor->acquire) {
-		if ((error = unit->sensor->acquire(unit, value))) {
-			free(value);
-			return error;
-		}
-	} else {
+	if ((error = unit->sensor->acquire(unit, value))) {
 		free(value);
-		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_ACQUIRE_UNDEFINED, NULL);
+		return error;
 	}
 
 	// Copy sensor values into instance
 	// Note that we only copy raw values as value types are set in sensor_setup from sensor
 	// definition
-	for(i=0;i<values;i++) {
+	for(i=0;i < SENSOR_MAX_DATA;i++) {
 		unit->data[i].raw = value[i].raw;
 	}
 
@@ -225,10 +235,32 @@ driver_error_t *sensor_read(sensor_instance_t *unit, const char *id, sensor_valu
 
 	*value = NULL;
 
-	for(idx=0;idx <  SENSOR_MAX_MALUES;idx++) {
-		if (strcmp(unit->sensor->data[idx].id,id) == 0) {
-			*value = &unit->data[idx];
-			return NULL;
+	for(idx=0;idx <  SENSOR_MAX_DATA;idx++) {
+		if (unit->sensor->data[idx].id) {
+			if (strcmp(unit->sensor->data[idx].id,id) == 0) {
+				*value = &unit->data[idx];
+				return NULL;
+			}
+		}
+	}
+
+	return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL);
+}
+
+driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value_t *value) {
+	int idx = 0;
+
+	// Sanity checks
+	if (!unit->sensor->set) {
+		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_SET_UNDEFINED, NULL);
+	}
+
+	for(idx=0;idx < SENSOR_MAX_SETTINGS;idx++) {
+		if (unit->sensor->settings[idx].id) {
+			if (strcmp(unit->sensor->settings[idx].id,id) == 0) {
+				unit->sensor->set(unit, id, value);
+				return NULL;
+			}
 		}
 	}
 

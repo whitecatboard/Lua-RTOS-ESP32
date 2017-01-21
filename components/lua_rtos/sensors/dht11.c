@@ -41,7 +41,7 @@
 #include <drivers/sensor.h>
 
 // Sensor specification and registration
-const sensor_t __attribute__((used,unused,section(".sensors"))) dht11_sensor = {
+static const sensor_t __attribute__((used,unused,section(".sensors"))) dht11_sensor = {
 	.id = "DHT11",
 	.interface = GPIO_INTERFACE,
 	.data = {

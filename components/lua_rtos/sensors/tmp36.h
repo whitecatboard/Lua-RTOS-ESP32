@@ -26,8 +26,8 @@
  * arising out of or in connection with the use or performance of
  * this software.
  */
-#include <sys/driver.h>
 
+#include <sys/driver.h>
 #include <drivers/sensor.h>
 
 driver_error_t *tmp36_setup(sensor_instance_t *unit);

@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, TMP36 sensor (temperature)
+ * Lua RTOS, PING))) #28015 sensor (Distance Sensor)
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -27,46 +27,9 @@
  * this software.
  */
 
-#include "tmp36.h"
-
-#include <math.h>
-
 #include <sys/driver.h>
-
 #include <drivers/sensor.h>
-#include <drivers/adc.h>
 
-// Sensor specification and registration
-static const sensor_t __attribute__((used,unused,section(".sensors"))) tmp36_sensor = {
-	.id = "TMP36",
-	.interface = ADC_INTERFACE,
-	.data = {
-		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
-	},
-	.setup = tmp36_setup,
-	.acquire = tmp36_acquire
-};
-
-/*
- * Operation functions
- */
-driver_error_t *tmp36_setup(sensor_instance_t *unit) {
-	return NULL;
-}
-
-driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values) {
-	driver_error_t *error;
-	int raw = 0;
-	double mvolts = 0;
-
-	// Read value
-	if ((error = adc_read(unit->setup.adc.channel, &raw, &mvolts))) {
-		return error;
-	}
-
-	// Calculate temperature
-	// TMP36 has a resolution of 0.5 ºC, so round to 1 decimal place
-	values->floatd.value = floor(10.0 * (((float)mvolts - 500) / 10)) / 10.0;
-
-	return NULL;
-}
+driver_error_t *ping28015_setup(sensor_instance_t *unit);
+driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *values);
+driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting);
