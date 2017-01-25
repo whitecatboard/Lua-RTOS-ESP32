@@ -1,8 +1,7 @@
-/*
- * owire.h
- *
- *  Created on: Jan 16, 2017
- *      Author: jaumeolivepetrus
+/**
+ * ONE WIRE driver for Lua-RTOS-ESP32
+ * author: LoBo (loboris@gmail.com)
+ * based on TM_ONEWIRE (author  Tilen Majerle)
  */
 
 #include "luartos.h"
@@ -11,12 +10,6 @@
 #define _OWIRE_H_
 
 #if USE_OWIRE
-
-/**
- * ONE WIRE driver for Lua-RTOS-ESP32
- * author: LoBo (loboris@gmail.com)
- * based on TM_ONEWIRE (author  Tilen Majerle)
- */
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -46,7 +39,8 @@ typedef struct {
 #define ONEWIRE_CMD_MATCHROM		0x55
 #define ONEWIRE_CMD_SKIPROM			0xCC
 
-#define MAX_ONEWIRE_SENSORS 8
+#define MAX_ONEWIRE_PINS 4			// Maximum number of buses (pins) to be used for owire
+#define MAX_ONEWIRE_SENSORS 8		// Maximum number of devices on one owire bus (gpio)
 
 typedef struct {
 	int 		  pin;          			// GPIO Pin to be used for I/O functions
@@ -56,20 +50,31 @@ typedef struct {
 	unsigned char ROM_NO[8];             	// 8-bytes address of last search device
 } TM_One_Wire_t;
 
-TM_One_Wire_t OW_DEVICE;
+typedef struct {
+	TM_One_Wire_t	device;
+	uint8_t			numdev;
+	uint8_t			roms[MAX_ONEWIRE_SENSORS][8];
+} TM_One_Wire_Devices_t;
 
-unsigned char TM_OneWire_ReadBit();
-void TM_OneWire_GetFullROM(unsigned char *firstIndex);
-unsigned char TM_OneWire_First();
-unsigned char TM_OneWire_Next();
-unsigned char TM_OneWire_Reset();
-int owdevice_input();
-void TM_OneWire_SelectWithPointer(unsigned char *ROM);
+TM_One_Wire_Devices_t ow_devices[MAX_ONEWIRE_PINS];
+
+unsigned char TM_OneWire_ReadBit(uint8_t dev);
+void TM_OneWire_GetFullROM(uint8_t dev, unsigned char *firstIndex);
+unsigned char TM_OneWire_First(uint8_t dev);
+unsigned char TM_OneWire_Next(uint8_t dev);
+unsigned char TM_OneWire_Reset(uint8_t dev);
+unsigned char TM_OneWire_Search(uint8_t dev, unsigned char command);
+void owdevice_input(uint8_t dev);
+void owdevice_pinpower(uint8_t dev);
+void TM_OneWire_SelectWithPointer(uint8_t dev, unsigned char *ROM);
 unsigned char TM_OneWire_CRC8(unsigned char *addr, unsigned char len);
-void TM_OneWire_WriteByte(unsigned char byte);
-unsigned char TM_OneWire_ReadByte();
+void TM_OneWire_WriteByte(uint8_t dev, unsigned char byte);
+unsigned char TM_OneWire_ReadByte(uint8_t dev);
 driver_error_t *owire_setup_pin(int8_t pin);
+int owire_checkpin(uint8_t pin);
+TM_One_Wire_Devices_t *ow_getdevice(uint8_t dev);
+void ow_devices_init(uint8_t dev);
+uint8_t TM_OneWire_Dosearch(uint8_t dev);
 
 #endif
-
 #endif /* _OWIRE_H_ */

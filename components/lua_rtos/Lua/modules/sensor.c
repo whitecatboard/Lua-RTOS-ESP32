@@ -56,11 +56,21 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 			setup->adc.resolution = luaL_checkinteger(L, 4);
 			break;
 
-		//case SPI_INTERFACE:
-		//case I2C_INTERFACE;
-		//case OWIRE_INTERFACE:
 		case GPIO_INTERFACE:
 			setup->gpio.gpio = luaL_checkinteger(L, 2);
+			break;
+
+		case I2C_INTERFACE:
+			setup->i2c.id = luaL_checkinteger(L, 2);
+			setup->i2c.speed = luaL_checkinteger(L, 3);
+			setup->i2c.sda = luaL_checkinteger(L, 4);
+			setup->i2c.scl = luaL_checkinteger(L, 5);
+			setup->i2c.address = luaL_checkinteger(L, 6);
+			break;
+
+		case OWIRE_INTERFACE:
+			setup->owire.gpio = luaL_checkinteger(L, 2);
+			setup->owire.owsensor = luaL_checkinteger(L, 3);
 			break;
 
 		default:
@@ -131,6 +141,7 @@ static int lsensor_setup( lua_State* L ) {
     }
 
     data->instance = instance;
+    data->adquired = 0;
 
     luaL_getmetatable(L, "sensor");
     lua_setmetatable(L, -2);
@@ -174,6 +185,8 @@ static int lsensor_acquire( lua_State* L ) {
     	return luaL_driver_error(L, error);
     }
 
+    udata->adquired = 1;
+
 	return 0;
 }
 
@@ -187,10 +200,19 @@ static int lsensor_read( lua_State* L ) {
 
     const char *id = luaL_checkstring( L, 2 );
 
+    // If data is not acquired acquire data
+    if (!udata->adquired) {
+        if ((error = sensor_acquire(udata->instance))) {
+        	return luaL_driver_error(L, error);
+        }
+    }
+
     // Read data
     if ((error = sensor_read(udata->instance, id, &value))) {
     	return luaL_driver_error(L, error);
     }
+
+    udata->adquired = 0;
 
 	switch (value->type) {
 		case SENSOR_NO_DATA:
@@ -435,7 +457,6 @@ MODULE_REGISTER_UNMAPPED(SENSOR, sensor, luaopen_sensor);
 s1 = sensor.setup("PING28015", pio.GPIO16)
 s1:set("temperature",20)
 while true do
-	s1:acquire()
 	distance = s1:read("distance")
 	print("distance "..distance)
 	tmr.delayms(500)
@@ -443,7 +464,6 @@ end
 
 s1 = sensor.setup("TMP36", adc.ADC1, adc.ADC_CH6, 12)
 while true do
-	s1:acquire()
 	temperature = s1:read("temperature")
 	print("temp "..temperature)
 	tmr.delayms(500)
@@ -451,7 +471,6 @@ end
 
 s1 = sensor.setup("DHT11", pio.GPIO4)
 while true do
-	s1:acquire()
 	temperature = s1:read("temperature")
 	humidity = s1:read("humidity")
 	print("temp "..temperature..", hum "..humidity)

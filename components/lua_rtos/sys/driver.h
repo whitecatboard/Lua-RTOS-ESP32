@@ -58,6 +58,7 @@
 #define SENSOR_DRIVER driver_get_by_name("sensor")
 #define ADC_DRIVER driver_get_by_name("adc")
 #define MQTT_DRIVER driver_get_by_name("mqtt")
+#define OWIRE_DRIVER driver_get_by_name("owire")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 

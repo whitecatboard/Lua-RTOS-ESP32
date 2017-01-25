@@ -36,6 +36,7 @@
 
 #include <sys/driver.h>
 #include <sys/delay.h>
+#include <sys/sleep.h>
 
 #include <drivers/gpio.h>
 #include <drivers/sensor.h>
@@ -89,6 +90,8 @@ driver_error_t *dht11_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 
 	// Get pin from instance
 	uint8_t pin = unit->setup.gpio.gpio;
+
+	usleep(200000);
 
 	portDISABLE_INTERRUPTS();
 

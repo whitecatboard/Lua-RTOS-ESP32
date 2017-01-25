@@ -40,6 +40,8 @@
 #include <drivers/sensor.h>
 #include <drivers/adc.h>
 #include <drivers/gpio.h>
+#include <drivers/owire.h>
+#include <drivers/i2c.h>
 
 // This variable is defined at linker time
 extern const sensor_t sensors[];
@@ -60,6 +62,7 @@ struct list sensor_list;
 /*
  * Helper functions
  */
+#if USE_ADC
 static driver_error_t *sensor_adc_setup(sensor_instance_t *unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
 	driver_error_t *error;
@@ -80,6 +83,7 @@ static driver_error_t *sensor_adc_setup(sensor_instance_t *unit) {
 
 	return NULL;
 }
+#endif
 
 static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
@@ -96,6 +100,53 @@ static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
 	return NULL;
 }
 
+#if USE_OWIRE
+static driver_error_t *sensor_owire_setup(sensor_instance_t *unit) {
+	driver_error_t *error;
+
+	// Check if owire interface is setup on the given gpio
+	int dev = owire_checkpin(unit->setup.owire.gpio);
+	if (dev < 0) {
+		// setup new owire interface on given pin
+		if ((error = owire_setup_pin(unit->setup.owire.gpio))) {
+		  	return error;
+		}
+		int dev = owire_checkpin(unit->setup.owire.gpio);
+		if (dev < 0) {
+			return driver_setup_error(SENSOR_DRIVER, SENSOR_ERR_CANT_INIT, NULL);
+		}
+		vTaskDelay(10 / portTICK_RATE_MS);
+		owdevice_input(dev);
+		ow_devices_init(dev);
+		unit->setup.owire.owdevice = dev;
+
+		// Search for devices on owire bus
+		TM_OneWire_Dosearch(dev);
+	}
+	else {
+		unit->setup.owire.owdevice = dev;
+		TM_OneWire_Dosearch(dev);
+	}
+
+	// check if owire bus is setup
+	if (ow_devices[unit->setup.owire.owdevice].device.pin == 0) {
+		return driver_setup_error(SENSOR_DRIVER, SENSOR_ERR_CANT_INIT, NULL);
+	}
+
+	return NULL;
+}
+#endif
+
+#if USE_I2C
+static driver_error_t *sensor_i2c_setup(sensor_instance_t *unit) {
+	driver_error_t *error;
+
+    if ((error = i2c_setup(unit->setup.i2c.id, I2C_MASTER, unit->setup.i2c.speed, unit->setup.i2c.sda, unit->setup.i2c.scl, 0, 0))) {
+    	return error;
+    }
+	return NULL;
+}
+#endif
 
 /*
  * Operation functions
@@ -156,12 +207,12 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 
 	// Initialize sensor data from sensor definition into instance
 	for(i=0;i<SENSOR_MAX_DATA;i++) {
-		instance->data[i].type = sensor->data[0].type;
+		instance->data[i].type = sensor->data[i].type;
 	}
 
 	// Initialize sensor settings from sensor definition into instance
 	for(i=0;i<SENSOR_MAX_SETTINGS;i++) {
-		instance->settings[i].type = sensor->settings[0].type;
+		instance->settings[i].type = sensor->settings[i].type;
 	}
 
 	// Add instance to sensor_list
@@ -173,8 +224,16 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 
 	// Setup sensor interface
 	switch (sensor->interface) {
+#if USE_ADC
 		case ADC_INTERFACE: error = sensor_adc_setup(instance);break;
+#endif
 		case GPIO_INTERFACE: error = sensor_gpio_setup(instance);break;
+#if USE_OWIRE
+		case OWIRE_INTERFACE: error = sensor_owire_setup(instance);break;
+#endif
+#if USE_I2C
+		case I2C_INTERFACE: error = sensor_i2c_setup(instance);break;
+#endif
 		default:
 			return driver_setup_error(SENSOR_DRIVER, SENSOR_ERR_INTERFACE_NOT_SUPPORTED, NULL);
 			break;

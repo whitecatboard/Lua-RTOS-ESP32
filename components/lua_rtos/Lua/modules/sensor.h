@@ -34,6 +34,7 @@
 
 typedef struct {
 	sensor_instance_t *instance;
+	uint8_t adquired;
 } sensor_userdata;
 
 #endif	/* LSENSOR_H */

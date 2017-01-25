@@ -47,7 +47,7 @@ typedef driver_error_t *(*sensor_setup_f_t)(struct sensor_instance *);
 typedef driver_error_t *(*sensor_acquire_f_t)(struct sensor_instance *, struct sensor_value *);
 typedef driver_error_t *(*sensor_set_f_t)(struct sensor_instance *, const char *, struct sensor_value *);
 
-#define SENSOR_MAX_DATA      2
+#define SENSOR_MAX_DATA      6
 #define SENSOR_MAX_SETTINGS  4
 
 // Sensor interface
@@ -124,6 +124,20 @@ typedef struct {
 			uint8_t channel;
 			uint8_t resolution;
 		} adc;
+
+		struct {
+			uint8_t gpio;
+			uint8_t owdevice;
+			uint8_t owsensor;
+		} owire;
+
+		struct {
+			uint8_t  id;
+			uint16_t speed;
+			uint8_t  sda;
+			uint8_t  scl;
+			uint16_t address;
+		} i2c;
 	};
 } sensor_setup_t;
 
