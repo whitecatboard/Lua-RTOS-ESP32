@@ -9,6 +9,7 @@
  * Lua modules to build
  *
  */
+#define LUA_USE_EVENT 1
 #define LUA_USE__G CONFIG_LUA_RTOS_LUA_USE__G
 #define LUA_USE_OS CONFIG_LUA_RTOS_LUA_USE_OS
 #define LUA_USE_MATH CONFIG_LUA_RTOS_LUA_USE_MATH

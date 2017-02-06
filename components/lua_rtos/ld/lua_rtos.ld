@@ -93,6 +93,14 @@ SECTIONS {
     KEEP(*(.net_error_map))
     LONG(0) LONG(0)
 
+    event_errors = ABSOLUTE(.);
+    KEEP(*(.event_errors))
+    LONG(0) LONG(0)
+
+    event_error_map = ABSOLUTE(.);
+    KEEP(*(.event_error_map))
+    LONG(0) LONG(0)
+
     owire_errors = ABSOLUTE(.);
     KEEP(*(.owire_errors))
     LONG(0) LONG(0)

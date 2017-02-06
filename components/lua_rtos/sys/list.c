@@ -113,6 +113,11 @@ int list_get(struct list *list, int index, void **item) {
 
     mtx_lock(&list->mutex);
 
+    if (!list->indexes) {
+        mtx_unlock(&list->mutex);
+        return EINVAL;
+    }
+
     // Check index
     if (index < list->first_index) {
         mtx_unlock(&list->mutex);
