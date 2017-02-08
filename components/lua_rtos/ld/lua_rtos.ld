@@ -101,6 +101,14 @@ SECTIONS {
     KEEP(*(.event_error_map))
     LONG(0) LONG(0)
 
+    servo_errors = ABSOLUTE(.);
+    KEEP(*(.servo_errors))
+    LONG(0) LONG(0)
+
+    servo_error_map = ABSOLUTE(.);
+    KEEP(*(.servo_error_map))
+    LONG(0) LONG(0)
+
     owire_errors = ABSOLUTE(.);
     KEEP(*(.owire_errors))
     LONG(0) LONG(0)

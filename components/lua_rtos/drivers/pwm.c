@@ -48,7 +48,7 @@
 
 // Resolution to use
 #define PWM_BITS 12
-#define PWM_MAX_VAL 4095
+#define PWM_MAX_VAL 4095.0
 
 // This macro gets a reference for this driver into drivers array
 #define PWM_DRIVER driver_get_by_name("pwm")
@@ -207,7 +207,9 @@ driver_error_t *pwm_setup_channel(int8_t unit, int8_t channel, int8_t pin, int32
 		}
 	}
 
-	*achannel = channel;
+	if (achannel) {
+		*achannel = channel;
+	}
 
 	// Lock resources
     pwm_resources_t resources;
@@ -235,7 +237,7 @@ driver_error_t *pwm_setup_channel(int8_t unit, int8_t channel, int8_t pin, int32
      // Setup channel
      ledc_channel_config_t ledc_conf = {
 		.channel = channel,
-		.duty = (int32_t)(duty * PWM_MAX_VAL),
+		.duty = (int32_t)(duty * (double)PWM_MAX_VAL),
 		.gpio_num = resources.pin,
 		.intr_type = LEDC_INTR_DISABLE,
 		.speed_mode = LEDC_HIGH_SPEED_MODE,
@@ -304,7 +306,7 @@ driver_error_t *pwm_set_duty(int8_t unit, int8_t channel, double duty) {
 
 	// Duty is expressed in %, and we bust to convert to a value from
 	// 0 and (2 ^ bits) - 1
-	ledc_set_duty(LEDC_HIGH_SPEED_MODE, channel, (int32_t)(duty * PWM_MAX_VAL));
+	ledc_set_duty(LEDC_HIGH_SPEED_MODE, channel, (int32_t)(duty * (double)PWM_MAX_VAL));
 	ledc_update_duty(LEDC_HIGH_SPEED_MODE, channel);
 
 	return NULL;
