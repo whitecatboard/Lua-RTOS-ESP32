@@ -54,10 +54,8 @@ static int lservo_attach( lua_State* L ) {
     }
 
     int8_t pin = luaL_checkinteger(L, 1);
-    double offset = luaL_checknumber(L, 2);
-    double width = luaL_checknumber(L, 3);
 
-    if ((error = servo_setup(pin, offset, width, &udata->instance))) {
+    if ((error = servo_setup(pin, &udata->instance))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -67,7 +65,7 @@ static int lservo_attach( lua_State* L ) {
     return 1;
 }
 
-static int lservo_write( lua_State* L ) {
+static int lservo_move( lua_State* L ) {
 	driver_error_t *error;
 	servo_userdata *udata;
 
@@ -75,43 +73,9 @@ static int lservo_write( lua_State* L ) {
 	udata = (servo_userdata *)luaL_checkudata(L, 1, "servo");
 	luaL_argcheck(L, udata, 1, "servo expected");
 
-    double angle = luaL_checknumber(L, 2);
+    double value = luaL_checknumber(L, 2);
 
-    if ((error = servo_write(udata->instance, angle))) {
-    	return luaL_driver_error(L, error);
-    }
-
-	return 0;
-}
-
-static int lservo_set_offset( lua_State* L ) {
-	driver_error_t *error;
-	servo_userdata *udata;
-
-	// Get user data
-	udata = (servo_userdata *)luaL_checkudata(L, 1, "servo");
-	luaL_argcheck(L, udata, 1, "servo expected");
-
-    double offset = luaL_checknumber(L, 2);
-
-    if ((error = servo_set_offset(udata->instance, offset))) {
-    	return luaL_driver_error(L, error);
-    }
-
-	return 0;
-}
-
-static int lservo_set_width( lua_State* L ) {
-	driver_error_t *error;
-	servo_userdata *udata;
-
-	// Get user data
-	udata = (servo_userdata *)luaL_checkudata(L, 1, "servo");
-	luaL_argcheck(L, udata, 1, "servo expected");
-
-    double width = luaL_checknumber(L, 2);
-
-    if ((error = servo_set_width(udata->instance, width))) {
+    if ((error = servo_write(udata->instance, value))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -139,9 +103,7 @@ static const LUA_REG_TYPE lservo_map[] = {
 };
 
 static const LUA_REG_TYPE lservo_ins_map[] = {
-    { LSTRKEY( "write"     ),	LFUNCVAL( lservo_write       ) },
-    { LSTRKEY( "setoffset" ),	LFUNCVAL( lservo_set_offset  ) },
-    { LSTRKEY( "setwidth"  ),	LFUNCVAL( lservo_set_width   ) },
+    { LSTRKEY( "move"      ),	LFUNCVAL( lservo_move      ) },
     { LNILKEY, LNILVAL }
 };
 
@@ -190,12 +152,24 @@ MODULE_REGISTER_UNMAPPED(SERVO, servo, luaopen_servo);
 
 /*
 
-s1 = servo.attach(pio.GPIO4, -60, 870)
+s1 = servo.attach(pio.GPIO4)
+s1:move(45)
 
 s1:setoffset(-60)
 s1:setwidth(500)
 
 s1:write(90)
 s1:write(-90)
+
+require("block")
+
+while true do
+wcBlock.servo.move(pio.GPIO4, 45, 1440, 560, 2360)
+tmr.delayms(500)
+wcBlock.servo.move(pio.GPIO4, -45, 1440, 560, 2360)
+tmr.delayms(500)
+end
+
+
 
 */

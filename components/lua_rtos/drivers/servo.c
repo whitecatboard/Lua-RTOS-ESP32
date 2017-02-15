@@ -44,24 +44,30 @@
 // Driver message errors
 DRIVER_REGISTER_ERROR(SERVO, servo, CannotSetup, "can't setup", SERVO_ERR_CANT_INIT);
 DRIVER_REGISTER_ERROR(SERVO, servo, NotEnoughtMemory, "not enough memory", SERVO_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(SERVO, servo, InvalidType, "invalid type", SERVO_ERR_INVALID_TYPE);
-DRIVER_REGISTER_ERROR(SERVO, servo, InvalidOperation, "invalid operation for this type", SERVO_ERR_INVALID_OPERATION);
 
 /*
  * Helper functions
  */
 static double get_duty(servo_instance_t *instance) {
-	double duty;
+	return (double)instance->value / ((double)20000);
+}
 
-	duty = (SERVO_MID_WIDTH + instance->offset - instance->width * cos(((90 - instance->angle) * M_PI) / 180.0)) / 20000;
+static uint16_t angle_to_pulse(servo_instance_t *instance, double angle) {
+	uint16_t pulse;
 
-	return duty;
+	if (angle <= 90) {
+		pulse = SERVO_MID - (90 - angle) * SERVO_USEC_PER_DEG;
+	} else {
+		pulse = SERVO_MID + (angle - 90) * SERVO_USEC_PER_DEG;
+	}
+
+	return pulse;
 }
 
 /*
  * Operation functions
  */
-driver_error_t *servo_setup(int8_t pin, double offset, double width, servo_instance_t **instance) {
+driver_error_t *servo_setup(int8_t pin, servo_instance_t **instance) {
 	driver_error_t *error;
 
 	// Allocate space for a servo instance
@@ -71,9 +77,7 @@ driver_error_t *servo_setup(int8_t pin, double offset, double width, servo_insta
 	}
 
 	(*instance)->pin = pin;
-	(*instance)->offset = offset;
-	(*instance)->width = width;
-	(*instance)->angle = 0;
+	(*instance)->value = SERVO_MID;
 
     // Setup PWM unit, 0 in our case
 	if ((error = pwm_setup(0))) {
@@ -83,7 +87,6 @@ driver_error_t *servo_setup(int8_t pin, double offset, double width, servo_insta
 
 	// Configure PWM channel (channel is assigned by PWM driver).
 	// Servo frequency is 50 hertzs.
-	// Set position to middle.
 	if ((error = pwm_setup_channel(0, -1, pin, 50, get_duty(*instance), &(*instance)->pwm_channel))) {
 		free(*instance);
 		return error;
@@ -98,28 +101,20 @@ driver_error_t *servo_setup(int8_t pin, double offset, double width, servo_insta
 	return NULL;
 }
 
-driver_error_t *servo_write(servo_instance_t *instance, double angle) {
+driver_error_t *servo_write(servo_instance_t *instance, double value) {
 	driver_error_t *error;
 
-	instance->angle = angle;
+	if ((value >= 0) && (value <= 180)) {
+		instance->value = angle_to_pulse(instance, value);
+	} else {
+		instance->value = value;
+	}
 
 	if ((error = pwm_set_duty(0, instance->pwm_channel, get_duty(instance)))) {
     	return error;
 	}
 
 	return NULL;
-}
-
-driver_error_t *servo_set_offset(servo_instance_t *instance, double offset) {
-	instance->offset = offset;
-
-	return servo_write(instance, instance->angle);
-}
-
-driver_error_t *servo_set_width(servo_instance_t *instance, double width) {
-	instance->width = width;
-
-	return servo_write(instance, instance->angle);
 }
 
 DRIVER_REGISTER(SERVO,servo,NULL,NULL,NULL);

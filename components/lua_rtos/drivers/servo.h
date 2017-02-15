@@ -36,29 +36,26 @@
 
 #include <sys/driver.h>
 
-// Standard servo middle position, expressed in pulse width (usecs)
-#define SERVO_MID_WIDTH 1500
+#define SERVO_MID 1444
+#define SERVO_USEC_PER_DEG 10
+
+// Pulse width for middle position
+//#define SERVO_MID SERVO_MIN + SERVO_WIDTH
 
 // Servo instance
 typedef struct servo_instance {
-	int8_t pin;
-	double offset;
-	double width;
-	double angle;
-	int8_t pwm_channel;
+	int8_t   pin;
+	uint16_t value;
+	int8_t   pwm_channel;
 } servo_instance_t;
 
 // Servo errors
 #define SERVO_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SERVO_DRIVER_ID) |  0)
 #define SERVO_ERR_NOT_ENOUGH_MEMORY		   (DRIVER_EXCEPTION_BASE(SERVO_DRIVER_ID) |  1)
-#define SERVO_ERR_INVALID_TYPE			   (DRIVER_EXCEPTION_BASE(SERVO_DRIVER_ID) |  2)
-#define SERVO_ERR_INVALID_OPERATION		   (DRIVER_EXCEPTION_BASE(SERVO_DRIVER_ID) |  3)
 
 // Driver functions
-driver_error_t *servo_setup(int8_t pin, double offset, double width, servo_instance_t **instance);
-driver_error_t *servo_write(servo_instance_t *instance, double angle);
-driver_error_t *servo_set_offset(servo_instance_t *instance, double offset);
-driver_error_t *servo_set_width(servo_instance_t *instance, double width);
+driver_error_t *servo_setup(int8_t pin, servo_instance_t **instance);
+driver_error_t *servo_write(servo_instance_t *instance, double value);
 
 #endif
 

@@ -52,7 +52,7 @@
 static adc_channel_t adc_channels[CPU_LAST_ADC_CH + 1];
 
 // Driver locks
-driver_unit_lock_t adc_locks[CPU_LAST_ADC + 1];
+driver_unit_lock_t adc_locks[CPU_LAST_ADC_CH + 1];
 
 // Driver message errors
 DRIVER_REGISTER_ERROR(ADC, adc, CannotSetup, "can't setup", ADC_ERR_CANT_INIT);
