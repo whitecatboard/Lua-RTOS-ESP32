@@ -226,6 +226,40 @@ static int luart_consume( lua_State* L ) {
     return 0;
 }
 
+static int luart_lock( lua_State* L ) {
+    int id = luaL_checkinteger(L, 1);
+
+    // Some integrity checks
+    if (!uart_exists(id)) {
+        return luaL_error(L, "UART%d does not exist", id);
+    }
+
+    if (!uart_is_setup(id)) {
+        return luaL_error(L, "UART%d is not setup", id);
+    }
+
+    uart_lock(id);
+
+    return 0;
+}
+
+static int luart_unlock( lua_State* L ) {
+    int id = luaL_checkinteger(L, 1);
+
+    // Some integrity checks
+    if (!uart_exists(id)) {
+        return luaL_error(L, "UART%d does not exist", id);
+    }
+
+    if (!uart_is_setup(id)) {
+        return luaL_error(L, "UART%d is not setup", id);
+    }
+
+    uart_unlock(id);
+
+    return 0;
+}
+
 #include "modules.h"
 
 static const LUA_REG_TYPE uart_map[] = {
@@ -234,6 +268,8 @@ static const LUA_REG_TYPE uart_map[] = {
     { LSTRKEY( "write"    ),	 LFUNCVAL( luart_write ) },
     { LSTRKEY( "read"     ),	 LFUNCVAL( luart_read ) },
     { LSTRKEY( "consume"  ),	 LFUNCVAL( luart_consume ) },
+    { LSTRKEY( "lock"     ),	 LFUNCVAL( luart_lock ) },
+    { LSTRKEY( "unlock"   ),	 LFUNCVAL( luart_unlock ) },
 #if LUA_USE_ROTABLE
 	{ LSTRKEY( "CONSOLE"  ),	 LINTVAL( CONSOLE_UART ) },
 	{ LSTRKEY( "PARNONE"  ),	 LINTVAL( 0 ) },
