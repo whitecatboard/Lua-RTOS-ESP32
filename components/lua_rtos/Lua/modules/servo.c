@@ -65,7 +65,7 @@ static int lservo_attach( lua_State* L ) {
     return 1;
 }
 
-static int lservo_move( lua_State* L ) {
+static int lservo_write( lua_State* L ) {
 	driver_error_t *error;
 	servo_userdata *udata;
 
@@ -103,7 +103,7 @@ static const LUA_REG_TYPE lservo_map[] = {
 };
 
 static const LUA_REG_TYPE lservo_ins_map[] = {
-    { LSTRKEY( "move"      ),	LFUNCVAL( lservo_move      ) },
+    { LSTRKEY( "write"   ),	LFUNCVAL( lservo_write      ) },
     { LNILKEY, LNILVAL }
 };
 
@@ -154,22 +154,5 @@ MODULE_REGISTER_UNMAPPED(SERVO, servo, luaopen_servo);
 
 s1 = servo.attach(pio.GPIO4)
 s1:move(45)
-
-s1:setoffset(-60)
-s1:setwidth(500)
-
-s1:write(90)
-s1:write(-90)
-
-require("block")
-
-while true do
-wcBlock.servo.move(pio.GPIO4, 45, 1440, 560, 2360)
-tmr.delayms(500)
-wcBlock.servo.move(pio.GPIO4, -45, 1440, 560, 2360)
-tmr.delayms(500)
-end
-
-
 
 */

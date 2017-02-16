@@ -456,6 +456,8 @@ driver_error_t *uart_setup_interrupts(int8_t unit) {
 	
 	syslog(LOG_INFO, "%s: interrupts enabled",names[unit]);
 
+    uart[unit].flags |= UART_FLAG_IRQ_INIT;
+
 	return NULL;
 }
 
