@@ -190,7 +190,7 @@ unsigned int cpu_port_number(unsigned int pin) {
 	return 1;
 }
 
-unsigned int cpu_gpio_number(unsigned int pin) {
+uint8_t cpu_gpio_number(uint8_t pin) {
 	return pin;
 }
 
@@ -198,7 +198,7 @@ unsigned int cpu_pin_number(unsigned int pin) {
 	return pin;
 }
 
-gpio_port_mask_t cpu_port_io_pin_mask(unsigned int port) {
+gpio_pin_mask_t cpu_port_io_pin_mask(unsigned int port) {
 	return GPIO_ALL;
 }
 

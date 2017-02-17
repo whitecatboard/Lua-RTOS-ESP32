@@ -4,6 +4,7 @@
 
 #if LUA_USE_PIO
 
+#include "error.h"
 #include "lualib.h"
 #include "lauxlib.h"
 #include "auxmods.h"
@@ -29,64 +30,83 @@
 // Helper functions
 //
 // port goes from 1 to GPIO_PORTS
-static pio_type pio_op(unsigned port, pio_type pinmask, int op) {
+static int pio_op(lua_State *L, unsigned port, gpio_pin_mask_t pinmask, int op, gpio_pin_mask_t *value) {
+	driver_error_t *error;
+
 	switch (op) {
 		case PLATFORM_IO_PIN_DIR_INPUT:
-			gpio_pin_input_mask(port, pinmask);
-			return 1;
+			if ((error = gpio_pin_input_mask(port, pinmask))) {
+				return luaL_driver_error(L, error);
+			}
 			break;
 
 		case PLATFORM_IO_PORT_DIR_INPUT:
-			gpio_port_input(port);
-			return 1;
+			if ((error = gpio_port_input(port))) {
+				return luaL_driver_error(L, error);
+			}
 			break;
 			
 		case PLATFORM_IO_PIN_DIR_OUTPUT:
-			gpio_pin_output_mask(port, pinmask);
-			return 1;
+			if ((error = gpio_pin_output_mask(port, pinmask))) {
+				return luaL_driver_error(L, error);
+			}
 			break;
 
 		case PLATFORM_IO_PORT_DIR_OUTPUT:
-			gpio_port_output(port);
-			return 1;
+			if ((error = gpio_port_output(port))) {
+				return luaL_driver_error(L, error);
+			}
 			break;
 			
 		case PLATFORM_IO_PIN_SET:
-			gpio_pin_set_mask(port, pinmask);
-			return 1;
+			if ((error = gpio_pin_set_mask(port, pinmask))) {
+				return luaL_driver_error(L, error);
+			}
 			break;
 			
 		case PLATFORM_IO_PORT_SET_VALUE:
-			gpio_port_set(port, pinmask);
-			return 1;
+			if ((error = gpio_port_set(port, pinmask))) {
+				return luaL_driver_error(L, error);
+			}
 			break;
 			
 		case PLATFORM_IO_PIN_CLEAR:
-			gpio_pin_clr_mask(port, pinmask);
-			return 1;
+			if ((error = gpio_pin_clr_mask(port, pinmask))) {
+				return luaL_driver_error(L, error);
+			}
 			break;
 			
 		case PLATFORM_IO_PIN_GET:
-			return gpio_pin_get_mask(port, pinmask);
+			if ((error = gpio_pin_get_mask(port, pinmask, value))) {
+				return luaL_driver_error(L, error);
+			}
 			break;
 
 		case PLATFORM_IO_PORT_GET_VALUE:
-			return gpio_port_get(port);
+			if ((error = gpio_port_get(port, value))) {
+				return luaL_driver_error(L, error);
+			}
 			break;
 
         case PLATFORM_IO_PIN_PULLUP:
-			gpio_pin_pullup_mask(port, pinmask);
-            return 1;
-            
+			if ((error = gpio_pin_pullup_mask(port, pinmask))) {
+				return luaL_driver_error(L, error);
+			}
+			break;
+
         case PLATFORM_IO_PIN_PULLDOWN:
-			gpio_pin_pulldwn_mask(port, pinmask);
-            return 1;
-            
+			if ((error = gpio_pin_pulldwn_mask(port, pinmask))) {
+				return luaL_driver_error(L, error);
+			}
+			break;
+
         case PLATFORM_IO_PIN_NOPULL:
-			gpio_pin_nopull_mask(port, pinmask);
-            return 1;
+			if ((error = gpio_pin_nopull_mask(port, pinmask))) {
+				return luaL_driver_error(L, error);
+			}
+			break;
 	}
-	
+
 	return 0;
 }
 
@@ -94,7 +114,7 @@ static int pioh_set_pins(lua_State* L, int stackidx, int op) {
   int total = lua_gettop(L);
   int i, v, port, pin;
 
-  pio_type pio_masks[GPIO_PORTS];
+  gpio_pin_mask_t pio_masks[GPIO_PORTS];
  
   for(i = 0; i < GPIO_PORTS; i ++)
     pio_masks[i] = 0;
@@ -112,14 +132,13 @@ static int pioh_set_pins(lua_State* L, int stackidx, int op) {
       return luaL_error(L, "invalid pin");
     }
     
-    pio_masks[port - 1] |= 1 << pin;
+    pio_masks[port - 1] |= GPIO_BIT_MASK << pin;
   }
   
   // Execute the given operation
   for(i = 0; i < GPIO_PORTS; i ++)
     if(pio_masks[i])
-      if(!pio_op(i + 1, pio_masks[i], op))
-        return luaL_error(L, "invalid PIO operation");
+      pio_op(L, i + 1, pio_masks[i], op, NULL);
 
   return 0;
 }
@@ -127,9 +146,9 @@ static int pioh_set_pins(lua_State* L, int stackidx, int op) {
 static int pioh_get_pins(lua_State* L, int stackidx, int op) {
   int total = lua_gettop(L);
   int i, j, v, port, pin;
-  unsigned int val;
+  gpio_pin_mask_t val;
 
-  pio_type pio_masks[GPIO_PORTS];
+  gpio_pin_mask_t pio_masks[GPIO_PORTS];
  
   for(i = 0; i < GPIO_PORTS; i ++)
     pio_masks[i] = 0;
@@ -147,7 +166,7 @@ static int pioh_get_pins(lua_State* L, int stackidx, int op) {
       return luaL_error(L, "invalid pin");
     }
     
-    pio_masks[port - 1] |= 1 << pin;
+    pio_masks[port - 1] |= GPIO_BIT_MASK << pin;
   }
   
   // Execute the given operation
@@ -155,7 +174,7 @@ static int pioh_get_pins(lua_State* L, int stackidx, int op) {
      if(pio_masks[i]) {
       	unsigned int mask = 1;
 
-    	val = pio_op(i + 1, pio_masks[i], op);
+    	pio_op(L, i + 1, pio_masks[i], op, &val);
 
       	for(j=0; j < GPIO_PER_PORT; j++) {
       		if (pio_masks[i] & mask) {
@@ -174,7 +193,7 @@ static int pioh_get_pins(lua_State* L, int stackidx, int op) {
   return total;
 }
 
-static int pioh_set_ports(lua_State* L, int stackidx, int op, pio_type mask) {
+static int pioh_set_ports(lua_State* L, int stackidx, int op, gpio_pin_mask_t mask) {
   int total = lua_gettop(L);
   int i, v, port;
   uint32_t port_mask = 0;
@@ -191,8 +210,7 @@ static int pioh_set_ports(lua_State* L, int stackidx, int op, pio_type mask) {
   // Ask platform to execute the given operation
   for(i = 0; i < GPIO_PORTS; i ++)
     if(port_mask & (1 << i))
-      if(!pio_op(i + 1, mask, op))
-        return luaL_error(L, "invalid PIO operation");
+      pio_op(L, i + 1, mask, op, NULL);
 
   return 0;
 }
@@ -225,7 +243,7 @@ static int pio_gen_setpull(lua_State *L, int optype) {
     	return pioh_set_ports(L, 2, op, GPIO_ALL);
 }
 
-static int pio_gen_setval(lua_State *L, int optype, pio_type val, int stackidx) {
+static int pio_gen_setval(lua_State *L, int optype, gpio_pin_mask_t val, int stackidx) {
 	if((optype == PIO_PIN_OP) && (val != 1) && (val != 0)) 
     	return luaL_error(L, "invalid pin value");
   	if(optype == PIO_PIN_OP)
@@ -252,7 +270,7 @@ static int pio_pin_setpull(lua_State *L) {
 }
 
 static int pio_pin_setval(lua_State *L) {
-  pio_type val = (pio_type)luaL_checkinteger(L, 1);
+  gpio_pin_mask_t val = (gpio_pin_mask_t)luaL_checkinteger(L, 1);
 
   return pio_gen_setval(L, PIO_PIN_OP, val, 2);
 }
@@ -270,7 +288,7 @@ static int pio_pin_getval(lua_State *L) {
 }
 
 static int pio_pin_pinnum(lua_State *L) {
-  pio_type value;
+  gpio_pin_mask_t value;
  
   int v, i, port, pin;
   int total = lua_gettop(L);
@@ -309,7 +327,7 @@ static int pio_port_setpull(lua_State *L) {
 }
 
 static int pio_port_setval(lua_State *L) {
-	pio_type val = (pio_type)luaL_checkinteger(L, 1);
+	gpio_pin_mask_t val = (gpio_pin_mask_t)luaL_checkinteger(L, 1);
 
 	return pio_gen_setval(L, PIO_PORT_OP, val, 2);
 }
@@ -323,7 +341,7 @@ static int pio_port_setlow(lua_State *L) {
 }
 
 static int pio_port_getval(lua_State *L) {
-  pio_type value;
+  gpio_pin_mask_t value;
   int v, i, port;
   int total = lua_gettop(L);
   
@@ -333,7 +351,7 @@ static int pio_port_getval(lua_State *L) {
     if(!cpu_has_port(port))
       return luaL_error(L, "invalid port");
     else {
-      value = pio_op(port, GPIO_ALL, PLATFORM_IO_PORT_GET_VALUE);
+      pio_op(L, port, GPIO_ALL, PLATFORM_IO_PORT_GET_VALUE, &value);
       lua_pushinteger(L, value);
     }
   }

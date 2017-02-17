@@ -57,14 +57,17 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) dht11_sen
  * Helper functions
  */
 static void dht11_bus_monitor(int pin, uint8_t level, uint8_t *elapsed) {
+	uint8_t val;
 	unsigned start, end;
 
 	// Get start time
 	start = xthal_get_ccount();
 	end = start;
 
-	while (gpio_pin_get(pin) == level) {
+	gpio_pin_get(pin, &val);
+	while (val == level) {
 		end = xthal_get_ccount();
+		gpio_pin_get(pin, &val);
 	}
 
 	end = xthal_get_ccount();

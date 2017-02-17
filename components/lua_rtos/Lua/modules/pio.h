@@ -309,13 +309,11 @@ enum
 #define PIO_GPIO46
 #endif
 
-typedef gpio_port_mask_t pio_type;
-
 int platform_pio_has_port( unsigned port );
 const char* platform_pio_get_prefix( unsigned port );
 int platform_pio_has_pin( unsigned port, unsigned pin );
 int platform_pio_get_num_pins( unsigned port );
-pio_type platform_pio_op( unsigned port, pio_type pinmask, int op );
+gpio_pin_mask_t platform_pio_op( unsigned port, gpio_pin_mask_t pinmask, int op );
 
 
 #endif	

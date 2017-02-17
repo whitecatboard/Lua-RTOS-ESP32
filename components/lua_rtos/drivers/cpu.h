@@ -38,121 +38,98 @@
  * ----------------------------------------------------------------
 */
 
-// ESP-WROOM-32 pin constants
-#define PIN_GPIO36	4
-#define PIN_GPIO37	4
-#define PIN_GPIO38	4
-#define PIN_GPIO39	5
-#define PIN_GPIO34	6
-#define PIN_GPIO35	7
-#define PIN_GPIO32	8
-#define PIN_GPIO33	9
-#define PIN_GPIO25	10
-#define PIN_GPIO26	11
-#define PIN_GPIO27	12
-#define PIN_GPIO14	13
-#define PIN_GPIO12	14
-#define PIN_GPIO13	16
-#define PIN_GPIO9	17
-#define PIN_GPIO10	18
-#define PIN_GPIO11	19
-#define PIN_GPIO6	20
-#define PIN_GPIO7	21
-#define PIN_GPIO8	22
-#define PIN_GPIO15	23
-#define PIN_GPIO2	24
-#define PIN_GPIO0	25
-#define PIN_GPIO4	26
-#define PIN_GPIO16	27
-#define PIN_GPIO17	28
-#define PIN_GPIO5	29
-#define PIN_GPIO18	30
-#define PIN_GPIO19	31
-#define PIN_GPIO21	33
-#define PIN_GPIO3	34
-#define PIN_GPIO1	35
-#define PIN_GPIO22	36
-#define PIN_GPIO23	37
-
-
-// ESP-WROOM-32 available GPIO pins
-#define GPIO36	36
-#define GPIO39	39
-#define GPIO34	34
-#define GPIO35	35
-#define GPIO32	32
-#define GPIO33	33
-#define GPIO25	25
-#define GPIO26	26
-#define GPIO27	27
-#define GPIO14	14
-#define GPIO12	12
-#define GPIO13	13
-#define GPIO9	9
-#define GPIO10	10
-#define GPIO11	11
+// ESP32 available GPIO pins
+#define GPIO0	0
+#define GPIO1	1
+#define GPIO2	2
+#define GPIO3	3
+#define GPIO4	4
+#define GPIO5	5
 #define GPIO6	6
 #define GPIO7	7
 #define GPIO8	8
+#define GPIO9	9
+#define GPIO10	10
+#define GPIO11	11
+#define GPIO12	12
+#define GPIO13	13
+#define GPIO14	14
 #define GPIO15	15
-#define GPIO2	2
-#define GPIO0	0
-#define GPIO4	4
 #define GPIO16	16
 #define GPIO17	17
-#define GPIO5	5
 #define GPIO18	18
 #define GPIO19	19
+#define GPIO20	20
 #define GPIO21	21
-#define GPIO3	3
-#define GPIO1	1
 #define GPIO22	22
 #define GPIO23	23
+#define GPIO25	25
+#define GPIO26	26
+#define GPIO27	27
+#define GPIO32	32
+#define GPIO33	33
+#define GPIO34	34
+#define GPIO35	35
+#define GPIO36	36
+#define GPIO37	37
+#define GPIO38	38
+#define GPIO39	39
 
-
-// ESP-WROOM-32 available pin names
-#define GPIO36_NAME	"GPIO36"
-#define GPIO39_NAME	"GPIO39"
-#define GPIO34_NAME	"GPIO34"
-#define GPIO35_NAME	"GPIO35"
-#define GPIO32_NAME	"GPIO32"
-#define GPIO33_NAME	"GPIO33"
-#define GPIO25_NAME	"GPIO25"
-#define GPIO26_NAME	"GPIO26"
-#define GPIO27_NAME	"GPIO27"
-#define GPIO14_NAME	"GPIO14"
-#define GPIO12_NAME	"GPIO12"
-#define GPIO13_NAME	"GPIO13"
-#define GPIO9_NAME	"GPIO9"
-#define GPIO10_NAME	"GPIO10"
-#define GPIO11_NAME	"GPIO11"
+// ESP32 available pin names
+#define GPIO0_NAME	"GPIO0"
+#define GPIO1_NAME	"GPIO1"
+#define GPIO2_NAME	"GPIO2"
+#define GPIO3_NAME	"GPIO3"
+#define GPIO4_NAME	"GPIO4"
+#define GPIO5_NAME	"GPIO5"
 #define GPIO6_NAME	"GPIO6"
 #define GPIO7_NAME	"GPIO7"
 #define GPIO8_NAME	"GPIO8"
+#define GPIO9_NAME	"GPIO9"
+#define GPIO10_NAME	"GPIO10"
+#define GPIO11_NAME	"GPIO11"
+#define GPIO12_NAME	"GPIO12"
+#define GPIO13_NAME	"GPIO13"
+#define GPIO14_NAME	"GPIO14"
 #define GPIO15_NAME	"GPIO15"
-#define GPIO2_NAME	"GPIO2"
-#define GPIO0_NAME	"GPIO0"
-#define GPIO4_NAME	"GPIO4"
 #define GPIO16_NAME	"GPIO16"
 #define GPIO17_NAME	"GPIO17"
-#define GPIO5_NAME	"GPIO5"
 #define GPIO18_NAME	"GPIO18"
 #define GPIO19_NAME	"GPIO19"
+#define GPIO20_NAME	"GPIO20"
 #define GPIO21_NAME	"GPIO21"
-#define GPIO3_NAME	"GPIO3"
-#define GPIO1_NAME	"GPIO1"
 #define GPIO22_NAME	"GPIO22"
 #define GPIO23_NAME	"GPIO23"
+#define GPIO25_NAME	"GPIO25"
+#define GPIO26_NAME	"GPIO26"
+#define GPIO27_NAME	"GPIO27"
+#define GPIO32_NAME	"GPIO32"
+#define GPIO33_NAME	"GPIO33"
+#define GPIO34_NAME	"GPIO34"
+#define GPIO35_NAME	"GPIO35"
+#define GPIO36_NAME	"GPIO36"
+#define GPIO37_NAME	"GPIO37"
+#define GPIO38_NAME	"GPIO38"
+#define GPIO39_NAME	"GPIO39"
 
 // ESP32 has only 1 GPIO port
 #define GPIO_PORTS 1
 
-// ESP32 has 16 GPIO per port
-#define GPIO_PER_PORT 39
+// ESP32 has 40 GPIO per port
+#define GPIO_PER_PORT 40
 
-// ESP32 needs 64 bits for port mask
-typedef uint64_t gpio_port_mask_t;
-#define GPIO_ALL 0b0001111100001110111011111111111111111111UL
+// ESP32 needs 64 bits for pin mask
+typedef uint64_t gpio_pin_mask_t;
+
+// ESP32 gpio masks
+#define GPIO_ALL     0b1111111100001110111111111111111111111111ULL
+#define GPIO_ALL_IN  0b1111111100001110111111111111111111111111ULL
+#define GPIO_ALL_OUT 0b0000001100001110111111111111111111111111ULL
+
+ // ESP32 port masks
+#define GPIO_PORT_ALL 0b1
+
+#define GPIO_BIT_MASK 1ULL
 
 #define CPU_FIRST_GPIO GPIO0
 #define CPU_LAST_GPIO  GPIO39
@@ -332,10 +309,11 @@ void cpu_release_pin(unsigned int pin);
 unsigned int cpu_pin_assigned(unsigned int pin);
 unsigned int cpu_pin_number(unsigned int pin);
 unsigned int cpu_port_number(unsigned int pin);
-gpio_port_mask_t cpu_port_io_pin_mask(unsigned int port);
+gpio_pin_mask_t cpu_port_io_pin_mask(unsigned int port);
 unsigned int cpu_port_adc_pin_mask(unsigned int port);
 void cpu_idle(int seconds);
 unsigned int cpu_has_gpio(unsigned int port, unsigned int pin);
 unsigned int cpu_has_port(unsigned int port);
 void cpu_sleep(int seconds);
 int cpu_reset_reason();
+uint8_t cpu_gpio_number(uint8_t pin);

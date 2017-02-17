@@ -84,6 +84,7 @@ driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *value
 	int gpio = unit->setup.gpio.gpio;
 	unsigned start, end;
 	double time;
+	uint8_t val;
 
 	// Trigger pulse
 	gpio_pin_output(gpio);
@@ -100,9 +101,12 @@ driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *value
 	time = 0.0;
 	start = xthal_get_ccount();
 	end = start;
-	while (!gpio_pin_get(gpio) && (time <= 750)) {
+
+	gpio_pin_get(gpio, &val);
+	while (!val && (time <= 750)) {
 		end = xthal_get_ccount();
 		time = (((double)((double)end - (double)start) / (double)(CPU_HZ / (1000000.0 * (CPU_HZ / CORE_TIMER_HZ))))) / (double)2.0;
+		gpio_pin_get(gpio, &val);
 	}
 
 	if (time > 800) {
@@ -112,9 +116,11 @@ driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *value
 	// Echo Return Pulse
 	time = 0.0;
 	start = xthal_get_ccount();
-	while (gpio_pin_get(gpio) && (time <= 185000)) {
+	gpio_pin_get(gpio, &val);
+	while (val && (time <= 185000)) {
 		end = xthal_get_ccount();
 		time = (((double)((double)end - (double)start) / (double)(CPU_HZ / (1000000.0 * (CPU_HZ / CORE_TIMER_HZ))))) / (double)2.0;
+		gpio_pin_get(gpio, &val);
 	}
 
 	portENABLE_INTERRUPTS();
