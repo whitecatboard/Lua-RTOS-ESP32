@@ -356,7 +356,7 @@ driver_error_t *gpio_pin_get_mask(uint8_t port, gpio_pin_mask_t pinmask, gpio_pi
 				return error;
 			};
 
-			get_mask |= (val << i);
+			get_mask |= ((gpio_pin_mask_t)val << i);
 		}
 
 		mask = (mask << 1);

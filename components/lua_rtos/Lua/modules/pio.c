@@ -172,7 +172,7 @@ static int pioh_get_pins(lua_State* L, int stackidx, int op) {
   // Execute the given operation
   for(i = 0; i < GPIO_PORTS; i ++) {
      if(pio_masks[i]) {
-      	unsigned int mask = 1;
+    	 gpio_pin_mask_t mask = GPIO_BIT_MASK;
 
     	pio_op(L, i + 1, pio_masks[i], op, &val);
 
