@@ -102,10 +102,13 @@ void _sys_init() {
 
     _signal_init();
 
-	console_clear();
-
 	esp_vfs_unregister("/dev/uart");
 	vfs_tty_register();
+
+	printf("Booting Lua RTOS... \r\n");
+	delay(100);
+
+	console_clear();
 
 	printf("  /\\       /\\\r\n");
     printf(" /  \\_____/  \\\r\n");
