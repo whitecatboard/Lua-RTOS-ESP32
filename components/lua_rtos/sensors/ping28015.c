@@ -46,7 +46,7 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) ping28015
 	.data = {
 		{.id = "distance",    .type = SENSOR_DATA_FLOAT},
 	},
-	.settings = {
+	.properties = {
 		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
 	},
 	.setup = ping28015_setup,
@@ -63,7 +63,7 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) ping28015
  */
 driver_error_t *ping28015_setup(sensor_instance_t *unit) {
 	// Set temperature to 20 ºC if any temperature is provided
-	unit->settings[0].floatd.value = 20;
+	unit->properties[0].floatd.value = 20;
 
 	// Ignore first measure
 	gpio_pin_clr(unit->setup.gpio.gpio);
@@ -74,7 +74,7 @@ driver_error_t *ping28015_setup(sensor_instance_t *unit) {
 
 driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting) {
 	if (strcmp(id,"temperature") == 0) {
-		memcpy(&unit->settings[0], setting, sizeof(sensor_value_t));
+		memcpy(&unit->properties[0], setting, sizeof(sensor_value_t));
 	}
 
 	return NULL;
@@ -146,7 +146,7 @@ driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *value
 	 */
 
 	// First calculate centimeters per usec
-	double cm_per_usecs = ((33150.0 + (0.6 * ((double)unit->settings[0].floatd.value))) / 1000000.0);
+	double cm_per_usecs = ((33150.0 + (0.6 * ((double)unit->properties[0].floatd.value))) / 1000000.0);
 
 	values[0].floatd.value = (float)((double)time * cm_per_usecs);
 

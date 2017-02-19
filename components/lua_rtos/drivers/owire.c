@@ -16,11 +16,23 @@
 #include <drivers/gpio.h>
 #include <stdio.h>
 
-
 #define OWIRE_FIRST_PIN	1
 #define OWIRE_LAST_PIN	31
 
 TM_One_Wire_Devices_t ow_devices[MAX_ONEWIRE_PINS];
+
+// Convert address to device
+int8_t owire_addess_to_dev(uint8_t sensor, uint64_t address) {
+	if (address < 255) {
+		return address;
+	}
+
+	for (uint8_t i=0;i<MAX_ONEWIRE_SENSORS;i++) {
+		if ((uint64_t)(ow_devices[sensor].roms[i][0]) == address) return i;
+	}
+
+	return -1;
+}
 
 // Check if owire pin is already setup
 int owire_checkpin(uint8_t pin) {
@@ -107,13 +119,11 @@ driver_error_t *owire_setup_pin(int8_t pin) {
 		return error;
 	}
 
-    syslog(LOG_INFO, "owire%d: at pin %s%d", pin, gpio_portname(resources.pin), gpio_name(resources.pin));
-
     return NULL;
 }
 
 void owire_init() {
-	memset(ow_devices, '0', sizeof(TM_One_Wire_Devices_t) * MAX_ONEWIRE_PINS);
+	memset(ow_devices, 0, sizeof(TM_One_Wire_Devices_t) * MAX_ONEWIRE_PINS);
 }
 
 DRIVER_REGISTER(OWIRE,owire,owire_locks,owire_init,NULL);

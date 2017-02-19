@@ -46,9 +46,10 @@ struct sensor_value;
 typedef driver_error_t *(*sensor_setup_f_t)(struct sensor_instance *);
 typedef driver_error_t *(*sensor_acquire_f_t)(struct sensor_instance *, struct sensor_value *);
 typedef driver_error_t *(*sensor_set_f_t)(struct sensor_instance *, const char *, struct sensor_value *);
+typedef driver_error_t *(*sensor_get_f_t)(struct sensor_instance *, const char *, struct sensor_value *);
 
-#define SENSOR_MAX_DATA      6
-#define SENSOR_MAX_SETTINGS  4
+#define SENSOR_MAX_DATA       6
+#define SENSOR_MAX_PROPERTIES 4
 
 // Sensor interface
 typedef enum {
@@ -64,7 +65,8 @@ typedef enum {
 	SENSOR_NO_DATA,
 	SENSOR_DATA_INT,
 	SENSOR_DATA_FLOAT,
-	SENSOR_DATA_DOUBLE
+	SENSOR_DATA_DOUBLE,
+	SENSOR_DATA_STRING,
 } sensor_data_type_t;
 
 // Sensor data
@@ -73,21 +75,22 @@ typedef struct {
 	const sensor_data_type_t type;
 } sensor_data_t;
 
-// Sensor setting
+// Sensor property
 typedef struct {
 	const char *id;
 	const sensor_data_type_t type;
-} sensor_setting_t;
+} sensor_property_t;
 
 // Sensor structure
 typedef struct {
 	const char *id;
 	const sensor_interface_t interface;
 	const sensor_data_t data[SENSOR_MAX_DATA];
-	const sensor_data_t settings[SENSOR_MAX_SETTINGS];
+	const sensor_data_t properties[SENSOR_MAX_PROPERTIES];
 	const sensor_setup_f_t setup;
 	const sensor_acquire_f_t acquire;
 	const sensor_set_f_t set;
+	const sensor_get_f_t get;
 } sensor_t;
 
 typedef struct sensor_value {
@@ -105,6 +108,10 @@ typedef struct sensor_value {
 		struct {
 			double value;
 		} doubled;
+
+		struct {
+			char *value;
+		} stringd;
 
 		struct {
 			int64_t value;
@@ -128,7 +135,7 @@ typedef struct {
 		struct {
 			uint8_t gpio;
 			uint8_t owdevice;
-			uint8_t owsensor;
+			uint64_t owsensor;
 		} owire;
 
 		struct {
@@ -145,17 +152,18 @@ typedef struct {
 typedef struct sensor_instance {
 	int unit;
 	sensor_value_t data[SENSOR_MAX_DATA];
-	sensor_value_t settings[SENSOR_MAX_SETTINGS];
+	sensor_value_t properties[SENSOR_MAX_PROPERTIES];
 	const sensor_t *sensor;
 	sensor_setup_t setup;
 } sensor_instance_t;
 
-const sensor_t *sensor_get(const char *id);
-const sensor_data_t *sensor_get_setting(const sensor_t *sensor, const char *setting);
+const sensor_t *get_sensor(const char *id);
+const sensor_data_t *sensor_get_property(const sensor_t *sensor, const char *property);
 driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sensor_instance_t **unit);
 driver_error_t *sensor_acquire(sensor_instance_t *unit);
 driver_error_t *sensor_read(sensor_instance_t *unit, const char *id, sensor_value_t **value);
 driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value_t *value);
+driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value_t **value);
 
 // SENSOR errors
 #define SENSOR_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  0)

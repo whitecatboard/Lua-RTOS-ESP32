@@ -75,6 +75,7 @@ int owire_checkpin(uint8_t pin);
 TM_One_Wire_Devices_t *ow_getdevice(uint8_t dev);
 void ow_devices_init(uint8_t dev);
 uint8_t TM_OneWire_Dosearch(uint8_t dev);
+int8_t owire_addess_to_dev(uint8_t sensor, uint64_t address);
 
 #endif
 #endif /* _OWIRE_H_ */

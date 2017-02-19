@@ -156,7 +156,7 @@ void sensor_init() {
     list_init(&sensor_list, 0);
 }
 
-const sensor_t *sensor_get(const char *id) {
+const sensor_t *get_sensor(const char *id) {
 	const sensor_t *csensor;
 
 	csensor = sensors;
@@ -170,13 +170,13 @@ const sensor_t *sensor_get(const char *id) {
 	return NULL;
 }
 
-const sensor_data_t *sensor_get_setting(const sensor_t *sensor, const char *setting) {
+const sensor_data_t *sensor_get_property(const sensor_t *sensor, const char *property) {
 	int idx = 0;
 
-	for(idx=0;idx <  SENSOR_MAX_SETTINGS;idx++) {
-		if (sensor->settings[idx].id) {
-			if (strcmp(sensor->settings[idx].id,setting) == 0) {
-				return &(sensor->settings[idx]);
+	for(idx=0;idx <  SENSOR_MAX_PROPERTIES;idx++) {
+		if (sensor->properties[idx].id) {
+			if (strcmp(sensor->properties[idx].id,property) == 0) {
+				return &(sensor->properties[idx]);
 			}
 		}
 	}
@@ -210,9 +210,9 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 		instance->data[i].type = sensor->data[i].type;
 	}
 
-	// Initialize sensor settings from sensor definition into instance
-	for(i=0;i<SENSOR_MAX_SETTINGS;i++) {
-		instance->settings[i].type = sensor->settings[i].type;
+	// Initialize sensor properties from sensor definition into instance
+	for(i=0;i<SENSOR_MAX_PROPERTIES;i++) {
+		instance->properties[i].type = sensor->properties[i].type;
 	}
 
 	// Add instance to sensor_list
@@ -314,10 +314,35 @@ driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value
 		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_SET_UNDEFINED, NULL);
 	}
 
-	for(idx=0;idx < SENSOR_MAX_SETTINGS;idx++) {
-		if (unit->sensor->settings[idx].id) {
-			if (strcmp(unit->sensor->settings[idx].id,id) == 0) {
+	for(idx=0;idx < SENSOR_MAX_PROPERTIES;idx++) {
+		if (unit->sensor->properties[idx].id) {
+			if (strcmp(unit->sensor->properties[idx].id,id) == 0) {
 				unit->sensor->set(unit, id, value);
+				return NULL;
+			}
+		}
+	}
+
+	return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL);
+}
+
+driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value_t **value) {
+	int idx = 0;
+
+	*value = NULL;
+
+	// Sanity checks
+	if (!unit->sensor->get) {
+		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_SET_UNDEFINED, NULL);
+	}
+
+	for(idx=0;idx < SENSOR_MAX_PROPERTIES;idx++) {
+		if (unit->sensor->properties[idx].id) {
+			if (strcmp(unit->sensor->properties[idx].id,id) == 0) {
+				unit->sensor->get(unit, id, &unit->properties[idx]);
+
+				*value = &unit->properties[idx];
+
 				return NULL;
 			}
 		}
