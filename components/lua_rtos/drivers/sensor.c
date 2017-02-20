@@ -77,7 +77,7 @@ static driver_error_t *sensor_adc_setup(sensor_instance_t *unit) {
 		return error;
 	}
 
-	if ((error = adc_setup_channel(unit->setup.adc.channel, unit->setup.adc.resolution))) {
+	if ((error = adc_setup_channel(unit->setup.adc.channel, unit->setup.adc.resolution, ADC_ATTEN_0db))) {
 		return error;
 	}
 

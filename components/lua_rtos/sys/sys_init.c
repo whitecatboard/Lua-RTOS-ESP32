@@ -105,7 +105,7 @@ void _sys_init() {
 	esp_vfs_unregister("/dev/uart");
 	vfs_tty_register();
 
-	printf("Booting Lua RTOS... \r\n");
+	printf("Booting Lua RTOS...\r\n");
 	delay(100);
 
 	console_clear();

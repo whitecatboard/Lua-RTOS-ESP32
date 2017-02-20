@@ -48,7 +48,7 @@
 #include <drivers/cpu.h>
 #include <drivers/adc.h>
 
-// ADC channels
+// ADC xs
 static adc_channel_t adc_channels[CPU_LAST_ADC_CH + 1];
 
 // Driver locks
@@ -58,6 +58,7 @@ driver_unit_lock_t adc_locks[CPU_LAST_ADC_CH + 1];
 DRIVER_REGISTER_ERROR(ADC, adc, CannotSetup, "can't setup", ADC_ERR_CANT_INIT);
 DRIVER_REGISTER_ERROR(ADC, adc, InvalidUnit, "invalid unit", ADC_ERR_INVALID_UNIT);
 DRIVER_REGISTER_ERROR(ADC, adc, InvalidChannel, "invalid channel", ADC_ERR_INVALID_CHANNEL);
+DRIVER_REGISTER_ERROR(ADC, adc, InvalidAttenuation, "invalid attenuation", ADC_ERR_INVALID_ATTENUATION);
 
 /*s
  * Operation functions
@@ -111,10 +112,14 @@ driver_error_t *adc_setup(int8_t unit) {
 }
 
 // Setup an ADC channel
-driver_error_t *adc_setup_channel(int8_t channel, int8_t resolution) {
+driver_error_t *adc_setup_channel(int8_t channel, int8_t resolution, int8_t attenuation) {
 	// Sanity checks
 	if (!((1 << channel) & CPU_ADC_ALL)) {
 		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+	}
+
+	if ((attenuation < 0) || (attenuation > 3)) {
+		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_ATTENUATION, NULL);
 	}
 
 	if (!adc_channels[channel].setup) {
@@ -126,9 +131,11 @@ driver_error_t *adc_setup_channel(int8_t channel, int8_t resolution) {
 			return error;
 		}
 
-		adc1_config_channel_atten(channel, ADC_ATTEN_0db);
+		adc1_config_channel_atten(channel, attenuation);
 
 		syslog(LOG_INFO, "adc%d: at pin %s%d", channel, gpio_portname(resources.pin), gpio_name(resources.pin));
+	} else {
+		adc1_config_channel_atten(channel, attenuation);
 	}
 
 	adc_channels[channel].setup = 1;
@@ -161,11 +168,13 @@ driver_error_t *adc_read(int8_t channel, int *raw, double *mvols) {
 	int resolution = adc_channels[channel].resolution;
 	int max_val = adc_channels[channel].max_val;
 
-	if (val & (1 << (12 - resolution - 1))) {
-    	val = ((val >> (12 - resolution)) + 1) & max_val;
-    } else {
-    	val = val >> (12 - resolution);
-    }
+	if (resolution != 12) {
+		if (val & (1 << (12 - resolution - 1))) {
+	    	val = ((val >> (12 - resolution)) + 1) & max_val;
+	    } else {
+	    	val = val >> (12 - resolution);
+	    }
+	}
 
     *raw = val;
 	*mvols = ((double)val * (double)CPU_ADC_REF) / (double)max_val;

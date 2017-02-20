@@ -77,7 +77,12 @@ static int ladc_setup_channel( lua_State* L ) {
     res = luaL_checkinteger( L, 2 );
     channel = luaL_checkinteger( L, 3 );
 
-    if ((error = adc_setup_channel(channel, res))) {
+    int attenuation = ADC_ATTEN_0db;
+    if (lua_gettop(L) == 4) {
+    	attenuation = luaL_checkinteger( L, 4 );
+    }
+
+     if ((error = adc_setup_channel(channel, res, attenuation))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -135,7 +140,11 @@ static const LUA_REG_TYPE ladc_constants_map[] = {
 	ADC_ADC_CH5
 	ADC_ADC_CH6
 	ADC_ADC_CH7
-	{LSTRKEY("error"), 			 LROVAL( adc_error_map )},
+	{LSTRKEY("error"), 			  LROVAL( adc_error_map    )},
+	{LSTRKEY("attenuation0db  "), LINTVAL( ADC_ATTEN_0db   )},
+	{LSTRKEY("attenuation2_5db"), LINTVAL( ADC_ATTEN_2_5db )},
+	{LSTRKEY("attenuation6db"  ), LINTVAL( ADC_ATTEN_6db   )},
+	{LSTRKEY("attenuation11db" ), LINTVAL( ADC_ATTEN_11db  )},
 	{ LNILKEY, LNILVAL }
 };
 
