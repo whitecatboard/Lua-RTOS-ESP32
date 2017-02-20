@@ -260,37 +260,67 @@ static int lsensor_read( lua_State* L ) {
         }
     }
 
-    // Read data
-    if ((error = sensor_read(udata->instance, id, &value))) {
-    	return luaL_driver_error(L, error);
+    if ((strcmp(id, "all") != 0) && (strcmp(id, "ALL") != 0)) {
+		// Read specified data
+		if ((error = sensor_read(udata->instance, id, &value))) {
+			return luaL_driver_error(L, error);
+		}
+
+		udata->adquired = 0;
+
+		switch (value->type) {
+			case SENSOR_NO_DATA:
+				lua_pushnil(L);
+				return 1;
+			case SENSOR_DATA_INT:
+				lua_pushinteger(L, value->integerd.value);
+				return 1;
+			case SENSOR_DATA_FLOAT:
+				lua_pushnumber(L, value->floatd.value);
+				return 1;
+			case SENSOR_DATA_DOUBLE:
+				lua_pushnumber(L, value->doubled.value);
+				return 1;
+			default:
+				return 0;
+		}
     }
+    else {
+    	// Read all sensor data
+    	int idx, numread=0;
+    	for(idx=0;idx <  SENSOR_MAX_DATA;idx++) {
+    		if (udata->instance->sensor->data[idx].id) {
+				*&value = &udata->instance->data[idx];
+				switch (value->type) {
+					case SENSOR_NO_DATA:
+						lua_pushnil(L);
+						numread++;
+						break;
+					case SENSOR_DATA_INT:
+						lua_pushinteger(L, value->integerd.value);
+						numread++;
+						break;
+					case SENSOR_DATA_FLOAT:
+						lua_pushnumber(L, value->floatd.value);
+						numread++;
+						break;
+					case SENSOR_DATA_DOUBLE:
+						lua_pushnumber(L, value->doubled.value);
+						numread++;
+						break;
+					default:
+						return luaL_driver_error(L, driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL));
+				}
+    		}
+    	}
+    	if (numread == 0) return luaL_driver_error(L, driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL));
 
-    udata->adquired = 0;
-
-	switch (value->type) {
-		case SENSOR_NO_DATA:
-			lua_pushnil(L);
-			return 1;
-
-		case SENSOR_DATA_INT:
-			lua_pushinteger(L, value->integerd.value);
-			return 1;
-
-		case SENSOR_DATA_FLOAT:
-			lua_pushnumber(L, value->floatd.value);
-			return 1;
-
-		case SENSOR_DATA_DOUBLE:
-			lua_pushnumber(L, value->doubled.value);
-			return 1;
-
-		default:
-			return 0;
-	}
+    	udata->adquired = 0;
+    	return numread;
+    }
 
 	return 0;
 }
-
 static int lsensor_list( lua_State* L ) {
 	const sensor_t *csensor = sensors;
 
