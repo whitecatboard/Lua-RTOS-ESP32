@@ -145,7 +145,7 @@ driver_error_t *hal_init (void) {
 	driver_error_t *error;
 
 	// Init SPI bus
-    if ((error = spi_init(LMIC_SPI))) {
+    if ((error = spi_init(LMIC_SPI, 1))) {
         syslog(LOG_ERR, "lmic cannot open spi%u", LMIC_SPI);
         return error;
     }
@@ -237,7 +237,11 @@ void hal_pin_rst (u1_t val) {
  *   - read byte and return value
  */
 u1_t IRAM_ATTR hal_spi (u1_t outval) {
-	return spi_transfer(LMIC_SPI, outval);
+	u1_t readed;
+
+	spi_transfer(LMIC_SPI, outval, &readed);
+
+	return readed;
 }
 
 void IRAM_ATTR hal_disableIRQs (void) {

@@ -29,6 +29,14 @@ SECTIONS {
 	/* exception names exported to Lua modules */
 	/* TO DO */
 	/*   Generate this entries automatically */
+    spi_errors = ABSOLUTE(.);
+    KEEP(*(.spi_errors))
+    LONG(0) LONG(0)
+
+    spi_error_map = ABSOLUTE(.);
+    KEEP(*(.spi_error_map))
+    LONG(0) LONG(0)
+
     adc_errors = ABSOLUTE(.);
     KEEP(*(.adc_errors))
     LONG(0) LONG(0)

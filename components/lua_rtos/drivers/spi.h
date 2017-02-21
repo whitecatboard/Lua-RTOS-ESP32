@@ -45,125 +45,36 @@ typedef struct {
 
 // SPI errors
 #define SPI_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  0)
+#define SPI_ERR_INVALID_MODE             (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  1)
+#define SPI_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  2)
+#define SPI_ERR_SLAVE_NOT_ALLOWED		 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  3)
 
-driver_error_t *spi_init(int unit);
+void spi_master_op(int unit, unsigned int word_size, unsigned int len, unsigned char *out, unsigned char *in);
 
-/*
- * Setup SPI connection on a given port (0..5) with a specified chip select pin.
- * Use default speed.
- * Return 0 if the SPI port is not configured.
- */
-int spi_setup(int unit);
+driver_error_t *spi_init(int unit, int master);
+driver_error_t *spi_setup(int unit);
+driver_error_t *spi_set_speed(int unit, unsigned int khz);
+driver_error_t *spi_set_cspin(int unit, int pin);
+driver_error_t *spi_select(int unit);
+driver_error_t *spi_deselect(int unit);
 
-/*
- * Set the SPI bit rate for a device (in kHz).
- */
-void spi_set_speed(int unit, unsigned int khz);
-
-/*
- * Setup the chip select pin for the SPI device.
- * Chip select pin is encoded as 0bPPPPNNNN, or 0xPN, where:
- * N is the pin number 0..F,
- * P is the port index 1..A:
- *   1 - port A
- *   2 - port B
- *   3 - port C
- *   4 - port D
- *   5 - port E
- *   6 - port F
- *   7 - port G
- *   8 - port H
- *   9 - port J
- *   A - port K
- */
-void spi_set_cspin(int unit, int pin);
-
-
-/*
- * Assert the CS pin of a device.
- */
-void spi_select(int unit);
-
-/*
- * Deassert the CS pin of a device.
- */
-void spi_deselect(int unit);
-
-/*
- * Set a mode setting or two - just updates the internal records,
- * the actual mode is changed next time the CS is asserted.
- */
-void spi_set(int unit, unsigned int set);
-
-void spi_clr_and_set(int unit, unsigned int set);
-
-/*
- * Clear a mode setting or two - just updates the internal records,
- * the actual mode is changed next time the CS is asserted.
- */
-void spi_clr(int unit, unsigned set);
-
-/*
- * Return the current status of the SPI bus for the device in question.
- * Just returns the ->stat entry in the register set.
- */
-unsigned int spi_status(int unit);
-
-/*
- * Return the name of the SPI bus for a device.
- */
 const char *spi_name(int unit);
-
-/*
- * Return the pin index of the chip select pin for a device.
- */
 int spi_cs_gpio(int unit);
+void spi_pin_config(int unit, unsigned char sdi, unsigned char sdo, unsigned char sck, unsigned char cs);
 
-/*
- * Return the speed in kHz.
- */
 unsigned int spi_get_speed(int unit);
 
-void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs);
-void spi_pin_config(int unit, unsigned char sdi, unsigned char sdo, unsigned char sck, unsigned char cs);
-void spi_set_mode(int unit, int mode);
+driver_error_t *spi_set_mode(int unit, int mode);
 
-/*
- * Transfer one word of data, and return the read word of data.
- * The actual number of bits sent depends on the mode of the transfer.
- * This is blocking, and waits for the transfer to complete
- * before returning.  Times out after a certain period.
- */
-unsigned int spi_transfer(int unit, unsigned int data);
-
-/*
- * Transmit a chunk of 8-bit data.
- */
-void spi_bulk_write(int unit, unsigned int nbytes, unsigned char *data);
-void spi_bulk_read(int unit, unsigned int nbytes, unsigned char *data);
-void spi_bulk_rw(int unit, unsigned int nbytes, unsigned char *data);
-
-/*
- * Transmit a chunk of 16-bit data.
- */
-void spi_bulk_write16(int unit, unsigned int nelem, short *data);
-void spi_bulk_read16(int unit, unsigned int nelem, short *data);
-void spi_bulk_rw16(int unit, unsigned int nelem, short *data);
-
-/*
- * Transmit a chunk of 32-bit data.
- */
-void spi_bulk_write32(int unit, unsigned int nelem, int *data);
-void spi_bulk_read32(int unit, unsigned int nelem, int *data);
-void spi_bulk_rw32(int unit, unsigned int nelem, int *data);
-
-/*
- * Transmit a chunk of 32-bit data with reversed endianness.
- */
-void spi_bulk_write32_be(int unit, unsigned int nelem, int *data);
-void spi_bulk_read32_be(int unit, unsigned int nelem, int *data);
-void spi_bulk_rw32_be(int unit, unsigned int nelem, int *data);
-
-driver_error_t *spi_lock_resources(int unit, void *resources);
+driver_error_t *spi_transfer(int unit, unsigned int data, unsigned char *read);
+driver_error_t *spi_bulk_write(int unit, unsigned int nbytes, unsigned char *data);
+driver_error_t *spi_bulk_read(int unit, unsigned int nbytes, unsigned char *data);
+driver_error_t *spi_bulk_rw(int unit, unsigned int nbytes, unsigned char *data);
+driver_error_t *spi_bulk_write16(int unit, unsigned int nelem, short *data);
+driver_error_t *spi_bulk_read16(int unit, unsigned int nelem, short *data);
+driver_error_t *spi_bulk_rw16(int unit, unsigned int nelem, short *data);
+driver_error_t *spi_bulk_write32(int unit, unsigned int nelem, int *data);
+driver_error_t *spi_bulk_write32_be(int unit, unsigned int nelem, int *data);
+driver_error_t *spi_bulk_read32_be(int unit, unsigned int nelem, int *data);
 
 #endif

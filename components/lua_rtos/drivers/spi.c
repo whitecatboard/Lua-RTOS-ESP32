@@ -56,6 +56,13 @@
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
 
+// Driver message errors
+DRIVER_REGISTER_ERROR(SPI, spi, CannotSetup, "can't setup",  SPI_ERR_CANT_INIT);
+DRIVER_REGISTER_ERROR(SPI, spi, InvalidMode, "invalid mode", SPI_ERR_INVALID_MODE);
+DRIVER_REGISTER_ERROR(SPI, spi, InvalidUnit, "invalid unit", SPI_ERR_INVALID_UNIT);
+DRIVER_REGISTER_ERROR(SPI, spi, SlaveNotAllowed, "slave mode not allowed", SPI_ERR_SLAVE_NOT_ALLOWED);
+
+// SPI structures
 struct spi {
     int          cs;	  // cs pin for device (if 0 use default cs pin)
     unsigned int speed;   // spi device speed
@@ -64,37 +71,21 @@ struct spi {
     unsigned int dirty;   // if 1 device must be reconfigured at next spi_select
 };
 
-static const driver_message_t spi_errors[] = {
-	{"",""},
-	{"can't setup","CannotSetup"},
-	{"invalid number mode","InvalidMode"},
-	{"invalid unit","InvalidUnit"},
-};
+struct spi spi[CPU_LAST_SPI + 1];
 
-#define SPI_DRIVER driver_get_by_name("spi")
-
-struct spi spi[NSPI] = {
-	{
-		0,0,0,0,0
-	},
-	{
-		0,0,0,0,0
-	},
-	{
-		0,0,0,0,0
-	},
-	{
-		0,0,0,0,0
-	}
-};
-
-#define FUNC_SPI 1
+/*
+ * Helper functions
+ */
+static void _spi_init() {
+	memset(spi, 0, sizeof(struct spi) * (CPU_LAST_SPI + 1));
+}
 
 /*
  * Extracted from arduino-esp32 (cores/esp32/esp32-hal-spi.c) for get the clock divisor
  * needed for setup the SIP bus at a desired baud rate
  *
  */
+#define FUNC_SPI 1
 
 #define ClkRegToFreq(reg) (CPU_CLK_FREQ / (((reg)->regPre + 1) * ((reg)->regN + 1)))
 
@@ -109,7 +100,7 @@ typedef union {
     };
 } spiClk_t;
 
-uint32_t spiFrequencyToClockDiv(uint32_t freq) {
+static uint32_t spiFrequencyToClockDiv(uint32_t freq) {
 
     if(freq >= CPU_CLK_FREQ) {
         return SPI_CLK_EQU_SYSCLK;
@@ -166,142 +157,7 @@ uint32_t spiFrequencyToClockDiv(uint32_t freq) {
  * End of extracted code from arduino-esp32
  */
 
-/*
- * Set the SPI mode for a device. Nothing is changed at hardware level.
- *
- */
-void spi_set_mode(int unit, int mode) {
-    struct spi *dev = &spi[unit];
-
-    dev->mode = mode;
-    dev->dirty = 1;
-}
-
-/*
- * Set the SPI bit rate for a device and stores the clock divisor needed
- * for this bit rate. Nothing is changed at hardware level.
- */
-void spi_set_speed(int unit, unsigned int sck) {
-    struct spi *dev = &spi[unit];
-
-    dev->speed = sck;
-    dev->divisor = spiFrequencyToClockDiv(sck * 1000);
-    dev->dirty = 1;
-}
-
-/*
- * Select the device. Prior this we reconfigure the SPI bus
- * to the required settings.
- */
-void spi_select(int unit) {
-    struct spi *dev = &spi[unit];
-
-    if (dev->dirty) {
-        // Complete operations, if pending
-        CLEAR_PERI_REG_MASK(SPI_SLAVE_REG(unit), SPI_TRANS_DONE << 5);
-        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CS_SETUP);
-
-        // Set mode
-    	switch (dev->mode) {
-    		case 0:
-    		    // Set CKP to 0
-    		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
-
-    		    // Set CPHA to 0
-    		    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
-
-    		    break;
-
-    		case 1:
-    		    // Set CKP to 0
-    		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
-
-    		    // Set CPHA to 1
-    		    SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
-
-    		    break;
-
-    		case 2:
-    		    // Set CKP to 1
-    		    SET_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
-
-    		    // Set CPHA to 0
-    		    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
-
-    		    break;
-
-    		case 3:
-    		    // Set CKP to 1
-    		    SET_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
-
-    		    // Set CPHA to 1
-    		    SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
-    	}
-
-    	// Set bit order to MSB
-        CLEAR_PERI_REG_MASK(SPI_CTRL_REG(unit), SPI_WR_BIT_ORDER | SPI_RD_BIT_ORDER);
-
-        // Enable full-duplex communication
-        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_DOUTDIN);
-
-        // Configure as master
-        WRITE_PERI_REG(SPI_USER1_REG(unit), 0);
-    	SET_PERI_REG_BITS(SPI_CTRL2_REG(unit), SPI_MISO_DELAY_MODE, 0, SPI_MISO_DELAY_MODE_S);
-    	CLEAR_PERI_REG_MASK(SPI_SLAVE_REG(unit), SPI_SLAVE_MODE);
-
-        // Set clock
-        WRITE_PERI_REG(SPI_CLOCK_REG(unit), dev->divisor);
-
-        // Enable MOSI / MISO / CS
-        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CS_SETUP | SPI_CS_HOLD | SPI_USR_MOSI | SPI_USR_MISO);
-        SET_PERI_REG_MASK(SPI_CTRL2_REG(unit), ((0x4 & SPI_MISO_DELAY_NUM) << SPI_MISO_DELAY_NUM_S));
-
-        CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_COMMAND);
-        SET_PERI_REG_BITS(SPI_USER2_REG(unit), SPI_USR_COMMAND_BITLEN, 0, SPI_USR_COMMAND_BITLEN_S);
-        CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_ADDR);
-        SET_PERI_REG_BITS(SPI_USER1_REG(unit), SPI_USR_ADDR_BITLEN, 0, SPI_USR_ADDR_BITLEN_S);
-
-        dev->dirty = 0;
-    }
-
-	// Select device
-    if (dev->cs) {
-       gpio_pin_clr(dev->cs);
-    }
-}
-
-/*
- * Deselect the device
- */
-void spi_deselect(int unit) {
-    struct spi *dev = &spi[unit];
-
-    if (dev->cs) {
-        gpio_pin_set(dev->cs);
-    }
-}
-
-/*
- * Set the CS pin for the device. This function stores CS pin in
- * device data, and setup CS pin as output and set to the high state
- * (device is not select)
- */
-void spi_set_cspin(int unit, int pin) {
-    struct spi *dev = &spi[unit];
-
-    if (pin != dev->cs) {
-        dev->cs = pin;
-
-        if (pin) {
-            gpio_pin_output(dev->cs);
-            gpio_pin_set(dev->cs);
-
-            dev->dirty = 1;
-        }
-    }
-}
-
-void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs) {
+static void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs) {
     switch (unit) {
     	case 1:
         	*sdi = GPIO7;
@@ -326,6 +182,49 @@ void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *s
     }
 }
 
+// Lock resources needed by the SPI
+static driver_error_t *spi_lock_resources(int unit, void *resources) {
+	spi_resources_t tmp_spi_resources;
+
+	if (!resources) {
+		resources = &tmp_spi_resources;
+	}
+
+	spi_resources_t *spi_resources = (spi_resources_t *)resources;
+    driver_unit_lock_error_t *lock_error = NULL;
+
+    // Get needed pins
+	spi_pins(unit, &spi_resources->sdi, &spi_resources->sdo, &spi_resources->sck, &spi_resources->cs);
+
+    // Lock this pins
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->sdi))) {
+    	// Revoked lock on pin
+    	return driver_lock_error(SPI_DRIVER, lock_error);
+    }
+
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->sdo))) {
+    	// Revoked lock on pin
+    	return driver_lock_error(SPI_DRIVER, lock_error);
+    }
+
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->sck))) {
+    	// Revoked lock on pin
+    	return driver_lock_error(SPI_DRIVER, lock_error);
+    }
+
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->cs))) {
+    	// Revoked lock on pin
+    	return driver_lock_error(SPI_DRIVER, lock_error);
+    }
+
+    return NULL;
+}
+
+/*
+ * Operation functions
+ *
+ */
+
 /*
  * Init pins for a device, and return used pins
  */
@@ -340,7 +239,7 @@ void spi_pin_config(int unit, unsigned char sdi, unsigned char sdo, unsigned cha
 	spi_set_cspin(unit, cs);
 }
 
-static void IRAM_ATTR spi_master_op(int unit, unsigned int word_size, unsigned int len, unsigned char *out, unsigned char *in) {
+void IRAM_ATTR spi_master_op(int unit, unsigned int word_size, unsigned int len, unsigned char *out, unsigned char *in) {
 	unsigned int bytes = word_size * len; // Number of bytes to write / read
 	unsigned int idx = 0;
 
@@ -421,41 +320,237 @@ static void IRAM_ATTR spi_master_op(int unit, unsigned int word_size, unsigned i
 }
 
 /*
+ * Set the SPI mode for a device. Nothing is changed at hardware level.
+ *
+ */
+driver_error_t *spi_set_mode(int unit, int mode) {
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((mode < 0) || (mode > 3)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_MODE, NULL);
+	}
+
+	struct spi *dev = &spi[unit];
+
+    dev->mode = mode;
+    dev->dirty = 1;
+
+    return NULL;
+}
+
+/*
+ * Set the SPI bit rate for a device and stores the clock divisor needed
+ * for this bit rate. Nothing is changed at hardware level.
+ */
+driver_error_t *spi_set_speed(int unit, unsigned int sck) {
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	struct spi *dev = &spi[unit];
+
+    dev->speed = sck;
+    dev->divisor = spiFrequencyToClockDiv(sck * 1000);
+    dev->dirty = 1;
+
+    return NULL;
+}
+
+/*
+ * Select the device. Prior this we reconfigure the SPI bus
+ * to the required settings.
+ */
+driver_error_t *spi_select(int unit) {
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	struct spi *dev = &spi[unit];
+
+    if (dev->dirty) {
+        // Complete operations, if pending
+        CLEAR_PERI_REG_MASK(SPI_SLAVE_REG(unit), SPI_TRANS_DONE << 5);
+        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CS_SETUP);
+
+        // Set mode
+    	switch (dev->mode) {
+    		case 0:
+    		    // Set CKP to 0
+    		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
+
+    		    // Set CPHA to 0
+    		    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
+
+    		    break;
+
+    		case 1:
+    		    // Set CKP to 0
+    		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
+
+    		    // Set CPHA to 1
+    		    SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
+
+    		    break;
+
+    		case 2:
+    		    // Set CKP to 1
+    		    SET_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
+
+    		    // Set CPHA to 0
+    		    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
+
+    		    break;
+
+    		case 3:
+    		    // Set CKP to 1
+    		    SET_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
+
+    		    // Set CPHA to 1
+    		    SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
+    	}
+
+    	// Set bit order to MSB
+        CLEAR_PERI_REG_MASK(SPI_CTRL_REG(unit), SPI_WR_BIT_ORDER | SPI_RD_BIT_ORDER);
+
+        // Enable full-duplex communication
+        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_DOUTDIN);
+
+        // Configure as master
+        WRITE_PERI_REG(SPI_USER1_REG(unit), 0);
+    	SET_PERI_REG_BITS(SPI_CTRL2_REG(unit), SPI_MISO_DELAY_MODE, 0, SPI_MISO_DELAY_MODE_S);
+    	CLEAR_PERI_REG_MASK(SPI_SLAVE_REG(unit), SPI_SLAVE_MODE);
+
+        // Set clock
+        WRITE_PERI_REG(SPI_CLOCK_REG(unit), dev->divisor);
+
+        // Enable MOSI / MISO / CS
+        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CS_SETUP | SPI_CS_HOLD | SPI_USR_MOSI | SPI_USR_MISO);
+        SET_PERI_REG_MASK(SPI_CTRL2_REG(unit), ((0x4 & SPI_MISO_DELAY_NUM) << SPI_MISO_DELAY_NUM_S));
+
+        CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_COMMAND);
+        SET_PERI_REG_BITS(SPI_USER2_REG(unit), SPI_USR_COMMAND_BITLEN, 0, SPI_USR_COMMAND_BITLEN_S);
+        CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_ADDR);
+        SET_PERI_REG_BITS(SPI_USER1_REG(unit), SPI_USR_ADDR_BITLEN, 0, SPI_USR_ADDR_BITLEN_S);
+
+        dev->dirty = 0;
+    }
+
+	// Select device
+    if (dev->cs) {
+       gpio_pin_clr(dev->cs);
+    }
+
+    return NULL;
+}
+
+/*
+ * Deselect the device
+ */
+driver_error_t *spi_deselect(int unit) {
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	struct spi *dev = &spi[unit];
+
+    if (dev->cs) {
+        gpio_pin_set(dev->cs);
+    }
+
+    return NULL;
+}
+
+/*
+ * Set the CS pin for the device. This function stores CS pin in
+ * device data, and setup CS pin as output and set to the high state
+ * (device is not select)
+ */
+driver_error_t *spi_set_cspin(int unit, int pin) {
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	struct spi *dev = &spi[unit];
+
+    if (pin != dev->cs) {
+        dev->cs = pin;
+
+        if (pin) {
+            gpio_pin_output(dev->cs);
+            gpio_pin_set(dev->cs);
+
+            dev->dirty = 1;
+        }
+    }
+
+    return NULL;
+}
+
+/*
  * Transfer one word of data, and return the read word of data.
  * The actual number of bits sent depends on the mode of the transfer.
  * This is blocking, and waits for the transfer to complete
  * before returning.  Times out after a certain period.
  */
-unsigned int IRAM_ATTR spi_transfer(int unit, unsigned int data) {
-	unsigned char read;
+driver_error_t * IRAM_ATTR spi_transfer(int unit, unsigned int data, unsigned char *read) {
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
 
-    spi_master_op(unit, 1, 1, (unsigned char *)(&data), &read);
+    spi_master_op(unit, 1, 1, (unsigned char *)(&data), read);
 
-    return read & 0xff;
+    return NULL;
 }
 
 /*
  * Send a chunk of 8-bit data.
  */
-void spi_bulk_write(int unit, unsigned int nbytes, unsigned char *data) {
-    taskDISABLE_INTERRUPTS();
+driver_error_t *spi_bulk_write(int unit, unsigned int nbytes, unsigned char *data) {
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	taskDISABLE_INTERRUPTS();
     spi_master_op(unit, 1, nbytes, data, NULL);
     taskENABLE_INTERRUPTS();
+
+    return NULL;
 }
 
 /*
  * Receive a chunk of 8-bit data.
  */
-void spi_bulk_read(int unit, unsigned int nbytes, unsigned char *data) {
-    taskDISABLE_INTERRUPTS();
+driver_error_t *spi_bulk_read(int unit, unsigned int nbytes, unsigned char *data) {
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	taskDISABLE_INTERRUPTS();
     spi_master_op(unit, 1, nbytes, NULL, data);
     taskENABLE_INTERRUPTS();
+
+    return NULL;
 }
 
 /*
  * Send and receive a chunk of 8-bit data.
  */
-void spi_bulk_rw(int unit, unsigned int nbytes, unsigned char *data) {
+driver_error_t *spi_bulk_rw(int unit, unsigned int nbytes, unsigned char *data) {
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
 	unsigned char *read = (unsigned char *)malloc(nbytes);
 	if (read) {
 	    taskDISABLE_INTERRUPTS();
@@ -465,36 +560,64 @@ void spi_bulk_rw(int unit, unsigned int nbytes, unsigned char *data) {
 
 	memcpy(data, read, nbytes);
 	free(read);
+
+	return NULL;
 }
 
 /*
  * Send a chunk of 16-bit data.
  */
-void spi_bulk_write16(int unit, unsigned int words, short *data) {
-    taskDISABLE_INTERRUPTS();
+driver_error_t *spi_bulk_write16(int unit, unsigned int words, short *data) {
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	taskDISABLE_INTERRUPTS();
     spi_master_op(unit, 2, words, (unsigned char *)data, NULL);
     taskENABLE_INTERRUPTS();
+
+    return NULL;
 }
 
 /*
  * Receive a chunk of 16-bit data.
  */
-void spi_bulk_read16(int unit, unsigned int nbytes, short *data) {
-    taskDISABLE_INTERRUPTS();
+driver_error_t *spi_bulk_read16(int unit, unsigned int nbytes, short *data) {
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	taskDISABLE_INTERRUPTS();
     spi_master_op(unit, 2, nbytes, NULL, (unsigned char *)data);
     taskENABLE_INTERRUPTS();
+
+    return NULL;
 }
 
 /*
  * Send a chunk of 32-bit data.
  */
-void spi_bulk_write32(int unit, unsigned int words, int *data) {
-    taskDISABLE_INTERRUPTS();
+driver_error_t *spi_bulk_write32(int unit, unsigned int words, int *data) {
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	taskDISABLE_INTERRUPTS();
     spi_master_op(unit, 4, words, (unsigned char *)data, NULL);
     taskENABLE_INTERRUPTS();
+
+    return NULL;
 }
 
-void spi_bulk_write32_be(int unit, unsigned int words, int *data) {
+driver_error_t *spi_bulk_write32_be(int unit, unsigned int words, int *data) {
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
 	int i = 0;
 
     taskDISABLE_INTERRUPTS();
@@ -508,13 +631,20 @@ void spi_bulk_write32_be(int unit, unsigned int words, int *data) {
     spi_master_op(unit, 4, words, (unsigned char *)data, NULL);
 
     taskENABLE_INTERRUPTS();
+
+    return NULL;
 }
 
 // Read a huge chunk of data as fast and as efficiently as
 // possible.  Switches in to 32-bit mode regardless, and uses
 // the enhanced buffer mode.
 // Data should be a multiple of 32 bits.
-void spi_bulk_read32_be(int unit, unsigned int words, int *data) {
+driver_error_t *spi_bulk_read32_be(int unit, unsigned int words, int *data) {
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
 	int i = 0;
 
     taskDISABLE_INTERRUPTS();
@@ -528,6 +658,8 @@ void spi_bulk_read32_be(int unit, unsigned int words, int *data) {
     }
 
     taskENABLE_INTERRUPTS();
+
+    return NULL;
 }
 
 /*
@@ -556,51 +688,17 @@ unsigned int spi_get_speed(int unit) {
     return dev->speed;
 }
 
-// Lock resources needed by the SPI
-driver_error_t *spi_lock_resources(int unit, void *resources) {
-	spi_resources_t tmp_spi_resources;
-
-	if (!resources) {
-		resources = &tmp_spi_resources;
-	}
-
-	spi_resources_t *spi_resources = (spi_resources_t *)resources;
-    driver_unit_lock_error_t *lock_error = NULL;
-
-    // Get needed pins
-	spi_pins(unit, &spi_resources->sdi, &spi_resources->sdo, &spi_resources->sck, &spi_resources->cs);
-
-    // Lock this pins
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->sdi))) {
-    	// Revoked lock on pin
-    	return driver_lock_error(SPI_DRIVER, lock_error);
-    }
-
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->sdo))) {
-    	// Revoked lock on pin
-    	return driver_lock_error(SPI_DRIVER, lock_error);
-    }
-
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->sck))) {
-    	// Revoked lock on pin
-    	return driver_lock_error(SPI_DRIVER, lock_error);
-    }
-
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->cs))) {
-    	// Revoked lock on pin
-    	return driver_lock_error(SPI_DRIVER, lock_error);
-    }
-
-    return NULL;
-}
-
 // Init a spi device
-driver_error_t *spi_init(int unit) {
+driver_error_t *spi_init(int unit, int master) {
     struct spi *dev = &spi[unit];
 
 	// Sanity checks
 	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_setup_error(SPI_DRIVER, SPI_ERR_CANT_INIT, "invalid unit");
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	if (master != 1) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_SLAVE_NOT_ALLOWED, NULL);
 	}
 
     // Lock resources
@@ -630,4 +728,4 @@ driver_error_t *spi_init(int unit) {
     return NULL;
 }
 
-DRIVER_REGISTER(SPI,spi,NULL,NULL,spi_lock_resources);
+DRIVER_REGISTER(SPI,spi,NULL,_spi_init,spi_lock_resources);

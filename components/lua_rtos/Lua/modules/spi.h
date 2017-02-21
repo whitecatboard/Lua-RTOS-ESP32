@@ -35,8 +35,6 @@
 #include <drivers/spi.h>
 #include <drivers/cpu.h>
 
-typedef uint32_t spi_data_type;
-
 typedef struct {
     unsigned char spi;
     unsigned char cs;
