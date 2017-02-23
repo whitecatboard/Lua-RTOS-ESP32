@@ -51,6 +51,7 @@
 #define OWIRE_DRIVER_ID  11
 #define MQTT_DRIVER_ID   12
 #define SERVO_DRIVER_ID   13
+#define ESPI_DRIVER_ID   14
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -61,6 +62,7 @@
 #define MQTT_DRIVER driver_get_by_name("mqtt")
 #define OWIRE_DRIVER driver_get_by_name("owire")
 #define SERVO_DRIVER driver_get_by_name("servo")
+#define ESPI_DRIVER driver_get_by_name("espi")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 

@@ -47,16 +47,20 @@
 extern LUA_REG_TYPE adc_error_map[];
 
 static int ladc_setup( lua_State* L ) {
-    int id;
+    int id, res, channel, vref;
 	driver_error_t *error;
 
     id = luaL_checkinteger( L, 1 );
+    channel = luaL_checkinteger( L, 2 );
+    res = luaL_checkinteger( L, 3 );
+    vref = luaL_optinteger( L, 4, 3300 );
 
     adc_userdata *adc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
 
     adc->adc = id;
+    adc->chan = channel;
     
-    if ((error = adc_setup(id))) {
+    if ((error = adc_setup(id, channel, vref, res))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -67,34 +71,7 @@ static int ladc_setup( lua_State* L ) {
 }
 
 static int ladc_setup_channel( lua_State* L ) {
-    int channel, res;
-    adc_userdata *adc = NULL;
-	driver_error_t *error;
-
-    adc = (adc_userdata *)luaL_checkudata(L, 1, "adc");
-    luaL_argcheck(L, adc, 1, "adc expected");
-
-    res = luaL_checkinteger( L, 2 );
-    channel = luaL_checkinteger( L, 3 );
-
-    int attenuation = ADC_ATTEN_0db;
-    if (lua_gettop(L) == 4) {
-    	attenuation = luaL_checkinteger( L, 4 );
-    }
-
-     if ((error = adc_setup_channel(channel, res, attenuation))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    adc_userdata *nadc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
-    memcpy(nadc, adc, sizeof(adc_userdata));
-    
-    nadc->chan = channel;
-
-    luaL_getmetatable(L, "adc");
-    lua_setmetatable(L, -2);
-
-    return 1;
+    return 0;
 }
 
 static int ladc_read( lua_State* L ) {
@@ -106,7 +83,7 @@ static int ladc_read( lua_State* L ) {
     adc = (adc_userdata *)luaL_checkudata(L, 1, "adc");
     luaL_argcheck(L, adc, 1, "adc expected");
 
-    if ((error = adc_read(adc->chan, &raw, &mvlots))) {
+    if ((error = adc_read(adc->adc, adc->chan, &raw, &mvlots))) {
     	return luaL_driver_error(L, error);
     } else {
         lua_pushinteger( L, raw );
@@ -132,6 +109,8 @@ static const LUA_REG_TYPE ladc_chan_map[] = {
 static const LUA_REG_TYPE ladc_constants_map[] = {
 	ADC_ADC0
 	ADC_ADC1
+	ADC_ADC2
+	ADC_ADC3
 	ADC_ADC_CH0
 	ADC_ADC_CH1
 	ADC_ADC_CH2

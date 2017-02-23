@@ -41,13 +41,12 @@ typedef struct {
 } spi_resources_t;
 
 
-#define NSPI 4
-
 // SPI errors
-#define SPI_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  0)
-#define SPI_ERR_INVALID_MODE             (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  1)
-#define SPI_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  2)
-#define SPI_ERR_SLAVE_NOT_ALLOWED		 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  3)
+#define SPI_ERR_INVALID_MODE             (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  0)
+#define SPI_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  1)
+#define SPI_ERR_SLAVE_NOT_ALLOWED	 	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  2)
+#define SPI_ERR_NOT_ENOUGH_MEMORY	 	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  3)
+#define SPI_ERR_PIN_NOT_ALLOWED		     (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  4)
 
 void spi_master_op(int unit, unsigned int word_size, unsigned int len, unsigned char *out, unsigned char *in);
 

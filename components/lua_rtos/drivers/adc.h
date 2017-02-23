@@ -40,9 +40,19 @@
 // ADC channel
 typedef struct {
 	uint8_t setup;
+	uint8_t max_resolution;
 	uint8_t resolution;
 	uint16_t max_val;
+	uint16_t vref;
 } adc_channel_t;
+
+typedef struct {
+	adc_channel_t *channel;
+} adc_unit_t;
+
+typedef struct {
+	driver_unit_lock_t *lock;
+} adc_lock_t;
 
 // Resources used by ADC
 typedef struct {
@@ -50,13 +60,13 @@ typedef struct {
 } adc_resources_t;
 
 // ADC errors
-#define ADC_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  0)
-#define ADC_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  1)
-#define ADC_ERR_INVALID_CHANNEL          (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  2)
-#define ADC_ERR_INVALID_ATTENUATION      (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  4)
+#define ADC_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  0)
+#define ADC_ERR_INVALID_CHANNEL          (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  1)
+#define ADC_ERR_INVALID_RESOLUTION       (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  2)
+#define ADC_ERR_NOT_ENOUGH_MEMORY	 	 (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  3)
 
-driver_error_t *adc_setup(int8_t unit);
-driver_error_t *adc_setup_channel(int8_t channel, int8_t resolution, int8_t attenuation);
-driver_error_t *adc_read(int8_t channel, int *raw, double *mvols);
+driver_error_t *adc_device(int8_t unit, int8_t channel, uint8_t *device);
+driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t resolution);
+driver_error_t *adc_read(uint8_t unit, uint8_t channel, int *raw, double *mvols);
 
 #endif	/* ADC_H */

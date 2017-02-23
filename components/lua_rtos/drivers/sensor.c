@@ -67,17 +67,13 @@ static driver_error_t *sensor_adc_setup(sensor_instance_t *unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
 	driver_error_t *error;
 
-    // Lock ADC channel
+	// Lock ADC channel
     if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, ADC_DRIVER, unit->setup.adc.channel))) {
     	// Revoked lock on ADC channel
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
 
-	if ((error = adc_setup(unit->setup.adc.unit))) {
-		return error;
-	}
-
-	if ((error = adc_setup_channel(unit->setup.adc.channel, unit->setup.adc.resolution, ADC_ATTEN_0db))) {
+	if ((error = adc_setup(unit->setup.adc.unit, unit->setup.adc.channel, 0, unit->setup.adc.resolution))) {
 		return error;
 	}
 

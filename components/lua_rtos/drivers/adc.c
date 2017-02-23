@@ -32,13 +32,6 @@
 #if USE_ADC
 #include "freertos/FreeRTOS.h"
 
-#include "soc/soc.h"
-#include "soc/rtc_io_reg.h"
-#include "soc/rtc_cntl_reg.h"
-#include "soc/sens_reg.h"
-
-#include "driver/adc.h"
-
 #include <stdint.h>
 
 #include <sys/driver.h>
@@ -47,141 +40,169 @@
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
 #include <drivers/adc.h>
+#include <drivers/adc_internal.h>
+#include "adc_mcp3008.h"
+#include "adc_mcp3208.h"
 
-// ADC xs
-static adc_channel_t adc_channels[CPU_LAST_ADC_CH + 1];
-
-// Driver locks
-driver_unit_lock_t adc_locks[CPU_LAST_ADC_CH + 1];
+static adc_unit_t adc_unit[CPU_LAST_ADC + 1];
 
 // Driver message errors
-DRIVER_REGISTER_ERROR(ADC, adc, CannotSetup, "can't setup", ADC_ERR_CANT_INIT);
 DRIVER_REGISTER_ERROR(ADC, adc, InvalidUnit, "invalid unit", ADC_ERR_INVALID_UNIT);
 DRIVER_REGISTER_ERROR(ADC, adc, InvalidChannel, "invalid channel", ADC_ERR_INVALID_CHANNEL);
-DRIVER_REGISTER_ERROR(ADC, adc, InvalidAttenuation, "invalid attenuation", ADC_ERR_INVALID_ATTENUATION);
+DRIVER_REGISTER_ERROR(ADC, adc, InvalidResolution, "invalid resolution", ADC_ERR_INVALID_RESOLUTION);
+DRIVER_REGISTER_ERROR(ADC, adc, NotEnoughtMemory, "not enough memory", ADC_ERR_NOT_ENOUGH_MEMORY);
 
-/*s
- * Operation functions
- *
+/*
+ * Helper functions
  */
 
-// Get the pins used by an ADC channel
-void adc_pins(int8_t channel, uint8_t *pin) {
-	switch (channel) {
-		case 0: *pin = GPIO36; break;
-		case 3: *pin = GPIO39; break;
-		case 4: *pin = GPIO32; break;
-		case 5: *pin = GPIO33; break;
-		case 6: *pin = GPIO34; break;
-		case 7: *pin = GPIO35; break;
-	}
-}
+/*
+ * Operation functions
+ */
 
-// Lock resources needed by ADC
-driver_error_t *adc_lock_resources(int8_t channel, void *resources) {
-	adc_resources_t tmp_adc_resources;
-
-	if (!resources) {
-		resources = &tmp_adc_resources;
-	}
-
-	adc_resources_t *adc_resources = (adc_resources_t *)resources;
-    driver_unit_lock_error_t *lock_error = NULL;
-
-    adc_pins(channel, &adc_resources->pin);
-
-    // Lock this pins
-    if ((lock_error = driver_lock(ADC_DRIVER, channel, GPIO_DRIVER, adc_resources->pin))) {
-    	// Revoked lock on pin
-    	return driver_lock_error(ADC_DRIVER, lock_error);
-    }
-
-    return NULL;
-}
-
-// ADC setup
-driver_error_t *adc_setup(int8_t unit) {
+// Get the ADC device number
+driver_error_t *adc_device(int8_t unit, int8_t channel, uint8_t *device) {
 	// Sanity checks
-	if (unit != 1) {
+	if ((unit < CPU_FIRST_ADC) || (unit > CPU_LAST_ADC)) {
 		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, NULL);
 	}
 
-	adc1_config_width(ADC_WIDTH_12Bit);
+	if ((unit < CPU_FIRST_ADC_CH) || (unit > CPU_LAST_ADC_CH)) {
+		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+	}
+
+	if (unit == 1) {
+		if (!((1 << channel) & CPU_ADC_ALL)) {
+			return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+		}
+
+		*device = channel;
+	} else {
+		*device = ((CPU_LAST_ADC_CH + 1)) + channel;
+	}
 
 	return NULL;
 }
 
-// Setup an ADC channel
-driver_error_t *adc_setup_channel(int8_t channel, int8_t resolution, int8_t attenuation) {
+// Setup ADC channel
+driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t resolution) {
+	driver_error_t *error = NULL;
+	uint8_t device;
+
 	// Sanity checks
-	if (!((1 << channel) & CPU_ADC_ALL)) {
+	if ((unit < CPU_FIRST_ADC) || (unit > CPU_LAST_ADC)) {
+		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((unit < CPU_FIRST_ADC_CH) || (unit > CPU_LAST_ADC_CH)) {
 		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
 	}
 
-	if ((attenuation < 0) || (attenuation > 3)) {
-		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_ATTENUATION, NULL);
-	}
+	// Allocate space for channels and locks, if needed
+	if (!adc_unit[unit].channel) {
+		adc_channel_t *channels;
 
-	if (!adc_channels[channel].setup) {
-		// Lock resources
-		driver_error_t *error;
-		adc_resources_t resources;
-
-		if ((error = adc_lock_resources(channel, &resources))) {
-			return error;
+		if (!(channels = calloc(CPU_LAST_ADC_CH + 1, sizeof(adc_channel_t)))) {
+			return driver_operation_error(ADC_DRIVER, ADC_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
 
-		adc1_config_channel_atten(channel, attenuation);
-
-		syslog(LOG_INFO, "adc%d: at pin %s%d", channel, gpio_portname(resources.pin), gpio_name(resources.pin));
-	} else {
-		adc1_config_channel_atten(channel, attenuation);
+		adc_unit[unit].channel = channels;
 	}
 
-	adc_channels[channel].setup = 1;
-	adc_channels[channel].resolution = resolution;
+	// Store channel configuration
+	switch (unit) {
+		case 1:
+			adc_internal_setup(unit, channel);
+			adc_unit[unit].channel[channel].max_resolution = 12;
+			adc_unit[unit].channel[channel].vref = CPU_ADC_REF;
+			break;
+
+		case 2:
+			adc_mcp3008_setup(unit, channel, 2, 15);
+			adc_unit[unit].channel[channel].max_resolution = 10;
+			adc_unit[unit].channel[channel].vref = vref;
+			break;
+
+		case 3:
+			adc_mcp3208_setup(unit, channel, 2, 16);
+			adc_unit[unit].channel[channel].max_resolution = 12;
+			adc_unit[unit].channel[channel].vref = vref;
+			break;
+	}
+
+	// Sanity checks
+	if ((resolution < 6) || (resolution > adc_unit[unit].channel[channel].max_resolution)) {
+		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_RESOLUTION, NULL);
+	}
+
+	adc_unit[unit].channel[channel].setup = 1;
+	adc_unit[unit].channel[channel].resolution = resolution;
 
     switch (resolution) {
-        case 6:  adc_channels[channel].max_val = 63;  break;
-        case 8:  adc_channels[channel].max_val = 255; break;
-        case 9:  adc_channels[channel].max_val = 511; break;
-        case 10: adc_channels[channel].max_val = 1023;break;
-        case 11: adc_channels[channel].max_val = 2047;break;
-        case 12: adc_channels[channel].max_val = 4095;break;
+        case 6:  adc_unit[unit].channel[channel].max_val = 63;  break;
+        case 7:  adc_unit[unit].channel[channel].max_val = 127; break;
+        case 8:  adc_unit[unit].channel[channel].max_val = 255; break;
+        case 9:  adc_unit[unit].channel[channel].max_val = 511; break;
+        case 10: adc_unit[unit].channel[channel].max_val = 1023;break;
+        case 11: adc_unit[unit].channel[channel].max_val = 2047;break;
+        case 12: adc_unit[unit].channel[channel].max_val = 4095;break;
     }
 
 	return NULL;
 }
 
-driver_error_t *adc_read(int8_t channel, int *raw, double *mvols) {
-	int val;
+driver_error_t *adc_read(uint8_t unit, uint8_t channel, int *raw, double *mvols) {
+	driver_error_t *error = NULL;
 
-	// Sanity checks
-	if (!((1 << channel) & CPU_ADC_ALL)) {
-		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+	switch (unit) {
+		case 1:
+			adc_internal_read(unit, channel, raw);
+			break;
+
+		case 2:
+			adc_mcp3008_read(unit, channel, raw);
+			break;
+
+		case 3:
+			adc_mcp3208_read(unit, channel, raw);
+			break;
 	}
 
-	// Get raw value
-	val = adc1_get_voltage(channel);
+	// Normalize raw value to device resolution
+	int resolution = adc_unit[unit].channel[channel].resolution;
+	int max_val = adc_unit[unit].channel[channel].max_val;
 
-	// Normalize to channel resolution
-	int resolution = adc_channels[channel].resolution;
-	int max_val = adc_channels[channel].max_val;
-
-	if (resolution != 12) {
-		if (val & (1 << (12 - resolution - 1))) {
-	    	val = ((val >> (12 - resolution)) + 1) & max_val;
-	    } else {
-	    	val = val >> (12 - resolution);
-	    }
+	if (resolution != adc_unit[unit].channel[channel].max_resolution) {
+		if (*raw & (1 << (adc_unit[unit].channel[channel].resolution - resolution - 1))) {
+			*raw = ((*raw >> (adc_unit[unit].channel[channel].resolution - resolution)) + 1) & max_val;
+		} else {
+			*raw = *raw >> (adc_unit[unit].channel[channel].resolution - resolution);
+		}
 	}
 
-    *raw = val;
-	*mvols = ((double)val * (double)CPU_ADC_REF) / (double)max_val;
+	// Convert raw value to millivolts
+	*mvols = ((double)(*raw) * (double)adc_unit[unit].channel[channel].vref) / (double)max_val;
 
 	return NULL;
 }
 
-DRIVER_REGISTER(ADC,adc,adc_locks,NULL,NULL);
+DRIVER_REGISTER(ADC,adc,NULL,NULL,NULL);
 
 #endif
+
+/*
+-- mcp = adc.setup(adc.MCP3208, 0, 12, 3300)
+--mcp:read()
+
+mcp = adc.setup(adc.MCP3008, 0, 10, 3300)
+mcp:read()
+
+-- mcp = adc.setup(adc.ADC1, 7, 12)
+while true do
+	raw, mvolts = mcp:read()
+
+    temp = (mvolts - 500) / 10
+	print("raw: "..raw..", mvolts: "..mvolts..", temp: "..temp)
+	tmr.delay(1)
+end
+*/

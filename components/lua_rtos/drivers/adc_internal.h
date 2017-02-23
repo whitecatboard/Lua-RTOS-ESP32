@@ -1,12 +1,12 @@
 /*
- * Lua RTOS, TMP36 sensor (temperature)
+ * Lua RTOS, ADC internal driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
- *
+ * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- *
- * All rights reserved.
+ * 
+ * All rights reserved.  
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -27,46 +27,12 @@
  * this software.
  */
 
-#include "tmp36.h"
+#ifndef _ADC_INTERNAL_H
+#define	_ADC_INTERNAL_H
 
-#include <math.h>
+#include <stdint.h>
 
-#include <sys/driver.h>
+driver_error_t *adc_internal_setup(int8_t unit, int8_t channel);
+driver_error_t *adc_internal_read(int8_t unit, int8_t channel, int *raw);
 
-#include <drivers/sensor.h>
-#include <drivers/adc.h>
-
-// Sensor specification and registration
-static const sensor_t __attribute__((used,unused,section(".sensors"))) tmp36_sensor = {
-	.id = "TMP36",
-	.interface = ADC_INTERFACE,
-	.data = {
-		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
-	},
-	.setup = tmp36_setup,
-	.acquire = tmp36_acquire
-};
-
-/*
- * Operation functions
- */
-driver_error_t *tmp36_setup(sensor_instance_t *unit) {
-	return NULL;
-}
-
-driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values) {
-	driver_error_t *error;
-	int raw = 0;
-	double mvolts = 0;
-
-	// Read value
-	if ((error = adc_read(unit->setup.adc.unit, unit->setup.adc.channel, &raw, &mvolts))) {
-		return error;
-	}
-
-	// Calculate temperature
-	// TMP36 has a resolution of 0.5 ºC, so round to 1 decimal place
-	values->floatd.value = floor(10.0 * (((float)mvolts - 500) / 10)) / 10.0;
-
-	return NULL;
-}
+#endif	/* _ADC_INTERNAL_H */

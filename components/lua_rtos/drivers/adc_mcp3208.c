@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, TMP36 sensor (temperature)
+ * Lua RTOS, ADC MCP3208 driver
  *
  * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -27,46 +27,48 @@
  * this software.
  */
 
-#include "tmp36.h"
+#include <sys/syslog.h>
 
-#include <math.h>
-
-#include <sys/driver.h>
-
-#include <drivers/sensor.h>
+#include <drivers/gpio.h>
+#include <drivers/spi.h>
 #include <drivers/adc.h>
+#include <drivers/adc_mcp3208.h>
 
-// Sensor specification and registration
-static const sensor_t __attribute__((used,unused,section(".sensors"))) tmp36_sensor = {
-	.id = "TMP36",
-	.interface = ADC_INTERFACE,
-	.data = {
-		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
-	},
-	.setup = tmp36_setup,
-	.acquire = tmp36_acquire
-};
+static uint8_t mcp3208_spi;
+static uint8_t mcp3208_cs;
 
-/*
- * Operation functions
- */
-driver_error_t *tmp36_setup(sensor_instance_t *unit) {
+driver_error_t *adc_mcp3208_setup(int8_t unit, int8_t channel, uint8_t spi, uint8_t cs) {
+	driver_error_t *error;
+
+    mcp3208_spi = spi;
+    mcp3208_cs = cs;
+
+    // Init SPI bus
+    if ((error = spi_init(mcp3208_spi, 1))) {
+        return error;
+    }
+
+	syslog(LOG_INFO, "adc MCP3208 channel %d at spi%d, cs=%s%d", channel, spi, gpio_portname(cs), gpio_name(cs));
+
 	return NULL;
 }
 
-driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values) {
-	driver_error_t *error;
-	int raw = 0;
-	double mvolts = 0;
+driver_error_t *adc_mcp3208_read(int8_t unit, int8_t channel, int *raw) {
+    uint8_t msb, lsb;
 
-	// Read value
-	if ((error = adc_read(unit->setup.adc.unit, unit->setup.adc.channel, &raw, &mvolts))) {
-		return error;
-	}
+    spi_set_mode(mcp3208_spi, 0);
+    spi_set_speed(mcp3208_spi, ADC_MCP3208_SPEED);
+    spi_set_cspin(mcp3208_spi, mcp3208_cs);
 
-	// Calculate temperature
-	// TMP36 has a resolution of 0.5 ºC, so round to 1 decimal place
-	values->floatd.value = floor(10.0 * (((float)mvolts - 500) / 10)) / 10.0;
+    spi_select(mcp3208_spi);
 
-	return NULL;
+    spi_transfer(mcp3208_spi, ((0x18 | channel) & 0x1f) >> 2, &msb);
+    spi_transfer(mcp3208_spi, ((0x18 | channel) & 0x03) << 6, &msb);
+    spi_transfer(mcp3208_spi, 0, &lsb);
+
+    spi_deselect(mcp3208_spi);
+
+    *raw = ((msb & 0x0f) << 8 | lsb);
+
+    return NULL;
 }

@@ -35,7 +35,6 @@
  * esp-open-rtos (https://github.com/SuperHouse/esp-open-rtos)
  *
  */
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -57,18 +56,20 @@
 #include <drivers/cpu.h>
 
 // Driver message errors
-DRIVER_REGISTER_ERROR(SPI, spi, CannotSetup, "can't setup",  SPI_ERR_CANT_INIT);
 DRIVER_REGISTER_ERROR(SPI, spi, InvalidMode, "invalid mode", SPI_ERR_INVALID_MODE);
 DRIVER_REGISTER_ERROR(SPI, spi, InvalidUnit, "invalid unit", SPI_ERR_INVALID_UNIT);
 DRIVER_REGISTER_ERROR(SPI, spi, SlaveNotAllowed, "slave mode not allowed", SPI_ERR_SLAVE_NOT_ALLOWED);
+DRIVER_REGISTER_ERROR(SPI, spi, NotEnoughtMemory, "not enough memory", SPI_ERR_NOT_ENOUGH_MEMORY);
+DRIVER_REGISTER_ERROR(SPI, spi, PinNowAllowed, "pin not allowed", SPI_ERR_PIN_NOT_ALLOWED);
 
 // SPI structures
 struct spi {
-    int          cs;	  // cs pin for device (if 0 use default cs pin)
-    unsigned int speed;   // spi device speed
-    unsigned int divisor; // clock divisor
-    unsigned int mode;    // device spi mode
-    unsigned int dirty;   // if 1 device must be reconfigured at next spi_select
+	uint8_t  cs;	  // cs pin for device (if 0 use default cs pin)
+    uint32_t speed;   // spi device speed
+    uint32_t divisor; // clock divisor
+    uint8_t  mode;    // device spi mode
+    uint8_t  dirty;   // if 1 device must be reconfigured at next spi_select
+    uint8_t  setup;   // device setup?
 };
 
 struct spi spi[CPU_LAST_SPI + 1];
@@ -556,10 +557,12 @@ driver_error_t *spi_bulk_rw(int unit, unsigned int nbytes, unsigned char *data) 
 	    taskDISABLE_INTERRUPTS();
 	    spi_master_op(unit, 1, nbytes, data, read);
 	    taskENABLE_INTERRUPTS();
-	}
 
-	memcpy(data, read, nbytes);
-	free(read);
+	    memcpy(data, read, nbytes);
+		free(read);
+	} else {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_NOT_ENOUGH_MEMORY, NULL);
+	}
 
 	return NULL;
 }
@@ -666,7 +669,7 @@ driver_error_t *spi_bulk_read32_be(int unit, unsigned int words, int *data) {
  * Return the name of the SPI bus for a device.
  */
 const char *spi_name(int unit) {
-    static const char *name[NSPI] = { "spi0", "spi1", "spi2", "spi3" };
+    static const char *name[CPU_LAST_SPI + 1] = { "spi0", "spi1", "spi2", "spi3" };
     return name[unit];
 }
 
@@ -701,6 +704,9 @@ driver_error_t *spi_init(int unit, int master) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_SLAVE_NOT_ALLOWED, NULL);
 	}
 
+	// If device is setup, nothing to do
+	if (dev->setup) return NULL;
+
     // Lock resources
     driver_error_t *error;
     spi_resources_t resources;
@@ -724,6 +730,7 @@ driver_error_t *spi_init(int unit, int master) {
     spi_set_mode(unit, 0);
 
     dev->dirty = 1;
+    dev->setup = 1;
     
     return NULL;
 }

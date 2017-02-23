@@ -37,6 +37,14 @@ SECTIONS {
     KEEP(*(.spi_error_map))
     LONG(0) LONG(0)
 
+    espi_errors = ABSOLUTE(.);
+    KEEP(*(.espi_errors))
+    LONG(0) LONG(0)
+
+    espi_error_map = ABSOLUTE(.);
+    KEEP(*(.espi_error_map))
+    LONG(0) LONG(0)
+
     adc_errors = ABSOLUTE(.);
     KEEP(*(.adc_errors))
     LONG(0) LONG(0)

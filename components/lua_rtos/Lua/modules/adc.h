@@ -50,6 +50,18 @@ typedef struct {
 #define ADC_ADC1
 #endif
 
+#ifdef CPU_ADC2
+#define ADC_ADC2 {LSTRKEY(CPU_ADC2_NAME), LINTVAL(CPU_ADC2)},
+#else
+#define ADC_ADC2
+#endif
+
+#ifdef CPU_ADC3
+#define ADC_ADC3 {LSTRKEY(CPU_ADC3_NAME), LINTVAL(CPU_ADC3)},
+#else
+#define ADC_ADC3
+#endif
+
 #ifdef CPU_ADC_CH0
 #define ADC_ADC_CH0 {LSTRKEY(CPU_ADC_CH0_NAME), LINTVAL(CPU_ADC_CH0)},
 #else
