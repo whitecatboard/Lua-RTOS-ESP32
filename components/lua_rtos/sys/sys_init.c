@@ -1,7 +1,7 @@
 /*
  * Lua RTOS, system init
  *
- * Copyright (C) 2015 - 2016
+ * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
@@ -115,7 +115,7 @@ void _sys_init() {
     printf("/_____________\\\r\n");
     printf("W H I T E C A T\r\n\r\n");
 
-    printf("Lua RTOS %s build %d Copyright (C) 2015 - 2016 whitecatboard.org\r\n", LUA_OS_VER, BUILD_TIME);
+    printf("Lua RTOS %s build %d Copyright (C) 2015 - 2017 whitecatboard.org\r\n", LUA_OS_VER, BUILD_TIME);
 
     printf("board type %s\r\n", LUA_RTOS_BOARD);
 

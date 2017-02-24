@@ -116,7 +116,7 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
    /_____________\
    W H I T E C A T
 
-   Lua RTOS beta 0.1 build 1479953238 Copyright (C) 2015 - 2016 whitecatboard.org
+   Lua RTOS beta 0.1 build 1479953238 Copyright (C) 2015 - 2017 whitecatboard.org
    cpu ESP32 at 240 Mhz
    spiffs0 start address at 0x180000, size 512 Kb
    spiffs0 mounted
