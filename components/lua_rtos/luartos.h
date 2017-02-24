@@ -5,6 +5,27 @@
 #include "esp_task.h"
 #include "sdkconfig.h"
 
+/* Board type */
+#if CONFIG_LUA_RTOS_BOARD_WHITECAT_N1ESP32
+#define LUA_RTOS_BOARD "WHITECAT ESP32 N1"
+#endif
+
+#if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+#define LUA_RTOS_BOARD "ESP32 CORE BOARD"
+#endif
+
+#if LUA_RTOS_BOARD_ESP32_THING
+#define LUA_RTOS_BOARD "ESP32 THING"
+#endif
+
+#if LUA_RTOS_BOARD_OTHER
+#define LUA_RTOS_BOARD "OTHER COMPATIBLE BOARD"
+#endif
+
+#ifndef LUA_RTOS_BOARD
+#define LUA_RTOS_BOARD "OTHER COMPATIBLE BOARD"
+#endif
+
 /*
  * Lua modules to build
  *

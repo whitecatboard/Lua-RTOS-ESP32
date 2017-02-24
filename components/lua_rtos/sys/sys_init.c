@@ -117,6 +117,8 @@ void _sys_init() {
 
     printf("Lua RTOS %s build %d Copyright (C) 2015 - 2016 whitecatboard.org\r\n", LUA_OS_VER, BUILD_TIME);
 
+    printf("board type %s\r\n", LUA_RTOS_BOARD);
+
 	#ifdef RUN_TESTS
 		// Create and run a pthread for tests
 		pthread_attr_t attr;

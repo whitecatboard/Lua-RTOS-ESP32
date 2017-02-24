@@ -61,6 +61,14 @@ void *lua_start(void *arg) {
 
 int linenoise(char *buf, const char *prompt);
 
+#if CONFIG_FREERTOS_LEGACY_TICK_HOOK
+void IRAM_ATTR vApplicationTickHook(void) {
+#if USE_LED_ACT
+	newTick();
+#endif
+}
+#endif
+
 void app_main() {
     nvs_flash_init();
 	

@@ -1,4 +1,20 @@
 menu "Lua RTOS"
+	choice LUA_RTOS_BOARD_TYPE
+	prompt "Board Type"
+	default LUA_RTOS_BOARD_WHITECAT_N1ESP32
+	config LUA_RTOS_BOARD_WHITECAT_N1ESP32
+	bool "WHITECAT ESP32 N1"
+		
+	config LUA_RTOS_BOARD_ESP32_CORE_BOARD
+	bool "ESP32 CORE BOARD"
+
+	config LUA_RTOS_BOARD_ESP32_THING
+	bool "ESP32 THING"
+
+	config LUA_RTOS_BOARD_OTHER
+	bool "OTHER COMPATIBLE BOARD"
+
+	endchoice
   menu "General"
 	menu "System Priorities"
 		config LUA_RTOS_SYS_TASK_HIGH_PRIORITY
@@ -13,6 +29,7 @@ menu "Lua RTOS"
     
   	config LUA_RTOS_USE_LED_ACT
   	bool "Use activity led"
+  	select FREERTOS_LEGACY_TICK_HOOK if LUA_RTOS_USE_LED_ACT
   	default n
     help 
 		Select this to enable the Lua RTOS activity led.
