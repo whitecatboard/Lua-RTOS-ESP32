@@ -1,18 +1,20 @@
 menu "Lua RTOS"
 	choice LUA_RTOS_BOARD_TYPE
-	prompt "Board Type"
-	default LUA_RTOS_BOARD_WHITECAT_N1ESP32
-	config LUA_RTOS_BOARD_WHITECAT_N1ESP32
-	bool "WHITECAT ESP32 N1"
+		prompt "Board Type"
+		default LUA_RTOS_BOARD_WHITECAT_N1ESP32
+	
+		config LUA_RTOS_BOARD_WHITECAT_N1ESP32
+			bool "WHITECAT ESP32 N1"
+			#select LUA_RTOS_USE_POWER_BUS if LUA_RTOS_BOARD_WHITECAT_N1ESP32
 		
-	config LUA_RTOS_BOARD_ESP32_CORE_BOARD
-	bool "ESP32 CORE BOARD"
+		config LUA_RTOS_BOARD_ESP32_CORE_BOARD
+			bool "ESP32 CORE BOARD"
 
-	config LUA_RTOS_BOARD_ESP32_THING
-	bool "ESP32 THING"
+		config LUA_RTOS_BOARD_ESP32_THING
+			bool "ESP32 THING"
 
-	config LUA_RTOS_BOARD_OTHER
-	bool "OTHER COMPATIBLE BOARD"
+		config LUA_RTOS_BOARD_OTHER
+			bool "OTHER COMPATIBLE BOARD"
 
 	endchoice
   menu "General"
@@ -27,18 +29,31 @@ menu "Lua RTOS"
 	    	time.
     endmenu
     
+    config LUA_RTOS_USE_POWER_BUS
+  		bool "Use power bus"
+  		default n
+    	help
+			Power bus allows to provide power to sensors connected to the bus. This is useful in IOT deployments to
+			ensure that the sensors do not consume energy while the CPU is sleeping.
+
+	config LUA_RTOS_POWER_BUS_PIN
+    	int "Power bus GPIO number"
+    	depends on LUA_RTOS_USE_POWER_BUS
+    	range 0 39
+    	default 25
+		
   	config LUA_RTOS_USE_LED_ACT
-  	bool "Use activity led"
-  	select FREERTOS_LEGACY_TICK_HOOK if LUA_RTOS_USE_LED_ACT
-  	default n
-    help 
-		Select this to enable the Lua RTOS activity led.
+	  	bool "Use activity led"
+  		select FREERTOS_LEGACY_TICK_HOOK if LUA_RTOS_USE_LED_ACT
+  		default n
+    	help 
+			Select this to enable the Lua RTOS activity led.
 
 	config LUA_RTOS_LED_ACT
-	depends on LUA_RTOS_USE_LED_ACT
-    int "Activity led GPIO number"
-    range 0 39
-    default 4
+		depends on LUA_RTOS_USE_LED_ACT
+    	int "Activity led GPIO number"
+    	range 0 39
+    	default 4
   endmenu
   menu "Console"
   	config LUA_RTOS_USE_CONSOLE
@@ -222,22 +237,51 @@ menu "Lua RTOS"
     
   menu "Lua"
 	  menu "Tunning"
+		config LUA_RTOS_LUA_STACK_SIZE
+			int "Lua interpreter stack size"
+			range 1024 40960
+			default 20480
+			help
+				Default stack size assigned to the Lua interpreter.
+
 		config LUA_RTOS_LUA_TASK_PRIORITY
-		int "Lua interpreter task priority"
-		range 3 11
-		default 3
-		help
-			Task priority assigned to the Lua interpreter. Lua RTOS has a thread-oriented programming model and
-			basically the Lua interpreter is used only for launch new threads and configure the system, so
-			it's not necessary to assing a high piority to the interpreter.
+			int "Lua interpreter task priority"
+			range 3 25
+			default 3
+			help
+				Task priority assigned to the Lua interpreter. Lua RTOS has a thread-oriented programming model and
+				basically the Lua interpreter is used only for launch new threads and configure the system, so
+				it's not necessary to assing a high piority to the interpreter.
 			
 		config LUA_RTOS_LUA_TASK_CPU
-		depends on !FREERTOS_UNICORE
-		int "Lua interpreter task CPU affinity"
-		range 0 1
-		default 0
-		help
-			CPU affinity for the task assigned to the Lua interpreter.
+			depends on !FREERTOS_UNICORE
+			int "Lua interpreter task CPU affinity"
+			range 0 1
+			default 0
+			help
+				CPU affinity for the task assigned to the Lua interpreter.
+				
+		config LUA_RTOS_LUA_THREAD_STACK_SIZE
+			int "Default Lua thread stack size"
+			range 1024 40960
+			default 10240
+			help
+				Default Stack size assigned to Lua threads.
+
+		config LUA_RTOS_LUA_THREAD_PRIORITY
+			int "Default Lua thread priority"
+			range 3 25
+			default 20
+			help
+				Default priority assigned to Lua threads.
+			
+		config LUA_RTOS_LUA_THREAD_CPU
+			depends on !FREERTOS_UNICORE
+			int "Default Lua thread CPU affinity"
+			range 0 1
+			default 1
+			help
+				Default CPU affinity for Lua threads.
 	  endmenu
 	  
 	  menu "Lua Modules"

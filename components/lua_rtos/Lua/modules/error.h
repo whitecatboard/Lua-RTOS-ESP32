@@ -49,4 +49,12 @@ int luaL_driver_error(lua_State* L, driver_error_t *error);
 		driver_get_err_msg_by_exception(exception) \
 	)
 
+#define luaL_exception_extended(l, exception, msg) \
+	luaL_error(l, \
+		"%d:%s (%s)", \
+		exception, \
+		driver_get_err_msg_by_exception(exception), \
+		msg \
+	)
+
 #endif

@@ -62,7 +62,7 @@
 #endif
 
 // Minimal stack size per thread
-#define PTHREAD_STACK_MIN LUA_THREAD_STACK
+#define PTHREAD_STACK_MIN (1024 * 2)
 
 #define PTHREAD_CREATE_DETACHED 0
 

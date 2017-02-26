@@ -35,7 +35,7 @@
 #include <pthread/pthread.h>
 
 int pthread_attr_init(pthread_attr_t *attr) {
-    attr->stack_size = PTHREAD_STACK_MIN;
+    attr->stack_size = CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE;
     attr->initial_state = PTHREAD_INITIAL_STATE_RUN;
     attr->sched_priority = TASK_PRIORITY;
     attr->cpuset = tskNO_AFFINITY;

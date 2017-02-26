@@ -38,6 +38,7 @@
 #include "lmem.h"
 #include "ldo.h"
 #include "thread.h"
+#include "error.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -47,6 +48,23 @@
 #include <errno.h>
 
 #include <pthread.h>
+
+// Module errors
+#define LUA_THREAD_ERR_NOT_ENOUGH_MEMORY    (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  0)
+#define LUA_THREAD_ERR_NOT_ALLOWED          (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  1)
+#define LUA_THREAD_ERR_NON_EXISTENT         (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  2)
+#define LUA_THREAD_ERR_CANNOT_START         (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  3)
+#define LUA_THREAD_ERR_INVALID_STACK_SIZE   (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  4)
+#define LUA_THREAD_ERR_INVALID_PRIORITY     (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  5)
+#define LUA_THREAD_ERR_INVALID_CPU_AFFINITY (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  6)
+
+DRIVER_REGISTER_ERROR(THREAD, thread, NotEnoughtMemory, "not enough memory", LUA_THREAD_ERR_NOT_ENOUGH_MEMORY);
+DRIVER_REGISTER_ERROR(THREAD, thread, NotAllowed, "not allowed", LUA_THREAD_ERR_NOT_ALLOWED);
+DRIVER_REGISTER_ERROR(THREAD, thread, NonExistentThread, "non-existent thread", LUA_THREAD_ERR_NON_EXISTENT);
+DRIVER_REGISTER_ERROR(THREAD, thread, CannotStart, "cannot start thread", LUA_THREAD_ERR_CANNOT_START);
+DRIVER_REGISTER_ERROR(THREAD, thread, InvalidStackSize, "invalid stack size", LUA_THREAD_ERR_INVALID_STACK_SIZE);
+DRIVER_REGISTER_ERROR(THREAD, thread, InvalidPriority, "invalid priority", LUA_THREAD_ERR_INVALID_PRIORITY);
+DRIVER_REGISTER_ERROR(THREAD, thread, InvaludCPUAffinity, "invalid CPU affinity", LUA_THREAD_ERR_INVALID_CPU_AFFINITY);
 
 #define LTHREAD_STATUS_RUNNING   1
 #define LTHREAD_STATUS_SUSPENDED 2
@@ -99,6 +117,9 @@ static int thread_suspend_pthreads(lua_State *L, int thid) {
     struct lthread *thread;
     int res, idx;
     
+    // For now this is not allowd in ESP32
+    return luaL_exception_extended(L, LUA_THREAD_ERR_NOT_ALLOWED, "in ESP32");
+
     if (thid) {
         idx = thid;
     } else {
@@ -108,7 +129,7 @@ static int thread_suspend_pthreads(lua_State *L, int thid) {
     while (idx >= 0) {
         res = list_get(&lthread_list, idx, (void **)&thread);
         if (res) {
-            return luaL_error(L, "can't suspend thread %d", idx);
+        	luaL_exception(L, LUA_THREAD_ERR_NON_EXISTENT);
         }
 
         // If thread is created, suspend
@@ -133,6 +154,9 @@ static int thread_resume_pthreads(lua_State *L, int thid) {
     struct lthread *thread;
     int res, idx;
     
+    // For now this is not allowd in ESP32
+    return luaL_exception_extended(L, LUA_THREAD_ERR_NOT_ALLOWED, "in ESP32");
+
     if (thid) {
         idx = thid;
     } else {
@@ -142,7 +166,7 @@ static int thread_resume_pthreads(lua_State *L, int thid) {
     while (idx >= 0) {
         res = list_get(&lthread_list, idx, (void **)&thread);
         if (res) {
-            return luaL_error(L, "can't resume thread %d", idx);
+        	luaL_exception(L, LUA_THREAD_ERR_NON_EXISTENT);
         }
 
         // If thread is created, suspend
@@ -176,7 +200,7 @@ static int thread_stop_pthreads(lua_State *L, int thid) {
     while (idx >= 0) {
         res = list_get(&lthread_list, idx, (void **)&thread);
         if (res) {
-            return luaL_error(L, "can't stop thread %d", idx);
+        	luaL_exception(L, LUA_THREAD_ERR_NON_EXISTENT);
         }
 
         // If thread is created, suspend
@@ -266,14 +290,39 @@ static int thread_list(lua_State *L) {
 static int new_thread(lua_State* L, int run) {
     struct lthread *thread;
     pthread_attr_t attr;
+	struct sched_param sched;
     int res, idx;
     pthread_t id;
     int retries;
-    
+
+    // Get stack size, priotity and cpu affinity
+    int stack = luaL_optinteger(L, 2, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE);
+    int priority = luaL_optinteger(L, 3, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY);
+    int affinity = luaL_optinteger(L, 4, CONFIG_LUA_RTOS_LUA_THREAD_CPU);
+
+    // Sanity checks
+    if (stack < PTHREAD_STACK_MIN) {
+    	return luaL_exception(L, LUA_THREAD_ERR_INVALID_STACK_SIZE);
+    }
+
+    if ((priority < ESP_TASK_PRIO_MIN + 3) || (priority > ESP_TASK_PRIO_MAX)) {
+    	return luaL_exception(L, LUA_THREAD_ERR_INVALID_PRIORITY);
+    }
+
+    if ((affinity < 0) || (affinity > 1)) {
+    	return luaL_exception(L, LUA_THREAD_ERR_INVALID_CPU_AFFINITY);
+    }
+
+    // TO DO
+    // Something is wrong somewhere. We need to do this for now.
+    while (lua_gettop(L) > 1) {
+        lua_remove(L, -1);
+    }
+
     // Allocate space for lthread info
     thread = (struct lthread *)malloc(sizeof(struct lthread));
     if (!thread) {
-        return luaL_error(L, "not enough memory");
+    	return luaL_exception(L, LUA_THREAD_ERR_NOT_ENOUGH_MEMORY);
     }
     
     // Check for argument is a function, and store it's reference
@@ -293,12 +342,23 @@ static int new_thread(lua_State* L, int run) {
     res = list_add(&lthread_list, thread, &idx);
     if (res) {
         free(thread);
-        return luaL_error(L, "not enough memory");
+    	return luaL_exception(L, LUA_THREAD_ERR_NOT_ENOUGH_MEMORY);
     }
 
-    // Create pthread
-    pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, LUA_THREAD_STACK);
+	// Init thread attributes
+	pthread_attr_init(&attr);
+
+	// Set stack size
+    pthread_attr_setstacksize(&attr, stack);
+
+    // Set priority
+    sched.sched_priority = priority;
+    pthread_attr_setschedparam(&attr, &sched);
+
+    // Set CPU
+    cpu_set_t cpu_set = affinity;
+    pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+
 
     if (run)  {
         pthread_attr_setinitialstate(&attr, PTHREAD_INITIAL_STATE_RUN);
@@ -323,7 +383,7 @@ retry:
         
         list_remove(&lthread_list, idx, 1);
         
-        return luaL_error(L, "can't start pthread (%s)",strerror(errno));
+        return luaL_exception_extended(L, LUA_THREAD_ERR_CANNOT_START, strerror(errno));
     }
 
     // Update thread status
@@ -418,6 +478,8 @@ static int thread_status(lua_State* L) {
 
 #include "modules.h"
 
+extern LUA_REG_TYPE thread_error_map[];
+
 static const LUA_REG_TYPE thread[] = {
     { LSTRKEY( "status" ),			LFUNCVAL( thread_status ) },
     { LSTRKEY( "create" ),			LFUNCVAL( thread_create ) },
@@ -430,7 +492,11 @@ static const LUA_REG_TYPE thread[] = {
     { LSTRKEY( "sleepms" ),			LFUNCVAL( thread_sleepms ) },
     { LSTRKEY( "sleepus" ),			LFUNCVAL( thread_sleepus ) },
     { LSTRKEY( "usleep" ),			LFUNCVAL( thread_sleepus ) },
-    { LNILKEY, LNILVAL }
+
+	// Error definitions
+	{LSTRKEY("error"),  			LROVAL( thread_error_map )},
+
+	{ LNILKEY, LNILVAL }
 };
 
 int luaopen_thread(lua_State* L) {
@@ -445,5 +511,6 @@ int luaopen_thread(lua_State* L) {
 } 
  
 MODULE_REGISTER_MAPPED(THREAD, thread, thread, luaopen_thread);
+DRIVER_REGISTER(THREAD,thread,NULL,NULL,NULL);
 
 #endif

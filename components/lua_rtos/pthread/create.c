@@ -53,7 +53,7 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
         initial_state = attr->initial_state;
         cpu = attr->cpuset;
     } else {
-        stacksize = PTHREAD_STACK_MIN;
+        stacksize = CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE;
         initial_state = PTHREAD_INITIAL_STATE_RUN;
         priority = TASK_PRIORITY;
 

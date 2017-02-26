@@ -29,6 +29,14 @@ SECTIONS {
 	/* exception names exported to Lua modules */
 	/* TO DO */
 	/*   Generate this entries automatically */
+    thread_errors = ABSOLUTE(.);
+    KEEP(*(.thread_errors))
+    LONG(0) LONG(0)
+
+    thread_error_map = ABSOLUTE(.);
+    KEEP(*(.thread_error_map))
+    LONG(0) LONG(0)
+
     spi_errors = ABSOLUTE(.);
     KEEP(*(.spi_errors))
     LONG(0) LONG(0)
