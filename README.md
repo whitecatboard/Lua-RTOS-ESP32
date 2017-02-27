@@ -40,6 +40,8 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
 
 ## Method 1: get a precompiled firmware
 
+1. Install esptool (the ESP32 flasher utility), following  [this instructions](https://github.com/espressif/esptool).
+
 1. Get the precompiled binaries for your board:
 
    | Board              |
