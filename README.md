@@ -77,25 +77,29 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
    ```lua
    source ./env
    ```
-   
- 1. Set sdkconfig for your board:
+
+1. Set sdkconfig for your board:
 
    For WHITECAT ESP32 N1 board:
+   
    ```lua
    cp WHITECAT-ESP32-N1 sdkconfig 
    ```
 
    For ESP32 CORE board:
+   
    ```lua
    cp ESP32-CORE-BOARD sdkconfig 
    ```
 
    For ESP32 THING board:
+   
    ```lua
    cp ESP32-THING sdkconfig 
    ```
 
    For other boards:
+   
    ```lua
    cp GENERIC sdkconfig 
    ```
@@ -120,9 +124,10 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
    ```lua
    make flashfs
    ```
-1. Connect to the console:
+   
+# Connect to the console
 
-   You can connect to the Lua RTOS console using your favorite terminal emulator program, such as picocom, minicom, hyperterminal, putty, etc ... The connection parameters are:
+You can connect to the Lua RTOS console using your favorite terminal emulator program, such as picocom, minicom, hyperterminal, putty, etc ... The connection parameters are:
 
    * speed: 115200 bauds
    * data bits: 8
