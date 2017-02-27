@@ -28,33 +28,34 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
 
 # How to get Lua RTOS firmware?
 
-# Method 1: get a precompiled firmware
+## Prerequisites
 
-1. Get the precompiled binary for your board
+Please note you need probably to download and install drivers for your board's USB-TO-SERIAL adapter for Win32 and MacOSX versions. The GNU/Linux version usually doesn't need any drivers. This drivers are required for connect to your board through a serial port connection.
 
-| Board              |
-|--------------------|
-| [WHITECAT ESP32 N1] (http://whitecatboard.org/firmware.php?board=WHITECAT-ESP32-N1)  | 
-| [ESP32 CORE] (http://whitecatboard.org/firmware.php?board=ESP32-CORE-BOARD)  | 
-| [ESP32 THING] (http://whitecatboard.org/firmware.php?board=ESP32-THING)  | 
-| [GENERIC] (http://whitecatboard.org/firmware.php?board=GENERIC)  | 
+   | Board              |
+   |--------------------|
+   | [WHITECAT ESP32 N1] (https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers)  | 
+   | [ESP32 CORE] (https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers)  | 
+   | [ESP32 THING] (http://www.ftdichip.com/Drivers/VCP.htm)  | 
 
-# Method 2: build by yourself
+## Method 1: get a precompiled firmware
 
-1. Install required drivers:
+1. Get the precompiled binaries for your board:
 
-   Please note you need to download and install drivers for Win32 and MacOSX versions. The GNU/Linux version doesn't need any drivers, as usual ;)
+   | Board              |
+   |--------------------|
+   | [WHITECAT ESP32 N1] (http://whitecatboard.org/firmware.php?board=WHITECAT-ESP32-N1)  | 
+   | [ESP32 CORE] (http://whitecatboard.org/firmware.php?board=ESP32-CORE-BOARD)  | 
+   | [ESP32 THING] (http://whitecatboard.org/firmware.php?board=ESP32-THING)  | 
+   | [GENERIC] (http://whitecatboard.org/firmware.php?board=GENERIC)  | 
 
-   This drivers are required for connect to the Lua RTOS console through a serial port connection.
+2. Uncompress to your favorite folder:
 
-   You can download this drivers following one of this links:
+   ```lua
+   unzip LuaRTOS.10.WHITECAT-ESP32-N1.1488209955.zip
+   ```
 
-   * [Linux 3.x.x](https://www.silabs.com/Support%20Documents/Software/Linux_3.x.x_VCP_Driver_Source.zip)
-   * [Linux 2.6.x](https://www.silabs.com/Support%20Documents/Software/Linux_2.6.x_VCP_Driver_Source.zip)
-   * [Mac OSX](https://www.silabs.com/Support%20Documents/Software/Mac_OSX_VCP_Driver.zip)
-   * [Windows](https://www.silabs.com/Support%20Documents/Software/CP210x_Windows_Drivers.zip)
-
-   You can get a full list of available drivers and versions [here](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx)
+## Method 2: build by yourself
 
 1. Install ESP32 toolchain for your desktop platform. Please, follow the instructions provided by ESPRESSIF:
    * [Windows] (https://github.com/espressif/esp-idf/blob/master/docs/windows-setup.rst)
