@@ -34,9 +34,9 @@ Please note you need probably to download and install drivers for your board's U
 
    | Board              |
    |--------------------|
-   | [WHITECAT ESP32 N1] (https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers)  | 
-   | [ESP32 CORE] (https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers)  | 
-   | [ESP32 THING] (http://www.ftdichip.com/Drivers/VCP.htm)  | 
+   | [WHITECAT ESP32 N1](https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers)  | 
+   | [ESP32 CORE](https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers)  | 
+   | [ESP32 THING](http://www.ftdichip.com/Drivers/VCP.htm)  | 
 
 ## Method 1: get a precompiled firmware
 
