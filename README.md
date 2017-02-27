@@ -26,22 +26,38 @@ The Lua RTOS compatible boards can be programmed in two ways: using the Lua prog
 
 In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have more information about this.
 
-# How to build?
+# How to get Lua RTOS firmware?
 
-1. Install required drivers:
+## Prerequisites
 
-   Please note you need to download and install drivers for Win32 and MacOSX versions. The GNU/Linux version doesn't need any drivers, as usual ;)
+1. Please note you need probably to download and install drivers for your board's USB-TO-SERIAL adapter for Windows and Mac OSX versions. The GNU/Linux version usually doesn't need any drivers. This drivers are required for connect to your board through a serial port connection.
 
-   This drivers are required for connect to the Lua RTOS console through a serial port connection.
+   | Board              |
+   |--------------------|
+   | [WHITECAT ESP32 N1](https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers)  | 
+   | [ESP32 CORE](https://www.silabs.com/products/development-tools/software/usb-to-uart-bridge-vcp-drivers)  | 
+   | [ESP32 THING](http://www.ftdichip.com/Drivers/VCP.htm)  | 
 
-   You can download this drivers following one of this links:
+## Method 1: get a precompiled firmware
 
-   * [Linux 3.x.x](https://www.silabs.com/Support%20Documents/Software/Linux_3.x.x_VCP_Driver_Source.zip)
-   * [Linux 2.6.x](https://www.silabs.com/Support%20Documents/Software/Linux_2.6.x_VCP_Driver_Source.zip)
-   * [Mac OSX](https://www.silabs.com/Support%20Documents/Software/Mac_OSX_VCP_Driver.zip)
-   * [Windows](https://www.silabs.com/Support%20Documents/Software/CP210x_Windows_Drivers.zip)
+1. Install esptool (the ESP32 flasher utility), following  [this instructions](https://github.com/espressif/esptool).
 
-   You can get a full list of available drivers and versions [here](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx)
+1. Get the precompiled binaries for your board:
+
+   | Board              |
+   |--------------------|
+   | [WHITECAT ESP32 N1] (http://whitecatboard.org/firmware.php?board=WHITECAT-ESP32-N1)  | 
+   | [ESP32 CORE] (http://whitecatboard.org/firmware.php?board=ESP32-CORE-BOARD)  | 
+   | [ESP32 THING] (http://whitecatboard.org/firmware.php?board=ESP32-THING)  | 
+   | [GENERIC] (http://whitecatboard.org/firmware.php?board=GENERIC)  | 
+
+2. Uncompress to your favorite folder:
+
+   ```lua
+   unzip LuaRTOS.10.WHITECAT-ESP32-N1.1488209955.zip
+   ```
+
+## Method 2: build by yourself
 
 1. Install ESP32 toolchain for your desktop platform. Please, follow the instructions provided by ESPRESSIF:
    * [Windows] (https://github.com/espressif/esp-idf/blob/master/docs/windows-setup.rst)
@@ -75,12 +91,40 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
    ```lua
    source ./env
    ```
+
+1. Set sdkconfig for your board:
+
+   For WHITECAT ESP32 N1 board:
    
+   ```lua
+   cp WHITECAT-ESP32-N1 sdkconfig 
+   ```
+
+   For ESP32 CORE board:
+   
+   ```lua
+   cp ESP32-CORE-BOARD sdkconfig 
+   ```
+
+   For ESP32 THING board:
+   
+   ```lua
+   cp ESP32-THING sdkconfig 
+   ```
+
+   For other boards:
+   
+   ```lua
+   cp GENERIC sdkconfig 
+   ```
+
 1. Compile:
 
    First configure Lua RTOS options (located in Component config --> Lua RTOS):
  
    ```lua
+   make defconfig
+   make clean
    make menuconfig
    ```
 
@@ -94,9 +138,10 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
    ```lua
    make flashfs
    ```
-1. Connect to the console:
+   
+# Connect to the console
 
-   You can connect to the Lua RTOS console using your favorite terminal emulator program, such as picocom, minicom, hyperterminal, putty, etc ... The connection parameters are:
+You can connect to the Lua RTOS console using your favorite terminal emulator program, such as picocom, minicom, hyperterminal, putty, etc ... The connection parameters are:
 
    * speed: 115200 bauds
    * data bits: 8
