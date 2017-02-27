@@ -65,10 +65,7 @@ static int os_sleep(lua_State *L) {
 }
 
 static int os_reset_reason(lua_State *L) {
-	//int reason = cpu_reset_reason();
-
-	lua_pushinteger(L, 0); 
-	
+	lua_pushinteger(L, cpu_reset_reason());
 	return 1;
 }
 
