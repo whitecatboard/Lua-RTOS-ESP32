@@ -42,6 +42,7 @@
 
 #include <drivers/gpio.h>
 #include <drivers/uart.h>
+#include <drivers/power_bus.h>
 
 #if 0
 static const char *pin_names[] = {
@@ -316,6 +317,11 @@ void cpu_show_info() {
 }
 
 void cpu_sleep(int seconds) {
+	// Stop powerbus
+	#if CONFIG_LUA_RTOS_USE_POWER_BUS
+	pwbus_off();
+	#endif
+
 	// Stop all UART units. This is done for prevent strangers characters
 	// on the console when CPU begins to enter in the sleep phase
 	uart_stop(-1);

@@ -53,6 +53,7 @@
 #define SERVO_DRIVER_ID  13
 #define ESPI_DRIVER_ID   14
 #define THREAD_DRIVER_ID 15
+#define PWBUS_DRIVER_ID  16
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")

@@ -29,6 +29,14 @@ SECTIONS {
 	/* exception names exported to Lua modules */
 	/* TO DO */
 	/*   Generate this entries automatically */
+    pwbus_errors = ABSOLUTE(.);
+    KEEP(*(.pwbus_errors))
+    LONG(0) LONG(0)
+
+    pwbus_error_map = ABSOLUTE(.);
+    KEEP(*(.pwbus_error_map))
+    LONG(0) LONG(0)
+
     thread_errors = ABSOLUTE(.);
     KEEP(*(.thread_errors))
     LONG(0) LONG(0)

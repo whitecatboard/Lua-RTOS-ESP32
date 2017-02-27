@@ -54,6 +54,7 @@
 #include <drivers/gpio.h>
 #include <drivers/spi.h>
 #include <drivers/lora.h>
+#include <drivers/power_bus.h>
 
 extern unsigned port_interruptNesting[portNUM_PROCESSORS];
 
@@ -112,10 +113,12 @@ static void IRAM_ATTR dio_intr_handler(void *args) {
 driver_error_t *lmic_lock_resources(int unit, void *resources) {
     driver_unit_lock_error_t *lock_error = NULL;
 
+	#if !CONFIG_LUA_RTOS_USE_POWER_BUS
     if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, LMIC_RST))) {
     	// Revoked lock on pin
     	return driver_lock_error(LORA_DRIVER, lock_error);
     }
+	#endif
 
 	if (LMIC_DIO0) {
 		if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, LMIC_DIO0))) {
@@ -163,26 +166,31 @@ driver_error_t *hal_init (void) {
         spi_name(LMIC_SPI), gpio_portname(spi_cs_gpio(LMIC_SPI)), spi_cs_gpio(LMIC_SPI));
     }
 	
-	// Init RESET pin
-	gpio_pin_output(LMIC_RST);
+	#if !CONFIG_LUA_RTOS_USE_POWER_BUS
+		// Init RESET pin
+		gpio_pin_output(LMIC_RST);
+	#endif
 
 	gpio_isr_register(&dio_intr_handler, NULL, 0, NULL);
 
 	// Init DIO pins
 	if (LMIC_DIO0) {
 		gpio_pin_input(LMIC_DIO0);
+		gpio_pin_pullup(LMIC_DIO0);
 		gpio_set_intr_type(LMIC_DIO0, GPIO_INTR_POSEDGE);
 		gpio_intr_enable(LMIC_DIO0);
 	}
 	
 	if (LMIC_DIO1) {
 		gpio_pin_input(LMIC_DIO1);
+		gpio_pin_pullup(LMIC_DIO1);
 		gpio_set_intr_type(LMIC_DIO1, GPIO_INTR_POSEDGE);
 		gpio_intr_enable(LMIC_DIO1);
 	}
 	
 	if (LMIC_DIO2) {
 		gpio_pin_input(LMIC_DIO2);
+		gpio_pin_pullup(LMIC_DIO2);
 		gpio_set_intr_type(LMIC_DIO2, GPIO_INTR_POSEDGE);
 		gpio_intr_enable(LMIC_DIO2);
 	}
@@ -220,15 +228,25 @@ void hal_pin_rxtx (u1_t val) {
  * control radio RST pin (0=low, 1=high, 2=floating)
  */
 void hal_pin_rst (u1_t val) {
-	if (val == 1) {
-		gpio_pin_output(LMIC_RST);
-		gpio_pin_set(LMIC_RST);
-	} else if (val == 0) {
-		gpio_pin_output(LMIC_RST);
-		gpio_pin_clr(LMIC_RST);
-	} else {
-		gpio_pin_input(LMIC_RST);
-	}	
+	#if CONFIG_LUA_RTOS_USE_POWER_BUS
+		if (val == 1) {
+			pwbus_on();
+		} else if (val == 0) {
+			pwbus_on();
+		} else {
+			delay(10);
+		}
+	#else
+		if (val == 1) {
+			gpio_pin_output(LMIC_RST);
+			gpio_pin_set(LMIC_RST);
+		} else if (val == 0) {
+			gpio_pin_output(LMIC_RST);
+			gpio_pin_clr(LMIC_RST);
+		} else {
+			gpio_pin_input(LMIC_RST);
+		}
+	#endif
 }
 
 /*

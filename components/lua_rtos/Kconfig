@@ -5,7 +5,7 @@ menu "Lua RTOS"
 	
 		config LUA_RTOS_BOARD_WHITECAT_N1ESP32
 			bool "WHITECAT ESP32 N1"
-			#select LUA_RTOS_USE_POWER_BUS if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+			select LUA_RTOS_USE_POWER_BUS if LUA_RTOS_BOARD_WHITECAT_N1ESP32
 		
 		config LUA_RTOS_BOARD_ESP32_CORE_BOARD
 			bool "ESP32 CORE BOARD"
@@ -15,7 +15,6 @@ menu "Lua RTOS"
 
 		config LUA_RTOS_BOARD_OTHER
 			bool "OTHER COMPATIBLE BOARD"
-
 	endchoice
   menu "General"
 	menu "System Priorities"
@@ -39,8 +38,14 @@ menu "Lua RTOS"
 	config LUA_RTOS_POWER_BUS_PIN
     	int "Power bus GPIO number"
     	depends on LUA_RTOS_USE_POWER_BUS
-    	range 0 39
-    	default 25
+    	range 25 25 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    	range 0 39 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    	range 0 39 if LUA_RTOS_BOARD_ESP32_THING
+    	range 0 39 if LUA_RTOS_BOARD_OTHER
+    	default 25 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    	default 25 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    	default 25 if LUA_RTOS_BOARD_ESP32_THING
+    	default 25 if LUA_RTOS_BOARD_OTHER
 		
   	config LUA_RTOS_USE_LED_ACT
 	  	bool "Use activity led"
@@ -52,8 +57,14 @@ menu "Lua RTOS"
 	config LUA_RTOS_LED_ACT
 		depends on LUA_RTOS_USE_LED_ACT
     	int "Activity led GPIO number"
-    	range 0 39
-    	default 4
+    	range 22 22 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    	range 0 39 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    	range 0 39 if LUA_RTOS_BOARD_ESP32_THING
+    	range 0 39 if LUA_RTOS_BOARD_OTHER
+    	default 22 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    	default 22 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    	default 22 if LUA_RTOS_BOARD_ESP32_THING
+    	default 22 if LUA_RTOS_BOARD_OTHER
   endmenu
   menu "Console"
   	config LUA_RTOS_USE_CONSOLE
@@ -192,41 +203,77 @@ menu "Lua RTOS"
 	config LUA_RTOS_LMIC_SPI
 	depends on LUA_RTOS_USE_LMIC
     int "PHY SPI port"
-    range 1 3
-    default 3
+    range 3 3 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    range 2 3 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    range 2 3 if LUA_RTOS_BOARD_ESP32_THING
+    range 2 3 if LUA_RTOS_BOARD_OTHER
+    default 3 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    default 3 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    default 3 if LUA_RTOS_BOARD_ESP32_THING
+    default 3 if LUA_RTOS_BOARD_OTHER
 	help
 		Select the SPI port number where phy is attached
 
 	config LUA_RTOS_LMIC_CS
 	depends on LUA_RTOS_USE_LMIC
     int "PHY SPI CS GPIO number"
-    range 0 39
-    default 5
+    range 5 5 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    range 0 39 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    range 0 39 if LUA_RTOS_BOARD_ESP32_THING
+    range 0 39 if LUA_RTOS_BOARD_OTHER
+    default 5 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    default 5 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    default 5 if LUA_RTOS_BOARD_ESP32_THING
+    default 5 if LUA_RTOS_BOARD_OTHER
 
 	config LUA_RTOS_LMIC_RST
 	depends on LUA_RTOS_USE_LMIC
     int "PHY RST GPIO number"
-    range 0 39
-    default 27
+    range 5 5 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    range 0 39 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    range 0 39 if LUA_RTOS_BOARD_ESP32_THING
+    range 0 39 if LUA_RTOS_BOARD_OTHER
+    default 27 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    default 27 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    default 27 if LUA_RTOS_BOARD_ESP32_THING
+    default 27 if LUA_RTOS_BOARD_OTHER
 
 	config LUA_RTOS_LMIC_DIO0
 	depends on LUA_RTOS_USE_LMIC
     int "PHY DIO0 GPIO number"
-    range 0 39
-    default 26
+    range 5 5 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    range 0 39 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    range 0 39 if LUA_RTOS_BOARD_ESP32_THING
+    range 0 39 if LUA_RTOS_BOARD_OTHER
+    default 26 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    default 26 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    default 26 if LUA_RTOS_BOARD_ESP32_THING
+    default 26 if LUA_RTOS_BOARD_OTHER
 
 	config LUA_RTOS_LMIC_DIO1
 	depends on LUA_RTOS_USE_LMIC
     int "PHY DIO1 GPIO number"
-    range 0 39
-    default 25
+    range 5 5 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    range 0 39 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    range 0 39 if LUA_RTOS_BOARD_ESP32_THING
+    range 0 39 if LUA_RTOS_BOARD_OTHER
+    default 25 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    default 25 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    default 25 if LUA_RTOS_BOARD_ESP32_THING
+    default 25 if LUA_RTOS_BOARD_OTHER
 
 	config LUA_RTOS_LMIC_DIO2
 	depends on LUA_RTOS_USE_LMIC
     int "PHY DIO2 GPIO number"
-    range 0 39
-    default 33
-  endmenu
+     range 5 5 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    range 0 39 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    range 0 39 if LUA_RTOS_BOARD_ESP32_THING
+    range 0 39 if LUA_RTOS_BOARD_OTHER
+    default 33 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
+    default 33 if LUA_RTOS_BOARD_ESP32_CORE_BOARD
+    default 33 if LUA_RTOS_BOARD_ESP32_THING
+    default 33 if LUA_RTOS_BOARD_OTHER
+ endmenu
 
   menu "HTTP server"
 	config LUA_RTOS_USE_HTTP_SERVER

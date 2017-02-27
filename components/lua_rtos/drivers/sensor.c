@@ -42,6 +42,7 @@
 #include <drivers/gpio.h>
 #include <drivers/owire.h>
 #include <drivers/i2c.h>
+#include <drivers/power_bus.h>
 
 // This variable is defined at linker time
 extern const sensor_t sensors[];
@@ -262,7 +263,11 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 	sensor_value_t *value = NULL;
 	int i = 0;
 
-	// Allocate space for sensor data
+	#if CONFIG_LUA_RTOS_USE_POWER_BUS
+	pwbus_on();
+	#endif
+
+// Allocate space for sensor data
 	if (!(value = calloc(1, sizeof(sensor_value_t) * SENSOR_MAX_DATA))) {
 		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
