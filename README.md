@@ -28,8 +28,7 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
 
 # How to get Lua RTOS firmware?
 
-Method 2: build by yourself
-===========================
+# Method 2: build by yourself
 
 1. Install required drivers:
 
