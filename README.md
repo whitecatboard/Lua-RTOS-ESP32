@@ -30,7 +30,7 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
 
 ## Prerequisites
 
-1. Please note you need probably to download and install drivers for your board's USB-TO-SERIAL adapter for Win32 and MacOSX versions. The GNU/Linux version usually doesn't need any drivers. This drivers are required for connect to your board through a serial port connection.
+1. Please note you need probably to download and install drivers for your board's USB-TO-SERIAL adapter for Windows and Mac OSX versions. The GNU/Linux version usually doesn't need any drivers. This drivers are required for connect to your board through a serial port connection.
 
    | Board              |
    |--------------------|
