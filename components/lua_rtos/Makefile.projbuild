@@ -98,4 +98,8 @@ CFLAGS += -DLUA_USE_HISTORY=1
 
 # Define BUILD_TIME flag, with the EPOCH time when Lua RTOS is build.
 # This is used for set system time when RTC is not set.
+ifneq (foo$(LUA_RTOS_BUILD_TIME), foo)
+CFLAGS += -DBUILD_TIME=$(LUA_RTOS_BUILD_TIME)
+else
 CFLAGS += -DBUILD_TIME=$(shell date +%s)
+endif
