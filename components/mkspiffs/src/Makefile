@@ -21,6 +21,10 @@ else
 		ifneq ($(filter %86,$(UNAME_P)),)
 			DIST_SUFFIX := linux32
 		endif
+		CC=gcc
+		CXX=g++
+		TARGET_CFLAGS   = -std=gnu99 -Os -Wall -Itclap -Ispiffs -I. -D$(TARGET_OS) -DVERSION=\"$(VERSION)\" -D__NO_INLINE__
+		TARGET_CXXFLAGS = -std=gnu++11 -Os -Wall -Itclap -Ispiffs -I. -D$(TARGET_OS) -DVERSION=\"$(VERSION)\" -D__NO_INLINE__
 	endif
 	ifeq ($(UNAME_S),Darwin)
 		TARGET_OS := OSX
