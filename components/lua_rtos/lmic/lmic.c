@@ -11,8 +11,8 @@
 
 #include "luartos.h"
 
-#ifdef LUA_USE_LORA
-#ifdef USE_LMIC
+#if LUA_USE_LORA
+#if USE_LMIC
 
 //! \file
 #include "lmic.h"
