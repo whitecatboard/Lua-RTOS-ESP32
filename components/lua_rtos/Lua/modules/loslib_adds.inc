@@ -20,6 +20,7 @@
 #include <sys/mount.h>
 
 extern const char *__progname;
+extern uint32_t boot_count;
 
 char lua_syslog_level = 0xff;
 
@@ -560,4 +561,10 @@ static int os_run (lua_State *L) {
     //tty_unlock();
 #endif
     return 0;
+}
+
+static int os_bootcount(lua_State *L) {
+	lua_pushinteger(L, boot_count);
+
+	return 1;
 }

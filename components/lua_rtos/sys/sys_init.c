@@ -27,10 +27,12 @@
  * this software.
  */
 
+#include "sdkconfig.h"
 #include "luartos.h"
 #include "lua.h"
 #include "esp_log.h"
 #include "esp_vfs.h"
+#include "esp_deep_sleep.h"
 #include "driver/periph_ctrl.h"
 
 #include <vfs.h>
@@ -58,6 +60,8 @@ extern void _clock_init();
 
 extern const char *__progname;
 
+RTC_DATA_ATTR uint32_t boot_count = 0;
+
 #ifdef RUN_TESTS
 #include <unity.h>
 
@@ -78,6 +82,28 @@ void *_sys_tests(void *arg) {
 #endif
 
 void _sys_init() {
+	// Set default power down mode for all RTC power domains in deep sleep
+	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
+	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+	#else
+	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+	#endif
+
+	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_SLOW_MEM
+	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+	#else
+	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+	#endif
+
+	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_FAST_MEM
+	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
+	#else
+	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
+	#endif
+
+	// Increment bootcount
+	boot_count++;
+
 	// TO DO: do this only if RTC is not set
 	struct timeval tv;
 

@@ -31,6 +31,8 @@
 #include "freertos/task.h"
 
 #include "esp_system.h"
+#include "esp_attr.h"
+#include "esp_deep_sleep.h"
 #include "rom/rtc.h"
 #include <soc/dport_reg.h>
 
@@ -41,6 +43,7 @@
 #include <sys/delay.h>
 #include <sys/status.h>
 
+#include <drivers/cpu.h>
 #include <drivers/gpio.h>
 #include <drivers/uart.h>
 #include <drivers/power_bus.h>

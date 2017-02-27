@@ -17,6 +17,20 @@ menu "Lua RTOS"
 			bool "OTHER COMPATIBLE BOARD"
 	endchoice
   menu "General"
+	menu "Deep Sleep"
+		config LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
+	  	bool "Mantain power for RTC IO, sensors and ULP co-processor by default"
+  		default n
+
+		config LUA_RTOS_DEEP_SLEEP_RTC_SLOW_MEM
+	  	bool "Mantain power for RTC slow memory by default"
+  		default y
+
+		config LUA_RTOS_DEEP_SLEEP_RTC_FAST_MEM
+	  	bool "Mantain power for RTC fast memory by default"
+  		default n
+	endmenu
+	
 	menu "System Priorities"
 		config LUA_RTOS_SYS_TASK_HIGH_PRIORITY
 	    int "High Priority system task priority"
