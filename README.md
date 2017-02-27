@@ -26,7 +26,10 @@ The Lua RTOS compatible boards can be programmed in two ways: using the Lua prog
 
 In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have more information about this.
 
-# How to build?
+# How to get Lua RTOS firmware?
+
+Method 2: build by yourself
+===========================
 
 1. Install required drivers:
 
@@ -76,11 +79,35 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
    source ./env
    ```
    
+ 1. Set sdkconfig for your board:
+
+   For WHITECAT ESP32 N1 board:
+   ```lua
+   cp WHITECAT-ESP32-N1 sdkconfig 
+   ```
+
+   For ESP32 CORE board:
+   ```lua
+   cp ESP32-CORE-BOARD sdkconfig 
+   ```
+
+   For ESP32 THING board:
+   ```lua
+   cp ESP32-THING sdkconfig 
+   ```
+
+   For other boards:
+   ```lua
+   cp GENERIC sdkconfig 
+   ```
+
 1. Compile:
 
    First configure Lua RTOS options (located in Component config --> Lua RTOS):
  
    ```lua
+   make defconfig
+   make clean
    make menuconfig
    ```
 
