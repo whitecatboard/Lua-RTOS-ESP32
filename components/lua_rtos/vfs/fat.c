@@ -274,6 +274,7 @@ static int IRAM_ATTR vfs_fat_fstat(int fd, struct stat * st) {
 
     if (fno.fattrib & AM_DIR) {
     	st->st_mode = S_IFDIR;
+    	st->st_size = 0;
     }
 
     if ((fno.fattrib & AM_LFN) || (fno.fattrib & AM_ARC)) {

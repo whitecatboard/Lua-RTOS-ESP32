@@ -298,6 +298,7 @@ static int IRAM_ATTR vfs_spiffs_fstat(int fd, struct stat * st) {
     // First test if it's a directory entry
     if (file->is_dir) {
         st->st_mode = S_IFDIR;
+        st->st_size = 0;
         return 0;
     }
 

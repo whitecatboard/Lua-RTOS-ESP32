@@ -8,7 +8,10 @@
 #include <unistd.h> 
 #include <limits.h>
 #include <stdio.h>
+#include <errno.h>
+#include <string.h>
 
+#include <sys/stat.h>
 #include <sys/syslog.h>
 #include <drivers/uart.h>
 
@@ -17,6 +20,37 @@
 #define l_unlockfile(f)	((void)0)
 
 int ioctl(int fd, unsigned long request, ...);
+
+static int f_attributes(lua_State *L) {
+    const char *path = luaL_checkstring(L, 1);
+    char type[10];
+
+    struct stat s;
+
+    if (stat(path, &s) < 0) {
+    	lua_pushnil(L);
+
+    	return 1;
+    }
+
+	if (s.st_mode == S_IFDIR) {
+		strcpy(type, "directory");
+	} else if (s.st_mode == S_IFREG) {
+		strcpy(type, "file");
+	}
+
+	lua_createtable(L, 0, 2);
+
+	lua_pushstring(L, "type");
+	lua_pushstring(L, type);
+	lua_settable(L, -3);
+
+	lua_pushstring(L, "size");
+	lua_pushinteger(L, s.st_size);
+	lua_settable(L, -3);
+
+	return 1;
+}
 
 static int read_line (lua_State *L, FILE *f, int chop) {
   luaL_Buffer b;

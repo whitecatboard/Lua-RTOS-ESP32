@@ -683,6 +683,7 @@ static const LUA_REG_TYPE iolib[] = {
   { LSTRKEY( "write"   ),			LFUNCVAL( io_write   ) },
   { LSTRKEY( "receive" ),			LFUNCVAL( f_receive  ) }, 
   { LSTRKEY( "send"    ),			LFUNCVAL( f_send     ) },
+  { LSTRKEY( "attributes"    ), 	LFUNCVAL( f_attributes) },
   { LNILKEY, LNILVAL }
 };
 
