@@ -28,6 +28,15 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
 
 # How to get Lua RTOS firmware?
 
+# Method 1: get a precompiled firmware
+
+1. Get the precompiled binary for your board
+
+| Board              |
+|--------------------|
+| [WHITECAT ESP32 N1] (http://whitecatboard.org/firmware.php?board=WHITECAT-ESP32-N1)  | 
+|--------------------|
+
 # Method 2: build by yourself
 
 1. Install required drivers:
