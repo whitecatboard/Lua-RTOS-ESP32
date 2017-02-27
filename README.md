@@ -35,7 +35,9 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
 | Board              |
 |--------------------|
 | [WHITECAT ESP32 N1] (http://whitecatboard.org/firmware.php?board=WHITECAT-ESP32-N1)  | 
-|--------------------|
+| [ESP32 CORE] (http://whitecatboard.org/firmware.php?board=ESP32-CORE-BOARD)  | 
+| [ESP32 THING] (http://whitecatboard.org/firmware.php?board=ESP32-THING)  | 
+| [GENERIC] (http://whitecatboard.org/firmware.php?board=GENERIC)  | 
 
 # Method 2: build by yourself
 
