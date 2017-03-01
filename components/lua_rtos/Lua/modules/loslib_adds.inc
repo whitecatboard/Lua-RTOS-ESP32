@@ -21,6 +21,7 @@
 
 extern const char *__progname;
 extern uint32_t boot_count;
+extern uint8_t flash_unique_id[8];
 
 char lua_syslog_level = 0xff;
 
@@ -566,5 +567,24 @@ static int os_run (lua_State *L) {
 static int os_bootcount(lua_State *L) {
 	lua_pushinteger(L, boot_count);
 
+	return 1;
+}
+
+static int os_flash_unique_id(lua_State *L) {
+	#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
+	char buffer[17];
+
+	sprintf(buffer,
+			"%02x%02x%02x%02x%02x%02x%02x%02x",
+			flash_unique_id[0], flash_unique_id[1],
+			flash_unique_id[2], flash_unique_id[3],
+			flash_unique_id[4], flash_unique_id[5],
+			flash_unique_id[6], flash_unique_id[7]
+	);
+
+    lua_pushstring(L, buffer);
+	#else
+    lua_pushnil(L);
+	#endif
 	return 1;
 }

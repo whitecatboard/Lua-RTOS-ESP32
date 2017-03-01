@@ -86,7 +86,7 @@ static driver_error_t *adc_lock_resources(int8_t channel, void *resources) {
 
 driver_error_t *adc_internal_setup(int8_t unit, int8_t channel) {
 	driver_error_t *error;
-	adc_resources_t resources;
+	adc_resources_t resources = {0};
 	uint8_t device;
 
 	// Get ADC device

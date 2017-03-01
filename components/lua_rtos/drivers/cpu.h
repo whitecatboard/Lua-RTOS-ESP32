@@ -321,3 +321,4 @@ unsigned int cpu_has_port(unsigned int port);
 void cpu_sleep(int seconds);
 int cpu_reset_reason();
 uint8_t cpu_gpio_number(uint8_t pin);
+void cpu_show_flash_info();

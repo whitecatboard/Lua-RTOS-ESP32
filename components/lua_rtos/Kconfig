@@ -31,6 +31,14 @@ menu "Lua RTOS"
   		default n
 	endmenu
 	
+	config LUA_RTOS_READ_FLASH_UNIQUE_ID
+  	bool "Read SPI flash EUI"
+	default n
+		help
+			Lua RTOS can get a EUI from the SPI Flash Memory. This is a 8-byte length identifier that can
+			be used for indentify your board. In the WHITECAT ESP32 N1 board this EUI is used in the LoRa WAN
+			stack to set the DevEUI.
+
 	menu "System Priorities"
 		config LUA_RTOS_SYS_TASK_HIGH_PRIORITY
 	    int "High Priority system task priority"

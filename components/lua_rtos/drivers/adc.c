@@ -86,9 +86,6 @@ driver_error_t *adc_device(int8_t unit, int8_t channel, uint8_t *device) {
 
 // Setup ADC channel
 driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t resolution) {
-	driver_error_t *error = NULL;
-	uint8_t device;
-
 	// Sanity checks
 	if ((unit < CPU_FIRST_ADC) || (unit > CPU_LAST_ADC)) {
 		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, NULL);
@@ -152,8 +149,6 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t re
 }
 
 driver_error_t *adc_read(uint8_t unit, uint8_t channel, int *raw, double *mvols) {
-	driver_error_t *error = NULL;
-
 	switch (unit) {
 		case 1:
 			adc_internal_read(unit, channel, raw);

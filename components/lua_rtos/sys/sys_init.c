@@ -35,6 +35,8 @@
 #include "esp_deep_sleep.h"
 #include "driver/periph_ctrl.h"
 
+#include <esp_spi_flash.h>
+
 #include <vfs.h>
 #include <string.h>
 #include <stdio.h>
@@ -51,7 +53,6 @@
 #include <drivers/cpu.h>
 #include <drivers/uart.h>
 
-extern void _syscalls_init();
 extern void _pthread_init();
 extern void _signal_init();
 extern void _mtx_init();
@@ -60,7 +61,11 @@ extern void _clock_init();
 
 extern const char *__progname;
 
+// Boot count
 RTC_DATA_ATTR uint32_t boot_count = 0;
+
+// Flash unique id
+uint8_t flash_unique_id[8];
 
 #ifdef RUN_TESTS
 #include <unity.h>
@@ -131,6 +136,15 @@ void _sys_init() {
 	esp_vfs_unregister("/dev/uart");
 	vfs_tty_register();
 
+	#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
+    // Get flash unique id
+    uint8_t command[13] = {0x4b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t response[13];
+
+    spi_flash_send_cmd(sizeof(command), command, response);
+    memcpy(flash_unique_id, response + 5, sizeof(flash_unique_id));
+	#endif
+
 	printf("Booting Lua RTOS...\r\n");
 	delay(100);
 
@@ -178,6 +192,7 @@ void _sys_init() {
     openlog(__progname, LOG_CONS | LOG_NDELAY, LOG_LOCAL1);
 
     cpu_show_info();
+    cpu_show_flash_info();
 
     //Init filesystems
 	#if USE_NET_VFS

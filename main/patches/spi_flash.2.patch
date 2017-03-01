@@ -1,0 +1,11 @@
+--- /Users/jaumeolivepetrus/esp-idf-uniqueid/components/spi_flash/include/esp_spi_flash.h	2017-03-01 13:24:17.000000000 +0100
++++ esp_spi_flash.h	2017-03-01 12:17:00.000000000 +0100
+@@ -305,6 +305,8 @@
+ 
+ #endif //CONFIG_SPI_FLASH_ENABLE_COUNTERS
+ 
++void spi_flash_send_cmd(uint32_t len, uint8_t *cmd, uint8_t *res);
++
+ #ifdef __cplusplus
+ }
+ #endif

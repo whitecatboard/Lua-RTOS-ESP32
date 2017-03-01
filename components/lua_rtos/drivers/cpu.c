@@ -36,8 +36,8 @@
 #include "rom/rtc.h"
 #include <soc/dport_reg.h>
 
+#include <stdio.h>
 #include <string.h>
-
 
 #include <sys/syslog.h>
 #include <sys/delay.h>
@@ -47,6 +47,8 @@
 #include <drivers/gpio.h>
 #include <drivers/uart.h>
 #include <drivers/power_bus.h>
+
+extern uint8_t flash_unique_id[8];
 
 void _cpu_init() {
 }
@@ -96,6 +98,22 @@ void cpu_show_info() {
 	} else {
         syslog(LOG_INFO, "cpu %s at %d Mhz", buffer, cpu_speed());        		
 	}
+}
+
+void cpu_show_flash_info() {
+	#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
+	char buffer[17];
+
+	sprintf(buffer,
+			"%02x%02x%02x%02x%02x%02x%02x%02x",
+			flash_unique_id[0], flash_unique_id[1],
+			flash_unique_id[2], flash_unique_id[3],
+			flash_unique_id[4], flash_unique_id[5],
+			flash_unique_id[6], flash_unique_id[7]
+	);
+
+    syslog(LOG_INFO, "flash EUI %s", buffer);
+	#endif
 }
 
 void cpu_sleep(int seconds) {
