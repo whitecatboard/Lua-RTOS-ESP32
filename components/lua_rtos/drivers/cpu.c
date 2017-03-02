@@ -35,6 +35,7 @@
 #include "esp_deep_sleep.h"
 #include "rom/rtc.h"
 #include <soc/dport_reg.h>
+#include <soc/efuse_reg.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -78,7 +79,7 @@ unsigned int cpu_has_port(unsigned int port) {
 }
 
 void cpu_model(char *buffer) {
-	strcpy(buffer,"ESP32");
+	sprintf(buffer, "ESP32 rev %d", cpu_revission());
 }
 
 int cpu_speed() {
@@ -86,11 +87,11 @@ int cpu_speed() {
 }
 
 int cpu_revission() {
-    return 0;
+	return (REG_READ(EFUSE_BLK0_RDATA3_REG) >> EFUSE_RD_CHIP_VER_RESERVE_S) && EFUSE_RD_CHIP_VER_RESERVE_V;
 }
 
 void cpu_show_info() {
-	char buffer[18];
+	char buffer[40];
     
 	cpu_model(buffer);
 	if (!*buffer) {
