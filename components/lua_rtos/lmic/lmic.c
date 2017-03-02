@@ -58,7 +58,7 @@ DEFINE_LMIC;
 static void engineUpdate(void);
 static void startScan (void);
 
-#if LMIC_DEBUG_LEVEL > 0
+#if CONFIG_LUA_RTOS_LORAWAN_LMIC_DEBUG > 0
 #define LMIC_DEBUG_LEN 60
 
 static char debug_buff[LMIC_DEBUG_LEN];
@@ -1134,7 +1134,7 @@ static bit_t decodeFrame (void) {
                             e_.info   = dlen < 4 ? 0 : os_rlsbf4(&d[dlen-4]),
                             e_.info2  = hdr + (dlen<<8)));
       norx:
-#if LMIC_DEBUG_LEVEL > 0
+#if CONFIG_LUA_RTOS_LORAWAN_LMIC_DEBUG > 0
         syslog(LOG_DEBUG, "%lu: Invalid downlink, window=%s\n", (u4_t)os_getTime(), window);
 #endif
         LMIC.dataLen = 0;
@@ -1417,7 +1417,7 @@ static bit_t decodeFrame (void) {
         LMIC.dataBeg = poff;
         LMIC.dataLen = pend-poff;
     }
-#if LMIC_DEBUG_LEVEL > 0
+#if CONFIG_LUA_RTOS_LORAWAN_LMIC_DEBUG > 0
     syslog(LOG_DEBUG, "%lu: Received downlink, window=%s, port=%d, ack=%d\n", (u4_t)os_getTime(), window, port, ackup);
 #endif
     return 1;
@@ -1587,7 +1587,7 @@ static bit_t processJoinAccept (void) {
             u4_t freq = convFreq(&LMIC.frame[dlen]);
             if( freq ) {
                 LMIC_setupChannel(chidx, freq, 0, -1);
-#if LMIC_DEBUG_LEVEL > 1
+#if CONFIG_LUA_RTOS_LORAWAN_LMIC_DEBUG > 1
                 syslog(LOG_DEBUG, "%lu: Setup channel, idx=%d, freq=%lu\n", (u4_t)os_getTime(), chidx, (unsigned long)freq);
 #endif
             }
@@ -2124,7 +2124,7 @@ static void startRxPing (xref2osjob_t osjob) {
 
 // Decide what to do next for the MAC layer of a device
 static void engineUpdate (void) {
-#if LMIC_DEBUG_LEVEL > 0
+#if CONFIG_LUA_RTOS_LORAWAN_LMIC_DEBUG > 0
     syslog(LOG_DEBUG, "%lu: engineUpdate, opmode=0x%x (%s)\n", (u4_t)os_getTime(), LMIC.opmode, debug_opmode(LMIC.opmode));
 #endif
     // Check for ongoing state: scan or TX/RX transaction

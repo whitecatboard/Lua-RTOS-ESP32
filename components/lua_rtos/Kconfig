@@ -19,37 +19,26 @@ menu "Lua RTOS"
   menu "General"
 	menu "Deep Sleep"
 		config LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
-	  	bool "Mantain power for RTC IO, sensors and ULP co-processor by default"
-  		default n
+		  	bool "Mantain power for RTC IO, sensors and ULP co-processor by default"
+  			default n
 
 		config LUA_RTOS_DEEP_SLEEP_RTC_SLOW_MEM
-	  	bool "Mantain power for RTC slow memory by default"
-  		default y
+	  		bool "Mantain power for RTC slow memory by default"
+  			default y
 
 		config LUA_RTOS_DEEP_SLEEP_RTC_FAST_MEM
-	  	bool "Mantain power for RTC fast memory by default"
-  		default n
+	  		bool "Mantain power for RTC fast memory by default"
+  			default n
 	endmenu
 	
 	config LUA_RTOS_READ_FLASH_UNIQUE_ID
-  	bool "Read SPI flash EUI"
-	default n
-		help
-			Lua RTOS can get a EUI from the SPI Flash Memory. This is a 8-byte length identifier that can
-			be used for indentify your board. In the WHITECAT ESP32 N1 board this EUI is used in the LoRa WAN
-			stack to set the DevEUI.
+	  	bool "Read SPI flash EUI"
+		default n
+			help
+				Lua RTOS can get a EUI from the SPI Flash Memory. This is a 8-byte length identifier that can
+				be used for indentify your board. In the WHITECAT ESP32 N1 board this EUI is used in the LoRa WAN
+				stack to set the DevEUI.
 
-	menu "System Priorities"
-		config LUA_RTOS_SYS_TASK_HIGH_PRIORITY
-	    int "High Priority system task priority"
-	    range 12 17
-	    default 17
-	    help
-	    	Some drivers in Lua RTOS create tasks that need to be executed in high priority. An example of this
-	    	is the LoRa WAN driver, that need to execute an state-machine that is very sensitive to the elapsed
-	    	time.
-    endmenu
-    
     config LUA_RTOS_USE_POWER_BUS
   		bool "Use power bus"
   		default n
@@ -78,136 +67,158 @@ menu "Lua RTOS"
   endmenu
   menu "Console"
   	config LUA_RTOS_USE_CONSOLE
-  	bool "Use console"
-  	default y
-    help 
-		Select this to enable the Lua RTOS console.
+	  	bool "Use console"
+	  	default y
+	    help 
+			Select this to enable the Lua RTOS console.
 
 	choice LUA_RTOS_CONSOLE_UART
-	depends on LUA_RTOS_USE_CONSOLE
-	prompt "UART"
-	default LUA_RTOS_CONSOLE_UART0
-	help
-		Select the uart number used by the Lua RTOS console.
+		depends on LUA_RTOS_USE_CONSOLE
+		prompt "UART"
+		default LUA_RTOS_CONSOLE_UART0
+		help
+			Select the uart number used by the Lua RTOS console.
 
 	config LUA_RTOS_CONSOLE_UART0
-	bool "UART 0"
+		bool "UART 0"
 		
 	config LUA_RTOS_CONSOLE_UART1
-	bool "UART 1"
+		bool "UART 1"
 
 	config LUA_RTOS_CONSOLE_UART2
-	bool "UART 2"
+		bool "UART 2"
 
 	endchoice
 	
 	choice LUA_RTOS_CONSOLE_BR
-	depends on LUA_RTOS_USE_CONSOLE
-	prompt "Baud rate"
-	default LUA_RTOS_CONSOLE_BR_115200
-	help
-		Baud rate to use by the Lua RTOS console.
+		depends on LUA_RTOS_USE_CONSOLE
+		prompt "Baud rate"
+		default LUA_RTOS_CONSOLE_BR_115200
+		help
+			Baud rate to use by the Lua RTOS console.
 
 	config LUA_RTOS_CONSOLE_BR_57200
-	bool "57200 baud"
+		bool "57200 baud"
 
 	config LUA_RTOS_CONSOLE_BR_115200
-	bool "115200 baud"
+		bool "115200 baud"
 	endchoice
 
 	config LUA_RTOS_CONSOLE_BUFFER_LEN
-	depends on LUA_RTOS_USE_CONSOLE
-    int "Buffer length"
-    range 32 2048
-    default 1024
-    help
-        Select the the buffer length used by the console, in bytes,    		
+		depends on LUA_RTOS_USE_CONSOLE
+	    int "Buffer length"
+	    range 32 2048
+	    default 1024
+	    help
+	        Select the the buffer length used by the console, in bytes,    		
   endmenu
   menu "File Systems"
   menu "SPIFFS"
   		config LUA_RTOS_USE_SPIFFS
-	  	bool "Use spiffs"
-	  	default y
-	  	help
-	  		Select for enable SPIFFS file system support. SPIFFS uses the ESP32 board flash memory.
+		  	bool "Use spiffs"
+		  	default y
+		  	help
+		  		Select for enable SPIFFS file system support. SPIFFS uses the ESP32 board flash memory.
 
 		config LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE
-		depends on LUA_RTOS_USE_SPIFFS
-	    int "Logical block size"
-	    range 4098 65536
-	    default 8192
+			depends on LUA_RTOS_USE_SPIFFS
+		    int "Logical block size"
+		    range 4098 65536
+		    default 8192
 
 		config LUA_RTOS_SPIFFS_BASE_ADDR
-		depends on LUA_RTOS_USE_SPIFFS
-	    hex "Base address"
-	    range 100000 1FFE000
-	    default 180000
+			depends on LUA_RTOS_USE_SPIFFS
+		    hex "Base address"
+		    range 100000 1FFE000
+		    default 180000
 
 		config LUA_RTOS_SPIFFS_SIZE
-		depends on LUA_RTOS_USE_SPIFFS
-	    int "Size"
-	    range 262144 1048576
-	    default 524288
+			depends on LUA_RTOS_USE_SPIFFS
+		    int "Size"
+		    range 262144 1048576
+		    default 524288
   endmenu
   menu "FAT"
   		config LUA_RTOS_USE_FAT
-	  	bool "Use FAT"
-	  	default n
-	  	help
-	  		Select for enable FAT file system support. Enabling this implies that you have an SD Card
-	  		appropriately connected to your ESP32 board.
+		  	bool "Use FAT"
+		  	default n
+		  	help
+		  		Select for enable FAT file system support. Enabling this implies that you have an SD Card
+		  		appropriately connected to your ESP32 board.
 
 		config LUA_RTOS_SD_SPI
-		depends on LUA_RTOS_USE_FAT
-	    int "SDCARD SPI port"
-	    range 1 3
-	    default 2
-		help
-			Select the SPI port number where SD Card is attached
+			depends on LUA_RTOS_USE_FAT
+		    int "SDCARD SPI port"
+		    range 1 3
+		    default 2
+			help
+				Select the SPI port number where SD Card is attached
 	
 		config LUA_RTOS_SD_CS
-		depends on LUA_RTOS_USE_FAT
-	    int "SDCARD SPI CS GPIO number"
-	    range 0 39
-	    default 15
+			depends on LUA_RTOS_USE_FAT
+		    int "SDCARD SPI CS GPIO number"
+		    range 0 39
+		    default 15
   endmenu
   endmenu
   
   menu "LoRa Wan"
 	config LUA_RTOS_USE_LMIC
-  	bool "Use LIMC stack"
-  	default n
+	  	bool "Use LIMC stack"
+  		default n
 
 	config LUA_RTOS_LORAWAN_LMIC_DEBUG
-  	bool "Enable machine-state debug"
-  	default n
+  		bool "Enable machine-state debug"
+  		default n
+
+	config LUA_RTOS_LORAWAN_LMIC_STACK_SIZE
+		int "LIMC stack size"
+		range 1024 4096
+		default 1024
+		help
+			Default stack size assigned to tLMIC.
+
+	config LUA_RTOS_LORAWAN_LMIC_TASK_PRIORITY
+		int "LMIC task priority"
+		range 3 25
+		default 12
+		help
+			Task priority assigned to LMIC.
+		
+	config LUA_RTOS_LORAWAN_LMIC_TASK_CPU
+		depends on !FREERTOS_UNICORE
+		int "LMIC task CPU affinity"
+		range 0 1
+		default 1
+		help
+			CPU affinity for LMIC.
 
 	choice LUA_RTOS_LORAWAN_BAND
-	depends on LUA_RTOS_USE_LMIC
-	prompt "ISM band"
-	default LUA_RTOS_LORAWAN_BAND_EU868
-	help
-		Select the ISM band to use. Please, select band allowed for your regions according to ISM regulations.
+		depends on LUA_RTOS_USE_LMIC
+		prompt "ISM band"
+		default LUA_RTOS_LORAWAN_BAND_EU868
+		help
+			Select the ISM band to use. Please, select band allowed for your regions according to ISM regulations.
 
 	config LUA_RTOS_LORAWAN_BAND_EU868
-	bool "Europe - 868 Mhz"
+		bool "Europe - 868 Mhz"
 
 	config LUA_RTOS_LORAWAN_BAND_US915
-	bool "United States - 915 Mhz"
+		bool "United States - 915 Mhz"
 	endchoice
 	
 	choice LUA_RTOS_LORAWAN_RADIO
-	depends on LUA_RTOS_USE_LMIC
-	prompt "PHY Type"
-	default LUA_RTOS_LORAWAN_RADIO_SX1276
-	help
-		Select the phy radio type
+		depends on LUA_RTOS_USE_LMIC
+		prompt "PHY Type"
+		default LUA_RTOS_LORAWAN_RADIO_SX1276
+		help
+			Select the phy radio type
 
 	config LUA_RTOS_LORAWAN_RADIO_SX1276
-	bool "sx1276"
+		bool "sx1276"
 
 	config LUA_RTOS_LORAWAN_RADIO_SX1272
-	bool "sx1272"
+		bool "sx1272"
 	endchoice
 
 	config LUA_RTOS_LMIC_SPI
@@ -255,9 +266,9 @@ menu "Lua RTOS"
 
   menu "HTTP server"
 	config LUA_RTOS_USE_HTTP_SERVER
-	depends on (WIFI_ENABLED || ETHERNET) && LUA_RTOS_LUA_USE_NET
-  	bool "Enable HTTP server"
-  	default y
+		depends on (WIFI_ENABLED || ETHERNET) && LUA_RTOS_LUA_USE_NET
+	  	bool "Enable HTTP server"
+	  	default y
   endmenu
     
   menu "Lua"
@@ -311,106 +322,106 @@ menu "Lua RTOS"
 	  
 	  menu "Lua Modules"
 	  	config LUA_RTOS_LUA_USE__G
-	  	bool "Include base module in build"
-	  	default y
+		  	bool "Include base module in build"
+		  	default y
 
 	  	config LUA_RTOS_LUA_USE_OS
-	  	bool "Include os module in build"
-	  	default y
+		  	bool "Include os module in build"
+		  	default y
 
 	  	config LUA_RTOS_LUA_USE_MATH
-	  	bool "Include math module in build"
-	  	default y
+		  	bool "Include math module in build"
+		  	default y
 
 	  	config LUA_RTOS_LUA_USE_TABLE
-	  	bool "Include table module in build"
-	  	default y
+		  	bool "Include table module in build"
+		  	default y
 
 	  	config LUA_RTOS_LUA_USE_IO
-	  	bool "Include io module in build"
-	  	default y
+		  	bool "Include io module in build"
+		  	default y
 
 	  	config LUA_RTOS_LUA_USE_STRING
-	  	bool "Include string module in build"
-	  	default y
+		  	bool "Include string module in build"
+		  	default y
 
 	  	config LUA_RTOS_LUA_USE_COROUTINE
-	  	bool "Include coroutine module in build"
-	  	default y
+		  	bool "Include coroutine module in build"
+		  	default y
 
 	  	config LUA_RTOS_LUA_USE_DEBUG
-	  	bool "Include debug module in build"
-	  	default y
+		  	bool "Include debug module in build"
+		  	default y
 
 	  	config LUA_RTOS_LUA_USE_UTF8
-	  	bool "Include utf8 module in build"
-	  	default y
+		  	bool "Include utf8 module in build"
+		  	default y
 
 	  	config LUA_RTOS_LUA_USE_PACKAGE
-	  	bool "Include package module in build"
-	  	default y
+		  	bool "Include package module in build"
+		  	default y
 	  endmenu
 	  menu "Lua RTOS Modules"
 	  	config LUA_RTOS_LUA_USE_THREAD
-	  	bool "Include thread module in build"
-	  	default y
+		  	bool "Include thread module in build"
+		  	default y
 
 	  	config LUA_RTOS_LUA_USE_NVS
-	  	bool "Include nvs module in build"
-	  	default y
+		  	bool "Include nvs module in build"
+		  	default y
 
 	  	config LUA_RTOS_LUA_USE_PACK
-	  	bool "Include pack module in build"
-	  	default y
+		  	bool "Include pack module in build"
+		  	default y
 
 		menu "Hardware Access Modules"
 		  	config LUA_RTOS_LUA_USE_ADC
-		  	bool "Include adc module in build"
-		  	default y	
+			  	bool "Include adc module in build"
+			  	default y	
 		
 		  	config LUA_RTOS_LUA_USE_I2C
-		  	bool "Include i2c module in build"
-		  	default y
+			  	bool "Include i2c module in build"
+			  	default y
 	
 		  	config LUA_RTOS_LUA_USE_PIO
-		  	bool "Include pio (gpio) module in build"
-		  	default y
+			  	bool "Include pio (gpio) module in build"
+			  	default y
 
 		  	config LUA_RTOS_LUA_USE_PWM
-		  	bool "Include pwm module in build"
-		  	default y
+			  	bool "Include pwm module in build"
+			  	default y
 
 		  	config LUA_RTOS_LUA_USE_SCREEN
-		  	bool "Include screen module in build"
-		  	default n
+			  	bool "Include screen module in build"
+			  	default n
 
 		  	config LUA_RTOS_LUA_USE_SPI
-		  	bool "Include spi module in build"
-		  	default y
+			  	bool "Include spi module in build"
+			  	default y
 	
 		  	config LUA_RTOS_LUA_USE_TMR
-		  	bool "Include tmr (timer) module in build"
-		  	default y
+			  	bool "Include tmr (timer) module in build"
+			  	default y
 
 		  	config LUA_RTOS_LUA_USE_UART
-		  	bool "Include uart module in build"
-		  	default y
+			  	bool "Include uart module in build"
+			  	default y
 		endmenu
 		menu "Communication Modules"
 		  	config LUA_RTOS_LUA_USE_NET
-		  	depends on WIFI_ENABLED || ETHERNET
-		  	bool "Include net module in build"
-		  	default y
+			  	depends on WIFI_ENABLED || ETHERNET
+			  	bool "Include net module in build"
+			  	default y
 
 		  	config LUA_RTOS_LUA_USE_LORA
-		  	depends on LUA_RTOS_USE_LMIC
-		  	bool "Include lora module in build"
-		  	default n
+			  	depends on LUA_RTOS_USE_LMIC
+			  	bool "Include lora module in build"
+			  	default n
 
 		  	config LUA_RTOS_LUA_USE_MQTT
-		  	depends on WIFI_ENABLED || ETHERNET
-		  	bool "Include MQTT module in build"
-		  	default n
+			  	depends on WIFI_ENABLED || ETHERNET
+			  	bool "Include MQTT module in build"
+			  	default n
 		endmenu
 	  endmenu
   endmenu

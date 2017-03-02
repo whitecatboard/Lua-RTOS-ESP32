@@ -25,6 +25,8 @@
 #include <sys/syslog.h>
 #include <sys/driver.h>
 
+#include <pthread/pthread.h>
+
 #include <drivers/lora.h>
 
 // LMIC run loop, as a FreeRTOS task
@@ -51,8 +53,31 @@ driver_error_t *os_init () {
     if (radio_init() == 0) {
         LMIC_init();
 
-    	// Run os_runloop in a FreeRTOS task
-    	xTaskCreate(os_runloop, "lmic", LMIC_STACK_SIZE, NULL, TASK_HIGH_PRIORITY, &xRunLoop);
+    	// Create and run a pthread for the run loop
+    	pthread_attr_t attr;
+    	struct sched_param sched;
+    	pthread_t thread;
+        int res;
+
+    	// Init thread attributes
+    	pthread_attr_init(&attr);
+
+    	// Set stack size
+        pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LORAWAN_LMIC_STACK_SIZE);
+
+        // Set priority
+        sched.sched_priority = CONFIG_LUA_RTOS_LORAWAN_LMIC_TASK_PRIORITY;
+        pthread_attr_setschedparam(&attr, &sched);
+
+        // Set CPU
+        cpu_set_t cpu_set = CONFIG_LUA_RTOS_LORAWAN_LMIC_TASK_CPU;
+        pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+
+        // Create thread
+        res = pthread_create(&thread, &attr, os_runloop, NULL);
+        if (res) {
+    		return driver_setup_error(LORA_DRIVER, LORA_ERR_CANT_SETUP, "cannot start run_loop");
+        }
     } else {
 		return driver_setup_error(LORA_DRIVER, LORA_ERR_CANT_SETUP, "radio phy not detected");
     }
@@ -91,7 +116,6 @@ void IRAM_ATTR os_setCallback (osjob_t* job, osjobcb_t cb) {
     for(pnext=&OS.runnablejobs; *pnext; pnext=&((*pnext)->next));
     *pnext = job;
     hal_enableIRQs();
-
     hal_resume();
 }
 
@@ -115,7 +139,6 @@ void os_setTimedCallback (osjob_t* job, ostime_t time, osjobcb_t cb) {
     }
     *pnext = job;
     hal_enableIRQs();
-
 	hal_resume();
 }
 
@@ -140,9 +163,6 @@ void os_runloop(void *pvParameters) {
 
 	    if (j) { // run job callback
 	        j->func(j);
-	        #if LMIC_DEBUG_LEVEL > 0
-	        	syslog(LOG_DEBUG, "%lu: free stack size %d\n", (u4_t)os_getTime(), uxTaskGetStackHighWaterMark(NULL) * 4);
-			#endif
 	    } else {
 	    	if (!OS.scheduledjobs) {
 	    		hal_sleep();

@@ -55,7 +55,7 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
     } else {
         stacksize = CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE;
         initial_state = PTHREAD_INITIAL_STATE_RUN;
-        priority = TASK_PRIORITY;
+        priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
 
         if (portNUM_PROCESSORS > 0) {
         	cpu = 0;

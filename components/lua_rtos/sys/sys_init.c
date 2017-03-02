@@ -170,7 +170,7 @@ void _sys_init() {
 		pthread_attr_init(&attr);
 
 		// Set stack size
-	    pthread_attr_setstacksize(&attr, LUA_TASK_STACK);
+	    pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_STACK_SIZE);
 
 	    // Set priority
 	    sched.sched_priority = LUA_TASK_PRIORITY;

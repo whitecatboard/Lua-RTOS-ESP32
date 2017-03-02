@@ -113,8 +113,10 @@ static void IRAM_ATTR dio_intr_handler(void *args) {
 	WRITE_PERI_REG(GPIO_STATUS_W1TC_REG, status_l & DIO_MASK_L);
 	WRITE_PERI_REG(GPIO_STATUS1_W1TC_REG, status_h & DIO_MASK_H);
 
-	radio_irq_handler(0);
-	hal_resume();
+	if (status_l | status_h) {
+		radio_irq_handler(0);
+		hal_resume();
+	}
 }
 
 driver_error_t *lmic_lock_resources(int unit, void *resources) {
@@ -327,7 +329,6 @@ void IRAM_ATTR hal_resume (void) {
 	mtx_lock(&lmic_hal_mtx);
 
 	if (resumed == 0) {
-		sleeped = 0;
 		resumed = 1;
 		resume  = 1;
 	}
@@ -352,7 +353,6 @@ void hal_sleep (void) {
 
 	if (sleeped == 0) {
 		sleeped = 1;
-		resumed = 0;
 		sleep   = 1;
 	}
 
@@ -360,6 +360,11 @@ void hal_sleep (void) {
 
 	if (sleep) {
 		xEventGroupWaitBits(lmicSleepEvent, evLMIC_SLEEP, pdTRUE, pdFALSE, portMAX_DELAY);
+
+		mtx_lock(&lmic_hal_mtx);
+		sleeped = 0;
+		resumed = 0;
+		mtx_unlock(&lmic_hal_mtx);
 	}
 }
 
@@ -424,7 +429,7 @@ u1_t hal_checkTimer (u8_t targettime) {
  *   - action could be HALT or reboot
  */
 void hal_failed (char *file, int line) {
-	syslog(LOG_ERR, "%lu: assert at $s, line %s\n", (u4_t)os_getTime(), file, line);
+	syslog(LOG_ERR, "%lu: assert at %s, line %s\n", (u4_t)os_getTime(), file, line);
 
 	for(;;);
 }

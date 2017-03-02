@@ -513,7 +513,7 @@ static void txlora () {
     // now we actually start the transmission
     opmode(OPMODE_TX);
 
-#if LMIC_DEBUG_LEVEL > 0
+#if CONFIG_LUA_RTOS_LORAWAN_LMIC_DEBUG > 0
     u1_t sf = getSf(LMIC.rps) + 6; // 1 == SF7
     u1_t bw = getBw(LMIC.rps);
     u1_t cr = getCr(LMIC.rps);
@@ -594,7 +594,7 @@ static void rxlora (u1_t rxmode) {
         opmode(OPMODE_RX);
     }
 
-#if LMIC_DEBUG_LEVEL > 0
+#if CONFIG_LUA_RTOS_LORAWAN_LMIC_DEBUG > 0
     if (rxmode == RXMODE_RSSI) {
         syslog(LOG_DEBUG, "%lu: RXMODE_RSSI\n", (u4_t)os_getTime());
     } else {
