@@ -92,49 +92,35 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
    source ./env
    ```
 
-1. Set sdkconfig for your board:
+1. Set the default configuration for your board:
 
-   For WHITECAT ESP32 N1 board:
+   | Board              | Run this command                                     |
+   |--------------------|------------------------------------------------------|
+   | WHITECAT ESP32 N1  | make SDKCONFIG_DEFAULTS=WHITECAT-ESP32-N1 defconfig  |
+   | ESP32 CORE         | make SDKCONFIG_DEFAULTS=ESP32-CORE-BOARD defconfig   |
+   | ESP32 THING        | make SDKCONFIG_DEFAULTS=ESP32-THING defconfig        |
+   | GENERIC            | make SDKCONFIG_DEFAULTS=GENERIC defconfig            |
+
+1. Change the default configuration:
+
+   You can change the default configuration doing:
    
    ```lua
-   cp WHITECAT-ESP32-N1 sdkconfig 
-   ```
-
-   For ESP32 CORE board:
-   
-   ```lua
-   cp ESP32-CORE-BOARD sdkconfig 
-   ```
-
-   For ESP32 THING board:
-   
-   ```lua
-   cp ESP32-THING sdkconfig 
-   ```
-
-   For other boards:
-   
-   ```lua
-   cp GENERIC sdkconfig 
-   ```
-
-1. Compile:
-
-   First configure Lua RTOS options (located in Component config --> Lua RTOS):
- 
-   ```lua
-   make defconfig
-   make clean
    make menuconfig
    ```
+   
+   Remember to check the device name for your board's USB-TO-SERIAL adapter under the "Serial flasher config / Default serial port" category.
+   
+1. Compile:
 
-   Build Lua RTOS, and flash to your ESP32 board:
+   Build Lua RTOS, and flash it to your ESP32 board:
 
    ```lua
    make flash
    ```
 
-   Flash spiffs file system image to your ESP32 board:
+   Flash the spiffs file system image to your ESP32 board:
+   
    ```lua
    make flashfs
    ```
