@@ -122,6 +122,15 @@ void _sys_init() {
 
 	settimeofday(&tv, NULL);
 
+	#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
+	// Get flash unique id
+	uint8_t command[13] = {0x4b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	uint8_t response[13];
+
+	spi_flash_send_cmd(sizeof(command), command, response);
+	memcpy(flash_unique_id, response + 5, sizeof(flash_unique_id));
+	#endif
+
 	// Init important things for Lua RTOS
 	_clock_init();
 	_cpu_init();
@@ -135,15 +144,6 @@ void _sys_init() {
 
 	esp_vfs_unregister("/dev/uart");
 	vfs_tty_register();
-
-	#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
-    // Get flash unique id
-    uint8_t command[13] = {0x4b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t response[13];
-
-    spi_flash_send_cmd(sizeof(command), command, response);
-    memcpy(flash_unique_id, response + 5, sizeof(flash_unique_id));
-	#endif
 
 	printf("Booting Lua RTOS...\r\n");
 	delay(100);
