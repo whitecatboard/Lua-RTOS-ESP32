@@ -17,7 +17,7 @@
 #include <sys/driver.h>
 
 #if LUA_USE_LORA
-#if USE_LMIC
+#if CONFIG_LUA_RTOS_USE_LMIC
 
 #ifdef __cplusplus
 extern "C"{

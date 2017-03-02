@@ -27,6 +27,8 @@
  * this software.
  */
 
+#include "luartos.h"
+
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"

@@ -18,7 +18,7 @@
 #include <sys/driver.h>
 
 #if LUA_USE_LORA
-#if USE_LMIC
+#if CONFIG_LUA_RTOS_USE_LMIC
 
 // Dependencies required for the LoRa MAC in C to run.
 // These settings can be adapted to the underlying system.

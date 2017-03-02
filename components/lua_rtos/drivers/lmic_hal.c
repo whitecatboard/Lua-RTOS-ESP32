@@ -30,7 +30,7 @@
 #include "luartos.h"
 
 #if LUA_USE_LORA
-#if USE_LMIC
+#if CONFIG_LUA_RTOS_USE_LMIC
 
 #include "lmic.h"
 
@@ -58,6 +58,10 @@
 
 extern unsigned port_interruptNesting[portNUM_PROCESSORS];
 
+#define DIO_MASK ((1ULL << CONFIG_LUA_RTOS_LMIC_DIO0) | (1ULL << CONFIG_LUA_RTOS_LMIC_DIO1) | (1ULL << CONFIG_LUA_RTOS_LMIC_DIO2))
+#define DIO_MASK_L (DIO_MASK & 0xffffffff)
+#define DIO_MASK_H (DIO_MASK >> 32)
+
 /*
  * Mutex for protect critical regions
  */
@@ -79,6 +83,9 @@ static int nested  = 0;
 static int sleeped = 0;
 static int resumed = 0;
 
+// DIO lines interrupt handler
+static gpio_isr_handle_t dio_handle;
+
  /*
   * This is an event group handler for sleep / resume os_runloop.
   * When os_runloop has nothing to do waits for an event.
@@ -96,15 +103,15 @@ static int resumed = 0;
  *
  */
 static void IRAM_ATTR dio_intr_handler(void *args) {
-	u4_t status_l = READ_PERI_REG(GPIO_STATUS_REG) & GPIO_STATUS_INT;
-	u4_t status_h = READ_PERI_REG(GPIO_STATUS1_REG) & GPIO_STATUS1_INT;
+	u4_t status_l = READ_PERI_REG(GPIO_STATUS_REG) & GPIO_STATUS_INT & DIO_MASK_L;
+	u4_t status_h = READ_PERI_REG(GPIO_STATUS1_REG) & GPIO_STATUS1_INT & DIO_MASK_H;
 
 	/*
 	 * Don't change the position of this code. Interrupt status must be clean
 	 * in this point.
 	 */
-	WRITE_PERI_REG(GPIO_STATUS_W1TC_REG, status_l);
-	WRITE_PERI_REG(GPIO_STATUS1_W1TC_REG, status_h);
+	WRITE_PERI_REG(GPIO_STATUS_W1TC_REG, status_l & DIO_MASK_L);
+	WRITE_PERI_REG(GPIO_STATUS1_W1TC_REG, status_h & DIO_MASK_H);
 
 	radio_irq_handler(0);
 	hal_resume();
@@ -114,32 +121,32 @@ driver_error_t *lmic_lock_resources(int unit, void *resources) {
     driver_unit_lock_error_t *lock_error = NULL;
 
 	#if !CONFIG_LUA_RTOS_USE_POWER_BUS
-    if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, LMIC_RST))) {
+    if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LMIC_RST))) {
     	// Revoked lock on pin
     	return driver_lock_error(LORA_DRIVER, lock_error);
     }
 	#endif
 
-	if (LMIC_DIO0) {
-		if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, LMIC_DIO0))) {
+	#if CONFIG_LUA_RTOS_LMIC_DIO0
+	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LMIC_DIO0))) {
 			// Revoked lock on pin
 			return driver_lock_error(LORA_DRIVER, lock_error);
-		}
 	}
+	#endif
 
-	if (LMIC_DIO1) {
-		if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, LMIC_DIO1))) {
-			// Revoked lock on pin
-			return driver_lock_error(LORA_DRIVER, lock_error);
-		}
+	#if CONFIG_LUA_RTOS_LMIC_DIO1
+	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LMIC_DIO1))) {
+		// Revoked lock on pin
+		return driver_lock_error(LORA_DRIVER, lock_error);
 	}
+	#endif
 
-	if (LMIC_DIO2) {
-		if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, LMIC_DIO2))) {
-			// Revoked lock on pin
-			return driver_lock_error(LORA_DRIVER, lock_error);
-		}
+	#if CONFIG_LUA_RTOS_LMIC_DIO2
+	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LMIC_DIO2))) {
+		// Revoked lock on pin
+		return driver_lock_error(LORA_DRIVER, lock_error);
 	}
+	#endif
 
 	return NULL;
 }
@@ -148,8 +155,8 @@ driver_error_t *hal_init (void) {
 	driver_error_t *error;
 
 	// Init SPI bus
-    if ((error = spi_init(LMIC_SPI, 1))) {
-        syslog(LOG_ERR, "lmic cannot open spi%u", LMIC_SPI);
+    if ((error = spi_init(CONFIG_LUA_RTOS_LMIC_SPI, 1))) {
+        syslog(LOG_ERR, "lmic cannot open spi%u", CONFIG_LUA_RTOS_LMIC_SPI);
         return error;
     }
     
@@ -158,48 +165,60 @@ driver_error_t *hal_init (void) {
     	return error;
     }
 
-    spi_set_cspin(LMIC_SPI, LMIC_CS);
-    spi_set_speed(LMIC_SPI, LMIC_SPI_KHZ);
+    spi_set_cspin(CONFIG_LUA_RTOS_LMIC_SPI, CONFIG_LUA_RTOS_LMIC_CS);
+    spi_set_speed(CONFIG_LUA_RTOS_LMIC_SPI, LMIC_SPI_KHZ);
 
-    if (spi_cs_gpio(LMIC_SPI) >= 0) {
-        syslog(LOG_INFO, "lmic is at %s, cs=%s%d",
-        spi_name(LMIC_SPI), gpio_portname(spi_cs_gpio(LMIC_SPI)), spi_cs_gpio(LMIC_SPI));
+    if (spi_cs_gpio(CONFIG_LUA_RTOS_LMIC_SPI) >= 0) {
+        syslog(LOG_INFO, "lmic is at %s, cs=%s%d/dio0=%s%d/dio1=%s%d/dio2=%s%d",
+			spi_name(CONFIG_LUA_RTOS_LMIC_SPI),
+			gpio_portname(spi_cs_gpio(CONFIG_LUA_RTOS_LMIC_SPI)), spi_cs_gpio(CONFIG_LUA_RTOS_LMIC_SPI),
+			gpio_portname(CONFIG_LUA_RTOS_LMIC_DIO0), CONFIG_LUA_RTOS_LMIC_DIO0,
+			gpio_portname(CONFIG_LUA_RTOS_LMIC_DIO1), CONFIG_LUA_RTOS_LMIC_DIO1,
+			gpio_portname(CONFIG_LUA_RTOS_LMIC_DIO2), CONFIG_LUA_RTOS_LMIC_DIO2
+		);
     }
 	
 	#if !CONFIG_LUA_RTOS_USE_POWER_BUS
 		// Init RESET pin
-		gpio_pin_output(LMIC_RST);
+		gpio_pin_output(CONFIG_LUA_RTOS_LMIC_RST);
 	#endif
 
-	gpio_isr_register(&dio_intr_handler, NULL, 0, NULL);
+	gpio_isr_register(&dio_intr_handler, NULL, 0, &dio_handle);
 
 	// Init DIO pins
-	if (LMIC_DIO0) {
-		gpio_pin_input(LMIC_DIO0);
-		gpio_pin_pullup(LMIC_DIO0);
-		gpio_set_intr_type(LMIC_DIO0, GPIO_INTR_POSEDGE);
-		gpio_intr_enable(LMIC_DIO0);
-	}
+	#if CONFIG_LUA_RTOS_LMIC_DIO0
+		gpio_pin_input(CONFIG_LUA_RTOS_LMIC_DIO0);
+		gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO0, GPIO_INTR_POSEDGE);
+	#endif
 	
-	if (LMIC_DIO1) {
-		gpio_pin_input(LMIC_DIO1);
-		gpio_pin_pullup(LMIC_DIO1);
-		gpio_set_intr_type(LMIC_DIO1, GPIO_INTR_POSEDGE);
-		gpio_intr_enable(LMIC_DIO1);
-	}
-	
-	if (LMIC_DIO2) {
-		gpio_pin_input(LMIC_DIO2);
-		gpio_pin_pullup(LMIC_DIO2);
-		gpio_set_intr_type(LMIC_DIO2, GPIO_INTR_POSEDGE);
-		gpio_intr_enable(LMIC_DIO2);
-	}
+	#if CONFIG_LUA_RTOS_LMIC_DIO1
+		gpio_pin_input(CONFIG_LUA_RTOS_LMIC_DIO1);
+		gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO1, GPIO_INTR_POSEDGE);
+	#endif
+
+	#if CONFIG_LUA_RTOS_LMIC_DIO2
+		gpio_pin_input(CONFIG_LUA_RTOS_LMIC_DIO2);
+		gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO2, GPIO_INTR_POSEDGE);
+	#endif
 
 	// Create lmicSleepEvent
 	lmicSleepEvent = xEventGroupCreate();
 
 	// Create mutex
     mtx_init(&lmic_hal_mtx, NULL, NULL, 0);
+
+	// Enable DIO interrupts
+	#if CONFIG_LUA_RTOS_LMIC_DIO0
+		gpio_intr_enable(CONFIG_LUA_RTOS_LMIC_DIO0);
+	#endif
+
+	#if CONFIG_LUA_RTOS_LMIC_DIO1
+		gpio_intr_enable(CONFIG_LUA_RTOS_LMIC_DIO1);
+	#endif
+
+	#if CONFIG_LUA_RTOS_LMIC_DIO2
+		gpio_intr_enable(CONFIG_LUA_RTOS_LMIC_DIO2);
+	#endif
 
     return NULL;
 }
@@ -208,12 +227,12 @@ driver_error_t *hal_init (void) {
  * drive radio NSS pin (0=low, 1=high).
  */
 void IRAM_ATTR hal_pin_nss (u1_t val) {
-    spi_set_cspin(LMIC_SPI, LMIC_CS);
+    spi_set_cspin(CONFIG_LUA_RTOS_LMIC_SPI, CONFIG_LUA_RTOS_LMIC_CS);
 
     if (!val) {
-		spi_select(LMIC_SPI);
+		spi_select(CONFIG_LUA_RTOS_LMIC_SPI);
 	} else {
-		spi_deselect(LMIC_SPI);	
+		spi_deselect(CONFIG_LUA_RTOS_LMIC_SPI);
 	}
 }
 
@@ -230,21 +249,29 @@ void hal_pin_rxtx (u1_t val) {
 void hal_pin_rst (u1_t val) {
 	#if CONFIG_LUA_RTOS_USE_POWER_BUS
 		if (val == 1) {
+			esp_intr_disable(&dio_handle);
+			pwbus_off();
+			delay(1);
 			pwbus_on();
+			esp_intr_enable(&dio_handle);
 		} else if (val == 0) {
+			esp_intr_disable(&dio_handle);
+			pwbus_off();
+			delay(1);
 			pwbus_on();
+			esp_intr_enable(&dio_handle);
 		} else {
-			delay(10);
+			delay(5);
 		}
 	#else
 		if (val == 1) {
-			gpio_pin_output(LMIC_RST);
-			gpio_pin_set(LMIC_RST);
+			gpio_pin_output(CONFIG_LUA_RTOS_LMIC_RST);
+			gpio_pin_set(CONFIG_LUA_RTOS_LMIC_RST);
 		} else if (val == 0) {
-			gpio_pin_output(LMIC_RST);
-			gpio_pin_clr(LMIC_RST);
+			gpio_pin_output(CONFIG_LUA_RTOS_LMIC_RST);
+			gpio_pin_clr(CONFIG_LUA_RTOS_LMIC_RST);
 		} else {
-			gpio_pin_input(LMIC_RST);
+			gpio_pin_input(CONFIG_LUA_RTOS_LMIC_RST);
 		}
 	#endif
 }
@@ -257,7 +284,7 @@ void hal_pin_rst (u1_t val) {
 u1_t IRAM_ATTR hal_spi (u1_t outval) {
 	u1_t readed;
 
-	spi_transfer(LMIC_SPI, outval, &readed);
+	spi_transfer(CONFIG_LUA_RTOS_LMIC_SPI, outval, &readed);
 
 	return readed;
 }

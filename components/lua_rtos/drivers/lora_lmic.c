@@ -30,7 +30,7 @@
 #include "luartos.h"
 
 #if LUA_USE_LORA
-#if USE_LMIC
+#if CONFIG_LUA_RTOS_USE_LMIC
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -699,8 +699,8 @@ void _lora_init() {
     status_set(STATUS_NEED_RTC_SLOW_MEM);
 }
 
-#endif
-
 DRIVER_REGISTER(LORA,lora, NULL,_lora_init,NULL);
+
+#endif
 
 #endif
