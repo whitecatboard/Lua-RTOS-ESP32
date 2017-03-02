@@ -49,6 +49,9 @@
 
 #include <pthread.h>
 
+#include <drivers/uart.h>
+#include <sys/console.h>
+
 // Module errors
 #define LUA_THREAD_ERR_NOT_ENOUGH_MEMORY    (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  0)
 #define LUA_THREAD_ERR_NOT_ALLOWED          (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  1)
@@ -57,6 +60,7 @@
 #define LUA_THREAD_ERR_INVALID_STACK_SIZE   (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  4)
 #define LUA_THREAD_ERR_INVALID_PRIORITY     (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  5)
 #define LUA_THREAD_ERR_INVALID_CPU_AFFINITY (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  6)
+#define LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  7)
 
 DRIVER_REGISTER_ERROR(THREAD, thread, NotEnoughtMemory, "not enough memory", LUA_THREAD_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_ERROR(THREAD, thread, NotAllowed, "not allowed", LUA_THREAD_ERR_NOT_ALLOWED);
@@ -64,7 +68,8 @@ DRIVER_REGISTER_ERROR(THREAD, thread, NonExistentThread, "non-existent thread", 
 DRIVER_REGISTER_ERROR(THREAD, thread, CannotStart, "cannot start thread", LUA_THREAD_ERR_CANNOT_START);
 DRIVER_REGISTER_ERROR(THREAD, thread, InvalidStackSize, "invalid stack size", LUA_THREAD_ERR_INVALID_STACK_SIZE);
 DRIVER_REGISTER_ERROR(THREAD, thread, InvalidPriority, "invalid priority", LUA_THREAD_ERR_INVALID_PRIORITY);
-DRIVER_REGISTER_ERROR(THREAD, thread, InvaludCPUAffinity, "invalid CPU affinity", LUA_THREAD_ERR_INVALID_CPU_AFFINITY);
+DRIVER_REGISTER_ERROR(THREAD, thread, InvalidCPUAffinity, "invalid CPU affinity", LUA_THREAD_ERR_INVALID_CPU_AFFINITY);
+DRIVER_REGISTER_ERROR(THREAD, thread, CannotMonitorAsTable, "you can't monitor thread as table", LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE);
 
 #define LTHREAD_STATUS_RUNNING   1
 #define LTHREAD_STATUS_SUSPENDED 2
@@ -246,45 +251,121 @@ static int thread_list(lua_State *L) {
     struct lthread *thread;
     int idx;
     char status[5];
+	uint8_t table = 0;
+	uint8_t monitor = 0;
 
-    const char *format = luaL_optstring(L, 1, "");
+	// Check if user wants result as a table, or wants result
+	// on the console
+	if (lua_gettop(L) == 1) {
+		luaL_checktype(L, 1, LUA_TBOOLEAN);
+		if (lua_toboolean(L, 1)) {
+			table = 1;
+		}
+	}
 
-    if (strcmp(format,"*n") == 0) {
-        // List only number of current threads
-        int n= 0;
+	// Check if user wants to monitor threads at regular intervals
+	if (lua_gettop(L) == 2) {
+		luaL_checktype(L, 2, LUA_TBOOLEAN);
+		if (lua_toboolean(L, 2)) {
+			monitor = 1;
+		}
+	}
 
-        idx = list_first(&lthread_list);
-        while (idx >= 0) {
-            n++;
-            idx = list_next(&lthread_list, idx);
-        }       
-        
-        lua_pushinteger(L, n);
-        return 1;
-    } else {
-        printf("THID\tNAME\t\tSTATUS\tCORE\tTIME\n");
+	if (table && monitor) {
+	    return luaL_exception_extended(L, LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE, NULL);
+	}
 
-        // For each lthread in list ...
-        idx = list_first(&lthread_list);
-        while (idx >= 0) {
-            list_get(&lthread_list, idx, (void **)&thread);
 
-            // Get status
-            switch (thread->status) {
-                case LTHREAD_STATUS_RUNNING: strcpy(status,"run "); break;
-                case LTHREAD_STATUS_SUSPENDED: strcpy(status,"susp"); break;
-                default:
-                    strcpy(status,"----");
+	if (monitor) {
+		console_clear();
+		console_hide_cursor();
+	}
 
-            }
+monitor_loop:
 
-            printf("%d\t%s\t\t%s\t%d\t%d\n", idx, "", status, _pthread_core(thread->thread),0);
+	if (monitor) {
+		console_gotoxy(0,0);
+		printf("Monitoring threads every 0.5 seconds\n\n");
+	}
 
-            idx = list_next(&lthread_list, idx);
-        }        
-    }
+	if (!table) {
+		printf("-----------------------------------------------\n");
+		printf("     |        |      |           STACK         \n");
+		printf("THID | STATUS | CORE |   SIZE     FREE     USED\n");
+		printf("-----------------------------------------------\n");
+	} else {
+		lua_createtable(L, 0, 0);
+	}
+
+	// For each lthread in list ...
+	int i = 0;
+	idx = list_first(&lthread_list);
+	int stack, stack_free;
+
+	while (idx >= 0) {
+		list_get(&lthread_list, idx, (void **)&thread);
+
+		// Get status
+		switch (thread->status) {
+			case LTHREAD_STATUS_RUNNING: strcpy(status,"run"); break;
+			case LTHREAD_STATUS_SUSPENDED: strcpy(status,"susp"); break;
+			default:
+				strcpy(status,"");
+
+		}
+
+		stack = _pthread_stack(thread->thread);
+		stack_free = _pthread_stack_free(thread->thread);
+
+		if (!table) {
+			printf(
+					"% 4d   %-6s   % 4d   % 6d   % 6d   % 6d   \n",
+					idx, status,
+					_pthread_core(thread->thread),
+					stack,
+					stack_free,
+					stack - stack_free
+			);
+		} else {
+			lua_pushinteger(L, i);
+
+			lua_createtable(L, 0, 4);
+
+			lua_pushinteger(L, idx);
+	        lua_setfield (L, -2, "thid");
+
+	        lua_pushstring(L, status);
+	        lua_setfield (L, -2, "status");
+
+	        lua_pushinteger(L, _pthread_core(thread->thread));
+	        lua_setfield (L, -2, "core");
+
+	        lua_pushinteger(L, _pthread_stack_free(thread->thread));
+	        lua_setfield (L, -2, "stack");
+
+	        lua_settable(L,-3);
+		}
+
+		idx = list_next(&lthread_list, idx);
+		i++;
+	}
+
+	if (monitor) {
+		printf("\n\nPress q for exit");
+
+		unsigned char press;
+
+		uart_read(CONSOLE_UART, &press, 1);
+		if ((press != 'q') && (press != 'Q')) {
+			usleep(500 * 1000);
+			goto monitor_loop;
+		} else {
+			console_show_cursor();
+			printf("\r\n");
+		}
+	}
     
-    return 0;
+    return table;
 }
 
 static int new_thread(lua_State* L, int run) {

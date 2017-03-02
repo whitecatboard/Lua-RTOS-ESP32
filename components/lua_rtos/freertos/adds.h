@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 typedef struct {
+	uint32_t   stack;
 	uint32_t   coreid;
 	int32_t    threadid;
  	uint32_t   signaled;	
@@ -35,3 +36,5 @@ uint32_t uxGetSignaled(TaskHandle_t h);
 TaskHandle_t xGetCurrentTask();
 uint8_t uxGetCoreID(TaskHandle_t h);
 void uxSetCoreID(int core);
+int uxGetStack(TaskHandle_t h);
+void uxSetStack(int stack);

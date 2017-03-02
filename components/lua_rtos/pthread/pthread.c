@@ -56,6 +56,7 @@ struct pthreadTaskArg {
     void *args;
     int id;
     int initial_state;
+    int stack;
 };
   
 void pthreadTask(void *task_arguments);
@@ -133,6 +134,7 @@ int _pthread_create(pthread_t *id, int priority, int stacksize, int cpu, int ini
     }
 
     taskArgs->id = *id;
+    taskArgs->stack = stacksize;
     thread->thread = *id;
     
     // This is the parent thread. After the creation of the new task related to new thread
@@ -362,6 +364,34 @@ int _pthread_core(pthread_t id) {
     return (int)uxGetCoreID(thread->task);
 }
 
+int _pthread_stack(pthread_t id) {
+    struct pthread *thread;
+    int res;
+
+    // Get thread
+    res = list_get(&thread_list, id, (void **)&thread);
+    if (res) {
+        errno = res;
+        return res;
+    }
+
+    return (int)uxGetStack(thread->task);
+}
+
+int _pthread_stack_free(pthread_t id) {
+    struct pthread *thread;
+    int res;
+
+    // Get thread
+    res = list_get(&thread_list, id, (void **)&thread);
+    if (res) {
+        errno = res;
+        return res;
+    }
+
+    return (int)uxTaskGetStackHighWaterMark(thread->task);
+}
+
 int _pthread_suspend(pthread_t id) {
     struct pthread *thread;
     int res;
@@ -430,6 +460,9 @@ void pthreadTask(void *taskArgs) {
 
 	// Store CPU core id when thread is running
 	uxSetCoreID(xPortGetCoreID());
+
+	// Store stack size
+	uxSetStack(args->stack);
 
     // Set thread id
     uxSetThreadId(args->id);

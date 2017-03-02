@@ -46,7 +46,7 @@
 #include <sys/stat.h>
 #include <sys/mount.h>
 
-#include "drivers/console.h"
+#include "sys/console.h"
 
 #ifdef SANOS
 #include <os.h>

@@ -47,6 +47,14 @@ void console_clear() {
 	console_put("\033[2J\033[1;1H");
 }
 
+void console_hide_cursor() {
+    printf("\033[25h");
+}
+
+void console_show_cursor() {
+    printf("\033[25l");
+}
+
 void console_size(int *rows, int *cols) {
     char buf[6];
     char *cbuf;

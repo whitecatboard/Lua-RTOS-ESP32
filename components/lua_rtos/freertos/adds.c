@@ -143,6 +143,19 @@ uint8_t uxGetCoreID(TaskHandle_t h) {
 	return coreid;
 }
 
+int uxGetStack(TaskHandle_t h) {
+	lua_rtos_tcb_t *lua_rtos_tcb;
+	int stack = 0;
+
+	// Get Lua RTOS specific TCB parts for current task
+	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(h, THREAD_LOCAL_STORAGE_POINTER_ID))) {
+		// Get stack size from Lua RTOS specific TCB parts
+		stack = lua_rtos_tcb->stack;
+	}
+
+	return stack;
+}
+
 void uxSetCoreID(int core) {
 	lua_rtos_tcb_t *lua_rtos_tcb;
 
@@ -150,5 +163,15 @@ void uxSetCoreID(int core) {
 	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
 		// Store current signaled mask into Lua RTOS specific TCB parts
 		lua_rtos_tcb->coreid = core;
+	}
+}
+
+void uxSetStack(int stack) {
+	lua_rtos_tcb_t *lua_rtos_tcb;
+
+	// Get Lua RTOS specific TCB parts for current task
+	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
+		// Store stack size into Lua RTOS specific TCB parts
+		lua_rtos_tcb->stack = stack;
 	}
 }

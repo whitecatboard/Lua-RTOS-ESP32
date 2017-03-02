@@ -16,7 +16,7 @@
 /----------------------------------------------------------------------------*/
 
 #include "luartos.h"
-#include <drivers/console.h>
+#include <sys/console.h>
 
 #if USE_FAT
 

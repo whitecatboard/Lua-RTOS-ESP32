@@ -37,6 +37,8 @@ void console_clearstatusline();
 void console_erase_eol();
 void console_erase_sol();
 void console_erase_l();
+void console_hide_cursor();
+void console_show_cursor();
 
 #endif	/* CONSOLE_H */
 

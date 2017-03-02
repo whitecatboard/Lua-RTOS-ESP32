@@ -177,6 +177,8 @@ void  _pthread_mutex_free();
 int   _pthread_core(pthread_t id);
 sig_t _pthread_signal(int s, sig_t h);
 int   _pthread_get_prio();
+int   _pthread_stack_free(pthread_t id);
+int   _pthread_stack(pthread_t id);
 
 // API functions
 int  pthread_attr_init(pthread_attr_t *attr);
