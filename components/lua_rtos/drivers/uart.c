@@ -54,6 +54,7 @@
 #include "luartos.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
+#include "freertos/timers.h"
 #include "freertos/xtensa_api.h"
 
 #include "esp_types.h"
@@ -81,10 +82,7 @@
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
 
-static const driver_message_t uart_errors[] = {
-	{"",""},
-	{"can't setup","CannotSetup"},
-};
+DRIVER_REGISTER_ERROR(UART, uart, CannotSetup, "can't setup", UART_ERR_CANT_INIT);
 
 // Flags for determine some UART states
 #define UART_FLAG_INIT		(1 << 1)
@@ -145,33 +143,33 @@ static void uart_pin_config(int8_t unit, uint8_t rx, uint8_t tx) {
 	switch (unit) {
 		case 0:
 			// Enable UTX0
-			PIN_PULLUP_DIS(PERIPHS_IO_MUX_U0TXD_U);
+			gpio_pullup_dis(1);
 			PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD_U0TXD);
 
 			// Enable U0RX
-	        PIN_PULLUP_EN(PERIPHS_IO_MUX_U0RXD_U);
+			gpio_pullup_en(3);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_U0RXD_U0RXD);
 
 			break;
 
 		case 1:
 			// Enable U1TX
-			PIN_PULLUP_DIS(PERIPHS_IO_MUX_SD_DATA3_U);
+			gpio_pullup_dis(10);
 			PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA3_U, FUNC_SD_DATA3_U1TXD);
 
 			// Enable U1RX
-	        PIN_PULLUP_EN(PERIPHS_IO_MUX_SD_DATA2_U);
+			gpio_pullup_en(9);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA2_U, FUNC_SD_DATA2_U1RXD);
 
 			break;
 
 		case 2:
 			// Enable U2TX
-			PIN_PULLUP_DIS(PERIPHS_IO_MUX_GPIO17_U);
+			gpio_pullup_dis(17);
 			PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO17_U, FUNC_GPIO17_U2TXD);
 
 			// Enable U2RX
-	        PIN_PULLUP_EN(PERIPHS_IO_MUX_GPIO16_U);
+			gpio_pullup_en(16);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO16_U, FUNC_GPIO16_U2RXD);
 
 			break;

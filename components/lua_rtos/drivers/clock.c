@@ -55,10 +55,10 @@ void IRAM_ATTR newTick(void) {
     }
 }
 
+#endif
+
 void _clock_init(void) {
 	#if USE_LED_ACT
     esp_register_freertos_tick_hook(&newTick);
 	#endif
 }
-
-#endif
