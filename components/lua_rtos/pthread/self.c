@@ -29,8 +29,10 @@
 
 #include "pthread.h"
 
+#include "esp_attr.h"
+
 extern UBaseType_t uxGetThreadId();
 
-pthread_t pthread_self(void) {
+pthread_t IRAM_ATTR pthread_self(void) {
     return (pthread_t)uxGetThreadId();
 }

@@ -27,6 +27,8 @@
  * this software.
  */
 
+#include "esp_attr.h"
+
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
@@ -107,7 +109,7 @@ int list_add(struct list *list, void *item, int *item_index) {
     return 0;
 }
 
-int list_get(struct list *list, int index, void **item) {
+int IRAM_ATTR list_get(struct list *list, int index, void **item) {
     struct list_index *cindex = NULL;
     int iindex;
 
@@ -183,7 +185,7 @@ int list_remove(struct list *list, int index, int destroy) {
     return 0;
 }
 
-int list_first(struct list *list) {
+int IRAM_ATTR list_first(struct list *list) {
     int index;
     int res = -1;
     
@@ -201,7 +203,7 @@ int list_first(struct list *list) {
     return res;
 }
 
-int list_next(struct list *list, int index) {
+int IRAM_ATTR list_next(struct list *list, int index) {
     int res = -1;
     int iindex;
     

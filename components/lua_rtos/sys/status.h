@@ -30,6 +30,8 @@
 #ifndef _SYS_STATUS_H_
 #define _SYS_STATUS_H_
 
+#include "esp_attr.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/adds.h"
@@ -51,20 +53,8 @@
 
 extern uint32_t LuaOS_status[];
 
-inline void status_set(uint16_t flag) {
-	LuaOS_status[(flag >> 8)] |= (1 << (flag & 0x00ff));
-}
-
-inline void status_clear(uint16_t flag) {
-	LuaOS_status[(flag >> 8)] &= ~(1 << (flag & 0x00ff));
-}
-
-inline int status_get(uint16_t flag) {
-	int value;
-	
-	value = (LuaOS_status[(flag >> 8)] & (1 << (flag & 0x00ff)));
-	
-	return value;
-}
+void IRAM_ATTR status_set(uint16_t flag);
+void IRAM_ATTR status_clear(uint16_t flag);
+int  IRAM_ATTR status_get(uint16_t flag);
 
 #endif /* !_SYS_STATUS_H_ */

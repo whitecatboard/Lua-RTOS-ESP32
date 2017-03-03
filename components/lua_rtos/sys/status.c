@@ -30,3 +30,20 @@
 #include <sys/status.h>
 
 uint32_t LuaOS_status[] = {0};
+
+void IRAM_ATTR status_set(uint16_t flag) {
+	LuaOS_status[(flag >> 8)] |= (1 << (flag & 0x00ff));
+}
+
+void IRAM_ATTR status_clear(uint16_t flag) {
+	LuaOS_status[(flag >> 8)] &= ~(1 << (flag & 0x00ff));
+}
+
+int IRAM_ATTR status_get(uint16_t flag) {
+	int value;
+
+	value = (LuaOS_status[(flag >> 8)] & (1 << (flag & 0x00ff)));
+
+	return value;
+}
+

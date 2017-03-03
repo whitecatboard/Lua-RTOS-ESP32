@@ -27,6 +27,8 @@
  * this software.
  */
 
+#include "esp_attr.h"
+
 #include <errno.h>
 #include <stdlib.h>
 #include <pthread/pthread.h>
@@ -104,7 +106,7 @@ int pthread_mutex_init(pthread_mutex_t *mut, const pthread_mutexattr_t *attr) {
     return 0;    
 }
 
-int pthread_mutex_lock(pthread_mutex_t *mut) {
+int IRAM_ATTR pthread_mutex_lock(pthread_mutex_t *mut) {
     struct pthread_mutex *mutex;
     int res;
 
@@ -133,7 +135,7 @@ int pthread_mutex_lock(pthread_mutex_t *mut) {
     return 0;
 }
 
-int pthread_mutex_unlock(pthread_mutex_t *mut) {
+int IRAM_ATTR pthread_mutex_unlock(pthread_mutex_t *mut) {
     struct pthread_mutex *mutex;
     int res;
 
