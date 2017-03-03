@@ -53,7 +53,26 @@
 ** 0 means 'aux' is metamethod (if 't' is a table) or NULL. 'f' is
 ** the raw get function to use.
 */
-#if !LUA_USE_ROTABLE
+
+#if LUA_USE_ROTABLE
+#define luaV_t_fastget(L,t,k,aux,f) \
+	(aux = f(hvalue(t), k),  /* else, do raw access */  \
+	  !ttisnil(aux) ? 1  /* result not nil? 'aux' has it */  \
+	  : (aux = fasttm(L, hvalue(t)->metatable, TM_INDEX),  /* get metamethod */\
+		 aux != NULL  ? 0  /* has metamethod? must call it */  \
+		 : (aux = luaO_nilobject, 1)))  /* else, final result is nil */
+
+#define luaV_r_fastget(L,t,k,aux,f) \
+	(aux = f(hvalue(t), k),  /* else, do raw access */  \
+	  !ttisnil(aux) ? 1  /* result not nil? 'aux' has it */  \
+	  : (aux = NULL,  /* get metamethod */\
+		 aux != NULL  ? 0  /* has metamethod? must call it */  \
+		 : (aux = luaO_nilobject, 1)))  /* else, final result is nil */
+
+#define luaV_fastget(L,t,k,aux,f) \
+   (ttistable(t)?luaV_t_fastget(L,t,k,aux,f):(ttisrotable(t)?luaV_r_fastget(L,t,k,aux,f):(aux = NULL, 0)))
+
+#else
 #define luaV_fastget(L,t,k,aux,f) \
   ((!ttistable(t)) \
    ? (aux = NULL, 0)  /* not a table; 'aux' is NULL and result is 0 */  \
@@ -62,15 +81,6 @@
       : (aux = fasttm(L, hvalue(t)->metatable, TM_INDEX),  /* get metamethod */\
          aux != NULL  ? 0  /* has metamethod? must call it */  \
          : (aux = luaO_nilobject, 1))))  /* else, final result is nil */
-#else
-#define luaV_fastget(L,t,k,aux,f) \
-  ((!ttistable(t) && !ttisrotable(t)) \
-   ? (aux = NULL, 0)  /* not a table; 'aux' is NULL and result is 0 */  \
-   : (aux = f(hvalue(t), k),  /* else, do raw access */  \
-      !ttisnil(aux) ? 1  /* result not nil? 'aux' has it */  \
-      : (ttisrotable(t)?(aux = luaO_nilobject, 1):(aux = fasttm(L, hvalue(t)->metatable, TM_INDEX),  /* get metamethod */\
-         aux != NULL  ? 0  /* has metamethod? must call it */  \
-         : (aux = luaO_nilobject, 1)))))  /* else, final result is nil */
 #endif
 
 /*
@@ -89,6 +99,23 @@
 ** returns true, there is no need to 'invalidateTMcache', because the
 ** call is not creating a new entry.
 */
+#if LUA_USE_ROTABLE
+#define luaV_t_fastset(L,t,k,slot,f,v) \
+   (slot = f(hvalue(t), k), \
+     ttisnil(slot) ? 0 \
+     : (ttisrotable(slot)?(0):(luaC_barrierback(L, hvalue(t), v), \
+        setobj2t(L, cast(TValue *,slot), v), \
+        1)))
+
+#define luaV_r_fastset(L,t,k,slot,f,v) \
+   (slot = f(hvalue(t), k), \
+	 ttisnil(slot) ? 0 \
+	 : (0))
+
+#define luaV_fastset(L,t,k,slot,f,v) \
+   (ttistable(t)?luaV_t_fastset(L,t,k,slot,f,v):(ttisrotable(t)?luaV_r_fastset(L,t,k,slot,f,v):(slot = NULL, 0)))
+
+#else
 #define luaV_fastset(L,t,k,slot,f,v) \
   (!ttistable(t) \
    ? (slot = NULL, 0) \
@@ -97,6 +124,7 @@
      : (luaC_barrierback(L, hvalue(t), v), \
         setobj2t(L, cast(TValue *,slot), v), \
         1)))
+#endif
 
 
 #define luaV_settable(L,t,k,v) { const TValue *slot; \

@@ -67,6 +67,7 @@ static const TValue* luaR_auxfind(const luaR_entry *pentry, const char *strkey, 
     if ((strkey && (pentry->key.type == LUA_TSTRING) && (!strcmp(pentry->key.id.strkey, strkey))) ||
         (!strkey && ((pentry->key.type & 0b111) == LUA_TNUMBER) && ((luaR_numkey)pentry->key.id.numkey == numkey))) {
       res = &pentry->value;
+
       break;
     }
     i ++; pentry ++;
@@ -74,7 +75,7 @@ static const TValue* luaR_auxfind(const luaR_entry *pentry, const char *strkey, 
 
   if (res && ppos)
     *ppos = i;   
-  
+
   return res;
 }
 

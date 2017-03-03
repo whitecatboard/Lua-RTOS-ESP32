@@ -32,6 +32,7 @@
 
 #if LUA_USE_ROTABLE
 #include "lrotable.h"
+#include "llex.h"
 #endif
 
 /* limit for table tag-method chains (to avoid loops) */
@@ -191,10 +192,24 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
                      StkId val, const TValue *oldval) {
   int loop;  /* counter to avoid infinite loops */
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
+    #if !LUA_USE_ROTABLE
     const TValue *tm;
+	#else
+    const TValue *tm = NULL;
+	#endif
     if (oldval != NULL) {
       lua_assert(ttistable(t) && ttisnil(oldval));
       /* must check the metamethod */
+	  #if LUA_USE_ROTABLE
+      if (ttisrotable(t) || ttisrotable(oldval)) {
+    	  if (ttisrotable(t)) {
+    		  luaG_typeerror(L, t, "set");
+    	  } else {
+    		  luaG_typeerror(L, oldval, "set");
+    	  }
+    	  return;
+      } else {
+	  #endif
       if ((tm = fasttm(L, hvalue(t)->metatable, TM_NEWINDEX)) == NULL &&
          /* no metamethod; is there a previous entry in the table? */
          (oldval != luaO_nilobject ||
@@ -207,6 +222,9 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
         luaC_barrierback(L, hvalue(t), val);
         return;
       }
+	  #if LUA_USE_ROTABLE
+      }
+	  #endif
       /* else will try the metamethod */
     }
     else {  /* not a table; check metamethod */
@@ -750,7 +768,7 @@ void luaV_finishOp (lua_State *L) {
 
 
 #define vmdispatch(o)	switch(o)
-#define vmcase(l)	case l:
+#define vmcase(l)	case l: //printf("%s\r\n",luaP_opnames[l]);
 #define vmbreak		break
 
 

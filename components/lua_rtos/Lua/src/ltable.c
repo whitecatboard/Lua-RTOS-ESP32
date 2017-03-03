@@ -570,9 +570,11 @@ const TValue *luaH_getshortstr (Table *t, TString *key) {
 */
 static const TValue *getgeneric (Table *t, const TValue *key) {
 #if LUA_USE_ROTABLE
-  if (luaR_isrotable((const void *)t)) {
-	  return luaR_findentry((const void *)t, getstr(key), 0, NULL);
-  }
+	const TValue *entry;
+
+	if ((entry = luaR_findentry((const void *)t, getstr(key), 0, NULL))) {
+		return entry;
+	}
 #endif
 
   Node *n = mainposition(t, key);
