@@ -192,11 +192,10 @@ static driver_error_t *wifi_init(wifi_mode_t mode) {
 }
 
 static driver_error_t *wifi_deinit() {
-	driver_error_t *error;
-
 	// TO DO
 	// esp_wifi_dinit: This API can not be called yet and will be done in the future.
 	#if 0
+	driver_error_t *error;
 	if (status_get(STATUS_WIFI_INITED)) {
 		// Remove and stop wifi driver from system
 		if ((error = wifi_check_error(esp_wifi_deinit()))) return error;
@@ -283,8 +282,8 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password) {
 
 	    memset(&wifi_config, 0, sizeof(wifi_config_t));
 
-	    strncpy(wifi_config.sta.ssid, ssid, 32);
-	    strncpy(wifi_config.sta.password, password, 64);
+	    strncpy((char *)wifi_config.sta.ssid, ssid, 32);
+	    strncpy((char *)wifi_config.sta.password, password, 64);
 
 	    // Set config
 	    if ((error = wifi_check_error(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config)))) return error;

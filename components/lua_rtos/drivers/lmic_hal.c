@@ -251,17 +251,17 @@ void hal_pin_rxtx (u1_t val) {
 void hal_pin_rst (u1_t val) {
 	#if CONFIG_LUA_RTOS_USE_POWER_BUS
 		if (val == 1) {
-			esp_intr_disable(&dio_handle);
+			esp_intr_disable((intr_handle_t)dio_handle);
 			pwbus_off();
 			delay(1);
 			pwbus_on();
-			esp_intr_enable(&dio_handle);
+			esp_intr_enable((intr_handle_t)dio_handle);
 		} else if (val == 0) {
-			esp_intr_disable(&dio_handle);
+			esp_intr_disable((intr_handle_t)dio_handle);
 			pwbus_off();
 			delay(1);
 			pwbus_on();
-			esp_intr_enable(&dio_handle);
+			esp_intr_enable((intr_handle_t)dio_handle);
 		} else {
 			delay(5);
 		}

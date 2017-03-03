@@ -1552,7 +1552,7 @@ static bit_t processJoinAccept (void) {
     }
     u1_t hdr  = LMIC.frame[0];
     u1_t dlen = LMIC.dataLen;
-    u4_t mic  = os_rlsbf4(&LMIC.frame[dlen-4]); // safe before modified by encrypt!
+    //u4_t mic  = os_rlsbf4(&LMIC.frame[dlen-4]); // safe before modified by encrypt!
     if( (dlen != LEN_JA && dlen != LEN_JAEXT)
         || (hdr & (HDR_FTYPE|HDR_MAJOR)) != (HDR_FTYPE_JACC|HDR_MAJOR_V1) ) {
         EV(specCond, ERR, (e_.reason = EV::specCond_t::UNEXPECTED_FRAME,

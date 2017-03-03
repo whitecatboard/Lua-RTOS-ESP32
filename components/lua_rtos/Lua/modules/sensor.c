@@ -186,7 +186,6 @@ static int lsensor_get( lua_State* L ) {
     sensor_userdata *udata = NULL;
 	driver_error_t *error;
 	sensor_value_t *value;
-	int ret;
 
 	udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor");
     luaL_argcheck(L, udata, 1, "sensor expected");
