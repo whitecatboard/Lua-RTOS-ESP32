@@ -43,6 +43,10 @@
 #define GPIO_ERR_INVALID_PIN                  (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  1)
 #define GPIO_ERR_INVALID_PORT                 (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  2)
 
+void gpio_ll_pin_set(uint8_t pin);
+void gpio_ll_pin_clr(uint8_t pin);
+void gpio_ll_pin_inv(int8_t pin);
+
 driver_error_t *gpio_pin_output(uint8_t pin);
 driver_error_t *gpio_pin_input(uint8_t pin);
 driver_error_t *gpio_pin_set(uint8_t pin);

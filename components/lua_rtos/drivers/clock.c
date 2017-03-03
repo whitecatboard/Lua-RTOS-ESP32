@@ -37,45 +37,28 @@
 
 #include <drivers/gpio.h>
 
-static volatile uint64_t tticks = 0;    // Number of ticks (1 tick = configTICK_RATE_HZ)
-static volatile uint64_t tdelta = 0;    // Delta tincs from last 1000 ms
-static volatile uint32_t tseconds = 0;  // Seconds counter (from boot)
-static volatile unsigned long long tuseconds = 0; // Seconds counter (from boot)
-
 #if USE_LED_ACT
+static volatile uint64_t tdelta = 0;
+
 unsigned int activity = 0;
-#endif
-
-void newTick(void);
-
-void _clock_init(void) {
-    tseconds = BUILD_TIME;
-
-    //esp_register_freertos_tick_hook(&newTick);
-}
 
 void IRAM_ATTR newTick(void) {
-	// Increment internal high tick counter
-    // This is every 1 ms
-    tticks++;
-
-    // Increment usecs
-    tuseconds = tuseconds + configTICK_RATE_HZ;
-
-    // Increment delta ticks
     tdelta++;
     if (tdelta == configTICK_RATE_HZ) {
         // 1 second since last second
         tdelta = 0;
-        tuseconds = 0;
 
-        tseconds++;
-
-		#if USE_LED_ACT
-        	if (activity <= 0) {
-            	activity = 0;
-            	gpio_pin_inv(LED_ACT);
-        	}
-		#endif
+        if (activity <= 0) {
+			activity = 0;
+			gpio_ll_pin_inv(LED_ACT);
+		}
     }
 }
+
+void _clock_init(void) {
+	#if USE_LED_ACT
+    esp_register_freertos_tick_hook(&newTick);
+	#endif
+}
+
+#endif
