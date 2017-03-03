@@ -30,7 +30,7 @@
 #include <drivers/lora.h>
 
 // LMIC run loop, as a FreeRTOS task
-void os_runloop(void *pvParameters);
+void *os_runloop(void *pvParameters);
 
 // Task handle for LMIC run loop
 TaskHandle_t xRunLoop = NULL;
@@ -143,7 +143,7 @@ void os_setTimedCallback (osjob_t* job, ostime_t time, osjobcb_t cb) {
 }
 
 // LMIC run loop, as a FreeRTOS task
-void os_runloop(void *pvParameters) {
+void *os_runloop(void *pvParameters) {
 	for(;;) {
 	    osjob_t *j = NULL;
 
@@ -169,6 +169,8 @@ void os_runloop(void *pvParameters) {
 	    	}
 	    }
 	}
+
+	return NULL;
 }
 
 #endif

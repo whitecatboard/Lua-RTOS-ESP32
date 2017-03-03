@@ -111,6 +111,7 @@ static owState_t TM_DS18B20_Start(uint8_t dev, unsigned char *ROM) {
 }
 
 //-------------------------------------------------
+#if 0
 static owState_t TM_DS18B20_StartAll(uint8_t dev) {
   if (getPowerMode(dev)) return owError_NoDevice;
 
@@ -125,6 +126,7 @@ static owState_t TM_DS18B20_StartAll(uint8_t dev) {
 
   return ow_OK;
 }
+#endif
 
 //--------------------------------------------------------------------------------------
 static owState_t TM_DS18B20_Read(uint8_t dev, unsigned char *ROM, double *destination) {

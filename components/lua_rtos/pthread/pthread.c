@@ -29,6 +29,8 @@
 
 #include "luartos.h"
 
+#include "esp_attr.h"
+
 #include "lua.h"
 #include "thread.h"
 
@@ -273,7 +275,7 @@ sig_t _pthread_signal(int s, sig_t h) {
     return NULL;
 }
 
-void _pthread_queue_signal(int s) {
+void IRAM_ATTR _pthread_queue_signal(int s) {
     struct pthread *thread; // Current thread
     int index;
     
@@ -313,7 +315,7 @@ void _pthread_process_signal(void) {
 }
 #endif
 
-int _pthread_has_signal(int s) {
+int IRAM_ATTR _pthread_has_signal(int s) {
     struct pthread *thread; // Current thread
     int index;
     

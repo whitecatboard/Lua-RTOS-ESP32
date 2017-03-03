@@ -54,6 +54,7 @@
 #include "luartos.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
+#include "freertos/timers.h"
 #include "freertos/xtensa_api.h"
 
 #include "esp_types.h"
@@ -81,10 +82,7 @@
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
 
-static const driver_message_t uart_errors[] = {
-	{"",""},
-	{"can't setup","CannotSetup"},
-};
+DRIVER_REGISTER_ERROR(UART, uart, CannotSetup, "can't setup", UART_ERR_CANT_INIT);
 
 // Flags for determine some UART states
 #define UART_FLAG_INIT		(1 << 1)
@@ -145,52 +143,49 @@ static void uart_pin_config(int8_t unit, uint8_t rx, uint8_t tx) {
 	switch (unit) {
 		case 0:
 			// Enable UTX0
-			PIN_PULLUP_DIS(PERIPHS_IO_MUX_U0TXD_U);
+			gpio_pullup_dis(1);
 			PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD_U0TXD);
 
 			// Enable U0RX
-	        PIN_PULLUP_EN(PERIPHS_IO_MUX_U0RXD_U);
+			gpio_pullup_en(3);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_U0RXD_U0RXD);
 
 			break;
 
 		case 1:
 			// Enable U1TX
-			PIN_PULLUP_DIS(PERIPHS_IO_MUX_SD_DATA3_U);
+			gpio_pullup_dis(10);
 			PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA3_U, FUNC_SD_DATA3_U1TXD);
 
 			// Enable U1RX
-	        PIN_PULLUP_EN(PERIPHS_IO_MUX_SD_DATA2_U);
+			gpio_pullup_en(9);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_SD_DATA2_U, FUNC_SD_DATA2_U1RXD);
 
 			break;
 
 		case 2:
 			// Enable U2TX
-			PIN_PULLUP_DIS(PERIPHS_IO_MUX_GPIO17_U);
+			gpio_pullup_dis(17);
 			PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO17_U, FUNC_GPIO17_U2TXD);
 
 			// Enable U2RX
-	        PIN_PULLUP_EN(PERIPHS_IO_MUX_GPIO16_U);
+			gpio_pullup_en(16);
 	        PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO16_U, FUNC_GPIO16_U2RXD);
 
 			break;
 	}}
 
 // Determine if byte must be queued
-static int IRAM_ATTR queue_byte(int8_t unit, uint8_t byte, int *signal) {
+static int IRAM_ATTR queue_byte(int8_t unit, uint8_t byte, uint8_t *status, int *signal) {
 	*signal = 0;
+	*status = 0;
 
     if (unit == CONSOLE_UART) {
         if (byte == 0x04) {
             if (!status_get(STATUS_LUA_RUNNING)) {
-            	uart_lock(CONSOLE_UART);
-                uart_writes(CONSOLE_UART, "Lua RTOS-booting-ESP32\r\n");
-            	uart_unlock(CONSOLE_UART);
+            	*status = 1;
             } else {
-            	uart_lock(CONSOLE_UART);
-                uart_writes(CONSOLE_UART, "Lua RTOS-running-ESP32\r\n");
-            	uart_unlock(CONSOLE_UART);
+            	*status = 2;
             }
 
 			status_set(STATUS_LUA_ABORT_BOOT_SCRIPTS);
@@ -251,10 +246,26 @@ void uart_pins(int8_t unit, uint8_t *rx, uint8_t *tx) {
 	}
 }
 
-void  IRAM_ATTR uart_rx_intr_handler(void *para) {
+void IRAM_ATTR report_status(void *pvParameter1, uint32_t status) {
+	if (status == 1) {
+    	uart_lock(CONSOLE_UART);
+        uart_writes(CONSOLE_UART, "Lua RTOS-booting-ESP32\r\n");
+    	uart_unlock(CONSOLE_UART);
+	} else if (status == 2) {
+    	uart_lock(CONSOLE_UART);
+        uart_writes(CONSOLE_UART, "Lua RTOS-running-ESP32\r\n");
+    	uart_unlock(CONSOLE_UART);
+	}
+}
+
+void IRAM_ATTR process_signal(void *pvParameter1, uint32_t signal) {
+	_pthread_queue_signal(signal);
+}
+
+void IRAM_ATTR uart_rx_intr_handler(void *para) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     uint32_t uart_intr_status = 0;
-	uint8_t byte;
+	uint8_t byte, status;
 	int signal = 0;
 	int unit = 0;
 
@@ -271,12 +282,22 @@ void  IRAM_ATTR uart_rx_intr_handler(void *para) {
 
 	            while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT) {
 					byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
-					if (queue_byte(unit, byte, &signal)) {
+					if (queue_byte(unit, byte, &status, &signal)) {
 			            // Put byte to UART queue
 			            xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
 					} else {
 						if (signal) {
-							_pthread_queue_signal(signal);
+							 xTimerPendFunctionCallFromISR(process_signal,
+							                               NULL,
+							                               (uint32_t)signal,
+							                               &xHigherPriorityTaskWoken);
+						}
+
+						if (status) {
+							 xTimerPendFunctionCallFromISR(report_status,
+							                               NULL,
+							                               (uint32_t)status,
+							                               &xHigherPriorityTaskWoken);
 						}
 					}
 	            }
@@ -285,12 +306,22 @@ void  IRAM_ATTR uart_rx_intr_handler(void *para) {
 
 	            while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT) {
 					byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
-					if (queue_byte(unit, byte, &signal)) {
+					if (queue_byte(unit, byte, &status, &signal)) {
 			            // Put byte to UART queue
 			            xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
 					} else {
 						if (signal) {
-							_pthread_queue_signal(signal);
+							 xTimerPendFunctionCallFromISR(process_signal,
+							                               NULL,
+							                               (uint32_t)signal,
+							                               &xHigherPriorityTaskWoken);
+						}
+
+						if (status) {
+							 xTimerPendFunctionCallFromISR(report_status,
+							                               NULL,
+							                               (uint32_t)status,
+							                               &xHigherPriorityTaskWoken);
 						}
 					}
 	            }

@@ -29,6 +29,14 @@ SECTIONS {
 	/* exception names exported to Lua modules */
 	/* TO DO */
 	/*   Generate this entries automatically */
+    uart_errors = ABSOLUTE(.);
+    KEEP(*(.uart_errors))
+    LONG(0) LONG(0)
+
+    uart_error_map = ABSOLUTE(.);
+    KEEP(*(.uart_error_map))
+    LONG(0) LONG(0)
+
     pwbus_errors = ABSOLUTE(.);
     KEEP(*(.pwbus_errors))
     LONG(0) LONG(0)

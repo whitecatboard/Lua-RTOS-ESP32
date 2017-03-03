@@ -91,7 +91,7 @@ u1_t radio_rand1 (void);
 int  radio_init (void);
 void radio_irq_handler (u1_t dio);
 driver_error_t *os_init (void);
-void os_runloop(void * pvParameters);
+void *os_runloop(void * pvParameters);
 
 //================================================================================
 

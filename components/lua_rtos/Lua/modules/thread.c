@@ -353,7 +353,7 @@ monitor_loop:
 	if (monitor) {
 		printf("\n\nPress q for exit");
 
-		unsigned char press;
+		char press;
 
 		uart_read(CONSOLE_UART, &press, 1);
 		if ((press != 'q') && (press != 'Q')) {

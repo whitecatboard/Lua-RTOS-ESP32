@@ -28,6 +28,7 @@
  */
 
 #include "esp_err.h"
+#include "esp_attr.h"
 
 #include <string.h>
 
@@ -42,6 +43,41 @@ static driver_unit_lock_t gpio_locks[CPU_LAST_GPIO + 1];
 DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPinDirection, "invalid pin direction", GPIO_ERR_INVALID_PIN_DIRECTION);
 DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPin, "invalid pin", GPIO_ERR_INVALID_PIN);
 DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPort, "invalid port", GPIO_ERR_INVALID_PORT);
+
+/*
+ * Low level gpio operations
+ */
+void IRAM_ATTR gpio_ll_pin_set(uint8_t pin) {
+	if (pin < 32) {
+		GPIO.out_w1ts = (1 << pin);
+	} else {
+		GPIO.out1_w1ts.data = (1 << (pin - 32));
+	}
+}
+
+void IRAM_ATTR gpio_ll_pin_clr(uint8_t pin) {
+	if (pin < 32) {
+		GPIO.out_w1tc = (1 << pin);
+	} else {
+		GPIO.out1_w1tc.data = (1 << (pin - 32));
+	}
+}
+
+void IRAM_ATTR gpio_ll_pin_inv(int8_t pin) {
+	if (pin < 32) {
+		if (GPIO.out & (1 << pin)) {
+			gpio_ll_pin_clr(pin);
+		} else {
+			gpio_ll_pin_set(pin);
+		}
+	} else {
+		if (GPIO.out1.val & (1 << pin)) {
+			gpio_ll_pin_clr(pin);
+		} else {
+			gpio_ll_pin_set(pin);
+		}
+	}
+}
 
 /*
  * Operations over a single pin
@@ -91,7 +127,7 @@ driver_error_t *gpio_pin_set(uint8_t pin) {
 		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 	}
 
-	gpio_set_level(pin, 1);
+	gpio_ll_pin_set(pin);
 
 	return NULL;
 }
@@ -102,7 +138,7 @@ driver_error_t *gpio_pin_clr(uint8_t pin) {
 		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 	}
 
-	gpio_set_level(pin, 0);
+	gpio_ll_pin_clr(pin);
 
 	return NULL;
 }
@@ -110,19 +146,12 @@ driver_error_t *gpio_pin_clr(uint8_t pin) {
 driver_error_t *gpio_pin_inv(uint8_t pin) {
 	driver_error_t *error = NULL;
 
-	if (pin < 32) {
-		if (GPIO.out & (1 << pin)) {
-			error = gpio_pin_clr(pin);
-		} else {
-			error = gpio_pin_set(pin);
-		}
-	} else {
-		if (GPIO.out1.val & (1 << pin)) {
-			error = gpio_pin_clr(pin);
-		} else {
-			error = gpio_pin_set(pin);
-		}
+	// Sanity checks
+	if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
+		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 	}
+
+	gpio_ll_pin_inv(pin);
 
 	return error;
 }

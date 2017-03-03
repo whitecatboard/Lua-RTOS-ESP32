@@ -54,7 +54,6 @@ menu "Lua RTOS"
 		
   	config LUA_RTOS_USE_LED_ACT
 	  	bool "Use activity led"
-  		select FREERTOS_LEGACY_TICK_HOOK if LUA_RTOS_USE_LED_ACT
   		default n
     	help 
 			Select this to enable the Lua RTOS activity led.

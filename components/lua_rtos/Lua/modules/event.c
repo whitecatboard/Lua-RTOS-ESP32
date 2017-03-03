@@ -42,9 +42,6 @@
 #include "event.h"
 #include "modules.h"
 
-// List of events
-static struct list event_list;
-
 // This variables are defined at linker time
 extern LUA_REG_TYPE event_error_map[];
 

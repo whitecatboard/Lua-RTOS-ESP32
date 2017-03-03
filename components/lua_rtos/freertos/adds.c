@@ -29,6 +29,8 @@
 
 #include "luartos.h"
 
+#include "esp_attr.h"
+
 #include "lua.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -70,7 +72,7 @@ void uxSetThreadId(UBaseType_t id) {
 	}
 }
 
-UBaseType_t uxGetThreadId() {
+UBaseType_t IRAM_ATTR uxGetThreadId() {
 	lua_rtos_tcb_t *lua_rtos_tcb;
 	int threadid = 0;
 
@@ -120,7 +122,7 @@ uint32_t uxGetSignaled(TaskHandle_t h) {
 	return signaled;
 }
 
-void uxSetSignaled(TaskHandle_t h, int s) {
+void IRAM_ATTR uxSetSignaled(TaskHandle_t h, int s) {
 	lua_rtos_tcb_t *lua_rtos_tcb;
 
 	// Get Lua RTOS specific TCB parts for current task
