@@ -421,8 +421,8 @@ static const LUA_REG_TYPE lora_map[] = {
 
 	// Error definitions
 	{LSTRKEY("error"), 			 LROVAL( lora_error_map )},
-	
-    {LNILKEY, LNILVAL}
+
+	{LNILKEY, LNILVAL}
 };
 
 int luaopen_lora(lua_State* L) {

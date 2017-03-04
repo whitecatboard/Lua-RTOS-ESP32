@@ -159,6 +159,8 @@ void _sys_init() {
 
     printf("board type %s\r\n", LUA_RTOS_BOARD);
 
+    luaR_dump();
+
 	#ifdef RUN_TESTS
 		// Create and run a pthread for tests
 		pthread_attr_t attr;

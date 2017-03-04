@@ -505,6 +505,7 @@ static const LUA_REG_TYPE base_funcs[] = {
 
 static int luaB_index (lua_State *L) {
   int fres;
+
   if ((fres = luaR_findfunction(L, base_funcs)) != 0)
     return fres;
 
@@ -518,7 +519,7 @@ static int luaB_index (lua_State *L) {
   if (!res)
     return 0;
   else {
-    lua_pushrotable(L, (void *)res);
+    lua_pushrotable(L, (void *)rvalue(res));
     return 1;
   }
 }

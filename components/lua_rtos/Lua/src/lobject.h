@@ -180,7 +180,7 @@ typedef struct lua_TValue {
 #define thvalue(o)	check_exp(ttisthread(o), gco2th(val_(o).gc))
 
 #if LUA_USE_ROTABLE
-#define rvalue(o)	check_exp(ttisrotable(o), gco2t(val_(o).gc))
+#define rvalue(o)	check_exp(ttisrotable(o), val_(o).p)
 #endif
 
 /* a dead value may get the 'gc' field, but cannot access its contents */
@@ -264,9 +264,7 @@ typedef struct lua_TValue {
 
 #if LUA_USE_ROTABLE
 #define setrvalue(obj,x) \
-  { TValue *io=(obj); luaR_table *x_ = (x); \
-    val_(io).gc = obj2gco(x_); settt_(io, LUA_TROTABLE); \
-    checkliveness(L,io); }
+  { TValue *io=(obj); val_(io).p=(x); settt_(io, LUA_TROTABLE); }
 #endif
 
 #define setobj(L,obj1,obj2) \

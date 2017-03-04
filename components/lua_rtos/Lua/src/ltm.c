@@ -68,22 +68,29 @@ void luaT_init (lua_State *L) {
 ** function to be used with macro "fasttm": optimized for absence of
 ** tag methods
 */
+#if !LUA_USE_ROTABLE
 const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
   const TValue *tm = luaH_getshortstr(events, ename);
   lua_assert(event <= TM_EQ);
   if (ttisnil(tm)) {  /* no tag method? */
-    #if LUA_USE_ROTABLE
-    if (!luaR_isrotable(events)) {
-	    events->flags |= cast_byte(1u<<event);  /* cache this fact */
-    }
-    #else
-	    events->flags |= cast_byte(1u<<event);  /* cache this fact */
-    #endif 
+    events->flags |= cast_byte(1u<<event);  /* cache this fact */
     return NULL;
   }
   else return tm;
 }
-
+#else
+const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
+  const TValue *tm = luaH_getshortstr(events, ename);
+  lua_assert(event <= TM_EQ);
+  if (ttisnil(tm)) {  /* no tag method? */
+	if (!luaR_isrotable(events)) {
+		events->flags |= cast_byte(1u<<event);  /* cache this fact */
+	}
+    return NULL;
+  }
+  else return tm;
+}
+#endif
 
 const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
   Table *mt;
@@ -93,7 +100,7 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
       break;
 #if LUA_USE_ROTABLE
     case LUA_TROTABLE:
-      mt = (Table*)luaR_getmeta(rvalue(o));
+      mt = (Table *)luaL_rometatable(rvalue(o));
       break;
 #endif
     case LUA_TUSERDATA:

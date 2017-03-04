@@ -397,6 +397,9 @@ LUA_API size_t lua_rawlen (lua_State *L, int idx) {
     case LUA_TLNGSTR: return tsvalue(o)->u.lnglen;
     case LUA_TUSERDATA: return uvalue(o)->len;
     case LUA_TTABLE: return luaH_getn(hvalue(o));
+#if LUA_USE_ROTABLE
+    case LUA_TROTABLE: return(luaH_getn_ro(hvalue(o)));
+#endif
     default: return 0;
   }
 }
@@ -724,15 +727,35 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
     case LUA_TUSERDATA:
       mt = uvalue(obj)->metatable;
       break;
+#if LUA_USE_ROTABLE
+    case LUA_TROTABLE:
+      mt = (Table *)luaL_rometatable(rvalue(obj));
+      break;
+#endif
     default:
       mt = G(L)->mt[ttnov(obj)];
       break;
   }
+#if !LUA_USE_ROTABLE
   if (mt != NULL) {
     sethvalue(L, L->top, mt);
     api_incr_top(L);
     res = 1;
   }
+#else
+  if (mt != NULL) {
+	  if(luaR_isrotable(mt)) {
+		  printf("1\r\n");
+		  setrvalue(L->top, mt);
+		  printf("2\r\n");
+	  } else {
+		  sethvalue(L, L->top, mt);
+	  }
+
+	  api_incr_top(L);
+	  res = 1;
+  }
+#endif
   lua_unlock(L);
   return res;
 }
