@@ -86,5 +86,6 @@ int luaH_next_ro (lua_State *L, void *t, StkId key);
 
 int luaR_index(lua_State *L, const void *funcs, const void *consts);
 int luaR_error(lua_State *L);
+LUALIB_API int luaL_newmetarotable (lua_State *L, const char* tname, void *p);
 
 #endif

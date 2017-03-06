@@ -64,14 +64,10 @@ static int ladc_setup( lua_State* L ) {
     	return luaL_driver_error(L, error);
     }
 
-    luaL_getmetatable(L, "adc");
+    luaL_getmetatable(L, "adc.chan");
     lua_setmetatable(L, -2);
 
     return 1;
-}
-
-static int ladc_setup_channel( lua_State* L ) {
-    return 0;
 }
 
 static int ladc_read( lua_State* L ) {
@@ -80,7 +76,7 @@ static int ladc_read( lua_State* L ) {
 	driver_error_t *error;
     adc_userdata *adc = NULL;
 
-    adc = (adc_userdata *)luaL_checkudata(L, 1, "adc");
+    adc = (adc_userdata *)luaL_checkudata(L, 1, "adc.chan");
     luaL_argcheck(L, adc, 1, "adc expected");
 
     if ((error = adc_read(adc->adc, adc->chan, &raw, &mvlots))) {
@@ -92,21 +88,8 @@ static int ladc_read( lua_State* L ) {
     }
 }
 
-static int ladc_index(lua_State *L);
-static int ladc_chan_index(lua_State *L);
-
 static const LUA_REG_TYPE ladc_map[] = {
-    { LSTRKEY( "setup"   ),			LFUNCVAL( ladc_setup   ) },
-    { LNILKEY, LNILVAL }
-};
-
-static const LUA_REG_TYPE ladc_chan_map[] = {
-  	{ LSTRKEY( "read"      ),	 LFUNCVAL( ladc_read          ) },
-  	{ LSTRKEY( "setupchan" ),	 LFUNCVAL( ladc_setup_channel ) },
-    { LNILKEY, LNILVAL }
-};
-
-static const LUA_REG_TYPE ladc_constants_map[] = {
+    { LSTRKEY( "setup"       ),			LFUNCVAL( ladc_setup   ) },
 	ADC_ADC0
 	ADC_ADC1
 	ADC_ADC2
@@ -127,39 +110,18 @@ static const LUA_REG_TYPE ladc_constants_map[] = {
 	{ LNILKEY, LNILVAL }
 };
 
-static const luaL_Reg ladc_func[] = {
-    { "__index", 	ladc_index },
-    { NULL, NULL }
+static const LUA_REG_TYPE ladc_chan_map[] = {
+  	{ LSTRKEY( "read"      ),	 LFUNCVAL( ladc_read          ) },
+    { LSTRKEY( "__metatable" ),	 LROVAL  ( ladc_chan_map      ) },
+	{ LSTRKEY( "__index" ),   	 LROVAL  ( ladc_chan_map      ) },
+	{ LNILKEY, LNILVAL }
 };
-
-static const luaL_Reg ladc_chan_func[] = {
-    { "__index", 	ladc_chan_index },
-    { NULL, NULL }
-};
-
-static int ladc_index(lua_State *L) {
-	return luaR_index(L, ladc_map, ladc_constants_map);
-}
-
-static int ladc_chan_index(lua_State *L) {
-	return luaR_index(L, ladc_chan_map, NULL);
-}
 
 LUALIB_API int luaopen_adc( lua_State *L ) {
-    luaL_newlib(L, ladc_func);
-    lua_pushvalue(L, -1);
-    lua_setmetatable(L, -2);
-
-    luaL_newmetatable(L, "adc");
-    lua_pushvalue(L, -1);
-    lua_setfield(L, -2, "__index");
-
-    luaL_setfuncs(L, ladc_chan_func, 0);
-    lua_pop(L, 1);
-
-    return 1;
+    luaL_newmetarotable(L,"adc.chan", ladc_chan_map);
+    return 0;
 }
 
-MODULE_REGISTER_UNMAPPED(ADC, adc, luaopen_adc);
+MODULE_REGISTER_MAPPED(ADC, adc, ladc_map, luaopen_adc);
 
 #endif

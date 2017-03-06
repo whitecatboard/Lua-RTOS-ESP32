@@ -305,7 +305,6 @@ LUALIB_API void luaL_setmetatable (lua_State *L, const char *tname) {
   lua_setmetatable(L, -2);
 }
 
-
 LUALIB_API void *luaL_testudata (lua_State *L, int ud, const char *tname) {
   void *p = lua_touserdata(L, ud);
   if (p != NULL) {  /* value is a userdata? */
@@ -317,6 +316,7 @@ LUALIB_API void *luaL_testudata (lua_State *L, int ud, const char *tname) {
       return p;
     }
   }
+
   return NULL;  /* value is not a userdata with a metatable */
 }
 

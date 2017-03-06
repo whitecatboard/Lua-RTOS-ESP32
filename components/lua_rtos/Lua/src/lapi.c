@@ -745,9 +745,7 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
 #else
   if (mt != NULL) {
 	  if(luaR_isrotable(mt)) {
-		  printf("1\r\n");
 		  setrvalue(L->top, mt);
-		  printf("2\r\n");
 	  } else {
 		  sethvalue(L, L->top, mt);
 	  }
@@ -884,6 +882,9 @@ LUA_API void lua_rawsetp (lua_State *L, int idx, const void *p) {
 
 
 LUA_API int lua_setmetatable (lua_State *L, int objindex) {
+#if LUA_USE_ROTABLE
+    int isrometa = 0;
+#endif
   TValue *obj;
   Table *mt;
   lua_lock(L);
@@ -893,12 +894,25 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
     mt = NULL;
   else {
     api_check(L, ttistable(L->top - 1), "table expected");
+#if !LUA_USE_ROTABLE
     mt = hvalue(L->top - 1);
+#else
+    if (ttistable(L->top - 1)) {
+      mt = hvalue(L->top - 1);
+    } else {
+      mt = (Table*)rvalue(L->top - 1);
+      isrometa = 1;
+    }
+#endif
   }
   switch (ttnov(obj)) {
     case LUA_TTABLE: {
       hvalue(obj)->metatable = mt;
+#if !LUA_USE_ROTABLE
       if (mt) {
+#else
+	  if (mt && !isrometa) {
+#endif
         luaC_objbarrier(L, gcvalue(obj), mt);
         luaC_checkfinalizer(L, gcvalue(obj), mt);
       }
@@ -906,7 +920,11 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
     }
     case LUA_TUSERDATA: {
       uvalue(obj)->metatable = mt;
+#if !LUA_USE_ROTABLE
       if (mt) {
+#else
+	  if (mt && !isrometa) {
+#endif
         luaC_objbarrier(L, uvalue(obj), mt);
         luaC_checkfinalizer(L, gcvalue(obj), mt);
       }

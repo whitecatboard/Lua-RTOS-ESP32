@@ -218,4 +218,15 @@ int luaR_index(lua_State *L, const void *funcs, const void *consts) {
 	return (int) luaO_nilobject;
 }
 
+LUALIB_API int luaL_newmetarotable (lua_State *L, const char* tname, void *p) {
+  lua_getfield(L, LUA_REGISTRYINDEX, tname);  /* get registry.name */
+  if (!lua_isnil(L, -1))  /* name already in use? */
+    return 0;  /* leave previous value on top, but return 0 */
+  lua_pop(L, 1);
+  lua_pushrotable(L, p);
+  lua_pushvalue(L, -1);
+  lua_setfield(L, LUA_REGISTRYINDEX, tname);  /* registry.name = metatable */
+  return 1;
+}
+
 #endif
