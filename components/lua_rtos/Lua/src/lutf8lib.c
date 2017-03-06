@@ -234,23 +234,40 @@ static int iter_codes (lua_State *L) {
 /* pattern to match a single UTF-8 character */
 #define UTF8PATT	"[\0-\x7F\xC2-\xF4][\x80-\xBF]*"
 
+#include "modules.h"
 
-static const luaL_Reg funcs[] = {
-  {"offset", byteoffset},
-  {"codepoint", codepoint},
-  {"char", utfchar},
-  {"len", utflen},
-  {"codes", iter_codes},
-  /* placeholders */
-  {"charpattern", NULL},
-  {NULL, NULL}
+#if LUA_USE_ROTABLE
+static int lua_utf8_index (lua_State *L) {
+  const char *keyname = luaL_checkstring(L, 2);
+  if (!strcmp(keyname, "charpattern")) {
+	lua_pushlstring(L, UTF8PATT, sizeof(UTF8PATT)/sizeof(char) - 1);
+    return 1;
+  }
+
+  return 0;
+}
+#endif
+
+static const LUA_REG_TYPE funcs[] = {
+  { LSTRKEY( "offset"      ),			LFUNCVAL( byteoffset     ) },
+  { LSTRKEY( "codepoint"   ),			LFUNCVAL( codepoint      ) },
+  { LSTRKEY( "char"        ),			LFUNCVAL( utfchar        ) },
+  { LSTRKEY( "len"         ),			LFUNCVAL( utflen         ) },
+  { LSTRKEY( "codes"       ),			LFUNCVAL( iter_codes     ) },
+  { LSTRKEY( "__metatable" ),	        LROVAL  ( funcs          ) },
+  { LSTRKEY( "__index"     ),           LFUNCVAL( lua_utf8_index ) },
+  { LNILKEY, LNILVAL }
 };
 
 
 LUAMOD_API int luaopen_utf8 (lua_State *L) {
-  luaL_newlib(L, funcs);
+#if !LUA_USE_ROTABLE
   lua_pushlstring(L, UTF8PATT, sizeof(UTF8PATT)/sizeof(char) - 1);
   lua_setfield(L, -2, "charpattern");
   return 1;
+#else
+  return 0;
+#endif
 }
 
+MODULE_REGISTER_MAPPED(UTF8, utf8, funcs, luaopen_utf8);

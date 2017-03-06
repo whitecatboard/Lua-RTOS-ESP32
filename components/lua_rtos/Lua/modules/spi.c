@@ -85,7 +85,7 @@ static int lspi_setup(lua_State* L) {
     	return luaL_driver_error(L, error);
     }
 
-    luaL_getmetatable(L, "spi");
+    luaL_getmetatable(L, "spi.ins");
     lua_setmetatable(L, -2);
 
 	return 1;
@@ -95,7 +95,7 @@ static int lspi_select(lua_State* L) {
 	driver_error_t *error;
     spi_userdata *spi = NULL;
 
-    spi = (spi_userdata *)luaL_checkudata(L, 1, "spi");
+    spi = (spi_userdata *)luaL_checkudata(L, 1, "spi.ins");
     luaL_argcheck(L, spi, 1, "spi expected");
 
     if ((error = spi_set_mode(spi->spi, spi->mode))) {
@@ -121,7 +121,7 @@ static int lspi_deselect(lua_State*L ) {
 	driver_error_t *error;
     spi_userdata *spi = NULL;
 
-    spi = (spi_userdata *)luaL_checkudata(L, 1, "spi");
+    spi = (spi_userdata *)luaL_checkudata(L, 1, "spi.ins");
     luaL_argcheck(L, spi, 1, "spi expected");
 
     if ((error = spi_deselect(spi->spi))) {
@@ -139,7 +139,7 @@ static int lspi_rw_helper( lua_State *L, int withread ) {
 
 	int total = lua_gettop(L), i, j;
 
-	spi = (spi_userdata *)luaL_checkudata(L, 1, "spi");
+	spi = (spi_userdata *)luaL_checkudata(L, 1, "spi.ins");
 	luaL_argcheck(L, spi, 1, "spi expected");
 
 	size_t len, residx = 0;
@@ -181,8 +181,8 @@ static int lspi_readwrite(lua_State* L) {
 // Destructor
 static int lspi_ins_gc (lua_State *L) {
     spi_userdata *udata = NULL;
-
-    udata = (spi_userdata *)luaL_checkudata(L, 1, "spi");
+printf("lspi_ins_gc\r\n");
+    udata = (spi_userdata *)luaL_checkudata(L, 1, "spi.ins");
 	if (udata) {
 	//	free(udata->instance);
 	}
@@ -190,74 +190,44 @@ static int lspi_ins_gc (lua_State *L) {
 	return 0;
 }
 
-static int lspi_index(lua_State *L);
-static int lspi_ins_index(lua_State *L);
-
 static const LUA_REG_TYPE lspi_map[] = {
-	{ LSTRKEY( "setup"     ),	 LFUNCVAL( lspi_setup     ) },
-    { LNILKEY, LNILVAL }
-};
-
-static const LUA_REG_TYPE lspi_ins_map[] = {
-	{ LSTRKEY( "select"    ),	 LFUNCVAL( lspi_select    ) },
-	{ LSTRKEY( "deselect"  ),	 LFUNCVAL( lspi_deselect  ) },
-	{ LSTRKEY( "write"     ),	 LFUNCVAL( lspi_write     ) },
-	{ LSTRKEY( "readwrite" ),	 LFUNCVAL( lspi_readwrite ) },
-    { LNILKEY, LNILVAL }
-};
-
-static const LUA_REG_TYPE lspi_constants_map[] = {
-	{ LSTRKEY("error"       ),   LROVAL( spi_error_map )},
-	{ LSTRKEY( "MASTER"     ),	 LINTVAL( 1 ) },
-	{ LSTRKEY( "SLAVE"      ),	 LINTVAL( 0 ) },
+	{ LSTRKEY( "setup"      ),	 LFUNCVAL( lspi_setup    ) },
+	{ LSTRKEY( "error"      ),   LROVAL  ( spi_error_map ) },
+	{ LSTRKEY( "MASTER"     ),	 LINTVAL ( 1 ) },
+	{ LSTRKEY( "SLAVE"      ),	 LINTVAL ( 0 ) },
 	SPI_SPI0
 	SPI_SPI1
 	SPI_SPI2
 	SPI_SPI3
-	{ LNILKEY, LNILVAL }
+    { LNILKEY, LNILVAL }
 };
 
-static const luaL_Reg lspi_func[] = {
-    { "__index", 	lspi_index },
-    { NULL, NULL }
+static const LUA_REG_TYPE lspi_ins_map[] = {
+	{ LSTRKEY( "select"      ),	 LFUNCVAL( lspi_select    ) },
+	{ LSTRKEY( "deselect"    ),	 LFUNCVAL( lspi_deselect  ) },
+	{ LSTRKEY( "write"       ),	 LFUNCVAL( lspi_write     ) },
+	{ LSTRKEY( "readwrite"   ),	 LFUNCVAL( lspi_readwrite ) },
+    { LSTRKEY( "__metatable" ),	 LROVAL  ( lspi_ins_map   ) },
+	{ LSTRKEY( "__index"     ),  LROVAL  ( lspi_ins_map   ) },
+	{ LSTRKEY( "__gc"        ),  LROVAL  ( lspi_ins_gc    ) },
+    { LNILKEY, LNILVAL }
 };
-
-static const luaL_Reg lspi_ins_func[] = {
-	{ "__gc"   , 	lspi_ins_gc },
-    { "__index", 	lspi_ins_index },
-    { NULL, NULL }
-};
-
-static int lspi_index(lua_State *L) {
-	return luaR_index(L, lspi_map, lspi_constants_map);
-}
-
-static int lspi_ins_index(lua_State *L) {
-	return luaR_index(L, lspi_ins_map, NULL);
-}
 
 LUALIB_API int luaopen_spi( lua_State *L ) {
-	luaL_newlib(L, lspi_func);
-    lua_pushvalue(L, -1);
-    lua_setmetatable(L, -2);
-
-    luaL_newmetatable(L, "spi");
-    lua_pushvalue(L, -1);
-    lua_setfield(L, -2, "__index");
-
-    luaL_setfuncs(L, lspi_ins_func, 0);
-    lua_pop(L, 1);
-
-    return 1;
+    luaL_newmetarotable(L,"spi.ins", (void *)lspi_ins_map);
+    return 0;
 }
 
-MODULE_REGISTER_UNMAPPED(SPI, spi, luaopen_spi);
+MODULE_REGISTER_MAPPED(SPI, spi, lspi_map, luaopen_spi);
 
 #endif
 
 /*
 
  mcp3208 = spi.setup(spi.SPI2, spi.MASTER, pio.GPIO15, 1000, 1, 1, 8)
+
+ while true do
  mcp3208:select()
  mcp3208:deselect()
+ end
  */

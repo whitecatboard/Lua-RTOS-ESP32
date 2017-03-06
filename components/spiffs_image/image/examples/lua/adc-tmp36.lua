@@ -1,5 +1,11 @@
--- Read adc value from a TMP36 temperature sensor and shows current temperature
--- value on the screen.
+-- ----------------------------------------------------------------
+-- WHITECAT ECOSYSTEM
+--
+-- Lua RTOS examples
+-- ----------------------------------------------------------------
+-- Read adc value from a TMP36 temperature sensor and shows 
+-- current temperature value on the screen.
+-- ----------------------------------------------------------------
 
 tmp36_adc = adc.ADC1     -- Sensor is connected to ADC1 module
 tmp36_chan = adc.ADC_CH4 -- Sensor is connected to ADC1 chan 4 (GPIO32)

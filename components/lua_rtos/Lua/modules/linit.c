@@ -34,6 +34,7 @@
 #include "lualib.h"
 #include "lauxlib.h"
 #include "auxmods.h"
+#include "lgc.h"
 
 /*
 ** these libs are loaded by lua.c and are readily available to any Lua
@@ -47,7 +48,6 @@ extern const luaL_Reg lua_libs1[];
 
 MODULE_REGISTER_UNMAPPED(_G, _G, luaopen_base);
 MODULE_REGISTER_UNMAPPED(IO, io, luaopen_io);
-MODULE_REGISTER_UNMAPPED(UTF8, utf8, luaopen_utf8);
 MODULE_REGISTER_UNMAPPED(PACKAGE, package, luaopen_package);
 
 LUALIB_API void luaL_openlibs (lua_State *L) {
@@ -58,7 +58,7 @@ LUALIB_API void luaL_openlibs (lua_State *L) {
   		debug_free_mem_begin(luaL_openlibs);
 
 		#if LUA_USE_ROTABLE
-  		TValue *res;
+  		const TValue *res;
 
 		if ((res = luaR_findglobal(lib->name,strlen(lib->name)))) {
 	        lua_pushcfunction(L, lib->func);
@@ -73,7 +73,12 @@ LUALIB_API void luaL_openlibs (lua_State *L) {
 			lua_pop(L, 1);  /* remove lib */
 		#endif
 		
+		#if DEBUG_FREE_MEM
+		luaC_fullgc(L, 1);
+		#endif
 	  	debug_free_mem_end(luaL_openlibs, lib->name);
     }
   }
+
+  luaC_fullgc(L, 1);
 }

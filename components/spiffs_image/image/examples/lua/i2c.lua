@@ -1,12 +1,16 @@
--- Lua RTOS sample code
+-- ----------------------------------------------------------------
+-- WHITECAT ECOSYSTEM
 --
+-- Lua RTOS examples
+-- ----------------------------------------------------------------
 -- This sample demonstrates how to communicate with i2c devices.
 -- The sample writes values into an EEPROM (4c256d) and then
 -- read from the EEPROM and test that readed values are the writed
 -- values. 
+-- ----------------------------------------------------------------
 
 -- Setup i2c
-eeprom = i2c.setup(i2c.I2C0, i2c.MASTER, 1, pio.GPIO16, pio.GPIO4)
+eeprom = i2c.setup(i2c.I2C0, i2c.MASTER, 1, pio.GPIO16, pio.GPIO27)
 
 -- Write
 for i=0,100 do

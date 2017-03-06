@@ -89,7 +89,7 @@ static int ladc_read( lua_State* L ) {
 }
 
 static const LUA_REG_TYPE ladc_map[] = {
-    { LSTRKEY( "setup"       ),			LFUNCVAL( ladc_setup   ) },
+    { LSTRKEY( "setup" ),		  LFUNCVAL( ladc_setup   ) },
 	ADC_ADC0
 	ADC_ADC1
 	ADC_ADC2
@@ -103,22 +103,18 @@ static const LUA_REG_TYPE ladc_map[] = {
 	ADC_ADC_CH6
 	ADC_ADC_CH7
 	{LSTRKEY("error"), 			  LROVAL( adc_error_map    )},
-	{LSTRKEY("attenuation0db  "), LINTVAL( ADC_ATTEN_0db   )},
-	{LSTRKEY("attenuation2_5db"), LINTVAL( ADC_ATTEN_2_5db )},
-	{LSTRKEY("attenuation6db"  ), LINTVAL( ADC_ATTEN_6db   )},
-	{LSTRKEY("attenuation11db" ), LINTVAL( ADC_ATTEN_11db  )},
 	{ LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE ladc_chan_map[] = {
-  	{ LSTRKEY( "read"      ),	 LFUNCVAL( ladc_read          ) },
-    { LSTRKEY( "__metatable" ),	 LROVAL  ( ladc_chan_map      ) },
-	{ LSTRKEY( "__index" ),   	 LROVAL  ( ladc_chan_map      ) },
+  	{ LSTRKEY( "read"        ),	  LFUNCVAL( ladc_read          ) },
+    { LSTRKEY( "__metatable" ),	  LROVAL  ( ladc_chan_map      ) },
+	{ LSTRKEY( "__index"     ),   LROVAL  ( ladc_chan_map      ) },
 	{ LNILKEY, LNILVAL }
 };
 
 LUALIB_API int luaopen_adc( lua_State *L ) {
-    luaL_newmetarotable(L,"adc.chan", ladc_chan_map);
+    luaL_newmetarotable(L,"adc.chan", (void *)ladc_chan_map);
     return 0;
 }
 

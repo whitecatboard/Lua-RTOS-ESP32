@@ -50,8 +50,8 @@
 #include <sys/delay.h>
 
 void MQTTClient_init();
-static int lmqtt_index(lua_State *L);
-static int lmqtt_client_index(lua_State *L);
+
+extern LUA_REG_TYPE mqtt_error_map[];
 
 // Module errors
 #define LUA_MQTT_ERR_CANT_CREATE_CLIENT (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  0)
@@ -190,7 +190,7 @@ static int lmqtt_client( lua_State* L ){
     	return luaL_exception(L, LUA_MQTT_ERR_CANT_SET_CALLBACKS);
     }
 
-   luaL_getmetatable(L, "mqtt");
+   luaL_getmetatable(L, "mqtt.cli");
    lua_setmetatable(L, -2);
 
     return 1;
@@ -203,7 +203,7 @@ static int lmqtt_connect( lua_State* L ) {
     const char *password;
     mqtt_userdata *mqtt = NULL;
     
-    mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt");
+    mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt.cli");
     luaL_argcheck(L, mqtt, 1, "mqtt expected");
     
     user = luaL_checkstring( L, 2 );
@@ -245,7 +245,7 @@ static int lmqtt_subscribe( lua_State* L ) {
     
     mqtt_userdata *mqtt = NULL;
     
-    mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt");
+    mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt.cli");
     luaL_argcheck(L, mqtt, 1, "mqtt expected");
     
     topic = luaL_checkstring( L, 2 );
@@ -278,7 +278,7 @@ static int lmqtt_publish( lua_State* L ) {
 
     mqtt_userdata *mqtt = NULL;
     
-    mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt");
+    mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt.cli");
     luaL_argcheck(L, mqtt, 1, "mqtt expected");
     
     topic = luaL_checkstring( L, 2 );
@@ -300,7 +300,7 @@ static int lmqtt_disconnect( lua_State* L ) {
 
     mqtt_userdata *mqtt = NULL;
     
-    mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt");
+    mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt.cli");
     luaL_argcheck(L, mqtt, 1, "mqtt expected");
     
     rc = MQTTClient_disconnect(mqtt->client, 0);
@@ -317,7 +317,7 @@ static int lmqtt_client_gc (lua_State *L) {
     mqtt_subs_callback *callback;
     mqtt_subs_callback *nextcallback;
     
-    mqtt = (mqtt_userdata *)luaL_testudata(L, 1, "mqtt");    
+    mqtt = (mqtt_userdata *)luaL_testudata(L, 1, "mqtt.cli");
     if (mqtt) {        
         // Destroy callbacks
         mtx_lock(&mqtt->callback_mtx);
@@ -345,27 +345,14 @@ static int lmqtt_client_gc (lua_State *L) {
 
 static const LUA_REG_TYPE lmqtt_map[] = {
   { LSTRKEY( "client"      ),	 LFUNCVAL( lmqtt_client     ) },
+
+  { LSTRKEY("QOS0"), LINTVAL(0) },
+  { LSTRKEY("QOS1"), LINTVAL(1) },
+  { LSTRKEY("QOS2"), LINTVAL(2) },
+
+  // Error definitions
+  {LSTRKEY("error"),  LROVAL( mqtt_error_map )},
   { LNILKEY, LNILVAL }
-};
-
-static const LUA_REG_TYPE lmqtt_error_map[] = {
-	{ LSTRKEY( "CannotCreateClient" ),	 LINTVAL( LUA_EXCEPTION_CODE(MQTT, LUA_MQTT_ERR_CANT_CREATE_CLIENT )) },
-	{ LSTRKEY( "CannotSetCallbacks" ),	 LINTVAL( LUA_EXCEPTION_CODE(MQTT, LUA_MQTT_ERR_CANT_SET_CALLBACKS )) },
-	{ LSTRKEY( "CannotConnect"      ),	 LINTVAL( LUA_EXCEPTION_CODE(MQTT, LUA_MQTT_ERR_CANT_CONNECT       )) },
-	{ LSTRKEY( "CannotSubscribe"    ),	 LINTVAL( LUA_EXCEPTION_CODE(MQTT, LUA_MQTT_ERR_CANT_SUBSCRIBE     )) },
-	{ LSTRKEY( "CannotPublish"      ),	 LINTVAL( LUA_EXCEPTION_CODE(MQTT, LUA_MQTT_ERR_CANT_PUBLISH       )) },
-	{ LSTRKEY( "CannotDisconnect"   ),	 LINTVAL( LUA_EXCEPTION_CODE(MQTT, LUA_MQTT_ERR_CANT_DISCONNECT    )) },
-};
-
-static const LUA_REG_TYPE lmqtt_constants_map[] = {
-	{ LSTRKEY("QOS0"), LINTVAL(0) },
-	{ LSTRKEY("QOS1"), LINTVAL(1) },
-	{ LSTRKEY("QOS2"), LINTVAL(2) },
-
-	// Error definitions
-	{LSTRKEY("error"),  LROVAL( lmqtt_error_map )},
-
-	{ LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE lmqtt_client_map[] = {
@@ -373,44 +360,18 @@ static const LUA_REG_TYPE lmqtt_client_map[] = {
   { LSTRKEY( "disconnect"  ),	 LFUNCVAL( lmqtt_disconnect ) },
   { LSTRKEY( "subscribe"   ),	 LFUNCVAL( lmqtt_subscribe  ) },
   { LSTRKEY( "publish"     ),	 LFUNCVAL( lmqtt_publish    ) },
+  { LSTRKEY( "__metatable" ),	 LROVAL  ( lmqtt_client_map ) },
+  { LSTRKEY( "__index"     ),    LROVAL  ( lmqtt_client_map ) },
+  { LSTRKEY( "__gc"        ),    LROVAL  ( lmqtt_client_gc  ) },
   { LNILKEY, LNILVAL }
 };
 
-static const luaL_Reg lmqtt_func[] = {
-    { "__index"    , 	lmqtt_index },
-    { NULL, NULL }
-};
-
-static const luaL_Reg lmqtt_client_func[] = {
-	{ "__gc"   , 	lmqtt_client_gc },
-    { "__index", 	lmqtt_client_index },
-    { NULL, NULL }
-};
-
-static int lmqtt_index(lua_State *L) {
-	return luaR_index(L, lmqtt_map, lmqtt_constants_map);
-}
-
-static int lmqtt_client_index(lua_State *L) {
-	return luaR_index(L, lmqtt_client_map, NULL);
-}
-
 LUALIB_API int luaopen_mqtt( lua_State *L ) {
-    luaL_newlib(L, lmqtt_func);
-    lua_pushvalue(L, -1);
-    lua_setmetatable(L, -2);
-
-    luaL_newmetatable(L, "mqtt");
-    lua_pushvalue(L, -1);
-    lua_setfield(L, -2, "__index");
-
-    luaL_setfuncs(L, lmqtt_client_func, 0);
-    lua_pop(L, 1);
-
-    return 1;
+    luaL_newmetarotable(L,"mqtt.cli", (void *)lmqtt_client_map);
+    return 0;
 }
 
-MODULE_REGISTER_UNMAPPED(MQTT, mqtt, luaopen_mqtt);
+MODULE_REGISTER_MAPPED(MQTT, mqtt, lmqtt_map, luaopen_mqtt);
 DRIVER_REGISTER(MQTT,mqtt,NULL,NULL,NULL);
 
 #endif

@@ -59,7 +59,7 @@ static int lservo_attach( lua_State* L ) {
     	return luaL_driver_error(L, error);
     }
 
-    luaL_getmetatable(L, "servo");
+    luaL_getmetatable(L, "servo.ins");
     lua_setmetatable(L, -2);
 
     return 1;
@@ -70,7 +70,7 @@ static int lservo_write( lua_State* L ) {
 	servo_userdata *udata;
 
 	// Get user data
-	udata = (servo_userdata *)luaL_checkudata(L, 1, "servo");
+	udata = (servo_userdata *)luaL_checkudata(L, 1, "servo.ins");
 	luaL_argcheck(L, udata, 1, "servo expected");
 
     double value = luaL_checknumber(L, 2);
@@ -86,7 +86,7 @@ static int lservo_write( lua_State* L ) {
 static int lservo_ins_gc (lua_State *L) {
     servo_userdata *udata = NULL;
 
-    udata = (servo_userdata *)luaL_checkudata(L, 1, "servo");
+    udata = (servo_userdata *)luaL_checkudata(L, 1, "servo.ins");
 	if (udata) {
 		free(udata->instance);
 	}
@@ -94,59 +94,26 @@ static int lservo_ins_gc (lua_State *L) {
 	return 0;
 }
 
-static int lservo_index(lua_State *L);
-static int lservo_ins_index(lua_State *L);
-
 static const LUA_REG_TYPE lservo_map[] = {
-    { LSTRKEY( "attach"  ),	LFUNCVAL( lservo_attach ) },
+    { LSTRKEY( "attach"  ),			LFUNCVAL( lservo_attach ) },
+	{ LSTRKEY ("error"   ), 		LROVAL( servo_error_map )},
     { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE lservo_ins_map[] = {
-    { LSTRKEY( "write"   ),	LFUNCVAL( lservo_write      ) },
+    { LSTRKEY( "write"        ),	LFUNCVAL( lservo_write   ) },
+	{ LSTRKEY( "__metatable"  ),    LROVAL  ( lservo_ins_map ) },
+	{ LSTRKEY( "__index"      ),   	LROVAL  ( lservo_ins_map ) },
+	{ LSTRKEY( "__gc"         ),   	LROVAL  ( lservo_ins_gc ) },
     { LNILKEY, LNILVAL }
 };
 
-static const LUA_REG_TYPE lservo_constants_map[] = {
-	{LSTRKEY("error"), 			 LROVAL( servo_error_map )},
-	{ LNILKEY, LNILVAL }
-};
-
-static const luaL_Reg lservo_func[] = {
-    { "__index", 	lservo_index },
-    { NULL, NULL }
-};
-
-static const luaL_Reg lservo_ins_func[] = {
-	{ "__gc"   , 	lservo_ins_gc },
-    { "__index", 	lservo_ins_index },
-    { NULL, NULL }
-};
-
-static int lservo_index(lua_State *L) {
-	return luaR_index(L, lservo_map, lservo_constants_map);
-}
-
-static int lservo_ins_index(lua_State *L) {
-	return luaR_index(L, lservo_ins_map, NULL);
-}
-
 LUALIB_API int luaopen_servo( lua_State *L ) {
-	luaL_newlib(L, lservo_func);
-    lua_pushvalue(L, -1);
-    lua_setmetatable(L, -2);
-
-    luaL_newmetatable(L, "servo");
-    lua_pushvalue(L, -1);
-    lua_setfield(L, -2, "__index");
-
-    luaL_setfuncs(L, lservo_ins_func, 0);
-    lua_pop(L, 1);
-
-    return 1;
+    luaL_newmetarotable(L,"servo.ins", (void *)lservo_ins_map);
+    return 0;
 }
 
-MODULE_REGISTER_UNMAPPED(SERVO, servo, luaopen_servo);
+MODULE_REGISTER_MAPPED(SERVO, servo, lservo_map, luaopen_servo);
 
 #endif
 

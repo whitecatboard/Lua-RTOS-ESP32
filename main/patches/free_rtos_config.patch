@@ -1,0 +1,11 @@
+--- a/esp-idf-orig/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h
++++ b/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h
+@@ -252,7 +252,7 @@
+ /* Test FreeRTOS timers (with timer task) and more. */
+ /* Some files don't compile if this flag is disabled */
+ #define configUSE_TIMERS                    1
+-#define configTIMER_TASK_PRIORITY           1
++#define configTIMER_TASK_PRIORITY           CONFIG_LUA_RTOS_LUA_TASK_PRIORITY
+ #define configTIMER_QUEUE_LENGTH            10
+ #define configTIMER_TASK_STACK_DEPTH        configMINIMAL_STACK_SIZE
+ 

@@ -1,17 +1,17 @@
--- ----------------------------------------------------------
+-- ----------------------------------------------------------------
 -- WHITECAT ECOSYSTEM
 --
 -- Lua RTOS examples
--- ----------------------------------------------------------
+-- ----------------------------------------------------------------
 -- This example demonstrates the use of the Lua PWM module
 -- for control led's brightness
--- ----------------------------------------------------------
+-- ----------------------------------------------------------------
 
 -- Led brightness is controled by this PWM channel
 led_pwm_chan = pwm.PWM_CH0
 
 -- Led is connected to this GPIO
-led_pwm_gpio = pio.GPIO16
+led_pwm_gpio = pio.GPIO27
 
 -- Setup pwm module0
 pwm0 = pwm.setup(pwm.PWM0)

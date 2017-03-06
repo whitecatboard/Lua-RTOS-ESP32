@@ -152,7 +152,7 @@ static int lsensor_setup( lua_State* L ) {
     data->instance = instance;
     data->adquired = 0;
 
-    luaL_getmetatable(L, "sensor");
+    luaL_getmetatable(L, "sensor.ins");
     lua_setmetatable(L, -2);
 
     return 1;
@@ -164,7 +164,7 @@ static int lsensor_set( lua_State* L ) {
 	sensor_value_t property_value;
 	int ret;
 
-	udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor");
+	udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor.ins");
     luaL_argcheck(L, udata, 1, "sensor expected");
 
     const char *property = luaL_checkstring( L, 2 );
@@ -187,7 +187,7 @@ static int lsensor_get( lua_State* L ) {
 	driver_error_t *error;
 	sensor_value_t *value;
 
-	udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor");
+	udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor.ins");
     luaL_argcheck(L, udata, 1, "sensor expected");
 
     const char *property = luaL_checkstring( L, 2 );
@@ -229,7 +229,7 @@ static int lsensor_acquire( lua_State* L ) {
     sensor_userdata *udata = NULL;
 	driver_error_t *error;
 
-	udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor");
+	udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor.ins");
     luaL_argcheck(L, udata, 1, "sensor expected");
 
     // Acquire data from sensor
@@ -247,7 +247,7 @@ static int lsensor_read( lua_State* L ) {
 	driver_error_t *error;
 	sensor_value_t *value;
 
-	udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor");
+	udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor.ins");
     luaL_argcheck(L, udata, 1, "sensor expected");
 
     const char *id = luaL_checkstring( L, 2 );
@@ -577,7 +577,7 @@ static int lsensor_enumerate( lua_State* L ) {
 static int lsensor_ins_gc (lua_State *L) {
     sensor_userdata *udata = NULL;
 
-    udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor");
+    udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor.ins");
 	if (udata) {
 		free(udata->instance);
 	}
@@ -585,66 +585,33 @@ static int lsensor_ins_gc (lua_State *L) {
 	return 0;
 }
 
-static int lsensor_index(lua_State *L);
-static int lsensor_ins_index(lua_State *L);
-
 static const LUA_REG_TYPE lsensor_map[] = {
     { LSTRKEY( "attach"  	 ),	LFUNCVAL( lsensor_setup  	  ) },
     { LSTRKEY( "setup"  	 ),	LFUNCVAL( lsensor_setup  	  ) },
 	{ LSTRKEY( "list"   	 ),	LFUNCVAL( lsensor_list   	  ) },
 	{ LSTRKEY( "enumerate"   ),	LFUNCVAL( lsensor_enumerate   ) },
+	{ LSTRKEY( "error"       ), LROVAL  ( sensor_error_map    ) },
+	{ LSTRKEY( "OWire"       ), LINTVAL ( OWIRE_INTERFACE     ) },
     { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE lsensor_ins_map[] = {
-	{ LSTRKEY( "acquire"   ),	LFUNCVAL( lsensor_acquire   ) },
-  	{ LSTRKEY( "read"      ),	LFUNCVAL( lsensor_read 	    ) },
-  	{ LSTRKEY( "set"       ),	LFUNCVAL( lsensor_set 	    ) },
-  	{ LSTRKEY( "get"       ),	LFUNCVAL( lsensor_get 	    ) },
+	{ LSTRKEY( "acquire"     ),	LFUNCVAL( lsensor_acquire   ) },
+  	{ LSTRKEY( "read"        ),	LFUNCVAL( lsensor_read 	    ) },
+  	{ LSTRKEY( "set"         ),	LFUNCVAL( lsensor_set 	    ) },
+  	{ LSTRKEY( "get"         ),	LFUNCVAL( lsensor_get 	    ) },
+    { LSTRKEY( "__metatable" ),	LROVAL  ( lsensor_ins_map   ) },
+	{ LSTRKEY( "__index"     ), LROVAL  ( lsensor_ins_map   ) },
+	{ LSTRKEY( "__gc"        ), LROVAL  ( lsensor_ins_gc    ) },
     { LNILKEY, LNILVAL }
 };
 
-static const LUA_REG_TYPE lsensor_constants_map[] = {
-	{LSTRKEY("error"), 			LROVAL ( sensor_error_map )},
-	{LSTRKEY("OWire"), 			LINTVAL( OWIRE_INTERFACE  )},
-	{ LNILKEY, LNILVAL }
-};
-
-static const luaL_Reg lsensor_func[] = {
-    { "__index", 	lsensor_index },
-    { NULL, NULL }
-};
-
-static const luaL_Reg lsensor_ins_func[] = {
-	{ "__gc"   , 	lsensor_ins_gc },
-    { "__index", 	lsensor_ins_index },
-    { NULL, NULL }
-};
-
-static int lsensor_index(lua_State *L) {
-	return luaR_index(L, lsensor_map, lsensor_constants_map);
-}
-
-static int lsensor_ins_index(lua_State *L) {
-	return luaR_index(L, lsensor_ins_map, NULL);
-}
-
 LUALIB_API int luaopen_sensor( lua_State *L ) {
-    luaL_newlib(L, lsensor_func);
-    lua_pushvalue(L, -1);
-    lua_setmetatable(L, -2);
-
-    luaL_newmetatable(L, "sensor");
-    lua_pushvalue(L, -1);
-    lua_setfield(L, -2, "__index");
-
-    luaL_setfuncs(L, lsensor_ins_func, 0);
-    lua_pop(L, 1);
-
-    return 1;
+    luaL_newmetarotable(L,"sensor.ins", (void *)lsensor_ins_map);
+    return 0;
 }
 
-MODULE_REGISTER_UNMAPPED(SENSOR, sensor, luaopen_sensor);
+MODULE_REGISTER_MAPPED(SENSOR, sensor, lsensor_map, luaopen_sensor);
 
 #endif
 
@@ -658,7 +625,7 @@ while true do
 	tmr.delayms(500)
 end
 
-s1 = sensor.setup("TMP36", adc.ADC1, adc.ADC_CH6, 12)
+s1 = sensor.setup("TMP36", adc.ADC1, adc.ADC_CH4, 12)
 while true do
 	temperature = s1:read("temperature")
 	print("temp "..temperature)

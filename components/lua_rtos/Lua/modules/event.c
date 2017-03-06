@@ -60,7 +60,7 @@ static int levent_create( lua_State* L ) {
     // Create listener list
     list_init(&udata->listener_list, 1);
 
-    luaL_getmetatable(L, "event");
+    luaL_getmetatable(L, "event.ins");
     lua_setmetatable(L, -2);
 
     return 1;
@@ -73,7 +73,7 @@ static int levent_addlistener( lua_State* L ) {
     int ret;
 
     // Get user data
-    udata = (event_userdata *)luaL_checkudata(L, 1, "event");
+    udata = (event_userdata *)luaL_checkudata(L, 1, "event.ins");
     luaL_argcheck(L, udata, 1, "event expected");
 
     // Check for function reference
@@ -112,7 +112,7 @@ static int levent_broadcast( lua_State* L ) {
 	int status;
 
     // Get user data
-	udata = (event_userdata *)luaL_checkudata(L, 1, "event");
+	udata = (event_userdata *)luaL_checkudata(L, 1, "event.ins");
     luaL_argcheck(L, udata, 1, "event expected");
 
     // Call to all listeners
@@ -145,67 +145,34 @@ static int levent_broadcast( lua_State* L ) {
 static int levent_ins_gc (lua_State *L) {
     event_userdata *udata = NULL;
 
-    udata = (event_userdata *)luaL_checkudata(L, 1, "event");
+    udata = (event_userdata *)luaL_checkudata(L, 1, "event.ins");
 	if (udata) {
 	}
 
 	return 0;
 }
 
-static int levent_index(lua_State *L);
-static int levent_ins_index(lua_State *L);
-
 static const LUA_REG_TYPE levent_map[] = {
-    { LSTRKEY( "create"  ),	LFUNCVAL( levent_create ) },
+    { LSTRKEY( "create"  ),			LFUNCVAL( levent_create ) },
+	{ LSTRKEY( "error"   ), 		LROVAL( event_error_map )},
     { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE levent_ins_map[] = {
-	{ LSTRKEY( "addlistener"),	LFUNCVAL( levent_addlistener    ) },
-  	{ LSTRKEY( "broadcast"  ),	LFUNCVAL( levent_broadcast 	    ) },
+	{ LSTRKEY( "addlistener" ),		LFUNCVAL( levent_addlistener    ) },
+  	{ LSTRKEY( "broadcast"   ),		LFUNCVAL( levent_broadcast 	    ) },
+	{ LSTRKEY( "__metatable" ),    	LROVAL  ( levent_ins_map ) },
+	{ LSTRKEY( "__index"     ),   	LROVAL  ( levent_ins_map ) },
+	{ LSTRKEY( "__gc"        ),   	LROVAL  ( levent_ins_gc ) },
     { LNILKEY, LNILVAL }
 };
 
-static const LUA_REG_TYPE levent_constants_map[] = {
-	{LSTRKEY("error"), 			 LROVAL( event_error_map )},
-	{ LNILKEY, LNILVAL }
-};
-
-static const luaL_Reg levent_func[] = {
-    { "__index", 	levent_index },
-    { NULL, NULL }
-};
-
-static const luaL_Reg levent_ins_func[] = {
-	{ "__gc"   , 	levent_ins_gc },
-    { "__index", 	levent_ins_index },
-    { NULL, NULL }
-};
-
-static int levent_index(lua_State *L) {
-	return luaR_index(L, levent_map, levent_constants_map);
-}
-
-static int levent_ins_index(lua_State *L) {
-	return luaR_index(L, levent_ins_map, NULL);
-}
-
 LUALIB_API int luaopen_event( lua_State *L ) {
-	luaL_newlib(L, levent_func);
-    lua_pushvalue(L, -1);
-    lua_setmetatable(L, -2);
-
-    luaL_newmetatable(L, "event");
-    lua_pushvalue(L, -1);
-    lua_setfield(L, -2, "__index");
-
-    luaL_setfuncs(L, levent_ins_func, 0);
-    lua_pop(L, 1);
-
-    return 1;
+    luaL_newmetarotable(L,"event.ins", (void*)levent_ins_map);
+    return 0;
 }
 
-MODULE_REGISTER_UNMAPPED(EVENT, event, luaopen_event);
+MODULE_REGISTER_MAPPED(EVENT, event, levent_map, luaopen_event);
 
 #endif
 

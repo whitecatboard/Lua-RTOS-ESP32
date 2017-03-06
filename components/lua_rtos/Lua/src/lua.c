@@ -121,7 +121,10 @@ static void lstop (lua_State *L, lua_Debug *ar) {
 ** interpreter.
 */
 static void laction (int i) {
-    signal(i, SIG_DFL); /* if another SIGINT happens, terminate process */
+	// TO DO: review this. Code dumps if removed.
+	delay(100);
+
+	signal(i, SIG_DFL); /* if another SIGINT happens, terminate process */
 
 #if !LUA_USE_SAFE_SIGNAL
 	lua_sethook(globalL, lstop, LUA_MASKCALL | LUA_MASKRET | LUA_MASKCOUNT, 1);

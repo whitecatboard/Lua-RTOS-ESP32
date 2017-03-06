@@ -71,7 +71,7 @@ static int li2c_setup( lua_State* L ) {
     user_data->unit = id;
     user_data->transaction = I2C_TRANSACTION_INITIALIZER;
 
-    luaL_getmetatable(L, "i2c");
+    luaL_getmetatable(L, "i2c.trans");
     lua_setmetatable(L, -2);
 
     return 1;
@@ -82,7 +82,7 @@ static int li2c_start( lua_State* L ) {
 	i2c_user_data_t *user_data;
 
 	// Get user data
-	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c");
+	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c.trans");
     luaL_argcheck(L, user_data, 1, "i2c transaction expected");
 
     if ((error = i2c_start(user_data->unit, &user_data->transaction))) {
@@ -97,7 +97,7 @@ static int li2c_stop( lua_State* L ) {
 	i2c_user_data_t *user_data;
 
 	// Get user data
-	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c");
+	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c.trans");
     luaL_argcheck(L, user_data, 1, "i2c transaction expected");
 
     if ((error = i2c_stop(user_data->unit, &user_data->transaction))) {
@@ -112,7 +112,7 @@ static int li2c_address( lua_State* L ) {
 	i2c_user_data_t *user_data;
 
 	// Get user data
-	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c");
+	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c.trans");
     luaL_argcheck(L, user_data, 1, "i2c transaction expected");
 
     int address = luaL_checkinteger(L, 2);
@@ -136,7 +136,7 @@ static int li2c_read( lua_State* L ) {
 	char data;
 
 	// Get user data
-	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c");
+	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c.trans");
     luaL_argcheck(L, user_data, 1, "i2c transaction expected");
 
     if ((error = i2c_read(user_data->unit, &user_data->transaction, &data, 1))) {
@@ -158,7 +158,7 @@ static int li2c_write(lua_State* L) {
 	i2c_user_data_t *user_data;
 
 	// Get user data
-	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c");
+	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c.trans");
     luaL_argcheck(L, user_data, 1, "i2c transaction expected");
 
     char data = (char)(luaL_checkinteger(L, 2) & 0xff);
@@ -176,31 +176,15 @@ static int li2c_write(lua_State* L) {
 static int li2c_trans_gc (lua_State *L) {
 	i2c_user_data_t *user_data = NULL;
 
-    user_data = (i2c_user_data_t *)luaL_testudata(L, 1, "i2c");
+    user_data = (i2c_user_data_t *)luaL_testudata(L, 1, "i2c.trans");
     if (user_data) {
     }
 
     return 0;
 }
 
-static int li2c_index(lua_State *L);
-static int li2c_trans_index(lua_State *L);
-
 static const LUA_REG_TYPE li2c_map[] = {
     { LSTRKEY( "setup"   ),			LFUNCVAL( li2c_setup   ) },
-    { LNILKEY, LNILVAL }
-};
-
-static const LUA_REG_TYPE li2c_trans_map[] = {
-	{ LSTRKEY( "start"   ),			LFUNCVAL( li2c_start   ) },
-    { LSTRKEY( "address" ),			LFUNCVAL( li2c_address ) },
-    { LSTRKEY( "read"    ),			LFUNCVAL( li2c_read    ) },
-    { LSTRKEY( "write"   ),			LFUNCVAL( li2c_write   ) },
-    { LSTRKEY( "stop"    ),			LFUNCVAL( li2c_stop    ) },
-    { LNILKEY, LNILVAL }
-};
-
-static const LUA_REG_TYPE li2c_constants_map[] = {
 	{ LSTRKEY( "MASTER"  ),			LINTVAL ( I2C_MASTER   ) },
 	{ LSTRKEY( "SLAVE"   ),			LINTVAL ( I2C_SLAVE    ) },
 	I2C_I2C0
@@ -208,44 +192,26 @@ static const LUA_REG_TYPE li2c_constants_map[] = {
 
 	// Error definitions
 	{LSTRKEY("error"     ),         LROVAL( i2c_error_map )},
-
-	{ LNILKEY, LNILVAL }
+    { LNILKEY, LNILVAL }
 };
 
-static const luaL_Reg li2c_func[] = {
-    { "__index", 	li2c_index },
-    { NULL, NULL }
+static const LUA_REG_TYPE li2c_trans_map[] = {
+	{ LSTRKEY( "start"      ),		LFUNCVAL( li2c_start     ) },
+    { LSTRKEY( "address"     ),		LFUNCVAL( li2c_address   ) },
+    { LSTRKEY( "read"        ),		LFUNCVAL( li2c_read      ) },
+    { LSTRKEY( "write"       ),		LFUNCVAL( li2c_write     ) },
+    { LSTRKEY( "stop"        ),		LFUNCVAL( li2c_stop      ) },
+    { LSTRKEY( "__metatable" ),  	LROVAL  ( li2c_trans_map ) },
+	{ LSTRKEY( "__index"     ),   	LROVAL  ( li2c_trans_map ) },
+	{ LSTRKEY( "__gc"        ),   	LFUNCVAL  ( li2c_trans_gc ) },
+    { LNILKEY, LNILVAL }
 };
-
-static const luaL_Reg li2c_trans_func[] = {
-	{ "__gc"   , 	li2c_trans_gc },
-    { "__index", 	li2c_trans_index },
-    { NULL, NULL }
-};
-
-static int li2c_index(lua_State *L) {
-	return luaR_index(L, li2c_map, li2c_constants_map);
-}
-
-static int li2c_trans_index(lua_State *L) {
-	return luaR_index(L, li2c_trans_map, NULL);
-}
 
 LUALIB_API int luaopen_i2c( lua_State *L ) {
-    luaL_newlib(L, li2c_func);
-    lua_pushvalue(L, -1);
-    lua_setmetatable(L, -2);
-
-    luaL_newmetatable(L, "i2c");
-    lua_pushvalue(L, -1);
-    lua_setfield(L, -2, "__index");
-
-    luaL_setfuncs(L, li2c_trans_func, 0);
-    lua_pop(L, 1);
-
-    return 1;
+    luaL_newmetarotable(L,"i2c.trans", (void *)li2c_trans_map);
+    return 0;
 }
 
-MODULE_REGISTER_UNMAPPED(I2C, i2c, luaopen_i2c);
+MODULE_REGISTER_MAPPED(I2C, i2c, li2c_map, luaopen_i2c);
 
 #endif

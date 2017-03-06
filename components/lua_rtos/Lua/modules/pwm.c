@@ -63,7 +63,7 @@ static int lpwm_setup( lua_State* L ) {
     	return luaL_driver_error(L, error);
     }
 
-    luaL_getmetatable(L, "pwm");
+    luaL_getmetatable(L, "pwm.chan");
     lua_setmetatable(L, -2);
 
     return 1;
@@ -77,7 +77,7 @@ static int lpwm_setup_channel( lua_State* L ) {
     pwm_userdata *pwm = NULL;
 	driver_error_t *error;
 
-    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm");
+    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm.chan");
     luaL_argcheck(L, pwm, 1, "pwm expected");
 
     channel = luaL_checkinteger( L, 2 );
@@ -94,7 +94,7 @@ static int lpwm_setup_channel( lua_State* L ) {
 
     npwm->channel = channel;
 
-    luaL_getmetatable(L, "pwm");
+    luaL_getmetatable(L, "pwm.chan");
     lua_setmetatable(L, -2);
 
     return 1;
@@ -105,7 +105,7 @@ static int lpwm_setduty(lua_State* L) {
 	driver_error_t *error;
 	double duty;
 
-    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm");
+    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm.chan");
     luaL_argcheck(L, pwm, 1, "pwm expected");
 
     duty = luaL_checknumber(L, 2);
@@ -121,7 +121,7 @@ static int lpwm_start(lua_State* L) {
     pwm_userdata *pwm = NULL;
 	driver_error_t *error;
 
-    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm");
+    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm.chan");
     luaL_argcheck(L, pwm, 1, "pwm expected");
 
     if ((error = pwm_start(pwm->unit, pwm->channel))) {
@@ -135,7 +135,7 @@ static int lpwm_stop(lua_State* L) {
     pwm_userdata *pwm = NULL;
 	driver_error_t *error;
 
-    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm");
+    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm.chan");
     luaL_argcheck(L, pwm, 1, "pwm expected");
 
     if ((error = pwm_stop(pwm->unit, pwm->channel))) {
@@ -145,15 +145,8 @@ static int lpwm_stop(lua_State* L) {
     return 0;
 }
 
-static int lpwm_index(lua_State *L);
-static int lpwm_channel_index(lua_State *L);
-
 static const LUA_REG_TYPE lpwm_map[] = {
-    { LSTRKEY("setup" )     ,	LFUNCVAL(lpwm_setup)     },
-  	{ LNILKEY, LNILVAL }
-};
-
-static const LUA_REG_TYPE lpwm_constants_map[] = {
+    { LSTRKEY("setup" ),	LFUNCVAL(lpwm_setup)     },
 	PWM_PWM0
 	PWM_PWM1
 	PWM_PWM_CH0
@@ -175,8 +168,7 @@ static const LUA_REG_TYPE lpwm_constants_map[] = {
 
 	// Error definitions
 	{LSTRKEY("error"),  LROVAL( pwm_error_map )},
-
-	{ LNILKEY, LNILVAL }
+  	{ LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE lpwm_channel_map[] = {
@@ -184,42 +176,16 @@ static const LUA_REG_TYPE lpwm_channel_map[] = {
   { LSTRKEY( "setduty"        ),	 LFUNCVAL( lpwm_setduty                ) },
   { LSTRKEY( "start"          ),	 LFUNCVAL( lpwm_start                  ) },
   { LSTRKEY( "stop"           ),	 LFUNCVAL( lpwm_stop                   ) },
+  { LSTRKEY( "__metatable"    ),	 LROVAL  ( lpwm_channel_map            ) },
+  { LSTRKEY( "__index"        ),   	 LROVAL  ( lpwm_channel_map            ) },
   { LNILKEY, LNILVAL }
 };
 
-static const luaL_Reg lpwm_func[] = {
-    { "__index"    , 	lpwm_index },
-    { NULL, NULL }
-};
-
-static const luaL_Reg lpwm_channel_func[] = {
-    { "__index", 	lpwm_channel_index },
-    { NULL, NULL }
-};
-
-static int lpwm_index(lua_State *L) {
-	return luaR_index(L, lpwm_map, lpwm_constants_map);
-}
-
-static int lpwm_channel_index(lua_State *L) {
-	return luaR_index(L, lpwm_channel_map, NULL);
-}
-
 LUALIB_API int luaopen_pwm( lua_State *L ) {
-    luaL_newlib(L, lpwm_func);
-    lua_pushvalue(L, -1);
-    lua_setmetatable(L, -2);
-
-    luaL_newmetatable(L, "pwm");
-    lua_pushvalue(L, -1);
-    lua_setfield(L, -2, "__index");
-
-    luaL_setfuncs(L, lpwm_channel_func, 0);
-    lua_pop(L, 1);
-
-    return 1;
+    luaL_newmetarotable(L,"pwm.chan", (void *)lpwm_channel_map);
+    return 0;
 }
 
-MODULE_REGISTER_UNMAPPED(PWM, pwm, luaopen_pwm);
+MODULE_REGISTER_MAPPED(PWM, pwm, lpwm_map, luaopen_pwm);
 
 #endif

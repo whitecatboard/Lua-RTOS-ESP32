@@ -1511,23 +1511,24 @@ static int str_unpack (lua_State *L) {
 #include "modules.h"
 
 static const LUA_REG_TYPE strlib[] = {
-  { LSTRKEY( "byte"     ),			LFUNCVAL( str_byte     ) },
-  { LSTRKEY( "char"     ),			LFUNCVAL( str_char     ) },
-  { LSTRKEY( "dump"     ),			LFUNCVAL( str_dump     ) },
-  { LSTRKEY( "find"     ),			LFUNCVAL( str_find     ) },
-  { LSTRKEY( "format"   ),			LFUNCVAL( str_format   ) },
-  { LSTRKEY( "gmatch"   ),			LFUNCVAL( gmatch       ) },
-  { LSTRKEY( "gsub"     ),			LFUNCVAL( str_gsub     ) },
-  { LSTRKEY( "len" 	    ),			LFUNCVAL( str_len      ) },
-  { LSTRKEY( "lower"    ),			LFUNCVAL( str_lower    ) },
-  { LSTRKEY( "match"    ),			LFUNCVAL( str_match    ) },
-  { LSTRKEY( "rep" 	    ),			LFUNCVAL( str_rep 	   ) },
-  { LSTRKEY( "reverse"  ),			LFUNCVAL( str_reverse  ) },
-  { LSTRKEY( "sub"      ),			LFUNCVAL( str_sub 	   ) },
-  { LSTRKEY( "upper"    ),			LFUNCVAL( str_upper    ) },
-  { LSTRKEY( "pack"     ),			LFUNCVAL( str_pack 	   ) },
-  { LSTRKEY( "packsize" ),			LFUNCVAL( str_packsize ) },
-  { LSTRKEY( "unpack"   ),			LFUNCVAL( str_unpack   ) },
+  { LSTRKEY( "byte"        ),			LFUNCVAL( str_byte     ) },
+  { LSTRKEY( "char"        ),			LFUNCVAL( str_char     ) },
+  { LSTRKEY( "dump"        ),			LFUNCVAL( str_dump     ) },
+  { LSTRKEY( "find"        ),			LFUNCVAL( str_find     ) },
+  { LSTRKEY( "format"      ),			LFUNCVAL( str_format   ) },
+  { LSTRKEY( "gmatch"      ),			LFUNCVAL( gmatch       ) },
+  { LSTRKEY( "gsub"        ),			LFUNCVAL( str_gsub     ) },
+  { LSTRKEY( "len" 	       ),			LFUNCVAL( str_len      ) },
+  { LSTRKEY( "lower"       ),			LFUNCVAL( str_lower    ) },
+  { LSTRKEY( "match"       ),			LFUNCVAL( str_match    ) },
+  { LSTRKEY( "rep" 	       ),			LFUNCVAL( str_rep 	   ) },
+  { LSTRKEY( "reverse"     ),			LFUNCVAL( str_reverse  ) },
+  { LSTRKEY( "sub"         ),			LFUNCVAL( str_sub 	   ) },
+  { LSTRKEY( "upper"       ),			LFUNCVAL( str_upper    ) },
+  { LSTRKEY( "pack"        ),			LFUNCVAL( str_pack 	   ) },
+  { LSTRKEY( "packsize"    ),			LFUNCVAL( str_packsize ) },
+  { LSTRKEY( "unpack"      ),			LFUNCVAL( str_unpack   ) },
+  { LSTRKEY( "__metatable" ),	        LROVAL  ( strlib       ) },
   { LNILKEY, LNILVAL }
 };
 
@@ -1553,6 +1554,10 @@ LUAMOD_API int luaopen_string (lua_State *L) {
   createmetatable(L);
   return 1;
 #else
+  //lua_pushliteral(L,"");
+  //lua_pushrotable(L, (void*)strlib);
+  //lua_setmetatable(L, -2);
+  //lua_pop(L,1);
   return 0;
 #endif
 }

@@ -562,17 +562,17 @@ static int thread_status(lua_State* L) {
 extern LUA_REG_TYPE thread_error_map[];
 
 static const LUA_REG_TYPE thread[] = {
-    { LSTRKEY( "status" ),			LFUNCVAL( thread_status ) },
-    { LSTRKEY( "create" ),			LFUNCVAL( thread_create ) },
-    { LSTRKEY( "start" ),			LFUNCVAL( thread_start ) },
+    { LSTRKEY( "status"  ),			LFUNCVAL( thread_status  ) },
+    { LSTRKEY( "create"  ),			LFUNCVAL( thread_create  ) },
+    { LSTRKEY( "start"   ),			LFUNCVAL( thread_start   ) },
     { LSTRKEY( "suspend" ),			LFUNCVAL( thread_suspend ) },
-    { LSTRKEY( "resume" ),			LFUNCVAL( thread_resume ) },
-    { LSTRKEY( "stop" ),			LFUNCVAL( thread_stop ) },
-    { LSTRKEY( "list" ),			LFUNCVAL( thread_list ) },
-    { LSTRKEY( "sleep" ),			LFUNCVAL( thread_sleep ) },
+    { LSTRKEY( "resume"  ),			LFUNCVAL( thread_resume  ) },
+    { LSTRKEY( "stop"    ),			LFUNCVAL( thread_stop    ) },
+    { LSTRKEY( "list"    ),			LFUNCVAL( thread_list    ) },
+    { LSTRKEY( "sleep"   ),			LFUNCVAL( thread_sleep   ) },
     { LSTRKEY( "sleepms" ),			LFUNCVAL( thread_sleepms ) },
     { LSTRKEY( "sleepus" ),			LFUNCVAL( thread_sleepus ) },
-    { LSTRKEY( "usleep" ),			LFUNCVAL( thread_sleepus ) },
+    { LSTRKEY( "usleep"  ),			LFUNCVAL( thread_sleepus ) },
 
 	// Error definitions
 	{LSTRKEY("error"),  			LROVAL( thread_error_map )},
