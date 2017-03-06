@@ -58,14 +58,16 @@ LUALIB_API void luaL_openlibs (lua_State *L) {
   		debug_free_mem_begin(luaL_openlibs);
 
 		#if LUA_USE_ROTABLE
-		//if (luaR_findglobal(lib->name,strlen(lib->name))) {
-	      //  lua_pushcfunction(L, lib->func);
-	      //  lua_pushstring(L, lib->name);
-	       // lua_call(L, 1, 0);
-		//} else {
+  		TValue *res;
+
+		if ((res = luaR_findglobal(lib->name,strlen(lib->name)))) {
+	        lua_pushcfunction(L, lib->func);
+	        lua_pushstring(L, lib->name);
+	        lua_call(L, 1, 0);
+		} else {
 			luaL_requiref(L, lib->name, lib->func, 1);
 			lua_pop(L, 1);  /* remove lib */
-	//	}
+		}
 		#else
 			luaL_requiref(L, lib->name, lib->func, 1);
 			lua_pop(L, 1);  /* remove lib */

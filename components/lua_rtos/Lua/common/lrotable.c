@@ -19,6 +19,7 @@ extern const luaR_entry lua_rotable[];
 static const TValue *luaR_auxfind(const luaR_entry *pentry, const char *strkey,
 		luaR_numkey numkey, unsigned *ppos);
 
+#if 0
 /*
  * Only for debug purposes.
  */
@@ -33,6 +34,7 @@ void luaR_dump() {
 		entry++;
 	}
 }
+#endif
 
 LUA_API void lua_pushrotable(lua_State *L, void *p) {
 	lua_lock(L);

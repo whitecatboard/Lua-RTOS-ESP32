@@ -286,6 +286,10 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
       lua_assert(ttisnil(slot));  /* old value must be nil */
       tm = fasttm(L, ttistable(t)?h->metatable:(Table*)luaL_rometatable(rvalue(t)), TM_NEWINDEX);  /* get metamethod */
       if (tm == NULL) {  /* no metamethod? */
+    	if (luaR_findglobal(svalue(key), strlen(svalue(key)))) {
+    		luaG_runerror(L, "attempt to index a rotable value (global 'lora')", svalue(key));
+    		return;
+    	}
         if (slot == luaO_nilobject)  /* no previous entry? */
           slot = luaH_newkey(L, h, key);  /* create one */
         /* no metamethod and (now) there is an entry with given key */

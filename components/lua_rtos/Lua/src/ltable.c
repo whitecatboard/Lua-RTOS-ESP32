@@ -456,6 +456,7 @@ static Node *getfreepos (Table *t) {
 TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
   Node *mp;
   TValue aux;
+
   if (ttisnil(key)) luaG_runerror(L, "table index is nil");
   else if (ttisfloat(key)) {
     lua_Integer k;
@@ -539,8 +540,9 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
 const TValue *luaH_getshortstr (Table *t, TString *key) {
   Node *n = hashstr(t, key);
 
-  #if LUA_USE_ROTABLE
+#if LUA_USE_ROTABLE
   if (luaR_isrotable((const void *)t)) {
+
 	  return luaR_findentry((const void *)t, getstr(key), 0, NULL);
   }
 #endif

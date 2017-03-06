@@ -9,6 +9,8 @@
 #include "luaconf.h"
 #include "lrodefs.h"
 
+#include <stdio.h>
+
 // TO DO: ??
 #define luaS_newro(L, s)  (luaS_newlstr(L, s, strlen(s)))
 
@@ -86,4 +88,3 @@ int luaR_index(lua_State *L, const void *funcs, const void *consts);
 int luaR_error(lua_State *L);
 
 #endif
-
