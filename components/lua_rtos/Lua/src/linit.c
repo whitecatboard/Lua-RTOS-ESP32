@@ -1,5 +1,5 @@
 /*
-** $Id: linit.c,v 1.38 2015/01/05 13:48:33 roberto Exp $
+** $Id: linit.c,v 1.39 2016/12/04 20:17:24 roberto Exp $
 ** Initialization of libraries for lua.c and other clients
 ** See Copyright Notice in lua.h
 */
@@ -18,30 +18,57 @@
 ** open the library, which is already linked to the application.
 ** For that, do the following code:
 **
-**  luaL_getsubtable(L, LUA_REGISTRYINDEX, "_PRELOAD");
+**  luaL_getsubtable(L, LUA_REGISTRYINDEX, LUA_PRELOAD_TABLE);
 **  lua_pushcfunction(L, luaopen_modname);
 **  lua_setfield(L, -2, modname);
-**  lua_pop(L, 1);  // remove _PRELOAD table
+**  lua_pop(L, 1);  // remove PRELOAD table
 */
- 
+
 #include "lprefix.h"
 
+
 #include <stddef.h>
-#include <string.h>
 
 #include "lua.h"
 
 #include "lualib.h"
 #include "lauxlib.h"
-#include "auxmods.h"
-#include "lgc.h"
 
+#if !LUA_USE_ROTABLE
 /*
 ** these libs are loaded by lua.c and are readily available to any Lua
 ** program
 */
+static const luaL_Reg loadedlibs[] = {
+  {"_G", luaopen_base},
+  {LUA_LOADLIBNAME, luaopen_package},
+  {LUA_COLIBNAME, luaopen_coroutine},
+  {LUA_TABLIBNAME, luaopen_table},
+  {LUA_IOLIBNAME, luaopen_io},
+  {LUA_OSLIBNAME, luaopen_os},
+  {LUA_STRLIBNAME, luaopen_string},
+  {LUA_MATHLIBNAME, luaopen_math},
+  {LUA_UTF8LIBNAME, luaopen_utf8},
+  {LUA_DBLIBNAME, luaopen_debug},
+#if defined(LUA_COMPAT_BITLIB)
+  {LUA_BITLIBNAME, luaopen_bit32},
+#endif
+  {NULL, NULL}
+};
 
+
+LUALIB_API void luaL_openlibs (lua_State *L) {
+  const luaL_Reg *lib;
+  /* "require" functions from 'loadedlibs' and set results to global table */
+  for (lib = loadedlibs; lib->func; lib++) {
+    luaL_requiref(L, lib->name, lib->func, 1);
+    lua_pop(L, 1);  /* remove lib */
+  }
+}
+#else
+#include "lrotable.h"
 #include "modules.h"
+#include "lgc.h"
 #include <sys/debug.h>
 
 extern const luaL_Reg lua_libs1[];
@@ -58,21 +85,19 @@ LUALIB_API void luaL_openlibs (lua_State *L) {
   		debug_free_mem_begin(luaL_openlibs);
 
 		#if LUA_USE_ROTABLE
-  		const TValue *res;
-
-		if ((res = luaR_findglobal(lib->name,strlen(lib->name)))) {
-	        lua_pushcfunction(L, lib->func);
-	        lua_pushstring(L, lib->name);
-	        lua_call(L, 1, 0);
-		} else {
+		//if (luaR_findglobal(lib->name)) {
+	    //    lua_pushcfunction(L, lib->func);
+	    //    lua_pushstring(L, lib->name);
+	    //    lua_call(L, 1, 0);
+		//} else {
 			luaL_requiref(L, lib->name, lib->func, 1);
 			lua_pop(L, 1);  /* remove lib */
-		}
+		//}
 		#else
 			luaL_requiref(L, lib->name, lib->func, 1);
 			lua_pop(L, 1);  /* remove lib */
 		#endif
-		
+
 		#if DEBUG_FREE_MEM
 		luaC_fullgc(L, 1);
 		#endif
@@ -82,3 +107,4 @@ LUALIB_API void luaL_openlibs (lua_State *L) {
 
   luaC_fullgc(L, 1);
 }
+#endif

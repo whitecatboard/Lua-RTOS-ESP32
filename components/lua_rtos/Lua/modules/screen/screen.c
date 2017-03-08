@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_SCREEN
+#if CONFIG_LUA_RTOS_LUA_USE_SCREEN
 
 #include <stdlib.h>
 #include <string.h>

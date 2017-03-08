@@ -2,7 +2,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_PIO
+#if CONFIG_LUA_RTOS_LUA_USE_PIO
 
 #include "error.h"
 #include "lualib.h"

@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if USE_SENSORS
+#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 
 #include <string.h>
 

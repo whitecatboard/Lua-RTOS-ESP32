@@ -469,7 +469,7 @@ void pthreadTask(void *taskArgs) {
     // Set thread id
     uxSetThreadId(args->id);
 
-#if LUA_USE_THREAD
+#if CONFIG_LUA_RTOS_LUA_USE_THREAD
 	if (args->args) {
 		// Set Lua context into TCB
 		uxSetLuaState(((struct lthread *)args->args)->L);
@@ -485,7 +485,7 @@ void pthreadTask(void *taskArgs) {
     
     // Call start function
     int *status = args->pthread_function(args->args);
-#if LUA_USE_THREAD
+#if CONFIG_LUA_RTOS_LUA_USE_THREAD
     if (status) {
         if (*status != LUA_OK) {
             struct lthread *thread;

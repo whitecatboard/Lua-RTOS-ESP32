@@ -81,35 +81,101 @@ static u8_t *my_spiffs_work_buf;
 static u8_t *my_spiffs_fds;
 static u8_t *my_spiffs_cache;
 
+// Add /. to the end of path
+static void dir_path(char *npath, int strip_last) {
+	int len = strlen(npath);
+
+	if (strip_last) {
+		char *c;
+
+		c = &npath[len - 1];
+		while (c >= npath) {
+			if (*c == '/') {
+				break;
+			}
+
+			len--;
+			c--;
+		}
+	}
+
+    if (len > 1) {
+    	if (npath[len - 1] == '.') {
+    		npath[len - 1] = '\0';
+
+        	if (npath[len - 2] == '/') {
+        		npath[len - 2] = '\0';
+        	}
+    	} else {
+        	if (npath[len - 1] == '/') {
+        		npath[len - 1] = '\0';
+        	}
+    	}
+    } else {
+    	if ((npath[len - 1] == '/') ||  (npath[len - 1] == '.')) {
+    		npath[len - 1] = '\0';
+    	}
+    }
+
+    strlcat(npath,"/.", PATH_MAX);
+}
+
 /*
  * Test if path corresponds to a directory. Return 0 if is not a directory,
  * 1 if it's a directory.
  *
  */
-static int is_dir(const char *path) {
+static int is_dir(const char *path, int strip_last) {
+    struct spiffs_dirent e;
     spiffs_DIR d;
-    char npath[PATH_MAX + 1];
+    char npath[PATH_MAX + 1]; // Normalized path
+    char tpath[PATH_MAX + 1]; // Test path
+    char *ctpath;
+
     int res = 0;
 
-    struct spiffs_dirent e;
-
-    // Add /. to path
     strlcpy(npath, path, PATH_MAX);
-    if (strcmp(path,"/") != 0) {
-        strlcat(npath,"/.", PATH_MAX);
-    } else {
-    	strlcat(npath,".", PATH_MAX);
-    }
+    dir_path(npath, strip_last);
 
-    SPIFFS_opendir(&fs, "/", &d);
-    while (SPIFFS_readdir(&d, &e)) {
-        if (strncmp(npath, (const char *)e.name, strlen(npath)) == 0) {
-            res = 1;
-            break;
-        }
-    }
+    ctpath = (char *)npath;
 
-    SPIFFS_closedir(&d);
+    for(;;) {
+    	if ((*ctpath == '/') || (*ctpath == '.') ||  (*ctpath == '\0')) {
+    		*tpath = '\0';
+
+    		if (ctpath - npath == 0) {
+    			ctpath++;
+    			continue;
+    		}
+
+
+    	    strlcpy(tpath, npath, ctpath - npath + 1);
+    	    dir_path(tpath, 0);
+
+    	    res = 0;
+
+    	    SPIFFS_opendir(&fs, "/", &d);
+    	    while (SPIFFS_readdir(&d, &e)) {
+    	        if (!strncmp(tpath, (const char *)e.name, strlen(tpath))) {
+    	            res = 1;
+    	            break;
+    	        }
+    	    }
+
+    	    SPIFFS_closedir(&d);
+
+    	    if (!res) {
+        	    return res;
+    	    } else {
+    	    }
+    	}
+
+    	if (*ctpath == '\0') {
+    		return res;
+    	}
+
+    	ctpath++;
+    }
 
     return res;
 }
@@ -141,6 +207,7 @@ static int spiffs_result(int res) {
 }
 
 static int IRAM_ATTR vfs_spiffs_open(const char *path, int flags, int mode) {
+    char npath[PATH_MAX + 1];
 	int fd, result = 0;
 
 	// Allocate new file
@@ -183,30 +250,37 @@ static int IRAM_ATTR vfs_spiffs_open(const char *path, int flags, int mode) {
     if (flags & O_TRUNC)
     	spiffs_mode |= SPIFFS_TRUNC;
 
-    if (is_dir(path)) {
-        char npath[PATH_MAX + 1];
+    if (is_dir(path, 0)) {
+    	if (spiffs_mode & (SPIFFS_WRONLY | SPIFFS_CREAT | SPIFFS_TRUNC)) {
+    		// Path is a directory, but flags indicates that we are expecting for a file
+        	list_remove(&files, fd, 1);
+    		errno = EISDIR;
+    		return -1;
+    	}
 
-        // Add /. to path
         strlcpy(npath, path, PATH_MAX);
-        if (strcmp(path,"/") != 0) {
-            strlcat(npath,"/.", PATH_MAX);
-        } else {
-        	strlcat(npath,".", PATH_MAX);
-        }
+        dir_path((char *)npath, 0);
 
         // Open SPIFFS file
-        file->spiffs_file = SPIFFS_open(&fs, npath, spiffs_mode, 0);
+        file->spiffs_file = SPIFFS_open(&fs, npath, SPIFFS_RDONLY, 0);
         if (file->spiffs_file < 0) {
             result = spiffs_result(fs.err_code);
         }
 
     	file->is_dir = 1;
     } else {
-        // Open SPIFFS file
-        file->spiffs_file = SPIFFS_open(&fs, path, spiffs_mode, 0);
-        if (file->spiffs_file < 0) {
-            result = spiffs_result(fs.err_code);
-        }
+    	// Test if base path is a directory
+    	if (!is_dir(path, 1)) {
+        	list_remove(&files, fd, 1);
+    		errno = ENOENT;
+    		return -1;
+    	} else {
+            // Open SPIFFS file
+            file->spiffs_file = SPIFFS_open(&fs, path, spiffs_mode, 0);
+            if (file->spiffs_file < 0) {
+                result = spiffs_result(fs.err_code);
+            }
+    	}
     }
 
     if (result != 0) {
@@ -393,14 +467,7 @@ static int IRAM_ATTR vfs_spiffs_stat(const char * path, struct stat * st) {
 static int IRAM_ATTR vfs_spiffs_unlink(const char *path) {
     char npath[PATH_MAX + 1];
 
-    strlcpy(npath, path, PATH_MAX);
-
-    if (is_dir(path)) {
-	    // Add /. to path
-	    if (strcmp(path,"/") != 0) {
-	        strlcat(npath,"/.", PATH_MAX);
-	    }
-	}
+	strlcpy(npath, path, PATH_MAX);
 
     // Open SPIFFS file
 	spiffs_file FP = SPIFFS_open(&fs, npath, SPIFFS_RDWR, 0);
@@ -589,11 +656,8 @@ static int IRAM_ATTR vfs_spiffs_mkdir(const char *path, mode_t mode) {
     char npath[PATH_MAX + 1];
     int res;
 
-    // Add /. to path
     strlcpy(npath, path, PATH_MAX);
-    if ((strcmp(path,"/") != 0) && (strcmp(path,"/.") != 0)) {
-        strlcat(npath,"/.", PATH_MAX);
-    }
+    dir_path((char *)npath, 0);
 
     spiffs_file fd = SPIFFS_open(&fs, npath, SPIFFS_CREAT, 0);
     if (fd < 0) {

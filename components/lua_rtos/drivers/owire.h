@@ -9,8 +9,6 @@
 #ifndef _OWIRE_H_
 #define _OWIRE_H_
 
-#if USE_OWIRE
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
@@ -77,5 +75,4 @@ void ow_devices_init(uint8_t dev);
 uint8_t TM_OneWire_Dosearch(uint8_t dev);
 int8_t owire_addess_to_dev(uint8_t sensor, uint64_t address);
 
-#endif
 #endif /* _OWIRE_H_ */

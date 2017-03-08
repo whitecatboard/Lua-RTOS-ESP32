@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.148 2015/11/23 11:36:11 roberto Exp $
+** $Id: liolib.c,v 2.151 2016/12/20 18:37:00 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -38,10 +38,11 @@
 #endif
 
 /* Check whether 'mode' matches '[rwa]%+?[L_MODEEXT]*' */
-#define l_checkmode(mode) \
-	(*mode != '\0' && strchr("rwa", *(mode++)) != NULL &&	\
-	(*mode != '+' || (++mode, 1)) &&  /* skip if char is '+' */	\
-	(strspn(mode, L_MODEEXT) == strlen(mode)))
+static int l_checkmode (const char *mode) {
+  return (*mode != '\0' && strchr("rwa", *(mode++)) != NULL &&
+         (*mode != '+' || (++mode, 1)) &&  /* skip if char is '+' */
+         (strspn(mode, L_MODEEXT) == strlen(mode)));  /* check extensions */
+}
 
 #endif
 
@@ -287,12 +288,10 @@ static int io_tmpfile (lua_State *L) {
 
 static FILE *getiofile (lua_State *L, const char *findex) {
   LStream *p;
-
   lua_getfield(L, LUA_REGISTRYINDEX, findex);
   p = (LStream *)lua_touserdata(L, -1);
   if (isclosed(p))
     luaL_error(L, "standard %s file is closed", findex + IOPREF_LEN);
-
   return p->f;
 }
 
@@ -378,14 +377,17 @@ static int io_lines (lua_State *L) {
 
 
 /* maximum length of a numeral */
-#define MAXRN		200
+#if !defined (L_MAXLENNUM)
+#define L_MAXLENNUM     200
+#endif
+
 
 /* auxiliary structure used by 'read_number' */
 typedef struct {
   FILE *f;  /* file being read */
   int c;  /* current character (look ahead) */
   int n;  /* number of elements in buffer 'buff' */
-  char buff[MAXRN + 1];  /* +1 for ending '\0' */
+  char buff[L_MAXLENNUM + 1];  /* +1 for ending '\0' */
 } RN;
 
 
@@ -393,7 +395,7 @@ typedef struct {
 ** Add current char to buffer (if not out of space) and read next one
 */
 static int nextc (RN *rn) {
-  if (rn->n >= MAXRN) {  /* buffer overflow? */
+  if (rn->n >= L_MAXLENNUM) {  /* buffer overflow? */
     rn->buff[0] = '\0';  /* invalidate result */
     return 0;  /* fail */
   }
@@ -406,10 +408,10 @@ static int nextc (RN *rn) {
 
 
 /*
-** Accept current char if it is in 'set' (of size 1 or 2)
+** Accept current char if it is in 'set' (of size 2)
 */
 static int test2 (RN *rn, const char *set) {
-  if (rn->c == set[0] || (rn->c == set[1] && rn->c != '\0'))
+  if (rn->c == set[0] || rn->c == set[1])
     return nextc(rn);
   else return 0;
 }
@@ -438,11 +440,11 @@ static int read_number (lua_State *L, FILE *f) {
   char decp[2];
   rn.f = f; rn.n = 0;
   decp[0] = lua_getlocaledecpoint();  /* get decimal point from locale */
-  decp[1] = '\0';
+  decp[1] = '.';  /* always accept a dot */
   l_lockfile(rn.f);
   do { rn.c = l_getc(rn.f); } while (isspace(rn.c));  /* skip spaces */
   test2(&rn, "-+");  /* optional signal */
-  if (test2(&rn, "0")) {
+  if (test2(&rn, "00")) {
     if (test2(&rn, "xX")) hex = 1;  /* numeral is hexadecimal */
     else count = 1;  /* count initial '0' as a valid digit */
   }
@@ -471,6 +473,31 @@ static int test_eof (lua_State *L, FILE *f) {
   lua_pushliteral(L, "");
   return (c != EOF);
 }
+
+
+// LUA RTOS BEGIN
+#if 0
+static int read_line (lua_State *L, FILE *f, int chop) {
+  luaL_Buffer b;
+  int c = '\0';
+  luaL_buffinit(L, &b);
+  while (c != EOF && c != '\n') {  /* repeat until end of line */
+    char *buff = luaL_prepbuffer(&b);  /* preallocate buffer */
+    int i = 0;
+    l_lockfile(f);  /* no memory errors can happen inside the lock */
+    while (i < LUAL_BUFFERSIZE && (c = l_getc(f)) != EOF && c != '\n')
+      buff[i++] = c;
+    l_unlockfile(f);
+    luaL_addsize(&b, i);
+  }
+  if (!chop && c == '\n')  /* want a newline and have one? */
+    luaL_addchar(&b, c);  /* add ending newline to result */
+  luaL_pushresult(&b);  /* close buffer */
+  /* return ok if read something (either a newline or something else) */
+  return (c == '\n' || lua_rawlen(L, -1) > 0);
+}
+#endif
+// LUA RTOS END
 
 static void read_all (lua_State *L, FILE *f) {
   size_t nr;
@@ -596,8 +623,10 @@ static int g_write (lua_State *L, FILE *f, int arg) {
     if (lua_type(L, arg) == LUA_TNUMBER) {
       /* optimization: could be done exactly as for strings */
       int len = lua_isinteger(L, arg)
-                ? fprintf(f, LUA_INTEGER_FMT, lua_tointeger(L, arg))
-                : fprintf(f, LUA_NUMBER_FMT, lua_tonumber(L, arg));
+                ? fprintf(f, LUA_INTEGER_FMT,
+                             (LUAI_UACINT)lua_tointeger(L, arg))
+                : fprintf(f, LUA_NUMBER_FMT,
+                             (LUAI_UACNUMBER)lua_tonumber(L, arg));
       status = status && (len > 0);
     }
     else {
@@ -670,24 +699,24 @@ static int f_flush (lua_State *L) {
 #include "modules.h"
 
 static const LUA_REG_TYPE iolib[] = {
-  { LSTRKEY( "close"   ),			LFUNCVAL( io_close   ) },
-  { LSTRKEY( "flush"   ),			LFUNCVAL( io_flush   ) },
-  { LSTRKEY( "input"   ),			LFUNCVAL( io_input   ) },
-  { LSTRKEY( "lines"   ),			LFUNCVAL( io_lines   ) },
-  { LSTRKEY( "open"    ),			LFUNCVAL( io_open    ) },
-  { LSTRKEY( "output"  ),			LFUNCVAL( io_output  ) },
-  { LSTRKEY( "popen"   ),			LFUNCVAL( io_popen   ) },
-  { LSTRKEY( "read"    ),			LFUNCVAL( io_read    ) },
-  { LSTRKEY( "tmpfile" ),			LFUNCVAL( io_tmpfile ) },
-  { LSTRKEY( "type"    ),			LFUNCVAL( io_type    ) },
-  { LSTRKEY( "write"   ),			LFUNCVAL( io_write   ) },
-  { LSTRKEY( "receive" ),			LFUNCVAL( f_receive  ) }, 
-  { LSTRKEY( "send"    ),			LFUNCVAL( f_send     ) },
-  { LSTRKEY( "attributes"    ), 	LFUNCVAL( f_attributes) },
+  { LSTRKEY( "close"      ),			LFUNCVAL( io_close   ) },
+  { LSTRKEY( "flush"      ),			LFUNCVAL( io_flush   ) },
+  { LSTRKEY( "input"      ),			LFUNCVAL( io_input   ) },
+  { LSTRKEY( "lines"      ),			LFUNCVAL( io_lines   ) },
+  { LSTRKEY( "open"       ),			LFUNCVAL( io_open    ) },
+  { LSTRKEY( "output"     ),			LFUNCVAL( io_output  ) },
+  { LSTRKEY( "popen"      ),			LFUNCVAL( io_popen   ) },
+  { LSTRKEY( "read"       ),			LFUNCVAL( io_read    ) },
+  { LSTRKEY( "tmpfile"    ),			LFUNCVAL( io_tmpfile ) },
+  { LSTRKEY( "type"       ),			LFUNCVAL( io_type    ) },
+  { LSTRKEY( "write"      ),			LFUNCVAL( io_write   ) },
+  { LSTRKEY( "receive"    ),			LFUNCVAL( f_receive  ) },
+  { LSTRKEY( "send"       ),			LFUNCVAL( f_send     ) },
+  { LSTRKEY( "attributes" ), 		    LFUNCVAL( f_attributes) },
   { LNILKEY, LNILVAL }
 };
 
-#if LUA_USE_ROTABLE  	
+#if LUA_USE_ROTABLE
 static int luaL_io_index(lua_State *L) {
   int fres;
   if ((fres = luaR_findfunction(L, iolib)) != 0)
@@ -716,12 +745,12 @@ static const LUA_REG_TYPE flib[] = {
   { LNILKEY, LNILVAL }
 };
 
-#if LUA_USE_ROTABLE  	
+#if LUA_USE_ROTABLE
 static int luaL_flib_index(lua_State *L) {
   int fres;
   if ((fres = luaR_findfunction(L, flib)) != 0)
     return fres;
-    
+
   return (int)luaO_nilobject;
 }
 
@@ -733,7 +762,6 @@ static const luaL_Reg flib_load_funcs[] = {
 };
 
 #else
-
 static void createmeta (lua_State *L) {
   luaL_newmetatable(L, LUA_FILEHANDLE);  /* create metatable for file handles */
   lua_pushvalue(L, -1);  /* push metatable */
@@ -741,7 +769,6 @@ static void createmeta (lua_State *L) {
   luaL_setfuncs(L, flib, 0);  /* add file methods to new metatable */
   lua_pop(L, 1);  /* pop new metatable */
 }
-
 #endif
 
 /*
@@ -755,6 +782,7 @@ static int io_noclose (lua_State *L) {
   return 2;
 }
 
+
 static void createstdfile (lua_State *L, FILE *f, const char *k,
                            const char *fname) {
   LStream *p = newprefile(L);
@@ -767,6 +795,7 @@ static void createstdfile (lua_State *L, FILE *f, const char *k,
   lua_setfield(L, -2, fname);  /* add file to module */
 }
 
+
 LUAMOD_API int luaopen_io (lua_State *L) {
 #if !LUA_USE_ROTABLE
   luaL_newlib(L, iolib);  /* new module */
@@ -778,7 +807,7 @@ LUAMOD_API int luaopen_io (lua_State *L) {
 #else
   luaL_newlib(L, io_load_funcs);  /* new module */
   lua_pushvalue(L, -1);
-  lua_setmetatable(L, -2); 
+  lua_setmetatable(L, -2);
 
   luaL_newmetatable(L, LUA_FILEHANDLE);  /* create metatable for file handles */
   lua_pushvalue(L, -1);  /* push metatable */

@@ -29,8 +29,6 @@
 
 #include "luartos.h"
 
-#if USE_I2C
-
 #include "freertos/FreeRTOS.h"
 #include "driver/i2c.h"
 #include "driver/periph_ctrl.h"
@@ -434,5 +432,3 @@ driver_error_t *i2c_read(int unit, int *transaction, char *data, int len) {
 }
 
 DRIVER_REGISTER(I2C,i2c,i2c_locks,i2c_init,NULL);
-
-#endif

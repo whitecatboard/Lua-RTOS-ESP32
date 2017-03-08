@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_SERVO
+#if CONFIG_LUA_RTOS_LUA_USE_SERVO
 
 #include "lua.h"
 #include "lualib.h"

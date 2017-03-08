@@ -24,7 +24,7 @@
 
 #include "luartos.h"
 
-#if USE_SD
+#if CONFIG_LUA_RTOS_USE_FAT
 
 #include <strings.h>
 #include <stdio.h>

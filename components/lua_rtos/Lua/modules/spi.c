@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_SPI
+#if CONFIG_LUA_RTOS_LUA_USE_SPI
 
 #include "lua.h"
 #include "lualib.h"

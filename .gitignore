@@ -17,6 +17,7 @@ GPATH
 .#*
 \#*#
 
+components/spiffs_image/image/tests/
 build/
 *.dis
 *.elf

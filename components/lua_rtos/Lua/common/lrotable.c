@@ -5,10 +5,13 @@
 
 #if LUA_USE_ROTABLE
 
+#include "esp_attr.h"
+
 #include "lapi.h"
 #include "lauxlib.h"
 #include "lobject.h"
 #include "lrotable.h"
+#include "cache.h"
 #include "lstring.h"
 #include "lua.h"
 #include <string.h>
@@ -19,22 +22,23 @@ extern const luaR_entry lua_rotable[];
 static const TValue *luaR_auxfind(const luaR_entry *pentry, const char *strkey,
 		luaR_numkey numkey, unsigned *ppos);
 
-#if 0
 /*
  * Only for debug purposes.
  */
-void luaR_dump() {
-	const luaR_entry *entry = lua_rotable;
-
-	printf("lua_rotable\r\n");
+void luaR_dump(luaR_entry *entry) {
+	printf("lua_rotable %x\r\n",(unsigned int)entry);
 
 	while (entry->key.id.strkey) {
-		printf("  %s --> %x\r\n", entry->key.id.strkey,
-				(unsigned int) rvalue(&entry->value));
+		if (entry->key.len >= 0) {
+			printf("  [%s] --> %x\r\n", entry->key.id.strkey,
+					(unsigned int) rvalue(&entry->value));
+		} else {
+			printf("  [%d] --> %x\r\n", entry->key.id.numkey,
+					(unsigned int) rvalue(&entry->value));
+		}
 		entry++;
 	}
 }
-#endif
 
 LUA_API void lua_pushrotable(lua_State *L, void *p) {
 	lua_lock(L);
@@ -55,37 +59,32 @@ void luaA_pushobject(lua_State *L, const TValue *o) {
 	api_incr_top(L);
 }
 
-/* Find a global "read only table" in the constant lua_rotable array */
-const TValue *luaR_findglobal(const char *name, unsigned len) {
-	unsigned i;
-
-	if (strlen(name) > LUA_MAX_ROTABLE_NAME)
-		return NULL;
-	for (i = 0; lua_rotable[i].key.id.strkey; i++)
-		if (*lua_rotable[i].key.id.strkey != '\0'
-				&& strlen(lua_rotable[i].key.id.strkey) == len
-				&& !strncmp(lua_rotable[i].key.id.strkey, name, len)) {
-			return &lua_rotable[i].value;
-		}
-	return NULL;
-}
-
 /* Find an entry in a rotable and return it */
-static const TValue *luaR_auxfind(const luaR_entry *pentry, const char *strkey,
-		luaR_numkey numkey, unsigned *ppos) {
-
+static const IRAM_ATTR TValue *luaR_auxfind(const luaR_entry *pentry, const char *k, luaR_numkey nk, unsigned *ppos) {
 	const TValue *res = luaO_nilobject;
 	const luaR_entry *entry = pentry;
 	int i = 0;
 
-	while (entry->key.id.strkey) {
-		if (((entry->key.type == LUA_TSTRING) && (strcmp(entry->key.id.strkey, strkey) == 0)) ||
-			(((entry->key.type & 0b111) == LUA_TNUMBER) && ((luaR_numkey)entry->key.id.numkey == numkey))) {
-			res = &entry->value;
-			break;
+	if (k) {
+		int kl = strlen(k);
+
+		while (entry->key.id.strkey) {
+			if ((entry->key.type == LUA_TSTRING) && (entry->key.len == kl) && (!strncmp(entry->key.id.strkey, k, kl))) {
+				res = &entry->value;
+				break;
+			}
+			entry++;
+			i++;
 		}
-		entry++;
-		i++;
+	} else {
+		while (entry->key.id.strkey) {
+			if (i == nk) {
+				res = &entry->value;
+				break;
+			}
+			entry++;
+			i++;
+		}
 	}
 
 	if (res && ppos)
@@ -94,7 +93,46 @@ static const TValue *luaR_auxfind(const luaR_entry *pentry, const char *strkey,
 	return res;
 }
 
-int luaR_findfunction(lua_State *L, const luaR_entry *ptable) {
+/**
+ * @brief  Find a "read only table" in the lua_rotable array
+ *
+ * @param  name read only table name
+ *
+ * @return
+ *     - If exists, the read only table value
+ *     - If not exists, NULL
+ *
+ */
+const IRAM_ATTR TValue *luaR_findglobal(const char *name) {
+	const TValue *res;
+
+	// Try to get from cache
+	#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+	res = rotable_cache_get(lua_rotable, name);
+	if (res) {
+		return res;
+	}
+	#endif
+
+	const luaR_entry *entry = lua_rotable;
+	int len = strlen(name);
+
+	while (entry->key.id.strkey) {
+		if ((entry->key.len == len) && (!strncmp(entry->key.id.strkey, name, len))) {
+			#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+			// Put in cache
+			rotable_cache_put(lua_rotable, entry);
+			#endif
+
+			return &entry->value;
+		}
+		entry++;
+	}
+
+	return NULL;
+}
+
+int IRAM_ATTR luaR_findfunction(lua_State *L, const luaR_entry *ptable) {
 	const TValue *res = NULL;
 	const char *key = luaL_checkstring(L, 2);
 
@@ -130,10 +168,14 @@ int luaR_isrotable(const void *p) {
 }
 
 int luaH_getn_ro(void *t) {
-	int i = 1, len = 0;
+    luaR_entry *entry = (luaR_entry *)t;
+    int len = 0;
 
-	while (luaR_findentry(t, NULL, i++, NULL))
+    while (entry->key.id.strkey) {
+		entry++;
 		len++;
+	}
+
 	return len;
 }
 
@@ -144,7 +186,7 @@ static void luaR_next_helper(lua_State *L, const luaR_entry *pentries, int pos,
 	if (pentries[pos].key.type != LUA_TNIL) {
 		/* Found an entry */
 		if (pentries[pos].key.type == LUA_TSTRING)
-			setsvalue(L, key, luaS_newro( L, pentries[pos] .key.id.strkey))
+			setsvalue(L, key, luaS_newro( L, pentries[pos].key.id.strkey))
 		else
 			setnvalue(key, (lua_Number )pentries[pos].key.id.numkey)
 		setobj2s(L, val, &pentries[pos].value)

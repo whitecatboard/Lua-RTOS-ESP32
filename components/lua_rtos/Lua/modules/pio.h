@@ -315,6 +315,5 @@ int platform_pio_has_pin( unsigned port, unsigned pin );
 int platform_pio_get_num_pins( unsigned port );
 gpio_pin_mask_t platform_pio_op( unsigned port, gpio_pin_mask_t pinmask, int op );
 
-
 #endif	
 

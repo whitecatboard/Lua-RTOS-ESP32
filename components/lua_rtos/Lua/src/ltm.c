@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.36 2015/11/03 15:47:30 roberto Exp $
+** $Id: ltm.c,v 2.38 2016/12/22 13:08:50 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,7 @@
 #include "lua.h"
 
 #include "ldebug.h"
-#include "ldo.h" 
+#include "ldo.h"
 #include "lobject.h"
 #include "lstate.h"
 #include "lstring.h"
@@ -68,29 +68,22 @@ void luaT_init (lua_State *L) {
 ** function to be used with macro "fasttm": optimized for absence of
 ** tag methods
 */
+const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
+  const TValue *tm = luaH_getshortstr(events, ename);
+  lua_assert(event <= TM_EQ);
+  if (ttisnil(tm)) {  /* no tag method? */
 #if !LUA_USE_ROTABLE
-const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
-  const TValue *tm = luaH_getshortstr(events, ename);
-  lua_assert(event <= TM_EQ);
-  if (ttisnil(tm)) {  /* no tag method? */
     events->flags |= cast_byte(1u<<event);  /* cache this fact */
-    return NULL;
-  }
-  else return tm;
-}
 #else
-const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
-  const TValue *tm = luaH_getshortstr(events, ename);
-  lua_assert(event <= TM_EQ);
-  if (ttisnil(tm)) {  /* no tag method? */
 	if (!luaR_isrotable(events)) {
 		events->flags |= cast_byte(1u<<event);  /* cache this fact */
 	}
+#endif
     return NULL;
   }
   else return tm;
 }
-#endif
+
 
 const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
   Table *mt;
@@ -98,18 +91,34 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
     case LUA_TTABLE:
       mt = hvalue(o)->metatable;
       break;
+    case LUA_TUSERDATA:
+      mt = uvalue(o)->metatable;
+      break;
 #if LUA_USE_ROTABLE
     case LUA_TROTABLE:
       mt = (Table *)luaL_rometatable(rvalue(o));
       break;
 #endif
-    case LUA_TUSERDATA:
-      mt = uvalue(o)->metatable;
-      break;
     default:
       mt = G(L)->mt[ttnov(o)];
   }
   return (mt ? luaH_getshortstr(mt, G(L)->tmname[event]) : luaO_nilobject);
+}
+
+
+/*
+** Return the name of the type of an object. For tables and userdata
+** with metatable, use their '__name' metafield, if present.
+*/
+const char *luaT_objtypename (lua_State *L, const TValue *o) {
+  Table *mt;
+  if ((ttistable(o) && (mt = hvalue(o)->metatable) != NULL) ||
+      (ttisfulluserdata(o) && (mt = uvalue(o)->metatable) != NULL)) {
+    const TValue *name = luaH_getshortstr(mt, luaS_new(L, "__name"));
+    if (ttisstring(name))  /* is '__name' a string? */
+      return getstr(tsvalue(name));  /* use it as type name */
+  }
+  return ttypename(ttnov(o));  /* else use standard type name */
 }
 
 

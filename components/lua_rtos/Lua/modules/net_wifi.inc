@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_WIFI
+#if CONFIG_WIFI_ENABLED && CONFIG_LUA_RTOS_LUA_USE_NET
 
 #include <string.h>
 #include <stdio.h>
@@ -225,7 +225,6 @@ static const LUA_REG_TYPE wifi_mode_map[] = {
 	{ LSTRKEY( "AP"           ), LINTVAL( WIFI_MODE_AP ) },
 	{ LSTRKEY( "APSTA"        ), LINTVAL( WIFI_MODE_APSTA ) },
 };
-#endif
 
 static const LUA_REG_TYPE wifi_map[] = {
 	{ LSTRKEY( "setup" ),	 LFUNCVAL( lwifi_setup   ) },
@@ -238,3 +237,5 @@ static const LUA_REG_TYPE wifi_map[] = {
     { LSTRKEY( "error" ),	 LROVAL  ( wifi_error_map ) },
 	{ LNILKEY, LNILVAL }
 };
+
+#endif

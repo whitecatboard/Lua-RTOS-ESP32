@@ -14,7 +14,7 @@
 #define LIB_TOSTRING_EVALUATOR(x) LIB_TOSTRING_PASTER(x)
 #define LIB_TOSTRING(x) LIB_TOSTRING_EVALUATOR(x)
 
-#define LIB_USED(fname) LIB_CONCAT(LUA_USE_,fname)
+#define LIB_USED(fname) LIB_CONCAT(CONFIG_LUA_RTOS_LUA_USE_,fname)
 #define LIB_SECTION(fname, section) LIB_CONCAT(section,LIB_USED(fname))
 
 #if LUA_USE_ROTABLE

@@ -132,7 +132,13 @@ static void luaos_boot_scripts(lua_State *L) {
     system_order[0] = "/system.lua";
     system_order[1] = NULL;
 
+#ifdef RUN_LUA_TESTS
+    chdir("/tests");
+    autorun_order[0] = "/tests/test.lua";
+#else
     autorun_order[0] = "/autorun.lua";
+#endif
+
     autorun_order[1] = NULL;
 
     printf("\n");
@@ -183,6 +189,10 @@ static void luaos_boot_scripts(lua_State *L) {
 // * Run autorun.lua before executing the interpreter (in same state)
 static int luaos_pmain (lua_State *L) {
   status_set(STATUS_LUA_RUNNING);
+
+#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+    rotable_cache_init();
+#endif
 
   debug_free_mem_begin(luaL_openlibs);
   luaL_openlibs(L);  /* open standard libraries */

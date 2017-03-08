@@ -6,8 +6,6 @@
 
 #include "luartos.h"
 
-#if USE_OWIRE
-
 #include <sys/syslog.h>
 #include <string.h>
 
@@ -510,5 +508,3 @@ uint8_t TM_OneWire_Dosearch(uint8_t dev) {
 
 	return count;
 }
-
-#endif

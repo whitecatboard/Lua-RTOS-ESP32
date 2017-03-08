@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_THREAD
+#if CONFIG_LUA_RTOS_LUA_USE_THREAD
 
 #include "lua.h"
 #include "lapi.h"
@@ -227,7 +227,7 @@ static int thread_stop_pthreads(lua_State *L, int thid) {
     }  
     
     if (!thid) {
-    	#if LUA_USE_PWM
+    	#if CONFIG_LUA_RTOS_LUA_USE_PWM
         lua_getglobal(L, "pwm"); 
         lua_getfield(L, -1, "down");
         lua_remove(L, -2);

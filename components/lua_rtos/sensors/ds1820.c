@@ -4,6 +4,10 @@
  * based on TM_ONEWIRE (author  Tilen Majerle)
  */
 
+#include "luartos.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
@@ -774,3 +778,5 @@ driver_error_t *ds1820_get(sensor_instance_t *unit, const char *id, sensor_value
 
 	return NULL;
 }
+
+#endif

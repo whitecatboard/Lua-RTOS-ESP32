@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_MQTT
+#if CONFIG_LUA_RTOS_LUA_USE_MQTT
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"

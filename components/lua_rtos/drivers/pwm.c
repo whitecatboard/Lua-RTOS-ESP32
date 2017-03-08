@@ -29,8 +29,6 @@
 
 #include "luartos.h"
 
-#if USE_PWM
-
 #include "driver/periph_ctrl.h"
 #include "driver/ledc.h"
 
@@ -313,5 +311,3 @@ driver_error_t *pwm_set_duty(int8_t unit, int8_t channel, double duty) {
 }
 
 DRIVER_REGISTER(PWM,pwm,pwm_locks,NULL,NULL);
-
-#endif

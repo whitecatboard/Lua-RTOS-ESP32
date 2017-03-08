@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_UART
+#if CONFIG_LUA_RTOS_LUA_USE_UART
 
 #include <stdio.h>
 #include <string.h>

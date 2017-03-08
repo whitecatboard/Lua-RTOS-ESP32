@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_I2C
+#if CONFIG_LUA_RTOS_LUA_USE_I2C
 
 #include "lua.h"
 #include "error.h"

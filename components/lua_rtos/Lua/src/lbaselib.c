@@ -1,12 +1,14 @@
 /*
-** $Id: lbaselib.c,v 1.312 2015/10/29 15:21:04 roberto Exp $
+** $Id: lbaselib.c,v 1.314 2016/09/05 19:06:34 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
 
+#define lbaselib_c
 #define LUA_LIB
 
-#include "lprefix.h"  
+#include "lprefix.h"
+
 
 #include <ctype.h>
 #include <stdio.h>
@@ -17,10 +19,14 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
-      
-LUALIB_API void luaL_checkanytable (lua_State *L, int arg);
 
+// LUA RTOS BEGIN
 #include <Lua/modules/lbaselib_adds.inc>
+// LUA RTOS END
+
+#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+#include <Lua/common/cache.h>
+#endif
 
 static int luaB_print (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
@@ -41,7 +47,7 @@ static int luaB_print (lua_State *L) {
   }
   lua_writeline();
   return 0;
-}    
+}
 
 
 #define SPACECHARS	" \f\n\r\t\v"
@@ -103,8 +109,8 @@ static int luaB_tonumber (lua_State *L) {
 static int luaB_error (lua_State *L) {
   int level = (int)luaL_optinteger(L, 2, 1);
   lua_settop(L, 1);
-  if (lua_isstring(L, 1) && level > 0) {  /* add extra information? */
-    luaL_where(L, level);
+  if (lua_type(L, 1) == LUA_TSTRING && level > 0) {
+    luaL_where(L, level);   /* add extra information */
     lua_pushvalue(L, 1);
     lua_concat(L, 2);
   }
@@ -214,12 +220,12 @@ static int luaB_type (lua_State *L) {
 
 static int pairsmeta (lua_State *L, const char *method, int iszero,
                       lua_CFunction iter) {
-  if (luaL_getmetafield(L, 1, method) == LUA_TNIL) {  /* no metamethod? */
 #if !LUA_USE_ROTABLE
-  luaL_checktype(L, 1, LUA_TTABLE);
+	luaL_checkany(L, 1);
 #else
   luaL_checkanytable(L, 1);
 #endif
+  if (luaL_getmetafield(L, 1, method) == LUA_TNIL) {  /* no metamethod? */
     lua_pushcfunction(L, iter);  /* will return generator, */
     lua_pushvalue(L, 1);  /* state, */
     if (iszero) lua_pushinteger(L, 0);  /* and initial value */
@@ -265,9 +271,8 @@ static int ipairsaux (lua_State *L) {
 
 
 /*
-** This function will use either 'ipairsaux' or 'ipairsaux_raw' to
-** traverse a table, depending on whether the table has metamethods
-** that can affect the traversal.
+** 'ipairs' function. Returns 'ipairsaux', given "table", 0.
+** (The given "table" may not be a table.)
 */
 static int luaB_ipairs (lua_State *L) {
 #if defined(LUA_COMPAT_IPAIRS)
@@ -467,6 +472,9 @@ static int luaB_tostring (lua_State *L) {
 #include "modules.h"
 
 static const LUA_REG_TYPE base_funcs[] = {
+#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+  { LSTRKEY( "cache" 		  ),			LFUNCVAL( rotable_cache_dump  	) },
+#endif
   { LSTRKEY( "try" 			  ),			LFUNCVAL( luaB_try 				) },
   { LSTRKEY( "assert" 		  ),			LFUNCVAL( luaB_assert 			) },
   { LSTRKEY( "collectgarbage" ),			LFUNCVAL( luaB_collectgarbage 	) },
@@ -502,7 +510,6 @@ static const LUA_REG_TYPE base_funcs[] = {
 };
 
 #if LUA_USE_ROTABLE
-
 static int luaB_index (lua_State *L) {
   int fres;
 
@@ -515,13 +522,7 @@ static int luaB_index (lua_State *L) {
     return 1;
   }
 
-  const TValue *res = luaR_findglobal(keyname, strlen(keyname));
-  if (!res)
-    return 0;
-  else {
-    lua_pushrotable(L, (void *)rvalue(res));
-    return 1;
-  }
+  return 0;
 }
 
 static const luaL_Reg base_load_funcs[] = {
@@ -534,21 +535,22 @@ LUAMOD_API int luaopen_base (lua_State *L) {
 #if !LUA_USE_ROTABLE
     /* open lib into global table */
     lua_pushglobaltable(L);
-    luaL_setfuncs(L, base_funcs, 0);  
+    luaL_setfuncs(L, base_funcs, 0);
     /* set global _G */
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "_G");
     /* set global _VERSION */
     lua_pushliteral(L, LUA_VERSION);
-    lua_setfield(L, -2, "_VERSION");	
+    lua_setfield(L, -2, "_VERSION");
 #else
     /* open lib into global table */
     lua_pushglobaltable(L);
     luaL_setfuncs(L, base_load_funcs, 0);
-  
-    lua_pushvalue(L, -1);
-    lua_setmetatable(L, -2); 
-#endif	
 
-	return 1;
+    lua_pushvalue(L, -1);
+    lua_setmetatable(L, -2);
+#endif
+
+    return 1;
 }
+

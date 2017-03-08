@@ -36,7 +36,7 @@
 #include <string.h>
 
 
-#if LUA_USE_NVS
+#if CONFIG_LUA_RTOS_LUA_USE_NVS
 
 #include "xtensa/xos_types.h"
 #include "esp_system.h"

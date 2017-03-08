@@ -35,7 +35,7 @@
 #include "modules.h"
 #include "error.h"
 
-#if LUA_USE_LORA
+#if CONFIG_LUA_RTOS_LUA_USE_LORA
 
 #include <string.h>
 #include <stdlib.h>

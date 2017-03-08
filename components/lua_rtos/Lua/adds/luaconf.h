@@ -23,8 +23,6 @@
 	#define luai_threadyield(L) 
 #endif
 
-
-
 #undef  LUA_PROMPT
 #define LUA_PROMPT		"> "
 
@@ -86,7 +84,7 @@
         
 #define LBASELIB_OPEN_ADDS 
 
-#if LUA_USE_TMR
+#if CONFIG_LUA_RTOS_LUA_USE_TMR
     #define LINIT_REG_TMR {AUXLIB_TMR, luaopen_tmr},
 #else
     #define LINIT_REG_TMR
@@ -98,49 +96,49 @@
     #define LINIT_REG_CAN
 #endif
 
-#if LUA_USE_NET
+#if CONFIG_LUA_RTOS_LUA_USE_NET
     #define LINIT_REG_NET {AUXLIB_NET, luaopen_net},
 #else
     #define LINIT_REG_NET
 #endif
 
-#if LUA_USE_ADC
+#if CONFIG_LUA_RTOS_LUA_USE_ADC
     #define LINIT_REG_ADC {AUXLIB_ADC, luaopen_adc},
 #else
     #define LINIT_REG_ADC
 #endif
 
-#if LUA_USE_SPI
+#if CONFIG_LUA_RTOS_LUA_USE_SPI
     #define LINIT_REG_SPI {AUXLIB_SPI, luaopen_spi},
 #else
     #define LINIT_REG_SPI
 #endif
 
-#if LUA_USE_MQTT
+#if CONFIG_LUA_RTOS_LUA_USE_MQTT
     #define LINIT_REG_MQTT {AUXLIB_MQTT, luaopen_mqtt},
 #else
     #define LINIT_REG_MQTT
 #endif
 
-#if LUA_USE_THREAD
+#if CONFIG_LUA_RTOS_LUA_USE_THREAD
     #define LINIT_REG_THREAD {AUXLIB_THREAD, luaopen_thread },
 #else
     #define LINIT_REG_THREAD
 #endif
 
-#if LUA_USE_SCREEN
+#if CONFIG_LUA_RTOS_LUA_USE_SCREEN
     #define LINIT_REG_SCREEN {AUXLIB_SCREEN, luaopen_screen},
 #else
     #define LINIT_REG_SCREEN
 #endif
 
-#if LUA_USE_UART
+#if CONFIG_LUA_RTOS_LUA_USE_UART
     #define LINIT_REG_UART {AUXLIB_UART, luaopen_uart},
 #else
     #define LINIT_REG_UART
 #endif
 
-#if LUA_USE_PWM
+#if CONFIG_LUA_RTOS_LUA_USE_PWM
     #define LINIT_REG_PWM {AUXLIB_PWM, luaopen_pwm},
 #else
     #define LINIT_REG_PWM
@@ -164,13 +162,13 @@
     #define LINIT_REG_STEPPER
 #endif
 
-#if LUA_USE_I2C
+#if CONFIG_LUA_RTOS_LUA_USE_I2C
    // #define LINIT_REG_I2C {AUXLIB_I2C, luaopen_i2c},
 #else
     #define LINIT_REG_I2C
 #endif
 
-#if LUA_USE_LORA
+#if CONFIG_LUA_RTOS_LUA_USE_LORA
     #define LINIT_REG_LORA {AUXLIB_LORA, luaopen_lora},
 #else
     #define LINIT_REG_LORA

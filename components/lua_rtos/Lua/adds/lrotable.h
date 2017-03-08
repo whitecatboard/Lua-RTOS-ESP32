@@ -44,9 +44,9 @@
 #endif // #ifdef ELUA_ENDIAN_LITTLE
 #endif // #ifndef LUA_PACK_VALUE
 
-#define LRO_STRKEY(k)   {LUA_TSTRING, {.strkey = k}}
-#define LRO_NUMKEY(k)   {LUA_TNUMFLT, {.numkey = k}}
-#define LRO_NILKEY      {LUA_TNIL,    {.strkey=NULL}}
+#define LRO_STRKEY(k)   {LUA_TSTRING, sizeof(k) - 1, {.strkey = k}}
+#define LRO_NUMKEY(k)   {LUA_TNUMFLT, -1, {.numkey = k}}
+#define LRO_NILKEY      {LUA_TNIL,    -1, {.strkey=NULL}}
 
 /* Maximum length of a rotable name and of a string key*/
 #define LUA_MAX_ROTABLE_NAME      32
@@ -58,6 +58,7 @@ typedef int luaR_numkey;
 typedef struct
 {
   int type;
+  int len;
   union
   {
     const char*   strkey;
@@ -72,7 +73,7 @@ typedef struct
   const TValue value;
 } luaR_entry;
 
-const TValue* luaR_findglobal(const char *key, unsigned len);
+const TValue* luaR_findglobal(const char *key);
 int luaR_findfunction(lua_State *L, const luaR_entry *ptable);
 const TValue* luaR_findentry(const void *pentry, const char *strkey, luaR_numkey numkey, unsigned *ppos);
 void luaR_getcstr(char *dest, const TString *src, size_t maxsize);

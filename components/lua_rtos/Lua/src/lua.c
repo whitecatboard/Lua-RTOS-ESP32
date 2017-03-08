@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.226 2015/08/14 19:11:20 roberto Exp $
+** $Id: lua.c,v 1.230 2017/01/12 17:14:26 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -7,6 +7,7 @@
 #define lua_c
 
 #include "lprefix.h"
+
 
 #include <signal.h>
 #include <stdio.h>
@@ -17,6 +18,8 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+
+
 
 #if !defined(LUA_PROMPT)
 #define LUA_PROMPT		"> "
@@ -35,8 +38,7 @@
 #define LUA_INIT_VAR		"LUA_INIT"
 #endif
 
-#define LUA_INITVARVERSION  \
-	LUA_INIT_VAR "_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
+#define LUA_INITVARVERSION	LUA_INIT_VAR LUA_VERSUFFIX
 
 
 /*
@@ -53,6 +55,8 @@
 #elif defined(LUA_USE_WINDOWS)	/* }{ */
 
 #include <io.h>
+#include <windows.h>
+
 #define lua_stdin_is_tty()	_isatty(_fileno(stdin))
 
 #else				/* }{ */
@@ -101,18 +105,15 @@ static lua_State *globalL = NULL;
 static const char *progname = LUA_PROGNAME;
 
 
-#if !LUA_USE_SAFE_SIGNAL
 /*
 ** Hook set by signal function to stop the interpreter.
 */
 static void lstop (lua_State *L, lua_Debug *ar) {
-    (void)ar;  /* unused arg. */
-    lua_sethook(L, NULL, 0, 0);  /* reset hook */
-    luaL_error(L, "interrupted!");
+  (void)ar;  /* unused arg. */
+  lua_sethook(L, NULL, 0, 0);  /* reset hook */
+  luaL_error(L, "interrupted!");
 }
-#endif
 
-//lua_State*  pvGetLuaState();
 
 /*
 ** Function to be called at a C signal. Because a C signal cannot
@@ -121,16 +122,8 @@ static void lstop (lua_State *L, lua_Debug *ar) {
 ** interpreter.
 */
 static void laction (int i) {
-	// TO DO: review this. Code dumps if removed.
-	delay(100);
-
-	signal(i, SIG_DFL); /* if another SIGINT happens, terminate process */
-
-#if !LUA_USE_SAFE_SIGNAL
-	lua_sethook(globalL, lstop, LUA_MASKCALL | LUA_MASKRET | LUA_MASKCOUNT, 1);
-#else
-    luaL_error(pvGetLuaState(), "interrupted!");
-#endif
+  signal(i, SIG_DFL); /* if another SIGINT happens, terminate process */
+  lua_sethook(globalL, lstop, LUA_MASKCALL | LUA_MASKRET | LUA_MASKCOUNT, 1);
 }
 
 
@@ -273,6 +266,20 @@ static int dolibrary (lua_State *L, const char *name) {
   return report(L, status);
 }
 
+// LUA RTOS BEGIN
+#if 0
+/*
+** Returns the string to be used as a prompt by the interpreter.
+*/
+static const char *get_prompt (lua_State *L, int firstline) {
+  const char *p;
+  lua_getglobal(L, firstline ? "_PROMPT" : "_PROMPT2");
+  p = lua_tostring(L, -1);
+  if (p == NULL) p = (firstline ? LUA_PROMPT : LUA_PROMPT2);
+  return p;
+}
+#endif
+// LUA RTOS END
 
 /* mark in error messages for incomplete statements */
 #define EOFMARK		"<eof>"
@@ -296,12 +303,8 @@ static int incomplete (lua_State *L, int status) {
   return 0;  /* else... */
 }
 
-
-// WHITECAT BEGIN
+// LUA RTOS BEGIN
 #if 0
-/*
-** Prompt the user, read a line, and push it into the Lua stack.
-*/
 static int pushline (lua_State *L, int firstline) {
   char buffer[LUA_MAXINPUT];
   char *b = buffer;
@@ -322,6 +325,7 @@ static int pushline (lua_State *L, int firstline) {
   return 1;
 }
 #endif
+// LUA RTOS END
 
 /*
 ** Try to compile line on the stack as 'return <line>;'; on return, stack
@@ -457,7 +461,7 @@ static int handle_script (lua_State *L, char **argv) {
 /*
 ** Traverses all arguments from 'argv', returning a mask with those
 ** needed before running any Lua code (or an error code if it finds
-** any invalid argument). 'first' returns the first not-handled argument 
+** any invalid argument). 'first' returns the first not-handled argument
 ** (either the script name or a bad argument in case of error).
 */
 static int collectargs (char **argv, int *first) {
@@ -481,7 +485,7 @@ static int collectargs (char **argv, int *first) {
         args |= has_E;
         break;
       case 'i':
-        args |= has_i;  /* (-i implies -v) *//* FALLTHROUGH */ 
+        args |= has_i;  /* (-i implies -v) *//* FALLTHROUGH */
       case 'v':
         if (argv[i][2] != '\0')  /* extra characters after 1st? */
           return has_error;  /* invalid option */
@@ -527,6 +531,7 @@ static int runargs (lua_State *L, char **argv, int n) {
   }
   return 1;
 }
+
 
 
 static int handle_luainit (lua_State *L) {
@@ -589,7 +594,10 @@ static int pmain (lua_State *L) {
   return 1;
 }
 
-
+// LUA RTOS BEGIN
+#if 0
+int main (int argc, char **argv) {
+#else
 int lua_main (int argc, char **argv) {
   int status, result;
   lua_State *L = luaL_newstate();  /* create state */
@@ -607,8 +615,8 @@ int lua_main (int argc, char **argv) {
   return (result && status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-// WHITECAT BEGIN
 lua_State *lua_global() {
     return globalL;
 }
-// WHITECAT END
+#endif
+

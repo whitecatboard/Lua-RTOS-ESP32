@@ -32,10 +32,14 @@
 
 #include <drivers/sensor.h>
 
+#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+
 typedef struct {
 	sensor_instance_t *instance;
 	uint8_t adquired;
 } sensor_userdata;
+
+#endif
 
 #endif	/* LSENSOR_H */
 

@@ -2,6 +2,10 @@ ifneq (foo$(TEST_COMPONENTS), foo)
 CFLAGS += -DRUN_TESTS
 endif
 
+ifneq (foo$(TEST_LUA), foo)
+CFLAGS += -DRUN_LUA_TESTS
+endif
+
 CFLAGS += -DCONFIG_MAX_FD_BITS=4
 CFLAGS += -DLWIP_IPV6=1
 CFLAGS += -DLWIP_RAW=1

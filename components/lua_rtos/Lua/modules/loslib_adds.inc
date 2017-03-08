@@ -24,9 +24,33 @@ extern uint32_t boot_count;
 extern uint8_t flash_unique_id[8];
 
 char lua_syslog_level = 0xff;
+FILE *lua_stdout_file = NULL;
 
 void luaC_fullgc (lua_State *L, int isemergency) ;
 int edit_main(int argc, char *argv[]);
+
+static int os_stdout(lua_State *L) {
+    int total = lua_gettop(L);
+    const char *path = NULL;
+
+    if (total == 1) {
+    	path = luaL_checkstring(L, 1);
+    }
+
+    if (path) {
+    	if (lua_stdout_file) {
+    		fclose(lua_stdout_file);
+    	}
+
+    	lua_stdout_file = fopen(path,"a+");
+    } else {
+    	if (lua_stdout_file) {
+    		fclose(lua_stdout_file);
+    		lua_stdout_file = NULL;
+    	}
+    }
+    return 0;
+}
 
 static int os_shell(lua_State *L) { 
     luaL_checktype(L, 1, LUA_TBOOLEAN);

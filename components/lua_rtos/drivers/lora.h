@@ -32,7 +32,7 @@
 #ifndef LORA_H
 #define LORA_H
 
-#if LUA_USE_LORA
+#if CONFIG_LUA_RTOS_LUA_USE_LORA
 
 #include <sys/driver.h>
 

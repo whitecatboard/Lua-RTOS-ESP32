@@ -29,7 +29,6 @@
 
 #include "luartos.h"
 
-#if USE_ADC
 #include "freertos/FreeRTOS.h"
 
 #include <stdint.h>
@@ -182,8 +181,6 @@ driver_error_t *adc_read(uint8_t unit, uint8_t channel, int *raw, double *mvols)
 }
 
 DRIVER_REGISTER(ADC,adc,NULL,NULL,NULL);
-
-#endif
 
 /*
 -- mcp = adc.setup(adc.MCP3208, 0, 12, 3300)

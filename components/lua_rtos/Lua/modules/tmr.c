@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_TMR
+#if CONFIG_LUA_RTOS_LUA_USE_TMR
 
 #include "lua.h"
 #include "lauxlib.h"

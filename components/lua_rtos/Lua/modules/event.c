@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_EVENT
+#if CONFIG_LUA_RTOS_LUA_USE_EVENT
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"

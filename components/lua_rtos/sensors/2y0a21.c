@@ -27,6 +27,8 @@
  * this software.
  */
 
+#include "luartos.h"
+
 #if 0
 
 #include "2y0a21.h"

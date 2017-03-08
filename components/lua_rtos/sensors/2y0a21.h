@@ -27,6 +27,8 @@
  * this software.
  */
 
+#include "luartos.h"
+
 #if 0
 
 #include <sys/driver.h>

@@ -4,6 +4,10 @@
  * based on TM_ONEWIRE (author  Tilen Majerle)
  */
 
+#include "luartos.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
@@ -76,3 +80,5 @@ void ds1820_gettype(sensor_instance_t *unit, char *buf);
 uint8_t ds1820_get_res(sensor_instance_t *unit);
 void ow_list(sensor_instance_t *unit);
 uint8_t ds1820_numdev(sensor_instance_t *unit);
+
+#endif

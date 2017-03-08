@@ -317,6 +317,14 @@ menu "Lua RTOS"
 			default 1
 			help
 				Default CPU affinity for Lua threads.
+
+		config LUA_RTOS_LUA_USE_ROTABLE_CACHE
+			bool "Use cache for readonly tables access (experimental)"
+			default n
+			help
+				This is an experimental feature. When accessing to readonly tables,
+				Lua RTOS can get the key/value pair from a cache. This can speedup
+				the execution of Lua scripts. 
 	  endmenu
 	  
 	  menu "Lua Modules"
@@ -363,6 +371,18 @@ menu "Lua RTOS"
 	  menu "Lua RTOS Modules"
 	  	config LUA_RTOS_LUA_USE_THREAD
 		  	bool "Include thread module in build"
+		  	default y
+
+	  	config LUA_RTOS_LUA_USE_SENSOR
+		  	bool "Include sensor module in build"
+		  	default y
+
+	  	config LUA_RTOS_LUA_USE_SERVO
+		  	bool "Include servo module in build"
+		  	default y
+
+	  	config LUA_RTOS_LUA_USE_EVENT
+		  	bool "Include event module in build"
 		  	default y
 
 	  	config LUA_RTOS_LUA_USE_NVS

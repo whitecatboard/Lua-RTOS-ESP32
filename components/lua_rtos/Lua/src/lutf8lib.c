@@ -1,5 +1,5 @@
 /*
-** $Id: lutf8lib.c,v 1.15 2015/03/28 19:16:55 roberto Exp $
+** $Id: lutf8lib.c,v 1.16 2016/12/22 13:08:50 roberto Exp $
 ** Standard library for UTF-8 manipulation
 ** See Copyright Notice in lua.h
 */
@@ -194,7 +194,7 @@ static int byteoffset (lua_State *L) {
     lua_pushinteger(L, posi + 1);
   else  /* no such character */
     lua_pushnil(L);
-  return 1;  
+  return 1;
 }
 
 
@@ -233,6 +233,7 @@ static int iter_codes (lua_State *L) {
 
 /* pattern to match a single UTF-8 character */
 #define UTF8PATT	"[\0-\x7F\xC2-\xF4][\x80-\xBF]*"
+
 
 #include "modules.h"
 

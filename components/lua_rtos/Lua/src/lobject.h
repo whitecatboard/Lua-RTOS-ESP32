@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.116 2015/11/03 18:33:10 roberto Exp $
+** $Id: lobject.h,v 2.117 2016/08/01 19:51:24 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -158,9 +158,6 @@ typedef struct lua_TValue {
 #define ttisthread(o)		checktag((o), ctb(LUA_TTHREAD))
 #define ttisdeadkey(o)		checktag((o), LUA_TDEADKEY)
 
-#if LUA_USE_ROTABLE
-#define ttisrotable(o) 	    checktag((o), LUA_TROTABLE)
-#endif
 
 /* Macros to access values */
 #define ivalue(o)	check_exp(ttisinteger(o), val_(o).i)
@@ -178,11 +175,6 @@ typedef struct lua_TValue {
 #define hvalue(o)	check_exp(ttistable(o), gco2t(val_(o).gc))
 #define bvalue(o)	check_exp(ttisboolean(o), val_(o).b)
 #define thvalue(o)	check_exp(ttisthread(o), gco2th(val_(o).gc))
-
-#if LUA_USE_ROTABLE
-#define rvalue(o)	check_exp(ttisrotable(o), val_(o).p)
-#endif
-
 /* a dead value may get the 'gc' field, but cannot access its contents */
 #define deadvalue(o)	check_exp(ttisdeadkey(o), cast(void *, val_(o).gc))
 
@@ -262,10 +254,7 @@ typedef struct lua_TValue {
 
 #define setdeadvalue(obj)	settt_(obj, LUA_TDEADKEY)
 
-#if LUA_USE_ROTABLE
-#define setrvalue(obj,x) \
-  { TValue *io=(obj); val_(io).p=(x); settt_(io, LUA_TROTABLE); }
-#endif
+
 
 #define setobj(L,obj1,obj2) \
 	{ TValue *io1=(obj1); *io1 = *(obj2); \
@@ -418,7 +407,7 @@ typedef struct LocVar {
 typedef struct Proto {
   CommonHeader;
   lu_byte numparams;  /* number of fixed parameters */
-  lu_byte is_vararg;  /* 2: declared vararg; 1: uses vararg */
+  lu_byte is_vararg;
   lu_byte maxstacksize;  /* number of registers needed by this function */
   int sizeupvalues;  /* size of 'upvalues' */
   int sizek;  /* size of 'k' */
@@ -555,6 +544,13 @@ LUAI_FUNC const char *luaO_pushvfstring (lua_State *L, const char *fmt,
 LUAI_FUNC const char *luaO_pushfstring (lua_State *L, const char *fmt, ...);
 LUAI_FUNC void luaO_chunkid (char *out, const char *source, size_t len);
 
+#if LUA_USE_ROTABLE
+#define ttisrotable(o)  checktag((o), LUA_TROTABLE)
+#define rvalue(o)       check_exp(ttisrotable(o), val_(o).p)
+
+#define setrvalue(obj,x) \
+  { TValue *io=(obj); val_(io).p=(x); settt_(io, LUA_TROTABLE); }
+#endif
 
 #endif
 

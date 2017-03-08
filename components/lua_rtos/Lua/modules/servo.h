@@ -31,6 +31,8 @@
 #ifndef LSERVO_H
 #define	LSERVO_H
 
+#if CONFIG_LUA_RTOS_LUA_USE_SERVO
+
 #include <stdint.h>
 
 #include <drivers/servo.h>
@@ -60,5 +62,7 @@
 typedef struct {
 	servo_instance_t *instance;
 } servo_userdata;
+
+#endif
 
 #endif	/* LSERVO_H */

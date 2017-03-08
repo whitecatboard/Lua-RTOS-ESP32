@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.265 2015/11/23 11:30:45 roberto Exp $
+** $Id: lvm.c,v 2.268 2016/02/05 19:59:14 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -34,6 +34,7 @@
 #include "lrotable.h"
 #include "llex.h"
 #endif
+
 
 /* limit for table tag-method chains (to avoid loops) */
 #define MAXTAGLOOP	2000
@@ -157,8 +158,9 @@ static int forlimit (const TValue *obj, lua_Integer *p, lua_Integer step,
 
 
 /*
-** Complete a table access: if 't' is a table, 'tm' has its metamethod;
-** otherwise, 'tm' is NULL.
+** Finish the table access 'val = t[key]'.
+** if 'slot' is NULL, 't' is not a table; otherwise, 'slot' points to
+** t[k] entry (which must be nil).
 */
 #if !LUA_USE_ROTABLE
 void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
@@ -235,8 +237,11 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
 
 
 /*
-** Main function for table assignment (invoking metamethods if needed).
-** Compute 't[key] = val'
+** Finish a table assignment 't[key] = val'.
+** If 'slot' is NULL, 't' is not a table.  Otherwise, 'slot' points
+** to the entry 't[key]', or to 'luaO_nilobject' if there is no such
+** entry.  (The value at 'slot' must be nil, otherwise 'luaV_fastset'
+** would have done the job.)
 */
 #if !LUA_USE_ROTABLE
 void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
@@ -286,10 +291,10 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
       lua_assert(ttisnil(slot));  /* old value must be nil */
       tm = fasttm(L, ttistable(t)?h->metatable:(Table*)luaL_rometatable(rvalue(t)), TM_NEWINDEX);  /* get metamethod */
       if (tm == NULL) {  /* no metamethod? */
-    	if (luaR_findglobal(svalue(key), strlen(svalue(key)))) {
-    		luaG_runerror(L, "attempt to index a rotable value (global 'lora')", svalue(key));
-    		return;
-    	}
+    	//if ((checktype(key, LUA_TSTRING)) && luaR_findglobal(svalue(key))) {
+    	//	luaG_runerror(L, "attempt to index a rotable value (global '%s')", svalue(key));
+    	//	return;
+    	//}
         if (slot == luaO_nilobject)  /* no previous entry? */
           slot = luaH_newkey(L, h, key);  /* create one */
         /* no metamethod and (now) there is an entry with given key */
@@ -504,10 +509,6 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
     case LUA_TNUMFLT: return luai_numeq(fltvalue(t1), fltvalue(t2));
     case LUA_TBOOLEAN: return bvalue(t1) == bvalue(t2);  /* true must be 1 !! */
     case LUA_TLIGHTUSERDATA: return pvalue(t1) == pvalue(t2);
-#if LUA_USE_ROTABLE
-    case LUA_TROTABLE:
-      return (rvalue(t1) == rvalue(t2));
-#endif
     case LUA_TLCF: return fvalue(t1) == fvalue(t2);
     case LUA_TSHRSTR: return eqshrstr(tsvalue(t1), tsvalue(t2));
     case LUA_TLNGSTR: return luaS_eqlngstr(tsvalue(t1), tsvalue(t2));
@@ -527,6 +528,10 @@ int luaV_equalobj (lua_State *L, const TValue *t1, const TValue *t2) {
         tm = fasttm(L, hvalue(t2)->metatable, TM_EQ);
       break;  /* will try TM */
     }
+#if LUA_USE_ROTABLE
+    case LUA_TROTABLE:
+      return (rvalue(t1) == rvalue(t2));
+#endif
     default:
       return gcvalue(t1) == gcvalue(t2);
   }
@@ -597,6 +602,7 @@ void luaV_concat (lua_State *L, int total) {
   } while (total > 1);  /* repeat until only 1 result left */
 }
 
+
 /*
 ** Main operation 'ra' = #rb'.
 */
@@ -618,12 +624,12 @@ void luaV_objlen (lua_State *L, StkId ra, const TValue *rb) {
       setivalue(ra, tsvalue(rb)->u.lnglen);
       return;
     }
-#if LUA_USE_ROTABLE    
+#if LUA_USE_ROTABLE
     case LUA_TROTABLE: {
        setivalue(ra, luaH_getn_ro((void *)rvalue(rb)));
        return;
     }
-#endif    
+#endif
     default: {  /* try metamethod */
       tm = luaT_gettmbyobj(L, rb, TM_LEN);
       if (ttisnil(tm))  /* no metamethod? */
@@ -741,6 +747,7 @@ static void pushclosure (lua_State *L, Proto *p, UpVal **encup, StkId base,
     p->cache = ncl;  /* save it on cache for reuse */
 }
 
+
 /*
 ** finish execution of an opcode interrupted by an yield
 */
@@ -843,18 +850,28 @@ void luaV_finishOp (lua_State *L) {
            luai_threadyield(L); }
 
 
+/* fetch an instruction and prepare its execution */
+#define vmfetch()	{ \
+  i = *(ci->u.l.savedpc++); \
+  if (L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) \
+    Protect(luaG_traceexec(L)); \
+  ra = RA(i); /* WARNING: any stack reallocation invalidates 'ra' */ \
+  lua_assert(base == ci->u.l.base); \
+  lua_assert(base <= L->top && L->top < L->stack + L->stacksize); \
+}
+
 #define vmdispatch(o)	switch(o)
-#define vmcase(l)	case l: //printf("%s\r\n",luaP_opnames[l]);
+#define vmcase(l)	case l:
 #define vmbreak		break
 
 
 /*
-** copy of 'luaV_gettable', but protecting call to potential metamethod
-** (which can reallocate the stack)
+** copy of 'luaV_gettable', but protecting the call to potential
+** metamethod (which can reallocate the stack)
 */
-#define gettableProtected(L,t,k,v)  { const TValue *aux; \
-  if (luaV_fastget(L,t,k,aux,luaH_get)) { setobj2s(L, v, aux); } \
-  else {Protect(luaV_finishget(L,t,k,v,aux));} }
+#define gettableProtected(L,t,k,v)  { const TValue *slot; \
+  if (luaV_fastget(L,t,k,slot,luaH_get)) { setobj2s(L, v, slot); } \
+  else Protect(luaV_finishget(L,t,k,v,slot)); }
 
 
 /* same for 'luaV_settable' */
@@ -877,14 +894,9 @@ void luaV_execute (lua_State *L) {
   base = ci->u.l.base;  /* local copy of function's base */
   /* main loop of interpreter */
   for (;;) {
-    Instruction i = *(ci->u.l.savedpc++);
+    Instruction i;
     StkId ra;
-    if (L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT))
-      Protect(luaG_traceexec(L));
-    /* WARNING: several calls may realloc the stack and invalidate 'ra' */
-    ra = RA(i);
-    lua_assert(base == ci->u.l.base);
-    lua_assert(base <= L->top && L->top < L->stack + L->stacksize);
+    vmfetch();
     vmdispatch (GET_OPCODE(i)) {
       vmcase(OP_MOVE) {
         setobjs2s(L, ra, RB(i));

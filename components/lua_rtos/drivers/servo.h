@@ -32,7 +32,7 @@
 
 #include "luartos.h"
 
-#if USE_SERVO
+#if CONFIG_LUA_RTOS_LUA_USE_SERVO
 
 #include <sys/driver.h>
 

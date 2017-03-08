@@ -42,7 +42,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if LUA_USE_PACK
+#if CONFIG_LUA_RTOS_LUA_USE_PACK
 #define PACK_NUMBER   0b0000
 #define PACK_INTEGER  0b0001
 #define PACK_NIL      0b0010

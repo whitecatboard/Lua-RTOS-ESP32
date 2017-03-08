@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, PING))) #28015 sensor (Distance Sensor)
+ * Lua RTOS, Read Only tables cache
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -29,13 +29,38 @@
 
 #include "luartos.h"
 
-#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
 
-#include <sys/driver.h>
-#include <drivers/sensor.h>
+#include "lrotable.h"
 
-driver_error_t *ping28015_setup(sensor_instance_t *unit);
-driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *values);
-driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting);
+#ifndef ROTABLE_CACHE_H
+#define ROTABLE_CACHE_H
+
+#define ROTABLE_CACHE_LENGTH 8
+
+struct rotable_cache_entry {
+	struct rotable_cache_entry *previous; // Previous entry
+	struct rotable_cache_entry *next;     // Next entry
+
+	luaR_entry *rotable; // cached rotable
+	luaR_entry *entry;   // cached entry
+
+	uint32_t used;
+};
+
+typedef struct {
+	uint32_t miss; // Number of cache misses
+	uint32_t hit;  // Number of cache hits
+
+	struct rotable_cache_entry *first; // First entry
+	struct rotable_cache_entry *last;  // Last entry
+} rotable_cache_t;
+
+void rotable_cache_dump();
+int rotable_cache_init();
+const TValue *rotable_cache_get(const luaR_entry *rotable, const char *strkey);
+void rotable_cache_put(const luaR_entry *rotable, const luaR_entry *entry);
+
+#endif
 
 #endif

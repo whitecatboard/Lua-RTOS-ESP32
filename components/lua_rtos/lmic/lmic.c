@@ -11,7 +11,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_LORA
+#if CONFIG_LUA_RTOS_LUA_USE_LORA
 #if CONFIG_LUA_RTOS_USE_LMIC
 
 //! \file

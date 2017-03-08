@@ -29,7 +29,6 @@
 
 #include "luartos.h"
 
-#if USE_ADC
 #include "driver/adc.h"
 
 #include <stdint.h>
@@ -115,5 +114,3 @@ driver_error_t *adc_internal_read(int8_t unit, int8_t channel, int *raw) {
 
 	return NULL;
 }
-
-#endif
