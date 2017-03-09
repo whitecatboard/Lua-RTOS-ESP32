@@ -480,6 +480,10 @@ typedef struct __attribute(( packed ))
   spiffs_obj_type type;
   // name of object
   u8_t name[SPIFFS_OBJ_NAME_LEN];
+#if SPIFFS_OBJ_META_LEN
+  // metadata. not interpreted by SPIFFS in any way.
+  u8_t meta[SPIFFS_OBJ_META_LEN];
+#endif
 } spiffs_page_object_ix_header;
 
 // object index page header
@@ -634,7 +638,8 @@ s32_t spiffs_page_delete(
 s32_t spiffs_object_create(
     spiffs *fs,
     spiffs_obj_id obj_id,
-    const u8_t name[SPIFFS_OBJ_NAME_LEN],
+    const u8_t name[],
+    const u8_t meta[],
     spiffs_obj_type type,
     spiffs_page_ix *objix_hdr_pix);
 
@@ -644,7 +649,8 @@ s32_t spiffs_object_update_index_hdr(
     spiffs_obj_id obj_id,
     spiffs_page_ix objix_hdr_pix,
     u8_t *new_objix_hdr_data,
-    const u8_t name[SPIFFS_OBJ_NAME_LEN],
+    const u8_t name[],
+    const u8_t meta[],
     u32_t size,
     spiffs_page_ix *new_pix);
 
