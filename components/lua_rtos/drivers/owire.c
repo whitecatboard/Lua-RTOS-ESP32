@@ -496,7 +496,6 @@ uint8_t TM_OneWire_Dosearch(uint8_t dev) {
 	owdev = TM_OneWire_First(dev);
 	while (owdev) {
 		count++;  // Increase device counter
-
 		// Get full ROM value, 8 bytes, give location of first byte where to save
 		TM_OneWire_GetFullROM(dev, ow_devices[dev].roms[count - 1]);
 		// Get next device
