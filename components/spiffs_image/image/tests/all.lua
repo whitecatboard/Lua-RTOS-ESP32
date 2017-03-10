@@ -11,6 +11,7 @@ if _VERSION ~= version then
 end
 
 
+_G._soft = true
 _G._ARG = arg   -- save arg for other tests
 
 
@@ -123,18 +124,21 @@ end
 local function report (n) print("\n***** FILE '"..n.."'*****") end
 local olddofile = dofile
 local dofile = function (n, strip)
+  collectgarbage()
   showmem()
   local c = os.clock()
   print(string.format("time: %g (+%g)", c - initclock, c - lastclock))
   lastclock = c
   report(n)
-  local f = assert(loadfile(n))
-  local b = string.dump(f, strip)
-  f = assert(load(b))
-  return f()
+  -- local f = assert(loadfile(n))
+  -- local b = string.dump(f, strip)
+  -- f = assert(load(b))
+  -- return f()
+  
+  return olddofile(n)
 end
 
-dofile('main.lua')
+-- dofile('main.lua')
 
 do
   local next, setmetatable, stderr = next, setmetatable, io.stderr
@@ -153,37 +157,37 @@ report"gc.lua"
 local f = assert(loadfile('gc.lua'))
 f()
 
-dofile('db.lua')
+-- dofile('db.lua')
 assert(dofile('calls.lua') == deep and deep)
 olddofile('strings.lua')
 olddofile('literals.lua')
 dofile('tpack.lua')
-assert(dofile('attrib.lua') == 27)
+-- assert(dofile('attrib.lua') == 27)
 
 assert(dofile('locals.lua') == 5)
 dofile('constructs.lua')
-dofile('code.lua', true)
+-- dofile('code.lua', true)
 if not _G._soft then
   report('big.lua')
   local f = coroutine.wrap(assert(loadfile('big.lua')))
   assert(f() == 'b')
   assert(f() == 'a')
 end
-dofile('nextvar.lua')
+-- dofile('nextvar.lua')
 dofile('pm.lua')
 dofile('utf8.lua')
-dofile('api.lua')
+-- dofile('api.lua')
 assert(dofile('events.lua') == 12)
 dofile('vararg.lua')
 dofile('closure.lua')
 dofile('coroutine.lua')
 dofile('goto.lua', true)
-dofile('errors.lua')
+-- dofile('errors.lua')
 dofile('math.lua')
 dofile('sort.lua', true)
 dofile('bitwise.lua')
-assert(dofile('verybig.lua', true) == 10); collectgarbage()
-dofile('files.lua')
+-- assert(dofile('verybig.lua', true) == 10); collectgarbage()
+-- dofile('files.lua')
 
 if #msgs > 0 then
   print("\ntests not performed:")
