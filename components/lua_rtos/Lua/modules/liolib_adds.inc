@@ -94,11 +94,18 @@ static int f_receive (lua_State *L) {
     unsigned char chunk[255];
     unsigned char *cchunk;
     unsigned char chunk_size;
-  
+
+    int buff_size = 10240;
+
     if (strlen(filename) == 0) return 0;
 
     FILE *f= fopen(filename, "w");
     if (f) {
+    	// Try to allocate a great buffer for output stream
+    	while (setvbuf(f , NULL, _IOFBF, buff_size) != 0) {
+    		buff_size = buff_size - 1024;
+    	}
+
         uart_lock(CONSOLE_UART);
         
         // Clear received buffer
