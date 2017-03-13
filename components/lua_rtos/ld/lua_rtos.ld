@@ -29,6 +29,22 @@ SECTIONS {
 	/* exception names exported to Lua modules */
 	/* TO DO */
 	/*   Generate this entries automatically */
+    nzr_errors = ABSOLUTE(.);
+    KEEP(*(.nzr_errors))
+    LONG(0) LONG(0)
+
+    nzr_error_map = ABSOLUTE(.);
+    KEEP(*(.nzr_error_map))
+    LONG(0) LONG(0)
+
+    neopixel_errors = ABSOLUTE(.);
+    KEEP(*(.neopixel_errors))
+    LONG(0) LONG(0)
+
+    neopixel_error_map = ABSOLUTE(.);
+    KEEP(*(.neopixel_error_map))
+    LONG(0) LONG(0)
+
     uart_errors = ABSOLUTE(.);
     KEEP(*(.uart_errors))
     LONG(0) LONG(0)

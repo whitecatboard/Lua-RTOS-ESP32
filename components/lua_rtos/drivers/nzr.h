@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, NEOPIXEL WS2812B driver
+ * Lua RTOS, NZR driver
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
@@ -27,36 +27,33 @@
  * this software.
  */
 
-#ifndef NEOPIXEL_H_
-#define NEOPIXEL_H_
+/*
+ * This driver implements NZR data transfers over a GPIO.
+ */
+
+#ifndef NZR_H_
+#define NZR_H_
 
 #include <sys/driver.h>
 
-typedef enum {
-	NeopixelWS2812B,
-} neopixel_controller_t;
+typedef struct {
+	uint32_t t0h; //T0H in cycles
+	uint32_t t0l; //T0L in cycles
+	uint32_t t1h; //T1H in cycles
+	uint32_t t1l; //T1L in cycles
+	uint32_t res; //RES in cycles
+} nzr_timing_t;
 
 typedef struct {
-	uint8_t g;
-	uint8_t r;
-	uint8_t b;
-} neopixel_pixel_t;
+	uint8_t gpio;
+	nzr_timing_t timings;
+} nzr_instance_t;
 
-typedef struct {
-	uint32_t nzr_unit;
-	neopixel_pixel_t *pixels;
-	uint32_t npixels;
-} neopixel_instance_t;
+// NZR errors
+#define NZR_ERR_NOT_ENOUGH_MEMORY           (DRIVER_EXCEPTION_BASE(NZR_DRIVER_ID) |  0)
+#define NRZ_ERR_INVALID_UNIT                (DRIVER_EXCEPTION_BASE(NZR_DRIVER_ID) |  1)
 
-// NEOPIXEL errors
-#define NEOPIXEL_ERR_NOT_ENOUGH_MEMORY           (DRIVER_EXCEPTION_BASE(NEOPIXEL_DRIVER_ID) |  0)
-#define NEOPIXEL_ERR_INVALID_UNIT                (DRIVER_EXCEPTION_BASE(NEOPIXEL_DRIVER_ID) |  1)
-#define NEOPIXEL_ERR_INVALID_PIXEL               (DRIVER_EXCEPTION_BASE(NEOPIXEL_DRIVER_ID) |  2)
-#define NEOPIXEL_ERR_INVALID_CONTROLLER          (DRIVER_EXCEPTION_BASE(NEOPIXEL_DRIVER_ID) |  4)
-#define NEOPIXEL_ERR_INVALID_RGB_COMPONENT       (DRIVER_EXCEPTION_BASE(NEOPIXEL_DRIVER_ID) |  5)
+driver_error_t *nzr_setup(nzr_timing_t *timing, uint8_t gpio, uint32_t *unit);
+driver_error_t *nzr_send(uint32_t unit, uint8_t *data, uint32_t bits);
 
-driver_error_t *neopixel_rgb(uint32_t unit, uint32_t pixel, uint8_t r, uint8_t g, uint8_t b);
-driver_error_t *neopixel_setup(neopixel_controller_t controller, uint8_t gpio, uint32_t pixels, uint32_t *unit);
-driver_error_t *neopixel_update(uint32_t unit);
-
-#endif /* NEOPIXEL_H_ */
+#endif /* NZR_H_ */

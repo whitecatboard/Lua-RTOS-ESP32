@@ -381,6 +381,10 @@ menu "Lua RTOS"
 		  	bool "Include servo module in build"
 		  	default y
 
+	  	config LUA_RTOS_LUA_USE_NEOPIXEL
+		  	bool "Include neopixel module in build"
+		  	default y
+
 	  	config LUA_RTOS_LUA_USE_EVENT
 		  	bool "Include event module in build"
 		  	default y

@@ -31,59 +31,110 @@
 
 #include "neopixel.h"
 
+#include <sys/list.h>
 #include <sys/driver.h>
 #include <sys/delay.h>
 
 #include <drivers/gpio.h>
+#include <drivers/nzr.h>
 
 #define NEO_CYCLES(n) ((double)n / (double)((double)1000000000L / (double)CPU_HZ))
 
-static neopixel_chipset_t chipset[1] = {
+static nzr_timing_t chipset[1] = {
 	{NEO_CYCLES(350), NEO_CYCLES(900), NEO_CYCLES(900), NEO_CYCLES(350), NEO_CYCLES(50000)}, // WS2812B
 };
 
-static uint8_t neopixel_gpio;
+// Driver errors
+DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, NotEnoughtMemory, "not enough memory", NEOPIXEL_ERR_NOT_ENOUGH_MEMORY);
+DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidUnit, "invalid unit", NEOPIXEL_ERR_INVALID_UNIT);
+DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidPixel, "invalid pixel", NEOPIXEL_ERR_INVALID_PIXEL);
+DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidController, "invalid controller", NEOPIXEL_ERR_INVALID_CONTROLLER);
+DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidRGBComponent, "invalid RGB component", NEOPIXEL_ERR_INVALID_RGB_COMPONENT);
 
-driver_error_t *neopixel_setup(neopixel_controller_t controller, uint8_t gpio, uint8_t *unit) {
-	neopixel_gpio = gpio;
+// List of units
+struct list neopixel_list;
 
-	gpio_pin_output(neopixel_gpio);
-
-	*unit = controller;
-
-	return NULL;
+/*
+ * Operation functions
+ */
+void neopixel_init() {
+	// Init  list
+    list_init(&neopixel_list, 0);
 }
 
-driver_error_t *neopixel_send(uint8_t unit, uint32_t *rgbs, uint32_t len) {
-	int bit, i;
-	uint32_t *rgb;
-	uint32_t pulseH;
-	uint32_t pulseL;
+driver_error_t *neopixel_rgb(uint32_t unit, uint32_t pixel, uint8_t r, uint8_t g, uint8_t b) {
+	neopixel_instance_t *instance;
 
-	uint32_t c, s;
+	// Get instance
+    if (list_get(&neopixel_list, (int)unit, (void **)&instance)) {
+		return driver_operation_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_UNIT, NULL);
+    }
 
-	portDISABLE_INTERRUPTS();
+    if (pixel > instance->npixels) {
+		return driver_operation_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_PIXEL, NULL);
+    }
 
-	c = xthal_get_ccount();
-	rgb = rgbs;
-	for(i=0;i < len;i++) {
-		for(bit=23;bit >= 0; bit--) {
-			s = c;
+    instance->pixels[pixel].r = r;
+    instance->pixels[pixel].g = g;
+    instance->pixels[pixel].b = b;
 
-			pulseH = ((*rgb) & (1 << bit))?chipset[unit].t1h:chipset[unit].t0h;
-			pulseL = ((*rgb) & (1 << bit))?chipset[unit].t1l:chipset[unit].t0l;
+    return NULL;
+}
 
-			gpio_ll_pin_set(neopixel_gpio);
-			while (((c = xthal_get_ccount()) - s) < pulseH);
+driver_error_t *neopixel_setup(neopixel_controller_t controller, uint8_t gpio, uint32_t pixels, uint32_t *unit) {
+	driver_error_t *error;
+	uint32_t nzr_unit;
 
-			gpio_ll_pin_clr(neopixel_gpio);
-			while (((c = xthal_get_ccount()) - s) < pulseL);
-		}
-
-		rgb++;
+	if (controller > 1) {
+		return driver_operation_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_CONTROLLER, NULL);
 	}
 
-	portENABLE_INTERRUPTS();
+	// Setup NZR
+	if ((error = nzr_setup(&chipset[controller], gpio, &nzr_unit))) {
+		return error;
+	}
+
+	// Create an instance
+	neopixel_instance_t *instance = (neopixel_instance_t *)calloc(1,sizeof(neopixel_instance_t));
+	if (!instance) {
+		return driver_operation_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_NOT_ENOUGH_MEMORY, NULL);
+	}
+
+	// Populate instance
+	instance->npixels = pixels;
+	instance->nzr_unit = nzr_unit;
+	instance->pixels = (neopixel_pixel_t *)calloc(1,sizeof(neopixel_pixel_t) * pixels);
+	if (!instance->pixels) {
+		free(instance);
+		return driver_operation_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_NOT_ENOUGH_MEMORY, NULL);
+	}
+
+	// Add instance
+	if (list_add(&neopixel_list, instance, (int *)unit)) {
+		free(instance->pixels);
+		free(instance);
+
+		return driver_setup_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_NOT_ENOUGH_MEMORY, NULL);
+	}
 
 	return NULL;
 }
+
+driver_error_t *neopixel_update(uint32_t unit) {
+	neopixel_instance_t *instance;
+	driver_error_t *error;
+
+	// Get instance
+    if (list_get(&neopixel_list, (int)unit, (void **)&instance)) {
+		return driver_operation_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_UNIT, NULL);
+    }
+
+    // Send buffer
+    if ((error = nzr_send(instance->nzr_unit, (uint8_t *)instance->pixels, 24 * instance->npixels))) {
+		return error;
+	}
+
+	return NULL;
+}
+
+DRIVER_REGISTER(NEOPIXEL,neopixel,NULL,neopixel_init,NULL);

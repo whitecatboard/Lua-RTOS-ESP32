@@ -1,12 +1,12 @@
 /*
- * Lua RTOS, NEOPIXEL WS2812B driver
+ * Lua RTOS, NEOPIXEL wrapper
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
- *
+ * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- *
- * All rights reserved.
+ * 
+ * All rights reserved.  
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -27,36 +27,14 @@
  * this software.
  */
 
-#ifndef NEOPIXEL_H_
-#define NEOPIXEL_H_
+#ifndef LNEOPIXEL_H
+#define	LNEOPIXEL_H
 
-#include <sys/driver.h>
-
-typedef enum {
-	NeopixelWS2812B,
-} neopixel_controller_t;
+#include "drivers/neopixel.h"
 
 typedef struct {
-	uint8_t g;
-	uint8_t r;
-	uint8_t b;
-} neopixel_pixel_t;
+	uint32_t unit;
+} neopixel_userdata;
 
-typedef struct {
-	uint32_t nzr_unit;
-	neopixel_pixel_t *pixels;
-	uint32_t npixels;
-} neopixel_instance_t;
+#endif	/* LNEOPIXEL_H */
 
-// NEOPIXEL errors
-#define NEOPIXEL_ERR_NOT_ENOUGH_MEMORY           (DRIVER_EXCEPTION_BASE(NEOPIXEL_DRIVER_ID) |  0)
-#define NEOPIXEL_ERR_INVALID_UNIT                (DRIVER_EXCEPTION_BASE(NEOPIXEL_DRIVER_ID) |  1)
-#define NEOPIXEL_ERR_INVALID_PIXEL               (DRIVER_EXCEPTION_BASE(NEOPIXEL_DRIVER_ID) |  2)
-#define NEOPIXEL_ERR_INVALID_CONTROLLER          (DRIVER_EXCEPTION_BASE(NEOPIXEL_DRIVER_ID) |  4)
-#define NEOPIXEL_ERR_INVALID_RGB_COMPONENT       (DRIVER_EXCEPTION_BASE(NEOPIXEL_DRIVER_ID) |  5)
-
-driver_error_t *neopixel_rgb(uint32_t unit, uint32_t pixel, uint8_t r, uint8_t g, uint8_t b);
-driver_error_t *neopixel_setup(neopixel_controller_t controller, uint8_t gpio, uint32_t pixels, uint32_t *unit);
-driver_error_t *neopixel_update(uint32_t unit);
-
-#endif /* NEOPIXEL_H_ */
