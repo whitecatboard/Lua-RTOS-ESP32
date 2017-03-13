@@ -66,10 +66,23 @@ static const IRAM_ATTR TValue *luaR_auxfind(const luaR_entry *pentry, const char
 	int i = 0;
 
 	if (k) {
+		// Try to get from cache
+		#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+		res = rotable_cache_get(pentry, k);
+		if (res) {
+			return res;
+		}
+		#endif
+
 		int kl = strlen(k);
 
 		while (entry->key.id.strkey) {
 			if ((entry->key.type == LUA_TSTRING) && (entry->key.len == kl) && (!strncmp(entry->key.id.strkey, k, kl))) {
+				#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+				// Put in cache
+				rotable_cache_put(pentry, entry);
+				#endif
+
 				res = &entry->value;
 				break;
 			}
