@@ -29,6 +29,14 @@ SECTIONS {
 	/* exception names exported to Lua modules */
 	/* TO DO */
 	/*   Generate this entries automatically */
+    stepper_errors = ABSOLUTE(.);
+    KEEP(*(.stepper_errors))
+    LONG(0) LONG(0)
+
+    stepper_error_map = ABSOLUTE(.);
+    KEEP(*(.stepper_error_map))
+    LONG(0) LONG(0)
+
     nzr_errors = ABSOLUTE(.);
     KEEP(*(.nzr_errors))
     LONG(0) LONG(0)

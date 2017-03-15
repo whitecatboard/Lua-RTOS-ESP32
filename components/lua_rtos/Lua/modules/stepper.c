@@ -29,100 +29,55 @@
 
 #include "luartos.h"
 
-#if LUA_USE_STEPPER
+#if CONFIG_LUA_RTOS_LUA_USE_STEPPER
 
 #include "lua.h"
+#include "lualib.h"
 #include "lauxlib.h"
+#include "auxmods.h"
+#include "error.h"
+#include "modules.h"
 
-#include <drivers/gpio/gpio.h>
-#include <drivers/cpu/error.h>
-#include <drivers/stepper/stepper.h>
-
-static int setup = 0;
-static int lstepper_id = 0;
+#include <drivers/gpio.h>
+#include <drivers/stepper.h>
 
 typedef struct {
-    int unit;
+    uint8_t unit;
+    double stpu;     // Steps per unit
+    double min_spd;  // Min speed in units / min
+    double max_spd;  // Max speed in units / min
+    double accel;    // Acceleration in units/secs^2
 } stepper_userdata;
 
-struct lstepp {
-    int setup;
-    int done;
-};
+extern LUA_REG_TYPE stepper_error_map[];
 
-struct lstepp lstepp[NSTEP];
-
-static void lstepper_end(void *arg1, uint32_t mask) {
-    int unit;
-    struct stepper *p = (struct stepper *)arg1;
-    
-    for(unit=0;unit < NSTEP; unit++, mask = (mask >> 1)) {
-        if (mask & 0b1) {
-            lstepp[unit].done = 1;            
-        }
-    }    
-}
-
-static int lstepper_unit() {
-    return lstepper_id++;
-}
-
-static int lstepper_setup( lua_State* L ) {
+static int lstepper_attach( lua_State* L ){
 	driver_error_t *error;
-    int pulse_width = luaL_checkinteger(L, 1); 
+    uint8_t unit = 0;
     
-    if (pulse_width <= 0) {
-      return luaL_error(L, "invalid step pulse width");        
+    // Direction & step pins
+    int dir_pin  = luaL_checkinteger(L, 1);
+    int step_pin = luaL_checkinteger(L, 2);
+
+    double stpu    = luaL_optnumber(L, 3, 200.0); // Steps per unit (200 steps per revolution by default)
+    double min_spd = luaL_optnumber(L, 4, 60.0);  // Min speed in units / min (60 rpm by default)
+    double max_spd = luaL_optnumber(L, 5, 1000.0); // Max speed in units / min (800 rpm by default)
+    double accel   = luaL_optnumber(L, 6, 2);     // Acceleration in units/secs^2 (2)
+
+    if ((error = stepper_setup(step_pin, dir_pin, &unit))) {
+    	return luaL_driver_error(L, error);
     }
 
-    if ((error = steppers_setup(pulse_width, lstepper_end))) {
-        return luaL_driver_error(L, "steppers can't setup", error);
-    }
-    
-    setup = 1;
-    
-    return 0;
-}
-
-static int lstepper_new( lua_State* L ){
-	driver_error_t *error;
-    stepper_userdata *lstepper;
-    int port, pin;
-    int unit;
-    
-    int step_pin = luaL_checkinteger(L, 1); 
-    int dir_pin = luaL_checkinteger(L, 2); 
-
-    if (!setup) {
-      return luaL_error(L, "stepper module is not setup. Setup first.");        
-    }
-    
-    port = PORB(step_pin);
-    pin = PINB(step_pin);
-    
-    if(!platform_pio_has_port(port + 1) || !platform_pio_has_pin(port + 1, pin))
-      return luaL_error(L, "invalid step pin");
-    
-    port = PORB(dir_pin);
-    pin = PINB(dir_pin);
-    
-    if(!platform_pio_has_port(port + 1) || !platform_pio_has_pin(port + 1, pin))
-      return luaL_error(L, "invalid dir pin");
-
-    unit = lstepper_unit();
-    
-    if ((error = stepper_setup(unit + 1, step_pin, dir_pin))) {
-        return luaL_driver_error(L, "stepper can't setup", error);
-    }
-
-    lstepp[unit].setup = 1;
-    lstepp[unit].done = 1;
-    
     // Allocate stepper structure and initialize
-    lstepper = (stepper_userdata *)lua_newuserdata(L, sizeof(stepper_userdata));
-    lstepper->unit = unit;
-        
-    luaL_getmetatable(L, "stepper");
+    stepper_userdata *stepper = (stepper_userdata *)lua_newuserdata(L, sizeof(stepper_userdata));
+
+    stepper->unit = unit;
+    stepper->stpu = stpu;
+    stepper->min_spd = min_spd;
+    stepper->max_spd = max_spd;
+    stepper->accel = accel;
+
+    luaL_getmetatable(L, "stepper.inst");
     lua_setmetatable(L, -2);
 
     return 1;
@@ -131,21 +86,57 @@ static int lstepper_new( lua_State* L ){
 static int lstepper_move( lua_State* L ){
     stepper_userdata *lstepper = NULL;
 
-    lstepper = (stepper_userdata *)luaL_checkudata(L, 1, "stepper");
+    lstepper = (stepper_userdata *)luaL_checkudata(L, 1, "stepper.inst");
     luaL_argcheck(L, lstepper, 1, "stepper expected");
 
-    if (!setup) {
-      return luaL_error(L, "stepper module is not setup. Setup first.");        
+    double units  = luaL_checkinteger(L, 2);
+    double speed  = luaL_optnumber(L, 3, lstepper->max_spd); // Speed in units / min (800 rpm by default)
+    double accel  = luaL_optnumber(L, 4, lstepper->accel);   // Acceleration in units/secs^2 (2)
+
+    double ispd = lstepper->min_spd;
+    double stpu = lstepper->stpu;
+
+    if (speed > lstepper->max_spd) {
+    	speed = lstepper->max_spd;
     }
 
-    int dir =  luaL_checkinteger(L, 2);
-    int steps = luaL_checkinteger(L, 3);
-    int ramp = luaL_checkinteger(L, 4);
-    double ifreq = luaL_checknumber(L, 5);
-    double efreq = luaL_checknumber(L, 6);
-        
-    stepper_move(lstepper->unit + 1, dir, steps, ramp, ifreq, efreq);
-    
+    // Calculate direction
+    uint8_t dir = (units >= 0.0);
+
+	// Calculate steps needed for move the axis
+    double absUnits = fabs(units);
+    double steps = absUnits * stpu;
+
+	// Remembrer:
+	//
+	// acc = (speed - initial speed) / time
+	// distance = initial speed * time + (1/2) * acc * time ^ 2
+
+	// Calculate time needed for reach desired speed from the initial speed at
+	// desired accelerarion
+    double acc_time = ((speed - ispd) / (60.0 * accel));
+
+	// Calculate distance needed for reach desired speed from the initial speed at
+	// desired accelerarion
+    double acc_dist = (ispd / 60.0) * acc_time + ((accel  * acc_time * acc_time)/2.0);
+
+	// Calculate steps needed for reach desired speed from the initial speed at
+	// desired accelerarion
+    double acc_steps = acc_dist * stpu;
+
+	if ((steps - 2 * acc_steps) < 0) {
+		acc_steps = floor(steps / 2.0);
+	}
+
+	// Calculate initial and end frequency
+	double ifreq = (ispd * stpu) / 60.0;
+	double efreq = (speed * stpu) / 60.0;
+
+    stepper_move(
+    		lstepper->unit, dir, (uint32_t)floor(steps), (uint32_t)floor(acc_steps),
+			(uint32_t)floor(ifreq), (uint32_t)floor(efreq)
+	);
+
     return 0;
 }
 
@@ -156,18 +147,12 @@ static int lstepper_start( lua_State* L ){
     int mask = 0;
     int i;
 
-    if (!setup) {
-      return luaL_error(L, "stepper module is not setup. Setup first.");        
-    }
-    
     for (i=1; i <= total; i++) {
         if (!lua_isnil(L, i)) {
-            lstepper = (stepper_userdata *)luaL_checkudata(L, i, "stepper");
+            lstepper = (stepper_userdata *)luaL_checkudata(L, i, "stepper.inst");
             luaL_argcheck(L, lstepper, i, "stepper expected");
         
             mask |= (1 << (lstepper->unit));
-
-            lstepp[lstepper->unit].done = 0;
         }
     }
     
@@ -176,59 +161,25 @@ static int lstepper_start( lua_State* L ){
     return 0;
 }
 
-static int lstepper_done( lua_State* L ){
-    stepper_userdata *lstepper = NULL;
-
-    if (!setup) {
-      return luaL_error(L, "stepper module is not setup. Setup first.");        
-    }
-
-    lstepper = (stepper_userdata *)luaL_checkudata(L, 1, "stepper");
-    luaL_argcheck(L, lstepper, 1, "stepper expected");
-    
-    lua_pushboolean(L, lstepp[lstepper->unit].done);    
-
-    return 1;
-}
-
-const luaL_Reg stepper_map[] = {
-  { "setup", lstepper_setup },
-  { "new", lstepper_new },
-  { "move", lstepper_move },
-  { "start", lstepper_start },
-  { "done", lstepper_done },
-  { NULL, NULL }
+static const LUA_REG_TYPE lstepper_map[] = {
+    { LSTRKEY( "attach" ),		  LFUNCVAL( lstepper_attach    ) },
+	{ LSTRKEY( "error"  ), 		  LROVAL  ( stepper_error_map  ) },
+	{ LSTRKEY( "start"  ),		  LFUNCVAL( lstepper_start     ) },
+	{ LNILKEY, LNILVAL }
 };
 
-static const luaL_Reg lstepper[] = {
-    {NULL, NULL}
+static const LUA_REG_TYPE lstepper_inst_map[] = {
+	{ LSTRKEY( "move"        ),   LFUNCVAL( lstepper_move      ) },
+    { LSTRKEY( "__metatable" ),	  LROVAL  ( lstepper_inst_map  ) },
+	{ LSTRKEY( "__index"     ),   LROVAL  ( lstepper_inst_map  ) },
+	{ LNILKEY, LNILVAL }
 };
 
-int luaopen_stepper(lua_State* L)
-{
-    luaL_newlib(L, lstepper);
-
-    // Set it as its own metatable
-    lua_pushvalue( L, -1 );
-    lua_setmetatable( L, -2 );
-
-    // create metatable
-    luaL_newmetatable(L, "stepper");
-
-    lua_pushinteger(L, 0);
-    lua_setfield(L, -2, "cw");
-
-    lua_pushinteger(L, 1);
-    lua_setfield(L, -2, "ccw");
-
-    lua_pushliteral(L, "__index");
-    lua_pushvalue(L,-2);
-    lua_rawset(L,-3);
-
-    // Setup the methods inside metatable
-    luaL_register( L, NULL, stepper_map );
-
-    return 1;
+LUALIB_API int luaopen_stepper( lua_State *L ) {
+    luaL_newmetarotable(L,"stepper.inst", (void *)lstepper_inst_map);
+    return 0;
 }
+
+MODULE_REGISTER_MAPPED(STEPPER, stepper, lstepper_map, luaopen_stepper);
 
 #endif

@@ -56,6 +56,7 @@
 #define PWBUS_DRIVER_ID    16
 #define NZR_DRIVER_ID      17
 #define NEOPIXEL_DRIVER_ID 18
+#define STEPPER_DRIVER_ID  19
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -69,6 +70,7 @@
 #define ESPI_DRIVER driver_get_by_name("espi")
 #define NZR_DRIVER driver_get_by_name("nzr")
 #define NEOPIXEL_DRIVER driver_get_by_name("neopixel")
+#define STEPPER_DRIVER driver_get_by_name("stepper")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 
