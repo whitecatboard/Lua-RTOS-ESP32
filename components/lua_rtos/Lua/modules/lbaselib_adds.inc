@@ -13,23 +13,23 @@ int stackDump(lua_State *L) {
       switch (t) {
 
         case LUA_TSTRING:  /* strings */
-          printf("%d: ", i);
+          printf("%d (%d): ", i, t);
           printf("`%s'\n", lua_tostring(L, i));
           break;
 
         case LUA_TBOOLEAN:  /* booleans */
-          printf("%d: ", i);
+          printf("%d (%d): ", i, t);
           printf(lua_toboolean(L, i) ? "true" : "false");
           printf("\n");
           break;
 
         case LUA_TNUMBER:  /* numbers */
-          printf("%d: ", i);
+  		  printf("%d (%d): ", i, t);
           printf("%g\n", lua_tonumber(L, i));
           break;
 
         default:  /* other values */
-          printf("%d: ", i);
+          printf("%d (%d): ", i, t);
           printf("%s\n", lua_typename(L, t));
           break;
 

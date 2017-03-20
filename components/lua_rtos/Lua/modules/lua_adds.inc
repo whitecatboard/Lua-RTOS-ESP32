@@ -29,19 +29,17 @@
 
 #include "pthread.h"
 #include "linenoise.h"
+#include "shell.h"
 
 #include <limits.h>
 
 #include <unistd.h>
 #include <sys/status.h>
 #include <sys/debug.h>
-//#include <sys/syscalls/mount.h>
 
 static int dofile (lua_State *L, const char *name);
 
 extern int threadInited;
-
-void lua_shell(char *line);
 
 #if LUA_USE_LUA_LOCK
 pthread_mutex_t lua_mutex;
@@ -87,6 +85,8 @@ static void get_prompt (lua_State *L, int firstline, char *path) {
   }
 }
 
+
+
 static int luaos_pushline (lua_State *L, int firstline) {
   char buffer[LUA_MAXINPUT];
   char prmt[PATH_MAX + 21];
@@ -102,7 +102,7 @@ static int luaos_pushline (lua_State *L, int firstline) {
   
 #if LUA_USE_SHELL
   if (status_get(STATUS_LUA_SHELL)) {
-      lua_shell(buffer);
+	  lua_shell(L, buffer);
   }
 #endif
   
