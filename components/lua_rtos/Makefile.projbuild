@@ -67,11 +67,6 @@ CFLAGS += -DPATH_MAX=64
 CFLAGS += -DMAXNAMLEN=64
 
 #
-# SDCARD configuration
-# 
-CFLAGS += -DSD_KHZ=15000	           # Speed
-
-#
 # Display driver configuration
 #
 CFLAGS += -DDISPLAY_SPI=3

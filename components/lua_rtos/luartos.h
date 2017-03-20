@@ -115,39 +115,11 @@
 #define CONSOLE_BR 115200
 #endif
 
-// SPIFFS?
-#define SPIFFS_ERASE_SIZE 4096
-#define SPIFFS_LOG_PAGE_SIZE 256
-
-#if CONFIG_LUA_RTOS_USE_SPIFFS
-#define USE_SPIFFS CONFIG_LUA_RTOS_USE_SPIFFS
-#else
-#define USE_SPIFFS 0
-#endif
-
-#ifdef CONFIG_LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE
-#define SPIFFS_LOG_BLOCK_SIZE CONFIG_LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE
-#else
-#define SPIFFS_LOG_BLOCK_SIZE 8192
-#endif
-
-#ifdef CONFIG_LUA_RTOS_SPIFFS_BASE_ADDR
-#define SPIFFS_BASE_ADDR CONFIG_LUA_RTOS_SPIFFS_BASE_ADDR
-#else
-#define SPIFFS_BASE_ADDR 180000
-#endif
-
-#ifdef CONFIG_LUA_RTOS_SPIFFS_SIZE
-#define SPIFFS_SIZE CONFIG_LUA_RTOS_SPIFFS_SIZE
-#else
-#define SPIFFS_SIZE 524288
-#endif
-
 // LoRa WAN
 
 #define US_PER_OSTICK   20
 #define OSTICKS_PER_SEC 50000
-#define LMIC_SPI_KHZ    10000
+#define LMIC_SPI_KHZ    1000
 
 #if CONFIG_LUA_RTOS_LORAWAN_RADIO_SX1276
 	#define CFG_sx1276_radio 1
@@ -167,27 +139,6 @@
 	#else
 		#define CFG_eu868 1
 	#endif
-#endif
-
-// SD Card / FAT
-#if CONFIG_LUA_RTOS_USE_FAT
-#define USE_FAT 1
-#define USE_SD 1
-#else
-#define USE_FAT 0
-#define USE_SD 0
-#endif
-
-#ifdef CONFIG_LUA_RTOS_SD_SPI
-#define SD_SPI CONFIG_LUA_RTOS_SD_SPI
-#else
-#define SD_SPI 2
-#endif
-
-#ifdef CONFIG_LUA_RTOS_SD_CS
-#define SD_CS CONFIG_LUA_RTOS_SD_CS
-#else
-#define SD_CS 15
 #endif
 
 #define THREAD_LOCAL_STORAGE_POINTER_ID 1

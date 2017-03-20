@@ -612,3 +612,17 @@ static int os_flash_unique_id(lua_State *L) {
 	#endif
 	return 1;
 }
+
+static int os_exists(lua_State *L) {
+	const char *fname;
+	struct stat sb;
+	size_t len;
+
+	fname = luaL_checklstring( L, 1, &len );
+	if (stat(fname, &sb) != 0) {
+		lua_pushboolean(L, false);
+	}
+	else lua_pushboolean(L, true);
+
+	return 1;
+}

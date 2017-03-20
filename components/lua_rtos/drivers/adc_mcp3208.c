@@ -34,19 +34,17 @@
 #include <drivers/adc.h>
 #include <drivers/adc_mcp3208.h>
 
-static uint8_t mcp3208_spi;
-static uint8_t mcp3208_cs;
+static int spi_device = -1;
 
 driver_error_t *adc_mcp3208_setup(int8_t unit, int8_t channel, uint8_t spi, uint8_t cs) {
 	driver_error_t *error;
 
-    mcp3208_spi = spi;
-    mcp3208_cs = cs;
-
     // Init SPI bus
-    if ((error = spi_init(mcp3208_spi, 1))) {
-        return error;
-    }
+	if (spi_device == -1) {
+		if ((error = spi_setup(spi, 1, cs, 0, ADC_MCP3208_SPEED, &spi_device))) {
+			return error;
+		}
+	}
 
 	syslog(LOG_INFO, "adc MCP3208 channel %d at spi%d, cs=%s%d", channel, spi, gpio_portname(cs), gpio_name(cs));
 
@@ -56,17 +54,13 @@ driver_error_t *adc_mcp3208_setup(int8_t unit, int8_t channel, uint8_t spi, uint
 driver_error_t *adc_mcp3208_read(int8_t unit, int8_t channel, int *raw) {
     uint8_t msb, lsb;
 
-    spi_set_mode(mcp3208_spi, 0);
-    spi_set_speed(mcp3208_spi, ADC_MCP3208_SPEED);
-    spi_set_cspin(mcp3208_spi, mcp3208_cs);
+    spi_ll_select(spi_device);
 
-    spi_select(mcp3208_spi);
+    spi_ll_transfer(spi_device, ((0x18 | channel) & 0x1f) >> 2, &msb);
+    spi_ll_transfer(spi_device, ((0x18 | channel) & 0x03) << 6, &msb);
+    spi_ll_transfer(spi_device, 0, &lsb);
 
-    spi_transfer(mcp3208_spi, ((0x18 | channel) & 0x1f) >> 2, &msb);
-    spi_transfer(mcp3208_spi, ((0x18 | channel) & 0x03) << 6, &msb);
-    spi_transfer(mcp3208_spi, 0, &lsb);
-
-    spi_deselect(mcp3208_spi);
+    spi_ll_deselect(spi_device);
 
     *raw = ((msb & 0x0f) << 8 | lsb);
 

@@ -199,11 +199,11 @@ void _sys_init() {
     	vfs_net_register();
 	#endif
 
-    #if USE_SPIFFS
+    #if CONFIG_LUA_RTOS_USE_SPIFFS
     	vfs_spiffs_register();
     #endif
 
-	#if USE_FAT
+	#if CONFIG_LUA_RTOS_USE_FAT
     	vfs_fat_register();
 
     	if (mount_is_mounted("fat")) {

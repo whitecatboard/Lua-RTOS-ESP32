@@ -34,15 +34,38 @@
  * esp32-nesemu (https://github.com/espressif/esp32-nesemu
  * esp-open-rtos (https://github.com/SuperHouse/esp-open-rtos)
  *
+ * By default low level access uses Lua RTOS implementation, instead of spi_master from esp-idf that uses DMA transfers.
+ * You can turn on esp-idf use setting SPI_USE_IDF_DRIVER to 1. Actually seems that spi_master from esp-idf have some
+ * performance issues (although uses DMA) and issues related to read operations using DMA.
+ *
+ * Initial work in this driver was made by the Lua RTOS team in the espi driver (see):
+ *
+ * https://github.com/whitecatboard/Lua-RTOS-ESP32/commit/e4cfeccf60ddd2301c137537b3f8e039d3762869#diff-03afb94387bf851f6050a3066103cc67
+ *
+ * Work in espi driver was continued by Boris Lovošević (see):
+ *
+ * https://github.com/loboris/Lua-RTOS-ESP32-lobo/commit/1da097fd4e4c5bca61c28ea2f03bee17c84942f5#diff-03afb94387bf851f6050a3066103cc67
+ *
+ * Finally the Lua RTOS team have integrated all the ideas on the espi driver in the same driver.
+ *
  */
+
+#include "luartos.h"
+
+#define SPI_USE_IDF_DRIVER 0
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #include "esp_attr.h"
+
 #include "soc/io_mux_reg.h"
 #include "soc/spi_reg.h"
 #include "soc/gpio_sig_map.h"
 #include "soc/gpio_reg.h"
+
+#include "driver/periph_ctrl.h"
+#include "driver/spi_master.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -55,38 +78,123 @@
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
 
+#define PIN_FUNC_SPI 1
+
 // Driver message errors
 DRIVER_REGISTER_ERROR(SPI, spi, InvalidMode, "invalid mode", SPI_ERR_INVALID_MODE);
 DRIVER_REGISTER_ERROR(SPI, spi, InvalidUnit, "invalid unit", SPI_ERR_INVALID_UNIT);
 DRIVER_REGISTER_ERROR(SPI, spi, SlaveNotAllowed, "slave mode not allowed", SPI_ERR_SLAVE_NOT_ALLOWED);
 DRIVER_REGISTER_ERROR(SPI, spi, NotEnoughtMemory, "not enough memory", SPI_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_ERROR(SPI, spi, PinNowAllowed, "pin not allowed", SPI_ERR_PIN_NOT_ALLOWED);
+DRIVER_REGISTER_ERROR(SPI, spi, NoMoreDevicesAllowed, "no more devices allowed", SPI_ERR_NO_MORE_DEVICES_ALLOWED);
+DRIVER_REGISTER_ERROR(SPI, spi, InvalidDevice, "invalid device", SPI_ERR_INVALID_DEVICE);
+DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSetup, "invalid device", SPI_ERR_DEVICE_NOT_SETUP);
+DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSelected, "device is not selected", SPI_ERR_DEVICE_IS_NOT_SELECTED);
 
-// SPI structures
-struct spi {
-	uint8_t  cs;	  // cs pin for device (if 0 use default cs pin)
-    uint32_t speed;   // spi device speed
-    uint32_t divisor; // clock divisor
-    uint8_t  mode;    // device spi mode
-    uint8_t  dirty;   // if 1 device must be reconfigured at next spi_select
-    uint8_t  setup;   // device setup?
-};
+typedef struct {
+	uint8_t  setup;
+	uint8_t  cs;
+	uint32_t speed;
+	uint8_t  mode;
+#if !SPI_USE_IDF_DRIVER
+	uint32_t divisor;
+	uint8_t  no_miso_delay;
+#else
+	spi_device_handle_t h;
+#endif
+} spi_device_t;
 
-struct spi spi[CPU_LAST_SPI + 1];
+typedef struct {
+	SemaphoreHandle_t mtx; // Recursive mutex for access the bus
+	uint8_t setup;         // Bus is setup?
+	int last_device;       // Last device that used the bus
+	int selected_device;   // Device that owns the bus
+
+	// Current pin assignment
+	uint8_t miso;
+	uint8_t mosi;
+	uint8_t clk;
+
+	// Default pin assignment
+	uint8_t dmiso;
+	uint8_t dmosi;
+	uint8_t dclk;
+
+	// Spi devices attached to the bus
+	spi_device_t device[SPI_BUS_DEVICES];
+} spi_bus_t;
+
+static spi_bus_t spi_bus[CPU_LAST_SPI + 1];
 
 /*
  * Helper functions
  */
 static void _spi_init() {
-	memset(spi, 0, sizeof(struct spi) * (CPU_LAST_SPI + 1));
+	memset(spi_bus, 0, sizeof(spi_bus_t) * (CPU_LAST_SPI + 1));
+
+	spi_bus[2].last_device = -1;
+	spi_bus[2].selected_device = -1;
+
+	spi_bus[3].last_device = -1;
+	spi_bus[3].selected_device = -1;
+
+	// SPI2
+	spi_bus[2].miso  = CONFIG_LUA_RTOS_SPI2_MISO;
+	spi_bus[2].mosi  = CONFIG_LUA_RTOS_SPI2_MOSI;
+	spi_bus[2].clk   = CONFIG_LUA_RTOS_SPI2_CLK;
+
+	spi_bus[2].dmiso = GPIO12;
+	spi_bus[2].dmosi = GPIO13;
+	spi_bus[2].dclk  = GPIO14;
+
+	// SPI3
+	spi_bus[3].miso  = CONFIG_LUA_RTOS_SPI3_MISO;
+	spi_bus[3].mosi  = CONFIG_LUA_RTOS_SPI3_MOSI;
+	spi_bus[3].clk   = CONFIG_LUA_RTOS_SPI3_CLK;
+
+	spi_bus[3].dmiso = GPIO19;
+	spi_bus[3].dmosi = GPIO23;
+	spi_bus[3].dclk  = GPIO18;
+
+	spi_bus[2].mtx = xSemaphoreCreateRecursiveMutex();
+	spi_bus[3].mtx = xSemaphoreCreateRecursiveMutex();
 }
+
+static void IRAM_ATTR spi_lock(uint8_t unit) {
+	xSemaphoreTakeRecursive(spi_bus[unit].mtx, portMAX_DELAY);
+}
+
+static void IRAM_ATTR spi_unlock(uint8_t unit) {
+	while (xSemaphoreGiveRecursive(spi_bus[unit].mtx) == pdTRUE);
+}
+
+static int spi_get_device_by_cs(int unit, uint8_t cs) {
+	int i;
+
+	for(i=0;i < SPI_BUS_DEVICES;i++) {
+		if (spi_bus[unit].device[i].setup && (spi_bus[unit].device[i].cs == cs)) return i;
+	}
+
+	return -1;
+}
+
+static int spi_get_free_device(int unit) {
+	int i;
+
+	for(i=0;i < SPI_BUS_DEVICES;i++) {
+		if (!spi_bus[unit].device[i].setup) return i;
+	}
+
+	return -1;
+}
+
+#if !SPI_USE_IDF_DRIVER
 
 /*
  * Extracted from arduino-esp32 (cores/esp32/esp32-hal-spi.c) for get the clock divisor
  * needed for setup the SIP bus at a desired baud rate
  *
  */
-#define FUNC_SPI 1
 
 #define ClkRegToFreq(reg) (CPU_CLK_FREQ / (((reg)->regPre + 1) * ((reg)->regN + 1)))
 
@@ -102,7 +210,6 @@ typedef union {
 } spiClk_t;
 
 static uint32_t spiFrequencyToClockDiv(uint32_t freq) {
-
     if(freq >= CPU_CLK_FREQ) {
         return SPI_CLK_EQU_SYSCLK;
     }
@@ -153,67 +260,110 @@ static uint32_t spiFrequencyToClockDiv(uint32_t freq) {
     }
     return bestReg.regValue;
 }
+#endif
+
+static void IRAM_ATTR spi_master_op(int deviceid, uint32_t word_size, uint32_t len, uint8_t *in, uint8_t *out) {
+	int unit = (deviceid & 0xff00) >> 8;
+
+#if !SPI_USE_IDF_DRIVER
+	// SPI hardware registers index
+	uint32_t idx = 0;
+
+	// TX / RX buffer
+	uint8_t buffer[64];
+
+	// This is the number of bytes / bits to transfer for current chunk
+	uint32_t cbytes;
+	uint16_t cbits;
+
+	// Number of bytes to transmit
+	uint32_t bytes = word_size * len;
+
+	portDISABLE_INTERRUPTS();
+
+	while (bytes) {
+		// Fill TX buffer
+		cbytes = ((bytes > 64)?64:bytes);
+		if (in) {
+			memcpy(buffer, in, cbytes);
+			in = in + cbytes;
+		} else {
+			memset(buffer, 0xff, cbytes);
+		}
+		cbits = cbytes << 3;
+
+		// Decrement bytes
+		bytes = bytes - cbytes;
+
+		// Wait for SPI bus ready
+		while (READ_PERI_REG(SPI_CMD_REG(unit))&SPI_USR);
+
+		// Set MOSI / MISO bit length
+		SET_PERI_REG_BITS(SPI_MOSI_DLEN_REG(unit), SPI_USR_MOSI_DBITLEN, cbits - 1, SPI_USR_MOSI_DBITLEN_S);
+		SET_PERI_REG_BITS(SPI_MISO_DLEN_REG(unit), SPI_USR_MISO_DBITLEN, cbits - 1, SPI_USR_MISO_DBITLEN_S);
+
+		// Populate HW buffers with TX buffer contents
+		idx = 0;
+		while ((idx << 5) < cbits) {
+			WRITE_PERI_REG((SPI_W0_REG(unit) + (idx << 2)), ((uint32_t *)buffer)[idx]);
+			idx++;
+		}
+
+		// Start transfer
+		SET_PERI_REG_MASK(SPI_CMD_REG(unit), SPI_USR);
+
+		// Wait for SPI bus ready
+		while (READ_PERI_REG(SPI_CMD_REG(unit))&SPI_USR);
+
+		if (out) {
+			// Populate RX buffer from HW buffers
+			idx = 0;
+			while ((idx << 5) < cbits) {
+				((uint32_t *)buffer)[idx] = READ_PERI_REG((SPI_W0_REG(unit) + (idx << 2)));
+				idx++;
+			}
+
+			memcpy((void *)out, (void *)buffer, cbytes);
+			out = out + cbytes;
+		}
+	}
+
+	portENABLE_INTERRUPTS();
+#else
+	int device = (deviceid & 0x00ff);
+
+	esp_err_t ret;
+	spi_transaction_t t;
+
+	memset(&t, 0, sizeof(t));
+	t.length = len * word_size * 8;
+	t.tx_buffer = (in == NULL)?NULL:in;
+	t.rx_buffer = (out == NULL)?NULL:out;
+
+	ret = spi_device_transmit(spi_bus[unit].device[device].h, &t);
+	assert(ret==ESP_OK);
+#endif
+}
 
 /*
  * End of extracted code from arduino-esp32
  */
 
-static void spi_pins(int unit, unsigned char *sdi, unsigned char *sdo, unsigned char *sck, unsigned char* cs) {
-    switch (unit) {
-    	case 1:
-        	*sdi = GPIO7;
-            *sdo = GPIO8;
-            *sck = GPIO6;
-            *cs =  GPIO11;
-            break;
-
-        case 2:
-            *sdi = GPIO12;
-            *sdo = GPIO13;
-            *sck = GPIO14;
-            *cs =  GPIO15;
-            break;
-
-        case 3:
-            *sdi = GPIO19;
-            *sdo = GPIO23;
-            *sck = GPIO18;
-            *cs =  GPIO5;
-            break;
-    }
-}
-
-// Lock resources needed by the SPI
-static driver_error_t *spi_lock_resources(int unit, void *resources) {
-	spi_resources_t tmp_spi_resources;
-
-	if (!resources) {
-		resources = &tmp_spi_resources;
-	}
-
-	spi_resources_t *spi_resources = (spi_resources_t *)resources;
+static driver_error_t *spi_lock_bus_resources(int unit) {
     driver_unit_lock_error_t *lock_error = NULL;
 
-    // Get needed pins
-	spi_pins(unit, &spi_resources->sdi, &spi_resources->sdo, &spi_resources->sck, &spi_resources->cs);
-
-    // Lock this pins
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->sdi))) {
+    // Lock pins
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].miso))) {
     	// Revoked lock on pin
     	return driver_lock_error(SPI_DRIVER, lock_error);
     }
 
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->sdo))) {
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].mosi))) {
     	// Revoked lock on pin
     	return driver_lock_error(SPI_DRIVER, lock_error);
     }
 
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->sck))) {
-    	// Revoked lock on pin
-    	return driver_lock_error(SPI_DRIVER, lock_error);
-    }
-
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_resources->cs))) {
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].clk))) {
     	// Revoked lock on pin
     	return driver_lock_error(SPI_DRIVER, lock_error);
     }
@@ -221,198 +371,327 @@ static driver_error_t *spi_lock_resources(int unit, void *resources) {
     return NULL;
 }
 
+static void spi_setup_bus(uint8_t unit) {
+#if !SPI_USE_IDF_DRIVER
+    if (spi_bus[unit].miso == spi_bus[unit].dmiso) {
+    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_SPI);
+    } else {
+        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_GPIO);
+        gpio_set_direction(spi_bus[unit].miso, GPIO_MODE_INPUT);
+
+        switch(unit) {
+        	case 2:
+                gpio_matrix_out(spi_bus[unit].miso, HSPIQ_OUT_IDX, 0, 0);
+                gpio_matrix_in(spi_bus[unit].miso, HSPIQ_IN_IDX, 0);
+                break;
+
+        	case 3:
+                gpio_matrix_out(spi_bus[unit].miso, VSPIQ_OUT_IDX, 0, 0);
+                gpio_matrix_in(spi_bus[unit].miso, VSPIQ_IN_IDX, 0);
+                break;
+        }
+    }
+
+    if (spi_bus[unit].mosi == spi_bus[unit].dmosi) {
+    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].mosi], PIN_FUNC_SPI);
+    } else {
+        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].mosi], PIN_FUNC_GPIO);
+        gpio_set_direction(spi_bus[unit].mosi, GPIO_MODE_OUTPUT);
+
+        switch(unit) {
+        	case 2:
+                gpio_matrix_out(spi_bus[unit].mosi, HSPID_OUT_IDX, 0, 0);
+                gpio_matrix_in(spi_bus[unit].mosi, HSPID_IN_IDX, 0);
+                break;
+
+        	case 3:
+                gpio_matrix_out(spi_bus[unit].mosi, VSPID_OUT_IDX, 0, 0);
+                gpio_matrix_in(spi_bus[unit].mosi, VSPID_IN_IDX, 0);
+                break;
+        }
+    }
+
+    if (spi_bus[unit].clk == spi_bus[unit].dclk) {
+    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].clk], PIN_FUNC_SPI);
+    } else {
+        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].clk], PIN_FUNC_GPIO);
+        gpio_set_direction(spi_bus[unit].clk, GPIO_MODE_OUTPUT);
+
+        switch(unit) {
+        	case 2:
+                gpio_matrix_out(spi_bus[unit].clk, HSPICLK_OUT_IDX, 0, 0);
+                break;
+
+        	case 3:
+                gpio_matrix_out(spi_bus[unit].clk, VSPICLK_OUT_IDX, 0, 0);
+                break;
+        }
+    }
+#else
+    esp_err_t ret;
+
+    spi_bus_config_t buscfg={
+        .miso_io_num=spi_bus[unit].miso,
+        .mosi_io_num=spi_bus[unit].mosi,
+        .sclk_io_num=spi_bus[unit].clk,
+        .quadwp_io_num=-1,
+        .quadhd_io_num=-1
+    };
+
+    ret = spi_bus_initialize(unit - 1, &buscfg, 1);
+    assert(ret==ESP_OK);
+#endif
+}
+
 /*
- * Operation functions
+ * Low-level functions
  *
  */
+int spi_ll_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_t speed, int *deviceid) {
+	spi_lock(unit);
 
-/*
- * Init pins for a device, and return used pins
- */
-void spi_pin_config(int unit, unsigned char sdi, unsigned char sdo, unsigned char sck, unsigned char cs) {
-    // Configure pins
-	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[sdi], FUNC_SPI);
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[sdo], FUNC_SPI);
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[sck], FUNC_SPI);
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[cs ], FUNC_SPI);
-
-    // Set the cs pin to the default cs pin for device
-	spi_set_cspin(unit, cs);
-}
-
-void IRAM_ATTR spi_master_op(int unit, unsigned int word_size, unsigned int len, unsigned char *out, unsigned char *in) {
-	unsigned int bytes = word_size * len; // Number of bytes to write / read
-	unsigned int idx = 0;
-
-	/*
-	 * SPI data buffers hardware registers are 32-bit size, so we use a
-	 * transfer buffer for adapt user buffers to buffers expected by hardware, this
-	 * buffer is 16-word size (64 bytes)
-	 *
-	 */
-	uint32_t buffer[16]; // Transfer buffer
-	uint32_t wd;         // Current word
-	unsigned int wdb; 	 // Current byte into current word
-
-	// This is the number of bits to transfer for current chunk
-	unsigned int bits;
-
-	bytes = word_size * len;
-	while (bytes) {
-		// Populate transfer buffer in chunks of 64 bytes
-		idx = 0;
-		bits = 0;
-		while (bytes && (idx < 16)) {
-			wd = 0;
-			wdb = 4;
-			while (bytes && wdb) {
-				wd = (wd >> 8);
-				if (out) {
-					wd |= *out << 24;
-					out++;
-				} else {
-					wd |= 0xff << 24;
-				}
-				wdb--;
-				bytes--;
-				bits += 8;
-			}
-
-			while (wdb) {
-				wd = (wd >> 8);
-				wdb--;
-			}
-
-			buffer[idx] = wd;
-			idx++;
+	// Check if there's some device un bus with the same cs
+	// If there's one, we want to reconfigure device
+	int device = spi_get_device_by_cs(unit, cs);
+	if (device < 0) {
+		// No device present with the same cs
+		// Get a free device
+		device = spi_get_free_device(unit);
+		if (device < 0) {
+	    	// No more devices
+			spi_unlock(unit);
+			return -1;
+		}
+	} else {
+		// Device present with the same cs
+		if ((spi_bus[unit].last_device & 0x0f) == device) {
+			spi_bus[unit].last_device = -1;
 		}
 
-		// Wait for SPI bus ready
-		while (READ_PERI_REG(SPI_CMD_REG(unit))&SPI_USR);
-
-		// Load send buffer
-	    SET_PERI_REG_BITS(SPI_MOSI_DLEN_REG(unit), SPI_USR_MOSI_DBITLEN, bits - 1, SPI_USR_MOSI_DBITLEN_S);
-	    SET_PERI_REG_BITS(SPI_MISO_DLEN_REG(unit), SPI_USR_MISO_DBITLEN, bits - 1, SPI_USR_MISO_DBITLEN_S);
-
-	    idx = 0;
-	    while ((idx << 5) < bits) {
-		    WRITE_PERI_REG((SPI_W0_REG(unit) + (idx << 2)), buffer[idx]);
-		    idx++;
-	    }
-
-	    // Start transfer
-	    SET_PERI_REG_MASK(SPI_CMD_REG(unit), SPI_USR);
-
-	    // Wait for SPI bus ready
-		while (READ_PERI_REG(SPI_CMD_REG(unit))&SPI_USR);
-
-		if (in) {
-			// Read data into buffer
-			idx = 0;
-			while ((idx << 5) < bits) {
-				buffer[idx] = READ_PERI_REG((SPI_W0_REG(unit) + (idx << 2)));
-				idx++;
-			}
-
-			memcpy((void *)in, (void *)buffer, bits >> 3);
-			in += (bits >> 3);
-		}
+#if SPI_USE_IDF_DRIVER
+		// Remove device first
+		spi_bus_remove_device(spi_bus[unit].device[device].h);
+#endif
 	}
+
+	// Setup bus, if not done yet
+	if (!spi_bus[unit].setup) {
+		spi_setup_bus(unit);
+
+		syslog(LOG_INFO,
+			"spi%u at pins miso=%s%d/mosi=%s%d/clk=%s%d", unit,
+			gpio_portname(spi_bus[unit].miso), gpio_name(spi_bus[unit].miso),
+			gpio_portname(spi_bus[unit].mosi), gpio_name(spi_bus[unit].mosi),
+			gpio_portname(spi_bus[unit].clk) , gpio_name(spi_bus[unit].clk)
+		);
+	}
+
+	// Setup CS
+	gpio_pin_output(cs);
+	gpio_ll_pin_set(cs);
+
+    spi_bus[unit].device[device].cs = cs;
+
+#if !SPI_USE_IDF_DRIVER
+    spi_bus[unit].device[device].mode = mode;
+    spi_bus[unit].device[device].speed = speed;
+    spi_bus[unit].device[device].divisor = spiFrequencyToClockDiv(speed);
+	spi_bus[unit].device[device].no_miso_delay = ((spi_bus[unit].miso == spi_bus[unit].dmiso) && speed >= (APB_CLK_FREQ/2));
+#else
+	esp_err_t ret;
+
+    spi_device_interface_config_t devcfg={
+        .clock_speed_hz=speed,
+        .mode=mode,
+        .spics_io_num=-1,
+        .queue_size=7,
+    };
+
+    ret = spi_bus_add_device(unit - 1, &devcfg, &spi_bus[unit].device[device].h);
+    assert(ret==ESP_OK);
+#endif
+
+    spi_bus[unit].setup = 1;
+    spi_bus[unit].device[device].setup = 1;
+
+    spi_unlock(unit);
+
+	*deviceid = (unit << 8) | device;
+
+	return 0;
 }
 
-/*
- * Set the SPI mode for a device. Nothing is changed at hardware level.
- *
- */
-driver_error_t *spi_set_mode(int unit, int mode) {
-	// Sanity checks
-	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
-	}
+void spi_ll_get_speed(int deviceid, uint32_t *speed) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
 
-	if ((mode < 0) || (mode > 3)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_MODE, NULL);
-	}
-
-	struct spi *dev = &spi[unit];
-
-    dev->mode = mode;
-    dev->dirty = 1;
-
-    return NULL;
+	spi_lock(unit);
+	*speed = spi_bus[unit].device[device].speed;
+	spi_unlock(unit);
 }
 
-/*
- * Set the SPI bit rate for a device and stores the clock divisor needed
- * for this bit rate. Nothing is changed at hardware level.
- */
-driver_error_t *spi_set_speed(int unit, unsigned int sck) {
-	// Sanity checks
-	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
-	}
+void spi_ll_set_speed(int deviceid, uint32_t speed) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
 
-	struct spi *dev = &spi[unit];
+	spi_lock(unit);
+	spi_bus[unit].last_device = -1;
+	spi_bus[unit].device[device].speed = speed;
+#if !SPI_USE_IDF_DRIVER
+	spi_bus[unit].device[device].divisor = spiFrequencyToClockDiv(speed);
+#else
+	esp_err_t ret;
 
-    dev->speed = sck;
-    dev->divisor = spiFrequencyToClockDiv(sck * 1000);
-    dev->dirty = 1;
+	spi_bus_remove_device(spi_bus[unit].device[device].h);
 
-    return NULL;
+    spi_device_interface_config_t devcfg={
+        .clock_speed_hz=spi_bus[unit].device[device].speed,
+        .mode = spi_bus[unit].device[device].mode,
+        .spics_io_num = -1,
+        .queue_size=7,
+    };
+
+    ret = spi_bus_add_device(unit - 1, &devcfg, &spi_bus[unit].device[device].h);
+    assert(ret==ESP_OK);
+
+    #endif
+	spi_unlock(unit);
 }
 
-/*
- * Select the device. Prior this we reconfigure the SPI bus
- * to the required settings.
- */
-driver_error_t *spi_select(int unit) {
-	// Sanity checks
-	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+void IRAM_ATTR spi_ll_transfer(int deviceid, uint8_t data, uint8_t *read) {
+    spi_master_op(deviceid, 1, 1, (uint8_t *)(&data), read);
+}
+
+void IRAM_ATTR spi_ll_bulk_write(int deviceid, uint32_t nbytes, uint8_t *data) {
+    spi_master_op(deviceid, 1, nbytes, data, NULL);
+}
+
+void IRAM_ATTR spi_ll_bulk_read(int deviceid, uint32_t nbytes, uint8_t *data) {
+    spi_master_op(deviceid, 1, nbytes, NULL, data);
+}
+
+int IRAM_ATTR spi_ll_bulk_rw(int deviceid, uint32_t nbytes, uint8_t *data) {
+	uint8_t *read = (uint8_t *)malloc(nbytes);
+	if (read) {
+	    spi_master_op(deviceid, 1, nbytes, data, read);
+
+	    memcpy(data, read, nbytes);
+		free(read);
+	} else {
+		return -1;
 	}
 
-	struct spi *dev = &spi[unit];
+	return 0;
+}
 
-    if (dev->dirty) {
+void IRAM_ATTR spi_ll_bulk_write16(int deviceid, uint32_t nelements, uint16_t *data) {
+    spi_master_op(deviceid, 2, nelements, (uint8_t *)data, NULL);
+}
+
+void IRAM_ATTR spi_ll_bulk_read16(int deviceid, uint32_t nelements, uint16_t *data) {
+    spi_master_op(deviceid, 2, nelements, NULL, (uint8_t *)data);
+}
+
+int IRAM_ATTR spi_ll_bulk_rw16(int deviceid, uint32_t nelements, uint16_t *data) {
+	uint16_t *read = (uint16_t *)malloc(nelements * sizeof(uint16_t));
+	if (read) {
+	    spi_master_op(deviceid, 2, nelements, (uint8_t *)data, (uint8_t *)read);
+
+	    memcpy(data, read, nelements);
+		free(read);
+	} else {
+		return -1;
+	}
+
+	return 0;
+}
+
+void IRAM_ATTR spi_ll_bulk_write32(int deviceid, uint32_t nelements, uint32_t *data) {
+    spi_master_op(deviceid, 4, nelements, (uint8_t *)data, NULL);
+}
+
+void IRAM_ATTR spi_ll_bulk_read32(int deviceid, uint32_t nelements, uint32_t *data) {
+    spi_master_op(deviceid, 4, nelements, NULL, (uint8_t *)data);
+}
+
+int IRAM_ATTR spi_ll_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data) {
+	uint32_t *read = (uint32_t *)malloc(nelements * sizeof(uint32_t));
+	if (read) {
+	    spi_master_op(deviceid, 4, nelements, (uint8_t *)data, (uint8_t *)read);
+
+	    memcpy(data, read, nelements);
+		free(read);
+	} else {
+		return -1;
+	}
+
+	return 0;
+}
+
+void IRAM_ATTR spi_ll_bulk_write32_be(int deviceid, uint32_t nelements, uint32_t *data) {
+	int unit = (deviceid & 0xff00) >> 8;
+
+	int i = 0;
+
+    if (GET_PERI_REG_MASK(SPI_CTRL_REG(unit), (SPI_WR_BIT_ORDER | SPI_RD_BIT_ORDER))) {
+        for(;i < nelements;i++) {
+        	data[i] = __builtin_bswap32(data[i]);
+        }
+    }
+
+    spi_master_op(deviceid, 4, nelements, (uint8_t *)data, NULL);
+}
+
+void IRAM_ATTR spi_ll_bulk_read32_be(int deviceid, uint32_t nelements, uint32_t *data) {
+	int unit = (deviceid & 0xff00) >> 8;
+
+	int i = 0;
+
+    spi_master_op(deviceid, 4, nelements, NULL, (uint8_t *)data);
+
+    if (GET_PERI_REG_MASK(SPI_CTRL_REG(unit), (SPI_WR_BIT_ORDER | SPI_RD_BIT_ORDER))) {
+        for(;i < nelements;i++) {
+        	data[i] = __builtin_bswap32(data[i]);
+        }
+    }
+}
+
+void IRAM_ATTR spi_ll_select(int deviceid) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	spi_lock(unit);
+
+	if (spi_bus[unit].last_device != deviceid) {
+#if !SPI_USE_IDF_DRIVER
         // Complete operations, if pending
         CLEAR_PERI_REG_MASK(SPI_SLAVE_REG(unit), SPI_TRANS_DONE << 5);
         SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CS_SETUP);
 
         // Set mode
-    	switch (dev->mode) {
-    		case 0:
-    		    // Set CKP to 0
-    		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
-
-    		    // Set CPHA to 0
+    	switch (spi_bus[unit].device[device].mode) {
+    		case 0: // CKP=0, CPHA = 0
+    		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit) , SPI_CK_IDLE_EDGE);
     		    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
+    		    SET_PERI_REG_BITS(SPI_CTRL2_REG(unit),  SPI_MISO_DELAY_MODE, spi_bus[unit].device[device].no_miso_delay?0:2, SPI_MISO_DELAY_MODE_S);
+                break;
 
-    		    break;
-
-    		case 1:
-    		    // Set CKP to 0
+    		case 1: // CKP=0, CPHA = 1
     		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
-
-    		    // Set CPHA to 1
-    		    SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
-
+    		    SET_PERI_REG_MASK(SPI_USER_REG(unit) ,  SPI_CK_OUT_EDGE);
+    		    SET_PERI_REG_BITS(SPI_CTRL2_REG(unit),  SPI_MISO_DELAY_MODE, spi_bus[unit].device[device].no_miso_delay?0:1, SPI_MISO_DELAY_MODE_S);
     		    break;
 
-    		case 2:
-    		    // Set CKP to 1
-    		    SET_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
-
-    		    // Set CPHA to 0
+    		case 2: // CKP=1, CPHA = 0
+    		    SET_PERI_REG_MASK(SPI_PIN_REG(unit)   , SPI_CK_IDLE_EDGE);
     		    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
-
+    		    SET_PERI_REG_BITS(SPI_CTRL2_REG(unit),  SPI_MISO_DELAY_MODE, spi_bus[unit].device[device].no_miso_delay?0:1, SPI_MISO_DELAY_MODE_S);
     		    break;
 
-    		case 3:
-    		    // Set CKP to 1
-    		    SET_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
-
-    		    // Set CPHA to 1
-    		    SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
+    		case 3: // CKP=1, CPHA = 1
+    		    SET_PERI_REG_MASK(SPI_PIN_REG(unit) ,   SPI_CK_IDLE_EDGE);
+    		    SET_PERI_REG_MASK(SPI_USER_REG(unit),   SPI_CK_OUT_EDGE);
+    		    SET_PERI_REG_BITS(SPI_CTRL2_REG(unit),  SPI_MISO_DELAY_MODE, spi_bus[unit].device[device].no_miso_delay?0:2, SPI_MISO_DELAY_MODE_S);
     	}
 
     	// Set bit order to MSB
@@ -427,312 +706,499 @@ driver_error_t *spi_select(int unit) {
     	CLEAR_PERI_REG_MASK(SPI_SLAVE_REG(unit), SPI_SLAVE_MODE);
 
         // Set clock
-        WRITE_PERI_REG(SPI_CLOCK_REG(unit), dev->divisor);
+        WRITE_PERI_REG(SPI_CLOCK_REG(unit), spi_bus[unit].device[device].divisor);
 
         // Enable MOSI / MISO / CS
         SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CS_SETUP | SPI_CS_HOLD | SPI_USR_MOSI | SPI_USR_MISO);
         SET_PERI_REG_MASK(SPI_CTRL2_REG(unit), ((0x4 & SPI_MISO_DELAY_NUM) << SPI_MISO_DELAY_NUM_S));
 
+        // Don't use command phase
         CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_COMMAND);
         SET_PERI_REG_BITS(SPI_USER2_REG(unit), SPI_USR_COMMAND_BITLEN, 0, SPI_USR_COMMAND_BITLEN_S);
+
+        // Don't use address phase
         CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_ADDR);
         SET_PERI_REG_BITS(SPI_USER1_REG(unit), SPI_USR_ADDR_BITLEN, 0, SPI_USR_ADDR_BITLEN_S);
+#endif
 
-        dev->dirty = 0;
+        spi_bus[unit].last_device = deviceid;
     }
 
 	// Select device
-    if (dev->cs) {
-       gpio_pin_clr(dev->cs);
+    gpio_ll_pin_clr(spi_bus[unit].device[device].cs);
+}
+
+void IRAM_ATTR spi_ll_deselect(int deviceid) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	// Deselect device
+    gpio_ll_pin_set(spi_bus[unit].device[device].cs);
+
+    spi_unlock(unit);
+}
+
+
+/*
+ * Operation functions
+ *
+ */
+driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_t speed, int *deviceid) {
+	driver_error_t *error = NULL;
+
+    // Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
     }
 
-    return NULL;
-}
-
-/*
- * Deselect the device
- */
-driver_error_t *spi_deselect(int unit) {
-	// Sanity checks
-	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
-	}
-
-	struct spi *dev = &spi[unit];
-
-    if (dev->cs) {
-        gpio_pin_set(dev->cs);
+    if (master != 1) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_SLAVE_NOT_ALLOWED, NULL);
     }
 
-    return NULL;
-}
-
-/*
- * Set the CS pin for the device. This function stores CS pin in
- * device data, and setup CS pin as output and set to the high state
- * (device is not select)
- */
-driver_error_t *spi_set_cspin(int unit, int pin) {
-	// Sanity checks
-	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
-	}
-
-	struct spi *dev = &spi[unit];
-
-    if (pin != dev->cs) {
-        dev->cs = pin;
-
-        if (pin) {
-            gpio_pin_output(dev->cs);
-            gpio_pin_set(dev->cs);
-
-            dev->dirty = 1;
-        }
+    if (mode >= 3) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_MODE, NULL);
     }
 
-    return NULL;
+    if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << spi_bus[unit].miso))) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "miso, selected pin cannot be input");
+    }
+
+    if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << spi_bus[unit].mosi))) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "mosi, selected pin cannot be output");
+    }
+
+    if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << spi_bus[unit].clk))) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "clk, selected pin cannot be output");
+    }
+
+    if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << cs))) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "cs, selected pin cannot be output");
+    }
+
+    // Lock resources
+    if (!spi_bus[unit].setup) {
+        if ((error = spi_lock_bus_resources(unit))) {
+    		return error;
+    	}
+    }
+
+    driver_unit_lock_error_t *lock_error = NULL;
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, cs))) {
+    	return driver_lock_error(SPI_DRIVER, lock_error);
+    }
+
+    // Low-level setup
+    if (spi_ll_setup(unit, master, cs, mode, speed, deviceid) != 0) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_NO_MORE_DEVICES_ALLOWED, NULL);
+    }
+
+	return NULL;
 }
 
-/*
- * Transfer one word of data, and return the read word of data.
- * The actual number of bits sent depends on the mode of the transfer.
- * This is blocking, and waits for the transfer to complete
- * before returning.  Times out after a certain period.
- */
-driver_error_t * IRAM_ATTR spi_transfer(int unit, unsigned int data, unsigned char *read) {
+driver_error_t *spi_select(int deviceid) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
 	// Sanity checks
 	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
 	}
 
-    spi_master_op(unit, 1, 1, (unsigned char *)(&data), read);
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
+
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	spi_ll_select(deviceid);
 
     return NULL;
 }
 
-/*
- * Send a chunk of 8-bit data.
- */
-driver_error_t *spi_bulk_write(int unit, unsigned int nbytes, unsigned char *data) {
+driver_error_t *spi_deselect(int deviceid) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
 	// Sanity checks
 	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
 	}
 
-	taskDISABLE_INTERRUPTS();
-    spi_master_op(unit, 1, nbytes, data, NULL);
-    taskENABLE_INTERRUPTS();
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
+
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+    spi_ll_deselect(deviceid);
 
     return NULL;
 }
 
-/*
- * Receive a chunk of 8-bit data.
- */
-driver_error_t *spi_bulk_read(int unit, unsigned int nbytes, unsigned char *data) {
+driver_error_t *spi_get_speed(int deviceid, uint32_t *speed) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
 	// Sanity checks
 	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
 	}
 
-	taskDISABLE_INTERRUPTS();
-    spi_master_op(unit, 1, nbytes, NULL, data);
-    taskENABLE_INTERRUPTS();
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
 
-    return NULL;
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	spi_ll_get_speed(deviceid, speed);
+
+	return NULL;
 }
 
-/*
- * Send and receive a chunk of 8-bit data.
- */
-driver_error_t *spi_bulk_rw(int unit, unsigned int nbytes, unsigned char *data) {
+driver_error_t *spi_set_speed(int deviceid, uint32_t speed) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
 	// Sanity checks
 	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
 	}
 
-	unsigned char *read = (unsigned char *)malloc(nbytes);
-	if (read) {
-	    taskDISABLE_INTERRUPTS();
-	    spi_master_op(unit, 1, nbytes, data, read);
-	    taskENABLE_INTERRUPTS();
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
 
-	    memcpy(data, read, nbytes);
-		free(read);
-	} else {
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	spi_ll_set_speed(deviceid, speed);
+
+	return NULL;
+}
+
+driver_error_t *spi_transfer(int deviceid, uint8_t data, uint8_t *read) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
+
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	if (spi_bus[unit].selected_device != deviceid) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
+	}
+
+	spi_ll_transfer(deviceid, data, read);
+
+    return NULL;
+}
+
+driver_error_t *spi_bulk_write(int deviceid, uint32_t nbytes, uint8_t *data) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
+
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	if (spi_bus[unit].selected_device != deviceid) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
+	}
+
+	spi_ll_bulk_write(deviceid, nbytes, data);
+
+    return NULL;
+}
+
+driver_error_t *spi_bulk_read(int deviceid, uint32_t nbytes, uint8_t *data) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
+
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	if (spi_bus[unit].selected_device != deviceid) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
+	}
+
+	spi_ll_bulk_read(deviceid, nbytes, data);
+
+	return NULL;
+}
+
+driver_error_t *spi_bulk_rw(int deviceid, uint32_t nbytes, uint8_t *data) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
+
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	if (spi_bus[unit].selected_device != deviceid) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
+	}
+
+	if (spi_ll_bulk_rw(deviceid, nbytes, data) < 0) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	return NULL;
 }
 
-/*
- * Send a chunk of 16-bit data.
- */
-driver_error_t *spi_bulk_write16(int unit, unsigned int words, short *data) {
-	// Sanity checks
-	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
-	}
-
-	taskDISABLE_INTERRUPTS();
-    spi_master_op(unit, 2, words, (unsigned char *)data, NULL);
-    taskENABLE_INTERRUPTS();
-
-    return NULL;
-}
-
-/*
- * Receive a chunk of 16-bit data.
- */
-driver_error_t *spi_bulk_read16(int unit, unsigned int nbytes, short *data) {
-	// Sanity checks
-	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
-	}
-
-	taskDISABLE_INTERRUPTS();
-    spi_master_op(unit, 2, nbytes, NULL, (unsigned char *)data);
-    taskENABLE_INTERRUPTS();
-
-    return NULL;
-}
-
-/*
- * Send a chunk of 32-bit data.
- */
-driver_error_t *spi_bulk_write32(int unit, unsigned int words, int *data) {
-	// Sanity checks
-	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
-	}
-
-	taskDISABLE_INTERRUPTS();
-    spi_master_op(unit, 4, words, (unsigned char *)data, NULL);
-    taskENABLE_INTERRUPTS();
-
-    return NULL;
-}
-
-driver_error_t *spi_bulk_write32_be(int unit, unsigned int words, int *data) {
-	// Sanity checks
-	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
-	}
-
-	int i = 0;
-
-    taskDISABLE_INTERRUPTS();
-
-    if (GET_PERI_REG_MASK(SPI_CTRL_REG(unit), (SPI_WR_BIT_ORDER | SPI_RD_BIT_ORDER))) {
-        for(;i < words;i++) {
-        	data[i] = __builtin_bswap32(data[i]);
-        }
-    }
-
-    spi_master_op(unit, 4, words, (unsigned char *)data, NULL);
-
-    taskENABLE_INTERRUPTS();
-
-    return NULL;
-}
-
-// Read a huge chunk of data as fast and as efficiently as
-// possible.  Switches in to 32-bit mode regardless, and uses
-// the enhanced buffer mode.
-// Data should be a multiple of 32 bits.
-driver_error_t *spi_bulk_read32_be(int unit, unsigned int words, int *data) {
-	// Sanity checks
-	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
-	}
-
-	int i = 0;
-
-    taskDISABLE_INTERRUPTS();
-
-    spi_master_op(unit, 4, words, NULL, (unsigned char *)data);
-
-    if (GET_PERI_REG_MASK(SPI_CTRL_REG(unit), (SPI_WR_BIT_ORDER | SPI_RD_BIT_ORDER))) {
-        for(;i < words;i++) {
-        	data[i] = __builtin_bswap32(data[i]);
-        }
-    }
-
-    taskENABLE_INTERRUPTS();
-
-    return NULL;
-}
-
-/*
- * Return the name of the SPI bus for a device.
- */
-const char *spi_name(int unit) {
-    static const char *name[CPU_LAST_SPI + 1] = { "spi0", "spi1", "spi2", "spi3" };
-    return name[unit];
-}
-
-/*
- * Return the pin index of the chip select pin for a device.
- */
-int spi_cs_gpio(int unit) {
-    struct spi *dev = &spi[unit];
-
-    return dev->cs;
-}
-
-/*
- * Return the speed in kHz.
- */
-unsigned int spi_get_speed(int unit) {
-    struct spi *dev = &spi[unit];
-
-    return dev->speed;
-}
-
-// Init a spi device
-driver_error_t *spi_init(int unit, int master) {
-    struct spi *dev = &spi[unit];
+driver_error_t *spi_bulk_write16(int deviceid, uint32_t nelements, uint16_t *data) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
 
 	// Sanity checks
 	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
 	}
 
-	if (master != 1) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_SLAVE_NOT_ALLOWED, NULL);
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
 	}
 
-	// If device is setup, nothing to do
-	if (dev->setup) return NULL;
-
-    // Lock resources
-    driver_error_t *error;
-    spi_resources_t resources;
-
-    if ((error = spi_lock_resources(unit, &resources))) {
-		return error;
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
 	}
 
-	// There are not errors, continue with init ...
+	if (spi_bus[unit].selected_device != deviceid) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
+	}
 
-    // Cotinue with init
-	spi_pin_config(unit, resources.sdi, resources.sdo, resources.sck, resources.cs);
+	spi_ll_bulk_write16(deviceid, nelements, data);
 
-	syslog(LOG_INFO,
-        "spi%u at pins sdi=%s%d/sdo=%s%d/sck=%s%d", unit,
-        gpio_portname(resources.sdi), gpio_name(resources.sdi),
-        gpio_portname(resources.sdo), gpio_name(resources.sdo),
-        gpio_portname(resources.sck), gpio_name(resources.sck)
-    );
-
-    spi_set_mode(unit, 0);
-
-    dev->dirty = 1;
-    dev->setup = 1;
-    
     return NULL;
 }
 
-DRIVER_REGISTER(SPI,spi,NULL,_spi_init,spi_lock_resources);
+driver_error_t *spi_bulk_read16(int deviceid, uint32_t nelements, uint16_t *data) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
+
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	if (spi_bus[unit].selected_device != deviceid) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
+	}
+
+	spi_ll_bulk_read16(deviceid, nelements, data);
+
+    return NULL;
+}
+
+driver_error_t *spi_bulk_rw16(int deviceid, uint32_t nelements, uint16_t *data) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
+
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	if (spi_bus[unit].selected_device != deviceid) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
+	}
+
+	if (spi_ll_bulk_rw16(deviceid, nelements, data) < 0) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_NOT_ENOUGH_MEMORY, NULL);
+	}
+
+	return NULL;
+}
+
+driver_error_t *spi_bulk_write32(int deviceid, uint32_t nelements, uint32_t *data) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
+
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	if (spi_bus[unit].selected_device != deviceid) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
+	}
+
+	spi_ll_bulk_write32(deviceid, nelements, data);
+
+    return NULL;
+}
+
+driver_error_t *spi_bulk_read32(int deviceid, uint32_t nelements, uint32_t *data) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
+
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	if (spi_bus[unit].selected_device != deviceid) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
+	}
+
+	spi_ll_bulk_read32(deviceid, nelements, data);
+
+    return NULL;
+}
+
+driver_error_t *spi_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
+
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	if (spi_bus[unit].selected_device != deviceid) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
+	}
+
+	if (spi_ll_bulk_rw32(deviceid, nelements, data) < 0) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_NOT_ENOUGH_MEMORY, NULL);
+	}
+
+	return NULL;
+}
+
+driver_error_t *spi_bulk_write32_be(int deviceid, uint32_t nelements, uint32_t *data) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
+
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	if (spi_bus[unit].selected_device != deviceid) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
+	}
+
+	spi_ll_bulk_write32_be(deviceid, nelements, data);
+
+    return NULL;
+}
+
+driver_error_t *spi_bulk_read32_be(int deviceid, uint32_t nelements, uint32_t *data) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
+
+	if (!spi_bus[unit].device[device].setup) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	if (spi_bus[unit].selected_device != deviceid) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
+	}
+
+	spi_ll_bulk_read32_be(deviceid, nelements, data);
+
+    return NULL;
+}
+
+DRIVER_REGISTER(SPI,spi,NULL,_spi_init,NULL);

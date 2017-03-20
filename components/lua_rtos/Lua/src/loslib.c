@@ -414,6 +414,7 @@ static const LUA_REG_TYPE syslib[] =
   { LSTRKEY( "setlocale" ),  LFUNCVAL( os_setlocale ) },
   { LSTRKEY( "getenv" ),  	 LFUNCVAL( os_getenv ) },
 
+  { LSTRKEY( "exists" ),  	 LFUNCVAL( os_exists ) },
   { LSTRKEY( "stdout" ),     LFUNCVAL( os_stdout ) },
   { LSTRKEY( "clear" ),      LFUNCVAL( os_clear ) },
   { LSTRKEY( "cpu" ),        LFUNCVAL( os_cpu ) },

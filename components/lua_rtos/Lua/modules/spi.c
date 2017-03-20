@@ -59,31 +59,9 @@ static int lspi_setup(lua_State* L) {
 
 	spi_userdata *spi = (spi_userdata *)lua_newuserdata(L, sizeof(spi_userdata));
 
-	spi->spi = id;
-	spi->cs = cs;
-	spi->speed = clock;
-	spi->mode = spi_mode;
-	spi->bits = data_bits;
-
-    if ((error = spi_init(spi->spi, is_master))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    if ((error = spi_set_mode(spi->spi, spi->mode))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    if ((error = spi_set_speed(spi->spi, spi->speed))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    if ((error = spi_set_cspin(spi->spi, spi->cs))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    if ((error = spi_deselect(spi->spi))) {
-    	return luaL_driver_error(L, error);
-    }
+	if ((error = spi_setup(id, is_master, cs, spi_mode, clock * 1000, &spi->spi_device))) {
+	    return luaL_driver_error(L, error);
+	}
 
     luaL_getmetatable(L, "spi.ins");
     lua_setmetatable(L, -2);
@@ -98,19 +76,7 @@ static int lspi_select(lua_State* L) {
     spi = (spi_userdata *)luaL_checkudata(L, 1, "spi.ins");
     luaL_argcheck(L, spi, 1, "spi expected");
 
-    if ((error = spi_set_mode(spi->spi, spi->mode))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    if ((error = spi_set_speed(spi->spi, spi->speed))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    if ((error = spi_set_cspin(spi->spi, spi->cs))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    if ((error = spi_select(spi->spi))) {
+    if ((error = spi_select(spi->spi_device))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -124,13 +90,12 @@ static int lspi_deselect(lua_State*L ) {
     spi = (spi_userdata *)luaL_checkudata(L, 1, "spi.ins");
     luaL_argcheck(L, spi, 1, "spi expected");
 
-    if ((error = spi_deselect(spi->spi))) {
+    if ((error = spi_deselect(spi->spi_device))) {
     	return luaL_driver_error(L, error);
     }
 
     return 0;
 }
-
 
 static int lspi_rw_helper( lua_State *L, int withread ) {
 	unsigned char value;
@@ -149,7 +114,7 @@ static int lspi_rw_helper( lua_State *L, int withread ) {
 
 	for (i = 2; i <= total; i++) {
 		if(lua_isnumber(L, i)) {
-			spi_transfer(spi->spi, lua_tointeger(L, i), &value);
+			spi_transfer(spi->spi_device, lua_tointeger(L, i), &value);
 			if(withread) {
 				lua_pushinteger(L, value);
 				lua_rawseti(L, -2, residx++);
@@ -158,7 +123,7 @@ static int lspi_rw_helper( lua_State *L, int withread ) {
 		else if(lua_isstring( L, i )) {
 			sval = lua_tolstring(L, i, &len);
 			for(j = 0; j < len; j ++) {
-				spi_transfer(spi->spi, sval[j], &value);
+				spi_transfer(spi->spi_device, sval[j], &value);
 				if (withread) {
 					lua_pushinteger(L, value);
 					lua_rawseti(L, -2, residx++);

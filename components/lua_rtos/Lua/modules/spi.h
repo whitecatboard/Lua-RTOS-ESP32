@@ -36,11 +36,7 @@
 #include <drivers/cpu.h>
 
 typedef struct {
-    unsigned char spi;
-    unsigned char cs;
-    unsigned int  speed;
-    unsigned int  mode;
-    unsigned int  bits;
+	int spi_device;
 } spi_userdata;
 
 #ifdef CPU_SPI0

@@ -34,19 +34,17 @@
 #include <drivers/adc.h>
 #include <drivers/adc_mcp3008.h>
 
-static uint8_t mcp3008_spi;
-static uint8_t mcp3008_cs;
+static int spi_device = -1;
 
 driver_error_t *adc_mcp3008_setup(int8_t unit, int8_t channel, uint8_t spi, uint8_t cs) {
 	driver_error_t *error;
 
-	mcp3008_spi = spi;
-    mcp3008_cs = cs;
-
     // Init SPI bus
-    if ((error = spi_init(mcp3008_spi, 1))) {
-        return error;
-    }
+	if (spi_device == -1) {
+		if ((error = spi_setup(spi, 1, cs, 0, ADC_MCP3008_SPEED, &spi_device))) {
+			return error;
+		}
+	}
 
 	syslog(LOG_INFO, "adc MCP3008 channel %d at spi%d, cs=%s%d", channel, spi, gpio_portname(cs), gpio_name(cs));
 
@@ -56,17 +54,13 @@ driver_error_t *adc_mcp3008_setup(int8_t unit, int8_t channel, uint8_t spi, uint
 driver_error_t *adc_mcp3008_read(int8_t unit, int8_t channel, int *raw) {
     uint8_t msb, lsb;
 
-    spi_set_mode(mcp3008_spi, 0);
-    spi_set_speed(mcp3008_spi, ADC_MCP3008_SPEED);
-    spi_set_cspin(mcp3008_spi, mcp3008_cs);
+    spi_ll_select(spi_device);
 
-    spi_select(mcp3008_spi);
+    spi_ll_transfer(spi_device, ((0x18 | channel) & 0xf0) >> 4, &msb);
+    spi_ll_transfer(spi_device, ((0x18 | channel) & 0x0f) << 4, &msb);
+    spi_ll_transfer(spi_device, 0, &lsb);
 
-    spi_transfer(mcp3008_spi, ((0x18 | channel) & 0xf0) >> 4, &msb);
-    spi_transfer(mcp3008_spi, ((0x18 | channel) & 0x0f) << 4, &msb);
-    spi_transfer(mcp3008_spi, 0, &lsb);
-
-    spi_deselect(mcp3008_spi);
+    spi_ll_deselect(spi_device);
 
     *raw = ((msb & 0x03) << 8 | lsb);
 

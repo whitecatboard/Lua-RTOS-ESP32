@@ -117,10 +117,10 @@ static const IRAM_ATTR TValue *luaR_auxfind(const luaR_entry *pentry, const char
  *
  */
 const IRAM_ATTR TValue *luaR_findglobal(const char *name) {
-	const TValue *res;
-
 	// Try to get from cache
 	#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+	const TValue *res;
+
 	res = rotable_cache_get(lua_rotable, name);
 	if (res) {
 		return res;

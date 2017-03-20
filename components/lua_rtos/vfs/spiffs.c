@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if USE_SPIFFS
+#if CONFIG_LUA_RTOS_USE_SPIFFS
 
 #include <freertos/FreeRTOS.h>
 
@@ -371,7 +371,7 @@ static int IRAM_ATTR vfs_spiffs_fstat(int fd, struct stat * st) {
     }
 
 	// Set block size for this file system
-    st->st_blksize = SPIFFS_LOG_PAGE_SIZE;
+    st->st_blksize = CONFIG_LUA_RTOS_SPIFFS_LOG_PAGE_SIZE;
 
     // First test if it's a directory entry
     if (file->is_dir) {
@@ -831,11 +831,11 @@ void vfs_spiffs_register() {
     int res = 0;
     int retries = 0;
 
-    cfg.phys_addr 		 = SPIFFS_BASE_ADDR;
-    cfg.phys_size 		 = SPIFFS_SIZE;
-    cfg.phys_erase_block = SPIFFS_ERASE_SIZE;
-    cfg.log_page_size    = SPIFFS_LOG_PAGE_SIZE;
-    cfg.log_block_size   = SPIFFS_LOG_BLOCK_SIZE;
+    cfg.phys_addr 		 = CONFIG_LUA_RTOS_SPIFFS_BASE_ADDR;
+    cfg.phys_size 		 = CONFIG_LUA_RTOS_SPIFFS_SIZE;
+    cfg.phys_erase_block = CONFIG_LUA_RTOS_SPIFFS_ERASE_SIZE;
+    cfg.log_page_size    = CONFIG_LUA_RTOS_SPIFFS_LOG_PAGE_SIZE;
+    cfg.log_block_size   = CONFIG_LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE;
 
     syslog(LOG_INFO, "spiffs%d start address at 0x%x, size %d Kb",
            unit, cfg.phys_addr, cfg.phys_size / 1024

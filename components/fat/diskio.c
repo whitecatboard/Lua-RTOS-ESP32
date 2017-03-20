@@ -9,7 +9,7 @@
 
 #include "luartos.h"
 
-#if USE_FAT
+#if CONFIG_LUA_RTOS_USE_FAT
 
 #include "diskio.h"		/* FatFs lower layer API */
 

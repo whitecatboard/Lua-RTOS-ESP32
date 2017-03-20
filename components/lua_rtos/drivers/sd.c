@@ -40,10 +40,6 @@
 #define RAWPART         0               /* 'x' partition */
 
 
-#ifndef SD_KHZ
-#define SD_KHZ          16666           /* speed 16.66 MHz */
-#endif
-
 #if USE_LED_ACT
 extern unsigned int activity;
 #endif
@@ -54,7 +50,7 @@ extern unsigned int activity;
 struct disk {
     /* the partition table */
     struct  diskpart part   [NPARTITIONS+1];
-    int     spi;            /* interface to SPI port */
+    int     spi_device;      /* interface to SPI port */
     int     unit;           /* physical unit number */
     int     open;           /* open/closed refcnt */
     int     wlabel;         /* label writable? */
@@ -126,9 +122,9 @@ static void sd_wait_ready(int spi, unsigned int limit, unsigned int *maxcount)
     unsigned int i;
     unsigned char reply;
 
-    spi_transfer(spi, 0xFF, NULL);
+    spi_ll_transfer(spi, 0xFF, NULL);
     for (i=0; i<limit; i++) {
-    	spi_transfer(spi, 0xFF, &reply);
+    	spi_ll_transfer(spi, 0xFF, &reply);
         if (reply == 0xFF) {
             if (*maxcount < i)
                 *maxcount = i;
@@ -157,7 +153,7 @@ static void sd_wait_ready(int spi, unsigned int limit, unsigned int *maxcount)
  */
 static int card_cmd(unsigned int unit, unsigned int cmd, unsigned int addr)
 {
-    int spi = sddrives[unit].spi;
+    int spi = sddrives[unit].spi_device;
     unsigned int i;
     unsigned char reply;
 
@@ -166,25 +162,25 @@ static int card_cmd(unsigned int unit, unsigned int cmd, unsigned int addr)
         sd_wait_ready(spi, TIMO_WAIT_CMD, &sd_timo_wait_cmd);
 
     /* Send a comand packet (6 bytes). */
-    spi_transfer(spi, cmd | 0x40, NULL);
-    spi_transfer(spi, addr >> 24, NULL);
-    spi_transfer(spi, addr >> 16, NULL);
-    spi_transfer(spi, addr >> 8, NULL);
-    spi_transfer(spi, addr, NULL);
+    spi_ll_transfer(spi, cmd | 0x40, NULL);
+    spi_ll_transfer(spi, addr >> 24, NULL);
+    spi_ll_transfer(spi, addr >> 16, NULL);
+    spi_ll_transfer(spi, addr >> 8, NULL);
+    spi_ll_transfer(spi, addr, NULL);
 
     /* Send cmd checksum for CMD_GO_IDLE.
      * For all other commands, CRC is ignored. */
     if (cmd == CMD_GO_IDLE)
-        spi_transfer(spi, 0x95, NULL);
+        spi_ll_transfer(spi, 0x95, NULL);
     else if (cmd == CMD_SEND_IF_COND)
-        spi_transfer(spi, 0x87, NULL);
+        spi_ll_transfer(spi, 0x87, NULL);
     else
-        spi_transfer(spi, 0xFF, NULL);
+        spi_ll_transfer(spi, 0xFF, NULL);
 
     /* Wait for a response. */
     for (i=0; i<TIMO_CMD; i++)
     {
-        spi_transfer(spi, 0xFF, &reply);
+        spi_ll_transfer(spi, 0xFF, &reply);
         if (! (reply & 0x80))
         {
             if (sd_timo_cmd < i)
@@ -223,8 +219,8 @@ sd_led(int val) {
 static inline void
 sd_deselect(int spi)
 {
-    spi_deselect(spi);
-    spi_transfer(spi, 0xFF, NULL);
+    spi_ll_deselect(spi);
+    spi_ll_transfer(spi, 0xFF, NULL);
     sd_led(0);
 }
 
@@ -235,7 +231,7 @@ static inline void
 sd_select(int spi)
 {
     sd_led(1);
-    spi_select(spi);
+    spi_ll_select(spi);
 }
 
 /*
@@ -244,14 +240,14 @@ sd_select(int spi)
  */
 static int card_init(int unit)
 {
-    int spi = sddrives[unit].spi;
+    int spi = sddrives[unit].spi_device;
     unsigned int i;
     unsigned char reply;
     unsigned char response[4];
     int timeout = 4;
 
     /* Slow speed: 250 kHz */
-    spi_set_speed(spi, 250);
+    spi_ll_set_speed(spi, 250000);
 
     sd_type[unit] = TYPE_UNKNOWN;
 
@@ -261,7 +257,7 @@ static int card_init(int unit)
 
         /* Send 80 clock cycles for start up. */
         for (i=0; i<10; i++)
-            spi_transfer(spi, 0xFF, NULL);
+            spi_ll_transfer(spi, 0xFF, NULL);
 
         /* Select the card and send a single GO_IDLE command. */
         sd_select(spi);
@@ -286,10 +282,10 @@ static int card_init(int unit)
         sd_deselect(spi);
         sd_type[unit] = TYPE_I;
     } else {
-        spi_transfer(spi, 0xFF, &response[0]);
-        spi_transfer(spi, 0xFF, &response[1]);
-        spi_transfer(spi, 0xFF, &response[2]);
-        spi_transfer(spi, 0xFF, &response[3]);
+        spi_ll_transfer(spi, 0xFF, &response[0]);
+        spi_ll_transfer(spi, 0xFF, &response[1]);
+        spi_ll_transfer(spi, 0xFF, &response[2]);
+        spi_ll_transfer(spi, 0xFF, &response[3]);
         sd_deselect(spi);
         if (response[3] != 0xAA)
         {
@@ -332,10 +328,10 @@ static int card_init(int unit)
             printf("sd%d: READ_OCR failed, reply=%02x", unit, reply);
             return 0;
         }
-        spi_transfer(spi, 0xFF, &response[0]);
-        spi_transfer(spi, 0xFF, &response[1]);
-        spi_transfer(spi, 0xFF, &response[2]);
-        spi_transfer(spi, 0xFF, &response[3]);
+        spi_ll_transfer(spi, 0xFF, &response[0]);
+        spi_ll_transfer(spi, 0xFF, &response[1]);
+        spi_ll_transfer(spi, 0xFF, &response[2]);
+        spi_ll_transfer(spi, 0xFF, &response[3]);
         sd_deselect(spi);
         if ((response[0] & 0xC0) == 0xC0)
         {
@@ -344,7 +340,7 @@ static int card_init(int unit)
     }
 
     /* Fast speed. */
-    spi_set_speed(spi, SD_KHZ);
+    spi_ll_set_speed(spi, CONFIG_LUA_RTOS_SD_HZ);
     return 1;
 }
 
@@ -354,7 +350,7 @@ static int card_init(int unit)
  */
 int card_size(int unit)
 {
-    int spi = sddrives[unit].spi;
+    int spi = sddrives[unit].spi_device;
     unsigned char csd [16];
     unsigned csize, n;
     unsigned char reply;
@@ -372,7 +368,7 @@ int card_size(int unit)
     /* Wait for a response. */
     for (i=0; ; i++)
     {
-        spi_transfer(spi, 0xFF, &reply);
+        spi_ll_transfer(spi, 0xFF, &reply);
         if (reply == DATA_START_BLOCK)
             break;
         if (i >= TIMO_SEND_CSD)
@@ -390,11 +386,11 @@ int card_size(int unit)
     /* Read data. */
     for (i=0; i<sizeof(csd); i++)
     {
-        spi_transfer(spi, 0xFF, &csd[i]);
+        spi_ll_transfer(spi, 0xFF, &csd[i]);
     }
     /* Ignore CRC. */
-    spi_transfer(spi, 0xFF, NULL);
-    spi_transfer(spi, 0xFF, NULL);
+    spi_ll_transfer(spi, 0xFF, NULL);
+    spi_ll_transfer(spi, 0xFF, NULL);
 
     /* Disable the card. */
     sd_deselect(spi);
@@ -425,7 +421,7 @@ int card_size(int unit)
 int
 card_read(int unit, unsigned int offset, char *data, unsigned int bcount)
 {
-    int spi = sddrives[unit].spi;
+    int spi = sddrives[unit].spi_device;
     unsigned char reply;
     unsigned int i;
 
@@ -451,7 +447,7 @@ again:
     /* Wait for a response. */
     for (i=0; ; i++)
     {
-        spi_transfer(spi, 0xFF, &reply);
+        spi_ll_transfer(spi, 0xFF, &reply);
         if (reply == DATA_START_BLOCK)
             break;
         if (i >= TIMO_READ)
@@ -470,21 +466,21 @@ again:
     /* Read data. */
     if (bcount >= SECTSIZE)
     {
-        spi_bulk_read32_be(spi, SECTSIZE/4, (int*)data);
+        spi_ll_bulk_read32_be(spi, SECTSIZE/4, (uint32_t *)data);
 //printf("    %08x %08x %08x %08x ...\n",
 //((int*)data)[0], ((int*)data)[1], ((int*)data)[2], ((int*)data)[3]);
         data += SECTSIZE;
     } else {
-        spi_bulk_read(spi, bcount, (unsigned char *)data);
+        spi_ll_bulk_read(spi, bcount, (uint8_t *)data);
 //printf("    %08x %08x %08x %08x ...\n",
 //((int*)data)[0], ((int*)data)[1], ((int*)data)[2], ((int*)data)[3]);
         data += bcount;
         for (i=bcount; i<SECTSIZE; i++)
-            spi_transfer(spi, 0xFF, NULL);
+            spi_ll_transfer(spi, 0xFF, NULL);
     }
     /* Ignore CRC. */
-    spi_transfer(spi, 0xFF, NULL);
-    spi_transfer(spi, 0xFF, NULL);
+    spi_ll_transfer(spi, 0xFF, NULL);
+    spi_ll_transfer(spi, 0xFF, NULL);
 
     if (bcount > SECTSIZE)
     {
@@ -509,7 +505,7 @@ again:
 int
 card_write(int unit, unsigned offset, char *data, unsigned bcount)
 {
-    int spi = sddrives[unit].spi;
+    int spi = sddrives[unit].spi_device;
     unsigned char reply;
 	int i;
 
@@ -551,23 +547,23 @@ again:
     sd_wait_ready(spi, TIMO_WAIT_WDATA, &sd_timo_wait_wdata);
 
     /* Send data. */
-    spi_transfer(spi, WRITE_MULTIPLE_TOKEN, NULL);
+    spi_ll_transfer(spi, WRITE_MULTIPLE_TOKEN, NULL);
     if (bcount >= SECTSIZE)
     {
-        spi_bulk_write32_be(spi, SECTSIZE/4, (int*)data);
+        spi_ll_bulk_write32_be(spi, SECTSIZE/4, (uint32_t *)data);
         data += SECTSIZE;
     } else {
-        spi_bulk_write(spi, bcount, (unsigned char *)data);
+        spi_ll_bulk_write(spi, bcount, (uint8_t *)data);
         data += bcount;
         for (i=bcount; i<SECTSIZE; i++)
-            spi_transfer(spi, 0xFF, NULL);
+            spi_ll_transfer(spi, 0xFF, NULL);
     }
     /* Send dummy CRC. */
-    spi_transfer(spi, 0xFF, NULL);
-    spi_transfer(spi, 0xFF, NULL);
+    spi_ll_transfer(spi, 0xFF, NULL);
+    spi_ll_transfer(spi, 0xFF, NULL);
 
     /* Check if data accepted. */
-    spi_transfer(spi, 0xFF, &reply);
+    spi_ll_transfer(spi, 0xFF, &reply);
     if ((reply & 0x1f) != 0x05)
     {
         /* Data rejected. */
@@ -591,7 +587,7 @@ again:
     /* Stop a write-multiple sequence. */
     sd_select(spi);
     sd_wait_ready(spi, TIMO_WAIT_WSTOP, &sd_timo_wait_wstop);
-    spi_transfer(spi, STOP_TRAN_TOKEN, NULL);
+    spi_ll_transfer(spi, STOP_TRAN_TOKEN, NULL);
     sd_wait_ready(spi, TIMO_WAIT_WIDLE, &sd_timo_wait_widle);
     sd_deselect(spi);
     mtx_unlock(&sd_mtx);
@@ -608,6 +604,7 @@ static int
 sd_setup(struct disk *u)
 {
     int unit = u->unit;
+	uint32_t speed;
 
     if (! card_init(unit)) {
         syslog(LOG_ERR, "sd%d no SD card detected", unit);
@@ -622,11 +619,14 @@ sd_setup(struct disk *u)
         syslog(LOG_ERR, "sd%d cannot get card size", unit);
         return 0;
     }
+
+    spi_get_speed(u->spi_device, &speed);
+
     syslog(LOG_INFO, "sd%d type %s, size %u kbytes, speed %u Mhz", unit,
         sd_type[unit]==TYPE_SDHC ? "SDHC" :
         sd_type[unit]==TYPE_II ? "II" : "I",
         u->part[RAWPART].dp_size / 2,
-        spi_get_speed(u->spi) / 1000);
+        speed / 1000000);
 
     /* Read partition table. */
     unsigned short buf[256];
@@ -842,33 +842,24 @@ sd_setup(struct disk *u)
  */
 int sd_init(int unit) {
     struct disk *du = &sddrives[unit];
-    int spi;
     int ok = 1;
 
     du->unit = unit;
-    du->spi = SD_SPI;
-
-    spi = du->spi;
 
     // Create mutex
     mtx_init(&sd_mtx, NULL, NULL, 0);
 
-    if (spi_init(spi, 1)) {
-        syslog(LOG_ERR, "sd%u cannot open spi%u port", unit, spi);
+    driver_error_t *error;
+    if ((error = spi_setup(CONFIG_LUA_RTOS_SD_SPI, 1, CONFIG_LUA_RTOS_SD_CS, 0, CONFIG_LUA_RTOS_SD_HZ, &du->spi_device))) {
+    	free(error);
+        syslog(LOG_ERR, "sd%u cannot open spi%u port (%s)", unit, du->spi_device, driver_get_err_msg(error));
         return 0;
     }
-    
-    spi_set_cspin(spi, SD_CS);
-    spi_set_speed(spi, SD_KHZ);
 
-#if PLATFORM_PIC32MZ
-    spi_set(spi, PIC32_SPICON_CKE);
-#endif
-
-    if (spi_cs_gpio(spi) >= 0) {
-        syslog(LOG_INFO, "sd%u is at %s, pin cs=%s%d", unit,
-            spi_name(spi), gpio_portname(spi_cs_gpio(spi)), spi_cs_gpio(spi));
-    }
+	syslog(LOG_INFO, "sd%u is at spi%d, pin cs=%s%d", unit,
+		CONFIG_LUA_RTOS_SD_SPI,
+        gpio_portname(CONFIG_LUA_RTOS_SD_CS), gpio_name(CONFIG_LUA_RTOS_SD_CS)
+	);
     
     /* Assign disk index. */
     du->dkindex = 1;

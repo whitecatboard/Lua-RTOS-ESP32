@@ -51,12 +51,11 @@
 #define OWIRE_DRIVER_ID    11
 #define MQTT_DRIVER_ID     12
 #define SERVO_DRIVER_ID    13
-#define ESPI_DRIVER_ID     14
-#define THREAD_DRIVER_ID   15
-#define PWBUS_DRIVER_ID    16
-#define NZR_DRIVER_ID      17
-#define NEOPIXEL_DRIVER_ID 18
-#define STEPPER_DRIVER_ID  19
+#define THREAD_DRIVER_ID   14
+#define PWBUS_DRIVER_ID    15
+#define NZR_DRIVER_ID      16
+#define NEOPIXEL_DRIVER_ID 17
+#define STEPPER_DRIVER_ID  18
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -67,7 +66,6 @@
 #define MQTT_DRIVER driver_get_by_name("mqtt")
 #define OWIRE_DRIVER driver_get_by_name("owire")
 #define SERVO_DRIVER driver_get_by_name("servo")
-#define ESPI_DRIVER driver_get_by_name("espi")
 #define NZR_DRIVER driver_get_by_name("nzr")
 #define NEOPIXEL_DRIVER driver_get_by_name("neopixel")
 #define STEPPER_DRIVER driver_get_by_name("stepper")

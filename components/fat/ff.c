@@ -18,7 +18,7 @@
 #include "luartos.h"
 #include <sys/console.h>
 
-#if USE_FAT
+#if CONFIG_LUA_RTOS_USE_FAT
 
 #include <stdlib.h>
 #include <stdio.h>

@@ -67,6 +67,8 @@ extern unsigned port_interruptNesting[portNUM_PROCESSORS];
  */
 static struct mtx lmic_hal_mtx;
 
+static int spi_device;
+
 /*
  * This variables are for doing things only one time.
  *
@@ -157,29 +159,20 @@ driver_error_t *hal_init (void) {
 	driver_error_t *error;
 
 	// Init SPI bus
-    if ((error = spi_init(CONFIG_LUA_RTOS_LMIC_SPI, 1))) {
+	if ((error = spi_setup(CONFIG_LUA_RTOS_LMIC_SPI, 1, CONFIG_LUA_RTOS_LMIC_CS, 0, LMIC_SPI_KHZ * 1000, &spi_device))) {
         syslog(LOG_ERR, "lmic cannot open spi%u", CONFIG_LUA_RTOS_LMIC_SPI);
         return error;
     }
-    
+
     // Lock pins
     if ((error = lmic_lock_resources(0, NULL))) {
     	return error;
     }
 
-    spi_set_cspin(CONFIG_LUA_RTOS_LMIC_SPI, CONFIG_LUA_RTOS_LMIC_CS);
-    spi_set_speed(CONFIG_LUA_RTOS_LMIC_SPI, LMIC_SPI_KHZ);
+	syslog(LOG_INFO, "lmic is at spi%d, pin cs=%s%d", CONFIG_LUA_RTOS_LMIC_SPI,
+        gpio_portname(CONFIG_LUA_RTOS_LMIC_CS), gpio_name(CONFIG_LUA_RTOS_LMIC_CS)
+	);
 
-    if (spi_cs_gpio(CONFIG_LUA_RTOS_LMIC_SPI) >= 0) {
-        syslog(LOG_INFO, "lmic is at %s, cs=%s%d/dio0=%s%d/dio1=%s%d/dio2=%s%d",
-			spi_name(CONFIG_LUA_RTOS_LMIC_SPI),
-			gpio_portname(spi_cs_gpio(CONFIG_LUA_RTOS_LMIC_SPI)), spi_cs_gpio(CONFIG_LUA_RTOS_LMIC_SPI),
-			gpio_portname(CONFIG_LUA_RTOS_LMIC_DIO0), CONFIG_LUA_RTOS_LMIC_DIO0,
-			gpio_portname(CONFIG_LUA_RTOS_LMIC_DIO1), CONFIG_LUA_RTOS_LMIC_DIO1,
-			gpio_portname(CONFIG_LUA_RTOS_LMIC_DIO2), CONFIG_LUA_RTOS_LMIC_DIO2
-		);
-    }
-	
 	#if !CONFIG_LUA_RTOS_USE_POWER_BUS
 		// Init RESET pin
 		gpio_pin_output(CONFIG_LUA_RTOS_LMIC_RST);
@@ -229,12 +222,10 @@ driver_error_t *hal_init (void) {
  * drive radio NSS pin (0=low, 1=high).
  */
 void IRAM_ATTR hal_pin_nss (u1_t val) {
-    spi_set_cspin(CONFIG_LUA_RTOS_LMIC_SPI, CONFIG_LUA_RTOS_LMIC_CS);
-
     if (!val) {
-		spi_select(CONFIG_LUA_RTOS_LMIC_SPI);
+		spi_ll_select(spi_device);
 	} else {
-		spi_deselect(CONFIG_LUA_RTOS_LMIC_SPI);
+		spi_ll_deselect(spi_device);
 	}
 }
 
@@ -286,7 +277,7 @@ void hal_pin_rst (u1_t val) {
 u1_t IRAM_ATTR hal_spi (u1_t outval) {
 	u1_t readed;
 
-	spi_transfer(CONFIG_LUA_RTOS_LMIC_SPI, outval, &readed);
+	spi_ll_transfer(spi_device, outval, &readed);
 
 	return readed;
 }

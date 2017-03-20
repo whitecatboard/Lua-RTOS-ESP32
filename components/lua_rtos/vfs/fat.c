@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if USE_FAT
+#if CONFIG_LUA_RTOS_USE_FAT
 
 #include "freertos/FreeRTOS.h"
 #include "esp_vfs.h"
