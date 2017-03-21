@@ -90,6 +90,7 @@ static int ladc_read( lua_State* L ) {
 
 static const LUA_REG_TYPE ladc_map[] = {
     { LSTRKEY( "setup" ),		  LFUNCVAL( ladc_setup   ) },
+    { LSTRKEY( "attach" ),		  LFUNCVAL( ladc_setup   ) },
 	ADC_ADC0
 	ADC_ADC1
 	ADC_ADC2

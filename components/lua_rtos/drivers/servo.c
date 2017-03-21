@@ -79,15 +79,9 @@ driver_error_t *servo_setup(int8_t pin, servo_instance_t **instance) {
 	(*instance)->pin = pin;
 	(*instance)->value = SERVO_MID;
 
-    // Setup PWM unit, 0 in our case
-	if ((error = pwm_setup(0))) {
-		free(*instance);
-    	return error;
-	}
-
 	// Configure PWM channel (channel is assigned by PWM driver).
 	// Servo frequency is 50 hertzs.
-	if ((error = pwm_setup_channel(0, -1, pin, 50, get_duty(*instance), &(*instance)->pwm_channel))) {
+	if ((error = pwm_setup(0, -1, pin, 50, get_duty(*instance), &(*instance)->pwm_channel))) {
 		free(*instance);
 		return error;
 	}

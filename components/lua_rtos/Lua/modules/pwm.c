@@ -50,51 +50,46 @@ extern const LUA_REG_TYPE pwm_error_map[];
 
 static int lpwm_setup( lua_State* L ) {
 	driver_error_t *error;
-    int8_t id;
-
-    id = luaL_checkinteger( L, 1 );
+    int8_t pin;
+    int32_t freq;
+    double duty;
 
     pwm_userdata *pwm = (pwm_userdata *)lua_newuserdata(L, sizeof(pwm_userdata));
 
-    pwm->unit = id;
-    pwm->channel = -1;
+    pwm->unit = 0;
 
-    if ((error = pwm_setup(id))) {
+    pin = luaL_checkinteger( L, 1 );
+    freq = luaL_checkinteger( L, 2 );
+    duty = luaL_checknumber(L, 3);
+
+    if ((error = pwm_setup(pwm->unit, -1, pin, freq, duty, &pwm->channel))) {
     	return luaL_driver_error(L, error);
     }
 
-    luaL_getmetatable(L, "pwm.chan");
+    luaL_getmetatable(L, "pwm.inst");
     lua_setmetatable(L, -2);
 
     return 1;
 }
 
-static int lpwm_setup_channel( lua_State* L ) {
-    int8_t channel, pin;
+static int lpwm_setupchan( lua_State* L ) {
+	driver_error_t *error;
+    int8_t pin;
     int32_t freq;
     double duty;
 
-    pwm_userdata *pwm = NULL;
-	driver_error_t *error;
+    pwm_userdata *pwm = (pwm_userdata *)lua_newuserdata(L, sizeof(pwm_userdata));
 
-    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm.chan");
-    luaL_argcheck(L, pwm, 1, "pwm expected");
+    pwm->unit = luaL_checkinteger( L, 1 );
+    pin = luaL_checkinteger( L, 2 );
+    freq = luaL_checkinteger( L, 3 );
+    duty = luaL_checknumber(L, 4);
 
-    channel = luaL_checkinteger( L, 2 );
-    pin = luaL_checkinteger( L, 3 );
-    freq = luaL_checkinteger( L, 4 );
-    duty = luaL_checknumber(L, 5);
-
-    if ((error = pwm_setup_channel(pwm->unit, channel, pin, freq, duty, &channel))) {
+    if ((error = pwm_setup(pwm->unit, -1, pin, freq, duty, &pwm->channel))) {
     	return luaL_driver_error(L, error);
     }
 
-    pwm_userdata *npwm = (pwm_userdata *)lua_newuserdata(L, sizeof(pwm_userdata));
-    memcpy(npwm, pwm, sizeof(pwm_userdata));
-
-    npwm->channel = channel;
-
-    luaL_getmetatable(L, "pwm.chan");
+    luaL_getmetatable(L, "pwm.inst");
     lua_setmetatable(L, -2);
 
     return 1;
@@ -105,7 +100,7 @@ static int lpwm_setduty(lua_State* L) {
 	driver_error_t *error;
 	double duty;
 
-    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm.chan");
+    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm.inst");
     luaL_argcheck(L, pwm, 1, "pwm expected");
 
     duty = luaL_checknumber(L, 2);
@@ -121,7 +116,7 @@ static int lpwm_start(lua_State* L) {
     pwm_userdata *pwm = NULL;
 	driver_error_t *error;
 
-    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm.chan");
+    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm.inst");
     luaL_argcheck(L, pwm, 1, "pwm expected");
 
     if ((error = pwm_start(pwm->unit, pwm->channel))) {
@@ -135,7 +130,7 @@ static int lpwm_stop(lua_State* L) {
     pwm_userdata *pwm = NULL;
 	driver_error_t *error;
 
-    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm.chan");
+    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm.inst");
     luaL_argcheck(L, pwm, 1, "pwm expected");
 
     if ((error = pwm_stop(pwm->unit, pwm->channel))) {
@@ -146,7 +141,9 @@ static int lpwm_stop(lua_State* L) {
 }
 
 static const LUA_REG_TYPE lpwm_map[] = {
+	{ LSTRKEY("setup" ),	LFUNCVAL(lpwm_setupchan) },
     { LSTRKEY("setup" ),	LFUNCVAL(lpwm_setup)     },
+    { LSTRKEY("attach" ),	LFUNCVAL(lpwm_setup)     },
 	PWM_PWM0
 	PWM_PWM1
 	PWM_PWM_CH0
@@ -172,7 +169,6 @@ static const LUA_REG_TYPE lpwm_map[] = {
 };
 
 static const LUA_REG_TYPE lpwm_channel_map[] = {
-  { LSTRKEY( "setupchan"      ),	 LFUNCVAL( lpwm_setup_channel          ) },
   { LSTRKEY( "setduty"        ),	 LFUNCVAL( lpwm_setduty                ) },
   { LSTRKEY( "start"          ),	 LFUNCVAL( lpwm_start                  ) },
   { LSTRKEY( "stop"           ),	 LFUNCVAL( lpwm_stop                   ) },
@@ -182,7 +178,7 @@ static const LUA_REG_TYPE lpwm_channel_map[] = {
 };
 
 LUALIB_API int luaopen_pwm( lua_State *L ) {
-    luaL_newmetarotable(L,"pwm.chan", (void *)lpwm_channel_map);
+    luaL_newmetarotable(L,"pwm.inst", (void *)lpwm_channel_map);
     return 0;
 }
 

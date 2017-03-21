@@ -166,21 +166,7 @@ driver_error_t *pwm_lock_resources(int8_t unit, int8_t channel, void *resources)
     return NULL;
 }
 
-driver_error_t *pwm_setup(int8_t unit) {
-	driver_error_t *error = NULL;
-
-	// Sanity checks
-	if ((error = pwm_check_unit(unit, 1))) return error;
-
-	// Enable module
-	switch (unit) {
-		case 0: periph_module_enable(PERIPH_LEDC_MODULE); break;
-	}
-
-	return NULL;
-}
-
-driver_error_t *pwm_setup_channel(int8_t unit, int8_t channel, int8_t pin, int32_t freq, double duty, int8_t *achannel) {
+driver_error_t *pwm_setup(int8_t unit, int8_t channel, int8_t pin, int32_t freq, double duty, int8_t *achannel) {
 	driver_error_t *error = NULL;
 
 	// Sanity checks
@@ -190,6 +176,11 @@ driver_error_t *pwm_setup_channel(int8_t unit, int8_t channel, int8_t pin, int32
 
 	if (!(pin & GPIO_ALL)) {
 		return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid pin");
+	}
+
+	// Enable module
+	switch (unit) {
+		case 0: periph_module_enable(PERIPH_LEDC_MODULE); break;
 	}
 
 	// If channel is -1 means that channel assignement is made by driver
