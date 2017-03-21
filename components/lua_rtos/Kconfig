@@ -386,6 +386,8 @@ menu "Lua RTOS"
 				help
 					GPIO where TFT touch pannel CS signal is attached.
   		  endmenu
+   		  menu "Segment Displays"	
+   		  endmenu		    		    
 	  endmenu	  
   
 	  menu "HTTP server"
@@ -516,7 +518,11 @@ menu "Lua RTOS"
 	
 		  	config LUA_RTOS_LUA_USE_TFT
 			  	bool "Include TFT module in build"
-			  	default y
+			  	default n
+
+		  	config LUA_RTOS_LUA_USE_SDISPLAY
+			  	bool "Include Segment Display module in build"
+			  	default n
 
 		  	config LUA_RTOS_LUA_USE_EVENT
 			  	bool "Include event module in build"

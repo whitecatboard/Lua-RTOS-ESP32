@@ -29,6 +29,14 @@ SECTIONS {
 	/* exception names exported to Lua modules */
 	/* TO DO */
 	/*   Generate this entries automatically */
+    tm1637_errors = ABSOLUTE(.);
+    KEEP(*(.tm1637_errors))
+    LONG(0) LONG(0)
+
+    tm1637_error_map = ABSOLUTE(.);
+    KEEP(*(.tm1637_error_map))
+    LONG(0) LONG(0)
+
     stepper_errors = ABSOLUTE(.);
     KEEP(*(.stepper_errors))
     LONG(0) LONG(0)
