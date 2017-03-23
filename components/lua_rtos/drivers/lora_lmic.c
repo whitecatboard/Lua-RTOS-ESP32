@@ -415,11 +415,8 @@ driver_error_t *lora_mac_set(const char command, const char *value) {
 			break;
 		
 		case LORA_MAC_SET_APPEUI:
-			#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
-			#else
 			// APPEUI must be in little-endian format
 			hex_string_to_val((char *)value, (char *)APPEUI, 8, 1);
-			#endif
 			break;
 		
 		case LORA_MAC_SET_NWKSKEY:

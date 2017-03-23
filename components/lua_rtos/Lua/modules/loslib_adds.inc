@@ -1,5 +1,7 @@
 #include "lauxlib.h"
 
+#include "luartos.h"
+
 #include <freertos/FreeRTOS.h>
 
 #include <limits.h>
@@ -342,6 +344,12 @@ static int os_cpu(lua_State *L) {
     
     lua_pushstring(L, cpuInfo);
     
+    return 1;
+}
+
+static int os_board(lua_State *L) {
+    lua_pushstring(L, LUA_RTOS_BOARD);
+
     return 1;
 }
 

@@ -141,8 +141,8 @@ static int lpwm_stop(lua_State* L) {
 }
 
 static const LUA_REG_TYPE lpwm_map[] = {
-	{ LSTRKEY("setup" ),	LFUNCVAL(lpwm_setupchan) },
     { LSTRKEY("setup" ),	LFUNCVAL(lpwm_setup)     },
+    { LSTRKEY("setupchan" ),LFUNCVAL(lpwm_setupchan) },
     { LSTRKEY("attach" ),	LFUNCVAL(lpwm_setup)     },
 	PWM_PWM0
 	PWM_PWM1
