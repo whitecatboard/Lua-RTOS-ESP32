@@ -89,7 +89,7 @@ static int lstepper_move( lua_State* L ){
     lstepper = (stepper_userdata *)luaL_checkudata(L, 1, "stepper.inst");
     luaL_argcheck(L, lstepper, 1, "stepper expected");
 
-    double units  = luaL_checkinteger(L, 2);
+    double units  = luaL_checknumber(L, 2);
     double speed  = luaL_optnumber(L, 3, lstepper->max_spd); // Speed in units / min (800 rpm by default)
     double accel  = luaL_optnumber(L, 4, lstepper->accel);   // Acceleration in units/secs^2 (2)
 
