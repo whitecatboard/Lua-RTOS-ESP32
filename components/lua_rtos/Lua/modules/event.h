@@ -30,10 +30,15 @@
 #ifndef LEVENT_H
 #define	LEVENT_H
 
+#include "lua.h"
+
 #include <sys/mutex.h>
 #include <sys/list.h>
 
-#define EVENT_QUEUE_SIZE 4
+typedef struct {
+	int func;
+	lua_State *L;
+} event_listener_t;
 
 typedef struct {
 	struct mtx mtx;

@@ -57,6 +57,7 @@
 #define NEOPIXEL_DRIVER_ID 17
 #define STEPPER_DRIVER_ID  18
 #define TM1637_DRIVER_ID   19
+#define EVENT_DRIVER_ID    20
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -71,6 +72,7 @@
 #define NEOPIXEL_DRIVER driver_get_by_name("neopixel")
 #define STEPPER_DRIVER driver_get_by_name("stepper")
 #define TM1637_DRIVER driver_get_by_name("tm1637")
+#define EVENT_DRIVER driver_get_by_name("event")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 

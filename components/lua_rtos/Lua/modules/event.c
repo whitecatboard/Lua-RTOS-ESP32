@@ -31,9 +31,6 @@
 
 #if CONFIG_LUA_RTOS_LUA_USE_EVENT
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
@@ -42,16 +39,22 @@
 #include "event.h"
 #include "modules.h"
 
+#include <sys/driver.h>
+
 // This variables are defined at linker time
 extern LUA_REG_TYPE event_error_map[];
+
+// Module errors
+
+#define EVENT_ERR_NOT_ENOUGH_MEMORY (DRIVER_EXCEPTION_BASE(EVENT_DRIVER_ID) |  0)
+
+DRIVER_REGISTER_ERROR(EVENT, event, NotEnoughtMemory, "not enough memory", EVENT_ERR_NOT_ENOUGH_MEMORY);
 
 static int levent_create( lua_State* L ) {
 	// Create user data
     event_userdata *udata = (event_userdata *)lua_newuserdata(L, sizeof(event_userdata));
     if (!udata) {
-    	// TO DO: exception
-
-    	return 0;
+    	return luaL_exception(L, EVENT_ERR_NOT_ENOUGH_MEMORY);
     }
 
     // Init mutex
@@ -68,7 +71,7 @@ static int levent_create( lua_State* L ) {
 
 static int levent_addlistener( lua_State* L ) {
     event_userdata *udata = NULL;
-    int *func;
+    event_listener_t *listener = NULL;
     int id;
     int ret;
 
@@ -79,23 +82,24 @@ static int levent_addlistener( lua_State* L ) {
     // Check for function reference
     luaL_checktype(L, 2, LUA_TFUNCTION);
 
-    // Allocate space for function reference
-    func = (int *)calloc(1,sizeof(int));
-    if (!func) {
-    	// TO DO: exception
-    	return 0;
+    // Allocate space for listener
+    listener = (event_listener_t *)calloc(1, sizeof(event_listener_t));
+    if (!listener){
+    	return luaL_exception(L, EVENT_ERR_NOT_ENOUGH_MEMORY);
     }
 
-    *func = luaL_ref(L, LUA_REGISTRYINDEX);
+    listener->func = luaL_ref(L, LUA_REGISTRYINDEX);
+    listener->L = L;
 
-    // Add function reference into the listener list
+    // Add listener
     mtx_lock(&udata->mtx);
 
-    ret = list_add(&udata->listener_list, func, &id);
+    ret = list_add(&udata->listener_list, listener, &id);
     if (ret) {
-    	// TO DO: exception
+    	free(listener);
+
     	mtx_unlock(&udata->mtx);
-    	return 0;
+    	return luaL_exception(L, EVENT_ERR_NOT_ENOUGH_MEMORY);
     }
 
     mtx_unlock(&udata->mtx);
@@ -107,32 +111,43 @@ static int levent_addlistener( lua_State* L ) {
 
 static int levent_broadcast( lua_State* L ) {
     event_userdata *udata = NULL;
+    event_listener_t *listener;
 	int idx = 1;
-	int *func;
 	int status;
+	int res;
 
     // Get user data
 	udata = (event_userdata *)luaL_checkudata(L, 1, "event.ins");
     luaL_argcheck(L, udata, 1, "event expected");
 
-    // Call to all listeners
     mtx_lock(&udata->mtx);
 
+    // Call to all listeners
     while (idx >= 1) {
     	// Get listener
-        if (list_get(&udata->listener_list, idx, (void **)&func)) {
+        if (list_get(&udata->listener_list, idx, (void **)&listener)) {
         	break;
         }
 
-        // There is a listener
-
         // Call to listener function
-        lua_rawgeti(L, LUA_REGISTRYINDEX, *func);
-        if ((status = lua_pcall(L, 0, 0, 0)) != LUA_OK) {
+        lua_rawgeti(listener->L, LUA_REGISTRYINDEX, listener->func);
+        if ((status = lua_pcall(listener->L, 0, 0, 0)) != LUA_OK) {
         	// Error in call
         }
 
         // Next listener
+        idx = list_next(&udata->listener_list, idx);
+    }
+
+    // Destroy all listeners
+    while (idx >= 0) {
+        res = list_get(&udata->listener_list, idx, (void **)&listener);
+        if (res) {
+        	break;
+
+        }
+
+        list_remove(&udata->listener_list, idx, 1);
         idx = list_next(&udata->listener_list, idx);
     }
 
@@ -144,9 +159,22 @@ static int levent_broadcast( lua_State* L ) {
 // Destructor
 static int levent_ins_gc (lua_State *L) {
     event_userdata *udata = NULL;
+    event_listener_t *listener;
+    int idx = 1;
+    int res;
 
     udata = (event_userdata *)luaL_checkudata(L, 1, "event.ins");
 	if (udata) {
+	    // Destroy all listeners
+	    while (idx >= 0) {
+	        res = list_get(&udata->listener_list, idx, (void **)&listener);
+	        if (res) {
+	        	break;
+	        }
+
+	        list_remove(&udata->listener_list, idx, 1);
+	        idx = list_next(&udata->listener_list, idx);
+	    }
 	}
 
 	return 0;
@@ -173,6 +201,7 @@ LUALIB_API int luaopen_event( lua_State *L ) {
 }
 
 MODULE_REGISTER_MAPPED(EVENT, event, levent_map, luaopen_event);
+DRIVER_REGISTER(EVENT,event,NULL,NULL,NULL);
 
 #endif
 
