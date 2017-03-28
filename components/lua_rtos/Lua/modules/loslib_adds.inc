@@ -21,6 +21,8 @@
 #include <drivers/cpu.h>
 #include <sys/mount.h>
 
+#include <drivers/uart.h>
+
 extern const char *__progname;
 extern uint32_t boot_count;
 extern uint8_t flash_unique_id[8];

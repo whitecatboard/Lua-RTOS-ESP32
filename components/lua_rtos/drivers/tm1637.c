@@ -255,7 +255,6 @@ static int tm1637_display(int deviceid, uint8_t addr,uint8_t data, uint8_t point
  */
 driver_error_t *tm1637_setup(uint8_t scl, uint8_t sda, int *deviceid) {
 	driver_unit_lock_error_t *lock_error = NULL;
-	driver_error_t *error;
 
 	*deviceid = (scl << 8) | sda;
 

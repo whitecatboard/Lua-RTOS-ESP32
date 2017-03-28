@@ -50,7 +50,7 @@ extern LUA_REG_TYPE tm1637_error_map[];
 static int lsdisplay_attach( lua_State* L ) {
 	driver_error_t *error;
 
-    char *type = luaL_checkstring(L, 1);
+    const char *type = luaL_checkstring(L, 1);
     if (strcmp(type,"TM1637") != 0) {
     	luaL_error(L, "type is not supported");
     }

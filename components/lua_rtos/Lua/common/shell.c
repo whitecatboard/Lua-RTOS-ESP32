@@ -205,7 +205,7 @@ void lua_shell(lua_State* L, char *buffer) {
 		    // Check for errors
 		    if (command[cindex].error_pos) {
 				if (lua_type(L, command[cindex].error_pos) == LUA_TSTRING) {
-					char *msg = lua_tostring(L, command[cindex].error_pos);
+					const char *msg = lua_tostring(L, command[cindex].error_pos);
 
 					if (msg) {
 						printf("%s\r\n", msg);

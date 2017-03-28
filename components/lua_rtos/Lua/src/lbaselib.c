@@ -22,6 +22,8 @@
 
 // LUA RTOS BEGIN
 #include <Lua/modules/lbaselib_adds.inc>
+
+LUALIB_API void luaL_checkanytable (lua_State *L, int arg);
 // LUA RTOS END
 
 #if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
