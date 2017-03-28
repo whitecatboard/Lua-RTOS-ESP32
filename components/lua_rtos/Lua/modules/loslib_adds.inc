@@ -489,7 +489,6 @@ static int os_cp(lua_State *L) {
 }
 
 static int os_run (lua_State *L) {
-	#if 0
     const char *argCode = luaL_optstring(L, 1, "");
     unsigned int i;
     int done;
@@ -500,9 +499,6 @@ static int os_run (lua_State *L) {
     char *cchunk;
     char chunk_size;
 
-    // Lock tty, avoid other threads to write to console
-    //tty_lock();
-
     if (*argCode) {
         code = (char *)argCode;
         lua_pop(L, 1);
@@ -512,6 +508,9 @@ static int os_run (lua_State *L) {
     }
     
     lua_pop(L, 1);
+
+    // Lock tty, avoid other threads to write to console
+    uart_lock(CONSOLE_UART);
 
     // Clear received buffer
     uart_consume(CONSOLE_UART);
@@ -555,22 +554,23 @@ static int os_run (lua_State *L) {
         
     if (!done) {
         // Unlock tty, permit other threads to write to console
-        //tty_unlock();
+    	uart_unlock(CONSOLE_UART);
 
         free(code);
 
         return luaL_error(L, "timeout");
     }
        
- skip:
-    // Call load
+	uart_unlock(CONSOLE_UART);
+
+skip:
+	// Call load
     lua_getglobal(L, "load"); 
     lua_pushstring(L, (const char *)code);
     lua_pcall(L, 1, 2, 0);
 
     if (!lua_isnil(L, -1)) {
         free(code);
-        //tty_unlock();
         return luaL_error(L, lua_tostring(L, -1));
     }
     
@@ -584,15 +584,11 @@ static int os_run (lua_State *L) {
     
     if (lua_pcall(L, 1, 1, 0) != 0) {
         free(code);
-        //tty_unlock();
         return luaL_error(L, lua_tostring(L, -1));
     }
-        
+
     lua_pop(L, 1);
     
-    // Unlock tty, permit other threads to write to console
-    //tty_unlock();
-#endif
     return 0;
 }
 
