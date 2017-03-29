@@ -56,6 +56,7 @@
 #include <sys/syslog.h>
 #include <sys/mutex.h>
 #include <sys/driver.h>
+#include <sys/status.h>
 
 #include <drivers/gpio.h>
 #include <drivers/spi.h>
@@ -206,7 +207,11 @@ driver_error_t *hal_init (void) {
 	#endif
 
 	#if !LMIC_OLD_ISR
-	gpio_install_isr_service(0);
+	if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
+		gpio_install_isr_service(0);
+
+		status_set(STATUS_ISR_SERVICE_INSTALLED);
+	}
 	#else
 	gpio_isr_register(&dio_intr_handler, NULL, 0, &dio_handle);
 	#endif

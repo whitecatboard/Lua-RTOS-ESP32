@@ -84,7 +84,6 @@ static int levent_wait( lua_State* L ) {
     // Create a queue
     q = xQueueCreate(1, sizeof(uint32_t));
     if (!q) {
-    	printf("error\r\n");
     	mtx_unlock(&udata->mtx);
     	return luaL_exception(L, EVENT_ERR_NOT_ENOUGH_MEMORY);
     }

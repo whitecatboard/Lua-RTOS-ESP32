@@ -4,6 +4,10 @@
 
 #if CONFIG_LUA_RTOS_LUA_USE_PIO
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+#include "freertos/task.h"
+
 #include "error.h"
 #include "lualib.h"
 #include "lauxlib.h"
@@ -16,8 +20,12 @@
 #include <string.h>
 #include <ctype.h>
 
+#include <sys/status.h>
+
 #include <drivers/cpu.h>
 #include <drivers/gpio.h>
+
+#include "esp_intr.h"
 
 // PIO public constants
 #define PIO_DIR_OUTPUT      0
@@ -26,6 +34,40 @@
 // PIO private constants
 #define PIO_PORT_OP         0
 #define PIO_PIN_OP          1
+
+typedef struct {
+	int pin;
+	int callbak;
+	lua_State *L;
+	xQueueHandle q;
+} pio_intr_t;
+
+static void IRAM_ATTR pio_intr_handler(void* arg) {
+    portBASE_TYPE high_priority_task_awoken = 0;
+	pio_intr_t *args = (pio_intr_t *)arg;
+	uint8_t d = 0;
+
+	xQueueSendFromISR(args->q, &d, NULL);
+
+	if (high_priority_task_awoken == pdTRUE) {
+        portYIELD_FROM_ISR();
+    }
+}
+
+static void pioTask(void *taskArgs) {
+	pio_intr_t *args = (pio_intr_t *)taskArgs;
+	uint8_t d;
+
+	while (1) {
+		xQueueReceive(args->q, &d, portMAX_DELAY);
+		portYIELD();
+	    if (args->callbak != LUA_NOREF) {
+	        lua_rawgeti(args->L , LUA_REGISTRYINDEX, args->callbak );
+	        lua_call(args->L, 0, 0);
+	    }
+	    portYIELD();
+	}
+}
 
 // Helper functions
 //
@@ -310,6 +352,61 @@ static int pio_pin_pinnum(lua_State *L) {
   return total;
 }
 
+static int pio_pin_interrupt(lua_State *L) {
+    pio_intr_t *args;
+
+    uint32_t pin = luaL_checkinteger(L, 1);
+    int type = luaL_optinteger(L, 3, GPIO_INTR_POSEDGE);
+    int qsize = luaL_optinteger(L, 4, 100);
+    int stack = luaL_optinteger(L, 5, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE);
+    int priority = luaL_optinteger(L, 6, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY);
+    int affinity = luaL_optinteger(L, 7, CONFIG_LUA_RTOS_LUA_THREAD_CPU);
+
+    luaL_checktype(L, 2, LUA_TFUNCTION);
+    lua_pushvalue(L, 2);
+
+    int callback = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    args = (pio_intr_t *)calloc(1,sizeof(pio_intr_t));
+    if (!args) {
+    	// TO DO: exception
+    	return 0;
+
+    }
+    args->callbak = callback;
+    args->L = L;
+    args->pin = pin;
+    args->q = xQueueCreate(qsize, sizeof(uint8_t));
+    if (!args->q) {
+    	free(args);
+
+    	// TO DO: exception
+    	return 0;
+    }
+
+    xTaskCreatePinnedToCore(pioTask, "lpio", stack, args, priority, NULL, affinity);
+
+    gpio_config_t io_conf;
+
+    io_conf.intr_type = type;
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pin_bit_mask = (1ULL << pin);
+    io_conf.pull_down_en = 0;
+    io_conf.pull_up_en = 1;
+
+    gpio_config(&io_conf);
+
+    if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
+    	gpio_install_isr_service(0);
+
+    	status_set(STATUS_ISR_SERVICE_INSTALLED);
+    }
+
+    gpio_isr_handler_add(pin, pio_intr_handler, (void*) args);
+
+	return 0;
+}
+
 static int pio_port_setdir(lua_State *L) {
 	return pio_gen_setdir(L, PIO_PORT_OP);
 }
@@ -372,15 +469,21 @@ static int pio_decode(lua_State *L) {
 #include "modules.h"
 
 static const LUA_REG_TYPE pio_pin_map[] = {
-    { LSTRKEY( "setdir"  ),			LFUNCVAL( pio_pin_setdir  ) },
-    { LSTRKEY( "output"  ),			LFUNCVAL( pio_pin_output  ) },
-    { LSTRKEY( "input"   ),			LFUNCVAL( pio_pin_input   ) },
-    { LSTRKEY( "setpull" ),			LFUNCVAL( pio_pin_setpull ) },
-    { LSTRKEY( "setval"  ),			LFUNCVAL( pio_pin_setval  ) },
-    { LSTRKEY( "sethigh" ),			LFUNCVAL( pio_pin_sethigh ) },
-    { LSTRKEY( "setlow"  ),			LFUNCVAL( pio_pin_setlow  ) },
-    { LSTRKEY( "getval"  ),			LFUNCVAL( pio_pin_getval  ) },
-    { LSTRKEY( "num"  	 ),			LFUNCVAL( pio_pin_pinnum  ) },
+    { LSTRKEY( "setdir"    ),			LFUNCVAL( pio_pin_setdir     ) },
+    { LSTRKEY( "output"    ),			LFUNCVAL( pio_pin_output     ) },
+    { LSTRKEY( "input"     ),			LFUNCVAL( pio_pin_input      ) },
+    { LSTRKEY( "setpull"   ),			LFUNCVAL( pio_pin_setpull    ) },
+    { LSTRKEY( "setval"    ),			LFUNCVAL( pio_pin_setval     ) },
+    { LSTRKEY( "sethigh"   ),			LFUNCVAL( pio_pin_sethigh    ) },
+    { LSTRKEY( "setlow"    ),			LFUNCVAL( pio_pin_setlow     ) },
+    { LSTRKEY( "getval"    ),			LFUNCVAL( pio_pin_getval     ) },
+    { LSTRKEY( "num"  	   ),			LFUNCVAL( pio_pin_pinnum     ) },
+    { LSTRKEY( "interrupt" ),			LFUNCVAL( pio_pin_interrupt  ) },
+	{ LSTRKEY( "IntrPosEdge"   ),		LINTVAL ( GPIO_INTR_POSEDGE        ) },
+	{ LSTRKEY( "IntrNegEdge"   ),		LINTVAL ( GPIO_INTR_NEGEDGE        ) },
+	{ LSTRKEY( "IntrAnyEdge"   ),		LINTVAL ( GPIO_INTR_ANYEDGE        ) },
+	{ LSTRKEY( "IntrLowLevel"  ),		LINTVAL ( GPIO_INTR_LOW_LEVEL      ) },
+	{ LSTRKEY( "IntrHighLevel" ),		LINTVAL ( GPIO_INTR_HIGH_LEVEL     ) },
     { LNILKEY, LNILVAL }
 };
 
@@ -466,69 +569,19 @@ static const LUA_REG_TYPE pio_map[] = {
 #endif
 
 LUALIB_API int luaopen_pio(lua_State *L) {
-#if !LUA_USE_ROTABLE
-    luaL_newlib(L, pio_map);
-
-    // Set it as its own metatable
-    lua_pushvalue(L, -1);
-    lua_setmetatable(L, -2);
-  
-    // Set constants for direction/pullups
-    lua_pushinteger(L, PIO_DIR_INPUT);
-    lua_setfield(L, -2, "INPUT");
-
-    lua_pushinteger(L, PIO_DIR_OUTPUT);
-    lua_setfield(L, -2, "OUTPUT");
-
-    lua_pushinteger(L, PLATFORM_IO_PIN_PULLUP);
-    lua_setfield(L, -2, "PULLUP");
-
-    lua_pushinteger(L, PLATFORM_IO_PIN_PULLDOWN);
-    lua_setfield(L, -2, "PULLDOWN");
-
-    lua_pushinteger(L, PLATFORM_IO_PIN_NOPULL);
-    lua_setfield(L, -2, "NOPULL");
-
-    int port, pin;
-    char tmp[6];
-  
-    // Set constants for port names
-    for(port=1;port <= 8; port++) {
-        if (platform_pio_has_port(port)) {
-            sprintf(tmp,"P%c", platform_pio_port_name(port));
-            lua_pushinteger(L, (port << 4));
-            lua_setfield(L, -2, tmp);
-        }
-    }
-
-    // Set constants for pin names
-    for(port=1;port <= 8; port++) {
-        if (platform_pio_has_port(port)) {
-            for(pin=0;pin < 16;pin++) {
-                if (platform_pio_has_pin(port, pin)) {   
-                    sprintf(tmp,"P%c_%d", platform_pio_port_name(port), pin);
-                    lua_pushinteger(L, (port << 4) | pin);
-                    lua_setfield(L, -2, tmp);
-                }
-            }
-        }
-    }
-    
-    // Setup the new tables (pin and port) inside pio
-    lua_newtable(L);
-    luaL_register(L, NULL, pio_pin_map);
-    lua_setfield(L, -2, "pin");
-
-    lua_newtable(L);
-    luaL_register(L, NULL, pio_port_map);
-    lua_setfield(L, -2, "port");
-
-    return 1;
-#else
 	return 0;
-#endif
 }
 
 MODULE_REGISTER_MAPPED(PIO, pio, pio_map, luaopen_pio);
 
 #endif
+
+
+/*
+
+ pio.pin.interrupt(pio.GPIO25, function()
+ 	 print("hola")
+ end, pio.pin.IntrAnyEdge)
+
+
+ */

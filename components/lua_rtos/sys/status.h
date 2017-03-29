@@ -50,6 +50,7 @@
 #define STATUS_WIFI_STARTED            0x0009
 #define STATUS_WIFI_CONNECTED          0x000a
 #define STATUS_NEED_RTC_SLOW_MEM       0x000b
+#define STATUS_ISR_SERVICE_INSTALLED   0x000c
 
 extern uint32_t LuaOS_status[];
 
