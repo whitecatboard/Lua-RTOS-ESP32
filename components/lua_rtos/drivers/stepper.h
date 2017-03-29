@@ -73,7 +73,7 @@
 #define STEPPER_HZ 100000
 
 // Stepper clock pulse in microseconds
-#define STEPPER_CLOCK_PULSE 20
+#define STEPPER_CLOCK_PULSE 10
 
 #define STEPPER_TIMER_ADJ 5
 

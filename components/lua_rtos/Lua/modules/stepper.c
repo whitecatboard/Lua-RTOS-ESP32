@@ -114,6 +114,15 @@ static int lstepper_move( lua_State* L ){
 
 	// Calculate time needed for reach desired speed from the initial speed at
 	// desired accelerarion
+
+    if (speed < ispd) {
+    	ispd = speed;
+    }
+
+    if (accel <= 0) {
+    	accel = 1;
+    }
+
     double acc_time = ((speed - ispd) / (60.0 * accel));
 
 	// Calculate distance needed for reach desired speed from the initial speed at

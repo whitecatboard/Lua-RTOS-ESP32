@@ -494,6 +494,8 @@ static int os_run (lua_State *L) {
     const char *argCode = luaL_optstring(L, 1, "");
     unsigned int i;
     int done;
+	int status;
+	int from_uart = 0;
 
     char *code = NULL;
     int code_size = 0;
@@ -509,6 +511,9 @@ static int os_run (lua_State *L) {
         goto skip;
     }
     
+    from_uart = 1;
+    code = (char *)calloc(1,1024);
+
     lua_pop(L, 1);
 
     // Lock tty, avoid other threads to write to console
@@ -569,13 +574,13 @@ skip:
 	// Call load
     lua_getglobal(L, "load"); 
     lua_pushstring(L, (const char *)code);
-    lua_pcall(L, 1, 2, 0);
 
-    if (!lua_isnil(L, -1)) {
-        free(code);
+    status = lua_pcall(L, 1, 2, NULL);
+    if (status != LUA_OK) {
+        if (code && from_uart) free(code);
         return luaL_error(L, lua_tostring(L, -1));
     }
-    
+
     lua_remove(L, -1);
     
     lua_getglobal(L, "thread"); 
@@ -584,13 +589,16 @@ skip:
     lua_remove(L, -2);   // Remove "thread" from the stack
     lua_insert(L, -2);   // Switch "thread" with parsed function
     
-    if (lua_pcall(L, 1, 1, 0) != 0) {
-        free(code);
+    status = lua_pcall(L, 1, 1, NULL);
+    if (status != LUA_OK) {
+        if (code && from_uart) free(code);
         return luaL_error(L, lua_tostring(L, -1));
     }
 
     lua_pop(L, 1);
-    
+
+    if (code && from_uart) free(code);
+
     return 0;
 }
 
