@@ -32,16 +32,22 @@
 #if CONFIG_LUA_RTOS_LUA_USE_LORA
 #if CONFIG_LUA_RTOS_USE_LMIC
 
+#define LMIC_OLD_ISR 0
+
 #include "lmic.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
 #include "freertos/event_groups.h"
+#include "freertos/queue.h"
 
 #include "esp_system.h"
 #include "esp_attr.h"
+#include "esp_intr.h"
 #include "soc/gpio_reg.h"
 #include "soc/rtc_cntl_reg.h"
+
+#include "driver/gpio.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -56,11 +62,13 @@
 #include <drivers/lora.h>
 #include <drivers/power_bus.h>
 
+#if LMIC_OLD_ISR
 extern unsigned port_interruptNesting[portNUM_PROCESSORS];
 
 #define DIO_MASK ((1ULL << CONFIG_LUA_RTOS_LMIC_DIO0) | (1ULL << CONFIG_LUA_RTOS_LMIC_DIO1) | (1ULL << CONFIG_LUA_RTOS_LMIC_DIO2))
 #define DIO_MASK_L (DIO_MASK & 0xffffffff)
 #define DIO_MASK_H (DIO_MASK >> 32)
+#endif
 
 /*
  * Mutex for protect critical regions
@@ -69,6 +77,7 @@ static struct mtx lmic_hal_mtx;
 
 static int spi_device;
 
+#if LMIC_OLD_ISR
 /*
  * This variables are for doing things only one time.
  *
@@ -87,6 +96,9 @@ static int resumed = 0;
 
 // DIO lines interrupt handler
 static gpio_isr_handle_t dio_handle;
+#else
+static int nested  = 0;
+#endif
 
  /*
   * This is an event group handler for sleep / resume os_runloop.
@@ -94,7 +106,11 @@ static gpio_isr_handle_t dio_handle;
   */
  #define evLMIC_SLEEP ( 1 << 0 )
 
- EventGroupHandle_t lmicSleepEvent;
+#if !LMIC_OLD_ISR
+xQueueHandle lmicSleepEvent;
+#else
+EventGroupHandle_t lmicSleepEvent;
+#endif
 
 /*
  * This is the LMIC interrupt handler. This interrupt is attached to the transceiver
@@ -104,6 +120,16 @@ static gpio_isr_handle_t dio_handle;
  * will be executed in the next iteration of the os_runloop routine.
  *
  */
+
+#if !LMIC_OLD_ISR
+ static void IRAM_ATTR dio_intr_handler(void* arg) {
+	uint32_t d = 1;
+
+	xQueueSendFromISR(lmicSleepEvent, &d, NULL);
+}
+#endif
+
+#if LMIC_OLD_ISR
 static void IRAM_ATTR dio_intr_handler(void *args) {
 	u4_t status_l = READ_PERI_REG(GPIO_STATUS_REG) & GPIO_STATUS_INT & DIO_MASK_L;
 	u4_t status_h = READ_PERI_REG(GPIO_STATUS1_REG) & GPIO_STATUS1_INT & DIO_MASK_H;
@@ -120,6 +146,7 @@ static void IRAM_ATTR dio_intr_handler(void *args) {
 		hal_resume();
 	}
 }
+#endif
 
 driver_error_t *lmic_lock_resources(int unit, void *resources) {
     driver_unit_lock_error_t *lock_error = NULL;
@@ -178,41 +205,69 @@ driver_error_t *hal_init (void) {
 		gpio_pin_output(CONFIG_LUA_RTOS_LMIC_RST);
 	#endif
 
+	#if !LMIC_OLD_ISR
+	gpio_install_isr_service(0);
+	#else
 	gpio_isr_register(&dio_intr_handler, NULL, 0, &dio_handle);
+	#endif
 
 	// Init DIO pins
 	#if CONFIG_LUA_RTOS_LMIC_DIO0
 		gpio_pin_input(CONFIG_LUA_RTOS_LMIC_DIO0);
+
+		#if !LMIC_OLD_ISR
 		gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO0, GPIO_INTR_POSEDGE);
-	#endif
+	    gpio_isr_handler_add(CONFIG_LUA_RTOS_LMIC_DIO0, dio_intr_handler, (void*) CONFIG_LUA_RTOS_LMIC_DIO0);
+		#else
+	    gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO0, GPIO_INTR_POSEDGE);
+		#endif
+    #endif
 	
 	#if CONFIG_LUA_RTOS_LMIC_DIO1
 		gpio_pin_input(CONFIG_LUA_RTOS_LMIC_DIO1);
+
+		#if !LMIC_OLD_ISR
 		gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO1, GPIO_INTR_POSEDGE);
+		gpio_isr_handler_add(CONFIG_LUA_RTOS_LMIC_DIO1, dio_intr_handler, (void*) CONFIG_LUA_RTOS_LMIC_DIO1);
+		#else
+		gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO1, GPIO_INTR_POSEDGE);
+		#endif
 	#endif
 
 	#if CONFIG_LUA_RTOS_LMIC_DIO2
 		gpio_pin_input(CONFIG_LUA_RTOS_LMIC_DIO2);
+
+		#if !LMIC_OLD_ISR
 		gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO2, GPIO_INTR_POSEDGE);
+		gpio_isr_handler_add(CONFIG_LUA_RTOS_LMIC_DIO2, dio_intr_handler, (void*) CONFIG_LUA_RTOS_LMIC_DIO2);
+		#else
+		gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO2, GPIO_INTR_POSEDGE);
+		#endif
 	#endif
 
-	// Create lmicSleepEvent
+#if !LMIC_OLD_ISR
+	lmicSleepEvent = xQueueCreate(10, sizeof(uint32_t));
+#else
+		// Create lmicSleepEvent
 	lmicSleepEvent = xEventGroupCreate();
+#endif
 
 	// Create mutex
     mtx_init(&lmic_hal_mtx, NULL, NULL, 0);
 
-	// Enable DIO interrupts
-	#if CONFIG_LUA_RTOS_LMIC_DIO0
-		gpio_intr_enable(CONFIG_LUA_RTOS_LMIC_DIO0);
-	#endif
+	#if LMIC_OLD_ISR
+		// Enable DIO interrupts
+		#if CONFIG_LUA_RTOS_LMIC_DIO0
+			gpio_intr_enable(CONFIG_LUA_RTOS_LMIC_DIO0);
+		#endif
 
-	#if CONFIG_LUA_RTOS_LMIC_DIO1
-		gpio_intr_enable(CONFIG_LUA_RTOS_LMIC_DIO1);
-	#endif
+		#if CONFIG_LUA_RTOS_LMIC_DIO1
+			gpio_intr_enable(CONFIG_LUA_RTOS_LMIC_DIO1);
+		#endif
 
-	#if CONFIG_LUA_RTOS_LMIC_DIO2
-		gpio_intr_enable(CONFIG_LUA_RTOS_LMIC_DIO2);
+		#if CONFIG_LUA_RTOS_LMIC_DIO2
+			gpio_intr_enable(CONFIG_LUA_RTOS_LMIC_DIO2);
+		#endif
 	#endif
 
     return NULL;
@@ -242,17 +297,25 @@ void hal_pin_rxtx (u1_t val) {
 void hal_pin_rst (u1_t val) {
 	#if CONFIG_LUA_RTOS_USE_POWER_BUS
 		if (val == 1) {
+			#if LMIC_OLD_ISR
 			esp_intr_disable((intr_handle_t)dio_handle);
+			#endif
 			pwbus_off();
 			delay(1);
 			pwbus_on();
+			#if LMIC_OLD_ISR
 			esp_intr_enable((intr_handle_t)dio_handle);
+			#endif
 		} else if (val == 0) {
+			#if LMIC_OLD_ISR
 			esp_intr_disable((intr_handle_t)dio_handle);
+			#endif
 			pwbus_off();
 			delay(1);
 			pwbus_on();
+			#if LMIC_OLD_ISR
 			esp_intr_enable((intr_handle_t)dio_handle);
+			#endif
 		} else {
 			delay(5);
 		}
@@ -315,6 +378,10 @@ void IRAM_ATTR hal_enableIRQs (void) {
 }
 
 void IRAM_ATTR hal_resume (void) {
+#if !LMIC_OLD_ISR
+	uint32_t d = 0;
+	xQueueSend(lmicSleepEvent, &d, portMAX_DELAY);
+#else
 	int resume = 0;
 
 	mtx_lock(&lmic_hal_mtx);
@@ -335,9 +402,18 @@ void IRAM_ATTR hal_resume (void) {
 			xEventGroupSetBits(lmicSleepEvent, evLMIC_SLEEP);
 		}
 	}
+#endif
 }
 
 void hal_sleep (void) {
+#if !LMIC_OLD_ISR
+	uint32_t d;
+
+	xQueueReceive(lmicSleepEvent, &d, portMAX_DELAY);
+	if (d == 1) {
+		radio_irq_handler(0);
+	}
+#else
 	int sleep = 0;
 
 	mtx_lock(&lmic_hal_mtx);
@@ -357,6 +433,7 @@ void hal_sleep (void) {
 		resumed = 0;
 		mtx_unlock(&lmic_hal_mtx);
 	}
+#endif
 }
 
 /*

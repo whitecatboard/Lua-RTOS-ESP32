@@ -36,14 +36,8 @@
 #include <sys/list.h>
 
 typedef struct {
-	int func;
-	lua_State *L;
-} event_listener_t;
-
-typedef struct {
 	struct mtx mtx;
 	struct list listener_list;
 } event_userdata;
 
 #endif	/* LEVENT_H */
-

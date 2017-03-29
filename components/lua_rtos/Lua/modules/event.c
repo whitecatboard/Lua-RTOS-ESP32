@@ -69,9 +69,9 @@ static int levent_create( lua_State* L ) {
     return 1;
 }
 
-static int levent_addlistener( lua_State* L ) {
+static int levent_wait( lua_State* L ) {
     event_userdata *udata = NULL;
-    event_listener_t *listener = NULL;
+    xQueueHandle q;
     int id;
     int ret;
 
@@ -79,42 +79,38 @@ static int levent_addlistener( lua_State* L ) {
     udata = (event_userdata *)luaL_checkudata(L, 1, "event.ins");
     luaL_argcheck(L, udata, 1, "event expected");
 
-    // Check for function reference
-    luaL_checktype(L, 2, LUA_TFUNCTION);
+    mtx_lock(&udata->mtx);
 
-    // Allocate space for listener
-    listener = (event_listener_t *)calloc(1, sizeof(event_listener_t));
-    if (!listener){
+    // Create a queue
+    q = xQueueCreate(1, sizeof(uint32_t));
+    if (!q) {
+    	printf("error\r\n");
+    	mtx_unlock(&udata->mtx);
     	return luaL_exception(L, EVENT_ERR_NOT_ENOUGH_MEMORY);
     }
 
-    listener->func = luaL_ref(L, LUA_REGISTRYINDEX);
-    listener->L = L;
-
-    // Add listener
-    mtx_lock(&udata->mtx);
-
-    ret = list_add(&udata->listener_list, listener, &id);
+    //Add queue
+    ret = list_add(&udata->listener_list, q, &id);
     if (ret) {
-    	free(listener);
-
     	mtx_unlock(&udata->mtx);
     	return luaL_exception(L, EVENT_ERR_NOT_ENOUGH_MEMORY);
     }
 
     mtx_unlock(&udata->mtx);
 
-    lua_pushinteger(L, id);
+    // Wait
+    uint32_t d;
 
-    return 1;
+    xQueueReceive(q, &d, portMAX_DELAY);
+
+    return 0;
 }
 
 static int levent_broadcast( lua_State* L ) {
     event_userdata *udata = NULL;
-    event_listener_t *listener;
-	int idx = 1;
-	int status;
-	int res;
+    uint32_t q;
+
+    int idx = 1;
 
     // Get user data
 	udata = (event_userdata *)luaL_checkudata(L, 1, "event.ins");
@@ -124,30 +120,20 @@ static int levent_broadcast( lua_State* L ) {
 
     // Call to all listeners
     while (idx >= 1) {
-    	// Get listener
-        if (list_get(&udata->listener_list, idx, (void **)&listener)) {
+    	// Get queue
+        if (list_get(&udata->listener_list, idx, (void **)&q)) {
         	break;
         }
 
-        // Call to listener function
-        lua_rawgeti(listener->L, LUA_REGISTRYINDEX, listener->func);
-        if ((status = lua_pcall(listener->L, 0, 0, 0)) != LUA_OK) {
-        	// Error in call
-        }
+        // Unblock waiting thread on this listener
+    	uint32_t d = 0;
+    	xQueueSend((xQueueHandle)q, &d, portMAX_DELAY);
+
+        // Remove this listener
+        vQueueDelete((xQueueHandle)q);
+        list_remove(&udata->listener_list, idx, 0);
 
         // Next listener
-        idx = list_next(&udata->listener_list, idx);
-    }
-
-    // Destroy all listeners
-    while (idx >= 0) {
-        res = list_get(&udata->listener_list, idx, (void **)&listener);
-        if (res) {
-        	break;
-
-        }
-
-        list_remove(&udata->listener_list, idx, 1);
         idx = list_next(&udata->listener_list, idx);
     }
 
@@ -159,22 +145,27 @@ static int levent_broadcast( lua_State* L ) {
 // Destructor
 static int levent_ins_gc (lua_State *L) {
     event_userdata *udata = NULL;
-    event_listener_t *listener;
-    int idx = 1;
+    uint32_t q;
     int res;
+    int idx = 1;
 
     udata = (event_userdata *)luaL_checkudata(L, 1, "event.ins");
 	if (udata) {
 	    // Destroy all listeners
 	    while (idx >= 0) {
-	        res = list_get(&udata->listener_list, idx, (void **)&listener);
+	        res = list_get(&udata->listener_list, idx, (void **)&q);
 	        if (res) {
 	        	break;
 	        }
 
-	        list_remove(&udata->listener_list, idx, 1);
+	        vQueueDelete((xQueueHandle)q);
+
+	        list_remove(&udata->listener_list, idx, 0);
 	        idx = list_next(&udata->listener_list, idx);
 	    }
+
+	    mtx_destroy(&udata->mtx);
+	    list_destroy(&udata->listener_list, 0);
 	}
 
 	return 0;
@@ -187,11 +178,11 @@ static const LUA_REG_TYPE levent_map[] = {
 };
 
 static const LUA_REG_TYPE levent_ins_map[] = {
-	{ LSTRKEY( "addlistener" ),		LFUNCVAL( levent_addlistener    ) },
-  	{ LSTRKEY( "broadcast"   ),		LFUNCVAL( levent_broadcast 	    ) },
-	{ LSTRKEY( "__metatable" ),    	LROVAL  ( levent_ins_map ) },
-	{ LSTRKEY( "__index"     ),   	LROVAL  ( levent_ins_map ) },
-	{ LSTRKEY( "__gc"        ),   	LROVAL  ( levent_ins_gc ) },
+	{ LSTRKEY( "wait"        ),		LFUNCVAL( levent_wait        ) },
+  	{ LSTRKEY( "broadcast"   ),		LFUNCVAL( levent_broadcast   ) },
+	{ LSTRKEY( "__metatable" ),    	LROVAL  ( levent_ins_map     ) },
+	{ LSTRKEY( "__index"     ),   	LROVAL  ( levent_ins_map     ) },
+	{ LSTRKEY( "__gc"        ),   	LROVAL  ( levent_ins_gc      ) },
     { LNILKEY, LNILVAL }
 };
 
@@ -208,21 +199,30 @@ DRIVER_REGISTER(EVENT,event,NULL,NULL,NULL);
 
 /*
 
-e = event.create()
+a = true
+e1 = event.create()
+e2 = event.create()
 
-e:addlistener(function()
-  print("hi from 1")
-end)
-
-e:addlistener(function()
-  print("hi from 2")
+thread.start(function()
+  while true do
+  	  e1:wait()
+  	  while a do
+	  	  tmr.delay(2)
+	  end
+	  print("hi from 1")
+  end
 end)
 
 thread.start(function()
   while true do
-	  e:broadcast(false)
-	  print("hi from master")
+  	  e2:wait()
+  	  e1:broadcast()
+  	  tmr.delay(4)
+	  print("hi from 2")
   end
 end)
 
- */
+e1:broadcast(false)
+e2:broadcast(false)
+
+*/
