@@ -36,6 +36,7 @@
 #include "freertos/task.h"
 #include "freertos/timers.h"
 #include "freertos/event_groups.h"
+#include "freertos/queue.h"
 
 #include "esp_attr.h"
 #include "esp_deep_sleep.h"
@@ -575,7 +576,7 @@ driver_error_t *lora_join() {
         LMIC_setDrTxpow(current_dr, 14);
     }
 
-	LMIC_startJoining();
+	hal_lmic_join();
 
 	// Wait for one of the expected events
     EventBits_t uxBits = xEventGroupWaitBits(loraEvent, evLORA_JOINED | evLORA_JOIN_DENIED, pdTRUE, pdFALSE, portMAX_DELAY);
@@ -654,10 +655,8 @@ driver_error_t *lora_tx(int cnf, int port, const char *data) {
 		LMIC_setDrTxpow(current_dr, 14);
 	}
 
-	// Send 
-    LMIC_setTxData2(port, payload, payload_len, cnf);
-		
-    free(payload);
+	// Send
+	hal_lmic_tx(port, payload, payload_len, cnf);
 
 	// Wait for one of the expected events
     EventBits_t uxBits = xEventGroupWaitBits(loraEvent, evLORA_TX_COMPLETE | evLORA_ACK_NOT_RECEIVED, pdTRUE, pdFALSE, portMAX_DELAY);
@@ -671,7 +670,7 @@ driver_error_t *lora_tx(int cnf, int port, const char *data) {
         return driver_operation_error(LORA_DRIVER, LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED, NULL);
     }
 	
-    mtx_unlock(&lora_mtx);
+	mtx_unlock(&lora_mtx);
 
     return driver_operation_error(LORA_DRIVER, LORA_ERR_UNEXPECTED_RESPONSE, NULL);
 }

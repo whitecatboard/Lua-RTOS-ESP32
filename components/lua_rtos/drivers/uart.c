@@ -120,6 +120,37 @@ static struct uart uart[NUART] = {
 };
 
 /*
+ * This is for process deferred process for CONSOLE interrupt handler
+ */
+static xQueueHandle signal_q = NULL;
+
+typedef struct {
+	uint8_t type;
+	uint8_t data;
+} console_deferred_data;
+
+static void console_deferred_intr_handler(void *args) {
+	console_deferred_data data;
+
+	for(;;) {
+		xQueueReceive(signal_q, &data, portMAX_DELAY);
+		if (data.type == 0) {
+			_pthread_queue_signal(data.data);
+		} else {
+			if (data.data == 1) {
+		    	uart_lock(CONSOLE_UART);
+		        uart_writes(CONSOLE_UART, "Lua RTOS-booting-ESP32\r\n");
+		    	uart_unlock(CONSOLE_UART);
+			} else if (data.data == 2) {
+		    	uart_lock(CONSOLE_UART);
+		        uart_writes(CONSOLE_UART, "Lua RTOS-running-ESP32\r\n");
+		    	uart_unlock(CONSOLE_UART);
+			}
+		}
+	}
+}
+
+/*
  * Helper functions
  */
 
@@ -246,25 +277,11 @@ void uart_pins(int8_t unit, uint8_t *rx, uint8_t *tx) {
 	}
 }
 
-void IRAM_ATTR report_status(void *pvParameter1, uint32_t status) {
-	if (status == 1) {
-    	uart_lock(CONSOLE_UART);
-        uart_writes(CONSOLE_UART, "Lua RTOS-booting-ESP32\r\n");
-    	uart_unlock(CONSOLE_UART);
-	} else if (status == 2) {
-    	uart_lock(CONSOLE_UART);
-        uart_writes(CONSOLE_UART, "Lua RTOS-running-ESP32\r\n");
-    	uart_unlock(CONSOLE_UART);
-	}
-}
-
-void IRAM_ATTR process_signal(void *pvParameter1, uint32_t signal) {
-	_pthread_queue_signal(signal);
-}
-
 void IRAM_ATTR uart_rx_intr_handler(void *para) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     uint32_t uart_intr_status = 0;
+    console_deferred_data data;
+
 	uint8_t byte, status;
 	int signal = 0;
 	int unit = 0;
@@ -287,17 +304,17 @@ void IRAM_ATTR uart_rx_intr_handler(void *para) {
 			            xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
 					} else {
 						if (signal) {
-							 xTimerPendFunctionCallFromISR(process_signal,
-							                               NULL,
-							                               (uint32_t)signal,
-							                               &xHigherPriorityTaskWoken);
+							data.type = 0;
+							data.data = signal;
+
+							xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
 						}
 
 						if (status) {
-							 xTimerPendFunctionCallFromISR(report_status,
-							                               NULL,
-							                               (uint32_t)status,
-							                               &xHigherPriorityTaskWoken);
+							data.type = 1;
+							data.data = status;
+
+							xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
 						}
 					}
 	            }
@@ -311,17 +328,17 @@ void IRAM_ATTR uart_rx_intr_handler(void *para) {
 			            xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
 					} else {
 						if (signal) {
-							 xTimerPendFunctionCallFromISR(process_signal,
-							                               NULL,
-							                               (uint32_t)signal,
-							                               &xHigherPriorityTaskWoken);
+							data.type = 0;
+							data.data = signal;
+
+							xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
 						}
 
 						if (status) {
-							 xTimerPendFunctionCallFromISR(report_status,
-							                               NULL,
-							                               (uint32_t)status,
-							                               &xHigherPriorityTaskWoken);
+							data.type = 1;
+							data.data = status;
+
+							xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
 						}
 					}
 	            }
@@ -366,6 +383,13 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 	// Sanity checks
 	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
 		return driver_setup_error(UART_DRIVER, UART_ERR_CANT_INIT, "invalid unit");
+	}
+
+	// Create the queue signal, and start a task
+	if (!signal_q) {
+		signal_q = xQueueCreate(1, sizeof(console_deferred_data));
+
+	    xTaskCreatePinnedToCore(console_deferred_intr_handler, "signal", configMINIMAL_STACK_SIZE, NULL, 21, NULL, 0);
 	}
 
 	// Get data bits, and sanity checks

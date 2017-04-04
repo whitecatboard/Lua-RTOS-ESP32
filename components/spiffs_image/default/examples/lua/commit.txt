@@ -1,0 +1,30 @@
+LMIC stack:
+
+* Lua RTOS LMIC stack don't need to disable / enable interrupts.
+* Now, if a thread call to join or tx, this functions are executed in the LMIC os_runloop thread and not in the caller thread.
+
+Event Lua Module:
+
+* Event API finished, this is the final proposed version.
+* Added done function, for inform thread that calls to event's wait function that event is processed.
+* Added pending function, for inform if all listeners have process the event.
+
+PIO Lua module:
+
+* interrupt function callback now informs about the pin value.
+* deferred task for interrupt function must be run on the same core that interrupt handler is running (current thread).
+* interrupt is disabled in the interrupt handler and reenabled when callback is done.
+
+Signal management:
+
+* Avoid call to xTimerPendFunctionCallFromISR for manage signals. Now signal management are done with a queue.
+* Now users can stop a running Lua script using Ctrl-C without any problem.
+
+
+----
+
+* Some bugs resolven in library.js when generating code from templates.
+* After code generation for "when board starts" it's neet to wait for _eventBoardStarted event.
+* Added "when digital pin changes at" block.
+* Added "is being processed?" block.
+* In "when i receive" block it's need to call to the event's done function.

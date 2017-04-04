@@ -32,8 +32,6 @@
 #if CONFIG_LUA_RTOS_LUA_USE_LORA
 #if CONFIG_LUA_RTOS_USE_LMIC
 
-#define LMIC_OLD_ISR 0
-
 #include "lmic.h"
 
 #include "freertos/FreeRTOS.h"
@@ -63,13 +61,7 @@
 #include <drivers/lora.h>
 #include <drivers/power_bus.h>
 
-#if LMIC_OLD_ISR
-extern unsigned port_interruptNesting[portNUM_PROCESSORS];
-
-#define DIO_MASK ((1ULL << CONFIG_LUA_RTOS_LMIC_DIO0) | (1ULL << CONFIG_LUA_RTOS_LMIC_DIO1) | (1ULL << CONFIG_LUA_RTOS_LMIC_DIO2))
-#define DIO_MASK_L (DIO_MASK & 0xffffffff)
-#define DIO_MASK_H (DIO_MASK >> 32)
-#endif
+#define LMIC_HAL_INTERRUPTS 0
 
 /*
  * Mutex for protect critical regions
@@ -78,27 +70,8 @@ static struct mtx lmic_hal_mtx;
 
 static int spi_device;
 
-#if LMIC_OLD_ISR
-/*
- * This variables are for doing things only one time.
- *
- * nested is for enable / disable interrupts once.
- * sleeped is for sleep os_runloop once.
- * resumed is for resume os_runloop once.
- *
- * For example, enable / disable interrupts are done as follows:
- *
- *   enable - disable - enable - disable
- *
- */
-static int nested  = 0;
-static int sleeped = 0;
-static int resumed = 0;
-
-// DIO lines interrupt handler
-static gpio_isr_handle_t dio_handle;
-#else
-static int nested  = 0;
+#if LMIC_HAL_INTERRUPTS
+static int nestedInterrupts  = 0;
 #endif
 
  /*
@@ -107,11 +80,12 @@ static int nested  = 0;
   */
  #define evLMIC_SLEEP ( 1 << 0 )
 
-#if !LMIC_OLD_ISR
+// This queue is for resume the os_runloop loop
 xQueueHandle lmicSleepEvent;
-#else
-EventGroupHandle_t lmicSleepEvent;
-#endif
+
+// This queue is for send a command to LMIC for ensure that
+// this command is executed into the LMIC thread
+xQueueHandle lmicCommand;
 
 /*
  * This is the LMIC interrupt handler. This interrupt is attached to the transceiver
@@ -122,32 +96,11 @@ EventGroupHandle_t lmicSleepEvent;
  *
  */
 
-#if !LMIC_OLD_ISR
  static void IRAM_ATTR dio_intr_handler(void* arg) {
 	uint32_t d = 1;
 
 	xQueueSendFromISR(lmicSleepEvent, &d, NULL);
 }
-#endif
-
-#if LMIC_OLD_ISR
-static void IRAM_ATTR dio_intr_handler(void *args) {
-	u4_t status_l = READ_PERI_REG(GPIO_STATUS_REG) & GPIO_STATUS_INT & DIO_MASK_L;
-	u4_t status_h = READ_PERI_REG(GPIO_STATUS1_REG) & GPIO_STATUS1_INT & DIO_MASK_H;
-
-	/*
-	 * Don't change the position of this code. Interrupt status must be clean
-	 * in this point.
-	 */
-	WRITE_PERI_REG(GPIO_STATUS_W1TC_REG, status_l & DIO_MASK_L);
-	WRITE_PERI_REG(GPIO_STATUS1_W1TC_REG, status_h & DIO_MASK_H);
-
-	if (status_l | status_h) {
-		radio_irq_handler(0);
-		hal_resume();
-	}
-}
-#endif
 
 driver_error_t *lmic_lock_resources(int unit, void *resources) {
     driver_unit_lock_error_t *lock_error = NULL;
@@ -206,74 +159,39 @@ driver_error_t *hal_init (void) {
 		gpio_pin_output(CONFIG_LUA_RTOS_LMIC_RST);
 	#endif
 
-	#if !LMIC_OLD_ISR
 	if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
 		gpio_install_isr_service(0);
 
 		status_set(STATUS_ISR_SERVICE_INSTALLED);
 	}
-	#else
-	gpio_isr_register(&dio_intr_handler, NULL, 0, &dio_handle);
-	#endif
 
 	// Init DIO pins
 	#if CONFIG_LUA_RTOS_LMIC_DIO0
 		gpio_pin_input(CONFIG_LUA_RTOS_LMIC_DIO0);
 
-		#if !LMIC_OLD_ISR
 		gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO0, GPIO_INTR_POSEDGE);
 	    gpio_isr_handler_add(CONFIG_LUA_RTOS_LMIC_DIO0, dio_intr_handler, (void*) CONFIG_LUA_RTOS_LMIC_DIO0);
-		#else
-	    gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO0, GPIO_INTR_POSEDGE);
-		#endif
     #endif
 	
 	#if CONFIG_LUA_RTOS_LMIC_DIO1
 		gpio_pin_input(CONFIG_LUA_RTOS_LMIC_DIO1);
 
-		#if !LMIC_OLD_ISR
 		gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO1, GPIO_INTR_POSEDGE);
 		gpio_isr_handler_add(CONFIG_LUA_RTOS_LMIC_DIO1, dio_intr_handler, (void*) CONFIG_LUA_RTOS_LMIC_DIO1);
-		#else
-		gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO1, GPIO_INTR_POSEDGE);
-		#endif
 	#endif
 
 	#if CONFIG_LUA_RTOS_LMIC_DIO2
 		gpio_pin_input(CONFIG_LUA_RTOS_LMIC_DIO2);
 
-		#if !LMIC_OLD_ISR
 		gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO2, GPIO_INTR_POSEDGE);
 		gpio_isr_handler_add(CONFIG_LUA_RTOS_LMIC_DIO2, dio_intr_handler, (void*) CONFIG_LUA_RTOS_LMIC_DIO2);
-		#else
-		gpio_set_intr_type(CONFIG_LUA_RTOS_LMIC_DIO2, GPIO_INTR_POSEDGE);
-		#endif
 	#endif
 
-#if !LMIC_OLD_ISR
-	lmicSleepEvent = xQueueCreate(10, sizeof(uint32_t));
-#else
-		// Create lmicSleepEvent
-	lmicSleepEvent = xEventGroupCreate();
-#endif
+	lmicSleepEvent = xQueueCreate(1, sizeof(uint32_t));
+	lmicCommand = xQueueCreate(1, sizeof(lmic_command_t));
 
 	// Create mutex
     mtx_init(&lmic_hal_mtx, NULL, NULL, 0);
-
-	#if LMIC_OLD_ISR
-		// Enable DIO interrupts
-		#if CONFIG_LUA_RTOS_LMIC_DIO0
-			gpio_intr_enable(CONFIG_LUA_RTOS_LMIC_DIO0);
-		#endif
-
-		#if CONFIG_LUA_RTOS_LMIC_DIO1
-			gpio_intr_enable(CONFIG_LUA_RTOS_LMIC_DIO1);
-		#endif
-
-		#if CONFIG_LUA_RTOS_LMIC_DIO2
-			gpio_intr_enable(CONFIG_LUA_RTOS_LMIC_DIO2);
-		#endif
-	#endif
 
     return NULL;
 }
@@ -302,25 +220,13 @@ void hal_pin_rxtx (u1_t val) {
 void hal_pin_rst (u1_t val) {
 	#if CONFIG_LUA_RTOS_USE_POWER_BUS
 		if (val == 1) {
-			#if LMIC_OLD_ISR
-			esp_intr_disable((intr_handle_t)dio_handle);
-			#endif
 			pwbus_off();
 			delay(1);
 			pwbus_on();
-			#if LMIC_OLD_ISR
-			esp_intr_enable((intr_handle_t)dio_handle);
-			#endif
 		} else if (val == 0) {
-			#if LMIC_OLD_ISR
-			esp_intr_disable((intr_handle_t)dio_handle);
-			#endif
 			pwbus_off();
 			delay(1);
 			pwbus_on();
-			#if LMIC_OLD_ISR
-			esp_intr_enable((intr_handle_t)dio_handle);
-			#endif
 		} else {
 			delay(5);
 		}
@@ -351,94 +257,42 @@ u1_t IRAM_ATTR hal_spi (u1_t outval) {
 }
 
 void IRAM_ATTR hal_disableIRQs (void) {
-	int disable = 0;
-
+#if LMIC_HAL_INTERRUPTS
 	mtx_lock(&lmic_hal_mtx);
-
-	if (nested++ == 0) {
-		disable = 1;
-	}
-
-	mtx_unlock(&lmic_hal_mtx);
-
-	if (disable) {
+	if (nestedInterrupts++ == 0) {
+		mtx_unlock(&lmic_hal_mtx);
 		portDISABLE_INTERRUPTS();
-	}
-}
-
-void IRAM_ATTR hal_enableIRQs (void) {
-	int enable = 0;
-
-	mtx_lock(&lmic_hal_mtx);
-
-	if (--nested == 0) {
-		enable = 1;
-	}
-
-	mtx_unlock(&lmic_hal_mtx);
-
-	if (enable) {
-		portENABLE_INTERRUPTS();
-	}
-}
-
-void IRAM_ATTR hal_resume (void) {
-#if !LMIC_OLD_ISR
-	uint32_t d = 0;
-	xQueueSend(lmicSleepEvent, &d, portMAX_DELAY);
-#else
-	int resume = 0;
-
-	mtx_lock(&lmic_hal_mtx);
-
-	if (resumed == 0) {
-		resumed = 1;
-		resume  = 1;
-	}
-
-	mtx_unlock(&lmic_hal_mtx);
-
-	if (resume) {
-		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-		if (port_interruptNesting[xPortGetCoreID()] != 0) {
-			xEventGroupSetBitsFromISR(lmicSleepEvent, evLMIC_SLEEP, &xHigherPriorityTaskWoken);
-		} else {
-			xEventGroupSetBits(lmicSleepEvent, evLMIC_SLEEP);
-		}
+	} else {
+		mtx_unlock(&lmic_hal_mtx);
 	}
 #endif
 }
 
+void IRAM_ATTR hal_enableIRQs (void) {
+#if LMIC_HAL_INTERRUPTS
+	mtx_lock(&lmic_hal_mtx);
+	if (--nestedInterrupts == 0) {
+		mtx_unlock(&lmic_hal_mtx);
+		portENABLE_INTERRUPTS();
+	} else {
+		mtx_unlock(&lmic_hal_mtx);
+	}
+#endif
+}
+
+void IRAM_ATTR hal_resume (void) {
+	uint32_t d = 0;
+
+	xQueueSend(lmicSleepEvent, &d, 0);
+}
+
 void hal_sleep (void) {
-#if !LMIC_OLD_ISR
-	uint32_t d;
+	uint32_t d = 0;
 
 	xQueueReceive(lmicSleepEvent, &d, portMAX_DELAY);
 	if (d == 1) {
 		radio_irq_handler(0);
 	}
-#else
-	int sleep = 0;
-
-	mtx_lock(&lmic_hal_mtx);
-
-	if (sleeped == 0) {
-		sleeped = 1;
-		sleep   = 1;
-	}
-
-	mtx_unlock(&lmic_hal_mtx);
-
-	if (sleep) {
-		xEventGroupWaitBits(lmicSleepEvent, evLMIC_SLEEP, pdTRUE, pdFALSE, portMAX_DELAY);
-
-		mtx_lock(&lmic_hal_mtx);
-		sleeped = 0;
-		resumed = 0;
-		mtx_unlock(&lmic_hal_mtx);
-	}
-#endif
 }
 
 /*
@@ -483,7 +337,7 @@ static u1_t is_close(u8_t target) {
  */
 void hal_waitUntil (u8_t time) {
     while (!is_close(time)) {
-    	udelay(1);
+    	udelay(US_PER_OSTICK);
     }
 }
 
@@ -505,6 +359,44 @@ void hal_failed (char *file, int line) {
 	syslog(LOG_ERR, "%lu: assert at %s, line %s\n", (u4_t)os_getTime(), file, line);
 
 	for(;;);
+}
+
+void hal_lmic_tx(int port, uint8_t *payload, uint8_t payload_len, uint8_t cnf) {
+	lmic_command_t command;
+
+	command.command = LMICTx;
+	command.tx.port = port;
+	command.tx.payload = payload;
+	command.tx.payload_len = payload_len;
+	command.tx.cnf = cnf;
+
+	xQueueSend(lmicCommand, &command, portMAX_DELAY);
+
+	hal_resume();
+}
+
+void hal_lmic_join() {
+	lmic_command_t command;
+
+	command.command = LMICJoin;
+
+	xQueueSend(lmicCommand, &command, portMAX_DELAY);
+
+	hal_resume();
+}
+
+void hal_lmic_command() {
+	lmic_command_t command;
+
+	if (xQueueReceive(lmicCommand, &command, 0)) {
+		if (command.command == LMICTx) {
+			LMIC_setTxData2(command.tx.port, command.tx.payload,  command.tx.payload_len,  command.tx.cnf);
+
+			free(command.tx.payload);
+		} else if (command.command == LMICJoin) {
+			LMIC_startJoining();
+		}
+	}
 }
 
 #endif

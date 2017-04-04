@@ -285,35 +285,13 @@ void IRAM_ATTR _pthread_queue_signal(int s) {
         
         if (thread->thread == 1) {
             if ((thread->signals[s] != SIG_DFL) && (thread->signals[s] != SIG_IGN)) {
-				#if LUA_USE_SAFE_SIGNAL
-            	uxSetSignaled(thread->task, s);
-				#else
             	thread->signals[s](s);
-				#endif
             }         
         }
         
         index = list_next(&thread_list, index);
     }
 }
-
-#if LUA_USE_SAFE_SIGNAL
-void _pthread_process_signal(void) {
-    struct pthread *thread; // Current thread
-    uint32_t s;
-    
-    list_get(&thread_list, pthread_self(), (void **)&thread);
-    
-    for(s=0;s < 32;s++) {
-    	if (uxGetSignaled(thread->task) & (1 << s)) {
-	        if ((thread->signals[s] != SIG_DFL) && (thread->signals[s] != SIG_IGN)) {
-    			thread->signals[s](s);
-	        }
-	        uxSetSignaled(thread->task, 0);
-    	}
-    }
-}
-#endif
 
 int IRAM_ATTR _pthread_has_signal(int s) {
     struct pthread *thread; // Current thread

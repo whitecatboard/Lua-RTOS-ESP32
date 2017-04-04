@@ -1,0 +1,4 @@
+LMIC stack:
+
+* Lua RTOS LMIC stack don't need to disable / enable interrupts.
+* Now, if a thread must join / tx to LoRa WAN, join / tx are integry executed in the LMIC os_runloop.

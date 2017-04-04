@@ -71,22 +71,25 @@ DRIVER_REGISTER_ERROR(THREAD, thread, InvalidPriority, "invalid priority", LUA_T
 DRIVER_REGISTER_ERROR(THREAD, thread, InvalidCPUAffinity, "invalid CPU affinity", LUA_THREAD_ERR_INVALID_CPU_AFFINITY);
 DRIVER_REGISTER_ERROR(THREAD, thread, CannotMonitorAsTable, "you can't monitor thread as table", LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE);
 
-#define LTHREAD_STATUS_RUNNING   1
-#define LTHREAD_STATUS_SUSPENDED 2
+#define thread_status_RUNNING   1
+#define thread_status_SUSPENDED 2
 
-// List of threads
-static struct list lthread_list;
+// List of Lua threads (this threads are created from Lua)
+static struct list lua_threads;
+
+// Lis of all pthreads (this threads are created from Lua or from System)
+extern struct list thread_list;
 
 void thread_terminated(void *args) {
     struct lthread *thread;
 
     int *thid = (void *)args;
-    int res = list_get(&lthread_list, *thid, (void **)&thread);
+    int res = list_get(&lua_threads, *thid, (void **)&thread);
     if (!res) {  
         luaL_unref(thread->PL, LUA_REGISTRYINDEX, thread->function_ref);
         luaL_unref(thread->PL, LUA_REGISTRYINDEX, thread->thread_ref);
             
-        list_remove(&lthread_list, *thid, 1);
+        list_remove(&lua_threads, *thid, 1);
     }
 
 	// Delay a number of ticks for take the iddle
@@ -94,7 +97,7 @@ void thread_terminated(void *args) {
 	vTaskDelay(10);	
 }
 
-void *thread_start_task(void *arg) {
+void *lthread_start_task(void *arg) {
     struct lthread *thread;
     int *thid;
     thread = (struct lthread *)arg;
@@ -118,7 +121,7 @@ void *thread_start_task(void *arg) {
     return NULL;
 }
 
-static int thread_suspend_pthreads(lua_State *L, int thid) {
+static int lthread_suspend_pthreads(lua_State *L, int thid) {
     struct lthread *thread;
     int res, idx;
     
@@ -128,11 +131,11 @@ static int thread_suspend_pthreads(lua_State *L, int thid) {
     if (thid) {
         idx = thid;
     } else {
-        idx = list_first(&lthread_list);
+        idx = list_first(&lua_threads);
     }
     
     while (idx >= 0) {
-        res = list_get(&lthread_list, idx, (void **)&thread);
+        res = list_get(&lua_threads, idx, (void **)&thread);
         if (res) {
         	luaL_exception(L, LUA_THREAD_ERR_NON_EXISTENT);
         }
@@ -142,11 +145,11 @@ static int thread_suspend_pthreads(lua_State *L, int thid) {
             _pthread_suspend(thread->thread);
 
             // Update thread status
-            thread->status = LTHREAD_STATUS_SUSPENDED;
+            thread->status = thread_status_SUSPENDED;
         }
 
         if (!thid) {
-            idx = list_next(&lthread_list, idx);
+            idx = list_next(&lua_threads, idx);
         } else {
             idx = -1;
         }
@@ -155,7 +158,7 @@ static int thread_suspend_pthreads(lua_State *L, int thid) {
     return 0;
 }
 
-static int thread_resume_pthreads(lua_State *L, int thid) {
+static int lthread_resume_pthreads(lua_State *L, int thid) {
     struct lthread *thread;
     int res, idx;
     
@@ -165,11 +168,11 @@ static int thread_resume_pthreads(lua_State *L, int thid) {
     if (thid) {
         idx = thid;
     } else {
-        idx = list_first(&lthread_list);
+        idx = list_first(&lua_threads);
     }
     
     while (idx >= 0) {
-        res = list_get(&lthread_list, idx, (void **)&thread);
+        res = list_get(&lua_threads, idx, (void **)&thread);
         if (res) {
         	luaL_exception(L, LUA_THREAD_ERR_NON_EXISTENT);
         }
@@ -179,11 +182,11 @@ static int thread_resume_pthreads(lua_State *L, int thid) {
             _pthread_resume(thread->thread);
 
             // Update thread status
-            thread->status = LTHREAD_STATUS_RUNNING;
+            thread->status = thread_status_RUNNING;
         }
 
         if (!thid) {
-            idx = list_next(&lthread_list, idx);
+            idx = list_next(&lua_threads, idx);
         } else {
             idx = -1;
         }
@@ -192,35 +195,35 @@ static int thread_resume_pthreads(lua_State *L, int thid) {
     return 0;
 }
 
-static int thread_stop_pthreads(lua_State *L, int thid) {
+static int lthread_stop_pthreads(lua_State *L, int thid) {
     struct lthread *thread;
     int res, idx;
     
     if (thid) {
         idx = thid;
     } else {
-        idx = list_first(&lthread_list);
+        idx = list_first(&lua_threads);
     }
     
     while (idx >= 0) {
-        res = list_get(&lthread_list, idx, (void **)&thread);
+        res = list_get(&lua_threads, idx, (void **)&thread);
         if (res) {
         	luaL_exception(L, LUA_THREAD_ERR_NON_EXISTENT);
         }
 
         // If thread is created, suspend
         if (thread->thread) {
-            _pthread_stop(thread->thread);            
+            _pthread_stop(thread->thread);
             _pthread_free(thread->thread);
 
             luaL_unref(L, LUA_REGISTRYINDEX, thread->function_ref);
             luaL_unref(L, LUA_REGISTRYINDEX, thread->thread_ref);
 
-            list_remove(&lthread_list, idx, 1);
+            list_remove(&lua_threads, idx, 1);
         }
 
         if (!thid) {
-            idx = list_next(&lthread_list, idx);
+            idx = list_next(&lua_threads, idx);
         } else {
             idx = -1;
         }
@@ -247,7 +250,7 @@ static int thread_stop_pthreads(lua_State *L, int thid) {
     return 0;
 }
 
-static int thread_list(lua_State *L) {
+static int lthread_list(lua_State *L) {
     struct lthread *thread;
     int idx;
     char status[5];
@@ -297,18 +300,18 @@ monitor_loop:
 		lua_createtable(L, 0, 0);
 	}
 
-	// For each lthread in list ...
+	// For each Lua thread ...
 	int i = 0;
-	idx = list_first(&lthread_list);
+	idx = list_first(&lua_threads);
 	int stack, stack_free;
 
 	while (idx >= 0) {
-		list_get(&lthread_list, idx, (void **)&thread);
+		list_get(&lua_threads, idx, (void **)&thread);
 
 		// Get status
 		switch (thread->status) {
-			case LTHREAD_STATUS_RUNNING: strcpy(status,"run"); break;
-			case LTHREAD_STATUS_SUSPENDED: strcpy(status,"susp"); break;
+			case thread_status_RUNNING: strcpy(status,"run"); break;
+			case thread_status_SUSPENDED: strcpy(status,"susp"); break;
 			default:
 				strcpy(status,"");
 
@@ -346,7 +349,51 @@ monitor_loop:
 	        lua_settable(L,-3);
 		}
 
-		idx = list_next(&lthread_list, idx);
+		idx = list_next(&lua_threads, idx);
+		i++;
+	}
+
+	// For each thread ...
+	struct pthread *pthread;
+	i = 0;
+	idx = list_first(&thread_list);
+
+	while (idx >= 0) {
+		list_get(&thread_list, idx, (void **)&pthread);
+
+		stack = _pthread_stack(pthread->thread);
+		stack_free = _pthread_stack_free(pthread->thread);
+
+		if (!table) {
+			printf(
+					"% 4d   %-6s   % 4d   % 6d   % 6d   % 6d   \n",
+					idx, status,
+					_pthread_core(pthread->thread),
+					stack,
+					stack_free,
+					stack - stack_free
+			);
+		} else {
+			lua_pushinteger(L, i);
+
+			lua_createtable(L, 0, 4);
+
+			lua_pushinteger(L, idx);
+	        lua_setfield (L, -2, "thid");
+
+	        lua_pushstring(L, status);
+	        lua_setfield (L, -2, "status");
+
+	        lua_pushinteger(L, _pthread_core(pthread->thread));
+	        lua_setfield (L, -2, "core");
+
+	        lua_pushinteger(L, _pthread_stack_free(pthread->thread));
+	        lua_setfield (L, -2, "stack");
+
+	        lua_settable(L,-3);
+		}
+
+		idx = list_next(&lua_threads, idx);
 		i++;
 	}
 
@@ -414,13 +461,13 @@ static int new_thread(lua_State* L, int run) {
     thread->PL = L;
     thread->L = lua_newthread(L);
     thread->thread_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    thread->status = LTHREAD_STATUS_SUSPENDED;
+    thread->status = thread_status_SUSPENDED;
     
     lua_rawgeti(L, LUA_REGISTRYINDEX, thread->function_ref);                
     lua_xmove(L, thread->L, 1);
 
     // Add lthread to list
-    res = list_add(&lthread_list, thread, &idx);
+    res = list_add(&lua_threads, thread, &idx);
     if (res) {
         free(thread);
     	return luaL_exception(L, LUA_THREAD_ERR_NOT_ENOUGH_MEMORY);
@@ -452,7 +499,7 @@ static int new_thread(lua_State* L, int run) {
     retries = 0;
     
 retry:  
-    res = pthread_create(&id, &attr, thread_start_task, thread);
+    res = pthread_create(&id, &attr, lthread_start_task, thread);
     if (res) {
         if ((res == ENOMEM) && (retries < 4)) {
             luaC_checkGC(L);  /* stack grow uses memory */
@@ -462,13 +509,13 @@ retry:
             goto retry;
         }
         
-        list_remove(&lthread_list, idx, 1);
+        list_remove(&lua_threads, idx, 1);
         
         return luaL_exception_extended(L, LUA_THREAD_ERR_CANNOT_START, strerror(errno));
     }
 
     // Update thread status
-    thread->status = LTHREAD_STATUS_RUNNING;
+    thread->status = thread_status_RUNNING;
     
     // Store pthread id
     thread->thread = id;            
@@ -479,16 +526,16 @@ retry:
 }
 
 // Create a new thread and run it
-static int thread_start(lua_State* L) {
+static int lthread_start(lua_State* L) {
     return new_thread(L, 1);
 }    
 
 // Create a new thread in suspended mode
-static int thread_create(lua_State* L) {
+static int lthread_create(lua_State* L) {
     return new_thread(L, 0);
 }    
 
-static int thread_sleep(lua_State* L) {
+static int lthread_sleep(lua_State* L) {
     int seconds;
     
     // Check argument (seconds)
@@ -499,7 +546,7 @@ static int thread_sleep(lua_State* L) {
     return 0;
 }
 
-static int thread_sleepms(lua_State* L) {
+static int lthread_sleepms(lua_State* L) {
     int milliseconds;
     
     // Check argument (seconds)
@@ -510,7 +557,7 @@ static int thread_sleepms(lua_State* L) {
     return 0;
 }
 
-static int thread_sleepus(lua_State* L) {
+static int lthread_sleepus(lua_State* L) {
     int useconds;
     
     // Check argument (seconds)
@@ -522,36 +569,36 @@ static int thread_sleepus(lua_State* L) {
 }
 
 // Suspend all threads, or a specific thread
-static int thread_suspend(lua_State* L) {
-    return thread_suspend_pthreads(L, luaL_optinteger(L, 1, 0));    
+static int lthread_suspend(lua_State* L) {
+    return lthread_suspend_pthreads(L, luaL_optinteger(L, 1, 0));
 }
 
 // Resume all threads, or a specific thread
-static int thread_resume(lua_State* L) {
-    return thread_resume_pthreads(L, luaL_optinteger(L, 1, 0));    
+static int lthread_resume(lua_State* L) {
+    return lthread_resume_pthreads(L, luaL_optinteger(L, 1, 0));
 }
 
 // Stop all threads, or a specific thread
-static int thread_stop(lua_State* L) {
-    return thread_stop_pthreads(L, luaL_optinteger(L, 1, 0));    
+static int lthread_stop(lua_State* L) {
+    return lthread_stop_pthreads(L, luaL_optinteger(L, 1, 0));
 }
 
-static int thread_status(lua_State* L) {
+static int lthread_status(lua_State* L) {
     struct lthread *thread;
     int res;
     int thid;
     
     thid = luaL_checkinteger(L, 1);
     
-    res = list_get(&lthread_list, thid, (void **)&thread);
+    res = list_get(&lua_threads, thid, (void **)&thread);
     if (res) {
         lua_pushnil(L);
         return 1;
     }
     
     switch (thread->status) {
-        case LTHREAD_STATUS_RUNNING:   lua_pushstring(L,"running"); break;
-        case LTHREAD_STATUS_SUSPENDED: lua_pushstring(L,"suspended"); break;
+        case thread_status_RUNNING:   lua_pushstring(L,"running"); break;
+        case thread_status_SUSPENDED: lua_pushstring(L,"suspended"); break;
     }
 
     return 1;
@@ -562,17 +609,17 @@ static int thread_status(lua_State* L) {
 extern LUA_REG_TYPE thread_error_map[];
 
 static const LUA_REG_TYPE thread[] = {
-    { LSTRKEY( "status"  ),			LFUNCVAL( thread_status  ) },
-    { LSTRKEY( "create"  ),			LFUNCVAL( thread_create  ) },
-    { LSTRKEY( "start"   ),			LFUNCVAL( thread_start   ) },
-    { LSTRKEY( "suspend" ),			LFUNCVAL( thread_suspend ) },
-    { LSTRKEY( "resume"  ),			LFUNCVAL( thread_resume  ) },
-    { LSTRKEY( "stop"    ),			LFUNCVAL( thread_stop    ) },
-    { LSTRKEY( "list"    ),			LFUNCVAL( thread_list    ) },
-    { LSTRKEY( "sleep"   ),			LFUNCVAL( thread_sleep   ) },
-    { LSTRKEY( "sleepms" ),			LFUNCVAL( thread_sleepms ) },
-    { LSTRKEY( "sleepus" ),			LFUNCVAL( thread_sleepus ) },
-    { LSTRKEY( "usleep"  ),			LFUNCVAL( thread_sleepus ) },
+    { LSTRKEY( "status"  ),			LFUNCVAL( lthread_status  ) },
+    { LSTRKEY( "create"  ),			LFUNCVAL( lthread_create  ) },
+    { LSTRKEY( "start"   ),			LFUNCVAL( lthread_start   ) },
+    { LSTRKEY( "suspend" ),			LFUNCVAL( lthread_suspend ) },
+    { LSTRKEY( "resume"  ),			LFUNCVAL( lthread_resume  ) },
+    { LSTRKEY( "stop"    ),			LFUNCVAL( lthread_stop    ) },
+    { LSTRKEY( "list"    ),			LFUNCVAL( lthread_list    ) },
+    { LSTRKEY( "sleep"   ),			LFUNCVAL( lthread_sleep   ) },
+    { LSTRKEY( "sleepms" ),			LFUNCVAL( lthread_sleepms ) },
+    { LSTRKEY( "sleepus" ),			LFUNCVAL( lthread_sleepus ) },
+    { LSTRKEY( "usleep"  ),			LFUNCVAL( lthread_sleepus ) },
 
 	// Error definitions
 	{LSTRKEY("error"),  			LROVAL( thread_error_map )},
@@ -581,7 +628,7 @@ static const LUA_REG_TYPE thread[] = {
 };
 
 int luaopen_thread(lua_State* L) {
-	list_init(&lthread_list, 1);
+	list_init(&lua_threads, 1);
 	
 #if !LUA_USE_ROTABLE
     luaL_newlib(L, thread);

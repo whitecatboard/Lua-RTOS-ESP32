@@ -23,6 +23,29 @@
 extern "C"{
 #endif
 
+typedef enum {
+	LMICJoin,
+	LMICTx
+} lmic_command;
+
+typedef struct {
+	lmic_command command;
+
+	union {
+		struct {
+			int port;
+			int cnf;
+			uint8_t *payload;
+			uint8_t payload_len;
+		} tx;
+
+		struct {
+
+		} join;
+	};
+
+} lmic_command_t;
+
 /*
  * initialize hardware (IO, SPI, TIMER, IRQ).
  */
@@ -95,6 +118,9 @@ u1_t hal_checkTimer (u8_t targettime);
  *   - action could be HALT or reboot
  */
 void hal_failed (char *file, int line);
+
+void hal_lmic_tx(int port, uint8_t *payload, uint8_t payload_len, uint8_t cnf);
+void hal_lmic_join();
 
 #ifdef __cplusplus
 } // extern "C"

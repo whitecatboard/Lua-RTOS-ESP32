@@ -159,7 +159,6 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 			break;
 
 		default :
-			printf("other event %d\r\n", event->event_id);
 			break;
 	}
 

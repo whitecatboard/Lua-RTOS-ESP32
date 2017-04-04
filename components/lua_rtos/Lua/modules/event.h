@@ -1,8 +1,8 @@
 /*
- * Lua RTOS, event wrapper
+ * Lua RTOS, Lua event module
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -27,17 +27,35 @@
  * this software.
  */
 
+/*
+ * This module implements basic event driven mechanism for sync threads.
+ */
+
 #ifndef LEVENT_H
 #define	LEVENT_H
 
 #include "lua.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+
 #include <sys/mutex.h>
 #include <sys/list.h>
 
+#include <pthread/pthread.h>
+
 typedef struct {
-	struct mtx mtx;
-	struct list listener_list;
-} event_userdata;
+	pthread_t thread;   // Thread id
+	uint8_t is_waiting; // If 1 the caller is waiting for the termination of all subscribers
+	xQueueHandle q;     // Queue for sync listener thread with this event
+} listener_data_t;
+
+typedef struct {
+	struct mtx mtx;        // Mutex for protect the listeners list and the queue
+	struct list listeners; // List of listeners for this event
+	uint8_t pending;       // Number of listeners that are processing the event
+	uint8_t waiting_for;   // Number of listener that caller must be wait for it's termination
+	xQueueHandle q;        // This is used by the listener for inform the caller that event is processed
+} event_userdata_t;
 
 #endif	/* LEVENT_H */

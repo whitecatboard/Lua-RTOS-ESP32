@@ -2,7 +2,7 @@
  * Lua RTOS, Lua event module
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -31,6 +31,9 @@
 
 #if CONFIG_LUA_RTOS_LUA_USE_EVENT
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
@@ -39,7 +42,11 @@
 #include "event.h"
 #include "modules.h"
 
+#include <string.h>
+
 #include <sys/driver.h>
+
+#include <pthread/pthread.h>
 
 // This variables are defined at linker time
 extern LUA_REG_TYPE event_error_map[];
@@ -50,18 +57,102 @@ extern LUA_REG_TYPE event_error_map[];
 
 DRIVER_REGISTER_ERROR(EVENT, event, NotEnoughtMemory, "not enough memory", EVENT_ERR_NOT_ENOUGH_MEMORY);
 
+/*
+ * Get the listener that corresponds to the current thread. If current thread has not
+ * a listener, create it.
+ */
+static int get_listener(lua_State* L, event_userdata_t *udata, listener_data_t **listener_data) {
+	listener_data_t *clistener;
+
+	*listener_data = NULL;
+
+    // Get the current thread
+    pthread_t thread = pthread_self();
+
+    // Search for listener
+    int idx = 1;
+    int listener_id = 0;
+    while (idx >= 1) {
+        if (list_get(&udata->listeners, idx, (void **)&clistener)) {
+        	break;
+        }
+
+        if (clistener->thread == thread) {
+        	listener_id = idx;
+        	break;
+        }
+
+        // Next listener
+        idx = list_next(&udata->listeners, idx);
+    }
+
+	// If not found, create a new listener for the current thread
+    if (!listener_id) {
+    	// Listener not found
+    	// Allocate space for the new listener
+    	clistener = (listener_data_t *)calloc(1,sizeof(listener_data_t));
+    	if (!clistener) {
+    		return luaL_exception(L, EVENT_ERR_NOT_ENOUGH_MEMORY);
+    	}
+
+		mtx_lock(&udata->mtx);
+
+		// Create a queue for the listener
+		clistener->q = xQueueCreate(1, sizeof(uint8_t));
+		if (!clistener->q) {
+			free(clistener);
+			mtx_unlock(&udata->mtx);
+			return luaL_exception(L, EVENT_ERR_NOT_ENOUGH_MEMORY);
+		}
+
+		clistener->thread = pthread_self();
+
+		//Add listener data
+		int id;
+
+		if (list_add(&udata->listeners, clistener, &id)) {
+			free(clistener);
+			mtx_unlock(&udata->mtx);
+			return luaL_exception(L, EVENT_ERR_NOT_ENOUGH_MEMORY);
+		}
+
+		mtx_unlock(&udata->mtx);
+    } else {
+    	// Listener found
+        list_get(&udata->listeners, listener_id, (void **)&clistener);
+    }
+
+    *listener_data = clistener;
+
+    return 0;
+}
+
 static int levent_create( lua_State* L ) {
 	// Create user data
-    event_userdata *udata = (event_userdata *)lua_newuserdata(L, sizeof(event_userdata));
+    event_userdata_t *udata = (event_userdata_t *)lua_newuserdata(L, sizeof(event_userdata_t));
     if (!udata) {
     	return luaL_exception(L, EVENT_ERR_NOT_ENOUGH_MEMORY);
     }
 
+    memset(udata,0, sizeof(event_userdata_t));
+
     // Init mutex
     mtx_init(&udata->mtx, NULL, NULL, 0);
 
-    // Create listener list
-    list_init(&udata->listener_list, 1);
+	mtx_lock(&udata->mtx);
+
+    // Create the listener list
+    list_init(&udata->listeners, 1);
+
+    // Create a queue for sync this event with the termination of the
+    // listeners, when using broadcast(true)
+    udata->q = xQueueCreate(10, sizeof(uint8_t));
+	if (!udata->q) {
+		free(udata);
+		return luaL_exception(L, EVENT_ERR_NOT_ENOUGH_MEMORY);
+	}
+
+	mtx_unlock(&udata->mtx);
 
     luaL_getmetatable(L, "event.ins");
     lua_setmetatable(L, -2);
@@ -70,70 +161,120 @@ static int levent_create( lua_State* L ) {
 }
 
 static int levent_wait( lua_State* L ) {
-    event_userdata *udata = NULL;
-    xQueueHandle q;
-    int id;
-    int ret;
+    event_userdata_t *udata = NULL;
+    listener_data_t *listener_data;
 
     // Get user data
-    udata = (event_userdata *)luaL_checkudata(L, 1, "event.ins");
+    udata = (event_userdata_t *)luaL_checkudata(L, 1, "event.ins");
     luaL_argcheck(L, udata, 1, "event expected");
 
-    mtx_lock(&udata->mtx);
-
-    // Create a queue
-    q = xQueueCreate(1, sizeof(uint32_t));
-    if (!q) {
-    	mtx_unlock(&udata->mtx);
-    	return luaL_exception(L, EVENT_ERR_NOT_ENOUGH_MEMORY);
+    // Get an existing listener for the current thread
+    int listener_id = get_listener(L, udata, &listener_data);
+    if (listener_id) {
+    	return listener_id;
     }
 
-    //Add queue
-    ret = list_add(&udata->listener_list, q, &id);
-    if (ret) {
-    	mtx_unlock(&udata->mtx);
-    	return luaL_exception(L, EVENT_ERR_NOT_ENOUGH_MEMORY);
-    }
-
-    mtx_unlock(&udata->mtx);
-
-    // Wait
-    uint32_t d;
-
-    xQueueReceive(q, &d, portMAX_DELAY);
+    // Wait for broadcast
+    uint8_t d = 0;
+    xQueueReceive(listener_data->q, &d, portMAX_DELAY);
 
     return 0;
 }
 
-static int levent_broadcast( lua_State* L ) {
-    event_userdata *udata = NULL;
-    uint32_t q;
-
-    int idx = 1;
+static int levent_done( lua_State* L ) {
+    event_userdata_t *udata = NULL;
+    listener_data_t *listener_data ;
 
     // Get user data
-	udata = (event_userdata *)luaL_checkudata(L, 1, "event.ins");
+    udata = (event_userdata_t *)luaL_checkudata(L, 1, "event.ins");
     luaL_argcheck(L, udata, 1, "event expected");
 
-    mtx_lock(&udata->mtx);
+    // Get an existing listener for the current thread
+    int listener_id = get_listener(L, udata, &listener_data);
+    if (listener_id) {
+    	return listener_id;
+    }
 
-    // Call to all listeners
+	if (listener_data->is_waiting) {
+		uint8_t d = 0;
+		xQueueSend((xQueueHandle)udata->q, &d, portMAX_DELAY);
+	}
+
+	mtx_lock(&udata->mtx);
+	udata->pending--;
+	mtx_unlock(&udata->mtx);
+
+	return 0;
+}
+
+static int levent_pending( lua_State* L ) {
+    event_userdata_t *udata = NULL;
+    listener_data_t *listener_data ;
+
+    // Get user data
+    udata = (event_userdata_t *)luaL_checkudata(L, 1, "event.ins");
+    luaL_argcheck(L, udata, 1, "event expected");
+
+	mtx_lock(&udata->mtx);
+	int pending = udata->pending;
+	mtx_unlock(&udata->mtx);
+
+	lua_pushboolean(L, pending > 0);
+
+	return 1;
+}
+
+static int levent_broadcast( lua_State* L ) {
+    event_userdata_t *udata = NULL;
+    listener_data_t *listener_data;
+
+	// Get user data
+	udata = (event_userdata_t *)luaL_checkudata(L, 1, "event.ins");
+    luaL_argcheck(L, udata, 1, "event expected");
+
+    // Check for wait
+    uint8_t wait = 0;
+	if (lua_gettop(L) == 2) {
+		luaL_checktype(L, 2, LUA_TBOOLEAN);
+		if (lua_toboolean(L, 2)) {
+			wait = 1;
+		}
+	}
+
+	mtx_lock(&udata->mtx);
+
+	// Unblock threads that are waiting for this event
+    int idx = 1;
+
     while (idx >= 1) {
     	// Get queue
-        if (list_get(&udata->listener_list, idx, (void **)&q)) {
+        if (list_get(&udata->listeners, idx, (void **)&listener_data)) {
         	break;
         }
 
-        // Unblock waiting thread on this listener
-    	uint32_t d = 0;
-    	xQueueSend((xQueueHandle)q, &d, portMAX_DELAY);
+        listener_data->is_waiting = wait;
+        udata->pending++;
 
-        // Remove this listener
-        vQueueDelete((xQueueHandle)q);
-        list_remove(&udata->listener_list, idx, 0);
+        // Unblock
+    	uint8_t d = 0;
+    	xQueueSend((xQueueHandle)listener_data->q, &d, portMAX_DELAY);
+
+        if (wait) {
+    		// Increment waiting count
+    		udata->waiting_for++;
+    	}
 
         // Next listener
-        idx = list_next(&udata->listener_list, idx);
+        idx = list_next(&udata->listeners, idx);
+    }
+
+    if (wait) {
+    	// If broadcast with waiting, wait for the termination of all threads
+    	uint8_t d;
+    	while (udata->waiting_for > 0) {
+    	    xQueueReceive(udata->q, &d, portMAX_DELAY);
+    	    udata->waiting_for--;
+    	}
     }
 
     mtx_unlock(&udata->mtx);
@@ -143,41 +284,45 @@ static int levent_broadcast( lua_State* L ) {
 
 // Destructor
 static int levent_ins_gc (lua_State *L) {
-    event_userdata *udata = NULL;
-    uint32_t q;
+    event_userdata_t *udata = NULL;
+    listener_data_t *listener_data;
     int res;
     int idx = 1;
 
-    udata = (event_userdata *)luaL_checkudata(L, 1, "event.ins");
+    udata = (event_userdata_t *)luaL_checkudata(L, 1, "event.ins");
 	if (udata) {
 	    // Destroy all listeners
 	    while (idx >= 0) {
-	        res = list_get(&udata->listener_list, idx, (void **)&q);
+	        res = list_get(&udata->listeners, idx, (void **)&listener_data);
 	        if (res) {
 	        	break;
 	        }
 
-	        vQueueDelete((xQueueHandle)q);
+	        vQueueDelete((xQueueHandle)listener_data->q);
 
-	        list_remove(&udata->listener_list, idx, 0);
-	        idx = list_next(&udata->listener_list, idx);
+	        list_remove(&udata->listeners, idx, 0);
+	        idx = list_next(&udata->listeners, idx);
 	    }
 
+	    vQueueDelete((xQueueHandle)udata->q);
+
 	    mtx_destroy(&udata->mtx);
-	    list_destroy(&udata->listener_list, 0);
+	    list_destroy(&udata->listeners, 0);
 	}
 
 	return 0;
 }
 
 static const LUA_REG_TYPE levent_map[] = {
-    { LSTRKEY( "create"  ),			LFUNCVAL( levent_create ) },
-	{ LSTRKEY( "error"   ), 		LROVAL( event_error_map )},
+    { LSTRKEY( "create"  ),			LFUNCVAL( levent_create   ) },
+	{ LSTRKEY( "error"   ), 		LROVAL  ( event_error_map )},
     { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE levent_ins_map[] = {
 	{ LSTRKEY( "wait"        ),		LFUNCVAL( levent_wait        ) },
+	{ LSTRKEY( "done"        ),		LFUNCVAL( levent_done        ) },
+	{ LSTRKEY( "pending"     ),		LFUNCVAL( levent_pending     ) },
   	{ LSTRKEY( "broadcast"   ),		LFUNCVAL( levent_broadcast   ) },
 	{ LSTRKEY( "__metatable" ),    	LROVAL  ( levent_ins_map     ) },
 	{ LSTRKEY( "__index"     ),   	LROVAL  ( levent_ins_map     ) },
@@ -198,16 +343,13 @@ DRIVER_REGISTER(EVENT,event,NULL,NULL,NULL);
 
 /*
 
-a = true
 e1 = event.create()
 e2 = event.create()
 
 thread.start(function()
   while true do
   	  e1:wait()
-  	  while a do
-	  	  tmr.delay(2)
-	  end
+	  tmr.delay(2)
 	  print("hi from 1")
   end
 end)
@@ -223,5 +365,29 @@ end)
 
 e1:broadcast(false)
 e2:broadcast(false)
+
+----
+
+e1 = event.create()
+
+thread.start(function()
+  while true do
+  	  e1:wait()
+	  tmr.delay(2)
+	  print("hi from 1")
+	  e1:done()
+  end
+end)
+
+thread.start(function()
+  while true do
+  	  e1:wait()
+	  tmr.delay(4)
+	  print("hi from 2")
+	  e1:done()
+  end
+end)
+
+e1:broadcast(true)
 
 */

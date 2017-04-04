@@ -101,6 +101,7 @@ void IRAM_ATTR os_clearCallback (osjob_t* job) {
     unlinkjob(&OS.scheduledjobs, job);
 	unlinkjob(&OS.runnablejobs, job);
     hal_enableIRQs();
+    hal_resume();
 }
 
 // schedule immediately runnable job
@@ -139,7 +140,7 @@ void os_setTimedCallback (osjob_t* job, ostime_t time, osjobcb_t cb) {
     }
     *pnext = job;
     hal_enableIRQs();
-	hal_resume();
+    hal_resume();
 }
 
 // LMIC run loop, as a FreeRTOS task
@@ -148,6 +149,8 @@ void *os_runloop(void *pvParameters) {
 	    osjob_t *j = NULL;
 
 	    hal_disableIRQs();
+
+	    hal_lmic_command();
 
 	    // check for runnable jobs
 		j = NULL;
@@ -158,6 +161,8 @@ void *os_runloop(void *pvParameters) {
 	        j = OS.scheduledjobs;
 	        OS.scheduledjobs = j->next;
 	    }
+
+	    // Is there any command?
 
 	    hal_enableIRQs();
 

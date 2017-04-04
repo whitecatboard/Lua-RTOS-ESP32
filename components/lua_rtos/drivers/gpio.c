@@ -79,6 +79,14 @@ void IRAM_ATTR gpio_ll_pin_inv(int8_t pin) {
 	}
 }
 
+uint8_t IRAM_ATTR gpio_ll_pin_get(int8_t pin) {
+    if (pin < 32) {
+        return (GPIO.in >> pin) & 0x1;
+    } else {
+        return (GPIO.in1.data >> (pin - 32)) & 0x1;
+    }
+}
+
 /*
  * Operations over a single pin
  *
@@ -162,7 +170,7 @@ driver_error_t *gpio_pin_get(uint8_t pin, uint8_t *val) {
 		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 	}
 
-	*val = gpio_get_level(pin);
+	*val = gpio_ll_pin_get(pin);
 
 	return NULL;
 }

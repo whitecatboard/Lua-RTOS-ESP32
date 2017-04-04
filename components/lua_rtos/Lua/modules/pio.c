@@ -36,36 +36,48 @@
 #define PIO_PIN_OP          1
 
 typedef struct {
-	int pin;
+	uint8_t pin;
+	uint8_t type;
 	int callbak;
 	lua_State *L;
 	xQueueHandle q;
 } pio_intr_t;
 
+typedef struct {
+	uint8_t value;
+} pio_intr_data_t;
+
 static void IRAM_ATTR pio_intr_handler(void* arg) {
-    portBASE_TYPE high_priority_task_awoken = 0;
 	pio_intr_t *args = (pio_intr_t *)arg;
-	uint8_t d = 0;
+	pio_intr_data_t data;
 
-	xQueueSendFromISR(args->q, &d, NULL);
+	gpio_intr_disable(args->pin);
 
-	if (high_priority_task_awoken == pdTRUE) {
-        portYIELD_FROM_ISR();
-    }
+	// Get pin value
+	switch (args->type) {
+		case GPIO_INTR_POSEDGE: data.value = 1; break;
+		case GPIO_INTR_NEGEDGE: data.value = 0; break;
+		case GPIO_INTR_ANYEDGE: data.value = gpio_ll_pin_get(args->pin); break;
+		case GPIO_INTR_LOW_LEVEL: data.value = 0; break;
+		case GPIO_INTR_HIGH_LEVEL: data.value =1; break;
+	}
+
+	xQueueSendFromISR(args->q, &data, NULL);
 }
 
 static void pioTask(void *taskArgs) {
 	pio_intr_t *args = (pio_intr_t *)taskArgs;
-	uint8_t d;
+	pio_intr_data_t data;
 
 	while (1) {
-		xQueueReceive(args->q, &d, portMAX_DELAY);
-		portYIELD();
+		xQueueReceive(args->q, &data, portMAX_DELAY);
 	    if (args->callbak != LUA_NOREF) {
 	        lua_rawgeti(args->L , LUA_REGISTRYINDEX, args->callbak );
-	        lua_call(args->L, 0, 0);
+	        lua_pushinteger(args->L, data.value);
+	        lua_call(args->L, 1, 0);
 	    }
-	    portYIELD();
+
+    	gpio_intr_enable(args->pin);
 	}
 }
 
@@ -360,9 +372,8 @@ static int pio_pin_interrupt(lua_State *L) {
     int qsize = luaL_optinteger(L, 4, 100);
     int stack = luaL_optinteger(L, 5, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE);
     int priority = luaL_optinteger(L, 6, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY);
-    int affinity = luaL_optinteger(L, 7, CONFIG_LUA_RTOS_LUA_THREAD_CPU);
 
-    luaL_checktype(L, 2, LUA_TFUNCTION);
+	luaL_checktype(L, 2, LUA_TFUNCTION);
     lua_pushvalue(L, 2);
 
     int callback = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -376,7 +387,8 @@ static int pio_pin_interrupt(lua_State *L) {
     args->callbak = callback;
     args->L = L;
     args->pin = pin;
-    args->q = xQueueCreate(qsize, sizeof(uint8_t));
+    args->type = type;
+    args->q = xQueueCreate(qsize, sizeof(pio_intr_data_t));
     if (!args->q) {
     	free(args);
 
@@ -384,7 +396,8 @@ static int pio_pin_interrupt(lua_State *L) {
     	return 0;
     }
 
-    xTaskCreatePinnedToCore(pioTask, "lpio", stack, args, priority, NULL, affinity);
+    // ISR related task must run on the same core that ISR handler is added
+    xTaskCreatePinnedToCore(pioTask, "lpio", stack, args, priority, NULL, xPortGetCoreID());
 
     gpio_config_t io_conf;
 
@@ -579,9 +592,9 @@ MODULE_REGISTER_MAPPED(PIO, pio, pio_map, luaopen_pio);
 
 /*
 
- pio.pin.interrupt(pio.GPIO25, function()
- 	 print("hola")
- end, pio.pin.IntrAnyEdge)
+ pio.pin.interrupt(pio.GPIO35, function(value)
+ 	 print("value: "..value)
+ end, pio.pin.IntrNegEdge)
 
 
  */
