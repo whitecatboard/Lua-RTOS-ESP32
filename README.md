@@ -51,10 +51,28 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
    | [ESP32 THING] (http://whitecatboard.org/firmware.php?board=ESP32-THING)  | 
    | [GENERIC] (http://whitecatboard.org/firmware.php?board=GENERIC)  | 
 
-2. Uncompress to your favorite folder:
+1. Uncompress to your favorite folder:
 
    ```lua
    unzip LuaRTOS.10.WHITECAT-ESP32-N1.1488209955.zip
+   ```
+
+1. Go to the uncompressed folder, and flash:
+
+   ```lua
+   cd LuaRTOS.10.WHITECAT-ESP32-N1.1488209955
+   ```
+
+   For flash the firmware:
+   
+   ```lua
+   python <esp-idf path>/components/esptool_py/esptool/esptool.py --chip esp32 --port "<usb path>" --baud 921600 --before "default_reset" --after "hard_reset" write_flash -z --flash_mode "dio" --flash_freq "40m" --flash_size detect 0x1000 bootloader.WHITECAT-ESP32-N1.bin 0x10000 lua_rtos.WHITECAT-ESP32-N1.bin 0x8000 partitions_singleapp.WHITECAT-ESP32-N1.bin
+   ```
+
+   For flash the filesystem:
+
+```lua
+   python <esp-idf path>/components/esptool_py/esptool/esptool.py --chip esp32 --port "<usb path>" --baud 921600 --before "default_reset" --after "hard_reset" write_flash -z --flash_mode "dio" --flash_freq "40m" --flash_size detect 0x180000 spiffs_image.WHITECAT-ESP32-N1.bin
    ```
 
 ## Method 2: build by yourself
