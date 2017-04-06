@@ -80,7 +80,7 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
    --flash_size detect 0x180000 spiffs_image.WHITECAT-ESP32-N1.bin
    ```
    
-   Change "<esp-idf path>" and "<usb path>" according to your needs.
+   Change "esp-idf path" and "usb path" according to your needs.
 
 ## Method 2: build by yourself
 
