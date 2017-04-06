@@ -1,0 +1,11 @@
+{
+        "gateway_conf": {
+                "gateway_ID": "B827EBFFFEC2D548",
+                "ref_latitude": 41.3598,
+                "ref_longitude": 2.0617,
+                "ref_altitude": 10,
+                "contact_email": "admin@whitecatboard.org",
+                "description": "WHITECAT N1 ESP32"
+        }
+}
+

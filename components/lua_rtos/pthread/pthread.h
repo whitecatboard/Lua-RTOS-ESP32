@@ -213,6 +213,7 @@ int  pthread_key_create(pthread_key_t *k, void (*destructor)(void*));
 int  pthread_setspecific(pthread_key_t k, const void *value);
 void *pthread_getspecific(pthread_key_t k);
 int  pthread_join(pthread_t thread, void **value_ptr);
+int pthread_cancel(pthread_t thread);
 
 pthread_t pthread_self(void);
 

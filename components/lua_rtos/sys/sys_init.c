@@ -91,13 +91,13 @@ void _sys_init() {
 	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
 	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
 	#else
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
 	#endif
 
 	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_SLOW_MEM
 	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
 	#else
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
 	#endif
 
 	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_FAST_MEM

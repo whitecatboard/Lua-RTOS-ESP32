@@ -12,10 +12,9 @@
 #ifndef _lorabase_h_
 #define _lorabase_h_
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LUA_USE_LORA
-#if CONFIG_LUA_RTOS_USE_LMIC
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
 
 #ifdef __cplusplus
 extern "C"{
@@ -393,7 +392,6 @@ int getSensitivity (rps_t rps);
 } // extern "C"
 #endif
 
-#endif
 #endif
 
 #endif // _lorabase_h_

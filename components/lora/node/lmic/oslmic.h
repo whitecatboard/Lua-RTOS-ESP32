@@ -13,12 +13,11 @@
 #ifndef _oslmic_h_
 #define _oslmic_h_
 
-#include "luartos.h"
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
 
 #include <sys/driver.h>
-
-#if CONFIG_LUA_RTOS_LUA_USE_LORA
-#if CONFIG_LUA_RTOS_USE_LMIC
 
 // Dependencies required for the LoRa MAC in C to run.
 // These settings can be adapted to the underlying system.
@@ -288,7 +287,6 @@ u4_t os_aes (u1_t mode, xref2u1_t buf, u2_t len);
 } // extern "C"
 #endif
 
-#endif
 #endif
 
 #endif // _oslmic_h_

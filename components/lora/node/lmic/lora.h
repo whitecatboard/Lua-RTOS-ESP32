@@ -2,7 +2,7 @@
  * Lua RTOS, Lora WAN driver for RN2483
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -27,12 +27,12 @@
  * this software.
  */
 
-#include "luartos.h"
-
 #ifndef LORA_H
 #define LORA_H
 
-#if CONFIG_LUA_RTOS_LUA_USE_LORA
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
 
 #include <sys/driver.h>
 

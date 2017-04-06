@@ -25,10 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LUA_USE_LORA
-#if CONFIG_LUA_RTOS_USE_LMIC
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
 
 #include "oslmic.h"
 
@@ -389,5 +388,4 @@ u4_t os_aes (u1_t mode, xref2u1_t buf, u2_t len) {
         return AESAUX[0];
 }
 
-#endif
 #endif

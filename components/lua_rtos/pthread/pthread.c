@@ -509,3 +509,7 @@ void pthreadTask(void *taskArgs) {
     // End related task
     vTaskDelete(NULL);
 }
+
+int pthread_cancel(pthread_t thread) {
+	return 0;
+}

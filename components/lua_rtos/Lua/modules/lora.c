@@ -2,7 +2,7 @@
  * Lua RTOS, Lora WAN Lua Module
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -35,17 +35,21 @@
 #include "modules.h"
 #include "error.h"
 
-#if CONFIG_LUA_RTOS_LUA_USE_LORA
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE || CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
 
 #include <string.h>
 #include <stdlib.h>
-#include <drivers/lora.h>
+
+#include <lora/node/lmic/lora.h>
+
 #include <drivers/uart.h>
+
+extern const LUA_REG_TYPE lora_error_map[];
+
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
 
 static int rx_callback = 0;
 static lua_State* rx_callbackL;
-
-extern const LUA_REG_TYPE lora_error_map[];
 
 static void on_received(int port, char *payload) {
     if (rx_callback != LUA_NOREF) {
@@ -392,8 +396,18 @@ static int llora_rx(lua_State* L) {
     
     return 0;
 }
+#endif
+
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
+static int llora_gw_start(lua_State* L) {
+	lora_pkt_fwd();
+
+    return 0;
+}
+#endif
 
 static const LUA_REG_TYPE lora_map[] = {
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
     { LSTRKEY( "setup" ),        LFUNCVAL( llora_setup ) }, 
     { LSTRKEY( "setDevAddr" ),   LFUNCVAL( llora_set_setDevAddr ) }, 
     { LSTRKEY( "setDevEui" ),    LFUNCVAL( llora_set_DevEui ) }, 
@@ -418,6 +432,11 @@ static const LUA_REG_TYPE lora_map[] = {
 	// Constant definitions
     { LSTRKEY( "BAND868" ),		 LINTVAL( 868 ) },
     { LSTRKEY( "BAND433" ), 	 LINTVAL( 433 ) },
+#endif
+
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
+	{ LSTRKEY( "start" ),        LFUNCVAL( llora_gw_start ) },
+#endif
 
 	// Error definitions
 	{LSTRKEY("error"), 			 LROVAL( lora_error_map )},

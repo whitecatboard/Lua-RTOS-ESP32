@@ -24,3 +24,6 @@ build/
 *.map
 **/.DS_Store
 components/mkspiffs/src/mkspiffs
+
+sdkconfig
+sdkconfig.old

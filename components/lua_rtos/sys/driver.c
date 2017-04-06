@@ -2,7 +2,7 @@
  * Lua RTOS, driver basics
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -29,6 +29,8 @@
 
 #include "luartos.h"
 
+#include "lora.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -43,7 +45,6 @@
 #include <drivers/uart.h>
 #include <drivers/spi.h>
 #include <drivers/gpio.h>
-#include <drivers/lora.h>
 
 #define DRIVER_LOCK_DEBUG 0
 

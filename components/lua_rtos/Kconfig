@@ -202,101 +202,137 @@ menu "Lua RTOS"
 		endmenu
 
 		menu "LoRa Wan"
-			config LUA_RTOS_USE_LMIC
-			  	bool "Use LIMC stack"
-		  		default n
+			choice LUA_RTOS_LORA_DEVICE_TYPE
+				prompt "Device Type"
+				default LUA_RTOS_LORA_DEVICE_TYPE_NODE
+			
+				config LUA_RTOS_LORA_DEVICE_TYPE_NODE
+					bool "Node"
+
+				config LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
+					bool "Gateway"				
+			endchoice
+
+			config LUA_RTOS_LORA_GATEWAY_SPI
+				depends on LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
+		    	int "Concentrator SPI port"
+		    	range 2 3
+		    	default 3
+				help
+					Select the SPI port number where concentrator is attached
 		
-			config LUA_RTOS_LORAWAN_LMIC_DEBUG
+			config LUA_RTOS_LORA_GATEWAY_CS
+				depends on LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
+		    	int "Concentrator SPI CS GPIO number"
+		    		range 0 39
+		    		default 14
+		    		
+			config LUA_RTOS_LORA_GATEWAY_RST
+				depends on LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
+		    	int "Concentrator RESET GPIO number"
+		    		range 0 39
+		    		default 26
+		    		
+			config LUA_RTOS_LORA_GATEWAY_SPEED
+				depends on LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
+			    int "Concentrator SPI speed in Hertz"
+			    range 1000000 10000000
+			    default 8000000		    		
+		    		
+			config LUA_RTOS_LORA_NODE_DEBUG
 		  		bool "Enable machine-state debug"
+  		    	depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE		  	
 		  		default n
 		
-			config LUA_RTOS_LORAWAN_LMIC_STACK_SIZE
-				int "LIMC stack size"
+			config LUA_RTOS_LORA_NODE_STACK_SIZE
+				int "LoRa WAN thread stack size"
+  		    	depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE		  	
 				range 1024 4096
-				default 1024
+				default 2048
 				help
-					Default stack size assigned to tLMIC.
+					Default stack size assigned to LoRa WAN thread.
 		
-			config LUA_RTOS_LORAWAN_LMIC_TASK_PRIORITY
-				int "LMIC task priority"
+			config LUA_RTOS_LORA_NODE_TASK_PRIORITY
+				int "LoRa WAN thread riority"
+  		    	depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE		  	
 				range 3 25
-				default 12
+				default 21
 				help
-					Task priority assigned to LMIC.
+					Task priority assigned to LoRa WAN thread.
 				
-			config LUA_RTOS_LORAWAN_LMIC_TASK_CPU
-				depends on !FREERTOS_UNICORE
-				int "LMIC task CPU affinity"
+			config LUA_RTOS_LORA_NODE_TASK_CPU
+				depends on !FREERTOS_UNICORE && LUA_RTOS_LORA_DEVICE_TYPE_NODE
+				int "to LoRa WAN thread CPU affinity"
 				range 0 1
-				default 1
+				default 0
 				help
-					CPU affinity for LMIC.
+					CPU affinity for LoRa WAN thread.
 		
-			choice LUA_RTOS_LORAWAN_BAND
-				depends on LUA_RTOS_USE_LMIC
+			choice LUA_RTOS_LORA_NODE_BAND
+				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE		  	
 				prompt "ISM band"
-				default LUA_RTOS_LORAWAN_BAND_EU868
+				default LUA_RTOS_LORA_NODE_BAND_EU868
 				help
 					Select the ISM band to use. Please, select band allowed for your regions according to ISM regulations.
 		
-			config LUA_RTOS_LORAWAN_BAND_EU868
+			config LUA_RTOS_LORA_NODE_BAND_EU868
 				bool "Europe - 868 Mhz"
 		
-			config LUA_RTOS_LORAWAN_BAND_US915
+			config LUA_RTOS_LORA_NODE_BAND_US915
 				bool "United States - 915 Mhz"
 			endchoice
 			
-			choice LUA_RTOS_LORAWAN_RADIO
-				depends on LUA_RTOS_USE_LMIC
+			choice LUA_RTOS_LORA_NODE_RADIO
+				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE
 				prompt "PHY Type"
-				default LUA_RTOS_LORAWAN_RADIO_SX1276
+				default LUA_RTOS_LORA_NODE_RADIO_SX1276
 				help
 					Select the phy radio type
 		
-			config LUA_RTOS_LORAWAN_RADIO_SX1276
+			config LUA_RTOS_LORA_NODE_RADIO_SX1276
 				bool "sx1276"
 		
-			config LUA_RTOS_LORAWAN_RADIO_SX1272
+			config LUA_RTOS_LORA_NODE_RADIO_SX1272
 				bool "sx1272"
 			endchoice
 		
-			config LUA_RTOS_LMIC_SPI
-				depends on LUA_RTOS_USE_LMIC
+			config LUA_RTOS_LORA_NODE_SPI
+				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE
 		    	int "PHY SPI port"
 		    	range 2 3
 		    	default 3
 				help
 					Select the SPI port number where phy is attached
 		
-			config LUA_RTOS_LMIC_CS
-				depends on LUA_RTOS_USE_LMIC
+			config LUA_RTOS_LORA_NODE_CS
+				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE
 		    	int "PHY SPI CS GPIO number"
 		    		range 0 39
 		    		default 5
 		
-			config LUA_RTOS_LMIC_RST
-				depends on LUA_RTOS_USE_LMIC
+			config LUA_RTOS_LORA_NODE_RST
+				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE
 		    	int "PHY RST GPIO number"
 			    range 0 39
 		    	default 0 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
 		    	default 27 if !LUA_RTOS_BOARD_WHITECAT_N1ESP32
 		
-			config LUA_RTOS_LMIC_DIO0
-				depends on LUA_RTOS_USE_LMIC
+			config LUA_RTOS_LORA_NODE_DIO0
+				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE
 		    	int "PHY DIO0 GPIO number"
 		    	range 0 39
 		    	default 4 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
 		    	default 26 if !LUA_RTOS_BOARD_WHITECAT_N1ESP32
 		
-			config LUA_RTOS_LMIC_DIO1
-				depends on LUA_RTOS_USE_LMIC
+			config LUA_RTOS_LORA_NODE_DIO1
+				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE
 		    	int "PHY DIO1 GPIO number"
 		    	range 0 39
 		    	default 16 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
 		    	default 25 if !LUA_RTOS_BOARD_WHITECAT_N1ESP32
 		
-			config LUA_RTOS_LMIC_DIO2
-				depends on LUA_RTOS_USE_LMIC
+			config LUA_RTOS_LORA_NODE_DIO2
+				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE
 		    	int "PHY DIO2 GPIO number"
 		    	range 0 39
 		    	default 17 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
@@ -572,7 +608,7 @@ menu "Lua RTOS"
 				  	default y
 	
 			  	config LUA_RTOS_LUA_USE_LORA
-				  	depends on LUA_RTOS_USE_LMIC
+				  	depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE || LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
 				  	bool "Include lora module in build"
 				  	default n
 	

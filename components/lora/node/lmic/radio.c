@@ -9,10 +9,9 @@
  *    IBM Zurich Research Lab - initial API, implementation and documentation
  *******************************************************************************/
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LUA_USE_LORA
-#if CONFIG_LUA_RTOS_USE_LMIC
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
 
 #include "esp_attr.h"
 
@@ -513,7 +512,7 @@ static void txlora () {
     // now we actually start the transmission
     opmode(OPMODE_TX);
 
-#if CONFIG_LUA_RTOS_LORAWAN_LMIC_DEBUG > 0
+#if CONFIG_LUA_RTOS_LORA_NODE_DEBUG > 0
     u1_t sf = getSf(LMIC.rps) + 6; // 1 == SF7
     u1_t bw = getBw(LMIC.rps);
     u1_t cr = getCr(LMIC.rps);
@@ -594,7 +593,7 @@ static void rxlora (u1_t rxmode) {
         opmode(OPMODE_RX);
     }
 
-#if CONFIG_LUA_RTOS_LORAWAN_LMIC_DEBUG > 0
+#if CONFIG_LUA_RTOS_LORA_NODE_DEBUG > 0
     if (rxmode == RXMODE_RSSI) {
         syslog(LOG_DEBUG, "%lu: RXMODE_RSSI\n", (u4_t)os_getTime());
     } else {
@@ -863,5 +862,4 @@ void os_radio (u1_t mode) {
     hal_enableIRQs();
 }
 
-#endif
 #endif

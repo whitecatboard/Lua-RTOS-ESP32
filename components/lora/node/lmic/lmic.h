@@ -15,10 +15,9 @@
 #ifndef _lmic_h_
 #define _lmic_h_
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LUA_USE_LORA
-#if CONFIG_LUA_RTOS_USE_LMIC
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
 
 #include "oslmic.h"
 #include "lorabase.h"
@@ -324,7 +323,6 @@ DECL_ON_LMIC_EVENT;
 } // extern "C"
 #endif
 
-#endif
 #endif
 
 #endif // _lmic_h_

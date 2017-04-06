@@ -9,10 +9,9 @@
  *    IBM Zurich Research Lab - initial API, implementation and documentation
  *******************************************************************************/
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LUA_USE_LORA
-#if CONFIG_LUA_RTOS_USE_LMIC
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
 
 #include "lmic.h"
 
@@ -22,12 +21,12 @@
 
 #include "esp_attr.h"
 
+#include "lora.h"
+
 #include <sys/syslog.h>
 #include <sys/driver.h>
 
 #include <pthread/pthread.h>
-
-#include <drivers/lora.h>
 
 // LMIC run loop, as a FreeRTOS task
 void *os_runloop(void *pvParameters);
@@ -63,14 +62,14 @@ driver_error_t *os_init () {
     	pthread_attr_init(&attr);
 
     	// Set stack size
-        pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LORAWAN_LMIC_STACK_SIZE);
+        pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LORA_NODE_STACK_SIZE);
 
         // Set priority
-        sched.sched_priority = CONFIG_LUA_RTOS_LORAWAN_LMIC_TASK_PRIORITY;
+        sched.sched_priority = CONFIG_LUA_RTOS_LORA_NODE_TASK_PRIORITY;
         pthread_attr_setschedparam(&attr, &sched);
 
         // Set CPU
-        cpu_set_t cpu_set = CONFIG_LUA_RTOS_LORAWAN_LMIC_TASK_CPU;
+        cpu_set_t cpu_set = CONFIG_LUA_RTOS_LORA_NODE_TASK_CPU;
         pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
 
         // Create thread
@@ -178,5 +177,4 @@ void *os_runloop(void *pvParameters) {
 	return NULL;
 }
 
-#endif
 #endif

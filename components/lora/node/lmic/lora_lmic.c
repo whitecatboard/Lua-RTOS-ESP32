@@ -2,7 +2,7 @@
  * Lua RTOS, Lora WAN driver for LMIC
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -27,10 +27,9 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LUA_USE_LORA
-#if CONFIG_LUA_RTOS_USE_LMIC
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -40,6 +39,8 @@
 
 #include "esp_attr.h"
 #include "esp_deep_sleep.h"
+
+#include "lora.h"
 
 #include <unistd.h>
 #include <string.h>
@@ -52,9 +53,8 @@
 #include <sys/driver.h>
 #include <sys/status.h>
 
-#include <drivers/lora.h>
- 
 #include "lmic.h"
+#include "common.h"
 
 // Driver message errors
 DRIVER_REGISTER_ERROR(LORA, lora, KeysNotConfigured, "keys are not configured", LORA_ERR_KEYS_NOT_CONFIGURED);
@@ -122,89 +122,6 @@ static u1_t current_dr = 0;
 
 // ADR active?
 static u1_t adr = 0;
-
-// Convert a buffer coded into an hex string (hbuff) into a byte buffer (vbuff)
-// Length of byte buffer is len
-static void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev) {
-    int  i;
-    char c;
-	
-	// If reverse, put hbuff at the last byte
-	if (rev) {
-		while(*hbuff) hbuff++;
-		hbuff -= 2;
-	}
-    
-    for(i=0;i<len;i++) {
-        c = 0;
-
-        if ((*hbuff >= '0') && (*hbuff <= '9')) {
-            c = (0 + (*hbuff - '0')) << 4;
-        }
-
-        if ((*hbuff >= 'A') && (*hbuff <= 'F')) {
-            c = (10 + (*hbuff - 'A')) << 4;
-        }
-        
-        hbuff++;
-
-        if ((*hbuff >= '0') && (*hbuff <= '9')) {
-            c |= 0 + (*hbuff - '0');
-        }
-
-        if ((*hbuff >= 'A') && (*hbuff <= 'F')) {
-            c |= 10 + (*hbuff - 'A');
-        }
-        
-        *vbuff = c;
-		
-		if (rev) {
-			hbuff -= 3;
-		} else {
-	        hbuff++;			
-		}
-		
-        vbuff++;
-    }
-}
-
-// Convert byte buffer (vbuff argument) of len argument size into a hex
-// string buffer (hbuff argument) into a ) 
-static void val_to_hex_string(char *hbuff, char *vbuff, int len, int reverse) {
-    int i;
-	
-	if (reverse) {
-		vbuff += (len - 1);
-	}
-
-    for(i=0;i<len;i++) {
-        if ((((*vbuff & 0xf0) >> 4) >= 0) && (((*vbuff & 0xf0) >> 4) <= 9)) {
-            *hbuff = '0' + ((*vbuff & 0xf0) >> 4);
-        }
-        
-        if ((((*vbuff & 0xf0) >> 4) >= 10) && (((*vbuff & 0xf0) >> 4) <= 15)) {
-            *hbuff = 'A' + (((*vbuff & 0xf0) >> 4) - 10);
-        }
-        hbuff++;
-
-        if (((*vbuff & 0x0f) >= 0) && ((*vbuff & 0x0f) <= 9)) {
-            *hbuff = '0' + (*vbuff & 0x0f);
-        }
-        
-        if (((*vbuff & 0x0f) >= 10) && ((*vbuff & 0x0f) <= 15)) {
-            *hbuff = 'A' + ((*vbuff & 0x0f) - 10);
-        }
-        hbuff++;  
-		
-		if (reverse) {
-	        vbuff--;						
-		} else {
-	        vbuff++;			
-		}
-    }    
-	
-	*hbuff = 0x00;
-}
 
 // LMIC event handler
 void onEvent (ev_t ev) {
@@ -715,7 +632,5 @@ void _lora_init() {
 }
 
 DRIVER_REGISTER(LORA,lora, NULL,_lora_init,NULL);
-
-#endif
 
 #endif

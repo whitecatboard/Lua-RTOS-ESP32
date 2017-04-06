@@ -12,12 +12,11 @@
 #ifndef _hal_hpp_
 #define _hal_hpp_
 
-#include "luartos.h"
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
 
 #include <sys/driver.h>
-
-#if CONFIG_LUA_RTOS_LUA_USE_LORA
-#if CONFIG_LUA_RTOS_USE_LMIC
 
 #ifdef __cplusplus
 extern "C"{
@@ -126,7 +125,6 @@ void hal_lmic_join();
 } // extern "C"
 #endif
 
-#endif
 #endif
 
 #endif // _hal_hpp_
