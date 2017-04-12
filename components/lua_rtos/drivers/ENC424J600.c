@@ -33,6 +33,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
+#include "freertos/queue.h"
 
 #include "esp_intr.h"
 #include "esp_event.h"
@@ -67,9 +68,7 @@ static uint16_t nextPacketPointer;
 static int spi_device;
 static struct netif *interface;
 
-#if !CONFIG_SPI_ETHERNET_INT
-static TimerHandle_t xTimer = NULL;
-#endif
+xQueueHandle ether_q;
 
 static uint16_t exec_8_op(uint8_t op);
 static uint16_t exec_16_op(uint8_t op, uint16_t data);
@@ -80,12 +79,8 @@ static uint16_t read_reg(uint16_t address);
 static void write_phy_reg(uint8_t address, uint16_t Data);
 static void bfs_reg(uint16_t address, uint16_t bitMask);
 static void bfc_reg(uint16_t address, uint16_t bitMask);
-
-#if CONFIG_SPI_ETHERNET_INT
 static void suspend_interrupts();
 static void reenable_interrupts();
-#endif
-
 static int phy_reset();
 static void mac_flush(void);
 static void write_n(uint8_t op, uint8_t* data, uint16_t len);
@@ -93,8 +88,6 @@ static void read_n(uint8_t op, uint8_t* data, uint16_t len);
 static void write_memory_window(uint8_t window, uint8_t *data, uint16_t len);
 static void read_memory_window(uint8_t window, uint8_t *data, uint16_t len);
 static int is_phy_linked(void);
-static void en_output(struct pbuf *q);
-static unsigned int en_packet_size();
 static void link_status_change();
 
 /*
@@ -230,7 +223,6 @@ static void bfc_reg(uint16_t address, uint16_t bitMask) {
 	exec_16_op(BFC | (address & 0x1F), bitMask);
 }
 
-#if CONFIG_SPI_ETHERNET_INT
 static void suspend_interrupts() {
 	// Disable global interrupts while processing this interrupt
 	// to avoid loose events
@@ -238,13 +230,9 @@ static void suspend_interrupts() {
 }
 
 static void reenable_interrupts() {
-	// Clear all interrupt flags
-	bfc_reg(EIR, 0xffff);
-
 	// Reenable ENC global interrupts
 	bfs_reg(EIE, EIE_INTIE);
 }
-#endif
 
 static int phy_reset() {
 	uint16_t ret = 0;
@@ -295,56 +283,11 @@ static int phy_reset() {
 	return 0;
 }
 
-
-#if CONFIG_SPI_ETHERNET_INT
-static void ether_intr(void* arg) {
-	unsigned int flag = 0;
-
-	// Get cause of this interrupt
-	flag = read_reg(EIR);
-
-	// Suspend interrupts
-	suspend_interrupts();
-
-	if (flag & EIR_LINKIF) {
-		link_status_change();
-	}
-
-	if (flag & EIR_PKTIF) {
-		spi_ethernetif_input(interface);
-	}
-
-    if (flag & EIR_TXIF) {
-        // Packet transmission has completed
-    }
-
-    if (flag & EIR_TXABTIF) {
-        // Packet transmission has been aborted due to an error
-    	uart_writes(CONSOLE_UART,"EIR_TXABTIF\r\n");
-    }
-
-    if (flag & EIR_RXABTIF) {
-        // An RX packet was dropped because there is insufficient space in the
-        // RX buffer to store the complete packet
-    	uart_writes(CONSOLE_UART,"EIR_RXABTIF\r\n");
-    }
-
-    if (flag & EIR_PCFULIF) {
-        // PKTCNT field has reached FFh. Software must decrement the packet
-        // counter to prevent the next RX packet from being dropped
-    	uart_writes(CONSOLE_UART,"EIR_PCFULIF\r\n");
-    }
-
-	// Reenable interrupts
-    reenable_interrupts();
-}
-#else
-void spi_eth_poll(void *arg) {
+static void ether_task(void *taskArgs) {
 	uint16_t flag;
 
-	while ((read_reg(ESTAT)) & ESTAT_INT) {
-		// Get cause of this interrupt
-		flag = read_reg(EIR);
+	for(;;) {
+		xQueueReceive(ether_q, &flag, portMAX_DELAY);
 
 		if (flag & EIR_LINKIF) {
 			link_status_change();
@@ -377,9 +320,27 @@ void spi_eth_poll(void *arg) {
 	        // counter to prevent the next RX packet from being dropped
 			bfc_reg(EIR, EIR_PCFULIF);
 	    }
+
+	    gpio_intr_enable(CONFIG_SPI_ETHERNET_INT);
+
+		// Reenable interrupts
+	    reenable_interrupts();
 	}
 }
-#endif
+
+static void ether_intr(void* arg) {
+	// Disable interrupt on GPIO
+	gpio_intr_disable(CONFIG_SPI_ETHERNET_INT);
+
+	// Suspend interrupts
+	suspend_interrupts();
+
+	// Get cause of this interrupt
+	unsigned int flag = read_reg(EIR);
+
+	// Send to ethernet task
+	xQueueSendFromISR(ether_q, &flag, NULL);
+}
 
 static void mac_flush(void) {
 	uint16_t w;
@@ -459,32 +420,6 @@ static void read_memory_window(uint8_t window, uint8_t *data, uint16_t len) {
 
 static int is_phy_linked(void) {
 	return (read_reg(ESTAT) & ESTAT_PHYLNK) != 0u;
-}
-
-static void en_output(struct pbuf *q) {
-	write_memory_window(GP_WINDOW, q->payload, q->len);
-
-	write_reg(EGPWRPT, ENC424J600_TXSTART);
-	write_reg(ETXLEN, q->len);
-
-	mac_flush();
-}
-
-static unsigned int en_packet_size() {
-	RXSTATUS statusVector;
-	unsigned int len;
-
-	// Set the RX Read Pointer to the beginning of the next unprocessed packet
-	write_reg(ERXRDPT, nextPacketPointer);
-
-	read_memory_window(RX_WINDOW, (uint8_t*) &nextPacketPointer,
-			sizeof(nextPacketPointer));
-	read_memory_window(RX_WINDOW, (uint8_t*) &statusVector,
-			sizeof(statusVector));
-
-	len = statusVector.bits.ByteCount - 4;
-
-	return len;
 }
 
 static void link_status_change() {
@@ -590,20 +525,15 @@ int enc424j600_init(struct netif *netif) {
 		status_set(STATUS_ISR_SERVICE_INSTALLED);
 	}
 
-#if CONFIG_SPI_ETHERNET_INT
 	gpio_pin_input(CONFIG_SPI_ETHERNET_INT);
 
 	gpio_set_intr_type(CONFIG_SPI_ETHERNET_INT, GPIO_INTR_NEGEDGE);
 	gpio_isr_handler_add(CONFIG_SPI_ETHERNET_INT, ether_intr, NULL);
-#else
-    if (!xTimer) {
-        xTimer = xTimerCreate("spieth", 1, pdTRUE, (void *) 0, spi_eth_poll);
 
-        if(xTimer != NULL ){
-            xTimerStart( xTimer, 0 );
-        }
-    }
-#endif
+	ether_q = xQueueCreate(100, sizeof(unsigned int));
+
+    // ISR related task must run on the same core that ISR handler is added
+    xTaskCreatePinnedToCore(ether_task, "eth", CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE, NULL, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY, NULL, xPortGetCoreID());
 
     // Disable all interrupts
     bfc_reg(EIE, 0xfff);

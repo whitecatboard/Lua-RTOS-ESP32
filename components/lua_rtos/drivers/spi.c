@@ -100,7 +100,6 @@ typedef struct {
 	uint8_t  mode;
 #if !SPI_USE_IDF_DRIVER
 	uint32_t divisor;
-	uint8_t  no_miso_delay;
 #else
 	spi_device_handle_t h;
 #endif
@@ -192,14 +191,6 @@ static int spi_get_free_device(int unit) {
 
 #if !SPI_USE_IDF_DRIVER
 
-/*
- * Extracted from arduino-esp32 (cores/esp32/esp32-hal-spi.c) for get the clock divisor
- * needed for setup the SIP bus at a desired baud rate
- *
- */
-
-#define ClkRegToFreq(reg) (CPU_CLK_FREQ / (((reg)->regPre + 1) * ((reg)->regN + 1)))
-
 typedef union {
     uint32_t regValue;
     struct {
@@ -211,56 +202,65 @@ typedef union {
     };
 } spiClk_t;
 
-static uint32_t spiFrequencyToClockDiv(uint32_t freq) {
-    if(freq >= CPU_CLK_FREQ) {
-        return SPI_CLK_EQU_SYSCLK;
-    }
+static int spi_freq_for_pre_n(int fapb, int pre, int n) {
+    return (fapb / (pre * n));
+}
 
-    const spiClk_t minFreqReg = { 0x7FFFF000 };
-    uint32_t minFreq = ClkRegToFreq((spiClk_t*) &minFreqReg);
-    if(freq < minFreq) {
-        return minFreqReg.regValue;
-    }
+static uint32_t spi_set_clock(int fapb, int hz, int duty_cycle, uint32_t *eff_clk) {
+	spiClk_t clock;
 
-    uint8_t calN = 1;
-    spiClk_t bestReg = { 0 };
-    int32_t bestFreq = 0;
+    int pre, n, h, l;
 
-    while(calN <= 0x3F) {
-        spiClk_t reg = { 0 };
-        int32_t calFreq;
-        int32_t calPre;
-        int8_t calPreVari = -2;
+    //In hw, n, h and l are 1-64, pre is 1-8K. Value written to register is one lower than used value.
+    if (hz>((fapb/4)*3)) {
+        //Using Fapb directly will give us the best result here.
+    	clock.regL = 0;
+    	clock.regH = 0;
+    	clock.regN = 0;
+    	clock.regPre = 0;
+    	clock.regEQU = 1;
 
-        reg.regN = calN;
-
-        while(calPreVari++ <= 1) {
-            calPre = (((CPU_CLK_FREQ / (reg.regN + 1)) / freq) - 1) + calPreVari;
-            if(calPre > 0x1FFF) {
-                reg.regPre = 0x1FFF;
-            } else if(calPre <= 0) {
-                reg.regPre = 0;
-            } else {
-                reg.regPre = calPre;
-            }
-            reg.regL = ((reg.regN + 1) / 2);
-            calFreq = ClkRegToFreq(&reg);
-            if(calFreq == (int32_t) freq) {
-                memcpy(&bestReg, &reg, sizeof(bestReg));
-                break;
-            } else if(calFreq < (int32_t) freq) {
-                if(abs(freq - calFreq) < abs(freq - bestFreq)) {
-                    bestFreq = calFreq;
-                    memcpy(&bestReg, &reg, sizeof(bestReg));
-                }
+    	if (eff_clk) *eff_clk=fapb;
+    } else {
+        //For best duty cycle resolution, we want n to be as close to 32 as possible, but
+        //we also need a pre/n combo that gets us as close as possible to the intended freq.
+        //To do this, we bruteforce n and calculate the best pre to go along with that.
+        //If there's a choice between pre/n combos that give the same result, use the one
+        //with the higher n.
+        int bestn=-1;
+        int bestpre=-1;
+        int besterr=0;
+        int errval;
+        for (n=1; n<=64; n++) {
+            //Effectively, this does pre=round((fapb/n)/hz).
+            pre=((fapb/n)+(hz/2))/hz;
+            if (pre<=0) pre=1;
+            if (pre>8192) pre=8192;
+            errval=abs(spi_freq_for_pre_n(fapb, pre, n)-hz);
+            if (bestn==-1 || errval<=besterr) {
+                besterr=errval;
+                bestn=n;
+                bestpre=pre;
             }
         }
-        if(calFreq == (int32_t) freq) {
-            break;
-        }
-        calN++;
+
+        n=bestn;
+        pre=bestpre;
+        l=n;
+        //This effectively does round((duty_cycle*n)/256)
+        h=(duty_cycle*n+127)/256;
+        if (h<=0) h=1;
+
+    	clock.regL = l-1;
+    	clock.regH = h-1;
+    	clock.regN = n-1;
+    	clock.regPre = pre-1;
+    	clock.regEQU = 0;
+
+    	if (eff_clk) *eff_clk=spi_freq_for_pre_n(fapb, pre, n);
     }
-    return bestReg.regValue;
+
+    return clock.regValue;
 }
 #endif
 
@@ -380,6 +380,13 @@ static driver_error_t *spi_lock_bus_resources(int unit) {
 
 static void spi_setup_bus(uint8_t unit) {
 #if !SPI_USE_IDF_DRIVER
+
+	// Enable SPI unit
+	switch (unit) {
+		case 2: periph_module_enable(PERIPH_HSPI_MODULE);break;
+		case 3:periph_module_enable(PERIPH_VSPI_MODULE);break;
+	}
+
     if (spi_bus[unit].miso == spi_bus[unit].dmiso) {
     	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_SPI);
     } else {
@@ -502,8 +509,8 @@ int spi_ll_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_
 #if !SPI_USE_IDF_DRIVER
     spi_bus[unit].device[device].mode = mode;
     spi_bus[unit].device[device].speed = speed;
-    spi_bus[unit].device[device].divisor = spiFrequencyToClockDiv(speed);
-	spi_bus[unit].device[device].no_miso_delay = ((spi_bus[unit].miso == spi_bus[unit].dmiso) && speed >= (APB_CLK_FREQ/2));
+    spi_bus[unit].device[device].divisor = spi_set_clock(APB_CLK_FREQ, speed, 128, NULL);
+
 #else
 	esp_err_t ret;
 
@@ -545,7 +552,7 @@ void spi_ll_set_speed(int deviceid, uint32_t speed) {
 	spi_bus[unit].last_device = -1;
 	spi_bus[unit].device[device].speed = speed;
 #if !SPI_USE_IDF_DRIVER
-	spi_bus[unit].device[device].divisor = spiFrequencyToClockDiv(speed);
+    spi_bus[unit].device[device].divisor = spi_set_clock(APB_CLK_FREQ, speed, 128, NULL);
 #else
 	esp_err_t ret;
 
@@ -680,25 +687,21 @@ void IRAM_ATTR spi_ll_select(int deviceid) {
     		case 0: // CKP=0, CPHA = 0
     		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit) , SPI_CK_IDLE_EDGE);
     		    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
-    		    SET_PERI_REG_BITS(SPI_CTRL2_REG(unit),  SPI_MISO_DELAY_MODE, spi_bus[unit].device[device].no_miso_delay?0:2, SPI_MISO_DELAY_MODE_S);
                 break;
 
     		case 1: // CKP=0, CPHA = 1
     		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
     		    SET_PERI_REG_MASK(SPI_USER_REG(unit) ,  SPI_CK_OUT_EDGE);
-    		    SET_PERI_REG_BITS(SPI_CTRL2_REG(unit),  SPI_MISO_DELAY_MODE, spi_bus[unit].device[device].no_miso_delay?0:1, SPI_MISO_DELAY_MODE_S);
     		    break;
 
     		case 2: // CKP=1, CPHA = 0
     		    SET_PERI_REG_MASK(SPI_PIN_REG(unit)   , SPI_CK_IDLE_EDGE);
     		    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
-    		    SET_PERI_REG_BITS(SPI_CTRL2_REG(unit),  SPI_MISO_DELAY_MODE, spi_bus[unit].device[device].no_miso_delay?0:1, SPI_MISO_DELAY_MODE_S);
     		    break;
 
     		case 3: // CKP=1, CPHA = 1
     		    SET_PERI_REG_MASK(SPI_PIN_REG(unit) ,   SPI_CK_IDLE_EDGE);
     		    SET_PERI_REG_MASK(SPI_USER_REG(unit),   SPI_CK_OUT_EDGE);
-    		    SET_PERI_REG_BITS(SPI_CTRL2_REG(unit),  SPI_MISO_DELAY_MODE, spi_bus[unit].device[device].no_miso_delay?0:2, SPI_MISO_DELAY_MODE_S);
     	}
 
     	// Set bit order to MSB
