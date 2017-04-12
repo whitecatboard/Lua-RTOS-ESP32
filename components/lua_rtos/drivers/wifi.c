@@ -48,7 +48,6 @@
 
 #include <drivers/wifi.h>
 
-#define WIFI_CONNECT_RETRIES 1
 #define WIFI_LOG(m) syslog(LOG_DEBUG, m);
 
 // This macro gets a reference for this driver into drivers array
@@ -72,15 +71,11 @@ DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidPassword, "invalid password", WIFI_ERR_
 DRIVER_REGISTER_ERROR(WIFI, wifi, Timeout, "timeout", WIFI_ERR_WIFI_TIMEOUT);
 DRIVER_REGISTER_ERROR(WIFI, wifi, RFClosed, "is in sleep state(RF closed) / wakeup fail", WIFI_ERR_WAKE_FAIL);
 
-// FreeRTOS events used by driver
-static EventGroupHandle_t wifiEvent;
+extern EventGroupHandle_t netEvent;
 
 #define evWIFI_SCAN_END 	       	 ( 1 << 0 )
 #define evWIFI_CONNECTED 	       	 ( 1 << 1 )
 #define evWIFI_CANT_CONNECT          ( 1 << 2 )
-
-// Retries for connect
-static uint8_t retries = 0;
 
 static driver_error_t *wifi_check_error(esp_err_t error) {
 	if (error == ESP_ERR_WIFI_OK) return NULL;
@@ -106,79 +101,14 @@ static driver_error_t *wifi_check_error(esp_err_t error) {
 	return NULL;
 }
 
-static esp_err_t event_handler(void *ctx, system_event_t *event) {
-	switch (event->event_id) {
-		case SYSTEM_EVENT_STA_START:
-			WIFI_LOG("SYSTEM_EVENT_STA_START\n");
-			esp_wifi_connect();
-			break;
-
-		case SYSTEM_EVENT_STA_STOP:
-			WIFI_LOG("SYSTEM_EVENT_STA_STOP\n");
-			break;
-
-	    case SYSTEM_EVENT_STA_DISCONNECTED:
-	    	WIFI_LOG("SYSTEM_EVENT_STA_DISCONNECTED\n");
-
-			if (!status_get(STATUS_WIFI_CONNECTED)) {
-				if (retries > WIFI_CONNECT_RETRIES) {
-					status_clear(STATUS_WIFI_CONNECTED);
-					xEventGroupSetBits(wifiEvent, evWIFI_CANT_CONNECT);
-					break;
-				} else {
-					retries++;
-
-					status_clear(STATUS_WIFI_CONNECTED);
-					esp_wifi_connect();
-				}
-			}
-
-			status_clear(STATUS_WIFI_CONNECTED);
-
-			esp_wifi_connect();
-	    	break;
-
-		case SYSTEM_EVENT_STA_GOT_IP:
-			WIFI_LOG("SYSTEM_EVENT_STA_GOT_IP\n");
- 		    xEventGroupSetBits(wifiEvent, evWIFI_CONNECTED);
-			break;
-
-		case SYSTEM_EVENT_AP_STA_GOT_IP6:
-			WIFI_LOG("SYSTEM_EVENT_AP_STA_GOT_IP6\n");
- 		    xEventGroupSetBits(wifiEvent, evWIFI_CONNECTED);
-			break;
-
-		case SYSTEM_EVENT_SCAN_DONE:
-			WIFI_LOG("SYSTEM_EVENT_SCAN_DONE\n");
- 		    xEventGroupSetBits(wifiEvent, evWIFI_SCAN_END);
-			break;
-
-		case SYSTEM_EVENT_STA_CONNECTED:
-			WIFI_LOG("SYSTEM_EVENT_STA_CONNECTED\n");
-			status_set(STATUS_WIFI_CONNECTED);
-			break;
-
-		default :
-			break;
-	}
-
-   return ESP_OK;
-}
-
 static driver_error_t *wifi_init(wifi_mode_t mode) {
 	driver_error_t *error;
 
+	if ((error = net_init())) {
+		return error;
+	}
+
 	if (!status_get(STATUS_WIFI_INITED)) {
-		wifiEvent = xEventGroupCreate();
-
-		if (!status_get(STATUS_TCPIP_INITED)) {
-			tcpip_adapter_init();
-
-			status_set(STATUS_TCPIP_INITED);
-		}
-
-		esp_event_loop_init(event_handler, NULL);
-
 		wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 		if ((error = wifi_check_error(esp_wifi_init(&cfg)))) return error;
 		if ((error = wifi_check_error(esp_wifi_set_storage(WIFI_STORAGE_RAM)))) return error;
@@ -200,7 +130,7 @@ static driver_error_t *wifi_deinit() {
 		if ((error = wifi_check_error(esp_wifi_deinit()))) return error;
 
 		// Remove event group
-		vEventGroupDelete(wifiEvent);
+		vEventGroupDelete(netEvent);
 
 		status_clear(STATUS_WIFI_INITED);
 	}
@@ -235,7 +165,7 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 	if ((error = wifi_check_error(esp_wifi_scan_start(&conf, true)))) return error;
 
 	// Wait for scan end
-    EventBits_t uxBits = xEventGroupWaitBits(wifiEvent, evWIFI_SCAN_END, pdTRUE, pdFALSE, portMAX_DELAY);
+    EventBits_t uxBits = xEventGroupWaitBits(netEvent, evWIFI_SCAN_END, pdTRUE, pdFALSE, portMAX_DELAY);
     if (uxBits & (evWIFI_SCAN_END)) {
     	// Get count of finded AP
     	if ((error = wifi_check_error(esp_wifi_scan_get_ap_num(count)))) return error;
@@ -303,11 +233,9 @@ driver_error_t *wifi_start() {
 	}
 
 	if (!status_get(STATUS_WIFI_STARTED)) {
-		retries = 0;
-
 		if ((error = wifi_check_error(esp_wifi_start()))) return error;
 
-	    EventBits_t uxBits = xEventGroupWaitBits(wifiEvent, evWIFI_CONNECTED | evWIFI_CANT_CONNECT, pdTRUE, pdFALSE, portMAX_DELAY);
+	    EventBits_t uxBits = xEventGroupWaitBits(netEvent, evWIFI_CONNECTED | evWIFI_CANT_CONNECT, pdTRUE, pdFALSE, portMAX_DELAY);
 	    if (uxBits & (evWIFI_CONNECTED)) {
 		    status_set(STATUS_WIFI_STARTED);
 	    }
@@ -340,7 +268,7 @@ driver_error_t *wifi_stop() {
 
 driver_error_t *wifi_stat(ifconfig_t *info) {
 	tcpip_adapter_ip_info_t esp_info;
-	uint8_t mac[6];
+	uint8_t mac[6] = {0,0,0,0,0,0};
 
 	driver_error_t *error;
 
@@ -348,7 +276,9 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 	if ((error = wifi_check_error(tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &esp_info)))) return error;
 
 	// Get MAC info
-	if ((error = wifi_check_error(esp_wifi_get_mac(ESP_IF_WIFI_STA, mac)))) return error;
+	if (status_get(STATUS_WIFI_STARTED)) {
+		if ((error = wifi_check_error(esp_wifi_get_mac(ESP_IF_WIFI_STA, mac)))) return error;
+	}
 
 	// Copy info
 	info->gw = esp_info.gw;

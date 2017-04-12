@@ -167,8 +167,8 @@ menu "Lua RTOS"
 				  		appropriately connected to your ESP32 board.		
 		  endmenu
 	  endmenu
-	  
-	  	  menu "Hardware"
+
+	  menu "Hardware"
 		menu "SPI pin map"
 			config LUA_RTOS_SPI2_MISO
 	    	int "SPI2 MISO"
@@ -199,6 +199,43 @@ menu "Lua RTOS"
 	    	int "SPI3 CLK"
 	    	range 0 39
 	    	default 18
+		endmenu
+
+		menu "SPI Ethernet"
+	  		config SPI_ETHERNET
+			  	bool "Use SPI Ethernet (ENC424J600)"
+			  	default n
+			  	help
+			  		Select for enable SPI Ethernet. SPI Ethernet needs only 5 pins, while RMII needs 8 pins plus 2
+			  		additional pins in some configurations (CRS_DV / PHY RESET).
+
+			config SPI_ETHERNET_SPI
+				depends on SPI_ETHERNET
+		    	int "SPI Ethernet port"
+		    	range 2 3
+		    	default 3
+				help
+					Select the SPI port number SPI Ethernet is attached
+		
+			config SPI_ETHERNET_SPEED
+				depends on SPI_ETHERNET
+			    int "SPI Ethernet speed in Hertz"
+			    range 1000000 14000000
+			    default 14000000		    		
+
+			config SPI_ETHERNET_CS
+				depends on SPI_ETHERNET
+		    	int "SPI Ethernet CS GPIO number"
+		    		range 0 39
+		    		default 26
+		    		
+			config SPI_ETHERNET_INT
+				depends on SPI_ETHERNET
+		    	int "SPI Ethernet Interrupt GPIO number"
+		    		range 0 39
+		    		default 0
+		    		help
+		    			Select 0 if you want to use SPI Eternet poll instead of interrupt.
 		endmenu
 
 		menu "LoRa Wan"

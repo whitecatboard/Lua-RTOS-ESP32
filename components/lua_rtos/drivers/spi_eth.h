@@ -1,8 +1,8 @@
 /*
- * Lua RTOS, network manager
+ * Lua RTOS, SPI ethernet driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -27,40 +27,25 @@
  * this software.
  */
 
-#ifndef NET_H_
-#define NET_H_
+#ifndef _SPI_ETH_
+#define _SPI_ETH_
 
-#include "lwip/err.h"
-#include "lwip/sockets.h"
-#include "lwip/sys.h"
-#include "lwip/netdb.h"
-#include "lwip/dns.h"
-#include "lwip/ip_addr.h"
+#include "net.h"
+
+#include "esp_wifi.h"
+#include "tcpip_adapter.h"
 
 #include <sys/driver.h>
-#include <sys/status.h>
 
-#define evWIFI_SCAN_END 	       	 ( 1 << 0 )
-#define evWIFI_CONNECTED 	       	 ( 1 << 1 )
-#define evWIFI_CANT_CONNECT          ( 1 << 2 )
-#define evSPI_ETH_CONNECTED 	     ( 1 << 3 )
-#define evSPI_ETH_CANT_CONNECT       ( 1 << 4 )
+// SPI ethernet errors
+#define SPI_ETH_ERR_CANT_INIT              (DRIVER_EXCEPTION_BASE(SPI_ETH_DRIVER_ID) |  0)
+#define SPI_ETH_ERR_NOT_INIT               (DRIVER_EXCEPTION_BASE(SPI_ETH_DRIVER_ID) |  1)
+#define SPI_ETH_ERR_NOT_START              (DRIVER_EXCEPTION_BASE(SPI_ETH_DRIVER_ID) |  2)
+#define SPI_ETH_ERR_CANT_CONNECT           (DRIVER_EXCEPTION_BASE(SPI_ETH_DRIVER_ID) |  3)
 
-#define NETWORK_AVAILABLE() (status_get(STATUS_WIFI_CONNECTED) || status_get(STATUS_SPI_ETH_CONNECTED))
-
-typedef struct {
-    ip4_addr_t ip;
-    ip4_addr_t netmask;
-    ip4_addr_t gw;
-    uint8_t    mac[6];
-} ifconfig_t;
-
-// NET errors
-#define NET_ERR_NOT_AVAILABLE              (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  0)
-#define NET_ERR_INVALID_IP                 (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  1)
-
-driver_error_t *net_check_connectivity();
-driver_error_t *net_init();
-driver_error_t *net_lookup(const char *name, struct sockaddr_in *address);
+driver_error_t *spi_eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1, uint32_t dns2);
+driver_error_t *spi_eth_start();
+driver_error_t *spi_eth_stop();
+driver_error_t *spi_eth_stat(ifconfig_t *info);
 
 #endif

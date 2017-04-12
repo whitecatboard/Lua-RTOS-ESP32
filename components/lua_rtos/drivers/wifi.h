@@ -37,6 +37,8 @@
 
 #include <sys/driver.h>
 
+#define WIFI_CONNECT_RETRIES 1
+
 // WIFI errors
 #define WIFI_ERR_CANT_INIT              (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  0)
 #define WIFI_ERR_CANT_CONNECT			(DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  1)

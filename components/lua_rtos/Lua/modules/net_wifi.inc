@@ -187,7 +187,7 @@ static int lwifi_stat(lua_State* L) {
 			);
 
 			printf("   ip address %s netmask %s\r\n", ipa, maska);
-			printf("   gw address %s\r\n", gwa);
+			printf("   gw address %s\r\n\r\n", gwa);
 	} else {
 		char tmp[17];
 

@@ -51,6 +51,9 @@
 #define STATUS_WIFI_CONNECTED          0x000a
 #define STATUS_NEED_RTC_SLOW_MEM       0x000b
 #define STATUS_ISR_SERVICE_INSTALLED   0x000c
+#define STATUS_SPI_ETH_SETUP           0x000d
+#define STATUS_SPI_ETH_STARTED         0x000e
+#define STATUS_SPI_ETH_CONNECTED       0x000f
 
 extern uint32_t LuaOS_status[];
 

@@ -23,7 +23,11 @@ configure-idf-lua-rtos:
 	@cd $(IDF_PATH)/components/vfs/include/sys && git checkout dirent.h
 	@cd $(IDF_PATH)/components/spi_flash && git checkout flash_ops.c
 	@cd $(IDF_PATH)/components/spi_flash/include && git checkout esp_spi_flash.h
-	#@cd $(IDF_PATH)/components/freertos/include/freertos && git checkout FreeRTOSConfig.h
+	@cd $(IDF_PATH)/components/esp32 && git checkout event_default_handlers.c
+	@cd $(IDF_PATH)/components/esp32/include && git checkout esp_event.h
+	@cd $(IDF_PATH)/components/esp32/include && git checkout esp_interface.h
+	@cd $(IDF_PATH)/components/tcpip_adapter/include && git checkout tcpip_adapter.h
+	@cd $(IDF_PATH)/components/tcpip_adapter && git checkout tcpip_adapter_lwip.c
 	@echo "Configure esp-idf for Lua RTOS ..."
 	@touch $(PROJECT_PATH)/components/lua_rtos/lwip/socket.c
 	@cd $(IDF_PATH)/components/lwip/api && git checkout api_msg.c
@@ -31,11 +35,18 @@ configure-idf-lua-rtos:
 	@patch -f $(IDF_PATH)/components/vfs/include/sys/dirent.h $(PROJECT_PATH)/main/patches/dirent.patch
 	@patch -f $(IDF_PATH)/components/spi_flash/flash_ops.c $(PROJECT_PATH)/main/patches/spi_flash.1.patch
 	@patch -f $(IDF_PATH)/components/spi_flash/include/esp_spi_flash.h $(PROJECT_PATH)/main/patches/spi_flash.2.patch
-	#@patch -f $(IDF_PATH)/components/freertos/include/freertos/FreeRTOSConfig.h $(PROJECT_PATH)/main/patches/free_rtos_config.patch
+	@cd $(IDF_PATH) && patch -p1 -f < $(PROJECT_PATH)/main/patches/spi_ethernet.patch
 	
 restore-idf:
 	@echo "Restoring esp-idf ..."
 	@cd $(IDF_PATH)/components/lwip/api && git checkout api_msg.c
 	@cd $(IDF_PATH)/components/vfs/include/sys && git checkout dirent.h
+	@cd $(IDF_PATH)/components/spi_flash && git checkout flash_ops.c
+	@cd $(IDF_PATH)/components/spi_flash/include && git checkout esp_spi_flash.h
+	@cd $(IDF_PATH)/components/esp32 && git checkout event_default_handlers.c
+	@cd $(IDF_PATH)/components/esp32/include && git checkout esp_event.h
+	@cd $(IDF_PATH)/components/esp32/include && git checkout esp_interface.h
+	@cd $(IDF_PATH)/components/tcpip_adapter/include && git checkout tcpip_adapter.h
+	@cd $(IDF_PATH)/components/tcpip_adapter && git checkout tcpip_adapter_lwip.c
 	
 include $(IDF_PATH)/make/project.mk

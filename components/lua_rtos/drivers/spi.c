@@ -80,6 +80,8 @@
 
 #define PIN_FUNC_SPI 1
 
+extern unsigned port_interruptNesting[portNUM_PROCESSORS];
+
 // Driver message errors
 DRIVER_REGISTER_ERROR(SPI, spi, InvalidMode, "invalid mode", SPI_ERR_INVALID_MODE);
 DRIVER_REGISTER_ERROR(SPI, spi, InvalidUnit, "invalid unit", SPI_ERR_INVALID_UNIT);
@@ -279,7 +281,9 @@ static void IRAM_ATTR spi_master_op(int deviceid, uint32_t word_size, uint32_t l
 	// Number of bytes to transmit
 	uint32_t bytes = word_size * len;
 
-	portDISABLE_INTERRUPTS();
+    if (port_interruptNesting[xPortGetCoreID()] == 0) {
+    	portDISABLE_INTERRUPTS();
+    }
 
 	while (bytes) {
 		// Fill TX buffer
@@ -328,7 +332,10 @@ static void IRAM_ATTR spi_master_op(int deviceid, uint32_t word_size, uint32_t l
 		}
 	}
 
-	portENABLE_INTERRUPTS();
+    if (port_interruptNesting[xPortGetCoreID()] == 0) {
+    	portENABLE_INTERRUPTS();
+    }
+
 #else
 	int device = (deviceid & 0x00ff);
 

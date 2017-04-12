@@ -125,6 +125,14 @@ SECTIONS {
     KEEP(*(.pwm_error_map))
     LONG(0) LONG(0)
 
+    spi_eth_errors = ABSOLUTE(.);
+    KEEP(*(.spi_eth_errors))
+    LONG(0) LONG(0)
+
+    spi_eth_error_map = ABSOLUTE(.);
+    KEEP(*(.spi_eth_error_map))
+    LONG(0) LONG(0)
+
     wifi_errors = ABSOLUTE(.);
     KEEP(*(.wifi_errors))
     LONG(0) LONG(0)

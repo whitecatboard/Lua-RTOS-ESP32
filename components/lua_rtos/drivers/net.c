@@ -2,7 +2,7 @@
  * Lua RTOS, network manager
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -27,17 +27,123 @@
  * this software.
  */
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
+
+#include "esp_wifi.h"
+#include "esp_system.h"
+#include "esp_event.h"
+#include "esp_event_loop.h"
+
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 
+#include <sys/status.h>
+
 #include <drivers/net.h>
+#include <drivers/wifi.h>
 
 // This macro gets a reference for this driver into drivers array
 #define NET_DRIVER driver_get_by_name("net")
 
 // Driver message errors
 DRIVER_REGISTER_ERROR(NET, net, NotAvailable, "network is not available", NET_ERR_NOT_AVAILABLE);
+DRIVER_REGISTER_ERROR(NET, net, InvalidIpAddr, "invalid IP adddress", NET_ERR_INVALID_IP);
+
+// FreeRTOS events used by driver
+EventGroupHandle_t netEvent;
+
+// Retries for connect
+static uint8_t retries = 0;
+
+/*
+ * Helper functions
+ */
+static esp_err_t event_handler(void *ctx, system_event_t *event) {
+	switch (event->event_id) {
+		case SYSTEM_EVENT_STA_START:
+			esp_wifi_connect();
+			break;
+
+		case SYSTEM_EVENT_STA_STOP:
+			break;
+
+	    case SYSTEM_EVENT_STA_DISCONNECTED:
+			if (!status_get(STATUS_WIFI_CONNECTED)) {
+				if (retries > WIFI_CONNECT_RETRIES) {
+					status_clear(STATUS_WIFI_CONNECTED);
+					xEventGroupSetBits(netEvent, evWIFI_CANT_CONNECT);
+					retries = 0;
+					break;
+				} else {
+					retries++;
+
+					status_clear(STATUS_WIFI_CONNECTED);
+					esp_wifi_connect();
+				}
+			}
+
+			status_clear(STATUS_WIFI_CONNECTED);
+
+			esp_wifi_connect();
+	    	break;
+
+		case SYSTEM_EVENT_STA_GOT_IP:
+ 		    xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
+			break;
+
+		case SYSTEM_EVENT_AP_STA_GOT_IP6:
+ 		    xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
+			break;
+
+		case SYSTEM_EVENT_SCAN_DONE:
+ 		    xEventGroupSetBits(netEvent, evWIFI_SCAN_END);
+			break;
+
+		case SYSTEM_EVENT_STA_CONNECTED:
+			status_set(STATUS_WIFI_CONNECTED);
+			break;
+
+
+		case SYSTEM_EVENT_SPI_ETH_CONNECTED:
+			status_set(STATUS_SPI_ETH_CONNECTED);
+			break;
+
+		case SYSTEM_EVENT_SPI_ETH_DISCONNECTED:
+			status_clear(STATUS_SPI_ETH_CONNECTED);
+			break;
+
+		case SYSTEM_EVENT_SPI_ETH_GOT_IP:
+ 		    xEventGroupSetBits(netEvent, evSPI_ETH_CONNECTED);
+			break;
+
+		default :
+			break;
+	}
+
+   return ESP_OK;
+}
+
+/*
+ * Operation functions
+ */
+
+driver_error_t *net_init() {
+	if (!status_get(STATUS_TCPIP_INITED)) {
+		status_set(STATUS_TCPIP_INITED);
+
+		retries = 0;
+
+		netEvent = xEventGroupCreate();
+
+		tcpip_adapter_init();
+
+		esp_event_loop_init(event_handler, NULL);
+	}
+
+	return NULL;
+}
 
 driver_error_t *net_check_connectivity() {
 	if (!NETWORK_AVAILABLE()) {
