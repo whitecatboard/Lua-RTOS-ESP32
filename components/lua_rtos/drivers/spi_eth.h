@@ -27,6 +27,10 @@
  * this software.
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_SPI_ETHERNET
+
 #ifndef _SPI_ETH_
 #define _SPI_ETH_
 
@@ -47,5 +51,7 @@ driver_error_t *spi_eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t 
 driver_error_t *spi_eth_start();
 driver_error_t *spi_eth_stop();
 driver_error_t *spi_eth_stat(ifconfig_t *info);
+
+#endif
 
 #endif

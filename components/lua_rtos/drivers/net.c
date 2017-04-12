@@ -105,7 +105,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 			status_set(STATUS_WIFI_CONNECTED);
 			break;
 
-
+#if CONFIG_SPI_ETHERNET
 		case SYSTEM_EVENT_SPI_ETH_CONNECTED:
 			status_set(STATUS_SPI_ETH_CONNECTED);
 			break;
@@ -117,6 +117,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 		case SYSTEM_EVENT_SPI_ETH_GOT_IP:
  		    xEventGroupSetBits(netEvent, evSPI_ETH_CONNECTED);
 			break;
+#endif
 
 		default :
 			break;

@@ -622,13 +622,13 @@ void _lora_init() {
     status_set(STATUS_NEED_RTC_SLOW_MEM);
 
     // Get device EUI from flash id
-    if (CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID) {
+	#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
     	int i = 0;
 
     	for(i=0;i<8;i++) {
     		DEVEUI[i] = flash_unique_id[7-i];
     	}
-    }
+	#endif
 }
 
 DRIVER_REGISTER(LORA,lora, NULL,_lora_init,NULL);

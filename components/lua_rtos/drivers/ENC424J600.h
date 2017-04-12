@@ -49,6 +49,10 @@
  * Howard Schlunder		11/30/07	Original
  ********************************************************************/
 
+#include "sdkconfig.h"
+
+#if CONFIG_SPI_ETHERNET
+
 #ifndef __ENCX24J600_H
 #define __ENCX24J600_H
 
@@ -783,5 +787,7 @@ typedef union __attribute__((aligned(2), packed)) {
 int enc424j600_init(struct netif *netif);
 err_t enc424j600_output(struct netif *netif, struct pbuf *p);
 struct pbuf *enc424j600_input(struct netif *netif);
+
+#endif
 
 #endif

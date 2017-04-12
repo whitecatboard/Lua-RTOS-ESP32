@@ -29,6 +29,8 @@
 
 #include "sdkconfig.h"
 
+#if CONFIG_SPI_ETHERNET
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 
@@ -159,3 +161,5 @@ driver_error_t *spi_eth_stat(ifconfig_t *info) {
 }
 
 DRIVER_REGISTER(SPI_ETH,spi_eth,NULL,NULL,NULL);
+
+#endif

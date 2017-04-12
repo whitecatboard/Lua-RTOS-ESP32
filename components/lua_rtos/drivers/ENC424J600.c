@@ -29,6 +29,8 @@
 
 #include "sdkconfig.h"
 
+#if CONFIG_SPI_ETHERNET
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
 
@@ -711,3 +713,5 @@ err_t enc424j600_output(struct netif *netif, struct pbuf *p) {
 
 	return ERR_OK;
 }
+
+#endif

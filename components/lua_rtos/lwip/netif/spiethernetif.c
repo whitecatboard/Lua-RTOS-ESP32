@@ -36,6 +36,10 @@
  *
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_SPI_ETHERNET
+
 #include "lwip/opt.h"
 
 #include "lwip/def.h"
@@ -159,3 +163,5 @@ err_t spi_ethernetif_init(struct netif *netif) {
 
 	return ERR_OK;
 }
+
+#endif
