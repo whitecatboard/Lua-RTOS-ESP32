@@ -29,6 +29,14 @@ SECTIONS {
 	/* exception names exported to Lua modules */
 	/* TO DO */
 	/*   Generate this entries automatically */
+    can_errors = ABSOLUTE(.);
+    KEEP(*(.can_errors))
+    LONG(0) LONG(0)
+
+    can_error_map = ABSOLUTE(.);
+    KEEP(*(.can_error_map))
+    LONG(0) LONG(0)
+
     tm1637_errors = ABSOLUTE(.);
     KEEP(*(.tm1637_errors))
     LONG(0) LONG(0)

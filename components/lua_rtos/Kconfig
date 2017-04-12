@@ -169,6 +169,36 @@ menu "Lua RTOS"
 	  endmenu
 
 	  menu "Hardware"
+		menu "CAN pin map"
+			choice LUA_RTOS_CAN_TX_CHOICE
+				prompt "TX"
+				default LUA_RTOS_CAN_TX_GPIO12
+		
+				config LUA_RTOS_CAN_TX_GPIO5
+					bool "GPIO5"
+				
+				config LUA_RTOS_CAN_TX_GPIO12
+					bool "GPIO12"
+
+				config LUA_RTOS_CAN_TX_GPIO25
+					bool "GPIO25"
+			endchoice
+			
+			choice LUA_RTOS_CAN_RX_CHOICE
+				prompt "RX"
+				default LUA_RTOS_CAN_RX_GPIO14
+
+				config LUA_RTOS_CAN_RX_GPIO4
+					bool "GPIO4"
+				
+				config LUA_RTOS_CAN_RX_GPIO14
+					bool "GPIO14"
+
+				config LUA_RTOS_CAN_RX_GPIO35
+					bool "GPIO35"
+			endchoice
+		endmenu
+		
 		menu "SPI pin map"
 			config LUA_RTOS_SPI2_MISO
 	    	int "SPI2 MISO"
@@ -653,6 +683,10 @@ menu "Lua RTOS"
 				  	depends on WIFI_ENABLED || ETHERNET
 				  	bool "Include MQTT module in build"
 				  	default n
+
+			  	config LUA_RTOS_LUA_USE_CAN
+				  	bool "Include CAN module in build"
+				  	default y
 			endmenu
 		  endmenu
 	  endmenu

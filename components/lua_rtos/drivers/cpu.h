@@ -134,6 +134,23 @@ typedef uint64_t gpio_pin_mask_t;
 #define CPU_FIRST_GPIO GPIO0
 #define CPU_LAST_GPIO  GPIO39
 
+ /*
+  * ----------------------------------------------------------------
+  * CAN
+  * ----------------------------------------------------------------
+  */
+
+ // Unit bounds
+ #define CPU_FIRST_CAN 0
+ #define CPU_LAST_CAN  0
+
+ // ESP32 available CAN units
+ #define CPU_CAN0  0
+
+ // ESP32 available CAN names
+ #define CPU_CAN0_NAME  "CAN0"
+
+
 /*
  * ----------------------------------------------------------------
  * UART

@@ -2,7 +2,7 @@
  * Lua RTOS, Lua CAN module
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -27,138 +27,174 @@
  * this software.
  */
 
-#if LUA_USE_CAN
+#include "sdkconfig.h"
 
+#if CONFIG_LUA_RTOS_LUA_USE_CAN
+
+#include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
 #include "auxmods.h"
+#include "error.h"
+#include "can.h"
+#include "modules.h"
 
-#include <drivers/can/can.h>
+#include <signal.h>
 
-static int lcan_pins( lua_State* L ) {
-    return platform_can_pins(L);
-}
+#include <drivers/can.h>
+#include <drivers/cpu.h>
 
-// Lua: result = setup( id, clock )
-static int lcan_setup( lua_State* L )
-{
-  unsigned id;
-  u32 clock, res;
-  
-  id = luaL_checkinteger( L, 1 );
-  MOD_CHECK_ID( can, id );
-  
-  clock = luaL_checkinteger( L, 2 );
-  res = platform_can_setup( id, clock );
-  if (res > 0) {
-      lua_pushinteger( L, res );      
-  } else {
-      return luaL_error( L, "can't setup CAN" );
-  }
-  return 1;
-}
+extern LUA_REG_TYPE can_error_map[];
 
-// Lua: success = send( id, canid, canidtype, message )
-static int lcan_send( lua_State* L ) {
-  size_t len;
-  int id, canid, idtype;
-  const char *data;
-  
-  id = luaL_checkinteger( L, 1 );
-  MOD_CHECK_ID( can, id );
-  canid = luaL_checkinteger( L, 2 );
-  idtype = luaL_checkinteger( L, 3 );
-  len = luaL_checkinteger( L, 4 );
-  
-  data = luaL_checkstring (L, 5);
-  if ( len > CAN_MAX_LEN )
-    return luaL_error( L, "message exceeds max length" );
-  
-  platform_can_send( id, canid, idtype, len, ( const u8 * )data);
-  
-  return 0;
-}
+static int dump_stop = 0;
 
-// Lua: canid, canidtype, message = recv( id )
-static int lcan_recv( lua_State* L ) {
-  u8 len;
-  int id;
-  u32 canid;
-  u8  idtype, data[ CAN_MAX_LEN ];
-  
-  id = luaL_checkinteger( L, 1 );
-  MOD_CHECK_ID( can, id );
-  
-  if( platform_can_recv( id, &canid, &idtype, &len, data ))
-  {
-    lua_pushinteger( L, canid );
-    lua_pushinteger( L, idtype );
-    lua_pushinteger( L, len );
-    lua_pushlstring( L, ( const char * )data, ( size_t )len );
-  
-    return 4;
-  }
-  else
+static int lcan_setup(lua_State* L) {
+	driver_error_t *error;
+
+	int id = luaL_checkinteger(L, 1);
+	uint32_t speed = luaL_checkinteger(L, 2);
+
+    if ((error = can_setup(id, speed))) {
+    	return luaL_driver_error(L, error);
+    }
+
     return 0;
 }
 
-static int lcan_stats( lua_State* L )
-{
-  u8 len;
-  int id;
-  struct can_stats stats;
-  
-  id = luaL_checkinteger( L, 1 );
-  MOD_CHECK_ID( can, id );
-  
-  if( platform_can_stats( id, &stats ))
-  {
-    lua_pushinteger( L, stats.rx );
-    lua_pushinteger( L, stats.tx );
-    lua_pushinteger( L, stats.rxqueued );
-    lua_pushinteger( L, stats.rxunqueued );
+static int lcan_send(lua_State* L) {
+	driver_error_t *error;
 
-    return 4;
-  }
-  else
-    return 0;
+	int id = luaL_checkinteger(L, 1);
+	int msg_id = luaL_checkinteger(L, 2);
+	int msg_id_type = luaL_checkinteger(L, 3);
+	int len = luaL_checkinteger(L, 4);
+	const char *data = luaL_checkstring(L, 5);
+
+    if ((error = can_tx(id, msg_id, msg_id_type, (uint8_t *)data, len))) {
+    	return luaL_driver_error(L, error);
+    }
+
+	return 0;
 }
 
-// Module function map
-#define MIN_OPT_LEVEL 2
+static int lcan_recv(lua_State* L) {
+	driver_error_t *error;
+	uint32_t msg_id;
+	uint8_t msg_id_type;
+	uint8_t len;
+	uint8_t data[9] = {0,0,0,0,0,0,0,0,0};
 
-const luaL_Reg can_map[] = 
-{
-  { "setup", lcan_setup },
-  { "pins",  lcan_pins },
-  { "send",  lcan_send },  
-  { "recv",  lcan_recv },
-  { "stats", lcan_stats },
-  { NULL, NULL }
+	int id = luaL_checkinteger(L, 1);
+
+    if ((error = can_rx(id, &msg_id, &msg_id_type, data, &len))) {
+    	return luaL_driver_error(L, error);
+    }
+
+	lua_pushinteger(L, msg_id);
+	lua_pushinteger(L, msg_id_type);
+	lua_pushinteger(L, len);
+	lua_pushlstring(L, (const char *) data, (size_t) len);
+
+	return 4;
+}
+
+static void ldump_stop (int i) {
+	dump_stop = 1;
+}
+
+static int lcan_dump(lua_State* L) {
+	driver_error_t *error;
+	uint32_t msg_id;
+	uint8_t msg_id_type;
+	uint8_t len;
+	uint8_t data[9] = {0,0,0,0,0,0,0,0,0};
+	int id = luaL_checkinteger(L, 1);
+	int i;
+
+	dump_stop = 0;
+	signal(SIGINT, ldump_stop);
+
+	while (!dump_stop) {
+	    if ((error = can_rx(id, &msg_id, &msg_id_type, data, &len))) {
+	    	return luaL_driver_error(L, error);
+	    }
+
+	    printf("can%d  %08x  [%d] ", id, msg_id, len);
+
+	    for(i = 0;i<len;i++) {
+	    	if (i > 0) {
+	    		printf(" ");
+	    	}
+
+	    	printf("%02x", data[i]);
+	    }
+
+	    printf("\r\n");
+	}
+
+	return 0;
+}
+
+#if 0
+static int lcan_stats(lua_State* L) {
+	u8 len;
+	int id;
+	struct can_stats stats;
+
+	id = luaL_checkinteger(L, 1);
+	MOD_CHECK_ID(can, id);
+
+	if (platform_can_stats(id, &stats)) {
+		lua_pushinteger(L, stats.rx);
+		lua_pushinteger(L, stats.tx);
+		lua_pushinteger(L, stats.rxqueued);
+		lua_pushinteger(L, stats.rxunqueued);
+
+		return 4;
+	} else
+		return 0;
+}
+#endif
+
+static const LUA_REG_TYPE lcan_map[] = {
+    { LSTRKEY( "setup"   ),		  LFUNCVAL( lcan_setup   ) },
+    { LSTRKEY( "send"    ),		  LFUNCVAL( lcan_send    ) },
+    { LSTRKEY( "receive" ),		  LFUNCVAL( lcan_recv    ) },
+    { LSTRKEY( "dump"    ),		  LFUNCVAL( lcan_dump    ) },
+	CAN_CAN0
+	CAN_CAN1
+	{LSTRKEY("error"), 			  LROVAL( can_error_map    )},
+
+	{LSTRKEY("STD"), LINTVAL(0)},
+	{LSTRKEY("EXT"), LINTVAL(1)},
+
+	{ LNILKEY, LNILVAL }
 };
 
-LUALIB_API int luaopen_can( lua_State *L )
-{
-#if LUA_OPTIMIZE_MEMORY > 0
-  return 0;
-#else // #if LUA_OPTIMIZE_MEMORY > 0
-  luaL_register( L, AUXLIB_CAN, can_map );
-  
-  // Module constants  
-  MOD_REG_INTEGER( L, "STD", 0 );
-  MOD_REG_INTEGER( L, "EXT", 1 );
-  
-  int i;
-  char buff[5];
- 
-  
-  for(i=1;i<=NCAN;i++) {
-      sprintf(buff,"CAN%d",i);
-      MOD_REG_INTEGER( L, buff, i );
-  }
-
-  return 1;
-#endif // #if LUA_OPTIMIZE_MEMORY > 0  
+LUALIB_API int luaopen_can( lua_State *L ) {
+    return 0;
 }
 
+MODULE_REGISTER_MAPPED(CAN, can, lcan_map, luaopen_can);
+
 #endif
+
+
+/*
+
+can.setup(can.CAN0, 1000)
+while true do
+    frame = string.pack(
+    	"BBBBBBBB",
+    	math.random(255), math.random(255), math.random(255), math.random(255),
+    	math.random(255), math.random(255), math.random(255), math.random(255)
+    )
+
+	can.send(can.CAN0, 100, can.STD, 8, frame)
+	tmr.delayms(50)
+end
+
+can.setup(can.CAN0, 1000)
+can.dump(can.CAN0)
+
+ */
