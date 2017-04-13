@@ -75,38 +75,38 @@ void spi_ethernetif_input(struct netif *netif) {
 	struct pbuf *p;
 	err_t ok = ERR_OK;
 
+more:
 	/* move received packet into a new pbuf */
 	p = enc424j600_input(netif);
 	/* no packet could be read, silently ignore this */
 	if (p == NULL)
 		return;
+
 	/* points to packet payload, which starts with an Ethernet header */
 	ethhdr = p->payload;
 
 	switch (htons(ethhdr->type)) {
-	/* IP or ARP packet? */
-	case ETHTYPE_IP:
-	case ETHTYPE_IPV6:
-	case ETHTYPE_ARP:
-#if PPPOE_SUPPORT
-		/* PPPoE packet? */
-		case ETHTYPE_PPPOEDISC:
-		case ETHTYPE_PPPOE:
-#endif /* PPPOE_SUPPORT */
-		/* full packet send to tcpip_thread to process */
-		ok = netif->input(p, netif);
-		if (ok != ERR_OK) {
-			LWIP_DEBUGF(NETIF_DEBUG, ("ethernetif_input: IP input error\n"));
+		/* IP or ARP packet? */
+		case ETHTYPE_IP:
+		case ETHTYPE_IPV6:
+		case ETHTYPE_ARP:
+			/* full packet send to tcpip_thread to process */
+			ok = netif->input(p, netif);
+			if (ok != ERR_OK) {
+				LWIP_DEBUGF(NETIF_DEBUG, ("ethernetif_input: IP input error\n"));
+				pbuf_free(p);
+				p = NULL;
+			}
+			break;
+
+		default:
 			pbuf_free(p);
 			p = NULL;
-		}
-		break;
-
-	default:
-		pbuf_free(p);
-		p = NULL;
-		break;
+			break;
 	}
+
+	// More packets?
+	goto more;
 }
 
 /**

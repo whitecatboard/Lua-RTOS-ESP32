@@ -68,7 +68,7 @@
 // ENC424J600 config
 #define ENC424J600_RAMSIZE	(0x6000)
 #define ENC424J600_TXSTART	(0x0000)
-#define ENC424J600_RXSTART	(030000) // Should be an even memory address
+#define ENC424J600_RXSTART	(0x3000) // Should be an even memory address
 
 void enc424j600Init(void);
 uint16_t enc424j600PacketReceive(uint16_t maxlen, uint8_t* packet);

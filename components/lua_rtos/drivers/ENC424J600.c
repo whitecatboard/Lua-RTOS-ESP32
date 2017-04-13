@@ -61,14 +61,14 @@
 
 extern void spi_ethernetif_input(struct netif *neti);
 
-#define ENC424J600_INT_MASK (EIR_LINKIF | EIR_PKTIF | EIR_TXIF | EIR_TXABTIF | EIR_RXABTIF | EIR_PCFULIF)
+#define ENC424J600_INT_MASK (EIR_LINKIF | EIR_PKTIF)
 
 static volatile int currentBank;
 static uint16_t nextPacketPointer;
 static int spi_device;
 static struct netif *interface;
 
-xQueueHandle ether_q;
+static xQueueHandle ether_q = NULL;
 
 static uint16_t exec_8_op(uint8_t op);
 static uint16_t exec_16_op(uint8_t op, uint16_t data);
@@ -79,8 +79,6 @@ static uint16_t read_reg(uint16_t address);
 static void write_phy_reg(uint8_t address, uint16_t Data);
 static void bfs_reg(uint16_t address, uint16_t bitMask);
 static void bfc_reg(uint16_t address, uint16_t bitMask);
-static void suspend_interrupts();
-static void reenable_interrupts();
 static int phy_reset();
 static void mac_flush(void);
 static void write_n(uint8_t op, uint8_t* data, uint16_t len);
@@ -172,29 +170,6 @@ static uint16_t read_reg(uint16_t address) {
 	return returnValue;
 }
 
-#if 0
-static uint16_t read_phy_reg(uint8_t address) {
-	uint16_t readed;
-
-	// Set the right address and start the register read operation
-	write_reg(MIREGADR, 0x0100 | address);
-	write_reg(MICMD, MICMD_MIIRD);
-
-	// Loop to wait until the PHY register has been read through the MII
-	// This requires 25.6us
-	while (read_reg(MISTAT) & MISTAT_BUSY)
-		;
-
-	// Stop reading
-	write_reg(MICMD, 0x0000);
-
-	// Obtain results and return
-	readed = read_reg(MIRD);
-
-	return readed;
-}
-#endif
-
 static void write_phy_reg(uint8_t address, uint16_t Data) {
 	// Write the register address
 	write_reg(MIREGADR, 0x0100 | address);
@@ -221,17 +196,6 @@ static void bfc_reg(uint16_t address, uint16_t bitMask) {
 	bank = ((uint8_t) address) & 0xE0;
 	change_bank_if_needed(bank);
 	exec_16_op(BFC | (address & 0x1F), bitMask);
-}
-
-static void suspend_interrupts() {
-	// Disable global interrupts while processing this interrupt
-	// to avoid loose events
-	bfc_reg(EIE, EIE_INTIE);
-}
-
-static void reenable_interrupts() {
-	// Reenable ENC global interrupts
-	bfs_reg(EIE, EIE_INTIE);
 }
 
 static int phy_reset() {
@@ -283,63 +247,42 @@ static int phy_reset() {
 	return 0;
 }
 
+/*
+ * SPI Ethernet task. Waits the ISR for process an interrupt.
+ *
+ */
 static void ether_task(void *taskArgs) {
-	uint16_t flag;
+	uint8_t dummy;
 
 	for(;;) {
-		xQueueReceive(ether_q, &flag, portMAX_DELAY);
+		// Wait the ISR
+		xQueueReceive(ether_q, &dummy, portMAX_DELAY);
 
-		if (flag & EIR_LINKIF) {
-			link_status_change();
-			bfc_reg(EIR, EIR_LINKIF);
+		// Get cause
+		unsigned int flag = read_reg(EIR);
+
+		if (flag) {
+			if (flag & EIR_LINKIF) {
+				link_status_change();
+			}
+
+			if (flag & EIR_PKTIF) {
+				spi_ethernetif_input(interface);
+			}
+
+		    // Clear all interrupt flags
+		    bfc_reg(EIR, 0xfff);
 		}
-
-		if (flag & EIR_PKTIF) {
-			spi_ethernetif_input(interface);
-			bfc_reg(EIR, EIR_PKTIF);
-		}
-
-	    if (flag & EIR_TXIF) {
-	        // Packet transmission has completed
-			bfc_reg(EIR, EIR_TXIF);
-	    }
-
-	    if (flag & EIR_TXABTIF) {
-	        // Packet transmission has been aborted due to an error
-			bfc_reg(EIR, EIR_TXABTIF);
-	    }
-
-	    if (flag & EIR_RXABTIF) {
-	        // An RX packet was dropped because there is insufficient space in the
-	        // RX buffer to store the complete packet
-			bfc_reg(EIR, EIR_RXABTIF);
-	    }
-
-	    if (flag & EIR_PCFULIF) {
-	        // PKTCNT field has reached FFh. Software must decrement the packet
-	        // counter to prevent the next RX packet from being dropped
-			bfc_reg(EIR, EIR_PCFULIF);
-	    }
-
-	    gpio_intr_enable(CONFIG_SPI_ETHERNET_INT);
-
-		// Reenable interrupts
-	    reenable_interrupts();
 	}
 }
 
 static void ether_intr(void* arg) {
-	// Disable interrupt on GPIO
-	gpio_intr_disable(CONFIG_SPI_ETHERNET_INT);
+	uint8_t dummy = 0;
 
-	// Suspend interrupts
-	suspend_interrupts();
-
-	// Get cause of this interrupt
-	unsigned int flag = read_reg(EIR);
-
-	// Send to ethernet task
-	xQueueSendFromISR(ether_q, &flag, NULL);
+	// Inform the ethernet task that there is a new interrupt
+	// for process. A dummy value is queued, because we don't
+	// want to pass data.
+	xQueueSendFromISR(ether_q, &dummy, NULL);
 }
 
 static void mac_flush(void) {
@@ -518,7 +461,20 @@ int enc424j600_init(struct netif *netif) {
 	// Enable RX packet reception
 	bfs_reg(ECON1, ECON1_RXEN);
 
-	// Configure external interrupt line
+    // Disable all interrupts
+    bfc_reg(EIE, 0xfff);
+
+    // Clear all interrupt flags
+    bfc_reg(EIR, 0xfff);
+
+    // Configure external interrupt line
+	if (!ether_q) {
+		ether_q = xQueueCreate(100, sizeof(uint8_t));
+	}
+
+	// ISR related task must run on the same core that ISR handler is added
+    xTaskCreatePinnedToCore(ether_task, "eth", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES - 6, NULL, xPortGetCoreID());
+
 	if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
 		gpio_install_isr_service(0);
 
@@ -530,17 +486,6 @@ int enc424j600_init(struct netif *netif) {
 	gpio_set_intr_type(CONFIG_SPI_ETHERNET_INT, GPIO_INTR_NEGEDGE);
 	gpio_isr_handler_add(CONFIG_SPI_ETHERNET_INT, ether_intr, NULL);
 
-	ether_q = xQueueCreate(100, sizeof(unsigned int));
-
-    // ISR related task must run on the same core that ISR handler is added
-    xTaskCreatePinnedToCore(ether_task, "eth", CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE, NULL, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY, NULL, xPortGetCoreID());
-
-    // Disable all interrupts
-    bfc_reg(EIE, 0xfff);
-
-    // Clear all interrupt flags
-    bfc_reg(EIR, 0xfff);
-
     // Enable interrupts
 	bfs_reg(EIE, ENC424J600_INT_MASK);
 
@@ -550,28 +495,37 @@ int enc424j600_init(struct netif *netif) {
 struct pbuf *enc424j600_input(struct netif *netif) {
     RXSTATUS statusVector;
     uint16_t newRXTail;
-    struct pbuf *p, *q;
+    struct pbuf *p = NULL, *q = NULL;
     u16_t len = 0;
     u16_t frame_size = 0;
+
+    // Ensure that are pending packets
+    if (!(read_reg(ESTAT) & 0b11111111)) {
+    	return NULL;
+    }
 
     // Set the RX Read Pointer to the beginning of the next unprocessed packet
     write_reg(ERXRDPT, nextPacketPointer);
 
+    // Read the adress of next packet
     read_memory_window(RX_WINDOW, (uint8_t*) & nextPacketPointer, sizeof (nextPacketPointer));
+
+    // Read the receive status vector
     read_memory_window(RX_WINDOW, (uint8_t*) & statusVector, sizeof (statusVector));
 
-    len = statusVector.bits.ByteCount - 4;
-
-    if (statusVector.bits.Zero || statusVector.bits.ZeroH ||
-	   statusVector.bits.CRCError ||
-	   statusVector.bits.ByteCount > 1522u ||
-	   !statusVector.bits.ReceiveOk) {
-
+    // Check the packet
+    if (
+    	statusVector.bits.Zero || statusVector.bits.ZeroH || statusVector.bits.CRCError ||
+		statusVector.bits.ByteCount > 1522u || !statusVector.bits.ReceiveOk
+	) {
     	goto exit;
     }
 
+    // Get the packet length
+    len = statusVector.bits.ByteCount - 4;
+
     // If we don't receive nothing, exit
-    if (len <= 0) {
+    if (len == 0) {
     	goto exit;
     }
 

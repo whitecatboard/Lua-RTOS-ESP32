@@ -161,11 +161,11 @@ static void _spi_init() {
 	spi_bus[3].mtx = xSemaphoreCreateRecursiveMutex();
 }
 
-static void IRAM_ATTR spi_lock(uint8_t unit) {
+static void spi_lock(uint8_t unit) {
 	xSemaphoreTakeRecursive(spi_bus[unit].mtx, portMAX_DELAY);
 }
 
-static void IRAM_ATTR spi_unlock(uint8_t unit) {
+static void spi_unlock(uint8_t unit) {
 	while (xSemaphoreGiveRecursive(spi_bus[unit].mtx) == pdTRUE);
 }
 
@@ -462,8 +462,6 @@ static void spi_setup_bus(uint8_t unit) {
  *
  */
 int spi_ll_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_t speed, int *deviceid) {
-	spi_lock(unit);
-
 	// Check if there's some device un bus with the same cs
 	// If there's one, we want to reconfigure device
 	int device = spi_get_device_by_cs(unit, cs);
@@ -473,7 +471,6 @@ int spi_ll_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_
 		device = spi_get_free_device(unit);
 		if (device < 0) {
 	    	// No more devices
-			spi_unlock(unit);
 			return -1;
 		}
 	} else {
@@ -528,8 +525,6 @@ int spi_ll_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_
     spi_bus[unit].setup = 1;
     spi_bus[unit].device[device].setup = 1;
 
-    spi_unlock(unit);
-
 	*deviceid = (unit << 8) | device;
 
 	return 0;
@@ -539,16 +534,13 @@ void spi_ll_get_speed(int deviceid, uint32_t *speed) {
 	int unit = (deviceid & 0xff00) >> 8;
 	int device = (deviceid & 0x00ff);
 
-	spi_lock(unit);
 	*speed = spi_bus[unit].device[device].speed;
-	spi_unlock(unit);
 }
 
 void spi_ll_set_speed(int deviceid, uint32_t speed) {
 	int unit = (deviceid & 0xff00) >> 8;
 	int device = (deviceid & 0x00ff);
 
-	spi_lock(unit);
 	spi_bus[unit].last_device = -1;
 	spi_bus[unit].device[device].speed = speed;
 #if !SPI_USE_IDF_DRIVER
@@ -569,7 +561,6 @@ void spi_ll_set_speed(int deviceid, uint32_t speed) {
     assert(ret==ESP_OK);
 
     #endif
-	spi_unlock(unit);
 }
 
 void IRAM_ATTR spi_ll_transfer(int deviceid, uint8_t data, uint8_t *read) {
@@ -674,8 +665,6 @@ void IRAM_ATTR spi_ll_select(int deviceid) {
 	int unit = (deviceid & 0xff00) >> 8;
 	int device = (deviceid & 0x00ff);
 
-	spi_lock(unit);
-
 	if (spi_bus[unit].last_device != deviceid) {
 #if !SPI_USE_IDF_DRIVER
         // Complete operations, if pending
@@ -744,8 +733,6 @@ void IRAM_ATTR spi_ll_deselect(int deviceid) {
 
 	// Deselect device
     gpio_ll_pin_set(spi_bus[unit].device[device].cs);
-
-    spi_unlock(unit);
 }
 
 
@@ -798,9 +785,12 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode
     }
 
     // Low-level setup
+	spi_lock(unit);
     if (spi_ll_setup(unit, master, cs, mode, speed, deviceid) != 0) {
+    	spi_unlock(unit);
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_NO_MORE_DEVICES_ALLOWED, NULL);
     }
+	spi_unlock(unit);
 
 	return NULL;
 }
@@ -822,6 +812,7 @@ driver_error_t *spi_select(int deviceid) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
 	}
 
+	spi_lock(unit);
 	spi_ll_select(deviceid);
 
     return NULL;
@@ -845,6 +836,7 @@ driver_error_t *spi_deselect(int deviceid) {
 	}
 
     spi_ll_deselect(deviceid);
+	spi_unlock(unit);
 
     return NULL;
 }
@@ -866,7 +858,9 @@ driver_error_t *spi_get_speed(int deviceid, uint32_t *speed) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
 	}
 
+	spi_lock(unit);
 	spi_ll_get_speed(deviceid, speed);
+	spi_unlock(unit);
 
 	return NULL;
 }
@@ -888,7 +882,9 @@ driver_error_t *spi_set_speed(int deviceid, uint32_t speed) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
 	}
 
+	spi_lock(unit);
 	spi_ll_set_speed(deviceid, speed);
+	spi_unlock(unit);
 
 	return NULL;
 }
