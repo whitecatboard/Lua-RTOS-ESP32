@@ -281,10 +281,6 @@ static void IRAM_ATTR spi_master_op(int deviceid, uint32_t word_size, uint32_t l
 	// Number of bytes to transmit
 	uint32_t bytes = word_size * len;
 
-    if (port_interruptNesting[xPortGetCoreID()] == 0) {
-    	portDISABLE_INTERRUPTS();
-    }
-
 	while (bytes) {
 		// Fill TX buffer
 		cbytes = ((bytes > 64)?64:bytes);
@@ -331,11 +327,6 @@ static void IRAM_ATTR spi_master_op(int deviceid, uint32_t word_size, uint32_t l
 			out = out + cbytes;
 		}
 	}
-
-    if (port_interruptNesting[xPortGetCoreID()] == 0) {
-    	portENABLE_INTERRUPTS();
-    }
-
 #else
 	int device = (deviceid & 0x00ff);
 
@@ -665,6 +656,8 @@ void IRAM_ATTR spi_ll_select(int deviceid) {
 	int unit = (deviceid & 0xff00) >> 8;
 	int device = (deviceid & 0x00ff);
 
+	spi_lock(unit);
+
 	if (spi_bus[unit].last_device != deviceid) {
 #if !SPI_USE_IDF_DRIVER
         // Complete operations, if pending
@@ -733,6 +726,8 @@ void IRAM_ATTR spi_ll_deselect(int deviceid) {
 
 	// Deselect device
     gpio_ll_pin_set(spi_bus[unit].device[device].cs);
+
+	spi_unlock(unit);
 }
 
 
@@ -812,7 +807,6 @@ driver_error_t *spi_select(int deviceid) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
 	}
 
-	spi_lock(unit);
 	spi_ll_select(deviceid);
 
     return NULL;
@@ -836,7 +830,6 @@ driver_error_t *spi_deselect(int deviceid) {
 	}
 
     spi_ll_deselect(deviceid);
-	spi_unlock(unit);
 
     return NULL;
 }

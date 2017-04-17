@@ -17,6 +17,9 @@ Maintainer: Sylvain Miermont
 
 #if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 /* -------------------------------------------------------------------------- */
 /* --- DEPENDANCIES --------------------------------------------------------- */
 
@@ -48,7 +51,7 @@ Maintainer: Sylvain Miermont
 
 /* This implementation is POSIX-pecific and require a fix to be compatible with C99 */
 void wait_ms(unsigned long a) {
-	delay(a);
+	vTaskDelay(a / portTICK_PERIOD_MS);
 }
 
 /* --- EOF ------------------------------------------------------------------ */

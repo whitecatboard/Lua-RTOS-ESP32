@@ -61,7 +61,7 @@
 
 extern void spi_ethernetif_input(struct netif *neti);
 
-#define ENC424J600_INT_MASK (EIR_LINKIF | EIR_PKTIF)
+#define ENC424J600_INT_MASK (EIE_INTIE | EIR_LINKIF | EIR_PKTIF)
 
 static volatile int currentBank;
 static uint16_t nextPacketPointer;
@@ -252,15 +252,15 @@ static int phy_reset() {
  *
  */
 static void ether_task(void *taskArgs) {
-	uint8_t dummy;
+	unsigned int flag;
+	unsigned int dummy;
 
 	for(;;) {
 		// Wait the ISR
 		xQueueReceive(ether_q, &dummy, portMAX_DELAY);
 
 		// Get cause
-		unsigned int flag = read_reg(EIR);
-
+		flag = read_reg(EIR);
 		if (flag) {
 			if (flag & EIR_LINKIF) {
 				link_status_change();
@@ -269,15 +269,15 @@ static void ether_task(void *taskArgs) {
 			if (flag & EIR_PKTIF) {
 				spi_ethernetif_input(interface);
 			}
-
-		    // Clear all interrupt flags
-		    bfc_reg(EIR, 0xfff);
 		}
+
+		// Clear all interrupt flags
+		bfc_reg(EIR, 0xfff);
 	}
 }
 
-static void ether_intr(void* arg) {
-	uint8_t dummy = 0;
+static void IRAM_ATTR ether_intr(void* arg) {
+	unsigned int dummy = 0;
 
 	// Inform the ethernet task that there is a new interrupt
 	// for process. A dummy value is queued, because we don't
@@ -462,18 +462,18 @@ int enc424j600_init(struct netif *netif) {
 	bfs_reg(ECON1, ECON1_RXEN);
 
     // Disable all interrupts
-    bfc_reg(EIE, 0xfff);
+	bfc_reg(EIE, ENC424J600_INT_MASK);
 
     // Clear all interrupt flags
     bfc_reg(EIR, 0xfff);
 
     // Configure external interrupt line
 	if (!ether_q) {
-		ether_q = xQueueCreate(100, sizeof(uint8_t));
+		ether_q = xQueueCreate(100, sizeof(unsigned int));
 	}
 
 	// ISR related task must run on the same core that ISR handler is added
-    xTaskCreatePinnedToCore(ether_task, "eth", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES - 6, NULL, xPortGetCoreID());
+    xTaskCreatePinnedToCore(ether_task, "eth", 1024 * 4, NULL, configMAX_PRIORITIES - 2, NULL, xPortGetCoreID());
 
 	if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
 		gpio_install_isr_service(0);
@@ -500,9 +500,9 @@ struct pbuf *enc424j600_input(struct netif *netif) {
     u16_t frame_size = 0;
 
     // Ensure that are pending packets
-    if (!(read_reg(ESTAT) & 0b11111111)) {
-    	return NULL;
-    }
+	if (!(read_reg(ESTAT) & 0b11111111)) {
+		return NULL;
+	}
 
     // Set the RX Read Pointer to the beginning of the next unprocessed packet
     write_reg(ERXRDPT, nextPacketPointer);

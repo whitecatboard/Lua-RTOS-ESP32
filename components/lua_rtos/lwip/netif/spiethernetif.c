@@ -105,7 +105,6 @@ more:
 			break;
 	}
 
-	// More packets?
 	goto more;
 }
 
