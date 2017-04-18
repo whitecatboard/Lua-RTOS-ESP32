@@ -30,6 +30,10 @@
 #ifndef WIFI_H_
 #define WIFI_H_
 
+#include "sdkconfig.h"
+
+#if CONFIG_WIFI_ENABLED
+
 #include "net.h"
 
 #include "esp_wifi.h"
@@ -62,5 +66,7 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password);
 driver_error_t *wifi_start();
 driver_error_t *wifi_stop();
 driver_error_t *wifi_stat(ifconfig_t *info);
+
+#endif
 
 #endif

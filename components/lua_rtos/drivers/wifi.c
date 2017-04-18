@@ -27,6 +27,10 @@
  * this software.
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_WIFI_ENABLED
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 
@@ -291,3 +295,5 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 }
 
 DRIVER_REGISTER(WIFI,wifi,NULL,NULL,NULL);
+
+#endif

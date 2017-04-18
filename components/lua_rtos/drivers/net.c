@@ -30,7 +30,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 
+#if CONFIG_WIFI_ENABLED
 #include "esp_wifi.h"
+#endif
+
 #include "esp_system.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
@@ -62,7 +65,8 @@ static uint8_t retries = 0;
  */
 static esp_err_t event_handler(void *ctx, system_event_t *event) {
 	switch (event->event_id) {
-		case SYSTEM_EVENT_STA_START:
+#if CONFIG_WIFI_ENABLED
+	case SYSTEM_EVENT_STA_START:
 			esp_wifi_connect();
 			break;
 
@@ -104,6 +108,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 		case SYSTEM_EVENT_STA_CONNECTED:
 			status_set(STATUS_WIFI_CONNECTED);
 			break;
+#endif
 
 #if CONFIG_SPI_ETHERNET
 		case SYSTEM_EVENT_SPI_ETH_CONNECTED:
