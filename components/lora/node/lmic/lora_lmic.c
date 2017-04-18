@@ -67,6 +67,8 @@ DRIVER_REGISTER_ERROR(LORA, lora, ABPExpected, "ABP expected", LORA_ERR_ABP_EXPE
 DRIVER_REGISTER_ERROR(LORA, lora, CannotSetup, "can't setup", LORA_ERR_CANT_SETUP);
 DRIVER_REGISTER_ERROR(LORA, lora, TransmissionFail, "transmission fail, ack not received", LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED);
 DRIVER_REGISTER_ERROR(LORA, lora, InvalidArgument, "invalid argument", LORA_ERR_INVALID_ARGUMENT);
+DRIVER_REGISTER_ERROR(LORA, lora, InvalidDataRate, "invalid data rate for your location", LORA_ERR_INVALID_DR);
+DRIVER_REGISTER_ERROR(LORA, lora, InvalidBand, "invalid band for your location", LORA_ERR_INVALID_BAND);
 
 #define evLORA_INITED 	       	 ( 1 << 0 )
 #define evLORA_JOINED  	       	 ( 1 << 1 )
@@ -106,16 +108,25 @@ RTC_DATA_ATTR static u4_t msgid = 0;
 // If = 1 driver is setup, if = 0 is not setup
 static u1_t setup = 0;
 
-// Current used band
-static int current_band = 0;
-
 // Callback function to call when data is received
 static lora_rx *lora_rx_callback = NULL;
 
-// Table for translate numeric datarates (from 0 to 7) to LMIC definitions
+// Table for translate numeric datarates to LMIC definitions
+#if CONFIG_LUA_RTOS_LORA_NODE_BAND_EU868
 static const u1_t data_rates[] = {
-	DR_SF12, DR_SF11, DR_SF10, DR_SF9, DR_SF8, DR_SF7, DR_SF7B, DR_FSK
+	DR_SF12, DR_SF11, DR_SF10, DR_SF9, DR_SF8, DR_SF7, DR_SF7B, DR_FSK, DR_NONE,
+	DR_NONE, DR_NONE, DR_NONE, DR_NONE, DR_NONE, DR_NONE, DR_NONE
 };
+#endif
+
+#if CONFIG_LUA_RTOS_LORA_NODE_BAND_US915
+static const u1_t data_rates[] = {
+	DR_SF10, DR_SF9, DR_SF8, DR_SF7, DR_SF8C, DR_NONE, DR_NONE, DR_NONE,
+	DR_SF12CR, DR_SF11CR, DR_SF10CR, DR_SF9CR, DR_SF8CR, DR_SF7CR, DR_NONE,
+	DR_NONE
+};
+
+#endif
 
 // Current datarate set by user
 static u1_t current_dr = 0;
@@ -214,8 +225,8 @@ static void lora_init(osjob_t *j) {
     // Reset MAC state
     LMIC_reset();
 
-    if (current_band == 868) {
-	    LMIC_setupChannel(0, 868100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
+	#if CONFIG_LUA_RTOS_LORA_NODE_BAND_EU868
+    	LMIC_setupChannel(0, 868100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
 	    LMIC_setupChannel(1, 868300000, DR_RANGE_MAP(DR_SF12, DR_SF7B), BAND_CENTI);
 	    LMIC_setupChannel(2, 868500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
 	    LMIC_setupChannel(3, 867100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
@@ -224,21 +235,25 @@ static void lora_init(osjob_t *j) {
 	    LMIC_setupChannel(6, 867700000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
 	    LMIC_setupChannel(7, 867900000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
 	    LMIC_setupChannel(8, 868800000, DR_RANGE_MAP(DR_FSK,  DR_FSK),  BAND_MILLI);	
-	}
+	#endif
 
-    /* Disable link check validation */
+	#if CONFIG_LUA_RTOS_LORA_NODE_BAND_US915
+	    LMIC_selectSubBand(1);
+	#endif
+
+	/* Disable link check validation */
     LMIC_setLinkCheckMode(0);
 
     /* adr disabled */
     adr = 0;
     LMIC_setAdrMode(0);
 
-    /* TTN uses SF9 for its RX2 window. */
-    LMIC.dn2Dr = DR_SF9;
+	/* TTN uses SF9 for its RX2 window. */
+	LMIC.dn2Dr = DR_SF9;
 
-    /* Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library) */
-    current_dr = DR_SF12;
-    LMIC_setDrTxpow(current_dr, 14);
+	/* Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library) */
+	current_dr = DR_SF7;
+	LMIC_setDrTxpow(current_dr, 14);
 
     xEventGroupSetBits(loraEvent, evLORA_INITED);
 }
@@ -266,16 +281,19 @@ static void lora_init(osjob_t *j) {
 
 // Setup driver
 driver_error_t *lora_setup(int band) {
-    mtx_lock(&lora_mtx);
+	#if CONFIG_LUA_RTOS_LORA_NODE_BAND_EU868
+	if (band != 868) {
+		return driver_operation_error(LORA_DRIVER, LORA_ERR_INVALID_BAND, NULL);
+	}
+	#endif
 
-    // Sanity checks
-    if (current_band == 0) {
-        current_band = band;
-    } else {
-    	if (current_band != band) {
-    		return driver_setup_error(LORA_DRIVER, LORA_ERR_CANT_SETUP, "you must reset your board for change ISM band");
-    	}
-    }
+	#if CONFIG_LUA_RTOS_LORA_NODE_BAND_US915
+	if (band != 915) {
+		return driver_operation_error(LORA_DRIVER, LORA_ERR_INVALID_BAND, NULL);
+	}
+	#endif
+
+    mtx_lock(&lora_mtx);
 
     if (!setup) {
         syslog(LOG_DEBUG, "lora: setup, band %d", band);
@@ -351,7 +369,16 @@ driver_error_t *lora_mac_set(const char command, const char *value) {
 			break;
 		
 		case LORA_MAC_SET_DR:
-			current_dr = data_rates[atoi((char *)value)];
+			if ((atoi((char *)value) < 0) || (atoi((char *)value) > 15)) {
+				return driver_operation_error(LORA_DRIVER, LORA_ERR_INVALID_DR, NULL);
+			}
+
+			u1_t dr = data_rates[atoi((char *)value)];
+			if (dr == DR_NONE) {
+				return driver_operation_error(LORA_DRIVER, LORA_ERR_INVALID_DR, NULL);
+			}
+
+			current_dr = dr;
 
 			if (!adr) {
 				LMIC_setDrTxpow(current_dr, 14);

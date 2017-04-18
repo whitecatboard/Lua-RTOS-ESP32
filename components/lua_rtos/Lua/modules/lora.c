@@ -432,6 +432,7 @@ static const LUA_REG_TYPE lora_map[] = {
 	// Constant definitions
     { LSTRKEY( "BAND868" ),		 LINTVAL( 868 ) },
     { LSTRKEY( "BAND433" ), 	 LINTVAL( 433 ) },
+    { LSTRKEY( "BAND915" ), 	 LINTVAL( 915 ) },
 #endif
 
 #if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
