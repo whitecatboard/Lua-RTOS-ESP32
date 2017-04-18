@@ -151,12 +151,8 @@ static void check_path(const char *path, uint8_t *base_is_dir, uint8_t *full_is_
     strlcpy(fpath, path, PATH_MAX);
     dir_path(fpath, 0);
 
-    //printf("bpath '%s'\r\n", bpath);
-    //printf("fpath '%s'\r\n", fpath);
-
     SPIFFS_opendir(&fs, "/", &d);
 	while (SPIFFS_readdir(&d, &e)) {
-		//printf("  %s\r\n",(char *)e.name);
 		if (!strcmp(bpath, (const char *)e.name)) {
 			*base_is_dir = 1;
 		}
@@ -170,8 +166,6 @@ static void check_path(const char *path, uint8_t *base_is_dir, uint8_t *full_is_
 		}
 	}
 	SPIFFS_closedir(&d);
-
-	//printf("%d %d %d\r\n", *base_is_dir, *full_is_dir, *is_file);
 }
 
 /*
@@ -847,14 +841,16 @@ void vfs_spiffs_register() {
 
     my_spiffs_work_buf = malloc(cfg.log_page_size * 2);
     if (!my_spiffs_work_buf) {
-    	// TO DO: assert
+    	syslog(LOG_ERR, "spiffs%d can't allocate memory for file system", unit);
+    	return;
     }
 
     int fds_len = sizeof(spiffs_fd) * 5;
     my_spiffs_fds = malloc(fds_len);
     if (!my_spiffs_fds) {
         free(my_spiffs_work_buf);
-    	// TO DO: assert
+    	syslog(LOG_ERR, "spiffs%d can't allocate memory for file system", unit);
+    	return;
     }
 
     int cache_len = cfg.log_page_size * 5;
@@ -862,34 +858,67 @@ void vfs_spiffs_register() {
     if (!my_spiffs_cache) {
         free(my_spiffs_work_buf);
         free(my_spiffs_fds);
-    	// TO DO: assert
+    	syslog(LOG_ERR, "spiffs%d can't allocate memory for file system", unit);
+    	return;
     }
 
-    res = SPIFFS_mount(
-            &fs, &cfg, my_spiffs_work_buf, my_spiffs_fds,
-            fds_len, my_spiffs_cache, cache_len, NULL
-    );
+    while (retries < 2) {
+        res = SPIFFS_mount(
+    		&fs, &cfg, my_spiffs_work_buf, my_spiffs_fds,
+    		fds_len, my_spiffs_cache, cache_len, NULL
+        );
 
-    if (res < 0) {
-        if (fs.err_code == SPIFFS_ERR_NOT_A_FS) {
-            syslog(LOG_ERR, "spiffs%d no file system detect, formating", unit);
-            SPIFFS_unmount(&fs);
-            res = SPIFFS_format(&fs);
-            if (res < 0) {
-                syslog(LOG_ERR, "spiffs%d format error",unit);
-            	// TO DO: assert
+        if (res < 0) {
+            if (fs.err_code == SPIFFS_ERR_NOT_A_FS) {
+                syslog(LOG_ERR, "spiffs%d no file system detect, formating...", unit);
+                SPIFFS_unmount(&fs);
+                res = SPIFFS_format(&fs);
+                if (res < 0) {
+                    free(my_spiffs_work_buf);
+                    free(my_spiffs_fds);
+                    free(my_spiffs_cache);
+                    syslog(LOG_ERR, "spiffs%d format error",unit);
+                    return;
+                }
+            } else {
+                free(my_spiffs_work_buf);
+                free(my_spiffs_fds);
+                free(my_spiffs_cache);
+                syslog(LOG_ERR, "spiffs%d can't mount file system (%s)",unit, strerror(spiffs_result(fs.err_code)));
+                return;
             }
+        } else {
+        	break;
         }
-    } else {
-        if (retries > 0) {
-        	// TO DO
-            //spiffs_mkdir_op("/.");
-        }
+
+        retries++;
     }
 
     mount_set_mounted("spiffs", 1);
 
     list_init(&files, 0);
+
+    if (retries > 0) {
+    	syslog(LOG_INFO, "spiffs%d creating root folder", unit);
+
+		// Create the root folder
+	    spiffs_file fd = SPIFFS_open(&fs, "/.", SPIFFS_CREAT | SPIFFS_RDWR, 0);
+	    if (fd < 0) {
+            free(my_spiffs_work_buf);
+            free(my_spiffs_fds);
+            free(my_spiffs_cache);
+            syslog(LOG_ERR, "spiffs%d can't create root folder (%s)",unit, strerror(spiffs_result(fs.err_code)));
+            return;
+	    }
+
+	    if (SPIFFS_close(&fs, fd) < 0) {
+            free(my_spiffs_work_buf);
+            free(my_spiffs_fds);
+            free(my_spiffs_cache);
+            syslog(LOG_ERR, "spiffs%d can't create root folder (%s)",unit, strerror(spiffs_result(fs.err_code)));
+            return;
+	    }
+	}
 
     syslog(LOG_INFO, "spiffs%d mounted", unit);
 }
