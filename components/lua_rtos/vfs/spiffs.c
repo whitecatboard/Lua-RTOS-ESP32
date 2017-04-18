@@ -923,4 +923,53 @@ void vfs_spiffs_register() {
     syslog(LOG_INFO, "spiffs%d mounted", unit);
 }
 
+void vfs_spiffs_format() {
+	int res = 0;
+	int unit = 0;
+
+	// First unregister
+	esp_vfs_unregister("/spiffs");
+	mount_set_mounted("spiffs", 0);
+
+	// Unmount
+    SPIFFS_unmount(&fs);
+
+    res = SPIFFS_format(&fs);
+    if (res < 0) {
+        free(my_spiffs_work_buf);
+        free(my_spiffs_fds);
+        free(my_spiffs_cache);
+        syslog(LOG_ERR, "spiffs%d format error",unit);
+        return;
+    }
+
+    // Free allocated space
+    free(my_spiffs_work_buf);
+    free(my_spiffs_fds);
+    free(my_spiffs_cache);
+
+    // Register again
+    vfs_spiffs_register();
+
+    syslog(LOG_INFO, "spiffs%d creating root folder", unit);
+
+	// Create the root folder
+    spiffs_file fd = SPIFFS_open(&fs, "/.", SPIFFS_CREAT | SPIFFS_RDWR, 0);
+    if (fd < 0) {
+        free(my_spiffs_work_buf);
+        free(my_spiffs_fds);
+        free(my_spiffs_cache);
+        syslog(LOG_ERR, "spiffs%d can't create root folder (%s)",unit, strerror(spiffs_result(fs.err_code)));
+        return;
+    }
+
+    if (SPIFFS_close(&fs, fd) < 0) {
+        free(my_spiffs_work_buf);
+        free(my_spiffs_fds);
+        free(my_spiffs_cache);
+        syslog(LOG_ERR, "spiffs%d can't create root folder (%s)",unit, strerror(spiffs_result(fs.err_code)));
+        return;
+    }
+}
+
 #endif

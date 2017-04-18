@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <vfs.h>
 
 #include <sys/stat.h>
 #include <sys/syslog.h>
@@ -390,18 +391,20 @@ static int os_stats(lua_State *L) {
 }
 
 static int os_format(lua_State *L) {
-	#if 0
     const char *device = luaL_checkstring(L, 1);
-    const struct devops *ops;
     char response = ' ';
 
     // This if check is for future use, to determine drive number
-    if (strcmp(device,"cfi") == 0) {
+    if (strcmp(device,"spiffs") == 0) {
     } else if (strcmp(device,"sd") == 0) {
     } else {
         return luaL_error(L, "device %s not exists for format", device); 
     }
     
+    if (strcmp(device,"sd") == 0) {
+        return luaL_error(L, "device %s not allowed for format", device);
+    }
+
     // Check for mounted device
     if (!mount_is_mounted(device)) {
          return luaL_error(L, "device %s is not mounted", device);            
@@ -418,12 +421,14 @@ static int os_format(lua_State *L) {
     printf("\n");
     
     if ((response == 'y') || (response == 'Y')) {
-        ops = getdevops(device);
-        (*ops->fo_format)();  
+        if (strcmp(device,"spiffs") == 0) {
+        	printf("Formatting...\r\n");
+        	vfs_spiffs_format();
+        }
     } else {
         printf("Format cancelled\n");
     }
-    #endif
+
     return 0;
 }
 
