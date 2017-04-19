@@ -90,17 +90,20 @@ static char *lua_token_skip_valid(char *buffer) {
 static int get_command(char *tb, char *te) {
 	char *ct,*cc;
 	int i;
+	int tl;
 
 	i = 0;
 	while (command[i].command ) {
 		ct = (char *)tb;
 		cc = (char *)(command[i].command);
+		tl = 0;
 		while ((*ct) && (*cc) && (ct <= te) && (*ct == *cc)) {
 			ct++;
 			cc++;
+			tl++;
 		}
 
-		if (ct > te) {
+		if ((ct > te) && (strlen(command[i].command) == tl)) {
 			return i;
 		}
 
@@ -154,7 +157,12 @@ void lua_shell(lua_State* L, char *buffer) {
 		// May be it's a lua script?
 	    struct stat s;
 
-		memcpy(arg, tokens[0].tb, tokens[0].te - tokens[0].tb + 1);
+	    int tl = tokens[0].te - tokens[0].tb + 1;
+	    if (tl > sizeof(arg)) {
+	    	return;
+	    }
+
+		memcpy(arg, tokens[0].tb, tl);
 		arg[tokens[0].te - tokens[0].tb + 1] = 0x00;
 
 	    if (stat(arg, &s) < 0) {
