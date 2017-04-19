@@ -248,6 +248,11 @@ char *mount_normalize_path(const char *path) {
     int is_dot_dot = 0;
     int plen = 0;
 
+    if (strlen(path) > PATH_MAX) {
+    	errno = ENAMETOOLONG;
+    	return NULL;
+    }
+
     rpath = malloc(PATH_MAX + 1);
     if (!rpath) {
         errno = ENOMEM;
@@ -459,8 +464,16 @@ char *mount_resolve_to_physical(const char *path) {
 	char *rpath;
 	char *ppath;
 
+    if (strlen(path) > PATH_MAX) {
+    	errno = ENAMETOOLONG;
+    	return NULL;
+    }
+
 	// Normalize path
 	npath = mount_normalize_path(path);
+	if (!npath){
+		return NULL;
+	}
 
 	// Get the device where path is mounted
 	if ((device = mount_device(npath))) {
@@ -517,6 +530,9 @@ char *mount_resolve_to_logical(const char *path) {
 
 	// Normalize path
 	npath = mount_normalize_path(path);
+	if (!npath) {
+		return NULL;
+	}
 
 	if ((device = mount_get_device_from_path(path, &rpath))) {
 		mount_path = mount_device_mount_path(device);

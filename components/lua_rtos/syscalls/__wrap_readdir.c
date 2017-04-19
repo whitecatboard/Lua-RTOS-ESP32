@@ -18,9 +18,13 @@ DIR* __wrap_readdir(const char* name) {
 	DIR *dir;
 
 	ppath = mount_resolve_to_physical(name);
-	dir = __real_readdir(ppath);
+	if (ppath) {
+		dir = __real_readdir(ppath);
 
-	free(ppath);
+		free(ppath);
 
-	return dir;
+		return dir;
+	} else {
+		return -1;
+	}
 }

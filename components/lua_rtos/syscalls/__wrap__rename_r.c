@@ -16,7 +16,15 @@ int IRAM_ATTR __wrap__rename_r(struct _reent *r, const char *src, const char *ds
 	int res;
 
 	ppath_src = mount_resolve_to_physical(src);
+	if (!ppath_src) {
+		return -1;
+	}
+
 	ppath_dst = mount_resolve_to_physical(dst);
+	if (!ppath_dst) {
+		free(ppath_src);
+		return -1;
+	}
 
 	res = __real__rename_r(r, ppath_src, ppath_dst);
 

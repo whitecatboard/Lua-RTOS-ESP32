@@ -52,6 +52,10 @@ int chdir(const char *path) {
     }
 
     ppath = mount_resolve_to_physical(path);
+    if (!ppath) {
+    	return -1;
+    }
+
     // Check for path existence
     if ((fd = open(ppath, O_RDONLY)) == -1) {
     	errno = ENOTDIR;

@@ -19,8 +19,12 @@ int IRAM_ATTR __wrap__open_r(struct _reent *r, const char *path, int flags, int 
 		return __real__open_r(r, path, flags, mode);
 	} else {
 		ppath = mount_resolve_to_physical(path);
-		res = __real__open_r(r, ppath, flags, mode);
-		free(ppath);
-		return res;
+		if (ppath) {
+			res = __real__open_r(r, ppath, flags, mode);
+			free(ppath);
+			return res;
+		} else {
+			return -1;
+		}
 	}
 }
