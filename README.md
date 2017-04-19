@@ -6,7 +6,7 @@ Lua RTOS is the main-core of the Whitecat ecosystem, that is being developed by 
 
 Lua RTOS has a 3-layers design:
 
-1. In the top layer there is a Lua 5.3.2 interpreter which offers to the programmer all resources provided by Lua 5.3.2 programming language, plus special modules for access the hardware (PIO, ADC, I2C, RTC, etc ...) and middleware services provided by Lua RTOS (LoRa WAN, MQTT, ...).
+1. In the top layer there is a Lua 5.3.4 interpreter which offers to the programmer all resources provided by the Lua programming language, plus special modules for access the hardware (PIO, ADC, I2C, RTC, CAN, SPI, etc ...), and middleware services provided by Lua RTOS (LoRa WAN, MQTT, ...).
 
 2. In the middle layer there is a Real-Time micro-kernel, powered by FreeRTOS. This is the responsible for that things happen in the expected time.
 
@@ -184,7 +184,8 @@ You can connect to the Lua RTOS console using your favorite terminal emulator pr
    fat0 mounted
    redirecting console messages to file system ...
 
-   Lua RTOS beta 0.1 powered by Lua 5.3.2
+   Lua RTOS beta 0.1 powered by Lua 5.3.4
+   
 
    Executing /system.lua ...
    Executing /autorun.lua ...
