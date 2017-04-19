@@ -24,7 +24,7 @@ The Lua RTOS compatible boards can be programmed in two ways: using the Lua prog
 
 ![](http://whitecatboard.org/git/code-example.png)
 
-In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have more information about this.
+In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have more information about this.
 
 # How to get Lua RTOS firmware?
 
@@ -46,10 +46,10 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
 
    | Board              |
    |--------------------|
-   | [WHITECAT ESP32 N1] (http://whitecatboard.org/firmware.php?board=WHITECAT-ESP32-N1)  | 
-   | [ESP32 CORE] (http://whitecatboard.org/firmware.php?board=ESP32-CORE-BOARD)  | 
-   | [ESP32 THING] (http://whitecatboard.org/firmware.php?board=ESP32-THING)  | 
-   | [GENERIC] (http://whitecatboard.org/firmware.php?board=GENERIC)  | 
+   | [WHITECAT ESP32 N1](http://whitecatboard.org/firmware.php?board=WHITECAT-ESP32-N1)  | 
+   | [ESP32 CORE](http://whitecatboard.org/firmware.php?board=ESP32-CORE-BOARD)  | 
+   | [ESP32 THING](http://whitecatboard.org/firmware.php?board=ESP32-THING)  | 
+   | [GENERIC](http://whitecatboard.org/firmware.php?board=GENERIC)  | 
 
 1. Uncompress to your favorite folder:
 
@@ -85,9 +85,9 @@ In our [wiki] (https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mo
 ## Method 2: build by yourself
 
 1. Install ESP32 toolchain for your desktop platform. Please, follow the instructions provided by ESPRESSIF:
-   * [Windows] (https://github.com/espressif/esp-idf/blob/master/docs/windows-setup.rst)
-   * [Mac OS] (https://github.com/espressif/esp-idf/blob/master/docs/macos-setup.rst)
-   * [Linux] (https://github.com/espressif/esp-idf/blob/master/docs/linux-setup.rst)
+   * [Windows](https://github.com/espressif/esp-idf/blob/master/docs/windows-setup.rst)
+   * [Mac OS](https://github.com/espressif/esp-idf/blob/master/docs/macos-setup.rst)
+   * [Linux](https://github.com/espressif/esp-idf/blob/master/docs/linux-setup.rst)
 
 1. Clone esp-idf repository from ESPRESSIF:
 
