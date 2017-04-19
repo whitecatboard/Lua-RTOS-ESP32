@@ -20,7 +20,7 @@ For porting Lua RTOS to other platforms is only necessary to write the code for 
 
 The Lua RTOS compatible boards can be programmed in two ways: using the Lua programming language directly, or using a block-based programming language that translates blocks to Lua. No matter if you use Lua or blocks, both forms of programming are made from the same programming environment. The programmer can decide, for example, to made a fast prototype using blocks, then change to Lua, and finally back to blocks.
 
-![](http://whitecatboard.org/wp-content/uploads/2016/11/block-example.png)
+![](http://whitecatboard.org/git/block-example.png)
 
 ![](http://whitecatboard.org/wp-content/uploads/2016/11/code-example.png)
 
