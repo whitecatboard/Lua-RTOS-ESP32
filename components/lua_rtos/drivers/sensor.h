@@ -144,6 +144,7 @@ typedef struct {
 			uint8_t  sda;
 			uint8_t  scl;
 			uint16_t address;
+			void     *userdata;
 		} i2c;
 	};
 } sensor_setup_t;
@@ -174,6 +175,7 @@ driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value
 #define SENSOR_ERR_SET_UNDEFINED		    (DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  5)
 #define SENSOR_ERR_NOT_FOUND				(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  6)
 #define SENSOR_ERR_INTERFACE_NOT_SUPPORTED	(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  7)
+#define SENSOR_ERR_NOT_SETUP				(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  8)
 
 #endif
 

@@ -56,6 +56,7 @@ DRIVER_REGISTER_ERROR(SENSOR, sensor, AcquireUndefined, "acquire function is not
 DRIVER_REGISTER_ERROR(SENSOR, sensor, SetUndefined, "set function is not defined", SENSOR_ERR_SET_UNDEFINED);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, NotFound, "not found", SENSOR_ERR_NOT_FOUND);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, InterfaceNotSupported, "interface not supported", SENSOR_ERR_INTERFACE_NOT_SUPPORTED);
+DRIVER_REGISTER_ERROR(SENSOR, sensor, NotSetup, "sensor is not setup", SENSOR_ERR_NOT_SETUP);
 
 // List of instantiated sensors
 struct list sensor_list;
@@ -255,7 +256,7 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 	pwbus_on();
 	#endif
 
-// Allocate space for sensor data
+	// Allocate space for sensor data
 	if (!(value = calloc(1, sizeof(sensor_value_t) * SENSOR_MAX_DATA))) {
 		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
