@@ -12,7 +12,7 @@ Lua RTOS has a 3-layers design:
 
 3. In the bottom layer there is a hardware abstraction layer, which talk directly with the platform hardware.
 
-![](http://whitecatboard.org/git/luaos.png)
+![](http://git.whitecatboard.org/luaos.png)
 
 For porting Lua RTOS to other platforms is only necessary to write the code for the bottom layer, because the top and the middle layer are the same for all platforms.
 
@@ -20,9 +20,9 @@ For porting Lua RTOS to other platforms is only necessary to write the code for 
 
 The Lua RTOS compatible boards can be programmed in two ways: using the Lua programming language directly, or using a block-based programming language that translates blocks to Lua. No matter if you use Lua or blocks, both forms of programming are made from the same programming environment. The programmer can decide, for example, to made a fast prototype using blocks, then change to Lua, and finally back to blocks.
 
-![](http://whitecatboard.org/git/block-example.png)
+![](http://git.whitecatboard.org/block-example.png)
 
-![](http://whitecatboard.org/git/code-example.png)
+![](http://git.whitecatboard.org/code-example.png)
 
 In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have more information about this.
 
