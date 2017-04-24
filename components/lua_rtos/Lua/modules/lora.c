@@ -116,11 +116,6 @@ static int llora_setup(lua_State* L) {
 	driver_error_t *error;
     
     int band = luaL_checkinteger(L, 1);
-
-    // Sanity checks
-    if ((band != 868) && (band != 433)) {
-        return luaL_error(L, "%d:invalid band", LORA_ERR_INVALID_ARGUMENT);
-    }
     
     // Setup in base of frequency
     error = lora_setup(band);
