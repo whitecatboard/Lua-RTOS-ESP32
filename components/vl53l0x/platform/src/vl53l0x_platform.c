@@ -33,39 +33,29 @@ SOFTWARE.
 
 static const uint32_t vl53l0x_i2c_id = 0;
 
-// calls read_i2c_block_data(address, reg, length)
-static int (*i2c_read_func)(uint8_t address, uint8_t reg,
-                    uint8_t *list, uint8_t length) = NULL;
-
-// calls write_i2c_block_data(address, reg, list)
-static int (*i2c_write_func)(uint8_t address, uint8_t reg,
-                    uint8_t *list, uint8_t length) = NULL;
-
-static pthread_mutex_t i2c_mutex = PTHREAD_MUTEX_INITIALIZER; 
-
 void VL53L0X_init(VL53L0X_DEV Dev){}
 
 static int VL53L0X_i2c_write(VL53L0X_DEV Dev, uint8_t cmd, uint8_t *data, uint8_t len)
 {
     int result = VL53L0X_ERROR_NONE;
 
-    i2c_read(adxl345_i2c_id, I2C_TRANSACTION_INITIALIZER , &data, 6);
+    i2c_read(vl53l0x_i2c_id, I2C_TRANSACTION_INITIALIZER , &data, 6);
 
     if(i2c_start(vl53l0x_i2c_id , I2C_TRANSACTION_INITIALIZER) != NULL){
-        return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
+        return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
     if(i2c_write_address(vl53l0x_i2c_id, I2C_TRANSACTION_INITIALIZER , Dev->I2cDevAddr, false) != NULL){
-        return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
+        return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
     if(i2c_write(vl53l0x_i2c_id , I2C_TRANSACTION_INITIALIZER , cmd , sizeof(uint8_t)) != NULL){
-        return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
+        return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
     if(i2c_write(vl53l0x_i2c_id , I2C_TRANSACTION_INITIALIZER , data , len) != NULL){
-        return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
+        return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
     if(i2c_stop(vl53l0x_i2c_id , I2C_TRANSACTION_INITIALIZER) != NULL){
-        return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
+        return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
     
     return result;
@@ -98,7 +88,7 @@ static int VL53L0X_i2c_read(VL53L0X_DEV Dev, uint8_t cmd, uint8_t * data, uint8_
         return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    if (i2c_read(adxl345_i2c_id, I2C_TRANSACTION_INITIALIZER , data, len) != NULL){ 
+    if (i2c_read(vl53l0x_i2c_id, I2C_TRANSACTION_INITIALIZER , data, len) != NULL){ 
             result =  VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
