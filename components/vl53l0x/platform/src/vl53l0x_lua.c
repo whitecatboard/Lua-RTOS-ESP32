@@ -22,7 +22,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <pthread.h>
+#include "luartos.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_VL53L0X
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +33,9 @@ SOFTWARE.
 #include <errno.h>
 #include <ctype.h>
 #include <time.h>
+#include "modules.h"
+#include "lauxlib.h"
+#include "platform.h"
 #include "vl53l0x_api.h"
 #include "vl53l0x_platform.h"
 
@@ -50,6 +56,10 @@ SOFTWARE.
 static VL53L0X_Dev_t *pMyDevice[MAX_DEVICES];
 static VL53L0X_RangingMeasurementData_t    RangingMeasurementData;
 static VL53L0X_RangingMeasurementData_t   *pRangingMeasurementData    = &RangingMeasurementData;
+
+static const uint32_t vl53l0x_i2c_id = 0;
+static const uint8_t vl53l0x_i2c_addr = 0x29;
+static const uint8_t object_number = 0;
 
 void print_pal_error(VL53L0X_Error Status)
 {
@@ -146,7 +156,7 @@ VL53L0X_Error WaitStopCompleted(VL53L0X_DEV Dev)
  *              being used. If not being used, set to 0.
  *
  *****************************************************************************/
-void startRanging(int object_number, int mode, uint8_t i2c_address, uint8_t TCA9548A_Device, uint8_t TCA9548A_Address)
+void startRanging(int object_number, int mode, uint8_t i2c_address)
 {
     VL53L0X_Error Status = VL53L0X_ERROR_NONE;
     uint32_t refSpadCount;
@@ -158,15 +168,7 @@ void startRanging(int object_number, int mode, uint8_t i2c_address, uint8_t TCA9
     VL53L0X_DeviceInfo_t                DeviceInfo;
     int32_t status_int;
 
-    if (TCA9548A_Device < 8)
-    {
-        printf ("VL53L0X Start Ranging Object %d Address 0x%02X TCA9548A Device %d TCA9548A Address 0x%02X\n\n",
-                    object_number, i2c_address, TCA9548A_Device, TCA9548A_Address);
-    }
-    else
-    {
-        printf ("VL53L0X Start Ranging Object %d Address 0x%02X\n\n", object_number, i2c_address);
-    }
+    printf ("VL53L0X Start Ranging Object %d Address 0x%02X\n\n", object_number, i2c_address);
 
     if (mode >= VL53L0X_GOOD_ACCURACY_MODE &&
             mode <= VL53L0X_HIGH_SPEED_MODE &&
@@ -178,9 +180,7 @@ void startRanging(int object_number, int mode, uint8_t i2c_address, uint8_t TCA9
         if (pMyDevice[object_number] != NULL)
         {
             // Initialize Comms to the default address to start
-            pMyDevice[object_number]->I2cDevAddr      = VL53L0X_DEFAULT_ADDRESS;
-            pMyDevice[object_number]->TCA9548A_Device = TCA9548A_Device;
-            pMyDevice[object_number]->TCA9548A_Address = TCA9548A_Address;
+            pMyDevice[object_number]->I2cDevAddr = VL53L0X_DEFAULT_ADDRESS;
 
             VL53L0X_init(pMyDevice[object_number]);
             /*
@@ -539,3 +539,79 @@ VL53L0X_DEV getDev(int object_number)
     return Dev;
 }
 
+static int init(lua_State* L) {
+
+    uint8_t  devid;
+
+    int addr = luaL_checkinteger(L, 1);
+
+    if ((error = i2c_setup(adxl345_i2c_id, mode, speed, sda, scl, 0, 0))) {
+        return luaL_driver_error(L, error);
+    }
+
+    // Enable sensor
+    i2c_start(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER);
+    i2c_write_address(adxl345_i2c_id, I2C_TRANSACTION_INITIALIZER , adxl345_i2c_addr, false);
+    i2c_write(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER , 0x2D , sizeof(uint8_t));
+    i2c_write(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER , 0x08 , sizeof(uint8_t));
+    i2c_stop(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER);
+
+    return 1;
+}
+
+static int start_ranging(lua_State* L) {
+
+    int8_t addr = luaL_checkinteger(L, 1);
+    int mode = luaL_checkinteger(L, 2);
+
+    startRanging(object_number, mode, addr)
+    return 0
+} 
+
+static int stop_ranging(lua_State* L) {
+    stopRanging(object_number)
+    return 0
+} 
+
+static int get_distance(lua_State* L) {
+    int32_t dist;
+    dist = getDistance(object_number);
+    lua_pushinteger(L, dist);
+
+    return 1;
+} 
+
+static int get_timing(lua_State* L) {
+
+    VL53L0X_DEV dev = NULL;
+    dev = getDev(object_number)
+
+    int32_t budget = 0;
+
+    Status = VL53L0X_GetMeasurementTimingBudgetMicroSeconds(dev, &budget)
+    if (Status == 0){
+        lua_pushinteger(L, budget_p + 1000);
+    }else{
+        lua_pushinteger(L, 0);
+    }
+
+    return 1;
+} 
+
+static const LUA_REG_TYPE vl53l0x_map[] = {
+    { LSTRKEY( "init" ),         LFUNCVAL( init )},
+    { LSTRKEY( "startRanging" ), LFUNCVAL( start_ranging )},
+    { LSTRKEY( "stopRanging" ),  LFUNCVAL( stop_ranging )},
+    { LSTRKEY( "getDistance" ),  LFUNCVAL( get_distance )},
+    { LSTRKEY( "getTiming" ),    LFUNCVAL( get_timing )},
+    { LNILKEY, LNILVAL}
+};
+
+
+LUALIB_API int luaopen_vl53l0x( lua_State *L ) {
+    luaL_newlib(L, vl53l0x_map);
+    return 1;
+}
+
+MODULE_REGISTER_MAPPED(VL53L0X, vl53l0x, vl53l0x_map, luaopen_vl53l0x);
+#endif

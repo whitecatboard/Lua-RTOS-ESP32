@@ -26,8 +26,8 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ********************************************************************************/
 /**
- * @file  vl53l0_types.h
- * @brief VL53L0 types definition
+ * @file  vl53l0x_types.h
+ * @brief VL53L0X types definition
  */
 
 #ifndef VL53L0X_TYPES_H_
@@ -36,7 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** @defgroup porting_type  Basic type definition
  *  @ingroup  VL53L0X_platform_group
  *
- *  @brief  file vl53l0_types.h files hold basic type definition that may requires porting
+ *  @brief  file vl53l0x_types.h files hold basic type definition that may requires porting
  *
  *  contains type that must be defined for the platform\n
  *  when target platform and compiler provide stdint.h and stddef.h it is enough to include it.\n

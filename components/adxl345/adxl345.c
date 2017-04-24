@@ -17,14 +17,9 @@
 static const uint32_t adxl345_i2c_id = 0;
 static const uint8_t adxl345_i2c_addr = 0x53;
 
-typedef struct {
-    int unit;
-    int transaction;
-} i2c_user_data_t;
+static int adxl345_init(lua_State* L) {
 
-static int ICACHE_FLASH_ATTR adxl345_init(lua_State* L) {
-
-    uint8_t  devid;
+    uint8_t devid;
 
     int id = luaL_checkinteger(L, 1);
     int mode = luaL_checkinteger(L, 2);
@@ -46,7 +41,7 @@ static int ICACHE_FLASH_ATTR adxl345_init(lua_State* L) {
     return 1;
 }
 
-static int ICACHE_FLASH_ATTR adxl345_read(lua_State* L) {
+static int adxl345_read(lua_State* L) {
 
     uint8_t data[6];
     int x,y,z;

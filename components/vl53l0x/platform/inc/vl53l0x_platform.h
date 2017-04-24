@@ -41,14 +41,14 @@ int VL53L0X_i2c_init(char * devPath, int devAddr);
 int32_t VL53L0X_i2c_close(void);
 
 /**
- * @file vl53l0_platform.h
+ * @file vl53l0x_platform.h
  *
  * @brief All end user OS/platform/application porting
  */
- 
+
 /**
- * @defgroup VL53L0X_platform_group VL53L0 Platform Functions
- * @brief    VL53L0 Platform Functions
+ * @defgroup VL53L0X_platform_group VL53L0X Platform Functions
+ * @brief    VL53L0X Platform Functions
  *  @{
  */
 
@@ -62,8 +62,7 @@ typedef struct {
 
     /*!< user specific field */
     uint8_t   I2cDevAddr;                /*!< i2c device address user specific field */
-    uint8_t   TCA9548A_Device;           /*!< Device number on TCA9548A I2C Multiplexer or 255 if TCA9548A not being used */
-    uint8_t   TCA9548A_Address;          /*!< Address of TCA9548A I2C Multiplexer or 255 if TCA9548A not being used */
+    int   fd;
 } VL53L0X_Dev_t;
 
 
@@ -93,12 +92,6 @@ typedef VL53L0X_Dev_t* VL53L0X_DEV;
  */
 #define PALDevDataSet(Dev, field, data) (Dev->Data.field)=(data)
 
-/**
- * Initialize PLatform Interface
- * @param   Dev       Device Handle
- * @return  None
- */
-void VL53L0X_init(VL53L0X_DEV Dev);
 
 /**
  * @defgroup VL53L0X_registerAccess_group PAL Register Access Functions
@@ -221,7 +214,7 @@ VL53L0X_Error VL53L0X_UpdateByte(VL53L0X_DEV Dev, uint8_t index, uint8_t AndData
 
 /** @} end of VL53L0X_registerAccess_group */
 
-    
+
 /**
  * @brief execute delay in all polling API call
  *

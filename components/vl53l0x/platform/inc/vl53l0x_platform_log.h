@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 /**
- * @file vl53l0_platform_log.h
+ * @file vl53l0x_platform_log.h
  *
  * @brief platform log function definition
  */
