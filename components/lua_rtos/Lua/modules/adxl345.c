@@ -27,11 +27,7 @@ static int adxl345_init(lua_State* L) {
     int sda = luaL_checkinteger(L, 4);
     int scl = luaL_checkinteger(L, 5);
 
-    if ((error = i2c_setup(adxl345_i2c_id, mode, speed, sda, scl, 0, 0))) {
-        lua_pushinteger(L, error);
-        return 1;
-    }
-
+    i2c_setup(adxl345_i2c_id, mode, speed, sda, scl, 0, 0)
     // Enable sensor
     i2c_start(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER);
     i2c_write_address(adxl345_i2c_id, I2C_TRANSACTION_INITIALIZER , adxl345_i2c_addr, false);
@@ -46,8 +42,6 @@ static int adxl345_read(lua_State* L) {
 
     uint8_t data[6];
     int x,y,z;
-    int i;
-    char data;
     uint8_t start_addr = 0x32;
 
     i2c_start(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER);
