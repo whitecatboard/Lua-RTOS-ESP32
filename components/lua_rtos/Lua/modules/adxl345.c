@@ -7,9 +7,11 @@
 
 #if CONFIG_LUA_RTOS_LUA_USE_ADXL345
 
-#include "i2c.h"
 #include "modules.h"
+#include "lua.h"
+#include "error.h"
 #include "lauxlib.h"
+#include "i2c.h"
 #include "platform.h"
 #include <stdlib.h>
 #include <string.h>
