@@ -687,6 +687,10 @@ menu "Lua RTOS"
 			  	config LUA_RTOS_LUA_USE_CAN
 				  	bool "Include CAN module in build"
 				  	default y
+
+			  	config LUA_RTOS_LUA_USE_ADXL345
+				  	bool "Include adxl345 module in build"
+				  	default y
 			endmenu
 		  endmenu
 	  endmenu
