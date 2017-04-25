@@ -18,6 +18,9 @@
 
 static const uint8_t adxl345_i2c_addr = 0x53;
 
+extern LUA_REG_TYPE adxl345_error_map[];
+extern driver_message_t adxl345_errors[];
+
 typedef struct {
 	int unit;
 	int transaction;
@@ -80,8 +83,8 @@ static int adxl345_read(lua_State* L) {
 	adxl345_user_data_t *user_data;
 
 	// Get user data
-	user_data = (adxl345_user_data_t *)luaL_checkudata(L, 1, "i2c.trans");
-    luaL_argcheck(L, user_data, 1, "i2c transaction expected");
+	user_data = (adxl345_user_data_t *)luaL_checkudata(L, 1, "adxl345.trans");
+    luaL_argcheck(L, user_data, 1, "adxl345 transaction expected");
 
     char *data = (char*)malloc(6);
     int x,y,z;
@@ -131,15 +134,36 @@ static int adxl345_read(lua_State* L) {
     return 3;
 }
 
+// Destructor
+static int adxl345_trans_gc (lua_State *L) {
+	adxl345_user_data_t *user_data = NULL;
+
+    user_data = (adxl345_user_data_t *)luaL_testudata(L, 1, "adxl345.trans");
+    if (user_data) {
+    }
+
+    return 0;
+}
+
+//class map
 static const LUA_REG_TYPE adxl345_map[] = {
-    { LSTRKEY( "read" ),         LFUNCVAL( adxl345_read )},
-    { LSTRKEY( "init" ),         LFUNCVAL( adxl345_init )},
+    { LSTRKEY( "init"   ), LFUNCVAL( adxl345_init )},
+	{LSTRKEY("error"    ), LROVAL( adxl345_error_map )},
+    { LNILKEY, LNILVAL }
+};
+
+//inst map
+static const LUA_REG_TYPE adxl345_trans_map[] = {
+    { LSTRKEY( "read" ),            LFUNCVAL( adxl345_read )},
+    { LSTRKEY( "__metatable" ),  	LROVAL  ( adxl345_trans_map ) },
+	{ LSTRKEY( "__index"     ),   	LROVAL  ( adxl345_trans_map ) },
+	{ LSTRKEY( "__gc"        ),   	LFUNCVAL  ( adxl345_trans_gc ) },
     { LNILKEY, LNILVAL}
 };
 
 
 LUALIB_API int luaopen_adxl345( lua_State *L ) {
-    luaL_newmetarotable(L,"adxl345.trans", (void *)adxl345_map);
+    luaL_newmetarotable(L,"adxl345.trans", (void *)adxl345_trans_map);
     return 0;
 }
 
