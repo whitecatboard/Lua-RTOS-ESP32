@@ -38,23 +38,24 @@ void VL53L0X_init(VL53L0X_DEV Dev){}
 static int VL53L0X_i2c_write(VL53L0X_DEV Dev, uint8_t cmd, uint8_t *data, uint8_t len)
 {
     int result = VL53L0X_ERROR_NONE;
+    int tran = I2C_TRANSACTION_INITIALIZER;
 
     //i2c_read(vl53l0x_i2c_id, &I2C_TRANSACTION_INITIALIZER , &data, 6);
 
-    if(i2c_start(vl53l0x_i2c_id , &I2C_TRANSACTION_INITIALIZER) != NULL){
+    if(i2c_start(vl53l0x_i2c_id , &tran) != NULL){
         return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    if(i2c_write_address(vl53l0x_i2c_id, &I2C_TRANSACTION_INITIALIZER , Dev->I2cDevAddr, false) != NULL){
+    if(i2c_write_address(vl53l0x_i2c_id, &tran , Dev->I2cDevAddr, false) != NULL){
         return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
-    if(i2c_write(vl53l0x_i2c_id , &I2C_TRANSACTION_INITIALIZER , &cmd , sizeof(uint8_t)) != NULL){
+    if(i2c_write(vl53l0x_i2c_id , &tran , &cmd , sizeof(uint8_t)) != NULL){
         return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
-    if(i2c_write(vl53l0x_i2c_id , &I2C_TRANSACTION_INITIALIZER , data , len) != NULL){
+    if(i2c_write(vl53l0x_i2c_id , &tran , data , len) != NULL){
         return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
-    if(i2c_stop(vl53l0x_i2c_id , &I2C_TRANSACTION_INITIALIZER) != NULL){
+    if(i2c_stop(vl53l0x_i2c_id , &tran) != NULL){
         return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
     
@@ -64,35 +65,36 @@ static int VL53L0X_i2c_write(VL53L0X_DEV Dev, uint8_t cmd, uint8_t *data, uint8_
 static int VL53L0X_i2c_read(VL53L0X_DEV Dev, uint8_t cmd, uint8_t * data, uint8_t len)
 {
     int result = VL53L0X_ERROR_NONE;
+    int tran = I2C_TRANSACTION_INITIALIZER;
 
-    if(i2c_start(vl53l0x_i2c_id , &I2C_TRANSACTION_INITIALIZER) != NULL){
+    if(i2c_start(vl53l0x_i2c_id , &tran) != NULL){
         return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    if(i2c_write_address(vl53l0x_i2c_id, &I2C_TRANSACTION_INITIALIZER , Dev->I2cDevAddr, false) != NULL){
+    if(i2c_write_address(vl53l0x_i2c_id, &tran , Dev->I2cDevAddr, false) != NULL){
         return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
     }
-    if(i2c_write(vl53l0x_i2c_id , &I2C_TRANSACTION_INITIALIZER , &cmd , sizeof(uint8_t)) != NULL){
-        return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
-    }
-
-    if(i2c_start(vl53l0x_i2c_id , &I2C_TRANSACTION_INITIALIZER) != NULL){
+    if(i2c_write(vl53l0x_i2c_id , &tran , &cmd , sizeof(uint8_t)) != NULL){
         return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    if(i2c_write_address(vl53l0x_i2c_id, &I2C_TRANSACTION_INITIALIZER , Dev->I2cDevAddr, false) != NULL){
+    if(i2c_start(vl53l0x_i2c_id , &tran) != NULL){
         return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    if(i2c_write(vl53l0x_i2c_id , &I2C_TRANSACTION_INITIALIZER , data , len) != NULL){
+    if(i2c_write_address(vl53l0x_i2c_id, &tran , Dev->I2cDevAddr, false) != NULL){
         return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    if (i2c_read(vl53l0x_i2c_id, &I2C_TRANSACTION_INITIALIZER , data, len) != NULL){ 
+    if(i2c_write(vl53l0x_i2c_id , &tran , data , len) != NULL){
+        return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
+    }
+
+    if (i2c_read(vl53l0x_i2c_id, &tran , data, len) != NULL){ 
             result =  VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    if(i2c_stop(vl53l0x_i2c_id , &I2C_TRANSACTION_INITIALIZER) != NULL){
+    if(i2c_stop(vl53l0x_i2c_id , &tran) != NULL){
         return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
     }
     
