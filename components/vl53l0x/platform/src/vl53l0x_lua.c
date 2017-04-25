@@ -692,7 +692,7 @@ static const LUA_REG_TYPE vl53l0x_trans_map[] = {
 	{ LSTRKEY( "__index"     ),   	LROVAL  ( vl53l0x_trans_map ) },
 	{ LSTRKEY( "__gc"        ),   	LFUNCVAL  ( vl53l0x_trans_gc ) },
     { LNILKEY, LNILVAL}
-}
+};
 
 LUALIB_API int luaopen_vl53l0x( lua_State *L ) {
     luaL_newmetarotable(L,"vl53l0x.trans", (void *)vl53l0x_trans_map);
