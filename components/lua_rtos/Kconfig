@@ -691,6 +691,7 @@ menu "Lua RTOS"
 			  	config LUA_RTOS_LUA_USE_ADXL345
 				  	bool "Include adxl345 module in build"
 				  	default y
+					  
 			  	config LUA_RTOS_LUA_USE_VL53L0X
 				  	bool "Include vl53l0x module in build"
 				  	default y
