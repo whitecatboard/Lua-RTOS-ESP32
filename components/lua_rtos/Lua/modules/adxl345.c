@@ -27,7 +27,7 @@ static int adxl345_init(lua_State* L) {
     int sda = luaL_checkinteger(L, 4);
     int scl = luaL_checkinteger(L, 5);
 
-    i2c_setup(adxl345_i2c_id, mode, speed, sda, scl, 0, 0)
+    i2c_setup(adxl345_i2c_id, mode, speed, sda, scl, 0, 0);
     // Enable sensor
     i2c_start(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER);
     i2c_write_address(adxl345_i2c_id, I2C_TRANSACTION_INITIALIZER , adxl345_i2c_addr, false);
