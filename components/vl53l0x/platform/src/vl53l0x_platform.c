@@ -32,6 +32,7 @@ SOFTWARE.
 #include "vl53l0x_api.h"
 
 static const uint32_t vl53l0x_i2c_id = 0;
+typedef char uint8_t;
 
 void VL53L0X_init(VL53L0X_DEV Dev){}
 
@@ -49,7 +50,7 @@ static int VL53L0X_i2c_write(VL53L0X_DEV Dev, uint8_t cmd, uint8_t *data, uint8_
     if(i2c_write_address(vl53l0x_i2c_id, &tran , Dev->I2cDevAddr, false) != NULL){
         return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
-    if(i2c_write(vl53l0x_i2c_id , &tran , &cmd , sizeof(uint8_t)) != NULL){
+    if(i2c_write(vl53l0x_i2c_id , &tran , cmd , sizeof(uint8_t)) != NULL){
         return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
     if(i2c_write(vl53l0x_i2c_id , &tran , data , len) != NULL){
@@ -74,7 +75,7 @@ static int VL53L0X_i2c_read(VL53L0X_DEV Dev, uint8_t cmd, uint8_t * data, uint8_
     if(i2c_write_address(vl53l0x_i2c_id, &tran , Dev->I2cDevAddr, false) != NULL){
         return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
     }
-    if(i2c_write(vl53l0x_i2c_id , &tran , &cmd , sizeof(uint8_t)) != NULL){
+    if(i2c_write(vl53l0x_i2c_id , &tran , cmd , sizeof(uint8_t)) != NULL){
         return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
@@ -161,7 +162,7 @@ VL53L0X_Error VL53L0X_UpdateByte(VL53L0X_DEV Dev, uint8_t index,
     {
         return  status_int;
     }
-    
+
 
     data = (data & AndData) | OrData;
     return VL53L0X_i2c_write(Dev, index, &data, 1);
