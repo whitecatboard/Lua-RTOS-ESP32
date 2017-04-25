@@ -71,20 +71,48 @@ static int adxl345_init(lua_State* L) {
 
 static int adxl345_read(lua_State* L) {
 
+	i2c_user_data_t *user_data;
+
+	// Get user data
+	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c.trans");
+    luaL_argcheck(L, user_data, 1, "i2c transaction expected");
+
     char data[6];
     int x,y,z;
     uint8_t start_addr = 0x32;
-    int tran = I2C_TRANSACTION_INITIALIZER;
 
-    i2c_start(adxl345_i2c_id , &tran);
-    i2c_write_address(adxl345_i2c_id, &tran , adxl345_i2c_addr, false);
-    i2c_write(adxl345_i2c_id , &tran , start_addr , sizeof(uint8_t));
-    i2c_start(adxl345_i2c_id , &tran);
-    i2c_write_address(adxl345_i2c_id, &tran , adxl345_i2c_addr, true);
+    if ((error = i2c_start(user_data->unit, &user_data->transaction))) {
+    	return luaL_driver_error(L, error);
+    }
 
-    i2c_read(adxl345_i2c_id, &tran , &data, 6);
+	if ((error = i2c_write_address(user_data->unit, &user_data->transaction, adxl345_i2c_addr, false))) {
+    	return luaL_driver_error(L, error);
+    }
 
-    i2c_stop(adxl345_i2c_id , &tran);
+    if ((error = i2c_write(user_data->unit, &user_data->transaction, start_addr , sizeof(uint8_t)))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    if ((error = i2c_start(user_data->unit, &user_data->transaction))) {
+    	return luaL_driver_error(L, error);
+    }
+
+	if ((error = i2c_write_address(user_data->unit, &user_data->transaction, adxl345_i2c_addr, true))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    if ((error = i2c_read(user_data->unit, &user_data->transaction, &data, 6))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    // We need to flush because we need to return reaad data now
+    if ((error = i2c_flush(user_data->unit, &user_data->transaction, 1))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    if ((error = i2c_stop(user_data->unit, &user_data->transaction))) {
+    	return luaL_driver_error(L, error);
+    }
 
     x = (int16_t) ((data[1] << 8) | data[0]);
     y = (int16_t) ((data[3] << 8) | data[2]);
