@@ -20,6 +20,7 @@ static const uint8_t adxl345_i2c_addr = 0x53;
 static int adxl345_init(lua_State* L) {
 
     uint8_t devid;
+    int tran = I2C_TRANSACTION_INITIALIZER;
 
     int id = luaL_checkinteger(L, 1);
     int mode = luaL_checkinteger(L, 2);
@@ -29,11 +30,11 @@ static int adxl345_init(lua_State* L) {
 
     i2c_setup(adxl345_i2c_id, mode, speed, sda, scl, 0, 0);
     // Enable sensor
-    i2c_start(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER);
-    i2c_write_address(adxl345_i2c_id, I2C_TRANSACTION_INITIALIZER , adxl345_i2c_addr, false);
-    i2c_write(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER , 0x2D , sizeof(uint8_t));
-    i2c_write(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER , 0x08 , sizeof(uint8_t));
-    i2c_stop(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER);
+    i2c_start(adxl345_i2c_id , &tran);
+    i2c_write_address(adxl345_i2c_id, &tran , adxl345_i2c_addr, false);
+    i2c_write(adxl345_i2c_id , &tran , 0x2D , sizeof(uint8_t));
+    i2c_write(adxl345_i2c_id , &tran , 0x08 , sizeof(uint8_t));
+    i2c_stop(adxl345_i2c_id , &tran);
     lua_pushinteger(L, 0);
     return 1;
 }
@@ -43,16 +44,17 @@ static int adxl345_read(lua_State* L) {
     uint8_t data[6];
     int x,y,z;
     uint8_t start_addr = 0x32;
+    int tran = I2C_TRANSACTION_INITIALIZER;
 
-    i2c_start(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER);
-    i2c_write_address(adxl345_i2c_id, I2C_TRANSACTION_INITIALIZER , adxl345_i2c_addr, false);
-    i2c_write(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER , start_addr , sizeof(uint8_t));
-    i2c_start(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER);
-    i2c_write_address(adxl345_i2c_id, I2C_TRANSACTION_INITIALIZER , adxl345_i2c_addr, true);
+    i2c_start(adxl345_i2c_id , &tran);
+    i2c_write_address(adxl345_i2c_id, &tran , adxl345_i2c_addr, false);
+    i2c_write(adxl345_i2c_id , &tran , start_addr , sizeof(uint8_t));
+    i2c_start(adxl345_i2c_id , &tran);
+    i2c_write_address(adxl345_i2c_id, &tran , adxl345_i2c_addr, true);
 
-    i2c_read(adxl345_i2c_id, I2C_TRANSACTION_INITIALIZER , &data, 6);
+    i2c_read(adxl345_i2c_id, &tran , &data, 6);
 
-    i2c_stop(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER);
+    i2c_stop(adxl345_i2c_id , &tran);
 
     x = (int16_t) ((data[1] << 8) | data[0]);
     y = (int16_t) ((data[3] << 8) | data[2]);
