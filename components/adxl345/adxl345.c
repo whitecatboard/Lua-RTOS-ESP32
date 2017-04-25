@@ -28,7 +28,8 @@ static int adxl345_init(lua_State* L) {
     int scl = luaL_checkinteger(L, 5);
 
     if ((error = i2c_setup(adxl345_i2c_id, mode, speed, sda, scl, 0, 0))) {
-        return luaL_driver_error(L, error);
+        lua_pushinteger(L, 1);
+        return 1;
     }
 
     // Enable sensor
@@ -37,7 +38,7 @@ static int adxl345_init(lua_State* L) {
     i2c_write(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER , 0x2D , sizeof(uint8_t));
     i2c_write(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER , 0x08 , sizeof(uint8_t));
     i2c_stop(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER);
-
+    lua_pushinteger(L, 0);
     return 1;
 }
 
@@ -78,8 +79,8 @@ static const LUA_REG_TYPE adxl345_map[] = {
 
 
 LUALIB_API int luaopen_adxl345( lua_State *L ) {
-    luaL_newlib(L, adxl345_map);
-    return 1;
+    luaL_newmetarotable(L,"adxl345", (void *)adxl345_map);
+    return 0;
 }
 
 MODULE_REGISTER_MAPPED(ADXL345, adxl345, adxl345_map, luaopen_adxl345);

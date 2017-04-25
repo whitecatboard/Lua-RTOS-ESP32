@@ -609,8 +609,8 @@ static const LUA_REG_TYPE vl53l0x_map[] = {
 
 
 LUALIB_API int luaopen_vl53l0x( lua_State *L ) {
-    luaL_newlib(L, vl53l0x_map);
-    return 1;
+    luaL_newmetarotable(L,"vl53l0x", (void *)vl53l0x_map);
+    return 0;
 }
 
 MODULE_REGISTER_MAPPED(VL53L0X, vl53l0x, vl53l0x_map, luaopen_vl53l0x);
