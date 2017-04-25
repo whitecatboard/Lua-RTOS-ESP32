@@ -28,7 +28,7 @@ static int adxl345_init(lua_State* L) {
     int scl = luaL_checkinteger(L, 5);
 
     if ((error = i2c_setup(adxl345_i2c_id, mode, speed, sda, scl, 0, 0))) {
-        lua_pushinteger(L, 1);
+        lua_pushinteger(L, error);
         return 1;
     }
 
@@ -84,5 +84,4 @@ LUALIB_API int luaopen_adxl345( lua_State *L ) {
 }
 
 MODULE_REGISTER_MAPPED(ADXL345, adxl345, adxl345_map, luaopen_adxl345);
-
 #endif
