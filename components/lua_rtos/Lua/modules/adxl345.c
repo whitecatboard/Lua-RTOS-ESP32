@@ -23,6 +23,8 @@ typedef struct {
 
 static int adxl345_init(lua_State* L) {
 
+    driver_error_t *error;
+
     int id = luaL_checkinteger(L, 1);
     int mode = luaL_checkinteger(L, 2);
     int speed = luaL_checkinteger(L, 3);
@@ -32,8 +34,6 @@ static int adxl345_init(lua_State* L) {
     if ((error = i2c_setup(id, mode, speed, sda, scl, 0, 0))) {
     	return luaL_driver_error(L, error);
     }
-
-    driver_error_t *error;
 
     // Allocate userdata
     adxl345_user_data_t *user_data = (adxl345_user_data_t *)lua_newuserdata(L, sizeof(adxl345_user_data_t));
