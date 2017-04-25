@@ -161,6 +161,7 @@ VL53L0X_Error VL53L0X_UpdateByte(VL53L0X_DEV Dev, uint8_t index,
     {
         return  status_int;
     }
+    
 
     data = (data & AndData) | OrData;
     return VL53L0X_i2c_write(Dev, index, &data, 1);
