@@ -71,6 +71,7 @@ static int adxl345_init(lua_State* L) {
 
 static int adxl345_read(lua_State* L) {
 
+    driver_error_t *error;
 	adxl345_user_data_t *user_data;
 
 	// Get user data
