@@ -1,5 +1,5 @@
 /*******************************************************************************
-Copyright © 2015, STMicroelectronics International N.V.
+Copyright ï¿½ 2015, STMicroelectronics International N.V.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -63,6 +63,7 @@ typedef struct {
     /*!< user specific field */
     uint8_t   I2cDevAddr;                /*!< i2c device address user specific field */
     int   fd;
+    int i2c_id;
 } VL53L0X_Dev_t;
 
 

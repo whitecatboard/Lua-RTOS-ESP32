@@ -63,11 +63,12 @@ static VL53L0X_RangingMeasurementData_t   *pRangingMeasurementData = &RangingMea
 
 static const uint32_t vl53l0x_i2c_id = 0;
 static const uint8_t vl53l0x_i2c_addr = 0x29;
-static const uint8_t object_number = 0;
+static uint8_t object_number = 0;
 
 typedef struct {
 	int unit;
 	int transaction;
+    char address;
     int object_number;
 } vl53l0x_user_data_t;
 
@@ -556,8 +557,9 @@ static int init(lua_State* L) {
     int id = luaL_checkinteger(L, 1);
     int mode = luaL_checkinteger(L, 2);
     int speed = luaL_checkinteger(L, 3);
-    int sda = luaL_checkinteger(L, 4);
-    int scl = luaL_checkinteger(L, 5);
+    int addr = luaL_checkinteger(L, 4);
+    int sda = luaL_checkinteger(L, 5);
+    int scl = luaL_checkinteger(L, 6);
 
     if ((error = i2c_setup(id, mode, speed, sda, scl, 0, 0))) {
     	return luaL_driver_error(L, error);
@@ -572,13 +574,14 @@ static int init(lua_State* L) {
     user_data->unit = id;
     user_data->transaction = I2C_TRANSACTION_INITIALIZER;
     user_data->object_number = object_number;
+    user_data->address = addr;
     object_number++;
 
     if ((error = i2c_start(user_data->unit, &user_data->transaction))) {
     	return luaL_driver_error(L, error);
     }
 
-	if ((error = i2c_write_address(user_data->unit, &user_data->transaction, adxl345_i2c_addr, false))) {
+	if ((error = i2c_write_address(user_data->unit, &user_data->transaction, user_data->address, false))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -613,8 +616,8 @@ static int start_ranging(lua_State* L) {
     int8_t addr = luaL_checkinteger(L, 2);
     int mode = luaL_checkinteger(L, 3);
 
-    startRanging(user_data->object_number, mode, addr)
-    return 0
+    startRanging(user_data->object_number, mode, addr);
+    return 0;
 } 
 
 static int stop_ranging(lua_State* L) {
@@ -624,8 +627,8 @@ static int stop_ranging(lua_State* L) {
 	user_data = (vl53l0x_user_data_t *)luaL_checkudata(L, 1, "vl53l0x.trans");
     luaL_argcheck(L, user_data, 1, "vl53l0x transaction expected");
 
-    stopRanging(user_data->object_number)
-    return 0
+    stopRanging(user_data->object_number);
+    return 0;
 } 
 
 static int get_distance(lua_State* L) {
@@ -654,10 +657,12 @@ static int get_timing(lua_State* L) {
     VL53L0X_DEV dev = NULL;
     dev = getDev(user_data->object_number)
 
-    int32_t budget = 0;
+    int32_t budget;
+    budget = 0;
+    VL53L0X_Error status;
+    status = VL53L0X_GetMeasurementTimingBudgetMicroSeconds(dev, &budget);
 
-    Status = VL53L0X_GetMeasurementTimingBudgetMicroSeconds(dev, &budget)
-    if (Status == 0){
+    if (status == 0){
         lua_pushinteger(L, budget_p + 1000);
     }else{
         lua_pushinteger(L, 0);

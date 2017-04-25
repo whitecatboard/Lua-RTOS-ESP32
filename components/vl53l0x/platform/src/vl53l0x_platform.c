@@ -41,8 +41,6 @@ static int VL53L0X_i2c_write(VL53L0X_DEV Dev, uint8_t cmd, uint8_t *data, uint8_
     int tran = I2C_TRANSACTION_INITIALIZER;
     char tRegAddr = cmd;
 
-    //i2c_read(vl53l0x_i2c_id, &I2C_TRANSACTION_INITIALIZER , &data, 6);
-
     if(i2c_start(vl53l0x_i2c_id , &tran) != NULL){
         return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
@@ -70,34 +68,34 @@ static int VL53L0X_i2c_read(VL53L0X_DEV Dev, uint8_t cmd, uint8_t * data, uint8_
     char tRegAddr = cmd;
 
     if(i2c_start(vl53l0x_i2c_id , &tran) != NULL){
-        return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
+        return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
     if(i2c_write_address(vl53l0x_i2c_id, &tran , Dev->I2cDevAddr, false) != NULL){
-        return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
+        return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
     if(i2c_write(vl53l0x_i2c_id , &tran , &tRegAddr , sizeof(uint8_t)) != NULL){
-        return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
+        return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
     if(i2c_start(vl53l0x_i2c_id , &tran) != NULL){
-        return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
+        return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
     if(i2c_write_address(vl53l0x_i2c_id, &tran , Dev->I2cDevAddr, false) != NULL){
-        return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
+        return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
     if(i2c_write(vl53l0x_i2c_id , &tran , data , len) != NULL){
-        return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
+        return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
     if (i2c_read(vl53l0x_i2c_id, &tran , data, len) != NULL){ 
-            result =  VL53L0X_ERROR_CONTROL_INTERFACE;
+            result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
     if(i2c_stop(vl53l0x_i2c_id , &tran) != NULL){
-        return result =  VL53L0X_ERROR_CONTROL_INTERFACE;
+        return result = VL53L0X_ERROR_CONTROL_INTERFACE;
     }
     
     return result;
@@ -163,7 +161,6 @@ VL53L0X_Error VL53L0X_UpdateByte(VL53L0X_DEV Dev, uint8_t index,
     {
         return  status_int;
     }
-
 
     data = (data & AndData) | OrData;
     return VL53L0X_i2c_write(Dev, index, &data, 1);
