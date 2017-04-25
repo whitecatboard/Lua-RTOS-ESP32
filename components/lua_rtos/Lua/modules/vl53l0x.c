@@ -550,7 +550,7 @@ VL53L0X_DEV getDev(int object_number)
     return Dev;
 }
 
-static int init(lua_State* L) {
+static int l_init(lua_State* L) {
 
     driver_error_t *error;
 
@@ -680,7 +680,7 @@ static int vl53l0x_trans_gc (lua_State *L) {
 }
 
 static const LUA_REG_TYPE vl53l0x_map[] = {
-    { LSTRKEY( "init" ), LFUNCVAL( init )},
+    { LSTRKEY( "init" ), LFUNCVAL( l_init )},
     { LNILKEY, LNILVAL }
 };
 
