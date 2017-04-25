@@ -71,10 +71,10 @@ static int adxl345_init(lua_State* L) {
 
 static int adxl345_read(lua_State* L) {
 
-	i2c_user_data_t *user_data;
+	adxl345_user_data_t *user_data;
 
 	// Get user data
-	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c.trans");
+	user_data = (adxl345_user_data_t *)luaL_checkudata(L, 1, "i2c.trans");
     luaL_argcheck(L, user_data, 1, "i2c transaction expected");
 
     char data[6];
