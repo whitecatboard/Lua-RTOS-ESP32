@@ -72,14 +72,14 @@ typedef struct {
     int object_number;
 } vl53l0x_user_data_t;
 
-void print_pal_error(VL53L0X_Error Status)
+static void print_pal_error(VL53L0X_Error Status)
 {
     char buf[VL53L0X_MAX_STRING_LENGTH];
     VL53L0X_GetPalErrorString(Status, buf);
     printf("API Status: %i : %s\n", Status, buf);
 }
 
-VL53L0X_Error WaitMeasurementDataReady(VL53L0X_DEV Dev)
+static VL53L0X_Error WaitMeasurementDataReady(VL53L0X_DEV Dev)
 {
     VL53L0X_Error Status = VL53L0X_ERROR_NONE;
     uint8_t NewDatReady=0;
@@ -110,7 +110,7 @@ VL53L0X_Error WaitMeasurementDataReady(VL53L0X_DEV Dev)
     return Status;
 }
 
-VL53L0X_Error WaitStopCompleted(VL53L0X_DEV Dev)
+static VL53L0X_Error WaitStopCompleted(VL53L0X_DEV Dev)
 {
     VL53L0X_Error Status = VL53L0X_ERROR_NONE;
     uint32_t StopCompleted=0;
@@ -167,7 +167,7 @@ VL53L0X_Error WaitStopCompleted(VL53L0X_DEV Dev)
  *              being used. If not being used, set to 0.
  *
  *****************************************************************************/
-void startRanging(int object_number, int mode, uint8_t i2c_address)
+static void startRanging(int object_number, int mode, uint8_t i2c_address)
 {
     VL53L0X_Error Status = VL53L0X_ERROR_NONE;
     uint32_t refSpadCount;
@@ -452,7 +452,7 @@ void startRanging(int object_number, int mode, uint8_t i2c_address)
  * @brief   Get current distance in mm
  * @return  Current distance in mm or -1 on error
  *****************************************************************************/
-int32_t getDistance(int object_number)
+static int32_t getDistance(int object_number)
 {
     VL53L0X_Error Status = VL53L0X_ERROR_NONE;
     int32_t current_distance = -1;
@@ -494,7 +494,7 @@ int32_t getDistance(int object_number)
 /******************************************************************************
  * @brief   Stop Ranging
  *****************************************************************************/
-void stopRanging(int object_number)
+static void stopRanging(int object_number)
 {
     VL53L0X_Error Status = VL53L0X_ERROR_NONE;
 
