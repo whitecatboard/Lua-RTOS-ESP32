@@ -54,10 +54,13 @@ static int adxl345_init(lua_State* L) {
     	return luaL_driver_error(L, error);
     }
 
-    if ((error = i2c_write(user_data->unit, &user_data->transaction, 0x2D , sizeof(uint8_t)))) {
+    char readyReg = 0x2D;
+    char readyValue = 0x08;
+
+    if ((error = i2c_write(user_data->unit, &user_data->transaction, &readyReg , sizeof(uint8_t)))) {
     	return luaL_driver_error(L, error);
     }
-    if ((error = i2c_write(user_data->unit, &user_data->transaction, 0x08 , sizeof(uint8_t)))) {
+    if ((error = i2c_write(user_data->unit, &user_data->transaction, &readyValue , sizeof(uint8_t)))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -80,9 +83,9 @@ static int adxl345_read(lua_State* L) {
 	user_data = (adxl345_user_data_t *)luaL_checkudata(L, 1, "i2c.trans");
     luaL_argcheck(L, user_data, 1, "i2c transaction expected");
 
-    char data[6];
+    char *data = (char*)malloc(6);
     int x,y,z;
-    uint8_t start_addr = 0x32;
+    char start_addr = 0x32;
 
     if ((error = i2c_start(user_data->unit, &user_data->transaction))) {
     	return luaL_driver_error(L, error);
@@ -92,7 +95,7 @@ static int adxl345_read(lua_State* L) {
     	return luaL_driver_error(L, error);
     }
 
-    if ((error = i2c_write(user_data->unit, &user_data->transaction, start_addr , sizeof(uint8_t)))) {
+    if ((error = i2c_write(user_data->unit, &user_data->transaction, &start_addr , sizeof(uint8_t)))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -104,7 +107,7 @@ static int adxl345_read(lua_State* L) {
     	return luaL_driver_error(L, error);
     }
 
-    if ((error = i2c_read(user_data->unit, &user_data->transaction, &data, 6))) {
+    if ((error = i2c_read(user_data->unit, &user_data->transaction, data, 6))) {
     	return luaL_driver_error(L, error);
     }
 
