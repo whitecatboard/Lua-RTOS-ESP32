@@ -128,6 +128,8 @@ static int adxl345_read(lua_State* L) {
     lua_pushinteger(L, y);
     lua_pushinteger(L, z);
 
+    free(data)
+
     return 3;
 }
 

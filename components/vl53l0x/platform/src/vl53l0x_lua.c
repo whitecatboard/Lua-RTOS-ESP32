@@ -26,6 +26,12 @@ SOFTWARE.
 
 #if CONFIG_LUA_RTOS_LUA_USE_VL53L0X
 
+#include "lua.h"
+#include "error.h"
+#include "lauxlib.h"
+#include "i2c.h"
+#include "platform.h"
+#include "modules.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,9 +39,7 @@ SOFTWARE.
 #include <errno.h>
 #include <ctype.h>
 #include <time.h>
-#include "modules.h"
-#include "lauxlib.h"
-#include "platform.h"
+
 #include "vl53l0x_api.h"
 #include "vl53l0x_platform.h"
 
@@ -55,11 +59,17 @@ SOFTWARE.
 
 static VL53L0X_Dev_t *pMyDevice[MAX_DEVICES];
 static VL53L0X_RangingMeasurementData_t    RangingMeasurementData;
-static VL53L0X_RangingMeasurementData_t   *pRangingMeasurementData    = &RangingMeasurementData;
+static VL53L0X_RangingMeasurementData_t   *pRangingMeasurementData = &RangingMeasurementData;
 
 static const uint32_t vl53l0x_i2c_id = 0;
 static const uint8_t vl53l0x_i2c_addr = 0x29;
 static const uint8_t object_number = 0;
+
+typedef struct {
+	int unit;
+	int transaction;
+    int object_number;
+} vl53l0x_user_data_t;
 
 void print_pal_error(VL53L0X_Error Status)
 {
@@ -198,7 +208,7 @@ void startRanging(int object_number, int mode, uint8_t i2c_address)
                 // the address we want we have to mutiply by 2 in the call so
                 // it gets set right
                 Status = VL53L0X_SetDeviceAddress(pMyDevice[object_number], (i2c_address * 2));
-                pMyDevice[object_number]->I2cDevAddr      = i2c_address;
+                pMyDevice[object_number]->I2cDevAddr = i2c_address;
             }
 
             if (Status == VL53L0X_ERROR_NONE)
@@ -541,41 +551,93 @@ VL53L0X_DEV getDev(int object_number)
 
 static int init(lua_State* L) {
 
-    uint8_t  devid;
+    driver_error_t *error;
 
-    int addr = luaL_checkinteger(L, 1);
+    int id = luaL_checkinteger(L, 1);
+    int mode = luaL_checkinteger(L, 2);
+    int speed = luaL_checkinteger(L, 3);
+    int sda = luaL_checkinteger(L, 4);
+    int scl = luaL_checkinteger(L, 5);
 
-    if ((error = i2c_setup(adxl345_i2c_id, mode, speed, sda, scl, 0, 0))) {
-        return luaL_driver_error(L, error);
+    if ((error = i2c_setup(id, mode, speed, sda, scl, 0, 0))) {
+    	return luaL_driver_error(L, error);
     }
 
-    // Enable sensor
-    i2c_start(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER);
-    i2c_write_address(adxl345_i2c_id, I2C_TRANSACTION_INITIALIZER , adxl345_i2c_addr, false);
-    i2c_write(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER , 0x2D , sizeof(uint8_t));
-    i2c_write(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER , 0x08 , sizeof(uint8_t));
-    i2c_stop(adxl345_i2c_id , I2C_TRANSACTION_INITIALIZER);
+    // Allocate userdata
+    vl53l0x_user_data_t *user_data = (vl53l0x_user_data_t *)lua_newuserdata(L, sizeof(vl53l0x_user_data_t));
+    if (!user_data) {
+       	return luaL_exception(L, I2C_ERR_NOT_ENOUGH_MEMORY);
+    }
+
+    user_data->unit = id;
+    user_data->transaction = I2C_TRANSACTION_INITIALIZER;
+    user_data->object_number = object_number;
+    object_number++;
+
+    if ((error = i2c_start(user_data->unit, &user_data->transaction))) {
+    	return luaL_driver_error(L, error);
+    }
+
+	if ((error = i2c_write_address(user_data->unit, &user_data->transaction, adxl345_i2c_addr, false))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    char readyReg = 0x000;
+    char readyValue = 0x01;
+
+    if ((error = i2c_write(user_data->unit, &user_data->transaction, &readyReg , sizeof(uint8_t)))) {
+    	return luaL_driver_error(L, error);
+    }
+    if ((error = i2c_write(user_data->unit, &user_data->transaction, &readyValue , sizeof(uint8_t)))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    if ((error = i2c_stop(user_data->unit, &user_data->transaction))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    luaL_getmetatable(L, "vl53l0x.trans");
+    lua_setmetatable(L, -2);
 
     return 1;
 }
 
 static int start_ranging(lua_State* L) {
+    driver_error_t *error;
+	vl53l0x_user_data_t *user_data;
 
-    int8_t addr = luaL_checkinteger(L, 1);
-    int mode = luaL_checkinteger(L, 2);
+	// Get user data
+	user_data = (vl53l0x_user_data_t *)luaL_checkudata(L, 1, "vl53l0x.trans");
+    luaL_argcheck(L, user_data, 1, "vl53l0x transaction expected");
 
-    startRanging(object_number, mode, addr)
+    int8_t addr = luaL_checkinteger(L, 2);
+    int mode = luaL_checkinteger(L, 3);
+
+    startRanging(user_data->object_number, mode, addr)
     return 0
 } 
 
 static int stop_ranging(lua_State* L) {
-    stopRanging(object_number)
+	vl53l0x_user_data_t *user_data;
+
+	// Get user data
+	user_data = (vl53l0x_user_data_t *)luaL_checkudata(L, 1, "vl53l0x.trans");
+    luaL_argcheck(L, user_data, 1, "vl53l0x transaction expected");
+
+    stopRanging(user_data->object_number)
     return 0
 } 
 
 static int get_distance(lua_State* L) {
+	vl53l0x_user_data_t *user_data;
+
+	// Get user data
+	user_data = (vl53l0x_user_data_t *)luaL_checkudata(L, 1, "vl53l0x.trans");
+    luaL_argcheck(L, user_data, 1, "vl53l0x transaction expected");
+
     int32_t dist;
-    dist = getDistance(object_number);
+    dist = getDistance(user_data->object_number);
+
     lua_pushinteger(L, dist);
 
     return 1;
@@ -583,8 +645,14 @@ static int get_distance(lua_State* L) {
 
 static int get_timing(lua_State* L) {
 
+	vl53l0x_user_data_t *user_data;
+
+	// Get user data
+	user_data = (vl53l0x_user_data_t *)luaL_checkudata(L, 1, "vl53l0x.trans");
+    luaL_argcheck(L, user_data, 1, "vl53l0x transaction expected");
+
     VL53L0X_DEV dev = NULL;
-    dev = getDev(object_number)
+    dev = getDev(user_data->object_number)
 
     int32_t budget = 0;
 
@@ -598,18 +666,36 @@ static int get_timing(lua_State* L) {
     return 1;
 } 
 
+// Destructor
+static int vl53l0x_trans_gc (lua_State *L) {
+	vl53l0x_user_data_t *user_data = NULL;
+
+    user_data = (vl53l0x_user_data_t *)luaL_testudata(L, 1, "vl53l0x.trans");
+    if (user_data) {
+    }
+
+    return 0;
+}
+
 static const LUA_REG_TYPE vl53l0x_map[] = {
-    { LSTRKEY( "init" ),         LFUNCVAL( init )},
+    { LSTRKEY( "init" ), LFUNCVAL( init )},
+    { LNILKEY, LNILVAL }
+};
+
+//inst map
+static const LUA_REG_TYPE vl53l0x_trans_map[] = {
     { LSTRKEY( "startRanging" ), LFUNCVAL( start_ranging )},
     { LSTRKEY( "stopRanging" ),  LFUNCVAL( stop_ranging )},
     { LSTRKEY( "getDistance" ),  LFUNCVAL( get_distance )},
     { LSTRKEY( "getTiming" ),    LFUNCVAL( get_timing )},
+    { LSTRKEY( "__metatable" ),  	LROVAL  ( vl53l0x_trans_map ) },
+	{ LSTRKEY( "__index"     ),   	LROVAL  ( vl53l0x_trans_map ) },
+	{ LSTRKEY( "__gc"        ),   	LFUNCVAL  ( vl53l0x_trans_gc ) },
     { LNILKEY, LNILVAL}
-};
-
+}
 
 LUALIB_API int luaopen_vl53l0x( lua_State *L ) {
-    luaL_newmetarotable(L,"vl53l0x", (void *)vl53l0x_map);
+    luaL_newmetarotable(L,"vl53l0x.trans", (void *)vl53l0x_trans_map);
     return 0;
 }
 
