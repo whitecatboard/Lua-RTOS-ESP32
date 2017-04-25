@@ -24,7 +24,7 @@ SOFTWARE.
 
 #include "luartos.h"
 
-#if LUA_RTOS_LUA_USE_VL53L0X
+#if CONFIG_LUA_RTOS_LUA_USE_VL53L0X
 
 #include "lua.h"
 #include "error.h"
