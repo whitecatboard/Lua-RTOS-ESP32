@@ -655,15 +655,14 @@ static int get_timing(lua_State* L) {
     luaL_argcheck(L, user_data, 1, "vl53l0x transaction expected");
 
     VL53L0X_DEV dev = NULL;
-    dev = getDev(user_data->object_number)
+    dev = getDev(user_data->object_number);
 
-    int32_t budget;
-    budget = 0;
+    int32_t budget = 0;
     VL53L0X_Error status;
     status = VL53L0X_GetMeasurementTimingBudgetMicroSeconds(dev, &budget);
 
     if (status == 0){
-        lua_pushinteger(L, budget_p + 1000);
+        lua_pushinteger(L, budget + 1000);
     }else{
         lua_pushinteger(L, 0);
     }
@@ -676,9 +675,7 @@ static int vl53l0x_trans_gc (lua_State *L) {
 	vl53l0x_user_data_t *user_data = NULL;
 
     user_data = (vl53l0x_user_data_t *)luaL_testudata(L, 1, "vl53l0x.trans");
-    if (user_data) {
-    }
-
+    if (user_data) {}
     return 0;
 }
 
