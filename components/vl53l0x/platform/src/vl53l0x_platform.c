@@ -40,7 +40,7 @@ static int VL53L0X_i2c_write(VL53L0X_DEV Dev, uint8_t cmd, uint8_t *data, uint8_
     char reg = (char)cmd;
 
     if ((error = i2c_start(Dev->unit, &Dev->tran))) {
-    	return error;
+    	return VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
     if(i2c_write_address(Dev->unit, &Dev->tran , Dev->I2cDevAddr, false) != NULL){
