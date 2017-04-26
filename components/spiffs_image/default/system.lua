@@ -20,7 +20,7 @@ client:connect("","")
 
 client:subscribe("code", mqtt.QOS2, function(len, message)
     local file2 = io.open("autorun.lua","w+")
-    file2:write(message)
+    file2:write(message) 
     file2:close()
     os.exit(1)
 end)
