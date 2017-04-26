@@ -612,15 +612,12 @@ static int l_init(lua_State* L) {
 }
 
 static int start_ranging(lua_State* L) {
-    driver_error_t *error;
 	vl53l0x_user_data_t *user_data;
 
 	// Get user data
 	user_data = (vl53l0x_user_data_t *)luaL_checkudata(L, 1, "vl53l0x.trans");
     luaL_argcheck(L, user_data, 1, "vl53l0x transaction expected");
-
-    int8_t addr = luaL_checkinteger(L, 2);
-    int mode = luaL_checkinteger(L, 3);
+    int mode = luaL_checkinteger(L, 2);
 
     startRanging(user_data, mode);
     return 0;
@@ -663,7 +660,7 @@ static int get_timing(lua_State* L) {
     VL53L0X_DEV dev = NULL;
     dev = getDev(user_data->object_number);
 
-    int32_t budget = 0;
+    uint32_t budget = 0;
     VL53L0X_Error status;
     status = VL53L0X_GetMeasurementTimingBudgetMicroSeconds(dev, &budget);
 
