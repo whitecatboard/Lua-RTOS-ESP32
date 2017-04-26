@@ -630,7 +630,7 @@ static int stop_ranging(lua_State* L) {
 	user_data = (vl53l0x_user_data_t *)luaL_checkudata(L, 1, "vl53l0x.trans");
     luaL_argcheck(L, user_data, 1, "vl53l0x transaction expected");
 
-    stopRanging(user_data->object_number);
+    stopRanging(user_data);
     return 0;
 } 
 
@@ -642,7 +642,7 @@ static int get_distance(lua_State* L) {
     luaL_argcheck(L, user_data, 1, "vl53l0x transaction expected");
 
     int32_t dist;
-    dist = getDistance(user_data->object_number);
+    dist = getDistance(user_data);
 
     lua_pushinteger(L, dist);
 

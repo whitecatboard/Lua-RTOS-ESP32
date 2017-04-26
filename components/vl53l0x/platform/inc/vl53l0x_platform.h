@@ -61,9 +61,9 @@ typedef struct {
     VL53L0X_DevData_t Data;               /*!< embed ST Ewok Dev  data as "Data"*/
 
     /*!< user specific field */
-    uint8_t   I2cDevAddr;                /*!< i2c device address user specific field */
+    uint8_t I2cDevAddr;                /*!< i2c device address user specific field */
     int8_t unit;
-    int6_t tran;
+    int8_t tran;
 } VL53L0X_Dev_t;
 
 
