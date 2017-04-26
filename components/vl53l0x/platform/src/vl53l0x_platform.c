@@ -37,15 +37,16 @@ static int VL53L0X_i2c_write(VL53L0X_DEV Dev, uint8_t cmd, uint8_t *data, uint8_
     driver_error_t *error;
 
     int result = VL53L0X_ERROR_NONE;
+    char reg = (char)cmd;
 
-    if ((error = i2c_start(Dev->unit, &tran))) {
+    if ((error = i2c_start(Dev->unit, &Dev->tran))) {
     	return error;
     }
 
     if(i2c_write_address(Dev->unit, &Dev->tran , Dev->I2cDevAddr, false) != NULL){
         return VL53L0X_ERROR_CONTROL_INTERFACE;
     }
-    if(i2c_write(Dev->unit , &Dev->tran , &((int)cmd) , 1) != NULL){
+    if(i2c_write(Dev->unit , &Dev->tran , &reg , 1) != NULL){
         return VL53L0X_ERROR_CONTROL_INTERFACE;
     }
     if(i2c_write(Dev->unit , &Dev->tran , (char*)data , (int)len) != NULL){
@@ -58,35 +59,35 @@ static int VL53L0X_i2c_write(VL53L0X_DEV Dev, uint8_t cmd, uint8_t *data, uint8_
     return result;
 }
 
-static int VL53L0X_i2c_read(VL53L0X_DEV Dev, int8_t cmd, uint_8_t * data, int8_t len)
+static int VL53L0X_i2c_read(VL53L0X_DEV Dev, int8_t cmd, uint8_t *data, int8_t len)
 {
     int result = VL53L0X_ERROR_NONE;
-    int regAddr = (int)cmd;
+    char reg = (char)cmd;
 
     if(i2c_start(Dev->unit, &Dev->tran) != NULL){
         return VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    if(i2c_write_address(vl53l0x_i2c_id, &tran , Dev->I2cDevAddr, false) != NULL){
+    if(i2c_write_address(Dev->unit, &Dev->tran , Dev->I2cDevAddr, false) != NULL){
         return VL53L0X_ERROR_CONTROL_INTERFACE;
     }
-    if(i2c_write(vl53l0x_i2c_id , &tran , &regAddr , 1) != NULL){
-        return VL53L0X_ERROR_CONTROL_INTERFACE;
-    }
-
-    if(i2c_start(vl53l0x_i2c_id , &tran) != NULL){
+    if(i2c_write(Dev->unit, &Dev->tran , &reg , 1) != NULL){
         return VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    if(i2c_write_address(vl53l0x_i2c_id, &tran , Dev->I2cDevAddr, false) != NULL){
+    if(i2c_start(Dev->unit, &Dev->tran) != NULL){
         return VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    if (i2c_read(vl53l0x_i2c_id, &tran , (char*)data, (int)len) != NULL){ 
+    if(i2c_write_address(Dev->unit, &Dev->tran , Dev->I2cDevAddr, true) != NULL){
         return VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    if(i2c_stop(vl53l0x_i2c_id , &tran) != NULL){
+    if (i2c_read(Dev->unit, &Dev->tran , (char*)data, (int)len) != NULL){ 
+        return VL53L0X_ERROR_CONTROL_INTERFACE;
+    }
+
+    if(i2c_stop(Dev->unit, &Dev->tran) != NULL){
         return VL53L0X_ERROR_CONTROL_INTERFACE;
     }
     
