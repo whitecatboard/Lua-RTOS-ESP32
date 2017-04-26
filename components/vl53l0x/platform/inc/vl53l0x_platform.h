@@ -62,8 +62,8 @@ typedef struct {
 
     /*!< user specific field */
     uint8_t I2cDevAddr;                /*!< i2c device address user specific field */
-    int8_t unit;
-    int8_t tran;
+    int unit;
+    int tran;
 } VL53L0X_Dev_t;
 
 
