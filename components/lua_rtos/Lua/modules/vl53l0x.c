@@ -64,9 +64,11 @@ static VL53L0X_RangingMeasurementData_t *pRangingMeasurementData = &RangingMeasu
 typedef struct {
 	int unit;
 	int transaction;
-    char address;
     int object_number;
+    char address;
 } vl53l0x_user_data_t;
+
+typedef vl53l0x_user_data_t* VL53L0X_USER_DATA;
 
 static void print_pal_error(VL53L0X_Error Status)
 {
@@ -163,7 +165,7 @@ static VL53L0X_Error WaitStopCompleted(VL53L0X_DEV Dev)
  *              being used. If not being used, set to 0.
  *
  *****************************************************************************/
-static void startRanging(vl53l0x_user_data_t userData, int mode)
+static void startRanging(VL53L0X_USER_DATA userData, int mode)
 {
     VL53L0X_Error Status = VL53L0X_ERROR_NONE;
     uint32_t refSpadCount;
@@ -452,7 +454,7 @@ static void startRanging(vl53l0x_user_data_t userData, int mode)
  * @brief   Get current distance in mm
  * @return  Current distance in mm or -1 on error
  *****************************************************************************/
-static int32_t getDistance(vl53l0x_user_data_t userData)
+static int32_t getDistance(VL53L0X_USER_DATA userData)
 {
     VL53L0X_Error Status = VL53L0X_ERROR_NONE;
     int32_t current_distance = -1;
@@ -496,7 +498,7 @@ static int32_t getDistance(vl53l0x_user_data_t userData)
 /******************************************************************************
  * @brief   Stop Ranging
  *****************************************************************************/
-static void stopRanging(vl53l0x_user_data_t userData)
+static void stopRanging(VL53L0X_USER_DATA userData)
 {
     VL53L0X_Error Status = VL53L0X_ERROR_NONE;
     int objNumber = userData->object_number;
