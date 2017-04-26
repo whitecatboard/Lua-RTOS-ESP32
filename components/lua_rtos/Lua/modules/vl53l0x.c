@@ -57,6 +57,7 @@ SOFTWARE.
 
 #define MAX_DEVICES                     16
 
+static int object_number = 0;
 static VL53L0X_Dev_t *pMyDevice[MAX_DEVICES];
 static VL53L0X_RangingMeasurementData_t RangingMeasurementData;
 static VL53L0X_RangingMeasurementData_t *pRangingMeasurementData = &RangingMeasurementData;
@@ -193,7 +194,7 @@ static void startRanging(VL53L0X_USER_DATA userData, int mode)
             // Initialize Comms to the default address to start
             pMyDevice[objNumber]->I2cDevAddr = userData->address;
             pMyDevice[objNumber]->tran = userData->transaction;
-            pMyDevice[objNumber]->unit = userData->unit
+            pMyDevice[objNumber]->unit = userData->unit;
 
             VL53L0X_init(pMyDevice[objNumber]);
             /*
@@ -621,7 +622,7 @@ static int start_ranging(lua_State* L) {
     int8_t addr = luaL_checkinteger(L, 2);
     int mode = luaL_checkinteger(L, 3);
 
-    startRanging(user_data, mode, addr);
+    startRanging(user_data, mode);
     return 0;
 } 
 
