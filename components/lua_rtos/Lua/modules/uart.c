@@ -50,25 +50,6 @@ static int uart_exists(int id) {
     return ((id >= CPU_FIRST_UART) && (id <= CPU_LAST_UART));
 }
 
-static int luart_pins( lua_State* L ) {
-    unsigned char rx, tx;
-    int i;
-
-    for(i=CPU_FIRST_UART;i<=CPU_LAST_UART;i++) {
-        uart_pins(i, &rx, &tx);
-
-        if ((rx != 0) && (tx != 0)) {
-            printf(
-                "uart%d: rx=%s%02d\t(pin %02d)\ttx=%s%02d\t(pin %02d)\n", i,
-                gpio_portname(rx), gpio_name(rx),cpu_pin_number(rx),
-                gpio_portname(tx), gpio_name(tx),cpu_pin_number(tx)
-            );
-        }
-    }
-
-    return 0;
-}
-
 static int luart_setup( lua_State* L ) {
 	driver_error_t *error;
 
@@ -79,11 +60,6 @@ static int luart_setup( lua_State* L ) {
     int stop_bits = luaL_checkinteger(L, 5);
     int buffer = luaL_optinteger(L, 6, 1024);
 
-    // Integrity checks
-    if (!uart_exists(id)) {
-        return luaL_error(L, "UART%d does not exist", id);
-    }
-    
     // Setup
     error = uart_init(id, bauds, databits, parity, stop_bits, buffer);
     if (error) {
@@ -153,7 +129,7 @@ static int luart_write( lua_State* L ) {
 static int luart_read( lua_State* L ) {
     int id = luaL_checkinteger(L, 1);
     const char  *format = luaL_checkstring(L, 2);
-    int timeout, crlf, res, c;
+    int timeout, res, c;
     
     // Some integrity checks
     if (!uart_exists(id)) {
@@ -164,20 +140,28 @@ static int luart_read( lua_State* L ) {
         return luaL_error(L, "UART%d is not setup", id);
     }
     
+    timeout = luaL_optinteger(L, 3, 0xffffffff);
+    if (timeout == 0xffffffff) {
+        timeout = portMAX_DELAY;
+    }
+
     // Read ...
     if (strcmp("*l", format) == 0) {
-        luaL_checktype(L, 3, LUA_TBOOLEAN);
-        crlf = lua_toboolean( L, 3 );
+        char *str = (char *)malloc(sizeof(char) * LUAL_BUFFERSIZE);
 
-        timeout = luaL_optinteger(L, 4, 0xffffffff);
+        res = uart_reads(id, str, 0, timeout);
+        if (res) {
+            lua_pushlstring(L, str, strlen(str));
+            free(str);
+        } else {
+            lua_pushnil(L);
+        }
         
+        return 1;
+    } else if (strcmp("*el", format) == 0) {
         char *str = (char *)malloc(sizeof(char) * LUAL_BUFFERSIZE);
         
-        if (timeout == 0xffffffff) {
-            timeout = portMAX_DELAY;
-        }
-
-        res = uart_reads(id, str, crlf, timeout);
+        res = uart_reads(id, str, 1, timeout);
         if (res) {
             lua_pushlstring(L, str, strlen(str));
             free(str);
@@ -187,12 +171,6 @@ static int luart_read( lua_State* L ) {
         
         return 1;
     } else if (strcmp("*c", format) == 0) {
-        timeout = luaL_optinteger(L, 3, 0xffffffff);
-
-        if (timeout == 0xffffffff) {
-            timeout = portMAX_DELAY;
-        }
-
         res = uart_read(id, (char *)&c, timeout);
         if (res) {
             lua_pushinteger(L, c & 0x000000ff);
@@ -210,52 +188,37 @@ static int luart_read( lua_State* L ) {
 }
 
 static int luart_consume( lua_State* L ) {
-    int id = luaL_checkinteger(L, 1);
+	driver_error_t *error;
+	int id = luaL_checkinteger(L, 1);
     
-    // Some integrity checks
-    if (!uart_exists(id)) {
-        return luaL_error(L, "UART%d does not exist", id);
+    error = uart_consume(id);
+    if (error) {
+        return luaL_driver_error(L, error);
     }
-    
-    if (!uart_is_setup(id)) {
-        return luaL_error(L, "UART%d is not setup", id);
-    }
-    
-    uart_consume(id);
-    
+
     return 0;
 }
 
 static int luart_lock( lua_State* L ) {
-    int id = luaL_checkinteger(L, 1);
+	driver_error_t *error;
+	int id = luaL_checkinteger(L, 1);
 
-    // Some integrity checks
-    if (!uart_exists(id)) {
-        return luaL_error(L, "UART%d does not exist", id);
+    error = uart_lock(id);
+    if (error) {
+        return luaL_driver_error(L, error);
     }
-
-    if (!uart_is_setup(id)) {
-        return luaL_error(L, "UART%d is not setup", id);
-    }
-
-    uart_lock(id);
 
     return 0;
 }
 
 static int luart_unlock( lua_State* L ) {
-    int id = luaL_checkinteger(L, 1);
+	driver_error_t *error;
+	int id = luaL_checkinteger(L, 1);
 
-    // Some integrity checks
-    if (!uart_exists(id)) {
-        return luaL_error(L, "UART%d does not exist", id);
+    error = uart_unlock(id);
+    if (error) {
+        return luaL_driver_error(L, error);
     }
-
-    if (!uart_is_setup(id)) {
-        return luaL_error(L, "UART%d is not setup", id);
-    }
-
-    uart_unlock(id);
 
     return 0;
 }
@@ -263,66 +226,27 @@ static int luart_unlock( lua_State* L ) {
 #include "modules.h"
 
 static const LUA_REG_TYPE uart_map[] = {
-    { LSTRKEY( "pins"     ),	 LFUNCVAL( luart_pins ) },
     { LSTRKEY( "setup"    ),	 LFUNCVAL( luart_setup ) },
     { LSTRKEY( "write"    ),	 LFUNCVAL( luart_write ) },
     { LSTRKEY( "read"     ),	 LFUNCVAL( luart_read ) },
     { LSTRKEY( "consume"  ),	 LFUNCVAL( luart_consume ) },
     { LSTRKEY( "lock"     ),	 LFUNCVAL( luart_lock ) },
     { LSTRKEY( "unlock"   ),	 LFUNCVAL( luart_unlock ) },
-#if LUA_USE_ROTABLE
-	{ LSTRKEY( "CONSOLE"  ),	 LINTVAL( CONSOLE_UART ) },
-	{ LSTRKEY( "PARNONE"  ),	 LINTVAL( 0 ) },
-	{ LSTRKEY( "PAREVEN"  ),	 LINTVAL( 1 ) },
-	{ LSTRKEY( "PARODD"   ),	 LINTVAL( 2 ) },
-	{ LSTRKEY( "STOPHALF" ),	 LINTVAL( 0 ) },
-	{ LSTRKEY( "STOP1"    ),	 LINTVAL( 1 ) },
-	{ LSTRKEY( "STOP2"    ),	 LINTVAL( 2 ) },
+	{ LSTRKEY( "CONSOLE"  ),	 LINTVAL ( CONSOLE_UART ) },
+	{ LSTRKEY( "PARNONE"  ),	 LINTVAL ( 0 ) },
+	{ LSTRKEY( "PAREVEN"  ),	 LINTVAL ( 1 ) },
+	{ LSTRKEY( "PARODD"   ),	 LINTVAL ( 2 ) },
+	{ LSTRKEY( "STOPHALF" ),	 LINTVAL ( 0 ) },
+	{ LSTRKEY( "STOP1"    ),	 LINTVAL ( 1 ) },
+	{ LSTRKEY( "STOP2"    ),	 LINTVAL ( 2 ) },
     UART_UART0
     UART_UART1
     UART_UART2
-#endif
 	{ LNILKEY, LNILVAL }
 };
 
 int luaopen_uart(lua_State* L) {
-#if !LUA_USE_ROTABLE
-    luaL_newlib(L, uart_map);
-
-    lua_pushinteger(L, CONSOLE_UART);
-    lua_setfield(L, -2, "CONSOLE");
-
-    lua_pushinteger(L, 0);
-    lua_setfield(L, -2, "PARNONE");
-
-    lua_pushinteger(L, 1);
-    lua_setfield(L, -2, "PAREVEN");
-
-    lua_pushinteger(L, 2);
-    lua_setfield(L, -2, "PARODD");
-
-    lua_pushinteger(L, 0);
-    lua_setfield(L, -2, "STOPHALF");
-
-    lua_pushinteger(L, 1);
-    lua_setfield(L, -2, "STOP1");
-
-    lua_pushinteger(L, 2);
-    lua_setfield(L, -2, "STOP2");
-
-    int i;
-    char buff[6];
-
-    for(i=CPU_FIRST_UART;i<=CPU_LAST_UART;i++) {
-        sprintf(buff,"UART%d",i);
-        lua_pushinteger(L, i);
-        lua_setfield(L, -2, buff);
-    }
-    
-    return 1;
-#else
     return 0;
-#endif
 }
 
 MODULE_REGISTER_MAPPED(UART, uart, uart_map, luaopen_uart);

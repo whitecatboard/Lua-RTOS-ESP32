@@ -106,7 +106,7 @@ static int f_receive (lua_State *L) {
     		buff_size = buff_size - 1024;
     	}
 
-        uart_lock(CONSOLE_UART);
+        uart_ll_lock(CONSOLE_UART);
         
         // Clear received buffer
         uart_consume(CONSOLE_UART);
@@ -177,7 +177,7 @@ static int f_send (lua_State *L) {
 
     FILE *f= fopen(filename, "r");
     if (f) {
-    	uart_lock(CONSOLE_UART);
+    	uart_ll_lock(CONSOLE_UART);
 
         done = 1;
         error = 0;

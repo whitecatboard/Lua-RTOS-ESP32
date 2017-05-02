@@ -199,6 +199,38 @@ menu "Lua RTOS"
 			endchoice
 		endmenu
 		
+		menu "UART pin map"
+			config LUA_RTOS_UART0_RX
+	    	int "UART0 RX"
+	    	range 0 39
+	    	default 3
+
+			config LUA_RTOS_UART0_TX
+	    	int "UART0 TX"
+	    	range 0 39
+	    	default 1
+
+			config LUA_RTOS_UART1_RX
+	    	int "UART1 RX"
+	    	range 0 39
+	    	default 9
+
+			config LUA_RTOS_UART1_TX
+	    	int "UART1 TX"
+	    	range 0 39
+	    	default 10
+
+			config LUA_RTOS_UART2_RX
+	    	int "UART2 RX"
+	    	range 0 39
+	    	default 16
+
+			config LUA_RTOS_UART2_TX
+	    	int "UART2 TX"
+	    	range 0 39
+	    	default 17
+		endmenu
+		
 		menu "SPI pin map"
 			config LUA_RTOS_SPI2_MISO
 	    	int "SPI2 MISO"

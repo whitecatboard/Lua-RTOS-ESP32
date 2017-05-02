@@ -522,7 +522,7 @@ static int os_run (lua_State *L) {
     lua_pop(L, 1);
 
     // Lock tty, avoid other threads to write to console
-    uart_lock(CONSOLE_UART);
+    uart_ll_lock(CONSOLE_UART);
 
     // Clear received buffer
     uart_consume(CONSOLE_UART);

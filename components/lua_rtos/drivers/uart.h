@@ -77,8 +77,13 @@ typedef struct {
 
 // UART errors
 #define UART_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  0)
+#define UART_ERR_INVALID_UNIT			  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  1)
+#define UART_ERR_INVALID_DATA_BITS		  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  2)
+#define UART_ERR_INVALID_PARITY			  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  3)
+#define UART_ERR_INVALID_STOP_BITS		  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  4)
+#define UART_ERR_NOT_ENOUGH_MEMORY		  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  5)
+#define UAR_ERR_IS_NOT_SETUP 			  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  6)
 
-	
 #define ETS_UART_INTR_ENABLE()  _xt_isr_unmask(1 << ETS_UART_INUM)
 #define ETS_UART_INTR_DISABLE() _xt_isr_mask(1 << ETS_UART_INUM)
 #define UART_INTR_MASK          0x1ff
@@ -88,22 +93,24 @@ while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_TXFIFO_CNT_S) & UART_TXFIFO
 
 driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t parity, uint8_t stop_bits, uint32_t qs);
 driver_error_t *uart_setup_interrupts(int8_t unit);
+driver_error_t *uart_consume(int8_t unit);
+driver_error_t *uart_lock(int unit);
+driver_error_t *uart_unlock(int unit);
+
+void uart_ll_lock(int unit);
+void uart_ll_unlock(int unit);
+
 void     uart_write(int8_t unit, char byte);
 void     uart_writes(int8_t unit, char *s);
 uint8_t uart_read(int8_t unit, char *c, uint32_t timeout);
 uint8_t  uart_reads(int8_t unit, char *buff, uint8_t crlf, uint32_t timeout);
 uint8_t  uart_wait_response(int8_t unit, char *command, uint8_t echo, char *ret, uint8_t substring, uint32_t timeout, int nargs, ...);
 uint8_t  uart_send_command(int8_t unit, char *command, uint8_t echo, uint8_t crlf, char *ret, uint8_t substring, uint32_t timeout, int nargs, ...);
-void     uart_consume(int8_t unit);
 const char  *uart_name(int8_t unit);
 int      uart_get_br(int unit);
 int      uart_is_setup(int unit);
 void     uart_stop(int unit);
 QueueHandle_t *uart_get_queue(int8_t unit);
-void uart_pins(int8_t unit, uint8_t *rx, uint8_t *tx);
 driver_error_t *uart_lock_resources(int unit, void *resources);
-
-void uart_lock(int unit);
-void uart_unlock(int unit);
 
 #endif

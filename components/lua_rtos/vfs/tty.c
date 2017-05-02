@@ -70,7 +70,7 @@ static size_t IRAM_ATTR vfs_tty_write(int fd, const void *data, size_t size) {
     const char *data_c = (const char *)data;
     int unit = fd;
 
-    uart_lock(unit);
+    uart_ll_lock(unit);
 
     for (size_t i = 0; i < size; i++) {
 #if CONFIG_NEWLIB_STDOUT_ADDCR
@@ -84,7 +84,7 @@ static size_t IRAM_ATTR vfs_tty_write(int fd, const void *data, size_t size) {
         }
     }
 
-	uart_unlock(unit);
+	uart_ll_unlock(unit);
 
     return size;
 }
