@@ -209,7 +209,6 @@ static int levent_done( lua_State* L ) {
 
 static int levent_pending( lua_State* L ) {
     event_userdata_t *udata = NULL;
-    listener_data_t *listener_data ;
 
     // Get user data
     udata = (event_userdata_t *)luaL_checkudata(L, 1, "event.ins");

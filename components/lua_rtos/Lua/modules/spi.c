@@ -66,6 +66,7 @@ static int lspi_setup(lua_State* L) {
     luaL_getmetatable(L, "spi.ins");
     lua_setmetatable(L, -2);
 
+	(void)data_bits;
 	return 1;
 }
 

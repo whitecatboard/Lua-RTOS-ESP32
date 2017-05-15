@@ -1419,6 +1419,7 @@ static bit_t decodeFrame (void) {
 #if CONFIG_LUA_RTOS_LORA_NODE_DEBUG > 0
     syslog(LOG_DEBUG, "%lu: Received downlink, window=%s, port=%d, ack=%d\n", (u4_t)os_getTime(), window, port, ackup);
 #endif
+    (void)window;
     return 1;
 }
 
