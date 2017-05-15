@@ -49,7 +49,7 @@
 void luaos_main();
 void _sys_init();
 
-void *lua_start(void *arg) {	
+void *lua_start(void *arg) {
 	for(;;) {
 		luaos_main();
     }
