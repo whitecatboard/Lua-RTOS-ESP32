@@ -40,6 +40,7 @@
 #include "net_spi_eth.inc"
 #include "net_service_sntp.inc"
 #include "net_service_http.inc"
+#include "net_ssh.inc"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -242,6 +243,7 @@ static const LUA_REG_TYPE net_map[] = {
 	{ LSTRKEY( "packip" ), LFUNCVAL ( lnet_packip ) },
 	{ LSTRKEY( "unpackip" ), LFUNCVAL ( lnet_unpackip ) },
 	{ LSTRKEY( "ping" ), LFUNCVAL ( lnet_ping ) },
+	{ LSTRKEY( "scp" ), LROVAL ( scp_map ) },
 #if CONFIG_WIFI_ENABLED && CONFIG_LUA_RTOS_LUA_USE_NET
 	{ LSTRKEY( "wf" ), LROVAL ( wifi_map ) },
 #endif
