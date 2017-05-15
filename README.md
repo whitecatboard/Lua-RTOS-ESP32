@@ -83,9 +83,9 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 ## Method 2: build by yourself
 
 1. Install ESP32 toolchain for your desktop platform. Please, follow the instructions provided by ESPRESSIF:
-   * [Windows](https://github.com/espressif/esp-idf/blob/master/docs/windows-setup.rst)
+   * [Windows](http://esp-idf.readthedocs.io/en/latest/get-started/windows-setup.html)
    * [Mac OS]( http://esp-idf.readthedocs.io/en/latest/get-started/macos-setup.html)
-   * [Linux](https://github.com/espressif/esp-idf/blob/master/docs/linux-setup.rst)
+   * [Linux](http://esp-idf.readthedocs.io/en/latest/get-started/linux-setup.html)
 
 1. Clone esp-idf repository from ESPRESSIF:
 
