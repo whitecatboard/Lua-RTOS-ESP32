@@ -193,7 +193,7 @@ int MQTTPacket_send(networkHandles* net, Header header, char* buffer, size_t buf
 
 #if defined(OPENSSL)
 	if (net->ssl)
-		rc = SSLSocket_putdatas(net->ssl, net->socket, buf, buf0len, 1, &buffer, &buflen, &free);
+		rc = SSLSocket_putdatas(net->ssl, net->socket, buf, buf0len, 1, &buffer, &buflen, &must_free);
 	else
 #endif
 		rc = Socket_putdatas(net->socket, buf, buf0len, 1, &buffer, &buflen, &must_free);

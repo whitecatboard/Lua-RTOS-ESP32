@@ -88,6 +88,16 @@ ClientStates* bstate = &ClientState;
 
 MQTTProtocol state;
 
+SSL_SESSION *SSL_get1_session(SSL *ssl)
+{
+	return ssl->session;
+}
+int SSL_set_session(SSL *ssl, SSL_SESSION *session)
+{
+	ssl->session = session;
+	return 1;
+}
+
 #if defined(WIN32) || defined(WIN64)
 static mutex_type mqttclient_mutex = NULL;
 static mutex_type socket_mutex = NULL;
@@ -679,6 +689,7 @@ void MQTTClient_stop()
 		}
 	}
 	FUNC_EXIT_RC(rc);
+	(void)rc;
 }
 
 
@@ -773,6 +784,8 @@ void Protocol_processPublication(Publish* publish, Clients* client)
 	 */
 	if (publish->header.bits.qos == 2)
 		mm->payload = publish->payload;
+	else if(!publish->payloadlen)
+		mm->payload = 0;
 	else
 	{
 		mm->payload = malloc(publish->payloadlen);
@@ -1933,7 +1946,7 @@ exit:
 
 MQTTClient_nameValue* MQTTClient_getVersionInfo()
 {
-	#define MAX_INFO_STRINGS 8
+	#define MAX_INFO_STRINGS 3
 	static MQTTClient_nameValue libinfo[MAX_INFO_STRINGS + 1];
 	int i = 0;
 
@@ -1945,22 +1958,7 @@ MQTTClient_nameValue* MQTTClient_getVersionInfo()
 
 	libinfo[i].name = "Build level";
 	libinfo[i++].value = BUILD_TIMESTAMP;
-#if defined(OPENSSL)
-	libinfo[i].name = "OpenSSL version";
-	libinfo[i++].value = SSLeay_version(SSLEAY_VERSION);
 
-	libinfo[i].name = "OpenSSL flags";
-	libinfo[i++].value = SSLeay_version(SSLEAY_CFLAGS);
-
-	libinfo[i].name = "OpenSSL build timestamp";
-	libinfo[i++].value = SSLeay_version(SSLEAY_BUILT_ON);
-
-	libinfo[i].name = "OpenSSL platform";
-	libinfo[i++].value = SSLeay_version(SSLEAY_PLATFORM);
-
-	libinfo[i].name = "OpenSSL directory";
-	libinfo[i++].value = SSLeay_version(SSLEAY_DIR);
-#endif
 	libinfo[i].name = NULL;
 	libinfo[i].value = NULL;
 	return libinfo;

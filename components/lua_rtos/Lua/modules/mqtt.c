@@ -173,7 +173,7 @@ static int lmqtt_client( lua_State* L ){
     mtx_init(&mqtt->callback_mtx, NULL, NULL, 0);
     
     // Calculate uri
-    sprintf(url, "%s:%d", host, port);
+    sprintf(url, "%s://%s:%d", mqtt->secure ? "ssl":"tcp", host, port);
     
     if (!client_inited) {
         MQTTClient_init();

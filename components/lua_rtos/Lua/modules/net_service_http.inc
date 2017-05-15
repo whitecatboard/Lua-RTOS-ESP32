@@ -37,7 +37,8 @@
 
 #include <drivers/net.h>
 
-extern void http_start();
+extern void http_start(lua_State* L);
+extern void http_stop();
 
 static int lhttp_start(lua_State* L) {
 	driver_error_t *error;
@@ -46,7 +47,7 @@ static int lhttp_start(lua_State* L) {
     	return luaL_driver_error(L, error);
 	}
 
-	http_start();
+	http_start(L);
 
 	return 0;
 }

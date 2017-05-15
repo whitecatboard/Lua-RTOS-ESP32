@@ -28,6 +28,8 @@
 
 #include <pthread/pthread.h>
 
+extern void hal_lmic_command();
+
 // LMIC run loop, as a FreeRTOS task
 void *os_runloop(void *pvParameters);
 

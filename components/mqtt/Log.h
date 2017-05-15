@@ -24,6 +24,7 @@
 #define LOG_H
 
 #include <sys/syslog.h>
+#include "Messages.h"
 
 #define TRACE_MAX      8
 #define TRACE_MINIMUM  8

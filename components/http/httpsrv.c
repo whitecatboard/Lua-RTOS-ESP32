@@ -35,6 +35,7 @@
 #include "lwip/netdb.h"
 #include "lwip/dns.h"
 #include "lwip/ip_addr.h"
+#include <sys/panic.h>
 
 #include <pthread/pthread.h>
 
@@ -49,6 +50,20 @@
 #define PROTOCOL       "HTTP/1.1"
 #define RFC1123FMT     "%a, %d %b %Y %H:%M:%S GMT"
 #define HTPP_BUFF_SIZE 1024
+
+#include "lua.h"
+#include "lualib.h"
+#include "lauxlib.h"
+
+static lua_State *LL=NULL;
+
+int is_lua(char *name) {
+    char *ext = strrchr(name, '.');
+    if (!ext) return 0;
+
+    if (strcmp(ext, ".lua")  == 0) return 1;
+    return 0;
+}
 
 char *get_mime_type(char *name) {
 
@@ -118,22 +133,6 @@ void send_error(FILE *f, int status, char *title, char *extra, char *text) {
     fprintf(f, HTTP_ERROR_LINE_4);
 }
 
-void send_file(FILE *f, char *path, struct stat *statbuf) {
-    int n;
-    char data[HTPP_BUFF_SIZE];
-    FILE *file = fopen(path, "r");
-
-    if (!file) {
-        send_error(f, 403, "Forbidden", NULL, "Access denied.");
-    } else {
-        int length = S_ISREG(statbuf->st_mode) ? statbuf->st_size : -1;
-        send_headers(f, 200, "OK", NULL, get_mime_type(path), length);
-        while ((n = fread(data, 1, sizeof (data), file)) > 0) fwrite(data, 1, n, f);
-        fclose(file);
-    }
-}
-
-
 static void chunk(FILE *f, const char *fmt, ...) {
 	char *buffer;
 	va_list args;
@@ -155,10 +154,51 @@ static void chunk(FILE *f, const char *fmt, ...) {
 	}
 }
 
+void send_file(FILE *f, char *path, struct stat *statbuf, char *requestdata) {
+    int n;
+    char data[HTPP_BUFF_SIZE];
+    FILE *file = fopen(path, "r");
+
+    if (!file) {
+        send_error(f, 403, "Forbidden", NULL, "Access denied.");
+    } else if (is_lua(path)) {
+    		fclose(file);
+    		
+        send_headers(f, 200, "OK", NULL, "text/html", -1);
+
+				lua_pushstring(LL, (requestdata && *requestdata) ? requestdata:"");
+				lua_setglobal(LL, "http_request");
+
+    		int rc = luaL_dofile(LL, path);
+    		(void) rc;
+
+				lua_getglobal(LL, "http_response");
+				size_t rlen = 0;
+				const char *response = lua_tostring(LL, -1);
+				if (!lua_isnil(LL,-1)) {
+			    rlen = lua_rawlen(LL, -1);
+					if (rlen>0) {
+						fprintf(f, "%x\r\n", rlen);
+						fwrite(response, 1, rlen, f);
+						fprintf(f, "\r\n");
+					}
+				}
+				lua_pop(LL, 1);
+				
+        fprintf(f, "0\r\n\r\n");
+    } else {
+        int length = S_ISREG(statbuf->st_mode) ? statbuf->st_size : -1;
+        send_headers(f, 200, "OK", NULL, get_mime_type(path), length);
+        while ((n = fread(data, 1, sizeof (data), file)) > 0) fwrite(data, 1, n, f);
+        fclose(file);
+    }
+}
+
 int process(FILE *f) {
     char buf[HTPP_BUFF_SIZE];
     char *method;
     char *path;
+    char *data;
     char *protocol;
     struct stat statbuf;
     char pathbuf[HTPP_BUFF_SIZE];
@@ -169,6 +209,12 @@ int process(FILE *f) {
     method = strtok(buf, " ");
     path = strtok(NULL, " ");
     protocol = strtok(NULL, "\r");
+
+		data = strchr(path, '?');
+    if (data) {
+    	*data = 0;
+    	data++;
+    }
 
     if (!method || !path || !protocol) return -1;
 
@@ -187,59 +233,64 @@ int process(FILE *f) {
             snprintf(pathbuf, sizeof (pathbuf), "Location: %s/", path);
             send_error(f, 302, "Found", pathbuf, "Directories must end with a slash.");
         } else {
-            snprintf(pathbuf, sizeof (pathbuf), "%sindex.html", path);
+            snprintf(pathbuf, sizeof (pathbuf), "%sindex.lua", path);
             if (stat(pathbuf, &statbuf) >= 0) {
-                send_file(f, pathbuf, &statbuf);
+                send_file(f, pathbuf, &statbuf, data);
             } else {
-                DIR *dir;
-                struct dirent *de;
+		          snprintf(pathbuf, sizeof (pathbuf), "%sindex.html", path);
+		          if (stat(pathbuf, &statbuf) >= 0) {
+		              send_file(f, pathbuf, &statbuf, data);
+		          } else {
+		              DIR *dir;
+		              struct dirent *de;
 
-                send_headers(f, 200, "OK", NULL, "text/html", -1);
-                chunk(f, "<HTML><HEAD><TITLE>Index of %s</TITLE></HEAD><BODY>", path);
-                chunk(f, "<H4>Index of %s</H4>", path);
+		              send_headers(f, 200, "OK", NULL, "text/html", -1);
+		              chunk(f, "<HTML><HEAD><TITLE>Index of %s</TITLE></HEAD><BODY>", path);
+		              chunk(f, "<H4>Index of %s</H4>", path);
 
-                chunk(f, "<TABLE>");
-                chunk(f, "<TR>");
-                chunk(f, "<TH style=\"width: 250;text-align: left;\">Name</TH><TH style=\"width: 100px;text-align: right;\">Size</TH>");
-                chunk(f, "</TR>");
+		              chunk(f, "<TABLE>");
+		              chunk(f, "<TR>");
+		              chunk(f, "<TH style=\"width: 250;text-align: left;\">Name</TH><TH style=\"width: 100px;text-align: right;\">Size</TH>");
+		              chunk(f, "</TR>");
 
-                if (len > 1) {
-                    chunk(f, "<TR>");
-                	chunk(f, "<TD><A HREF=\"..\">..</A></TD><TD></TD>");
-                    chunk(f, "</TR>");
-                }
+		              if (len > 1) {
+		                  chunk(f, "<TR>");
+		              	chunk(f, "<TD><A HREF=\"..\">..</A></TD><TD></TD>");
+		                  chunk(f, "</TR>");
+		              }
 
-                dir = opendir(path);
-                while ((de = readdir(dir)) != NULL) {
-                    strcpy(pathbuf, path);
-                    strcat(pathbuf, de->d_name);
+		              dir = opendir(path);
+		              while ((de = readdir(dir)) != NULL) {
+		                  strcpy(pathbuf, path);
+		                  strcat(pathbuf, de->d_name);
 
-                    stat(pathbuf, &statbuf);
+		                  stat(pathbuf, &statbuf);
 
-                    chunk(f, "<TR>");
-                    chunk(f, "<TD>");
-                    chunk(f, "<A HREF=\"%s%s\">", de->d_name, S_ISDIR(statbuf.st_mode) ? "/" : "");
-                    chunk(f, "%s%s", de->d_name, S_ISDIR(statbuf.st_mode) ? "/</A>" : "</A> ");
-                    chunk(f, "</TD>");
-                    chunk(f, "<TD style=\"text-align: right;\">");
-                    if (!S_ISDIR(statbuf.st_mode)) {
-                        chunk(f, "%d", (int)statbuf.st_size);
-                    }
-                    chunk(f, "</TD>");
-                    chunk(f, "</TR>");
-                }
-                closedir(dir);
+		                  chunk(f, "<TR>");
+		                  chunk(f, "<TD>");
+		                  chunk(f, "<A HREF=\"%s%s\">", de->d_name, S_ISDIR(statbuf.st_mode) ? "/" : "");
+		                  chunk(f, "%s%s", de->d_name, S_ISDIR(statbuf.st_mode) ? "/</A>" : "</A> ");
+		                  chunk(f, "</TD>");
+		                  chunk(f, "<TD style=\"text-align: right;\">");
+		                  if (!S_ISDIR(statbuf.st_mode)) {
+		                      chunk(f, "%d", (int)statbuf.st_size);
+		                  }
+		                  chunk(f, "</TD>");
+		                  chunk(f, "</TR>");
+		              }
+		              closedir(dir);
 
 
-                chunk(f, "</TABLE>");
+		              chunk(f, "</TABLE>");
 
-                chunk(f, "</BODY></HTML>", SERVER);
+		              chunk(f, "</BODY></HTML>", SERVER);
 
-                fprintf(f, "0\r\n\r\n");
-            }
+		              fprintf(f, "0\r\n\r\n");
+		          }
+		       }
         }
     } else {
-        send_file(f, path, &statbuf);
+        send_file(f, path, &statbuf, data);
     }
 
     return 0;
@@ -294,11 +345,13 @@ static void *http_thread(void *arg) {
     pthread_exit(NULL);
 }
 
-void http_start() {
+void http_start(lua_State* L) {
 	pthread_attr_t attr;
 	struct sched_param sched;
 	pthread_t thread;
 	int res;
+
+	LL=L;
 
 	// Init thread attributes
 	pthread_attr_init(&attr);
