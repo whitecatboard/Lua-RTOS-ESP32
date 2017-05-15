@@ -111,7 +111,7 @@ static int lnet_packip(lua_State *L) {
 	       	return luaL_exception(L, NET_ERR_INVALID_IP);
 
 		for (i = 0; i < 4; i++) {
-			if (temp[i] < 0 || temp[i] > 255)
+			if (temp[i] > 255)
 		       	return luaL_exception(L, NET_ERR_INVALID_IP);
 
 			ip.ipbytes[i] = (uint8_t) temp[i];
@@ -186,6 +186,7 @@ static int lnet_stat(lua_State* L) {
 
 	// This should be done in a more elegant way in future versions ...
 
+#if CONFIG_WIFI_ENABLED && CONFIG_LUA_RTOS_LUA_USE_NET
 	// Call wf.stat
 	lua_getglobal(L, "net");
 	lua_getfield(L, -1, "wf");
@@ -207,7 +208,9 @@ static int lnet_stat(lua_State* L) {
 	if (table) {
 		lua_pushinteger(L, 1);
 	}
+#endif
 
+#if CONFIG_SPI_ETHERNET && CONFIG_LUA_RTOS_LUA_USE_NET
 	// Call wf.stat
 	lua_getglobal(L, "net");
 	lua_getfield(L, -1, "en");
@@ -225,6 +228,7 @@ static int lnet_stat(lua_State* L) {
 	} else {
 		lua_settop(L, 0);
 	}
+#endif
 
 	return table;
 }
