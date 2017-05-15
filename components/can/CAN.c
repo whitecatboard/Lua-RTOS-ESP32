@@ -27,6 +27,10 @@
  *
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_CAN
+
 #include "CAN.h"
 
 #include "freertos/FreeRTOS.h"
@@ -229,3 +233,5 @@ int CAN_stop(){
 
 	return 0;
 }
+
+#endif
