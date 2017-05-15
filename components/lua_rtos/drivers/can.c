@@ -29,6 +29,8 @@
 
 #include "sdkconfig.h"
 
+#if CONFIG_LUA_RTOS_LUA_USE_CAN
+
 #include <stdint.h>
 #include <string.h>
 
@@ -125,3 +127,5 @@ driver_error_t *can_rx(uint32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8
 }
 
 DRIVER_REGISTER(CAN,can,NULL,NULL,NULL);
+
+#endif
