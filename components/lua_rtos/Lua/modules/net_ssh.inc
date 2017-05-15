@@ -150,6 +150,7 @@ static int l_scp_get(lua_State* L) {
     fclose(fp);
 
     libssh2_channel_free(channel);
+    l_ssh_shutdown(session);
     close(sock);
     libssh2_exit();
 
@@ -167,7 +168,6 @@ static const LUA_REG_TYPE scp_map[] = {
 
 Example:
 
-net.scp.get("your_domain.com",22,"/server_path/server_file","/local_path/local_file","user","password")
+net.scp.get("your_domain.com",22,"/server_path/server_file","/local_path/local_file","user","pass")
 
 */
- */
