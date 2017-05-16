@@ -236,15 +236,21 @@ static const LUA_REG_TYPE wifi_mode_map[] = {
 	{ LSTRKEY( "APSTA"        ), LINTVAL( WIFI_MODE_APSTA ) },
 };
 
+static const LUA_REG_TYPE wifi_powersave_map[] = {
+	{ LSTRKEY( "NONE"          ), LINTVAL( WIFI_PS_NONE ) },
+	{ LSTRKEY( "MODEM"         ), LINTVAL( WIFI_PS_MODEM ) },
+};
+
 static const LUA_REG_TYPE wifi_map[] = {
-	{ LSTRKEY( "setup" ),	 LFUNCVAL( lwifi_setup   ) },
-	{ LSTRKEY( "scan"  ),	 LFUNCVAL( lwifi_scan    ) },
-	{ LSTRKEY( "start" ),	 LFUNCVAL( lwifi_start   ) },
-	{ LSTRKEY( "stop"  ),	 LFUNCVAL( lwifi_stop    ) },
-	{ LSTRKEY( "stat"  ),	 LFUNCVAL( lwifi_stat    ) },
-	{ LSTRKEY( "auth"  ),	 LROVAL  ( wifi_auth_map ) },
-	{ LSTRKEY( "mode"  ),	 LROVAL  ( wifi_mode_map ) },
-	{ LSTRKEY( "error" ),	 LROVAL  ( wifi_error_map ) },
+	{ LSTRKEY( "setup"     ),	 LFUNCVAL( lwifi_setup        ) },
+	{ LSTRKEY( "scan"      ),	 LFUNCVAL( lwifi_scan         ) },
+	{ LSTRKEY( "start"     ),	 LFUNCVAL( lwifi_start        ) },
+	{ LSTRKEY( "stop"      ),	 LFUNCVAL( lwifi_stop         ) },
+	{ LSTRKEY( "stat"      ),	 LFUNCVAL( lwifi_stat         ) },
+	{ LSTRKEY( "auth"      ),	 LROVAL  ( wifi_auth_map      ) },
+	{ LSTRKEY( "mode"      ),	 LROVAL  ( wifi_mode_map      ) },
+	{ LSTRKEY( "powersave" ),	 LROVAL  ( wifi_powersave_map ) },
+	{ LSTRKEY( "error"     ),	 LROVAL  ( wifi_error_map     ) },
 	{ LNILKEY, LNILVAL }
 };
 
