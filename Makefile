@@ -28,6 +28,7 @@ configure-idf-lua-rtos:
 	@cd $(IDF_PATH)/components/esp32/include && git checkout esp_interface.h
 	@cd $(IDF_PATH)/components/tcpip_adapter/include && git checkout tcpip_adapter.h
 	@cd $(IDF_PATH)/components/tcpip_adapter && git checkout tcpip_adapter_lwip.c
+	@cd $(IDF_PATH)/components/newlib/include/sys && git checkout syslimits.h
 	@echo "Configure esp-idf for Lua RTOS ..."
 	@touch $(PROJECT_PATH)/components/lua_rtos/lwip/socket.c
 	@cd $(IDF_PATH)/components/lwip/api && git checkout api_msg.c
