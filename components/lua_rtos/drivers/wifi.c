@@ -74,6 +74,9 @@ DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidSSID, "invalid SSID", WIFI_ERR_WIFI_SSI
 DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidPassword, "invalid password", WIFI_ERR_WIFI_PASSWORD);
 DRIVER_REGISTER_ERROR(WIFI, wifi, Timeout, "timeout", WIFI_ERR_WIFI_TIMEOUT);
 DRIVER_REGISTER_ERROR(WIFI, wifi, RFClosed, "is in sleep state(RF closed) / wakeup fail", WIFI_ERR_WAKE_FAIL);
+DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidArg, "invalid argument", WIFI_ERR_INVALID_ARGUMENT);
+DRIVER_REGISTER_ERROR(WIFI, wifi, NotSupport, "wifi API is not supported yet", WIFI_ERR_NOT_SUPPORT);
+DRIVER_REGISTER_ERROR(WIFI, wifi, NotStopped, "driver was not stopped", WIFI_ERR_NOT_STOPPED);
 
 extern EventGroupHandle_t netEvent;
 
@@ -99,11 +102,21 @@ static driver_error_t *wifi_check_error(esp_err_t error) {
 		case ESP_ERR_WIFI_TIMEOUT:     return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_TIMEOUT,NULL);
 		case ESP_ERR_WIFI_WAKE_FAIL:   return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WAKE_FAIL,NULL);
 		case ESP_ERR_WIFI_MODE:        return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_MODE,NULL);
-		default:
-		{
-			char buffer[40];
-			sprintf(buffer, "missing wifi error case %i", error);
-			panic(buffer);
+		case ESP_ERR_WIFI_ARG:		   return driver_operation_error(WIFI_DRIVER, WIFI_ERR_INVALID_ARGUMENT,NULL);
+		case ESP_ERR_WIFI_NOT_SUPPORT: return driver_operation_error(WIFI_DRIVER, WIFI_ERR_NOT_SUPPORT,NULL);
+		case ESP_ERR_WIFI_NOT_STOPPED: return driver_operation_error(WIFI_DRIVER, WIFI_ERR_NOT_STOPPED,NULL);
+
+		default: {
+			char *buffer;
+
+			buffer = malloc(40);
+			if (!buffer) {
+				panic("not enougth memory");
+			}
+
+			sprintf(buffer, "missing wifi error case %d", error);
+
+			return driver_operation_error(WIFI_DRIVER, WIFI_ERR_CANT_INIT, buffer);
 		}
 	}
 
@@ -208,47 +221,50 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 
 driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int powersave, int channel, int hidden) {
 	driver_error_t *error;
+	wifi_interface_t interface;
 
 	status_clear(STATUS_WIFI_SETUP);
+
+	// Sanity checks
+	if (mode == WIFI_MODE_AP) {
+		if (strlen(password) < 8) {
+			return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_PASSWORD, "length must be greater or equal to 8");
+		}
+	}
 
 	// Attach wifi driver
 	if ((error = wifi_init(mode))) return error;
 
 	// Setup mode and config related to desired mode
+	wifi_config_t wifi_config;
+
+	memset(&wifi_config, 0, sizeof(wifi_config_t));
+
 	if (mode == WIFI_MODE_STA) {
-		wifi_config_t wifi_config;
-
-		memset(&wifi_config, 0, sizeof(wifi_config_t));
-
 		strncpy((char *)wifi_config.sta.ssid, ssid, 32);
 		strncpy((char *)wifi_config.sta.password, password, 64);
-			wifi_config.sta.channel = (channel ? channel : 0);
 
-		// Set STA config
-		if ((error = wifi_check_error(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config)))) return error;
-		
-		if (powersave)
-			if ((error = wifi_check_error(esp_wifi_set_ps(WIFI_PS_MODEM)))) return error;
+		wifi_config.sta.channel = (channel ? channel : 0);
+
+		interface = ESP_IF_WIFI_STA;
 	} else {
-		wifi_config_t wifi_config;
-
-		memset(&wifi_config, 0, sizeof(wifi_config_t));
-
 		strncpy((char *)wifi_config.ap.ssid, ssid, 32);
 		strncpy((char *)wifi_config.ap.password, password, 64);
-		wifi_config.ap.ssid_len = 0;
-			wifi_config.ap.channel = (channel ? channel : 1);
-			wifi_config.ap.authmode = (*password ? WIFI_AUTH_WPA_WPA2_PSK : WIFI_AUTH_OPEN);
-			wifi_config.ap.ssid_hidden = hidden;
-			wifi_config.ap.max_connection = 4;
-			wifi_config.ap.beacon_interval = 100;
 
-		// Set AP config
-		if ((error = wifi_check_error(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config)))) return error;
-		
-		if (powersave)
-			if ((error = wifi_check_error(esp_wifi_set_ps(WIFI_PS_MODEM)))) return error;
+		wifi_config.ap.ssid_len = 0;
+		wifi_config.ap.channel = (channel ? channel : 1);
+		wifi_config.ap.authmode = (*password ? WIFI_AUTH_WPA_WPA2_PSK : WIFI_AUTH_OPEN);
+		wifi_config.ap.ssid_hidden = hidden;
+		wifi_config.ap.max_connection = 4;
+		wifi_config.ap.beacon_interval = 100;
+
+		interface = ESP_IF_WIFI_AP;
 	}
+
+	if ((error = wifi_check_error(esp_wifi_set_config(interface, &wifi_config)))) return error;
+
+	if (powersave)
+		if ((error = wifi_check_error(esp_wifi_set_ps(powersave)))) return error;
 
 	status_set(STATUS_WIFI_SETUP);
 

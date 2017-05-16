@@ -2,7 +2,7 @@
  * Lua RTOS, pthread wrapper for FreeRTOS
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -125,9 +125,6 @@ static int lthread_suspend_pthreads(lua_State *L, int thid) {
     struct lthread *thread;
     int res, idx;
     
-    // For now this is not allowd in ESP32
-    return luaL_exception_extended(L, LUA_THREAD_ERR_NOT_ALLOWED, "in ESP32");
-
     if (thid) {
         idx = thid;
     } else {
@@ -162,9 +159,6 @@ static int lthread_resume_pthreads(lua_State *L, int thid) {
     struct lthread *thread;
     int res, idx;
     
-    // For now this is not allowd in ESP32
-    return luaL_exception_extended(L, LUA_THREAD_ERR_NOT_ALLOWED, "in ESP32");
-
     if (thid) {
         idx = thid;
     } else {

@@ -1,0 +1,14 @@
+diff --git a/components/newlib/include/sys/syslimits.h b/components/newlib/include/sys/syslimits.h
+index c0bb3a2..e1e70e1 100644
+--- a/components/newlib/include/sys/syslimits.h
++++ b/components/newlib/include/sys/syslimits.h
+@@ -49,7 +49,9 @@
+ #ifndef OPEN_MAX
+ #define	OPEN_MAX		   64	/* max open files per process */
+ #endif
++#ifndef PATH_MAX
+ #define	PATH_MAX		 1024	/* max bytes in pathname */
++#endif
+ #define	PIPE_BUF		  512	/* max bytes for atomic pipe writes */
+ #define	IOV_MAX			 1024	/* max elements in i/o vector */
+ 

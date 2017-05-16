@@ -60,6 +60,8 @@ static int lsdisplay_attach( lua_State* L ) {
     int8_t segments = luaL_optinteger(L, 4, 4);
     int8_t brightness = luaL_optinteger(L, 5, TM1637_BRIGHT_TYPICAL);
 
+    UNUSED(segments);
+
     if ((brightness < 0) || (brightness > 7)) {
     	luaL_error(L, "invalid brightness");
     }

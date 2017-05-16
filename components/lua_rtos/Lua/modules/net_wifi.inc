@@ -46,6 +46,7 @@ static int lwifi_setup(lua_State* L) {
 	int channel = 0;
 	int hidden = 0;
 
+
 	if (lua_gettop(L) > 3) {
 		powersave = luaL_checkinteger(L, 4);
 
@@ -55,7 +56,10 @@ static int lwifi_setup(lua_State* L) {
 			// Get arguments related only to AP mode
 			if (mode == WIFI_MODE_STA) {
 				if (lua_gettop(L) > 5) {
-					hidden = luaL_checkinteger(L, 6);
+					luaL_checktype(L, 6, LUA_TBOOLEAN);
+					if (lua_toboolean(L, 6)) {
+						hidden = 1;
+					}
 				}
 			}
 		}
@@ -236,15 +240,21 @@ static const LUA_REG_TYPE wifi_mode_map[] = {
 	{ LSTRKEY( "APSTA"        ), LINTVAL( WIFI_MODE_APSTA ) },
 };
 
+static const LUA_REG_TYPE wifi_powersave_map[] = {
+	{ LSTRKEY( "NONE"          ), LINTVAL( WIFI_PS_NONE ) },
+	{ LSTRKEY( "MODEM"         ), LINTVAL( WIFI_PS_MODEM ) },
+};
+
 static const LUA_REG_TYPE wifi_map[] = {
-	{ LSTRKEY( "setup" ),	 LFUNCVAL( lwifi_setup   ) },
-	{ LSTRKEY( "scan"  ),	 LFUNCVAL( lwifi_scan    ) },
-	{ LSTRKEY( "start" ),	 LFUNCVAL( lwifi_start   ) },
-	{ LSTRKEY( "stop"  ),	 LFUNCVAL( lwifi_stop    ) },
-	{ LSTRKEY( "stat"  ),	 LFUNCVAL( lwifi_stat    ) },
-	{ LSTRKEY( "auth"  ),	 LROVAL  ( wifi_auth_map ) },
-	{ LSTRKEY( "mode"  ),	 LROVAL  ( wifi_mode_map ) },
-	{ LSTRKEY( "error" ),	 LROVAL  ( wifi_error_map ) },
+	{ LSTRKEY( "setup"     ),	 LFUNCVAL( lwifi_setup        ) },
+	{ LSTRKEY( "scan"      ),	 LFUNCVAL( lwifi_scan         ) },
+	{ LSTRKEY( "start"     ),	 LFUNCVAL( lwifi_start        ) },
+	{ LSTRKEY( "stop"      ),	 LFUNCVAL( lwifi_stop         ) },
+	{ LSTRKEY( "stat"      ),	 LFUNCVAL( lwifi_stat         ) },
+	{ LSTRKEY( "auth"      ),	 LROVAL  ( wifi_auth_map      ) },
+	{ LSTRKEY( "mode"      ),	 LROVAL  ( wifi_mode_map      ) },
+	{ LSTRKEY( "powersave" ),	 LROVAL  ( wifi_powersave_map ) },
+	{ LSTRKEY( "error"     ),	 LROVAL  ( wifi_error_map     ) },
 	{ LNILKEY, LNILVAL }
 };
 
