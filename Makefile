@@ -36,6 +36,7 @@ configure-idf-lua-rtos:
 	@patch -f $(IDF_PATH)/components/spi_flash/flash_ops.c $(PROJECT_PATH)/main/patches/spi_flash.1.patch
 	@patch -f $(IDF_PATH)/components/spi_flash/include/esp_spi_flash.h $(PROJECT_PATH)/main/patches/spi_flash.2.patch
 	@cd $(IDF_PATH) && patch -p1 -f < $(PROJECT_PATH)/main/patches/spi_ethernet.patch
+	@cd $(IDF_PATH) && patch -p1 -f < $(PROJECT_PATH)/main/patches/libc_path_max.patch
 	
 restore-idf:
 	@echo "Restoring esp-idf ..."
@@ -48,5 +49,6 @@ restore-idf:
 	@cd $(IDF_PATH)/components/esp32/include && git checkout esp_interface.h
 	@cd $(IDF_PATH)/components/tcpip_adapter/include && git checkout tcpip_adapter.h
 	@cd $(IDF_PATH)/components/tcpip_adapter && git checkout tcpip_adapter_lwip.c
+	@cd $(IDF_PATH)/components/newlib/include/sys && git checkout syslimits.h
 	
 include $(IDF_PATH)/make/project.mk
