@@ -46,6 +46,7 @@ static int lwifi_setup(lua_State* L) {
 	int channel = 0;
 	int hidden = 0;
 
+
 	if (lua_gettop(L) > 3) {
 		powersave = luaL_checkinteger(L, 4);
 
