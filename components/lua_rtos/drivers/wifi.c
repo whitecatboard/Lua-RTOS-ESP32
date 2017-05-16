@@ -107,9 +107,16 @@ static driver_error_t *wifi_check_error(esp_err_t error) {
 		case ESP_ERR_WIFI_NOT_STOPPED: return driver_operation_error(WIFI_DRIVER, WIFI_ERR_NOT_STOPPED,NULL);
 
 		default: {
-			char buffer[40];
-			sprintf(buffer, "missing wifi error case %i", error);
-			panic(buffer);
+			char *buffer;
+
+			buffer = malloc(40);
+			if (!buffer) {
+				panic("not enougth memory");
+			}
+
+			sprintf(buffer, "missing wifi error case %d", error);
+
+			return driver_operation_error(WIFI_DRIVER, WIFI_ERR_CANT_INIT, buffer);
 		}
 	}
 
@@ -249,7 +256,7 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int pow
 			wifi_config.ap.max_connection = 4;
 			wifi_config.ap.beacon_interval = 100;
 
-		// Set AP config
+			// Set AP config
 		if ((error = wifi_check_error(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config)))) return error;
 		
 		if (powersave)
