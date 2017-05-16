@@ -27,6 +27,10 @@
  *
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_CAN
+
 #include "CAN.h"
 
 #include "freertos/FreeRTOS.h"
@@ -144,8 +148,8 @@ int CAN_init(){
 	float __bt = 1000/CAN_cfg.speed;
 
     //enable module
-    SET_PERI_REG_MASK(DPORT_PERIP_CLK_EN_REG, DPORT_CAN_CLK_EN);
-    CLEAR_PERI_REG_MASK(DPORT_PERIP_RST_EN_REG, DPORT_CAN_RST);
+    DPORT_SET_PERI_REG_MASK(DPORT_PERIP_CLK_EN_REG, DPORT_CAN_CLK_EN);
+    DPORT_CLEAR_PERI_REG_MASK(DPORT_PERIP_RST_EN_REG, DPORT_CAN_RST);
 
     //configure TX pin
     gpio_set_direction(CAN_cfg.tx_pin_id,GPIO_MODE_OUTPUT);
@@ -229,3 +233,5 @@ int CAN_stop(){
 
 	return 0;
 }
+
+#endif

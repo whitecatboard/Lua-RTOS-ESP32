@@ -20,7 +20,6 @@
 	#define ssl_mutex_type HANDLE
 #else
 	#include <pthread.h>
-	#include <semaphore.h>
 	#define ssl_mutex_type pthread_mutex_t
 #endif
 

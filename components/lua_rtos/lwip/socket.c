@@ -80,6 +80,7 @@ extern int __real_lwip_writev_r(int s, const struct iovec *iov, int iovcnt);
 extern int __real_lwip_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
 extern int __real_lwip_ioctl_r(int s, long cmd, void *argp);
 extern int __real_lwip_fcntl_r(int s, int cmd, int val);
+extern int __real_lwip_close_r(int s);
 
 int __wrap_lwip_accept_r(int fd, struct sockaddr *addr, socklen_t *addrlen) {
 	int s = __real_lwip_accept_r(fd_to_socket(fd), addr, addrlen);
@@ -258,4 +259,8 @@ int __wrap_lwip_socket(int domain, int type, int protocol) {
 #endif
 
 	return s;
+}
+
+int __wrap_lwip_close_r(int fd) {
+	return __real_lwip_close_r(fd_to_socket(fd));
 }

@@ -37,7 +37,11 @@
 #if CONFIG_LUA_RTOS_USE_HTTP_SERVER
 #define LUA_USE_HTTP 1
 #else
-#define LUA_USE_HTTP 0
+	#if LUA_RTOS_USE_HTTP_SERVER
+	#define LUA_USE_HTTP 1
+	#else
+	#define LUA_USE_HTTP 0
+	#endif
 #endif
 
 /*

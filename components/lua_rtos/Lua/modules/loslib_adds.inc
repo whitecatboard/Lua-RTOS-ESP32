@@ -580,7 +580,7 @@ skip:
     lua_getglobal(L, "load"); 
     lua_pushstring(L, (const char *)code);
 
-    status = lua_pcall(L, 1, 2, NULL);
+    status = lua_pcall(L, 1, 2, 0);
     if (status != LUA_OK) {
         if (code && from_uart) free(code);
         return luaL_error(L, lua_tostring(L, -1));
@@ -594,7 +594,7 @@ skip:
     lua_remove(L, -2);   // Remove "thread" from the stack
     lua_insert(L, -2);   // Switch "thread" with parsed function
     
-    status = lua_pcall(L, 1, 1, NULL);
+    status = lua_pcall(L, 1, 1, 0);
     if (status != LUA_OK) {
         if (code && from_uart) free(code);
         return luaL_error(L, lua_tostring(L, -1));

@@ -33,7 +33,7 @@
 #include "lauxlib.h"
 
 static int lhttp_start(lua_State* L) {
-    http_start();
+    http_start(L);
     
     return 0;
 }

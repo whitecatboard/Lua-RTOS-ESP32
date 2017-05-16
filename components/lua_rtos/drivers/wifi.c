@@ -74,6 +74,9 @@ DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidSSID, "invalid SSID", WIFI_ERR_WIFI_SSI
 DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidPassword, "invalid password", WIFI_ERR_WIFI_PASSWORD);
 DRIVER_REGISTER_ERROR(WIFI, wifi, Timeout, "timeout", WIFI_ERR_WIFI_TIMEOUT);
 DRIVER_REGISTER_ERROR(WIFI, wifi, RFClosed, "is in sleep state(RF closed) / wakeup fail", WIFI_ERR_WAKE_FAIL);
+DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidArg, "invalid argument", WIFI_ERR_INVALID_ARGUMENT);
+DRIVER_REGISTER_ERROR(WIFI, wifi, NotSupport, "wifi API is not supported yet", WIFI_ERR_NOT_SUPPORT);
+DRIVER_REGISTER_ERROR(WIFI, wifi, NotStopped, "driver was not stopped", WIFI_ERR_NOT_STOPPED);
 
 extern EventGroupHandle_t netEvent;
 
@@ -98,8 +101,23 @@ static driver_error_t *wifi_check_error(esp_err_t error) {
 		case ESP_ERR_WIFI_PASSWORD:    return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_PASSWORD,NULL);
 		case ESP_ERR_WIFI_TIMEOUT:     return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_TIMEOUT,NULL);
 		case ESP_ERR_WIFI_WAKE_FAIL:   return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WAKE_FAIL,NULL);
-		default:
-			panic("missing wifi error case");
+		case ESP_ERR_WIFI_MODE:        return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_MODE,NULL);
+		case ESP_ERR_WIFI_ARG:		   return driver_operation_error(WIFI_DRIVER, WIFI_ERR_INVALID_ARGUMENT,NULL);
+		case ESP_ERR_WIFI_NOT_SUPPORT: return driver_operation_error(WIFI_DRIVER, WIFI_ERR_NOT_SUPPORT,NULL);
+		case ESP_ERR_WIFI_NOT_STOPPED: return driver_operation_error(WIFI_DRIVER, WIFI_ERR_NOT_STOPPED,NULL);
+
+		default: {
+			char *buffer;
+
+			buffer = malloc(40);
+			if (!buffer) {
+				panic("not enougth memory");
+			}
+
+			sprintf(buffer, "missing wifi error case %d", error);
+
+			return driver_operation_error(WIFI_DRIVER, WIFI_ERR_CANT_INIT, buffer);
+		}
 	}
 
 	return NULL;
@@ -169,24 +187,24 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 	if ((error = wifi_check_error(esp_wifi_scan_start(&conf, true)))) return error;
 
 	// Wait for scan end
-    EventBits_t uxBits = xEventGroupWaitBits(netEvent, evWIFI_SCAN_END, pdTRUE, pdFALSE, portMAX_DELAY);
-    if (uxBits & (evWIFI_SCAN_END)) {
-    	// Get count of finded AP
-    	if ((error = wifi_check_error(esp_wifi_scan_get_ap_num(count)))) return error;
+	EventBits_t uxBits = xEventGroupWaitBits(netEvent, evWIFI_SCAN_END, pdTRUE, pdFALSE, portMAX_DELAY);
+	if (uxBits & (evWIFI_SCAN_END)) {
+		// Get count of finded AP
+		if ((error = wifi_check_error(esp_wifi_scan_get_ap_num(count)))) return error;
 
-    	// Allocate space for AP list
-    	*list = (wifi_ap_record_t *)malloc(sizeof(wifi_ap_record_t) * (*count));
-    	if (!*list) {
-    		return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NO_MEM,NULL);
-    	}
+		// Allocate space for AP list
+		*list = (wifi_ap_record_t *)malloc(sizeof(wifi_ap_record_t) * (*count));
+		if (!*list) {
+			return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NO_MEM,NULL);
+		}
 
-    	// Get AP list
-    	if ((error = wifi_check_error(esp_wifi_scan_get_ap_records(count, *list)))) {
-    		free(list);
+		// Get AP list
+		if ((error = wifi_check_error(esp_wifi_scan_get_ap_records(count, *list)))) {
+			free(list);
 
-    		return error;
-    	}
-    }
+			return error;
+		}
+	}
 
 	if (!status_get(STATUS_WIFI_STARTED)) {
 		// Stop wifi
@@ -201,28 +219,52 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 	return NULL;
 }
 
-driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password) {
+driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int powersave, int channel, int hidden) {
 	driver_error_t *error;
+	wifi_interface_t interface;
 
 	status_clear(STATUS_WIFI_SETUP);
+
+	// Sanity checks
+	if (mode == WIFI_MODE_AP) {
+		if (strlen(password) < 8) {
+			return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_PASSWORD, "length must be greater or equal to 8");
+		}
+	}
 
 	// Attach wifi driver
 	if ((error = wifi_init(mode))) return error;
 
 	// Setup mode and config related to desired mode
+	wifi_config_t wifi_config;
+
+	memset(&wifi_config, 0, sizeof(wifi_config_t));
+
 	if (mode == WIFI_MODE_STA) {
-	    wifi_config_t wifi_config;
+		strncpy((char *)wifi_config.sta.ssid, ssid, 32);
+		strncpy((char *)wifi_config.sta.password, password, 64);
 
-	    memset(&wifi_config, 0, sizeof(wifi_config_t));
+		wifi_config.sta.channel = (channel ? channel : 0);
 
-	    strncpy((char *)wifi_config.sta.ssid, ssid, 32);
-	    strncpy((char *)wifi_config.sta.password, password, 64);
-
-	    // Set config
-	    if ((error = wifi_check_error(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config)))) return error;
+		interface = ESP_IF_WIFI_STA;
 	} else {
-		return driver_setup_error(WIFI_DRIVER, WIFI_ERR_CANT_INIT, "invalid mode");
+		strncpy((char *)wifi_config.ap.ssid, ssid, 32);
+		strncpy((char *)wifi_config.ap.password, password, 64);
+
+		wifi_config.ap.ssid_len = 0;
+		wifi_config.ap.channel = (channel ? channel : 1);
+		wifi_config.ap.authmode = (*password ? WIFI_AUTH_WPA_WPA2_PSK : WIFI_AUTH_OPEN);
+		wifi_config.ap.ssid_hidden = hidden;
+		wifi_config.ap.max_connection = 4;
+		wifi_config.ap.beacon_interval = 100;
+
+		interface = ESP_IF_WIFI_AP;
 	}
+
+	if ((error = wifi_check_error(esp_wifi_set_config(interface, &wifi_config)))) return error;
+
+	if (powersave)
+		if ((error = wifi_check_error(esp_wifi_set_ps(powersave)))) return error;
 
 	status_set(STATUS_WIFI_SETUP);
 
@@ -239,16 +281,23 @@ driver_error_t *wifi_start() {
 	if (!status_get(STATUS_WIFI_STARTED)) {
 		if ((error = wifi_check_error(esp_wifi_start()))) return error;
 
-	    EventBits_t uxBits = xEventGroupWaitBits(netEvent, evWIFI_CONNECTED | evWIFI_CANT_CONNECT, pdTRUE, pdFALSE, portMAX_DELAY);
-	    if (uxBits & (evWIFI_CONNECTED)) {
-		    status_set(STATUS_WIFI_STARTED);
-	    }
+		uint8_t mode;
+		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
 
-	    if (uxBits & (evWIFI_CANT_CONNECT)) {
-	    	esp_wifi_stop();
+		if (WIFI_MODE_AP == mode) {
+			status_set(STATUS_WIFI_STARTED);
+		} else {
 
-			return driver_operation_error(WIFI_DRIVER, WIFI_ERR_CANT_CONNECT, NULL);
-	    }
+			EventBits_t uxBits = xEventGroupWaitBits(netEvent, evWIFI_CONNECTED | evWIFI_CANT_CONNECT, pdTRUE, pdFALSE, portMAX_DELAY);
+			if (uxBits & (evWIFI_CONNECTED)) {
+				status_set(STATUS_WIFI_STARTED);
+			}
+
+			if (uxBits & (evWIFI_CANT_CONNECT)) {
+				esp_wifi_stop();
+				return driver_operation_error(WIFI_DRIVER, WIFI_ERR_CANT_CONNECT, NULL);
+			}
+		 }
 	}
 
 	return NULL;

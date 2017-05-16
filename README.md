@@ -14,7 +14,9 @@ For porting Lua RTOS to other platforms is only necessary to write the code for 
 
 # How is it programmed?
 
-The Lua RTOS compatible boards can be programmed in two ways: using the Lua programming language directly, or using a block-based programming language that translates blocks to Lua. No matter if you use Lua or blocks, both forms of programming are made from the same programming environment. The programmer can decide, for example, to made a fast prototype using blocks, then change to Lua, and finally back to blocks.
+The Lua RTOS compatible boards can be programmed with [The Whitecat IDE](https://ide.whitecatboard.org) in two ways: using the Lua programming language directly, or using a block-based programming language that translates blocks to Lua. No matter if you use Lua or blocks, both forms of programming are made from the same programming environment. The programmer can decide, for example, to made a fast prototype using blocks, then change to Lua, and finally back to blocks.
+
+The Whitecat IDE is available at: [https://ide.whitecatboard.org](https://ide.whitecatboard.org).
 
 ![](http://git.whitecatboard.org/block-example.png)
 
@@ -81,9 +83,9 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 ## Method 2: build by yourself
 
 1. Install ESP32 toolchain for your desktop platform. Please, follow the instructions provided by ESPRESSIF:
-   * [Windows](https://github.com/espressif/esp-idf/blob/master/docs/windows-setup.rst)
-   * [Mac OS](https://github.com/espressif/esp-idf/blob/master/docs/macos-setup.rst)
-   * [Linux](https://github.com/espressif/esp-idf/blob/master/docs/linux-setup.rst)
+   * [Windows](http://esp-idf.readthedocs.io/en/latest/get-started/windows-setup.html)
+   * [Mac OS]( http://esp-idf.readthedocs.io/en/latest/get-started/macos-setup.html)
+   * [Linux](http://esp-idf.readthedocs.io/en/latest/get-started/linux-setup.html)
 
 1. Clone esp-idf repository from ESPRESSIF:
 

@@ -60,9 +60,12 @@
 #define WIFI_ERR_WIFI_PASSWORD          (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  13)
 #define WIFI_ERR_WIFI_TIMEOUT           (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  14)
 #define WIFI_ERR_WAKE_FAIL              (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  15)
+#define WIFI_ERR_INVALID_ARGUMENT		(DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  16)
+#define WIFI_ERR_NOT_SUPPORT			(DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  17)
+#define WIFI_ERR_NOT_STOPPED			(DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  18)
 
 driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list);
-driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password);
+driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int powersave, int channel, int hidden);
 driver_error_t *wifi_start();
 driver_error_t *wifi_stop();
 driver_error_t *wifi_stat(ifconfig_t *info);

@@ -50,6 +50,7 @@ LDFLAGS += -Wl,--wrap=lwip_writev_r
 LDFLAGS += -Wl,--wrap=lwip_select
 LDFLAGS += -Wl,--wrap=lwip_ioctl_r
 LDFLAGS += -Wl,--wrap=lwip_fcntl_r
+LDFLAGS += -Wl,--wrap=lwip_close_r
 
 CFLAGS += -DPLATFORM_ESP32
 CFLAGS += -DKERNEL

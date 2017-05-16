@@ -66,14 +66,14 @@ static uint8_t retries = 0;
 static esp_err_t event_handler(void *ctx, system_event_t *event) {
 	switch (event->event_id) {
 #if CONFIG_WIFI_ENABLED
-	case SYSTEM_EVENT_STA_START:
+		case SYSTEM_EVENT_STA_START:
 			esp_wifi_connect();
 			break;
 
 		case SYSTEM_EVENT_STA_STOP:
 			break;
 
-	    case SYSTEM_EVENT_STA_DISCONNECTED:
+		case SYSTEM_EVENT_STA_DISCONNECTED:
 			if (!status_get(STATUS_WIFI_CONNECTED)) {
 				if (retries > WIFI_CONNECT_RETRIES) {
 					status_clear(STATUS_WIFI_CONNECTED);
@@ -89,20 +89,27 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 			}
 
 			status_clear(STATUS_WIFI_CONNECTED);
-
 			esp_wifi_connect();
-	    	break;
+			break;
 
 		case SYSTEM_EVENT_STA_GOT_IP:
- 		    xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
+ 			xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
 			break;
 
 		case SYSTEM_EVENT_AP_STA_GOT_IP6:
- 		    xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
+ 			xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
+			break;
+
+		case SYSTEM_EVENT_AP_START:
+			status_set(STATUS_WIFI_CONNECTED);
+			break;
+
+		case SYSTEM_EVENT_AP_STOP:
+			status_clear(STATUS_WIFI_CONNECTED);
 			break;
 
 		case SYSTEM_EVENT_SCAN_DONE:
- 		    xEventGroupSetBits(netEvent, evWIFI_SCAN_END);
+ 			xEventGroupSetBits(netEvent, evWIFI_SCAN_END);
 			break;
 
 		case SYSTEM_EVENT_STA_CONNECTED:
@@ -120,7 +127,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 			break;
 
 		case SYSTEM_EVENT_SPI_ETH_GOT_IP:
- 		    xEventGroupSetBits(netEvent, evSPI_ETH_CONNECTED);
+ 			xEventGroupSetBits(netEvent, evSPI_ETH_CONNECTED);
 			break;
 #endif
 

@@ -60,8 +60,8 @@ static const command_t command[] = {
 	{"mkdir", "os", "mkdir", 1, 0, "mkdir path", 4},
 	{"more", "os", "more", 1, 0, "more filename", 4},
 	{"pwd", "os", "pwd", 0, 0, NULL, 0},
-	{"remove", "os", "remove", 1, 0, "remove filename", 4},
-	{"rename", "os", "rename", 2, 0, "rename old new", 4},
+	{"rm", "os", "remove", 1, 0, "rm filename", 4},
+	{"mv", "os", "rename", 2, 0, "mv old new", 4},
 	{NULL, NULL, NULL, 0, 0, NULL, 0},
 };
 

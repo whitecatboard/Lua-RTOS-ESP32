@@ -25,6 +25,6 @@ DIR* __wrap_readdir(const char* name) {
 
 		return dir;
 	} else {
-		return -1;
+		return (DIR*)-1;
 	}
 }
