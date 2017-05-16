@@ -74,6 +74,9 @@ DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidSSID, "invalid SSID", WIFI_ERR_WIFI_SSI
 DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidPassword, "invalid password", WIFI_ERR_WIFI_PASSWORD);
 DRIVER_REGISTER_ERROR(WIFI, wifi, Timeout, "timeout", WIFI_ERR_WIFI_TIMEOUT);
 DRIVER_REGISTER_ERROR(WIFI, wifi, RFClosed, "is in sleep state(RF closed) / wakeup fail", WIFI_ERR_WAKE_FAIL);
+DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidArg, "invalid argument", WIFI_ERR_INVALID_ARGUMENT);
+DRIVER_REGISTER_ERROR(WIFI, wifi, NotSupport, "wifi API is not supported yet", WIFI_ERR_NOT_SUPPORT);
+DRIVER_REGISTER_ERROR(WIFI, wifi, NotStopped, "driver was not stopped", WIFI_ERR_NOT_STOPPED);
 
 extern EventGroupHandle_t netEvent;
 
@@ -99,8 +102,11 @@ static driver_error_t *wifi_check_error(esp_err_t error) {
 		case ESP_ERR_WIFI_TIMEOUT:     return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_TIMEOUT,NULL);
 		case ESP_ERR_WIFI_WAKE_FAIL:   return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WAKE_FAIL,NULL);
 		case ESP_ERR_WIFI_MODE:        return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_MODE,NULL);
-		default:
-		{
+		case ESP_ERR_WIFI_ARG:		   return driver_operation_error(WIFI_DRIVER, WIFI_ERR_INVALID_ARGUMENT,NULL);
+		case ESP_ERR_WIFI_NOT_SUPPORT: return driver_operation_error(WIFI_DRIVER, WIFI_ERR_NOT_SUPPORT,NULL);
+		case ESP_ERR_WIFI_NOT_STOPPED: return driver_operation_error(WIFI_DRIVER, WIFI_ERR_NOT_STOPPED,NULL);
+
+		default: {
 			char buffer[40];
 			sprintf(buffer, "missing wifi error case %i", error);
 			panic(buffer);
