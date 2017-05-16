@@ -56,7 +56,10 @@ static int lwifi_setup(lua_State* L) {
 			// Get arguments related only to AP mode
 			if (mode == WIFI_MODE_STA) {
 				if (lua_gettop(L) > 5) {
-					hidden = luaL_checkinteger(L, 6);
+					luaL_checktype(L, 6, LUA_TBOOLEAN);
+					if (lua_toboolean(L, 6)) {
+						hidden = 1;
+					}
 				}
 			}
 		}
