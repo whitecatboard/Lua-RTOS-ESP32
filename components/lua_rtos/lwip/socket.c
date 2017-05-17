@@ -51,6 +51,9 @@
 #include <errno.h>
 
 #if USE_NET_VFS
+#if 0
+int _curl_socket = 0;
+#endif
 #define fd_to_socket(fd) (fd & ((1 << CONFIG_MAX_FD_BITS) - 1))
 #else
 #define fd_to_socket(fd) fd
@@ -244,7 +247,11 @@ int __wrap_lwip_socket(int domain, int type, int protocol) {
 	int s = __real_lwip_socket(domain, type, protocol);
 
 #if USE_NET_VFS
+#if 0
+	if ((s != -1) && (!_curl_socket)) {
+#else
 	if (s != -1) {
+#endif
 		char device[15];
 
 		snprintf(device, sizeof(device), "/dev/socket/%d", s);

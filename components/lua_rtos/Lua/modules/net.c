@@ -40,6 +40,7 @@
 #include "net_spi_eth.inc"
 #include "net_service_sntp.inc"
 #include "net_service_http.inc"
+#include "net_service_curl.inc"
 #include "net_service_captivedns.inc"
 #include "net_ssh.inc"
 
@@ -249,13 +250,23 @@ static const LUA_REG_TYPE net_map[] = {
 	{ LSTRKEY( "packip" ), LFUNCVAL ( lnet_packip ) },
 	{ LSTRKEY( "unpackip" ), LFUNCVAL ( lnet_unpackip ) },
 	{ LSTRKEY( "ping" ), LFUNCVAL ( lnet_ping ) },
+
+#if CONFIG_LUA_RTOS_LUA_USE_SCP_NET
 	{ LSTRKEY( "scp" ), LROVAL ( scp_map ) },
+#endif
+
 #if CONFIG_WIFI_ENABLED && CONFIG_LUA_RTOS_LUA_USE_NET
 	{ LSTRKEY( "wf" ), LROVAL ( wifi_map ) },
 #endif
-#if CONFIG_SPI_ETHERNET && CONFIG_LUA_RTOS_LUA_USE_NET
+
+	#if CONFIG_SPI_ETHERNET && CONFIG_LUA_RTOS_LUA_USE_NET
 	{ LSTRKEY( "en" ), LROVAL ( spi_eth_map ) },
 #endif
+
+#if CONFIG_LUA_RTOS_LUA_USE_CURL_NET
+	{ LSTRKEY( "curl" ), LROVAL ( curl_map ) },
+#endif
+
 	{ LSTRKEY( "service" ), LROVAL ( service_map ) },
 	{ LSTRKEY( "error" ), LROVAL ( net_error_map ) },
 	{ LNILKEY, LNILVAL }

@@ -705,6 +705,16 @@ menu "Lua RTOS"
 				  	depends on WIFI_ENABLED || ETHERNET
 				  	bool "Include net module in build"
 				  	default y
+
+			  	config LUA_RTOS_LUA_USE_CURL_NET
+				  	depends on LUA_RTOS_LUA_USE_NET
+				  	bool "Include curl support in net module"
+				  	default y
+
+			  	config LUA_RTOS_LUA_USE_SCP_NET
+				  	depends on LUA_RTOS_LUA_USE_NET
+				  	bool "Include scp support in net module"
+				  	default y
 	
 			  	config LUA_RTOS_LUA_USE_LORA
 				  	depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE || LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
