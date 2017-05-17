@@ -240,7 +240,6 @@ static const LUA_REG_TYPE service_map[] = {
 #if LUA_USE_HTTP
 	{ LSTRKEY( "http" ), LROVAL ( http_map ) },
 #endif
-	{ LSTRKEY( "curl" ), LROVAL ( curl_map ) },
 };
 
 static const LUA_REG_TYPE net_map[] = {
@@ -256,6 +255,7 @@ static const LUA_REG_TYPE net_map[] = {
 #if CONFIG_SPI_ETHERNET && CONFIG_LUA_RTOS_LUA_USE_NET
 	{ LSTRKEY( "en" ), LROVAL ( spi_eth_map ) },
 #endif
+	{ LSTRKEY( "curl" ), LROVAL ( curl_map ) },
 	{ LSTRKEY( "service" ), LROVAL ( service_map ) },
 	{ LSTRKEY( "error" ), LROVAL ( net_error_map ) },
 	{ LNILKEY, LNILVAL }

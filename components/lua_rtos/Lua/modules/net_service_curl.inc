@@ -356,7 +356,7 @@ static int _preparePost(lua_State* L, int pos)
 
 /*
  * ---------------------------------------------------
- * res, hdr,body = net.service.curl.post(url, tparams)
+ * res, hdr,body = net.curl.post(url, tparams)
  * ---------------------------------------------------
  *
  * POST data to http or https server
@@ -375,7 +375,7 @@ static int _preparePost(lua_State* L, int pos)
  * Example:
  * --------
  *
- * 	res, hdr, bdy = net.service.curl.post("http://loboris.eu/ESP32/test.php", {temp=24, user="esp32"})
+ * 	res, hdr, bdy = net.curl.post("http://loboris.eu/ESP32/test.php", {temp=24, user="esp32"})
  *
  * 	postreq = {
  * 				temp=24,
@@ -383,7 +383,7 @@ static int _preparePost(lua_State* L, int pos)
  * 				_FILE_file2="data.txt",
  * 				_JSON_jsondata="{\"name\":\"John\", \"age\":31}"
  * 	          }
- * 	res, hdr, bdy = net.service.curl.post("http://loboris.eu/ESP32/test.php", postreq)
+ * 	res, hdr, bdy = net.curl.post("http://loboris.eu/ESP32/test.php", postreq)
  *
  * Note:
  * 	- More than one file can be uploaded
@@ -493,7 +493,7 @@ static int lnet_curlpost(lua_State* L) {
 
 /*
  * ---------------------------------------------------
- * res, hdr,body = net.service.curl.get(url [, fname])
+ * res, hdr,body = net.curl.get(url [, fname])
  * ---------------------------------------------------
  *
  * GET data from http or https server
@@ -509,8 +509,8 @@ static int lnet_curlpost(lua_State* L) {
  *
  * Example:
  * --------
- * 	res, hdr, bdy = net.service.curl.get("http://loboris.eu/ESP32/test.php?par1=765&par2=test")
- * 	res, hdr, bdy = net.service.curl.get("http://loboris.eu/ESP32/test.php?name=lobo", "response.txt")
+ * 	res, hdr, bdy = net.curl.get("http://loboris.eu/ESP32/test.php?par1=765&par2=test")
+ * 	res, hdr, bdy = net.curl.get("http://loboris.eu/ESP32/test.php?name=lobo", "response.txt")
  *
  */
 
@@ -629,7 +629,7 @@ static int lnet_curlget(lua_State* L) {
 
 /*
  * ------------------------------------------------------------------------
- * res, hdr, resp = net.service.curl.ftp(upload, url, user, pass [, fname])
+ * res, hdr, resp = net.curl.ftp(upload, url, user, pass [, fname])
  * ------------------------------------------------------------------------
  *
  * FTP operations; LIST, GET file, PUT file
@@ -654,16 +654,16 @@ static int lnet_curlget(lua_State* L) {
  *  NOTE: 'ftp://speedtest.tele2.net' is real ftp server which can be used for testing
  *
  *  -- list files in root directory
- * 	res, hdr, resp = net.service.curl.ftp(0,"ftp://speedtest.tele2.net","anonymous","lua.esp32@gmail.com")
+ * 	res, hdr, resp = net.curl.ftp(0,"ftp://speedtest.tele2.net","anonymous","lua.esp32@gmail.com")
  *
  * 	-- send file to upload directory (file name MUST be given in URL)
- * 	res, hdr, resp = net.service.curl.ftp(1,"ftp://speedtest.tele2.net/upload/image77.jpg","anonymous","lua.esp32@gmail.com","images/myimage.jpg")
+ * 	res, hdr, resp = net.curl.ftp(1,"ftp://speedtest.tele2.net/upload/image77.jpg","anonymous","lua.esp32@gmail.com","images/myimage.jpg")
  *
  * 	-- list files in upload directory to check if file is uploaded (trailing slash MUST be given)
- * 	res, hdr, resp = net.service.curl.ftp(0,"ftp://speedtest.tele2.net/upload","anonymous","lua.esp32@gmail.com")
+ * 	res, hdr, resp = net.curl.ftp(0,"ftp://speedtest.tele2.net/upload","anonymous","lua.esp32@gmail.com")
  *
  *  -- get file back under new name
- * 	res, hdr, resp = net.service.curl.ftp(0,"ftp://speedtest.tele2.net/upload/image77.jpg","anonymous","lua.esp32@gmail.com","images/newimage.jpg")
+ * 	res, hdr, resp = net.curl.ftp(0,"ftp://speedtest.tele2.net/upload/image77.jpg","anonymous","lua.esp32@gmail.com","images/newimage.jpg")
  */
 
 //=====================================
@@ -832,9 +832,9 @@ static int lnet_curlftp(lua_State* L) {
 
 /*
  * Send email
- * Default SMTP server is 'smtp.gmail.com', it can be changed using net.service.curl.mailserver() function
+ * Default SMTP server is 'smtp.gmail.com', it can be changed using net.curl.mailserver() function
  *
- * ret,msg = net.services.curl.sendmail(options)
+ * ret,msg = net.s.curl.sendmail(options)
  *
  * Params:
  * 		options:	Lua table containing email options in the following format:
@@ -855,7 +855,7 @@ static int lnet_curlftp(lua_State* L) {
  *
  *  Example:
  *  	opt = {user="luaesp32@gmail.com", pass="luaESP32password", to="myfriend@gmail.com"}
- *  	ret,stat = net.service.curl.sendmail(opt)
+ *  	ret,stat = net.curl.sendmail(opt)
  *
  *  	opt = {
  *  			user = "luaesp32@gmail.com",
@@ -866,12 +866,12 @@ static int lnet_curlftp(lua_State* L) {
  *  			secure = true,
  *  			attach = {"picture.jpg", "sd/images/image7.bmp"}
  *  		  }
- *  	ret,stat = net.service.curl.sendmail(opt)
+ *  	ret,stat = net.curl.sendmail(opt)
  *
  *		-- reuse 'opt' for another mail
  *  	opt.cc = "forgotten@gmail.com"
  *  	opt.subj = "2nd test"
- *  	ret,stat = net.service.curl.sendmail(opt)
+ *  	ret,stat = net.curl.sendmail(opt)
  */
 //======================================
 static int lnet_sendmail(lua_State* L) {
@@ -1079,7 +1079,7 @@ static int lnet_curlverbose(lua_State* L) {
 	return 1;
 }
 
-// n = net.service.curlprogress([n])
+// n = net.curlprogress([n])
 // Set or get curl operation progress info in seconds
 // Progress is shown every n seconds
 // when set to 0, no progress info is shown
