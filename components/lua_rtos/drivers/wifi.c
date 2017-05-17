@@ -84,7 +84,7 @@ extern EventGroupHandle_t netEvent;
 #define evWIFI_CONNECTED 	       	 ( 1 << 1 )
 #define evWIFI_CANT_CONNECT          ( 1 << 2 )
 
-static driver_error_t *wifi_check_error(esp_err_t error) {
+driver_error_t *wifi_check_error(esp_err_t error) {
 	if (error == ESP_ERR_WIFI_OK) return NULL;
 
 	switch (error) {
@@ -325,12 +325,19 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 
 	driver_error_t *error;
 
+	uint8_t mode;
+	if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
+
+	uint8_t interface = ESP_IF_WIFI_AP;
+	if (mode == WIFI_MODE_STA)
+		interface = ESP_IF_WIFI_STA;
+
 	// Get WIFI IF info
-	if ((error = wifi_check_error(tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &esp_info)))) return error;
+	if ((error = wifi_check_error(tcpip_adapter_get_ip_info(interface, &esp_info)))) return error;
 
 	// Get MAC info
 	if (status_get(STATUS_WIFI_STARTED)) {
-		if ((error = wifi_check_error(esp_wifi_get_mac(ESP_IF_WIFI_STA, mac)))) return error;
+		if ((error = wifi_check_error(esp_wifi_get_mac(interface, mac)))) return error;
 	}
 
 	// Copy info
