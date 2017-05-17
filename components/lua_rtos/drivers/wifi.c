@@ -84,7 +84,7 @@ extern EventGroupHandle_t netEvent;
 #define evWIFI_CONNECTED 	       	 ( 1 << 1 )
 #define evWIFI_CANT_CONNECT          ( 1 << 2 )
 
-static driver_error_t *wifi_check_error(esp_err_t error) {
+driver_error_t *wifi_check_error(esp_err_t error) {
 	if (error == ESP_ERR_WIFI_OK) return NULL;
 
 	switch (error) {
