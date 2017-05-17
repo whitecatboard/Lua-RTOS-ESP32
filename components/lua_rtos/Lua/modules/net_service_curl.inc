@@ -233,7 +233,9 @@ static int xferinfo(void *p, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ul
 
 // ==== Socket open & close callbacks =====================================================
 
+#if 0
 extern int _curl_socket;
+#endif
 
 //------------------------------------------------------------------
 static int closesocket_callback(void *clientp, curl_socket_t item) {
@@ -244,9 +246,13 @@ static int closesocket_callback(void *clientp, curl_socket_t item) {
 
 //------------------------------------------------------------------------------------------------------------
 static curl_socket_t opensocket_callback(void *clientp, curlsocktype purpose, struct curl_sockaddr *address) {
+#if 0
 	_curl_socket = 1;  // workaround for NET_VFS problem
+#endif
 	int s = socket(address->family, address->socktype, address->protocol);
+#if 0
 	_curl_socket = 0;  // workaround for NET_VFS problem
+#endif
 	if (curl_verbose) printf("== OPEN socket %d: %d,%d,%d\r\n", s, address->family, address->socktype, address->protocol);
 	return s;
 }
