@@ -49,23 +49,23 @@ typedef struct {
 } command_t;
 
 static const command_t command[] = {
-	{"cat", "os", "cat", 1, 0, "cat [filename]", 4},
-	{"cd", "os", "cd", 0, 1, "cd [path]", 4},
+	{"cat", "os", "cat", 1, 0, "cat filename", 4},
+	{"cd", "os", "cd", 0, 1, "cd path", 4},
 	{"cp", "os", "cp", 2, 0, "cp from to", 4},
 	{"dmesg", "os", "dmesg", 0, 0, NULL, 0},
 	{"clear", "os", "clear", 0, 0, NULL, 0},
 	{"edit", "os", "edit", 1, 0, "edit [filename]", 4},
 	{"exit", "os", "exit", 0, 0, NULL, 0},
 	{"ls", "os", "ls", 0, 1, "ls [pattern]", 4},
-	{"dir", "os", "ls", 0, 1, "ls [pattern]", 4},
+	{"dir", "os", "ls", 0, 1, "dir [pattern]", 4},
 	{"mkdir", "os", "mkdir", 1, 0, "mkdir path", 4},
 	{"more", "os", "more", 1, 0, "more filename", 4},
 	{"mv", "os", "rename", 2, 0, "mv old new", 4},
 	{"pwd", "os", "pwd", 0, 0, NULL, 0},
 	{"remove", "os", "remove", 1, 0, "remove filename", 4},
 	{"rename", "os", "rename", 2, 0, "rename old new", 4},
-	{"rm", "os", "remove", 1, 0, "remove filename", 4},
-	{"unlink", "os", "remove", 1, 0, "remove filename", 4},
+	{"rm", "os", "remove", 1, 0, "rm filename", 4},
+	{"unlink", "os", "remove", 1, 0, "unlink filename", 4},
 	{NULL, NULL, NULL, 0, 0, NULL, 0},
 };
 
