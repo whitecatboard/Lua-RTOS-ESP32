@@ -41,7 +41,6 @@
 #include "net_service_sntp.inc"
 #include "net_service_http.inc"
 #include "net_service_curl.inc"
-#include "net_service_captivedns.inc"
 #include "net_ssh.inc"
 
 #include <stdint.h>
@@ -240,7 +239,6 @@ static const LUA_REG_TYPE service_map[] = {
 	{ LSTRKEY( "sntp" ), LROVAL ( sntp_map ) },
 #if LUA_USE_HTTP
 	{ LSTRKEY( "http" ), LROVAL ( http_map ) },
-	{ LSTRKEY( "captivedns" ), LROVAL ( captivedns_map ) },
 #endif
 };
 
