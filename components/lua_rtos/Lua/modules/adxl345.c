@@ -84,9 +84,7 @@ static int adxl345_writeReg(lua_State* L) {
     	return luaL_driver_error(L, error);
     }
 
-    lua_pushinteger(L, 0);
-
-    return 1;
+    return 0;
 }
 
 static int adxl345_read(lua_State* L) {
