@@ -191,7 +191,7 @@ static const LUA_REG_TYPE adxl345_map[] = {
 //inst map
 static const LUA_REG_TYPE adxl345_trans_map[] = {
     { LSTRKEY( "read" ),            LFUNCVAL( adxl345_read )},
-    { LSTRKEY( "writeReg") ,        LFUNCVAL( adxl345_writeReg)},
+    { LSTRKEY( "write") ,           LFUNCVAL( adxl345_writeReg )},
     { LSTRKEY( "__metatable" ),  	LROVAL  ( adxl345_trans_map ) },
 	{ LSTRKEY( "__index"     ),   	LROVAL  ( adxl345_trans_map ) },
 	{ LSTRKEY( "__gc"        ),   	LFUNCVAL  ( adxl345_trans_gc ) },
