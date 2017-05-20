@@ -52,10 +52,6 @@ static int adxl345_init(lua_State* L) {
     return 1;
 }
 
-static int adxl345_readReg(lua_State* L) {
-    return 0;
-}
-
 static int adxl345_writeReg(lua_State* L) {
 
     driver_error_t *error;
@@ -173,7 +169,6 @@ static const LUA_REG_TYPE adxl345_map[] = {
 static const LUA_REG_TYPE adxl345_trans_map[] = {
     { LSTRKEY( "read" ),            LFUNCVAL( adxl345_read )},
     { LSTRKEY( "writeReg") ,        LFUNCVAL( adxl345_writeReg)},
-    { LSTRKEY( "readReg") ,         LFUNCVAL( adxl345_readReg)},
     { LSTRKEY( "__metatable" ),  	LROVAL  ( adxl345_trans_map ) },
 	{ LSTRKEY( "__index"     ),   	LROVAL  ( adxl345_trans_map ) },
 	{ LSTRKEY( "__gc"        ),   	LFUNCVAL  ( adxl345_trans_gc ) },
