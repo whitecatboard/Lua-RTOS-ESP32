@@ -87,6 +87,9 @@ static int adxl345_writeReg(lua_State* L) {
     char reg_addr = luaL_checkinteger(L, 2);
     char value = luaL_checkinteger(L, 3);
 
+    printf("writeReg %c %c", reg_addr , value);
+    /*
+
     // Enable sensor
     if ((error = i2c_start(user_data->unit, &user_data->transaction))) {
     	return luaL_driver_error(L, error);
@@ -105,8 +108,7 @@ static int adxl345_writeReg(lua_State* L) {
 
     if ((error = i2c_stop(user_data->unit, &user_data->transaction))) {
     	return luaL_driver_error(L, error);
-    }
-
+    }*/
     return 0;
 }
 
