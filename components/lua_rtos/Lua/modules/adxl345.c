@@ -46,6 +46,29 @@ static int adxl345_init(lua_State* L) {
     user_data->unit = id;
     user_data->transaction = I2C_TRANSACTION_INITIALIZER;
 
+    luaL_getmetatable(L, "adxl345.trans");
+    lua_setmetatable(L, -2);
+
+    return 1;
+}
+
+static int adxl345_readReg(lua_State* L) {
+    return 0;
+}
+
+static int adxl345_writeReg(lua_State* L) {
+
+    driver_error_t *error;
+	adxl345_user_data_t *user_data;
+
+	// Get user data
+	user_data = (adxl345_user_data_t *)luaL_checkudata(L, 1, "adxl345.trans");
+    luaL_argcheck(L, user_data, 1, "adxl345 transaction expected");
+
+    char reg_addr = luaL_checkinteger(L, 2);
+    char value = luaL_checkinteger(L, 3);
+
+    // Enable sensor
     if ((error = i2c_start(user_data->unit, &user_data->transaction))) {
     	return luaL_driver_error(L, error);
     }
@@ -54,13 +77,10 @@ static int adxl345_init(lua_State* L) {
     	return luaL_driver_error(L, error);
     }
 
-    char readyReg = 0x2D;
-    char readyValue = 0x08;
-
-    if ((error = i2c_write(user_data->unit, &user_data->transaction, &readyReg , sizeof(uint8_t)))) {
+    if ((error = i2c_write(user_data->unit, &user_data->transaction, &reg_addr , sizeof(uint8_t)))) {
     	return luaL_driver_error(L, error);
     }
-    if ((error = i2c_write(user_data->unit, &user_data->transaction, &readyValue , sizeof(uint8_t)))) {
+    if ((error = i2c_write(user_data->unit, &user_data->transaction, &value , sizeof(uint8_t)))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -68,8 +88,7 @@ static int adxl345_init(lua_State* L) {
     	return luaL_driver_error(L, error);
     }
 
-    luaL_getmetatable(L, "adxl345.trans");
-    lua_setmetatable(L, -2);
+    lua_pushinteger(L, 0);
 
     return 1;
 }
@@ -153,6 +172,8 @@ static const LUA_REG_TYPE adxl345_map[] = {
 //inst map
 static const LUA_REG_TYPE adxl345_trans_map[] = {
     { LSTRKEY( "read" ),            LFUNCVAL( adxl345_read )},
+    { LSTRKEY( "writeReg") ,        LFUNCVAL( adxl345_writeReg)},
+    { LSTRKEY( "readReg") ,         LFUNCVAL( adxl345_readReg)},
     { LSTRKEY( "__metatable" ),  	LROVAL  ( adxl345_trans_map ) },
 	{ LSTRKEY( "__index"     ),   	LROVAL  ( adxl345_trans_map ) },
 	{ LSTRKEY( "__gc"        ),   	LFUNCVAL  ( adxl345_trans_gc ) },
