@@ -77,6 +77,8 @@ static int adxl345_init(lua_State* L) {
 
 static int adxl345_writeReg(lua_State* L) {
 
+    printf("testttttttt")
+
     driver_error_t *error;
 	adxl345_user_data_t *user_data;
 
