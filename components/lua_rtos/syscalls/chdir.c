@@ -46,6 +46,11 @@ int chdir(const char *path) {
     char *lpath;
 	int fd;
 
+	if (!path || !*path) {
+		errno = ENOENT;
+		return -1;
+	}
+
     if (strlen(path) > PATH_MAX) {
         errno = ENAMETOOLONG;
         return -1;

@@ -50,10 +50,13 @@
 #define PROTOCOL       "HTTP/1.1"
 #define RFC1123FMT     "%a, %d %b %Y %H:%M:%S GMT"
 #define HTTP_BUFF_SIZE 1024
+#define CAPTIVE_SERVER_NAME	"config-esp32-settings"
 
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
+
+char *strcasestr(const char *haystack, const char *needle);
 
 static lua_State *LL=NULL;
 
@@ -199,8 +202,10 @@ int process(FILE *f) {
 	char *method;
 	char *path;
 	char *data = NULL;
+	char *host = NULL;
 	char *protocol;
 	struct stat statbuf;
+	char hostbuf[HTTP_BUFF_SIZE];
 	char pathbuf[HTTP_BUFF_SIZE];
 	int len;
 
@@ -216,6 +221,24 @@ int process(FILE *f) {
 	  	*data = 0; //cut off the path
 	  	data++; //point to start of params
 	  }
+	}
+		
+	while (fgets(hostbuf, sizeof (hostbuf), f)) {
+		host = strcasestr(hostbuf, "Host:");
+		if (host) {
+			host = strtok(host, " "); //Host:
+	  	host = strtok(NULL, "\r"); //the actual host
+
+			if (0 == strcasecmp(CAPTIVE_SERVER_NAME, host)) {
+				break; //done parsing headers
+			}
+			else {
+				//redirect
+				snprintf(pathbuf, sizeof (pathbuf), "Location: http://%s/", CAPTIVE_SERVER_NAME);
+				send_headers(f, 302, "Found", pathbuf, "text/html", -1);
+				return 0;
+			}
+		}
 	}
 		
 	if (!method || !path || !protocol) return -1;

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include <sys/mount.h>
 
@@ -14,6 +15,17 @@ int IRAM_ATTR __wrap__rename_r(struct _reent *r, const char *src, const char *ds
 	char *ppath_src;
 	char *ppath_dst;
 	int res;
+
+	if (!src || !*src) {
+		errno = ENOENT;
+		return -1;
+	}
+
+	if (!dst || !*dst) {
+		errno = ENOENT;
+		return -1;
+	}
+
 
 	ppath_src = mount_resolve_to_physical(src);
 	if (!ppath_src) {
