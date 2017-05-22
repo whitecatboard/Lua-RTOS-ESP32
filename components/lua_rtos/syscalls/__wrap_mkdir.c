@@ -15,6 +15,11 @@ int __wrap_mkdir(const char* name, mode_t mode) {
 	char *ppath;
 	int res;
 
+	if (!name || !*name) {
+		errno = ENOENT;
+		return -1;
+	}
+
 	ppath = mount_resolve_to_physical(name);
 	if (ppath) {
 		res = __real_mkdir(ppath, mode);
