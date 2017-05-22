@@ -19,7 +19,7 @@ DIR* __wrap_opendir(const char* name) {
 
 	if (!name || !*name) {
 		errno = ENOENT;
-		return -1;
+		return (DIR*)-1;
 	}
 
 	ppath = mount_resolve_to_physical(name);
