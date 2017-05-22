@@ -65,6 +65,7 @@ driver_error_t *spi_eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t 
 	driver_error_t *error;
 	tcpip_adapter_ip_info_t ip_info;
 	ip_addr_t dns;
+	ip_addr_t *dns_p = &dns;
 
 	// Init network, if needed
 	if (!status_get(STATUS_SPI_ETH_SETUP)) {
@@ -85,13 +86,13 @@ driver_error_t *spi_eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t 
 
 		// If present, set dns1, else set to 8.8.8.8
 		if (!dns1) dns1 = 134744072;
-		ip_addr_set_ip4_u32(&dns, dns1);
+		ip_addr_set_ip4_u32(dns_p, dns1);
 
 		dns_setserver(0, (const ip_addr_t *)&dns);
 
 		// If present, set dns2, else set to 8.8.4.4
 		if (!dns2) dns2 = 67373064;
-		ip_addr_set_ip4_u32(&dns, dns2);
+		ip_addr_set_ip4_u32(dns_p, dns2);
 
 		dns_setserver(1, (const ip_addr_t *)&dns);
 	}
@@ -127,8 +128,6 @@ driver_error_t *spi_eth_start() {
 }
 
 driver_error_t *spi_eth_stop() {
-	driver_error_t *error;
-
 	if (!status_get(STATUS_SPI_ETH_SETUP)) {
 		return driver_operation_error(SPI_ETH_DRIVER, SPI_ETH_ERR_NOT_INIT, NULL);
 	}
