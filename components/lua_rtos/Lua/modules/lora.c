@@ -3,10 +3,10 @@
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * 
+ *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- * 
- * All rights reserved.  
+ *
+ * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -58,7 +58,7 @@ static void on_received(int port, char *payload) {
         lua_pushlstring(rx_callbackL, payload, strlen(payload));
         lua_call(rx_callbackL, 2, 0);
     }
-    
+
     free(payload);
 }
 
@@ -71,16 +71,16 @@ static int check_hex_str(const char *str) {
 
         str++;
     }
-    
+
     return 1;
 }
 
 // Pads a hex number string representation at a specified length
 static char *hex_str_pad(lua_State* L, const char  *str, int len) {
     if (!check_hex_str(str)) {
-        luaL_error(L, "invalid hexadecimal number");     
+        luaL_error(L, "invalid hexadecimal number");
     }
-    
+
     // Allocate string
     char *tmp = (char *)malloc(len + 1);
     if (!tmp) {
@@ -93,7 +93,7 @@ static char *hex_str_pad(lua_State* L, const char  *str, int len) {
         int curr_len = strlen(str);
         int pad_num = len - curr_len;
         char *c = tmp;
-        
+
         // Pad with 0
         for(i=0;i < pad_num;i++) {
             *c++ = '0';
@@ -103,7 +103,7 @@ static char *hex_str_pad(lua_State* L, const char  *str, int len) {
         for(i = pad_num - 1;i < len; i++) {
             *c++ = *str++;
         }
-        
+
         *c = 0x00;
     } else {
         strcpy(tmp, str);
@@ -112,23 +112,23 @@ static char *hex_str_pad(lua_State* L, const char  *str, int len) {
     return tmp;
 }
 
-static int llora_setup(lua_State* L) {    
+static int llora_setup(lua_State* L) {
 	driver_error_t *error;
-    
+
     int band = luaL_checkinteger(L, 1);
-    
+
     // Setup in base of frequency
     error = lora_setup(band);
     if (error) {
         return luaL_driver_error(L, error);
     }
-	
+
     return 0;
 }
 
 static int llora_set_setDevAddr(lua_State* L) {
     char *devAddr = hex_str_pad(L, luaL_checkstring(L, 1), 8);
-    
+
     driver_error_t *error = lora_mac_set(LORA_MAC_SET_DEVADDR, devAddr);
     if (error) {
         free(devAddr);
@@ -136,12 +136,12 @@ static int llora_set_setDevAddr(lua_State* L) {
     }
 
     free(devAddr);
-    return 0;    
+    return 0;
 }
 
 static int llora_set_DevEui(lua_State* L) {
     char  *devEui = hex_str_pad(L, luaL_checkstring(L, 1), 16);
-    
+
     driver_error_t *error = lora_mac_set(LORA_MAC_SET_DEVEUI, devEui);
     if (error) {
         free(devEui);
@@ -149,12 +149,12 @@ static int llora_set_DevEui(lua_State* L) {
     }
 
     free(devEui);
-    return 0;  
+    return 0;
 }
 
 static int llora_set_AppEui(lua_State* L) {
     char  *appEui = hex_str_pad(L, luaL_checkstring(L, 1), 16);
-        
+
     driver_error_t *error = lora_mac_set(LORA_MAC_SET_APPEUI, appEui);
     if (error) {
         free(appEui);
@@ -162,12 +162,12 @@ static int llora_set_AppEui(lua_State* L) {
     }
 
     free(appEui);
-    return 0;  
+    return 0;
 }
 
 static int llora_set_NwkSKey(lua_State* L) {
     char  *nwkSKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
-        
+
     driver_error_t *error = lora_mac_set(LORA_MAC_SET_NWKSKEY, nwkSKey);
     if (error) {
         free(nwkSKey);
@@ -175,12 +175,12 @@ static int llora_set_NwkSKey(lua_State* L) {
     }
 
     free(nwkSKey);
-    return 0;  
+    return 0;
 }
 
 static int llora_set_AppSKey(lua_State* L) {
     char  *appSKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
-        
+
     driver_error_t *error = lora_mac_set(LORA_MAC_SET_APPSKEY, appSKey);
     if (error) {
         free(appSKey);
@@ -193,7 +193,7 @@ static int llora_set_AppSKey(lua_State* L) {
 
 static int llora_set_AppKey(lua_State* L) {
     char  *appKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
-        
+
     driver_error_t *error = lora_mac_set(LORA_MAC_SET_APPKEY, appKey);
     if (error) {
         free(appKey);
@@ -206,20 +206,20 @@ static int llora_set_AppKey(lua_State* L) {
 
 static int llora_set_Dr(lua_State* L) {
     int dr = luaL_checkinteger(L, 1);
-    
+
     if ((dr < 0) || (dr > 7)) {
         return luaL_error(L, "%d:invalid data rate value (0 to 7)", LORA_ERR_INVALID_ARGUMENT);
     }
-    
+
     char value[2];
-    
+
     sprintf(value,"%d", dr);
-        
+
     driver_error_t *error = lora_mac_set(LORA_MAC_SET_DR, value);
     if (error) {
         return luaL_driver_error(L, error);
     }
-	
+
     return 0;
 }
 
@@ -232,7 +232,7 @@ static int llora_set_Adr(lua_State* L) {
     } else {
         strcpy(value, "off");
     }
-    
+
     driver_error_t *error = lora_mac_set(LORA_MAC_SET_ADR, value);
     if (error) {
     	return luaL_driver_error(L, error);
@@ -267,11 +267,11 @@ static int llora_get_DevAddr(lua_State* L) {
     if (error) {
     	return luaL_driver_error(L, error);
     }
-	
+
     lua_pushlstring(L, value, strlen(value));
     free(value);
-    
-    return 1;    
+
+    return 1;
 }
 
 static int llora_get_DevEui(lua_State* L) {
@@ -281,11 +281,11 @@ static int llora_get_DevEui(lua_State* L) {
     if (error) {
     	return luaL_driver_error(L, error);
     }
-	
+
     lua_pushlstring(L, value, strlen(value));
     free(value);
-    
-    return 1;    
+
+    return 1;
 }
 
 static int llora_get_AppEui(lua_State* L) {
@@ -295,11 +295,11 @@ static int llora_get_AppEui(lua_State* L) {
     if (error) {
     	return luaL_driver_error(L, error);
     }
-	
+
     lua_pushlstring(L, value, strlen(value));
     free(value);
-    
-    return 1;    
+
+    return 1;
 }
 
 static int llora_get_Dr(lua_State* L) {
@@ -309,11 +309,11 @@ static int llora_get_Dr(lua_State* L) {
     if (error) {
     	return luaL_driver_error(L, error);
     }
-	
+
     lua_pushinteger(L, atoi(value));
     free(value);
-    
-    return 1;    
+
+    return 1;
 }
 
 static int llora_get_Adr(lua_State* L) {
@@ -323,16 +323,16 @@ static int llora_get_Adr(lua_State* L) {
     if (error) {
     	return luaL_driver_error(L, error);
     }
-	
+
     if (strcmp(value,"on") == 0) {
         lua_pushboolean(L, 1);
     } else {
-        lua_pushboolean(L, 0);        
+        lua_pushboolean(L, 0);
     }
 
     free(value);
-    
-    return 1;    
+
+    return 1;
 }
 
 static int llora_get_ReTx(lua_State* L) {
@@ -354,7 +354,7 @@ static int llora_join(lua_State* L) {
     if (error) {
         return luaL_driver_error(L, error);
     }
-    
+
     return 0;
 }
 
@@ -363,32 +363,32 @@ static int llora_tx(lua_State* L) {
     int cnf = lua_toboolean( L, 1 );
     int port = luaL_checkinteger(L, 2);
     const char *data = luaL_checkstring(L, 3);
-    
+
     if ((port < 1) || (port > 223)) {
         return luaL_error(L, "%d:invalid port number", LORA_ERR_INVALID_ARGUMENT);
     }
 
     if (!check_hex_str(data)) {
         luaL_error(L, "%d:invalid data", LORA_ERR_INVALID_ARGUMENT);
-    }    
-    
+    }
+
     driver_error_t *error = lora_tx(cnf, port, data);
     if (error) {
         return luaL_driver_error(L, error);
     }
-    
-    return 0;    
+
+    return 0;
 }
 
 static int llora_rx(lua_State* L) {
     luaL_checktype(L, 1, LUA_TFUNCTION);
-    lua_pushvalue(L, 1); 
+    lua_pushvalue(L, 1);
 
     rx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
-            
+
     rx_callbackL = L;
     lora_set_rx_callback(on_received);
-    
+
     return 0;
 }
 #endif
@@ -403,27 +403,26 @@ static int llora_gw_start(lua_State* L) {
 
 static const LUA_REG_TYPE lora_map[] = {
 #if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
-    { LSTRKEY( "setup" ),        LFUNCVAL( llora_setup ) }, 
-    { LSTRKEY( "setDevAddr" ),   LFUNCVAL( llora_set_setDevAddr ) }, 
-    { LSTRKEY( "setDevEui" ),    LFUNCVAL( llora_set_DevEui ) }, 
-    { LSTRKEY( "setAppEui" ),    LFUNCVAL( llora_set_AppEui ) }, 
-    { LSTRKEY( "setAppKey" ),    LFUNCVAL( llora_set_AppKey ) }, 
-    { LSTRKEY( "setNwksKey" ),   LFUNCVAL( llora_set_NwkSKey ) }, 
-    { LSTRKEY( "setAppsKey" ),   LFUNCVAL( llora_set_AppSKey ) }, 
-    { LSTRKEY( "setAppKey" ),    LFUNCVAL( llora_set_AppKey ) }, 
-    { LSTRKEY( "setDr" ),        LFUNCVAL( llora_set_Dr ) }, 
-    { LSTRKEY( "setAdr" ),       LFUNCVAL( llora_set_Adr ) }, 
+    { LSTRKEY( "setup" ),        LFUNCVAL( llora_setup ) },
+    { LSTRKEY( "setDevAddr" ),   LFUNCVAL( llora_set_setDevAddr ) },
+    { LSTRKEY( "setDevEui" ),    LFUNCVAL( llora_set_DevEui ) },
+    { LSTRKEY( "setAppEui" ),    LFUNCVAL( llora_set_AppEui ) },
+    { LSTRKEY( "setAppKey" ),    LFUNCVAL( llora_set_AppKey ) },
+    { LSTRKEY( "setNwksKey" ),   LFUNCVAL( llora_set_NwkSKey ) },
+    { LSTRKEY( "setAppsKey" ),   LFUNCVAL( llora_set_AppSKey ) },
+    { LSTRKEY( "setDr" ),        LFUNCVAL( llora_set_Dr ) },
+    { LSTRKEY( "setAdr" ),       LFUNCVAL( llora_set_Adr ) },
     { LSTRKEY( "setReTx" ),      LFUNCVAL( llora_set_ReTx ) },
-    { LSTRKEY( "getDevAddr" ),   LFUNCVAL( llora_get_DevAddr ) }, 
-    { LSTRKEY( "getDevEui" ),    LFUNCVAL( llora_get_DevEui ) }, 
-    { LSTRKEY( "getAppEui" ),    LFUNCVAL( llora_get_AppEui ) }, 
-    { LSTRKEY( "getDr" ),        LFUNCVAL( llora_get_Dr ) }, 
-    { LSTRKEY( "getAdr" ),       LFUNCVAL( llora_get_Adr ) }, 
+    { LSTRKEY( "getDevAddr" ),   LFUNCVAL( llora_get_DevAddr ) },
+    { LSTRKEY( "getDevEui" ),    LFUNCVAL( llora_get_DevEui ) },
+    { LSTRKEY( "getAppEui" ),    LFUNCVAL( llora_get_AppEui ) },
+    { LSTRKEY( "getDr" ),        LFUNCVAL( llora_get_Dr ) },
+    { LSTRKEY( "getAdr" ),       LFUNCVAL( llora_get_Adr ) },
     { LSTRKEY( "getReTx" ),      LFUNCVAL( llora_get_ReTx ) },
-    { LSTRKEY( "join" ),         LFUNCVAL( llora_join ) }, 
+    { LSTRKEY( "join" ),         LFUNCVAL( llora_join ) },
     { LSTRKEY( "tx" ),           LFUNCVAL( llora_tx ) },
     { LSTRKEY( "whenReceived" ), LFUNCVAL( llora_rx ) },
-	
+
 	// Constant definitions
     { LSTRKEY( "BAND868" ),		 LINTVAL( 868 ) },
     { LSTRKEY( "BAND433" ), 	 LINTVAL( 433 ) },
@@ -446,7 +445,7 @@ int luaopen_lora(lua_State* L) {
 	return 1;
 #else
 	return 0;
-#endif		   
+#endif
 }
 
 MODULE_REGISTER_MAPPED(LORA, lora, lora_map, luaopen_lora);

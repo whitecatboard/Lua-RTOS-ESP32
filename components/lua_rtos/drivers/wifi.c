@@ -225,6 +225,13 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int pow
 
 	status_clear(STATUS_WIFI_SETUP);
 
+	// Sanity checks
+	if (mode == WIFI_MODE_AP) {
+		if (*password && strlen(password) < 8) {
+			return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_PASSWORD, "if provided the password must have more than 7 characters");
+		}
+	}
+
 	// Attach wifi driver
 	if ((error = wifi_init(mode))) return error;
 
