@@ -383,7 +383,7 @@ int _pthread_suspend(pthread_t id) {
         return res;
     }
     
-    // Stop
+    // Suspend
     vTaskSuspend(thread->task);
     
     return 0;
@@ -400,7 +400,7 @@ int _pthread_resume(pthread_t id) {
         return res;
     }
         
-    // Stop
+    // Resume
     vTaskResume(thread->task);
 
     return 0;

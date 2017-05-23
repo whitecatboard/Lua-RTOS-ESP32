@@ -58,7 +58,9 @@
 
 char *strcasestr(const char *haystack, const char *needle);
 
+static u8_t http_refcount;
 static lua_State *LL=NULL;
+static pthread_t http_pthread;
 
 int is_lua(char *name) {
 	char *ext = strrchr(name, '.');
@@ -371,36 +373,44 @@ static void *http_thread(void *arg) {
 }
 
 void http_start(lua_State* L) {
-	pthread_attr_t attr;
-	struct sched_param sched;
-	pthread_t thread;
-	int res;
+	if(http_refcount == 0) {
+		pthread_attr_t attr;
+		struct sched_param sched;
+		int res;
 
-	LL=L;
+		LL=L;
 
-	// Init thread attributes
-	pthread_attr_init(&attr);
+		// Init thread attributes
+		pthread_attr_init(&attr);
 
-	// Set stack size
-	pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_STACK_SIZE);
+		// Set stack size
+		pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_STACK_SIZE);
 
-	// Set priority
-	sched.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
-	pthread_attr_setschedparam(&attr, &sched);
+		// Set priority
+		sched.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
+		pthread_attr_setschedparam(&attr, &sched);
 
-	// Set CPU
-	cpu_set_t cpu_set = CONFIG_LUA_RTOS_LUA_TASK_CPU;
-	pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+		// Set CPU
+		cpu_set_t cpu_set = CONFIG_LUA_RTOS_LUA_TASK_CPU;
+		pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
 
-	// Create thread
-	res = pthread_create(&thread, &attr, http_thread, NULL);
-	if (res) {
-		panic("Cannot start http_thread");
+		// Create thread
+		res = pthread_create(&http_pthread, &attr, http_thread, NULL);
+		if (res) {
+			panic("Cannot start http_thread");
+		}
+
+		pthread_attr_destroy(&attr);
+		http_refcount++;
 	}
 }
 
 void http_stop() {
-
+	if(http_refcount) {
+		_pthread_stop(http_pthread);
+		_pthread_free(http_pthread);
+		http_refcount--;
+	}
 }
 
 #endif
