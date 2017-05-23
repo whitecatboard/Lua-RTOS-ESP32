@@ -58,7 +58,7 @@
 
 char *strcasestr(const char *haystack, const char *needle);
 
-static u8_t http_refcount;
+static u8_t http_refcount = 0;
 static lua_State *LL=NULL;
 static pthread_t http_pthread;
 
@@ -368,12 +368,11 @@ static void *http_thread(void *arg) {
 	}
 
 	close(server);
-
 	pthread_exit(NULL);
 }
 
 void http_start(lua_State* L) {
-	if(http_refcount == 0) {
+	if(!http_refcount) {
 		pthread_attr_t attr;
 		struct sched_param sched;
 		int res;
@@ -400,7 +399,6 @@ void http_start(lua_State* L) {
 			panic("Cannot start http_thread");
 		}
 
-		pthread_attr_destroy(&attr);
 		http_refcount++;
 	}
 }
