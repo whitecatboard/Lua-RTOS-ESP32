@@ -65,6 +65,7 @@ static lua_State *LL=NULL;
 static u8_t http_refcount = 0;
 static u8_t volatile http_shutdown = 0;
 static char ip4addr[IP4ADDR_STRLEN_MAX];
+static int server = 0;
 
 int is_lua(char *name) {
 	char *ext = strrchr(name, '.');
@@ -232,7 +233,7 @@ int process(FILE *f) {
 			else {
 				//redirect
 				snprintf(pathbuf, sizeof (pathbuf), "Location: http://%s/", CAPTIVE_SERVER_NAME);
-				send_headers(f, 302, "Found", pathbuf, "text/html", -1);
+				send_headers(f, 302, "Found", pathbuf, NULL, 0);
 				return 0;
 			}
 		}
@@ -319,24 +320,31 @@ int process(FILE *f) {
 }
 
 static void *http_thread(void *arg) {
-	int server;
 	struct sockaddr_in sin;
 
-	server = socket(AF_INET, SOCK_STREAM, 0);
+	if(!server) {
+		server = socket(AF_INET, SOCK_STREAM, 0);
+		LWIP_ASSERT("httpd_init: socket failed", server >= 0);
 
-	memset(&sin, 0, sizeof(sin));
-	sin.sin_family      = AF_INET;
-	sin.sin_addr.s_addr = INADDR_ANY;
-	sin.sin_port        = htons(PORT);
-	bind(server, (struct sockaddr *) &sin, sizeof (sin));
+		u8_t one = 1;
+		setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 
-	listen(server, 5);
+		memset(&sin, 0, sizeof(sin));
+		sin.sin_family      = AF_INET;
+		sin.sin_addr.s_addr = INADDR_ANY;
+		sin.sin_port        = htons(PORT);
+		int rc = bind(server, (struct sockaddr *) &sin, sizeof (sin));
+		LWIP_ASSERT("httpd_init: bind failed", rc == 0);
 
-	// Set the timeout for accept
-	struct timeval timeout;
-	timeout.tv_sec = 1;
-	timeout.tv_usec = 0;
-	setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+		listen(server, 5);
+		LWIP_ASSERT("httpd_init: listen failed", server >= 0);
+
+		// Set the timeout for accept
+		struct timeval timeout;
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+		setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+	}
 	
 	syslog(LOG_INFO, "http: server listening on port %d\n", PORT);
 
@@ -349,7 +357,7 @@ static void *http_thread(void *arg) {
 			// We wait for send all data before close socket's stream
 			struct linger so_linger;
 			so_linger.l_onoff  = 1;
-			so_linger.l_linger = 0; // We MUST use 0 here to send a RST when closing
+			so_linger.l_linger = 2;
 			setsockopt(client, SOL_SOCKET, SO_LINGER, &so_linger, sizeof(so_linger));
 
 			// Set a timeout for send / receive
@@ -362,30 +370,26 @@ static void *http_thread(void *arg) {
 			// Create the socket stream
 			FILE *stream = fdopen(client, "a+");
 			process(stream);
+			fflush(stream);
 			fclose(stream);
-
-			shutdown(client, SHUT_RDWR);
-			close(client);
 		}
 	}
 
 	syslog(LOG_INFO, "http: server shutting down on port %d\n", PORT);
 
-	/* http://lwip.wikia.com/wiki/Netconn_bind
-	  "Note that if you try to bind the same address and/or port you
-	   might get an error (ERR_USE, address in use), even if you
-	   delete the netconn. Only after some time (minutes) the
-	   resources are completely cleared in the underlying stack due
-	   to the need to follow the TCP specification and go through
-	   the TCP timewait state."
-	   
-	   Setting SO_LINGER with a value of 0 makes sure this does NOT
-	   apply and a subsequent call to bind() will succeed
-	*/
+	/* it's not ideal to keep the server_socket open as it is blocked
+	   but now at least the httpsrv can be restarted from lua scripts.
+	   if we'd properly close the socket we would need to bind() again
+	   when restarting the httpsrv but bind() will succeed only after
+	   several (~4) minutes: http://lwip.wikia.com/wiki/Netconn_bind
 
-	shutdown(server, SHUT_RDWR);
-	close(server);
-	server = 0;
+	   "Note that if you try to bind the same address and/or port you
+	    might get an error (ERR_USE, address in use), even if you
+	    delete the netconn. Only after some time (minutes) the
+	    resources are completely cleared in the underlying stack due
+	    to the need to follow the TCP specification and go through
+	    the TCP timewait state."
+	*/
 
 	http_refcount--;
 	pthread_exit(NULL);
