@@ -45,6 +45,12 @@
 #define SPI_ERR_INVALID_DEVICE 			 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  6)
 #define SPI_ERR_DEVICE_NOT_SETUP     	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  7)
 #define SPI_ERR_DEVICE_IS_NOT_SELECTED 	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  8)
+#define SPI_ERR_INVALID_FLAG 	         (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  9)
+
+// Flags
+#define SPI_FLAG_WRITE 0x01
+#define SPI_FLAG_READ  0x02
+#define SPI_FLAG_ALL (SPI_FLAG_WRITE | SPI_FLAG_READ)
 
 /**
  * @brief Select SPI device for start a transaction over the SPI bus to the device. This function is thread safe.
@@ -243,6 +249,7 @@ void spi_ll_bulk_read32_be(int deviceid, uint32_t nelements, uint32_t *data);
  * @param cs GPIO number for the cs signal.
  * @param mode SPI mode, can be either 0, 1, 2 or 3.
  * @param speed Speed in Hertz.
+ * @param flags. A mask formed by one of the following SPI_FLAG_WRITE, SPI_FLAG_READ.
  * @param deviceid A pointer to an integer with a device identifier assigned to the SPI device.
  *
  * @return
@@ -255,7 +262,7 @@ void spi_ll_bulk_read32_be(int deviceid, uint32_t nelements, uint32_t *data);
  *     	 SPI_ERR_PIN_NOT_ALLOWED
  *     	 SPI_ERR_NO_MORE_DEVICES_ALLOWED
  */
-driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_t speed, int *deviceid);
+driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid);
 
 /**
  * @brief Select SPI device for start a transaction over the SPI bus to the device. This function is thread safe.

@@ -49,6 +49,7 @@ static int lspi_setup(lua_State* L) {
 	driver_error_t *error;
 	uint32_t clock;
 	int spi_mode = 0;
+	int flags = SPI_FLAG_WRITE | SPI_FLAG_READ;
 
 	id = luaL_checkinteger(L, 1);
 	is_master = luaL_checkinteger(L, 2) == 1;
@@ -57,9 +58,13 @@ static int lspi_setup(lua_State* L) {
 	data_bits = luaL_checkinteger(L, 5);
 	spi_mode = luaL_checkinteger(L, 6);
 
+	if (lua_gettop(L) == 7) {
+		flags = luaL_checkinteger(L, 7);
+	}
+
 	spi_userdata *spi = (spi_userdata *)lua_newuserdata(L, sizeof(spi_userdata));
 
-	if ((error = spi_setup(id, is_master, cs, spi_mode, clock * 1000, &spi->spi_device))) {
+	if ((error = spi_setup(id, is_master, cs, spi_mode, clock * 1000, flags, &spi->spi_device))) {
 	    return luaL_driver_error(L, error);
 	}
 
@@ -159,6 +164,8 @@ printf("lspi_ins_gc\r\n");
 static const LUA_REG_TYPE lspi_map[] = {
 	{ LSTRKEY( "setup"      ),	 LFUNCVAL( lspi_setup    ) },
 	{ LSTRKEY( "error"      ),   LROVAL  ( spi_error_map ) },
+	{ LSTRKEY( "WRITE"      ),	 LINTVAL ( SPI_FLAG_WRITE) },
+	{ LSTRKEY( "READ"       ),	 LINTVAL ( SPI_FLAG_READ ) },
 	{ LSTRKEY( "MASTER"     ),	 LINTVAL ( 1 ) },
 	{ LSTRKEY( "SLAVE"      ),	 LINTVAL ( 0 ) },
 	SPI_SPI0

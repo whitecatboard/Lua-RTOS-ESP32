@@ -850,7 +850,7 @@ int sd_init(int unit) {
     mtx_init(&sd_mtx, NULL, NULL, 0);
 
     driver_error_t *error;
-    if ((error = spi_setup(CONFIG_LUA_RTOS_SD_SPI, 1, CONFIG_LUA_RTOS_SD_CS, 0, CONFIG_LUA_RTOS_SD_HZ, &du->spi_device))) {
+    if ((error = spi_setup(CONFIG_LUA_RTOS_SD_SPI, 1, CONFIG_LUA_RTOS_SD_CS, 0, CONFIG_LUA_RTOS_SD_HZ, SPI_FLAG_WRITE | SPI_FLAG_READ, &du->spi_device))) {
     	free(error);
         syslog(LOG_ERR, "sd%u cannot open spi%u port (%s)", unit, du->spi_device, driver_get_err_msg(error));
         return 0;

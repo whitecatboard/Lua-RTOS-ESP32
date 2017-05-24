@@ -41,7 +41,7 @@ driver_error_t *adc_mcp3208_setup(int8_t unit, int8_t channel, uint8_t spi, uint
 
     // Init SPI bus
 	if (spi_device == -1) {
-		if ((error = spi_setup(spi, 1, cs, 0, ADC_MCP3208_SPEED, &spi_device))) {
+		if ((error = spi_setup(spi, 1, cs, 0, ADC_MCP3208_SPEED, SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
 			return error;
 		}
 	}
