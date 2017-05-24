@@ -46,6 +46,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <sys/delay.h>
 #include <sys/status.h>
 #include <sys/panic.h>
 #include <sys/syslog.h>
@@ -164,11 +165,20 @@ static driver_error_t *wifi_deinit() {
 driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 	driver_error_t *error;
 
-	uint8_t mode;
-	if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
+	if (status_get(STATUS_WIFI_INITED)) {
+		uint8_t mode;
+		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
 
-	if (!status_get(STATUS_WIFI_INITED) || WIFI_MODE_AP == mode) {
-		status_clear(STATUS_WIFI_INITED); //for case of WIFI_MODE_AP
+		if (WIFI_MODE_AP == mode) {
+			if(status_get(STATUS_WIFI_STARTED)) {
+				if ((error = wifi_check_error(esp_wifi_stop()))) return error;
+				status_clear(STATUS_WIFI_STARTED);
+			}
+			status_clear(STATUS_WIFI_INITED);
+		}
+	}
+		
+	if (!status_get(STATUS_WIFI_INITED)) {
 		// Attach wifi driver
 		if ((error = wifi_init(WIFI_MODE_STA))) {
 			return error;
@@ -178,6 +188,9 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 	if (!status_get(STATUS_WIFI_STARTED)) {
 		// Start wifi
 		if ((error = wifi_check_error(esp_wifi_start()))) return error;
+		/* when scan()'ing shortly after esp_wifi_start() the result list may wrongly be empty
+		   so we waste some time here to make sure the system had some time to find some APs */
+		delay(10);
 	}
 
 	wifi_scan_config_t conf = {
@@ -193,20 +206,25 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 	// Wait for scan end
 	EventBits_t uxBits = xEventGroupWaitBits(netEvent, evWIFI_SCAN_END, pdTRUE, pdFALSE, portMAX_DELAY);
 	if (uxBits & (evWIFI_SCAN_END)) {
-		// Get count of finded AP
+		// Get count of found AP
 		if ((error = wifi_check_error(esp_wifi_scan_get_ap_num(count)))) return error;
 
-		// Allocate space for AP list
-		*list = (wifi_ap_record_t *)malloc(sizeof(wifi_ap_record_t) * (*count));
-		if (!*list) {
-			return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NO_MEM,NULL);
-		}
+		// An empty list shall not throw an error
+		if(0 < *count) {
+		
+			// Allocate space for AP list
+			*list = (wifi_ap_record_t *)malloc(sizeof(wifi_ap_record_t) * (*count));
+			if (!*list) {
+				return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NO_MEM,NULL);
+			}
 
-		// Get AP list
-		if ((error = wifi_check_error(esp_wifi_scan_get_ap_records(count, *list)))) {
-			free(list);
+			// Get AP list
+			if ((error = wifi_check_error(esp_wifi_scan_get_ap_records(count, *list)))) {
+				free(list);
 
-			return error;
+				return error;
+			}
+			
 		}
 	}
 
@@ -240,10 +258,12 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int pow
 		uint8_t curmode;
 		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&curmode)))) return error;
 		if (curmode != mode) {
-			//in case of switching mode AP<->STA
-			status_clear(STATUS_WIFI_INITED); 
-			status_clear(STATUS_WIFI_STARTED); 
-			status_clear(STATUS_WIFI_CONNECTED);
+			//in case of switching mode AP<->STA Stop wifi
+			if(status_get(STATUS_WIFI_STARTED)) {
+				if ((error = wifi_check_error(esp_wifi_stop()))) return error;
+				status_clear(STATUS_WIFI_STARTED);
+			}
+			status_clear(STATUS_WIFI_INITED);
 		}
 	}
 
@@ -340,13 +360,15 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 
 	driver_error_t *error;
 
-	uint8_t mode;
-	if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
+	uint8_t interface = ESP_IF_WIFI_STA;
+	if (status_get(STATUS_WIFI_INITED)) {
+		uint8_t mode;
+		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
 
-	uint8_t interface = ESP_IF_WIFI_AP;
-	if (mode == WIFI_MODE_STA)
-		interface = ESP_IF_WIFI_STA;
-
+		if (mode == WIFI_MODE_AP)
+			interface = ESP_IF_WIFI_AP;
+	}
+	
 	// Get WIFI IF info
 	if ((error = wifi_check_error(tcpip_adapter_get_ip_info(interface, &esp_info)))) return error;
 

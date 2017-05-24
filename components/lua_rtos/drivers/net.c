@@ -89,7 +89,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 			}
 
 			status_clear(STATUS_WIFI_CONNECTED);
-			esp_wifi_connect();
+			//don't esp_wifi_connect() here
 			break;
 
 		case SYSTEM_EVENT_STA_GOT_IP:
@@ -106,6 +106,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
 		case SYSTEM_EVENT_AP_STOP:
 			status_clear(STATUS_WIFI_CONNECTED);
+			status_clear(STATUS_WIFI_INITED);
 			break;
 
 		case SYSTEM_EVENT_SCAN_DONE:
