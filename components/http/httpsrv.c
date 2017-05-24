@@ -323,18 +323,14 @@ static void *http_thread(void *arg) {
 	struct sockaddr_in sin;
 
 	server = socket(AF_INET, SOCK_STREAM, 0);
-	LWIP_ASSERT("httpd_init: socket failed", server >= 0);
 
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family      = AF_INET;
 	sin.sin_addr.s_addr = INADDR_ANY;
 	sin.sin_port        = htons(PORT);
-
-	int rc = bind(server, (struct sockaddr *) &sin, sizeof (sin));
-	LWIP_ASSERT("httpd_init: bind failed", rc == 0);
+	bind(server, (struct sockaddr *) &sin, sizeof (sin));
 
 	listen(server, 5);
-	LWIP_ASSERT("httpd_init: listen failed", server >= 0);
 
 	// Set the timeout for accept
 	struct timeval timeout;
