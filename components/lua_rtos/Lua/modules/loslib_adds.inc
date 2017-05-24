@@ -326,8 +326,9 @@ static int os_version(lua_State *L) {
    lua_pushstring(L, "Lua RTOS");
    lua_pushstring(L, LUA_OS_VER);   
    lua_pushinteger(L, BUILD_TIME);
+   lua_pushstring(L, BUILD_COMMIT);
    
-   return 3;
+   return 4;
 }
 
 static int os_cpu(lua_State *L) {

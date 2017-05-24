@@ -108,3 +108,10 @@ CFLAGS += -DBUILD_TIME=$(LUA_RTOS_BUILD_TIME)
 else
 CFLAGS += -DBUILD_TIME=$(shell date +%s)
 endif
+
+# Define BUILD_COMMIT flag, with the commit hash number used in build.
+ifneq (foo$(LUA_RTOS_BUILD_COMMIT), foo)
+CFLAGS += -DBUILD_COMMIT=$(LUA_RTOS_BUILD_COMMIT)
+else
+CFLAGS += -DBUILD_COMMIT=\"$(shell git rev-parse HEAD)\"
+endif
