@@ -52,6 +52,8 @@ static int uart_exists(int id) {
 
 static int luart_setup( lua_State* L ) {
 	driver_error_t *error;
+	int flags = UART_FLAG_WRITE | UART_FLAG_READ;
+
 
 	int id = luaL_checkinteger(L, 1);
     int bauds = luaL_checkinteger(L, 2);
@@ -60,8 +62,12 @@ static int luart_setup( lua_State* L ) {
     int stop_bits = luaL_checkinteger(L, 5);
     int buffer = luaL_optinteger(L, 6, 1024);
 
+	if (lua_gettop(L) == 7) {
+		flags = luaL_checkinteger(L, 7);
+	}
+
     // Setup
-    error = uart_init(id, bauds, databits, parity, stop_bits, buffer);
+    error = uart_init(id, bauds, databits, parity, stop_bits, flags, buffer);
     if (error) {
         return luaL_driver_error(L, error);
     }

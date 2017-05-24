@@ -89,7 +89,8 @@ DRIVER_REGISTER_ERROR(UART, uart, InvalidDataBits, "invalid data bits", UART_ERR
 DRIVER_REGISTER_ERROR(UART, uart, InvalidParity, "invalid parity", UART_ERR_INVALID_PARITY);
 DRIVER_REGISTER_ERROR(UART, uart, InvalidStopBits, "invalid stop bits", UART_ERR_INVALID_STOP_BITS);
 DRIVER_REGISTER_ERROR(UART, uart, NotEnoughtMemory, "not enough memory", UART_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(UART, uart, NotSetup, "is not setup", UAR_ERR_IS_NOT_SETUP);
+DRIVER_REGISTER_ERROR(UART, uart, NotSetup, "is not setup", UART_ERR_IS_NOT_SETUP);
+DRIVER_REGISTER_ERROR(UART, uart, InvalidFlag, "invalid flag", UART_ERR_INVALID_FLAG);
 
 // Flags for determine some UART states
 #define UART_FLAG_INIT		(1 << 1)
@@ -197,7 +198,7 @@ static void uart_comm_param_config(int8_t unit, UartBautRate brg, UartBitsNum4Ch
 }
 
 // Configure the UART pins
-static void uart_pin_config(int8_t unit, uint8_t rx, uint8_t tx) {
+static void uart_pin_config(int8_t unit, uint8_t flags, uint8_t rx, uint8_t tx) {
 	wait_tx_empty(unit);
 
 	int tx_sig, rx_sig;
@@ -223,15 +224,19 @@ static void uart_pin_config(int8_t unit, uint8_t rx, uint8_t tx) {
     }
 
     // Configure TX
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[tx], PIN_FUNC_GPIO);
-    gpio_set_direction(tx, GPIO_MODE_OUTPUT);
-    gpio_matrix_out(tx, tx_sig, 0, 0);
+    if (flags & UART_FLAG_WRITE) {
+        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[tx], PIN_FUNC_GPIO);
+        gpio_set_direction(tx, GPIO_MODE_OUTPUT);
+        gpio_matrix_out(tx, tx_sig, 0, 0);
+    }
 
     // Configure RX
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[rx], PIN_FUNC_GPIO);
-    gpio_set_pull_mode(rx, GPIO_PULLUP_ONLY);
-    gpio_set_direction(rx, GPIO_MODE_INPUT);
-    gpio_matrix_in(rx, rx_sig, 0);
+    if (flags & UART_FLAG_READ) {
+        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[rx], PIN_FUNC_GPIO);
+        gpio_set_pull_mode(rx, GPIO_PULLUP_ONLY);
+        gpio_set_direction(rx, GPIO_MODE_INPUT);
+        gpio_matrix_in(rx, rx_sig, 0);
+    }
 }
 
 // Determine if byte must be queued
@@ -290,7 +295,7 @@ driver_error_t *uart_lock(int unit) {
 	}
 
 	if (!((uart[unit].flags & UART_FLAG_INIT) && (uart[unit].flags & UART_FLAG_IRQ_INIT))) {
-		return driver_operation_error(UART_DRIVER, UAR_ERR_IS_NOT_SETUP, NULL);
+		return driver_operation_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
 	}
 
 	uart_ll_lock(unit);
@@ -305,7 +310,7 @@ driver_error_t *uart_unlock(int unit) {
 	}
 
 	if (!((uart[unit].flags & UART_FLAG_INIT) && (uart[unit].flags & UART_FLAG_IRQ_INIT))) {
-		return driver_operation_error(UART_DRIVER, UAR_ERR_IS_NOT_SETUP, NULL);
+		return driver_operation_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
 	}
 
 	uart_ll_unlock(unit);
@@ -388,7 +393,7 @@ void IRAM_ATTR uart_rx_intr_handler(void *para) {
 }
 
 // Lock resources needed by the UART
-driver_error_t *uart_lock_resources(int unit, void *resources) {
+driver_error_t *uart_lock_resources(int unit, uint8_t flags, void *resources) {
 	uart_resources_t tmp_uart_resources;
 
 	if (!resources) {
@@ -401,25 +406,37 @@ driver_error_t *uart_lock_resources(int unit, void *resources) {
     uart_pins(unit, &uart_resources->rx, &uart_resources->tx);
 
     // Lock this pins
-    if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart_resources->rx))) {
-    	// Revoked lock on pin
-    	return driver_lock_error(UART_DRIVER, lock_error);
+    if (flags & UART_FLAG_READ) {
+        if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart_resources->rx))) {
+        	// Revoked lock on pin
+        	return driver_lock_error(UART_DRIVER, lock_error);
+        }
     }
 
-    if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart_resources->tx))) {
-    	// Revoked lock on pin
-    	return driver_lock_error(UART_DRIVER, lock_error);
+    if (flags & UART_FLAG_WRITE) {
+        if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart_resources->tx))) {
+        	// Revoked lock on pin
+        	return driver_lock_error(UART_DRIVER, lock_error);
+        }
     }
 
     return NULL;
 }
 
 // Init UART. Interrupts are not enabled.
-driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t parity, uint8_t stop_bits, uint32_t qs) {
+driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t parity, uint8_t stop_bits, uint8_t flags, uint32_t qs) {
 	// Sanity checks
 	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
 		return driver_operation_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
 	}
+
+    if (flags & (~UART_FLAG_ALL)) {
+		return driver_operation_error(SPI_DRIVER, UART_ERR_INVALID_FLAG, NULL);
+    }
+
+    if (!(flags & (UART_FLAG_ALL))) {
+		return driver_operation_error(SPI_DRIVER, UART_ERR_INVALID_FLAG, NULL);
+    }
 
 	// Create the queue signal, and start a task
 	if (!signal_q) {
@@ -463,7 +480,7 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
     driver_error_t *error;
     uart_resources_t resources;
 
-    if ((error = uart_lock_resources(unit, &resources))) {
+    if ((error = uart_lock_resources(unit, flags, &resources))) {
 		return error;
 	}
 
@@ -492,7 +509,7 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
         pthread_mutex_init(&uart[unit].mtx, &attr);
     }
 
-    uart_pin_config(unit, resources.rx, resources.tx);
+    uart_pin_config(unit, flags, resources.rx, resources.tx);
 	uart_comm_param_config(unit, brg, esp_databits, esp_parity, esp_stop_bits);
 
     uart[unit].brg = brg; 
@@ -500,9 +517,17 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 
     uart[unit].flags |= UART_FLAG_INIT;
 
-    syslog(LOG_INFO, "%s: at pins rx=%s%d/tx=%s%d",names[unit],
-            gpio_portname(resources.rx), gpio_name(resources.rx),
-            gpio_portname(resources.tx), gpio_name(resources.tx));
+	if ((flags & (UART_FLAG_READ | UART_FLAG_WRITE)) == (UART_FLAG_READ | UART_FLAG_WRITE)) {
+	    syslog(LOG_INFO, "%s: at pins rx=%s%d/tx=%s%d",names[unit],
+	            gpio_portname(resources.rx), gpio_name(resources.rx),
+	            gpio_portname(resources.tx), gpio_name(resources.tx));
+	} else if ((flags & (UART_FLAG_READ | UART_FLAG_WRITE)) == UART_FLAG_WRITE) {
+	    syslog(LOG_INFO, "%s: at pins tx=%s%d",names[unit],
+	            gpio_portname(resources.tx), gpio_name(resources.tx));
+	} else if ((flags & (UART_FLAG_READ | UART_FLAG_WRITE)) == UART_FLAG_READ) {
+	    syslog(LOG_INFO, "%s: at pins rx=%s%d",names[unit],
+	            gpio_portname(resources.rx), gpio_name(resources.rx));
+	}
 
     syslog(LOG_INFO, "%s: speed %d bauds", names[unit],brg);
 
@@ -589,7 +614,7 @@ driver_error_t *uart_consume(int8_t unit) {
 	}
 
 	if (!((uart[unit].flags & UART_FLAG_INIT) && (uart[unit].flags & UART_FLAG_IRQ_INIT))) {
-		return driver_operation_error(UART_DRIVER, UAR_ERR_IS_NOT_SETUP, NULL);
+		return driver_operation_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
 	}
 
     while(uart_read(unit,&tmp,1));
