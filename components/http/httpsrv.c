@@ -36,6 +36,7 @@
 #include "lwip/dns.h"
 #include "lwip/ip_addr.h"
 #include <sys/panic.h>
+#include <sys/delay.h>
 
 #include <pthread/pthread.h>
 
@@ -55,12 +56,15 @@
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
+#include <drivers/net.h>
 
 char *strcasestr(const char *haystack, const char *needle);
+driver_error_t *wifi_stat(ifconfig_t *info);
 
-static u8_t http_refcount = 0;
 static lua_State *LL=NULL;
-static pthread_t http_pthread;
+static u8_t http_refcount = 0;
+static u8_t volatile http_shutdown = 0;
+static char ip4addr[IP4ADDR_STRLEN_MAX];
 
 int is_lua(char *name) {
 	char *ext = strrchr(name, '.');
@@ -170,26 +174,16 @@ void send_file(FILE *f, char *path, struct stat *statbuf, char *requestdata) {
 		fclose(file);
 		
 		send_headers(f, 200, "OK", NULL, "text/html", -1);
+		fflush(f);
 
 		lua_pushstring(LL, (requestdata && *requestdata) ? requestdata:"");
 		lua_setglobal(LL, "http_request");
 
-		int rc = luaL_dofile(LL, path);
-		(void) rc;
+		FILE fp_old = *stdout;  // preserve the original stdout
+		*stdout = *f;  // redirect stdout to stream
+		(void)luaL_dofile(LL, path); //should do something more php-like here...
+		*stdout = fp_old;  // restore stdout
 
-		lua_getglobal(LL, "http_response");
-		size_t rlen = 0;
-		const char *response = lua_tostring(LL, -1);
-		if (!lua_isnil(LL,-1)) {
-		rlen = lua_rawlen(LL, -1);
-			if (rlen>0) {
-				fprintf(f, "%x\r\n", rlen);
-				fwrite(response, 1, rlen, f);
-				fprintf(f, "\r\n");
-			}
-		}
-		lua_pop(LL, 1);
-				
 		fprintf(f, "0\r\n\r\n");
 	} else {
 		int length = S_ISREG(statbuf->st_mode) ? statbuf->st_size : -1;
@@ -231,7 +225,8 @@ int process(FILE *f) {
 			host = strtok(host, " "); //Host:
 	  	host = strtok(NULL, "\r"); //the actual host
 
-			if (0 == strcasecmp(CAPTIVE_SERVER_NAME, host)) {
+			if (0 == strcasecmp(CAPTIVE_SERVER_NAME, host) ||
+			    0 == strcasecmp(ip4addr, host)) {
 				break; //done parsing headers
 			}
 			else {
@@ -242,8 +237,8 @@ int process(FILE *f) {
 			}
 		}
 	}
-		
-	if (!method || !path || !protocol) return -1;
+	
+	if (!method || !path) return -1; //protocol may be omitted
 
 	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol);
 
@@ -324,39 +319,47 @@ int process(FILE *f) {
 }
 
 static void *http_thread(void *arg) {
-	struct sockaddr_in sin;
 	int server;
+	struct sockaddr_in sin;
 
 	server = socket(AF_INET, SOCK_STREAM, 0);
+	LWIP_ASSERT("httpd_init: socket failed", server >= 0);
 
-
+	memset(&sin, 0, sizeof(sin));
 	sin.sin_family      = AF_INET;
 	sin.sin_addr.s_addr = INADDR_ANY;
 	sin.sin_port        = htons(PORT);
-	bind(server, (struct sockaddr *) &sin, sizeof (sin));
+
+	int rc = bind(server, (struct sockaddr *) &sin, sizeof (sin));
+	LWIP_ASSERT("httpd_init: bind failed", rc == 0);
 
 	listen(server, 5);
+	LWIP_ASSERT("httpd_init: listen failed", server >= 0);
+
+	// Set the timeout for accept
+	struct timeval timeout;
+	timeout.tv_sec = 1;
+	timeout.tv_usec = 0;
+	setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+	
 	syslog(LOG_INFO, "http: server listening on port %d\n", PORT);
 
-	while (1) {
+	while (!http_shutdown) {
 		int client;
 
 		// Wait for a request ...
 		if ((client = accept(server, NULL, NULL)) != -1) {
-			// We waiting for send all data before close socket's stream
+
+			// We wait for send all data before close socket's stream
 			struct linger so_linger;
-
 			so_linger.l_onoff  = 1;
-			so_linger.l_linger = 10;
-
+			so_linger.l_linger = 0; // We MUST use 0 here to send a RST when closing
 			setsockopt(client, SOL_SOCKET, SO_LINGER, &so_linger, sizeof(so_linger));
 
 			// Set a timeout for send / receive
 			struct timeval tout;
-
 			tout.tv_sec = 10;
 			tout.tv_usec = 0;
-
 			setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &tout, sizeof(tout));
 			setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &tout, sizeof(tout));
 
@@ -364,20 +367,50 @@ static void *http_thread(void *arg) {
 			FILE *stream = fdopen(client, "a+");
 			process(stream);
 			fclose(stream);
+
+			shutdown(client, SHUT_RDWR);
+			close(client);
 		}
 	}
 
+	syslog(LOG_INFO, "http: server shutting down on port %d\n", PORT);
+
+	/* http://lwip.wikia.com/wiki/Netconn_bind
+	  "Note that if you try to bind the same address and/or port you
+	   might get an error (ERR_USE, address in use), even if you
+	   delete the netconn. Only after some time (minutes) the
+	   resources are completely cleared in the underlying stack due
+	   to the need to follow the TCP specification and go through
+	   the TCP timewait state."
+	   
+	   Setting SO_LINGER with a value of 0 makes sure this does NOT
+	   apply and a subsequent call to bind() will succeed
+	*/
+
+	shutdown(server, SHUT_RDWR);
 	close(server);
+	server = 0;
+
+	http_refcount--;
 	pthread_exit(NULL);
 }
 
 void http_start(lua_State* L) {
+	//wait until an ongoing shutdown has been finished
+	while(http_refcount && http_shutdown) delay(10);
+	
 	if(!http_refcount) {
 		pthread_attr_t attr;
 		struct sched_param sched;
+		pthread_t thread;
+		ifconfig_t info;
 		int res;
 
 		LL=L;
+
+		driver_error_t *error;
+		if ((error = wifi_stat(&info))) return; //FIXME return error;		
+		strcpy(ip4addr, inet_ntoa(info.ip));
 
 		// Init thread attributes
 		pthread_attr_init(&attr);
@@ -394,20 +427,18 @@ void http_start(lua_State* L) {
 		pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
 
 		// Create thread
-		res = pthread_create(&http_pthread, &attr, http_thread, NULL);
+		http_shutdown = 0;
+		res = pthread_create(&thread, &attr, http_thread, NULL);
 		if (res) {
 			panic("Cannot start http_thread");
 		}
-
 		http_refcount++;
 	}
 }
 
 void http_stop() {
 	if(http_refcount) {
-		_pthread_stop(http_pthread);
-		_pthread_free(http_pthread);
-		http_refcount--;
+		http_shutdown++;
 	}
 }
 
