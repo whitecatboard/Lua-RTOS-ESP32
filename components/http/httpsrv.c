@@ -38,7 +38,9 @@
 #include <sys/panic.h>
 #include <sys/delay.h>
 
+#include "esp_wifi_types.h"
 #include <pthread/pthread.h>
+#include <esp_wifi.h>
 
 #include <time.h>
 #include <stdio.h>
@@ -60,8 +62,10 @@
 
 char *strcasestr(const char *haystack, const char *needle);
 driver_error_t *wifi_stat(ifconfig_t *info);
+driver_error_t *wifi_check_error(esp_err_t error);
 
 static lua_State *LL=NULL;
+static u8_t wifi_mode = WIFI_MODE_STA;
 static u8_t http_refcount = 0;
 static u8_t volatile http_shutdown = 0;
 static char ip4addr[IP4ADDR_STRLEN_MAX];
@@ -155,8 +159,11 @@ static void chunk(FILE *f, const char *fmt, ...) {
 
 		vsnprintf(buffer, 2048, fmt, args);
 
-		fprintf(f, "%x\r\n", strlen(buffer));
-		fprintf(f, "%s\r\n", buffer);
+		int length = strlen(buffer);
+		if(length) { //a length of zero would end our whole transfer
+			fprintf(f, "%x\r\n", length);
+			fprintf(f, "%s\r\n", buffer);
+		}
 
 		va_end(args);
 
@@ -164,9 +171,35 @@ static void chunk(FILE *f, const char *fmt, ...) {
 	}
 }
 
+int http_print(lua_State* L) {
+
+		lua_getglobal(L, "http_stream_handle");
+		if (!lua_islightuserdata(L, -1)) {
+        return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
+    }
+    FILE *f = (FILE*)lua_touserdata(L, -1);
+
+		if (!f) {
+        return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
+    }
+
+    int nargs = lua_gettop(L);
+    for (int i=1; i <= nargs; i++) {
+        if (lua_isstring(L, i)) {
+            chunk(f, "%s", lua_tostring(L, i));
+        }
+        else {
+        		/* non-strings handling not reqired */
+        }
+    }
+
+    return 0;
+}
+
 void send_file(FILE *f, char *path, struct stat *statbuf, char *requestdata) {
-	int n;
+	int n, inLua, line;
 	char data[HTTP_BUFF_SIZE];
+	char *p1, *p2;
 	FILE *file = fopen(path, "r");
 
 	if (!file) {
@@ -180,12 +213,69 @@ void send_file(FILE *f, char *path, struct stat *statbuf, char *requestdata) {
 		lua_pushstring(LL, (requestdata && *requestdata) ? requestdata:"");
 		lua_setglobal(LL, "http_request");
 
-		FILE fp_old = *stdout;  // preserve the original stdout
-		*stdout = *f;  // redirect stdout to stream
-		(void)luaL_dofile(LL, path); //should do something more php-like here...
-		*stdout = fp_old;  // restore stdout
+		lua_pushlightuserdata(LL, (void*)f);
+		lua_setglobal(LL, "http_stream_handle");
+
+		file = fopen(path, "r");
+		inLua = false;
+		line = 0;
+		while (fgets(data, sizeof (data), file)) {
+			line++;
+			n = strlen(data);
+			
+			for(p1 = data; p1-data < n; ) {
+			
+				if(inLua) {
+				
+					p2 = strcasestr(p1, "?>");
+					if(p2) {
+						*p2 = 0;
+						inLua = false;
+						p2+=2;
+						//remove newline after lua code
+						while(*p2=='\r' || *p2=='\n') p2++;
+					}
+					else {
+						p2 = data + n; //all of this line was done
+					}
+					if (*p1 != 0) {
+						if (luaL_dostring(LL, p1)) {
+							//printf("lua error '%s' interpreting: '%s'", lua_tostring(LL, -1), p1);
+							chunk(f, "LUA Error at %s in %s on line %i", lua_tostring(LL, -1), path, line);
+						}
+					}
+					p1 = p2;
+				}
+				else {
+
+					p2 = strcasestr(p1, "<?lua");
+					if(p2) {
+						*p2 = 0;
+						inLua = true;
+						p2+=5;
+						//ignore newline before lua code
+						while(*p2=='\r' || *p2=='\n') p2++;
+					}
+					else {
+						p2 = data + n; //all of this line was done
+					}
+					if (*p1 != 0) {
+						chunk(f, "%s", p1);
+					}
+					p1 = p2;
+				}
+				
+			}
+
+			fflush(f);
+		}
+		fclose(file);
 
 		fprintf(f, "0\r\n\r\n");
+
+		lua_pushlightuserdata(LL, (void*)0);
+		lua_setglobal(LL, "http_stream_handle");
+
 	} else {
 		int length = S_ISREG(statbuf->st_mode) ? statbuf->st_size : -1;
 		send_headers(f, 200, "OK", NULL, get_mime_type(path), length);
@@ -202,7 +292,6 @@ int process(FILE *f) {
 	char *host = NULL;
 	char *protocol;
 	struct stat statbuf;
-	char hostbuf[HTTP_BUFF_SIZE];
 	char pathbuf[HTTP_BUFF_SIZE];
 	int len;
 
@@ -219,26 +308,39 @@ int process(FILE *f) {
 	  	data++; //point to start of params
 	  }
 	}
-		
-	while (fgets(hostbuf, sizeof (hostbuf), f)) {
-		host = strcasestr(hostbuf, "Host:");
-		if (host) {
-			host = strtok(host, " "); //Host:
-	  	host = strtok(NULL, "\r"); //the actual host
 
-			if (0 == strcasecmp(CAPTIVE_SERVER_NAME, host) ||
-			    0 == strcasecmp(ip4addr, host)) {
-				break; //done parsing headers
-			}
-			else {
-				//redirect
-				snprintf(pathbuf, sizeof (pathbuf), "Location: http://%s/", CAPTIVE_SERVER_NAME);
-				send_headers(f, 302, "Found", pathbuf, NULL, 0);
-				return 0;
-			}
-		}
-	}
+	//only in AP mode we redirect arbitrary host names to our own host name
+	if (wifi_mode != WIFI_MODE_STA) {
 	
+		//find the Host: header and check if it matches our IP or captive server name
+		while (fgets(pathbuf, sizeof (pathbuf), f)) {
+
+			//quick check if the first char matches, only then do strcasestr
+			if(pathbuf[0]=='h' || pathbuf[0]=='H') {			
+				host = strcasestr(pathbuf, "Host:");
+				
+				//check if the line begins with "Host:"
+				if (host==(char *)pathbuf) {
+					host = strtok(host, ":");  //Host:
+					host = strtok(NULL, "\r"); //the actual host
+					while(*host==' ') host++;  //skip spaces after the :
+
+					if (0 == strcasecmp(CAPTIVE_SERVER_NAME, host) ||
+							0 == strcasecmp(ip4addr, host)) {
+						break; //done parsing headers
+					}
+					else {
+						//redirect
+						snprintf(pathbuf, sizeof (pathbuf), "Location: http://%s/", CAPTIVE_SERVER_NAME);
+						send_headers(f, 302, "Found", pathbuf, NULL, 0);
+						return 0;
+					}
+				}
+			}
+
+		} //while
+	} // AP mode
+		
 	if (!method || !path) return -1; //protocol may be omitted
 
 	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol);
@@ -322,9 +424,12 @@ int process(FILE *f) {
 static void *http_thread(void *arg) {
 	struct sockaddr_in sin;
 
-	if(!server) {
+	if(0 == server) {
 		server = socket(AF_INET, SOCK_STREAM, 0);
 		LWIP_ASSERT("httpd_init: socket failed", server >= 0);
+		if(0 > server) {
+			pthread_exit(NULL); //FIXME add error handling here
+		}
 
 		u8_t one = 1;
 		setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
@@ -335,9 +440,15 @@ static void *http_thread(void *arg) {
 		sin.sin_port        = htons(PORT);
 		int rc = bind(server, (struct sockaddr *) &sin, sizeof (sin));
 		LWIP_ASSERT("httpd_init: bind failed", rc == 0);
+		if(0 != rc) {
+			pthread_exit(NULL); //FIXME add error handling here
+		}
 
 		listen(server, 5);
 		LWIP_ASSERT("httpd_init: listen failed", server >= 0);
+		if(0 > server) {
+			pthread_exit(NULL); //FIXME add error handling here
+		}
 
 		// Set the timeout for accept
 		struct timeval timeout;
@@ -348,6 +459,7 @@ static void *http_thread(void *arg) {
 	
 	syslog(LOG_INFO, "http: server listening on port %d\n", PORT);
 
+	http_refcount++;
 	while (!http_shutdown) {
 		int client;
 
@@ -370,7 +482,6 @@ static void *http_thread(void *arg) {
 			// Create the socket stream
 			FILE *stream = fdopen(client, "a+");
 			process(stream);
-			fflush(stream);
 			fclose(stream);
 		}
 	}
@@ -395,7 +506,7 @@ static void *http_thread(void *arg) {
 	pthread_exit(NULL);
 }
 
-void http_start(lua_State* L) {
+int http_start(lua_State* L) {
 	//wait until an ongoing shutdown has been finished
 	while(http_refcount && http_shutdown) delay(10);
 	
@@ -405,11 +516,17 @@ void http_start(lua_State* L) {
 		pthread_t thread;
 		ifconfig_t info;
 		int res;
+		driver_error_t *error;
 
 		LL=L;
 
-		driver_error_t *error;
-		if ((error = wifi_stat(&info))) return; //FIXME return error;		
+		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&wifi_mode)))) {
+			return luaL_error(L, "couldn't get wifi mode");
+		}
+	
+		if ((error = wifi_stat(&info))) {
+			return luaL_error(L, "couldn't get wifi IP");
+		}
 		strcpy(ip4addr, inet_ntoa(info.ip));
 
 		// Init thread attributes
@@ -430,10 +547,11 @@ void http_start(lua_State* L) {
 		http_shutdown = 0;
 		res = pthread_create(&thread, &attr, http_thread, NULL);
 		if (res) {
-			panic("Cannot start http_thread");
+			return luaL_error(L, "couldn't start http_thread");
 		}
-		http_refcount++;
 	}
+	
+	return 0;
 }
 
 void http_stop() {
