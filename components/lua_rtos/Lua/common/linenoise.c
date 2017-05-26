@@ -664,9 +664,11 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
     if (!status_get(STATUS_LUA_HISTORY)) return;
 
     if (mount_is_mounted("fat")) {
-  		fname = "/sd/history";
-   	} else if (mount_is_mounted("spiffs")) {
+    	if (mount_is_mounted("spiffs")) {
+    		fname = "/sd/history";
+    	} else {
     		fname = "/history";
+    	}
     } else {
     	return;
     }
@@ -693,9 +695,11 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
     if (!status_get(STATUS_LUA_HISTORY)) return;
     
     if (mount_is_mounted("fat")) {
-  		fname = "/sd/history";
-  	} else if (mount_is_mounted("spiffs")) {
-  		fname = "/history";
+    	if (mount_is_mounted("spiffs")) {
+    		fname = "/sd/history";
+    	} else {
+    		fname = "/history";
+    	}
     } else {
     	return;
     }
