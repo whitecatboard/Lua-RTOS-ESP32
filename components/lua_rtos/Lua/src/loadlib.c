@@ -608,7 +608,7 @@ static int ll_require (lua_State *L) {
 #if LUA_USE_ROTABLE
   // If name is in rotable, package is loaded
   const TValue *res = luaR_findglobal(name);
-  if (res) {
+  if (res != luaO_nilobject) {
     lua_pushrotable(L, (void *)rvalue(res));
     return 1;
   }

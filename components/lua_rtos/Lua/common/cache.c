@@ -138,7 +138,7 @@ const IRAM_ATTR TValue *rotable_cache_get(const luaR_entry *rotable, const char 
 	// miss
 	cache.miss++;
 
-	return NULL;
+	return luaO_nilobject;
 }
 
 void IRAM_ATTR rotable_cache_put(const luaR_entry *rotable, const luaR_entry *entry) {

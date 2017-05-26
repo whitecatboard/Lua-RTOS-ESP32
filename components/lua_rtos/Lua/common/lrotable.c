@@ -69,7 +69,7 @@ static const IRAM_ATTR TValue *luaR_auxfind(const luaR_entry *pentry, const char
 		// Try to get from cache
 		#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
 		res = rotable_cache_get(pentry, k);
-		if (res) {
+		if (res != luaO_nilobject) {
 			return res;
 		}
 		#endif
@@ -119,10 +119,10 @@ static const IRAM_ATTR TValue *luaR_auxfind(const luaR_entry *pentry, const char
 const IRAM_ATTR TValue *luaR_findglobal(const char *name) {
 	// Try to get from cache
 	#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
-	const TValue *res;
+	const TValue *res = luaO_nilobject;
 
 	res = rotable_cache_get(lua_rotable, name);
-	if (res) {
+	if (res != luaO_nilobject) {
 		return res;
 	}
 	#endif
@@ -142,7 +142,7 @@ const IRAM_ATTR TValue *luaR_findglobal(const char *name) {
 		entry++;
 	}
 
-	return NULL;
+	return luaO_nilobject;
 }
 
 int IRAM_ATTR luaR_findfunction(lua_State *L, const luaR_entry *ptable) {
