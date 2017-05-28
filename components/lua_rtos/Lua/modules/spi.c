@@ -104,6 +104,7 @@ static int lspi_deselect(lua_State*L ) {
 }
 
 static int lspi_rw_helper( lua_State *L, int withread ) {
+	driver_error_t *error;
 	unsigned char value;
 	const char *sval;
 	spi_userdata *spi = NULL;
@@ -120,7 +121,11 @@ static int lspi_rw_helper( lua_State *L, int withread ) {
 
 	for (i = 2; i <= total; i++) {
 		if(lua_isnumber(L, i)) {
-			spi_transfer(spi->spi_device, lua_tointeger(L, i), &value);
+			error = spi_transfer(spi->spi_device, lua_tointeger(L, i), &value);
+			if (error) {
+				return luaL_driver_error(L, error);
+			}
+
 			if(withread) {
 				lua_pushinteger(L, value);
 				lua_rawseti(L, -2, residx++);
@@ -129,7 +134,10 @@ static int lspi_rw_helper( lua_State *L, int withread ) {
 		else if(lua_isstring( L, i )) {
 			sval = lua_tolstring(L, i, &len);
 			for(j = 0; j < len; j ++) {
-				spi_transfer(spi->spi_device, sval[j], &value);
+				error = spi_transfer(spi->spi_device, sval[j], &value);
+				if (error) {
+					return luaL_driver_error(L, error);
+				}
 				if (withread) {
 					lua_pushinteger(L, value);
 					lua_rawseti(L, -2, residx++);
