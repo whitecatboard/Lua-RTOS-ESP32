@@ -61,7 +61,7 @@ void luaA_pushobject(lua_State *L, const TValue *o) {
 
 /* Find an entry in a rotable and return it */
 static const IRAM_ATTR TValue *luaR_auxfind(const luaR_entry *pentry, const char *k, luaR_numkey nk, unsigned *ppos) {
-	const TValue *res = luaO_nilobject;
+	const TValue *res = NULL;
 	const luaR_entry *entry = pentry;
 	int i = 0;
 
