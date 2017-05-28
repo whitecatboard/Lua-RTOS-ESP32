@@ -737,6 +737,7 @@ void IRAM_ATTR spi_ll_select(int deviceid) {
 #endif
 
         spi_bus[unit].last_device = deviceid;
+        spi_bus[unit].selected_device = deviceid;
     }
 
 	// Select device
