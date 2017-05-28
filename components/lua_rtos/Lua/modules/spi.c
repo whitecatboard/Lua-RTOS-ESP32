@@ -160,7 +160,6 @@ static int lspi_readwrite(lua_State* L) {
 // Destructor
 static int lspi_ins_gc (lua_State *L) {
     spi_userdata *udata = NULL;
-printf("lspi_ins_gc\r\n");
     udata = (spi_userdata *)luaL_checkudata(L, 1, "spi.ins");
 	if (udata) {
 	//	free(udata->instance);
