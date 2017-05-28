@@ -751,6 +751,8 @@ void IRAM_ATTR spi_ll_deselect(int deviceid) {
 	// Deselect device
     gpio_ll_pin_set(spi_bus[unit].device[device].cs);
 
+    spi_bus[unit].selected_device = -1;
+
 	spi_unlock(unit);
 }
 
