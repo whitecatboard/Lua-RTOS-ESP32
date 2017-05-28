@@ -30,6 +30,7 @@
 #include "pthread.h"
 #include "linenoise.h"
 #include "shell.h"
+#include "cache.h"
 
 #include <limits.h>
 
