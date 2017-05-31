@@ -370,17 +370,13 @@ int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, con
       reqpath = next;
   }
   pos = newpath + pathlen;
-  *pos = 0;
 
 	// add the additional path
 	if (addpath) {
-		//need to add addpath handling here (!)
-
 		// make sure the current path ends with a slash
 		if(*(pos-1) != '/') {
 			*pos = '/';
 			pos++;
-			*pos = 0;
 		}
 
 		// remove leading slashes from the request path
@@ -393,8 +389,8 @@ int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, con
 			memcpy(pos, addpath, seglen);
 
 		pos += seglen;
-		*pos = 0;
 	}
+	*pos = 0;
 
 	return 1;
 }
@@ -503,6 +499,7 @@ int process(FILE *f) {
 						  chunk(f, "</TR>");
 					  }
 
+					  filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL); //restore folder pathbuf
 					  dir = opendir(pathbuf);
 					  while ((de = readdir(dir)) != NULL) {
 					  	filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, de->d_name);
