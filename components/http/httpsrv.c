@@ -48,7 +48,6 @@
 #include <dirent.h>
 #include <sys/syslog.h>
 
-#define PORT           80
 #define SERVER         "lua-rtos-http-server/1.0"
 #define PROTOCOL       "HTTP/1.1"
 #define RFC1123FMT     "%a, %d %b %Y %H:%M:%S GMT"
@@ -240,7 +239,7 @@ void send_file(FILE *f, char *path, struct stat *statbuf, char *requestdata) {
 					}
 					if (*p1 != 0) {
 						if (luaL_dostring(LL, p1)) {
-							//printf("lua error '%s' interpreting: '%s'", lua_tostring(LL, -1), p1);
+							//printf("LUA Error at %s in %s on line %i", lua_tostring(LL, -1), path, line);
 							chunk(f, "LUA Error at %s in %s on line %i", lua_tostring(LL, -1), path, line);
 						}
 					}
@@ -282,6 +281,122 @@ void send_file(FILE *f, char *path, struct stat *statbuf, char *requestdata) {
 		while ((n = fread(data, 1, sizeof (data), file)) > 0) fwrite(data, 1, n, f);
 		fclose(file);
 	}
+}
+
+//newpath must have a size of HTTP_BUFF_SIZE
+//rootpath must not be relative, should be '/' or any valid file system path
+//reqpath may be relative
+//addpath must not be relative and should not start with '/', or should be NULL
+int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, const char *addpath) {
+	char *pos = newpath;
+	int seglen;
+
+	//newpath has a size of HTTP_BUFF_SIZE
+	memset(newpath, 0, HTTP_BUFF_SIZE);
+
+  // treat null as an empty path.
+  if (!reqpath)
+      reqpath = "";
+
+	// copy the root path
+	seglen = strlen(rootpath);
+	if(seglen==0) {
+	}
+	else if(seglen==1) {
+		// no need to memcpy
+		*pos = *rootpath;
+		pos++;
+	}
+	else {
+		memcpy(newpath, rootpath, seglen);
+		pos += seglen;
+	}
+
+	// make sure the root path ends with a slash
+	if(*(pos-1) != '/') {
+		*pos = '/';
+		pos++;
+	}
+	*pos = 0;
+
+	// remove leading slashes from the request path
+	while (*reqpath=='/') {
+		reqpath++;
+	}
+
+	int rootlen = pos - newpath;
+	int pathlen = rootlen;
+
+	// add the request path segment by segment
+	while (*reqpath) {
+      // finding the closing '/'
+      const char *next = reqpath;
+      while (*next && (*next != '/')) {
+          ++next;
+      }
+      seglen = next - reqpath;
+
+      if (seglen == 0 || (seglen == 1 && reqpath[0] == '.')) {
+          // noop segment (/ or ./) => skip
+      }
+      else if (seglen == 2 && reqpath[0] == '.' && reqpath[1] == '.') {
+          // backpath (../)
+
+          // try to crop the prior segment
+          do {
+              --pathlen;
+          } while (pathlen && newpath[pathlen - 1] != '/');
+
+          // now test if we are above root path length and
+          // get back if necessary
+          if (pathlen < rootlen) {
+              pathlen = rootlen;
+          }
+      }
+      else {
+          // an actual segment, append to dest path
+          if (*next) {
+              seglen++;
+          }
+          memcpy(newpath + pathlen, reqpath, seglen);
+          pathlen += seglen;
+      }
+
+      // skip over trailing slash => next segment
+      if (*next) {
+          ++next;
+      }
+
+      reqpath = next;
+  }
+  pos = newpath + pathlen;
+  *pos = 0;
+
+	// add the additional path
+	if (addpath) {
+		//need to add addpath handling here (!)
+
+		// make sure the current path ends with a slash
+		if(*(pos-1) != '/') {
+			*pos = '/';
+			pos++;
+			*pos = 0;
+		}
+
+		// remove leading slashes from the request path
+		while (*addpath=='/') {
+			addpath++;
+		}
+
+		seglen = strlen(addpath);
+		if(pos - newpath + seglen < HTTP_BUFF_SIZE)
+			memcpy(pos, addpath, seglen);
+
+		pos += seglen;
+		*pos = 0;
+	}
+
+	return 1;
 }
 
 int process(FILE *f) {
@@ -338,31 +453,35 @@ int process(FILE *f) {
 				}
 			}
 
-		} //while
+		} // while
 	} // AP mode
 		
 	if (!method || !path) return -1; //protocol may be omitted
 
 	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol);
 
-	fseek(f, 0, SEEK_CUR); // Force change of stream direction
+	fseek(f, 0, SEEK_CUR); // force change of stream direction
 
 	if (strcasecmp(method, "GET") != 0) {
 		send_error(f, 501, "Not supported", NULL, "Method is not supported.");
-	} else if (stat(path, &statbuf) < 0) {
+	} else if (!filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL)) {
 		send_error(f, 404, "Not Found", NULL, "File not found.");
-		syslog(LOG_DEBUG, "http: %s Not found\r", path);
+		syslog(LOG_DEBUG, "http: invalid path requested: %s\r", path);
+	} else if (stat(pathbuf, &statbuf) < 0) {
+		send_error(f, 404, "Not Found", NULL, "File not found.");
+		syslog(LOG_DEBUG, "http: %s Not found\r", pathbuf);
 	} else if (S_ISDIR(statbuf.st_mode)) {
 		len = strlen(path);
 		if (len == 0 || path[len - 1] != '/') {
+			//send a redirect
 			snprintf(pathbuf, sizeof (pathbuf), "Location: %s/", path);
 			send_error(f, 302, "Found", pathbuf, "Directories must end with a slash.");
 		} else {
-			snprintf(pathbuf, sizeof (pathbuf), "%sindex.lua", path);
+			filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.lua");
 			if (stat(pathbuf, &statbuf) >= 0) {
 				send_file(f, pathbuf, &statbuf, data);
 			} else {
-				  snprintf(pathbuf, sizeof (pathbuf), "%sindex.html", path);
+					filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.html");
 				  if (stat(pathbuf, &statbuf) >= 0) {
 					  send_file(f, pathbuf, &statbuf, data);
 				  } else {
@@ -384,11 +503,9 @@ int process(FILE *f) {
 						  chunk(f, "</TR>");
 					  }
 
-					  dir = opendir(path);
+					  dir = opendir(pathbuf);
 					  while ((de = readdir(dir)) != NULL) {
-						  strcpy(pathbuf, path);
-						  strcat(pathbuf, de->d_name);
-
+					  	filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, de->d_name);
 						  stat(pathbuf, &statbuf);
 
 						  chunk(f, "<TR>");
@@ -415,7 +532,7 @@ int process(FILE *f) {
 			   }
 		}
 	} else {
-		send_file(f, path, &statbuf, data);
+		send_file(f, pathbuf, &statbuf, data);
 	}
 
 	return 0;
@@ -437,7 +554,7 @@ static void *http_thread(void *arg) {
 		memset(&sin, 0, sizeof(sin));
 		sin.sin_family      = AF_INET;
 		sin.sin_addr.s_addr = INADDR_ANY;
-		sin.sin_port        = htons(PORT);
+		sin.sin_port        = htons(CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
 		int rc = bind(server, (struct sockaddr *) &sin, sizeof (sin));
 		LWIP_ASSERT("httpd_init: bind failed", rc == 0);
 		if(0 != rc) {
@@ -457,7 +574,7 @@ static void *http_thread(void *arg) {
 		setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 	}
 	
-	syslog(LOG_INFO, "http: server listening on port %d\n", PORT);
+	syslog(LOG_INFO, "http: server listening on port %d\n", CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
 
 	http_refcount++;
 	while (!http_shutdown) {
@@ -486,7 +603,7 @@ static void *http_thread(void *arg) {
 		}
 	}
 
-	syslog(LOG_INFO, "http: server shutting down on port %d\n", PORT);
+	syslog(LOG_INFO, "http: server shutting down on port %d\n", CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
 
 	/* it's not ideal to keep the server_socket open as it is blocked
 	   but now at least the httpsrv can be restarted from lua scripts.
