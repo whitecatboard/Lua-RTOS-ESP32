@@ -37,8 +37,9 @@
 
 #include <drivers/net.h>
 
-extern void http_start(lua_State* L);
+extern int http_start(lua_State* L);
 extern void http_stop();
+extern int http_print(lua_State* L);
 
 static int lhttp_start(lua_State* L) {
 	driver_error_t *error;
@@ -47,9 +48,7 @@ static int lhttp_start(lua_State* L) {
     	return luaL_driver_error(L, error);
 	}
 
-	http_start(L);
-
-	return 0;
+	return http_start(L);
 }
 
 static int lhttp_stop(lua_State* L) {
@@ -64,9 +63,20 @@ static int lhttp_stop(lua_State* L) {
 	return 0;
 }
 
+static int lhttp_print(lua_State* L) {
+	driver_error_t *error;
+
+	if ((error = net_check_connectivity())) {
+    	return luaL_driver_error(L, error);
+	}
+
+	return http_print(L);
+}
+
 static const LUA_REG_TYPE http_map[] = {
     { LSTRKEY( "start" ),	 LFUNCVAL( lhttp_start   ) },
     { LSTRKEY( "stop"  ),	 LFUNCVAL( lhttp_stop    ) },
+    { LSTRKEY( "print_chunk"  ),	 LFUNCVAL( lhttp_print    ) },
 	{ LNILKEY, LNILVAL }
 };
 

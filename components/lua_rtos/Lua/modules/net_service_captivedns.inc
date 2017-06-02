@@ -34,7 +34,7 @@
 
 #include <drivers/net.h>
 
-extern void captivedns_start();
+extern int captivedns_start(lua_State* L);
 extern void captivedns_stop();
 
 static int lcaptivedns_start(lua_State* L) {
@@ -44,9 +44,7 @@ static int lcaptivedns_start(lua_State* L) {
     	return luaL_driver_error(L, error);
 	}
 
-	captivedns_start();
-
-	return 0;
+	return captivedns_start(L);
 }
 
 static int lcaptivedns_stop(lua_State* L) {

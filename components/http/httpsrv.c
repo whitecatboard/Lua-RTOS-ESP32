@@ -36,8 +36,11 @@
 #include "lwip/dns.h"
 #include "lwip/ip_addr.h"
 #include <sys/panic.h>
+#include <sys/delay.h>
 
+#include "esp_wifi_types.h"
 #include <pthread/pthread.h>
+#include <esp_wifi.h>
 
 #include <time.h>
 #include <stdio.h>
@@ -45,7 +48,6 @@
 #include <dirent.h>
 #include <sys/syslog.h>
 
-#define PORT           80
 #define SERVER         "lua-rtos-http-server/1.0"
 #define PROTOCOL       "HTTP/1.1"
 #define RFC1123FMT     "%a, %d %b %Y %H:%M:%S GMT"
@@ -55,10 +57,18 @@
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
+#include <drivers/net.h>
 
 char *strcasestr(const char *haystack, const char *needle);
+driver_error_t *wifi_stat(ifconfig_t *info);
+driver_error_t *wifi_check_error(esp_err_t error);
 
 static lua_State *LL=NULL;
+static u8_t wifi_mode = WIFI_MODE_STA;
+static u8_t http_refcount = 0;
+static u8_t volatile http_shutdown = 0;
+static char ip4addr[IP4ADDR_STRLEN_MAX];
+static int server = 0;
 
 int is_lua(char *name) {
 	char *ext = strrchr(name, '.');
@@ -148,8 +158,11 @@ static void chunk(FILE *f, const char *fmt, ...) {
 
 		vsnprintf(buffer, 2048, fmt, args);
 
-		fprintf(f, "%x\r\n", strlen(buffer));
-		fprintf(f, "%s\r\n", buffer);
+		int length = strlen(buffer);
+		if(length) { //a length of zero would end our whole transfer
+			fprintf(f, "%x\r\n", length);
+			fprintf(f, "%s\r\n", buffer);
+		}
 
 		va_end(args);
 
@@ -157,9 +170,35 @@ static void chunk(FILE *f, const char *fmt, ...) {
 	}
 }
 
+int http_print(lua_State* L) {
+
+		lua_getglobal(L, "http_stream_handle");
+		if (!lua_islightuserdata(L, -1)) {
+        return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
+    }
+    FILE *f = (FILE*)lua_touserdata(L, -1);
+
+		if (!f) {
+        return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
+    }
+
+    int nargs = lua_gettop(L);
+    for (int i=1; i <= nargs; i++) {
+        if (lua_isstring(L, i)) {
+            chunk(f, "%s", lua_tostring(L, i));
+        }
+        else {
+        		/* non-strings handling not reqired */
+        }
+    }
+
+    return 0;
+}
+
 void send_file(FILE *f, char *path, struct stat *statbuf, char *requestdata) {
-	int n;
+	int n, inLua, line;
 	char data[HTTP_BUFF_SIZE];
+	char *p1, *p2;
 	FILE *file = fopen(path, "r");
 
 	if (!file) {
@@ -168,33 +207,192 @@ void send_file(FILE *f, char *path, struct stat *statbuf, char *requestdata) {
 		fclose(file);
 		
 		send_headers(f, 200, "OK", NULL, "text/html", -1);
+		fflush(f);
 
 		lua_pushstring(LL, (requestdata && *requestdata) ? requestdata:"");
 		lua_setglobal(LL, "http_request");
 
-		int rc = luaL_dofile(LL, path);
-		(void) rc;
+		lua_pushlightuserdata(LL, (void*)f);
+		lua_setglobal(LL, "http_stream_handle");
 
-		lua_getglobal(LL, "http_response");
-		size_t rlen = 0;
-		const char *response = lua_tostring(LL, -1);
-		if (!lua_isnil(LL,-1)) {
-		rlen = lua_rawlen(LL, -1);
-			if (rlen>0) {
-				fprintf(f, "%x\r\n", rlen);
-				fwrite(response, 1, rlen, f);
-				fprintf(f, "\r\n");
-			}
-		}
-		lua_pop(LL, 1);
+		file = fopen(path, "r");
+		inLua = false;
+		line = 0;
+		while (fgets(data, sizeof (data), file)) {
+			line++;
+			n = strlen(data);
+			
+			for(p1 = data; p1-data < n; ) {
+			
+				if(inLua) {
 				
+					p2 = strcasestr(p1, "?>");
+					if(p2) {
+						*p2 = 0;
+						inLua = false;
+						p2+=2;
+						//remove newline after lua code
+						while(*p2=='\r' || *p2=='\n') p2++;
+					}
+					else {
+						p2 = data + n; //all of this line was done
+					}
+					if (*p1 != 0) {
+						if (luaL_dostring(LL, p1)) {
+							//printf("LUA Error at %s in %s on line %i", lua_tostring(LL, -1), path, line);
+							chunk(f, "LUA Error at %s in %s on line %i", lua_tostring(LL, -1), path, line);
+						}
+					}
+					p1 = p2;
+				}
+				else {
+
+					p2 = strcasestr(p1, "<?lua");
+					if(p2) {
+						*p2 = 0;
+						inLua = true;
+						p2+=5;
+						//ignore newline before lua code
+						while(*p2=='\r' || *p2=='\n') p2++;
+					}
+					else {
+						p2 = data + n; //all of this line was done
+					}
+					if (*p1 != 0) {
+						chunk(f, "%s", p1);
+					}
+					p1 = p2;
+				}
+				
+			}
+
+			fflush(f);
+		}
+		fclose(file);
+
 		fprintf(f, "0\r\n\r\n");
+
+		lua_pushlightuserdata(LL, (void*)0);
+		lua_setglobal(LL, "http_stream_handle");
+
 	} else {
 		int length = S_ISREG(statbuf->st_mode) ? statbuf->st_size : -1;
 		send_headers(f, 200, "OK", NULL, get_mime_type(path), length);
 		while ((n = fread(data, 1, sizeof (data), file)) > 0) fwrite(data, 1, n, f);
 		fclose(file);
 	}
+}
+
+//newpath must have a size of HTTP_BUFF_SIZE
+//rootpath must not be relative, should be '/' or any valid file system path
+//reqpath may be relative
+//addpath must not be relative and should not start with '/', or should be NULL
+int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, const char *addpath) {
+	char *pos = newpath;
+	int seglen;
+
+	//newpath has a size of HTTP_BUFF_SIZE
+	memset(newpath, 0, HTTP_BUFF_SIZE);
+
+  // treat null as an empty path.
+  if (!reqpath)
+      reqpath = "";
+
+	// copy the root path
+	seglen = strlen(rootpath);
+	if(seglen==0) {
+	}
+	else if(seglen==1) {
+		// no need to memcpy
+		*pos = *rootpath;
+		pos++;
+	}
+	else {
+		memcpy(newpath, rootpath, seglen);
+		pos += seglen;
+	}
+
+	// make sure the root path ends with a slash
+	if(*(pos-1) != '/') {
+		*pos = '/';
+		pos++;
+	}
+	*pos = 0;
+
+	// remove leading slashes from the request path
+	while (*reqpath=='/') {
+		reqpath++;
+	}
+
+	int rootlen = pos - newpath;
+	int pathlen = rootlen;
+
+	// add the request path segment by segment
+	while (*reqpath) {
+      // finding the closing '/'
+      const char *next = reqpath;
+      while (*next && (*next != '/')) {
+          ++next;
+      }
+      seglen = next - reqpath;
+
+      if (seglen == 0 || (seglen == 1 && reqpath[0] == '.')) {
+          // noop segment (/ or ./) => skip
+      }
+      else if (seglen == 2 && reqpath[0] == '.' && reqpath[1] == '.') {
+          // backpath (../)
+
+          // try to crop the prior segment
+          do {
+              --pathlen;
+          } while (pathlen && newpath[pathlen - 1] != '/');
+
+          // now test if we are above root path length and
+          // get back if necessary
+          if (pathlen < rootlen) {
+              pathlen = rootlen;
+          }
+      }
+      else {
+          // an actual segment, append to dest path
+          if (*next) {
+              seglen++;
+          }
+          memcpy(newpath + pathlen, reqpath, seglen);
+          pathlen += seglen;
+      }
+
+      // skip over trailing slash => next segment
+      if (*next) {
+          ++next;
+      }
+
+      reqpath = next;
+  }
+  pos = newpath + pathlen;
+
+	// add the additional path
+	if (addpath) {
+		// make sure the current path ends with a slash
+		if(*(pos-1) != '/') {
+			*pos = '/';
+			pos++;
+		}
+
+		// remove leading slashes from the request path
+		while (*addpath=='/') {
+			addpath++;
+		}
+
+		seglen = strlen(addpath);
+		if(pos - newpath + seglen < HTTP_BUFF_SIZE)
+			memcpy(pos, addpath, seglen);
+
+		pos += seglen;
+	}
+	*pos = 0;
+
+	return 1;
 }
 
 int process(FILE *f) {
@@ -205,7 +403,6 @@ int process(FILE *f) {
 	char *host = NULL;
 	char *protocol;
 	struct stat statbuf;
-	char hostbuf[HTTP_BUFF_SIZE];
 	char pathbuf[HTTP_BUFF_SIZE];
 	int len;
 
@@ -222,47 +419,65 @@ int process(FILE *f) {
 	  	data++; //point to start of params
 	  }
 	}
-		
-	while (fgets(hostbuf, sizeof (hostbuf), f)) {
-		host = strcasestr(hostbuf, "Host:");
-		if (host) {
-			host = strtok(host, " "); //Host:
-	  	host = strtok(NULL, "\r"); //the actual host
 
-			if (0 == strcasecmp(CAPTIVE_SERVER_NAME, host)) {
-				break; //done parsing headers
+	//only in AP mode we redirect arbitrary host names to our own host name
+	if (wifi_mode != WIFI_MODE_STA) {
+	
+		//find the Host: header and check if it matches our IP or captive server name
+		while (fgets(pathbuf, sizeof (pathbuf), f)) {
+
+			//quick check if the first char matches, only then do strcasestr
+			if(pathbuf[0]=='h' || pathbuf[0]=='H') {			
+				host = strcasestr(pathbuf, "Host:");
+				
+				//check if the line begins with "Host:"
+				if (host==(char *)pathbuf) {
+					host = strtok(host, ":");  //Host:
+					host = strtok(NULL, "\r"); //the actual host
+					while(*host==' ') host++;  //skip spaces after the :
+
+					if (0 == strcasecmp(CAPTIVE_SERVER_NAME, host) ||
+							0 == strcasecmp(ip4addr, host)) {
+						break; //done parsing headers
+					}
+					else {
+						//redirect
+						snprintf(pathbuf, sizeof (pathbuf), "Location: http://%s/", CAPTIVE_SERVER_NAME);
+						send_headers(f, 302, "Found", pathbuf, NULL, 0);
+						return 0;
+					}
+				}
 			}
-			else {
-				//redirect
-				snprintf(pathbuf, sizeof (pathbuf), "Location: http://%s/", CAPTIVE_SERVER_NAME);
-				send_headers(f, 302, "Found", pathbuf, "text/html", -1);
-				return 0;
-			}
-		}
-	}
+
+		} // while
+	} // AP mode
 		
-	if (!method || !path || !protocol) return -1;
+	if (!method || !path) return -1; //protocol may be omitted
 
 	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol);
 
-	fseek(f, 0, SEEK_CUR); // Force change of stream direction
+	fseek(f, 0, SEEK_CUR); // force change of stream direction
 
 	if (strcasecmp(method, "GET") != 0) {
 		send_error(f, 501, "Not supported", NULL, "Method is not supported.");
-	} else if (stat(path, &statbuf) < 0) {
+	} else if (!filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL)) {
 		send_error(f, 404, "Not Found", NULL, "File not found.");
-		syslog(LOG_DEBUG, "http: %s Not found\r", path);
+		syslog(LOG_DEBUG, "http: invalid path requested: %s\r", path);
+	} else if (stat(pathbuf, &statbuf) < 0) {
+		send_error(f, 404, "Not Found", NULL, "File not found.");
+		syslog(LOG_DEBUG, "http: %s Not found\r", pathbuf);
 	} else if (S_ISDIR(statbuf.st_mode)) {
 		len = strlen(path);
 		if (len == 0 || path[len - 1] != '/') {
+			//send a redirect
 			snprintf(pathbuf, sizeof (pathbuf), "Location: %s/", path);
 			send_error(f, 302, "Found", pathbuf, "Directories must end with a slash.");
 		} else {
-			snprintf(pathbuf, sizeof (pathbuf), "%sindex.lua", path);
+			filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.lua");
 			if (stat(pathbuf, &statbuf) >= 0) {
 				send_file(f, pathbuf, &statbuf, data);
 			} else {
-				  snprintf(pathbuf, sizeof (pathbuf), "%sindex.html", path);
+					filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.html");
 				  if (stat(pathbuf, &statbuf) >= 0) {
 					  send_file(f, pathbuf, &statbuf, data);
 				  } else {
@@ -284,11 +499,10 @@ int process(FILE *f) {
 						  chunk(f, "</TR>");
 					  }
 
-					  dir = opendir(path);
+					  filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL); //restore folder pathbuf
+					  dir = opendir(pathbuf);
 					  while ((de = readdir(dir)) != NULL) {
-						  strcpy(pathbuf, path);
-						  strcat(pathbuf, de->d_name);
-
+					  	filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, de->d_name);
 						  stat(pathbuf, &statbuf);
 
 						  chunk(f, "<TR>");
@@ -315,7 +529,7 @@ int process(FILE *f) {
 			   }
 		}
 	} else {
-		send_file(f, path, &statbuf, data);
+		send_file(f, pathbuf, &statbuf, data);
 	}
 
 	return 0;
@@ -323,38 +537,59 @@ int process(FILE *f) {
 
 static void *http_thread(void *arg) {
 	struct sockaddr_in sin;
-	int server;
 
-	server = socket(AF_INET, SOCK_STREAM, 0);
+	if(0 == server) {
+		server = socket(AF_INET, SOCK_STREAM, 0);
+		LWIP_ASSERT("httpd_init: socket failed", server >= 0);
+		if(0 > server) {
+			pthread_exit(NULL); //FIXME add error handling here
+		}
 
+		u8_t one = 1;
+		setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 
-	sin.sin_family      = AF_INET;
-	sin.sin_addr.s_addr = INADDR_ANY;
-	sin.sin_port        = htons(PORT);
-	bind(server, (struct sockaddr *) &sin, sizeof (sin));
+		memset(&sin, 0, sizeof(sin));
+		sin.sin_family      = AF_INET;
+		sin.sin_addr.s_addr = INADDR_ANY;
+		sin.sin_port        = htons(CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
+		int rc = bind(server, (struct sockaddr *) &sin, sizeof (sin));
+		LWIP_ASSERT("httpd_init: bind failed", rc == 0);
+		if(0 != rc) {
+			pthread_exit(NULL); //FIXME add error handling here
+		}
 
-	listen(server, 5);
-	syslog(LOG_INFO, "http: server listening on port %d\n", PORT);
+		listen(server, 5);
+		LWIP_ASSERT("httpd_init: listen failed", server >= 0);
+		if(0 > server) {
+			pthread_exit(NULL); //FIXME add error handling here
+		}
 
-	while (1) {
+		// Set the timeout for accept
+		struct timeval timeout;
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+		setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+	}
+	
+	syslog(LOG_INFO, "http: server listening on port %d\n", CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
+
+	http_refcount++;
+	while (!http_shutdown) {
 		int client;
 
 		// Wait for a request ...
 		if ((client = accept(server, NULL, NULL)) != -1) {
-			// We waiting for send all data before close socket's stream
+
+			// We wait for send all data before close socket's stream
 			struct linger so_linger;
-
 			so_linger.l_onoff  = 1;
-			so_linger.l_linger = 10;
-
+			so_linger.l_linger = 2;
 			setsockopt(client, SOL_SOCKET, SO_LINGER, &so_linger, sizeof(so_linger));
 
 			// Set a timeout for send / receive
 			struct timeval tout;
-
 			tout.tv_sec = 10;
 			tout.tv_usec = 0;
-
 			setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &tout, sizeof(tout));
 			setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &tout, sizeof(tout));
 
@@ -365,42 +600,78 @@ static void *http_thread(void *arg) {
 		}
 	}
 
-	close(server);
+	syslog(LOG_INFO, "http: server shutting down on port %d\n", CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
 
+	/* it's not ideal to keep the server_socket open as it is blocked
+	   but now at least the httpsrv can be restarted from lua scripts.
+	   if we'd properly close the socket we would need to bind() again
+	   when restarting the httpsrv but bind() will succeed only after
+	   several (~4) minutes: http://lwip.wikia.com/wiki/Netconn_bind
+
+	   "Note that if you try to bind the same address and/or port you
+	    might get an error (ERR_USE, address in use), even if you
+	    delete the netconn. Only after some time (minutes) the
+	    resources are completely cleared in the underlying stack due
+	    to the need to follow the TCP specification and go through
+	    the TCP timewait state."
+	*/
+
+	http_refcount--;
 	pthread_exit(NULL);
 }
 
-void http_start(lua_State* L) {
-	pthread_attr_t attr;
-	struct sched_param sched;
-	pthread_t thread;
-	int res;
+int http_start(lua_State* L) {
+	//wait until an ongoing shutdown has been finished
+	while(http_refcount && http_shutdown) delay(10);
+	
+	if(!http_refcount) {
+		pthread_attr_t attr;
+		struct sched_param sched;
+		pthread_t thread;
+		ifconfig_t info;
+		int res;
+		driver_error_t *error;
 
-	LL=L;
+		LL=L;
 
-	// Init thread attributes
-	pthread_attr_init(&attr);
+		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&wifi_mode)))) {
+			return luaL_error(L, "couldn't get wifi mode");
+		}
+	
+		if ((error = wifi_stat(&info))) {
+			return luaL_error(L, "couldn't get wifi IP");
+		}
+		strcpy(ip4addr, inet_ntoa(info.ip));
 
-	// Set stack size
-	pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_STACK_SIZE);
+		// Init thread attributes
+		pthread_attr_init(&attr);
 
-	// Set priority
-	sched.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
-	pthread_attr_setschedparam(&attr, &sched);
+		// Set stack size
+		pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_STACK_SIZE);
 
-	// Set CPU
-	cpu_set_t cpu_set = CONFIG_LUA_RTOS_LUA_TASK_CPU;
-	pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+		// Set priority
+		sched.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
+		pthread_attr_setschedparam(&attr, &sched);
 
-	// Create thread
-	res = pthread_create(&thread, &attr, http_thread, NULL);
-	if (res) {
-		panic("Cannot start http_thread");
+		// Set CPU
+		cpu_set_t cpu_set = CONFIG_LUA_RTOS_LUA_TASK_CPU;
+		pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+
+		// Create thread
+		http_shutdown = 0;
+		res = pthread_create(&thread, &attr, http_thread, NULL);
+		if (res) {
+			return luaL_error(L, "couldn't start http_thread");
+		}
 	}
+	
+	return 0;
 }
 
 void http_stop() {
-
+	if(http_refcount) {
+		http_shutdown++;
+	}
 }
 
 #endif
