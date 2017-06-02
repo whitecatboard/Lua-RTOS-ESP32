@@ -164,7 +164,11 @@ static driver_error_t *wifi_deinit() {
 driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 	driver_error_t *error;
 
-	if (!status_get(STATUS_WIFI_SETUP)) {
+	uint8_t mode;
+	if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
+
+	if (!status_get(STATUS_WIFI_INITED) || WIFI_MODE_AP == mode) {
+		status_clear(STATUS_WIFI_INITED); //for case of WIFI_MODE_AP
 		// Attach wifi driver
 		if ((error = wifi_init(WIFI_MODE_STA))) {
 			return error;
@@ -229,6 +233,17 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int pow
 	if (mode == WIFI_MODE_AP) {
 		if (*password && strlen(password) < 8) {
 			return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_PASSWORD, "if provided the password must have more than 7 characters");
+		}
+	}
+
+	if (status_get(STATUS_WIFI_INITED)) {
+		uint8_t curmode;
+		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&curmode)))) return error;
+		if (curmode != mode) {
+			//in case of switching mode AP<->STA
+			status_clear(STATUS_WIFI_INITED); 
+			status_clear(STATUS_WIFI_STARTED); 
+			status_clear(STATUS_WIFI_CONNECTED);
 		}
 	}
 
