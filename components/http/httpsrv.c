@@ -29,6 +29,8 @@
 
 #if LUA_USE_HTTP
 
+#include "preprocessor.h"
+
 #include "lwip/err.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
@@ -198,6 +200,7 @@ int http_print(lua_State* L) {
 void send_file(FILE *f, char *path, struct stat *statbuf, char *requestdata) {
 	int n, inLua, line;
 	char data[HTTP_BUFF_SIZE];
+
 	char *p1, *p2;
 	FILE *file = fopen(path, "r");
 
@@ -215,60 +218,19 @@ void send_file(FILE *f, char *path, struct stat *statbuf, char *requestdata) {
 		lua_pushlightuserdata(LL, (void*)f);
 		lua_setglobal(LL, "http_stream_handle");
 
-		file = fopen(path, "r");
-		inLua = false;
-		line = 0;
-		while (fgets(data, sizeof (data), file)) {
-			line++;
-			n = strlen(data);
-			
-			for(p1 = data; p1-data < n; ) {
-			
-				if(inLua) {
-				
-					p2 = strcasestr(p1, "?>");
-					if(p2) {
-						*p2 = 0;
-						inLua = false;
-						p2+=2;
-						//remove newline after lua code
-						while(*p2=='\r' || *p2=='\n') p2++;
-					}
-					else {
-						p2 = data + n; //all of this line was done
-					}
-					if (*p1 != 0) {
-						if (luaL_dostring(LL, p1)) {
-							//printf("LUA Error at %s in %s on line %i", lua_tostring(LL, -1), path, line);
-							chunk(f, "LUA Error at %s in %s on line %i", lua_tostring(LL, -1), path, line);
-						}
-					}
-					p1 = p2;
-				}
-				else {
+		char ppath[PATH_MAX];
 
-					p2 = strcasestr(p1, "<?lua");
-					if(p2) {
-						*p2 = 0;
-						inLua = true;
-						p2+=5;
-						//ignore newline before lua code
-						while(*p2=='\r' || *p2=='\n') p2++;
-					}
-					else {
-						p2 = data + n; //all of this line was done
-					}
-					if (*p1 != 0) {
-						chunk(f, "%s", p1);
-					}
-					p1 = p2;
-				}
-				
-			}
-
-			fflush(f);
+		strcpy(ppath, path);
+		if (strlen(ppath) < PATH_MAX - 1) {
+			strcat(ppath, "p");
 		}
-		fclose(file);
+
+		http_process_lua_page(path,ppath);
+
+		int rc = luaL_dofile(LL, ppath);
+		(void) rc;
+
+		fflush(f);
 
 		fprintf(f, "0\r\n\r\n");
 
@@ -451,7 +413,7 @@ int process(FILE *f) {
 
 		} // while
 	} // AP mode
-		
+
 	if (!method || !path) return -1; //protocol may be omitted
 
 	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol);
@@ -607,7 +569,6 @@ static void *http_thread(void *arg) {
 	   if we'd properly close the socket we would need to bind() again
 	   when restarting the httpsrv but bind() will succeed only after
 	   several (~4) minutes: http://lwip.wikia.com/wiki/Netconn_bind
-
 	   "Note that if you try to bind the same address and/or port you
 	    might get an error (ERR_USE, address in use), even if you
 	    delete the netconn. Only after some time (minutes) the
