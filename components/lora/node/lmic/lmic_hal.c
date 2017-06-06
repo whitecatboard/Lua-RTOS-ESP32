@@ -140,7 +140,7 @@ driver_error_t *hal_init (void) {
 	driver_error_t *error;
 
 	// Init SPI bus
-	if ((error = spi_setup(CONFIG_LUA_RTOS_LORA_NODE_SPI, 1, CONFIG_LUA_RTOS_LORA_NODE_CS, 0, LMIC_SPI_KHZ * 1000, &spi_device))) {
+	if ((error = spi_setup(CONFIG_LUA_RTOS_LORA_NODE_SPI, 1, CONFIG_LUA_RTOS_LORA_NODE_CS, 0, LMIC_SPI_KHZ * 1000, SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
         syslog(LOG_ERR, "lmic cannot open spi%u", CONFIG_LUA_RTOS_LORA_NODE_SPI);
         return error;
     }

@@ -2,7 +2,7 @@
  * Lua RTOS, network manager
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -30,6 +30,10 @@
 #ifndef NET_H_
 #define NET_H_
 
+#include "esp_system.h"
+#include "esp_event.h"
+#include "esp_event_loop.h"
+
 #include "lwip/err.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
@@ -39,6 +43,8 @@
 
 #include <sys/driver.h>
 #include <sys/status.h>
+
+#define MAX_NET_EVENT_CALLBACKS 3
 
 #define evWIFI_SCAN_END 	       	 ( 1 << 0 )
 #define evWIFI_CONNECTED 	       	 ( 1 << 1 )
@@ -58,9 +64,75 @@ typedef struct {
 // NET errors
 #define NET_ERR_NOT_AVAILABLE              (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  0)
 #define NET_ERR_INVALID_IP                 (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  1)
+#define NET_ERR_NO_MORE_CALLBACKS          (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  2)
+#define NET_ERR_NO_CALLBACK_NOT_FOUND      (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  3)
 
-driver_error_t *net_check_connectivity();
+typedef void (*net_event_register_callback_t)(system_event_t *event);
+
+/**
+ * @brief Init the network driver. It must be called before use any network function.
+ *        The function inits the tcp/ip adapter, the main network event loop, and some
+ *        internal structures required by Lua RTOS.
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs. Reserved for future use.
+ */
 driver_error_t *net_init();
+
+/**
+ * @brief Checks the network connectivity. We consider that network is available if
+ *        one of the network interface are init and up.
+ *
+ * @return
+ *     - NULL success, the network is available
+ *     - Pointer to driver_error_t if some error occurs.
+ *
+ *     	 NET_ERR_NOT_AVAILABLE
+ */
+driver_error_t *net_check_connectivity();
+
+/**
+ * @brief Lookup for a hostname, and get the IP, doing a DNS search.
+ *
+ * @param name The hostname.
+ * @param address A pointer to a sockaddr_in structure where put the IP address.
+ *
+ * @return
+ *     - NULL success, the host name where find by the DNS
+ *     - Pointer to driver_error_t if some error occurs.
+ *
+ *     	 NET_ERR_NOT_AVAILABLE
+ */
 driver_error_t *net_lookup(const char *name, struct sockaddr_in *address);
+
+/**
+ * @brief Register a function callback in the network event loop. When an event is
+ *        received in the event loop the net driver executes the default treatment
+ *        for the event, and at the end call to the registered callbacks.
+ *
+ * @param name A pointer to the callback function.
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs.
+ *
+ *     	 NET_ERR_NO_MORE_CALLBACKS
+ */
+driver_error_t *net_event_register_callback(net_event_register_callback_t func);
+
+/**
+ * @brief Unregister a function callback previously registered with the
+ *        net_event_register_callback function.
+ *
+ * @param name A pointer to the callback function.
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs.
+ *
+ *     	 NET_ERR_NO_MORE_CALLBACKS
+ */
+driver_error_t *net_event_unregister_callback(net_event_register_callback_t func);
 
 #endif

@@ -53,6 +53,8 @@
 // Driver message errors
 DRIVER_REGISTER_ERROR(NET, net, NotAvailable, "network is not available", NET_ERR_NOT_AVAILABLE);
 DRIVER_REGISTER_ERROR(NET, net, InvalidIpAddr, "invalid IP adddress", NET_ERR_INVALID_IP);
+DRIVER_REGISTER_ERROR(NET, net, NoMoreCallbacksAvailable, "no more callbacks available", NET_ERR_NO_MORE_CALLBACKS);
+DRIVER_REGISTER_ERROR(NET, net, CallbackNotFound, "callback not found", NET_ERR_NO_CALLBACK_NOT_FOUND);
 
 // FreeRTOS events used by driver
 EventGroupHandle_t netEvent;
@@ -60,20 +62,35 @@ EventGroupHandle_t netEvent;
 // Retries for connect
 static uint8_t retries = 0;
 
+// Event callbacks
+static net_event_register_callback_t callback[MAX_NET_EVENT_CALLBACKS] = {0};
+
 /*
  * Helper functions
  */
 static esp_err_t event_handler(void *ctx, system_event_t *event) {
 	switch (event->event_id) {
+
 #if CONFIG_WIFI_ENABLED
-		case SYSTEM_EVENT_STA_START:
+		case SYSTEM_EVENT_WIFI_READY: 	            /**< ESP32 WiFi ready */
+			break;
+
+		case SYSTEM_EVENT_SCAN_DONE:                /**< ESP32 finish scanning AP */
+ 			xEventGroupSetBits(netEvent, evWIFI_SCAN_END);
+			break;
+
+		case SYSTEM_EVENT_STA_START:                /**< ESP32 station start */
 			esp_wifi_connect();
 			break;
 
-		case SYSTEM_EVENT_STA_STOP:
+		case SYSTEM_EVENT_STA_STOP:                 /**< ESP32 station stop */
 			break;
 
-		case SYSTEM_EVENT_STA_DISCONNECTED:
+		case SYSTEM_EVENT_STA_CONNECTED:            /**< ESP32 station connected to AP */
+			status_set(STATUS_WIFI_CONNECTED);
+			break;
+
+		case SYSTEM_EVENT_STA_DISCONNECTED:         /**< ESP32 station disconnected from AP */
 			if (!status_get(STATUS_WIFI_CONNECTED)) {
 				if (retries > WIFI_CONNECT_RETRIES) {
 					status_clear(STATUS_WIFI_CONNECTED);
@@ -89,45 +106,83 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 			}
 
 			status_clear(STATUS_WIFI_CONNECTED);
-			//don't esp_wifi_connect() here
 			break;
 
-		case SYSTEM_EVENT_STA_GOT_IP:
+		case SYSTEM_EVENT_STA_AUTHMODE_CHANGE:      /**< the auth mode of AP connected by ESP32 station changed */
+			break;
+
+		case SYSTEM_EVENT_STA_GOT_IP:               /**< ESP32 station got IP from connected AP */
  			xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
 			break;
 
-		case SYSTEM_EVENT_AP_STA_GOT_IP6:
- 			xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
+		case SYSTEM_EVENT_STA_WPS_ER_SUCCESS:       /**< ESP32 station wps succeeds in enrollee mode */
 			break;
 
-		case SYSTEM_EVENT_AP_START:
+		case SYSTEM_EVENT_STA_WPS_ER_FAILED:        /**< ESP32 station wps fails in enrollee mode */
+			break;
+
+		case SYSTEM_EVENT_STA_WPS_ER_TIMEOUT:       /**< ESP32 station wps timeout in enrollee mode */
+			break;
+
+		case SYSTEM_EVENT_STA_WPS_ER_PIN:           /**< ESP32 station wps pin code in enrollee mode */
+			break;
+
+		case SYSTEM_EVENT_AP_START:                 /**< ESP32 soft-AP start */
 			status_set(STATUS_WIFI_CONNECTED);
 			break;
 
-		case SYSTEM_EVENT_AP_STOP:
+		case SYSTEM_EVENT_AP_STOP:                  /**< ESP32 soft-AP stop */
 			status_clear(STATUS_WIFI_CONNECTED);
 			status_clear(STATUS_WIFI_INITED);
 			break;
 
-		case SYSTEM_EVENT_SCAN_DONE:
- 			xEventGroupSetBits(netEvent, evWIFI_SCAN_END);
+		case SYSTEM_EVENT_AP_STACONNECTED:          /**< a station connected to ESP32 soft-AP */
 			break;
 
-		case SYSTEM_EVENT_STA_CONNECTED:
-			status_set(STATUS_WIFI_CONNECTED);
+		case SYSTEM_EVENT_AP_STADISCONNECTED:       /**< a station disconnected from ESP32 soft-AP */
+			break;
+
+		case SYSTEM_EVENT_AP_PROBEREQRECVED:        /**< Receive probe request packet in soft-AP interface */
+			break;
+
+		case SYSTEM_EVENT_AP_STA_GOT_IP6:           /**< ESP32 station or ap interface v6IP addr is preferred */
+ 			xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
+			break;
+#endif
+
+#if CONFIG_ETHERNET
+		case SYSTEM_EVENT_ETH_START:                /**< ESP32 ethernet start */
+			break;
+
+		case SYSTEM_EVENT_ETH_STOP:                 /**< ESP32 ethernet stop */
+			break;
+
+		case SYSTEM_EVENT_ETH_CONNECTED:            /**< ESP32 ethernet phy link up */
+			break;
+
+		case SYSTEM_EVENT_ETH_DISCONNECTED:         /**< ESP32 ethernet phy link down */
+			break;
+
+		case SYSTEM_EVENT_ETH_GOT_IP:               /**< ESP32 ethernet got IP from connected AP */
 			break;
 #endif
 
 #if CONFIG_SPI_ETHERNET
-		case SYSTEM_EVENT_SPI_ETH_CONNECTED:
+		case SYSTEM_EVENT_SPI_ETH_START:            /**< ESP32 spi ethernet start */
+			break;
+
+		case SYSTEM_EVENT_SPI_ETH_STOP:             /**< ESP32 spi ethernet stop */
+			break;
+
+		case SYSTEM_EVENT_SPI_ETH_CONNECTED:        /**< ESP32 spi ethernet phy link up */
 			status_set(STATUS_SPI_ETH_CONNECTED);
 			break;
 
-		case SYSTEM_EVENT_SPI_ETH_DISCONNECTED:
+		case SYSTEM_EVENT_SPI_ETH_DISCONNECTED:     /**< ESP32 spi ethernet phy link down */
 			status_clear(STATUS_SPI_ETH_CONNECTED);
 			break;
 
-		case SYSTEM_EVENT_SPI_ETH_GOT_IP:
+		case SYSTEM_EVENT_SPI_ETH_GOT_IP:           /**< ESP32 spi ethernet got IP from connected AP */
  			xEventGroupSetBits(netEvent, evSPI_ETH_CONNECTED);
 			break;
 #endif
@@ -136,13 +191,21 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 			break;
 	}
 
+	// Call to the registered callbacks
+	int i = 0;
+
+	for(i=0; i < MAX_NET_EVENT_CALLBACKS; i++) {
+		if (callback[i]) {
+			callback[i](event);
+		}
+	}
+
    return ESP_OK;
 }
 
 /*
  * Operation functions
  */
-
 driver_error_t *net_init() {
 	if (!status_get(STATUS_TCPIP_INITED)) {
 		status_set(STATUS_TCPIP_INITED);
@@ -200,6 +263,32 @@ driver_error_t *net_lookup(const char *name, struct sockaddr_in *address) {
 		printf("net_lookup error %d, errno %d (%s)\r\n",rc, errno, strerror(rc));
 		return NULL;
 	}
+}
+
+driver_error_t *net_event_register_callback(net_event_register_callback_t func) {
+	int i = 0;
+
+	for(i=0; i < MAX_NET_EVENT_CALLBACKS; i++) {
+		if (callback[i] == 0) {
+			callback[i] = func;
+			return NULL;
+		}
+	}
+
+	return driver_operation_error(NET_DRIVER, NET_ERR_NO_MORE_CALLBACKS,NULL);
+}
+
+driver_error_t *net_event_unregister_callback(net_event_register_callback_t func) {
+	int i = 0;
+
+	for(i=0; i < MAX_NET_EVENT_CALLBACKS; i++) {
+		if (callback[i] == func) {
+			callback[i] = NULL;
+			return NULL;
+		}
+	}
+
+	return driver_operation_error(NET_DRIVER, NET_ERR_NO_MORE_CALLBACKS,NULL);
 }
 
 DRIVER_REGISTER(NET,net,NULL,NULL,NULL);

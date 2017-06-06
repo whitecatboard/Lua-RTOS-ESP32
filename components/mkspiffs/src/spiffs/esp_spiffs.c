@@ -37,95 +37,18 @@
 #include <esp_spi_flash.h>
 
 s32_t esp32_spi_flash_read(u32_t addr, u32_t size, u8_t *dst) {
-	u32_t aaddr;
-	u8_t *buff = NULL;
-	u8_t *abuff = NULL;
-	u32_t asize;
-
-	asize = size;
-	
-	// Align address to 4 byte
-	aaddr = (addr + (4 - 1)) & (u32_t)-4;
-	if (aaddr != addr) {
-		aaddr -= 4;
-		asize += (addr - aaddr);
+	if (spi_flash_read(addr, (void *)dst, size) != 0) {
+		return SPIFFS_ERR_INTERNAL;
 	}
 
-	// Align size to 4 byte
-	asize = (asize + (4 - 1)) & (u32_t)-4;
-
-	if ((aaddr != addr) || (asize != size)) {
-		// Align buffer
-		buff = malloc(asize + 4);
-		if (!buff) {
-			return SPIFFS_ERR_INTERNAL;
-		}
-
-		abuff = (u8_t *)(((ptrdiff_t)buff + (4 - 1)) & (u32_t)-4);
-
-		if (spi_flash_read(aaddr, (void *)abuff, asize) != 0) {
-			free(buff);
-			return SPIFFS_ERR_INTERNAL;
-		}
-
-		memcpy(dst, abuff + (addr - aaddr), size);
-
-		free(buff);
-	} else {
-		if (spi_flash_read(addr, (void *)dst, size) != 0) {
-			return SPIFFS_ERR_INTERNAL;
-		}
-	}
-	
-    return SPIFFS_OK;
+	return SPIFFS_OK;
 }
 
 s32_t esp32_spi_flash_write(u32_t addr, u32_t size, const u8_t *src) {
-	u32_t aaddr;
-	u8_t *buff = NULL;
-	u8_t *abuff = NULL;
-	u32_t asize;
-
-	asize = size;
-	
-	// Align address to 4 byte
-	aaddr = (addr + (4 - 1)) & -4;
-	if (aaddr != addr) {
-		aaddr -= 4;
-		asize += (addr - aaddr);
+	if (spi_flash_write(addr, (uint32_t *)src, size) != 0) {
+		return SPIFFS_ERR_INTERNAL;
 	}
 
-	// Align size to 4 byte
-	asize = (asize + (4 - 1)) & -4; 
-
-	if ((aaddr != addr) || (asize != size)) {
-		// Align buffer
-		buff = malloc(asize + 4);
-		if (!buff) {
-			return SPIFFS_ERR_INTERNAL;
-		}
-
-		abuff = (u8_t *)(((ptrdiff_t)buff + (4 - 1)) & -4);
-
-		if (spi_flash_read(aaddr, (void *)abuff, asize) != 0) {
-			free(buff);
-			return SPIFFS_ERR_INTERNAL;
-		}
-
-		memcpy(abuff + (addr - aaddr), src, size);
-
-		if (spi_flash_write(aaddr, (uint32_t *)abuff, asize) != 0) {
-			free(buff);
-			return SPIFFS_ERR_INTERNAL;
-		}
-
-		free(buff);
-	} else {
-		if (spi_flash_write(addr, (uint32_t *)src, size) != 0) {
-			return SPIFFS_ERR_INTERNAL;
-		}
-	}
-	
     return SPIFFS_OK;
 }
 

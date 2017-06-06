@@ -7,10 +7,18 @@ ifneq (foo$(SPIFFS_IMAGE), foo)
 SPIFFS_IMAGE := $(SPIFFS_IMAGE)
 endif
 
-flashfs: $(SDKCONFIG_MAKEFILE) mkspiffs
-	@echo "Making spiffs image foo$(SPIFFS_IMAGE) ..."
+fs: $(SDKCONFIG_MAKEFILE) mkspiffs
 	@echo "Making spiffs image $(SPIFFS_IMAGE) ..."
-	@echo "$(ESPTOOLPY_WRITE_FLASH)"
-	@echo "$(MKSPIFFS_COMPONENT_PATH)/../mkspiffs/src/mkspiffs -c $(SPIFFS_IMAGE_COMPONENT_PATH)/$(SPIFFS_IMAGE) -b $(CONFIG_LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE) -p $(CONFIG_LUA_RTOS_SPIFFS_LOG_PAGE_SIZE) -s $(CONFIG_LUA_RTOS_SPIFFS_SIZE) $(BUILD_DIR_BASE)/spiffs_image.img"
 	$(MKSPIFFS_COMPONENT_PATH)/../mkspiffs/src/mkspiffs -c $(SPIFFS_IMAGE_COMPONENT_PATH)/$(SPIFFS_IMAGE) -b $(CONFIG_LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE) -p $(CONFIG_LUA_RTOS_SPIFFS_LOG_PAGE_SIZE) -s $(CONFIG_LUA_RTOS_SPIFFS_SIZE) $(BUILD_DIR_BASE)/spiffs_image.img
+	
+flashfs: fs
 	$(ESPTOOLPY_WRITE_FLASH) $(CONFIG_LUA_RTOS_SPIFFS_BASE_ADDR) $(BUILD_DIR_BASE)/spiffs_image.img
+
+flashfs-args:
+	@echo $(subst $(PROJECT_PATH)/build/,, \
+			$(subst --port $(ESPPORT),, \
+				$(subst python /components/esptool_py/esptool/esptool.py,, \
+					$(subst $(IDF_PATH),, $(ESPTOOLPY_WRITE_FLASH) $(CONFIG_LUA_RTOS_SPIFFS_BASE_ADDR) $(BUILD_DIR_BASE)/spiffs_image.img)\
+				)\
+	 	  	) \
+	 	  )

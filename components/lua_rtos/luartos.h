@@ -145,6 +145,10 @@
 	#endif
 #endif
 
-#define THREAD_LOCAL_STORAGE_POINTER_ID 1
+#if CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS <= 1
+#error "Please, review the 'Number of thread local storage pointers' settings in kconfig. Must be >= 2."
+#endif
+
+#define THREAD_LOCAL_STORAGE_POINTER_ID (CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS - 1)
 
 #endif

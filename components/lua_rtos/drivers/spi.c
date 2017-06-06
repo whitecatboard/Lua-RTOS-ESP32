@@ -92,6 +92,7 @@ DRIVER_REGISTER_ERROR(SPI, spi, NoMoreDevicesAllowed, "no more devices allowed",
 DRIVER_REGISTER_ERROR(SPI, spi, InvalidDevice, "invalid device", SPI_ERR_INVALID_DEVICE);
 DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSetup, "invalid device", SPI_ERR_DEVICE_NOT_SETUP);
 DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSelected, "device is not selected", SPI_ERR_DEVICE_IS_NOT_SELECTED);
+DRIVER_REGISTER_ERROR(SPI, spi, InvalidFlag, "invalid flag", SPI_ERR_INVALID_FLAG);
 
 typedef struct {
 	uint8_t  setup;
@@ -347,18 +348,22 @@ static void IRAM_ATTR spi_master_op(int deviceid, uint32_t word_size, uint32_t l
  * End of extracted code from arduino-esp32
  */
 
-static driver_error_t *spi_lock_bus_resources(int unit) {
+static driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
     driver_unit_lock_error_t *lock_error = NULL;
 
     // Lock pins
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].miso))) {
-    	// Revoked lock on pin
-    	return driver_lock_error(SPI_DRIVER, lock_error);
+    if (flags & SPI_FLAG_READ) {
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].miso))) {
+        	// Revoked lock on pin
+        	return driver_lock_error(SPI_DRIVER, lock_error);
+        }
     }
 
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].mosi))) {
-    	// Revoked lock on pin
-    	return driver_lock_error(SPI_DRIVER, lock_error);
+    if (flags & SPI_FLAG_WRITE) {
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].mosi))) {
+        	// Revoked lock on pin
+        	return driver_lock_error(SPI_DRIVER, lock_error);
+        }
     }
 
     if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].clk))) {
@@ -369,7 +374,7 @@ static driver_error_t *spi_lock_bus_resources(int unit) {
     return NULL;
 }
 
-static void spi_setup_bus(uint8_t unit) {
+static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 #if !SPI_USE_IDF_DRIVER
 
 	// Enable SPI unit
@@ -378,43 +383,47 @@ static void spi_setup_bus(uint8_t unit) {
 		case 3:periph_module_enable(PERIPH_VSPI_MODULE);break;
 	}
 
-    if (spi_bus[unit].miso == spi_bus[unit].dmiso) {
-    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_SPI);
-    } else {
-        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_GPIO);
-        gpio_set_direction(spi_bus[unit].miso, GPIO_MODE_INPUT);
+	if (flags & SPI_FLAG_READ) {
+	    if (spi_bus[unit].miso == spi_bus[unit].dmiso) {
+	    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_SPI);
+	    } else {
+	        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_GPIO);
+	        gpio_set_direction(spi_bus[unit].miso, GPIO_MODE_INPUT);
 
-        switch(unit) {
-        	case 2:
-                gpio_matrix_out(spi_bus[unit].miso, HSPIQ_OUT_IDX, 0, 0);
-                gpio_matrix_in(spi_bus[unit].miso, HSPIQ_IN_IDX, 0);
-                break;
+	        switch(unit) {
+	        	case 2:
+	                gpio_matrix_out(spi_bus[unit].miso, HSPIQ_OUT_IDX, 0, 0);
+	                gpio_matrix_in(spi_bus[unit].miso, HSPIQ_IN_IDX, 0);
+	                break;
 
-        	case 3:
-                gpio_matrix_out(spi_bus[unit].miso, VSPIQ_OUT_IDX, 0, 0);
-                gpio_matrix_in(spi_bus[unit].miso, VSPIQ_IN_IDX, 0);
-                break;
-        }
-    }
+	        	case 3:
+	                gpio_matrix_out(spi_bus[unit].miso, VSPIQ_OUT_IDX, 0, 0);
+	                gpio_matrix_in(spi_bus[unit].miso, VSPIQ_IN_IDX, 0);
+	                break;
+	        }
+	    }
+	}
 
-    if (spi_bus[unit].mosi == spi_bus[unit].dmosi) {
-    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].mosi], PIN_FUNC_SPI);
-    } else {
-        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].mosi], PIN_FUNC_GPIO);
-        gpio_set_direction(spi_bus[unit].mosi, GPIO_MODE_OUTPUT);
+	if (flags & SPI_FLAG_WRITE) {
+	    if (spi_bus[unit].mosi == spi_bus[unit].dmosi) {
+	    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].mosi], PIN_FUNC_SPI);
+	    } else {
+	        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].mosi], PIN_FUNC_GPIO);
+	        gpio_set_direction(spi_bus[unit].mosi, GPIO_MODE_OUTPUT);
 
-        switch(unit) {
-        	case 2:
-                gpio_matrix_out(spi_bus[unit].mosi, HSPID_OUT_IDX, 0, 0);
-                gpio_matrix_in(spi_bus[unit].mosi, HSPID_IN_IDX, 0);
-                break;
+	        switch(unit) {
+	        	case 2:
+	                gpio_matrix_out(spi_bus[unit].mosi, HSPID_OUT_IDX, 0, 0);
+	                gpio_matrix_in(spi_bus[unit].mosi, HSPID_IN_IDX, 0);
+	                break;
 
-        	case 3:
-                gpio_matrix_out(spi_bus[unit].mosi, VSPID_OUT_IDX, 0, 0);
-                gpio_matrix_in(spi_bus[unit].mosi, VSPID_IN_IDX, 0);
-                break;
-        }
-    }
+	        	case 3:
+	                gpio_matrix_out(spi_bus[unit].mosi, VSPID_OUT_IDX, 0, 0);
+	                gpio_matrix_in(spi_bus[unit].mosi, VSPID_IN_IDX, 0);
+	                break;
+	        }
+	    }
+	}
 
     if (spi_bus[unit].clk == spi_bus[unit].dclk) {
     	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].clk], PIN_FUNC_SPI);
@@ -452,7 +461,7 @@ static void spi_setup_bus(uint8_t unit) {
  * Low-level functions
  *
  */
-int spi_ll_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_t speed, int *deviceid) {
+int spi_ll_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid) {
 	// Check if there's some device un bus with the same cs
 	// If there's one, we want to reconfigure device
 	int device = spi_get_device_by_cs(unit, cs);
@@ -478,14 +487,28 @@ int spi_ll_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_
 
 	// Setup bus, if not done yet
 	if (!spi_bus[unit].setup) {
-		spi_setup_bus(unit);
+		spi_setup_bus(unit, flags);
 
-		syslog(LOG_INFO,
-			"spi%u at pins miso=%s%d/mosi=%s%d/clk=%s%d", unit,
-			gpio_portname(spi_bus[unit].miso), gpio_name(spi_bus[unit].miso),
-			gpio_portname(spi_bus[unit].mosi), gpio_name(spi_bus[unit].mosi),
-			gpio_portname(spi_bus[unit].clk) , gpio_name(spi_bus[unit].clk)
-		);
+		if ((flags & (SPI_FLAG_READ | SPI_FLAG_WRITE)) == (SPI_FLAG_READ | SPI_FLAG_WRITE)) {
+			syslog(LOG_INFO,
+				"spi%u at pins miso=%s%d/mosi=%s%d/clk=%s%d", unit,
+				gpio_portname(spi_bus[unit].miso), gpio_name(spi_bus[unit].miso),
+				gpio_portname(spi_bus[unit].mosi), gpio_name(spi_bus[unit].mosi),
+				gpio_portname(spi_bus[unit].clk) , gpio_name(spi_bus[unit].clk)
+			);
+		} else if ((flags & (SPI_FLAG_READ | SPI_FLAG_WRITE)) == SPI_FLAG_WRITE) {
+			syslog(LOG_INFO,
+				"spi%u at pins mosi=%s%d/clk=%s%d", unit,
+				gpio_portname(spi_bus[unit].mosi), gpio_name(spi_bus[unit].mosi),
+				gpio_portname(spi_bus[unit].clk) , gpio_name(spi_bus[unit].clk)
+			);
+		} else if ((flags & (SPI_FLAG_READ | SPI_FLAG_WRITE)) == SPI_FLAG_READ) {
+			syslog(LOG_INFO,
+				"spi%u at pins miso=%s%d/clk=%s%d", unit,
+				gpio_portname(spi_bus[unit].miso), gpio_name(spi_bus[unit].miso),
+				gpio_portname(spi_bus[unit].clk) , gpio_name(spi_bus[unit].clk)
+			);
+		}
 	}
 
 	// Setup CS
@@ -714,6 +737,7 @@ void IRAM_ATTR spi_ll_select(int deviceid) {
 #endif
 
         spi_bus[unit].last_device = deviceid;
+        spi_bus[unit].selected_device = deviceid;
     }
 
 	// Select device
@@ -727,6 +751,8 @@ void IRAM_ATTR spi_ll_deselect(int deviceid) {
 	// Deselect device
     gpio_ll_pin_set(spi_bus[unit].device[device].cs);
 
+    spi_bus[unit].selected_device = -1;
+
 	spi_unlock(unit);
 }
 
@@ -735,7 +761,7 @@ void IRAM_ATTR spi_ll_deselect(int deviceid) {
  * Operation functions
  *
  */
-driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_t speed, int *deviceid) {
+driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid) {
 	driver_error_t *error = NULL;
 
     // Sanity checks
@@ -767,9 +793,17 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "cs, selected pin cannot be output");
     }
 
+    if (flags & (~SPI_FLAG_ALL)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_FLAG, NULL);
+    }
+
+    if (!(flags & (SPI_FLAG_ALL))) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_FLAG, NULL);
+    }
+
     // Lock resources
     if (!spi_bus[unit].setup) {
-        if ((error = spi_lock_bus_resources(unit))) {
+        if ((error = spi_lock_bus_resources(unit, flags))) {
     		return error;
     	}
     }
@@ -781,7 +815,7 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode
 
     // Low-level setup
 	spi_lock(unit);
-    if (spi_ll_setup(unit, master, cs, mode, speed, deviceid) != 0) {
+    if (spi_ll_setup(unit, master, cs, mode, speed, flags, deviceid) != 0) {
     	spi_unlock(unit);
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_NO_MORE_DEVICES_ALLOWED, NULL);
     }

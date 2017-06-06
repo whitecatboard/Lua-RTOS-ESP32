@@ -512,7 +512,13 @@ TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key) {
 const TValue *luaH_getint (Table *t, lua_Integer key) {
 #if LUA_USE_ROTABLE
   if (luaR_isrotable((const void *)t)) {
-	  return luaR_findentry((const void *)t, NULL, key, NULL);
+	  const TValue *res = luaR_findentry((const void *)t, NULL, key, NULL);
+
+	  if (!res) {
+		  return luaO_nilobject;
+	  } else {
+		  return res;
+	  }
   }
 #endif
 
@@ -541,8 +547,13 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
 const TValue *luaH_getshortstr (Table *t, TString *key) {
 #if LUA_USE_ROTABLE
   if (luaR_isrotable((const void *)t)) {
+	  const TValue *res = luaR_findentry((const void *)t, getstr(key), 0, NULL);
 
-	  return luaR_findentry((const void *)t, getstr(key), 0, NULL);
+	  if (!res) {
+		 return luaO_nilobject;
+	  } else {
+		  return res;
+	  }
   }
 #endif
 
@@ -569,7 +580,13 @@ const TValue *luaH_getshortstr (Table *t, TString *key) {
 static const TValue *getgeneric (Table *t, const TValue *key) {
 #if LUA_USE_ROTABLE
   if (luaR_isrotable((const void *)t)) {
-	  return luaR_findentry((const void *)t, getstr(key), 0, NULL);
+	  const TValue *res = luaR_findentry((const void *)t, getstr(key), 0, NULL);
+
+	  if (!res) {
+		 return luaO_nilobject;
+	  } else {
+		  return res;
+	  }
   }
 #endif
 

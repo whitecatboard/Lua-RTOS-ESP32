@@ -60,7 +60,7 @@ static int IRAM_ATTR vfs_tty_open(const char *path, int flags, int mode) {
 	}
 
     // Init uart unit
-    uart_init(unit, CONSOLE_BR, 8, 0, 1, CONSOLE_BUFFER_LEN);
+    uart_init(unit, CONSOLE_BR, 8, 0, 1, UART_FLAG_READ | UART_FLAG_WRITE, CONSOLE_BUFFER_LEN);
     uart_setup_interrupts(unit);
 
     return unit;

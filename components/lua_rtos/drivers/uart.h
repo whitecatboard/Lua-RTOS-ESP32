@@ -82,7 +82,13 @@ typedef struct {
 #define UART_ERR_INVALID_PARITY			  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  3)
 #define UART_ERR_INVALID_STOP_BITS		  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  4)
 #define UART_ERR_NOT_ENOUGH_MEMORY		  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  5)
-#define UAR_ERR_IS_NOT_SETUP 			  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  6)
+#define UART_ERR_IS_NOT_SETUP 			  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  6)
+#define UART_ERR_INVALID_FLAG 			  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  7)
+
+// Flags
+#define UART_FLAG_WRITE 0x01
+#define UART_FLAG_READ  0x02
+#define UART_FLAG_ALL (UART_FLAG_WRITE | UART_FLAG_READ)
 
 #define ETS_UART_INTR_ENABLE()  _xt_isr_unmask(1 << ETS_UART_INUM)
 #define ETS_UART_INTR_DISABLE() _xt_isr_mask(1 << ETS_UART_INUM)
@@ -91,7 +97,7 @@ typedef struct {
 #define wait_tx_empty(unit) \
 while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_TXFIFO_CNT_S) & UART_TXFIFO_CNT);delay(1);
 
-driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t parity, uint8_t stop_bits, uint32_t qs);
+driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t parity, uint8_t stop_bits, uint8_t flags, uint32_t qs);
 driver_error_t *uart_setup_interrupts(int8_t unit);
 driver_error_t *uart_consume(int8_t unit);
 driver_error_t *uart_lock(int unit);
@@ -111,6 +117,6 @@ int      uart_get_br(int unit);
 int      uart_is_setup(int unit);
 void     uart_stop(int unit);
 QueueHandle_t *uart_get_queue(int8_t unit);
-driver_error_t *uart_lock_resources(int unit, void *resources);
+driver_error_t *uart_lock_resources(int unit, uint8_t flags, void *resources);
 
 #endif

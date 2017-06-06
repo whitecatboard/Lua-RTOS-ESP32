@@ -170,8 +170,6 @@ driver_error_t *driver_operation_error(const driver_t *driver, unsigned int exce
         error->msg = msg;
     }
 
-    printf("%s\r\n", driver_get_err_msg(error));
-
     return error;
 }
 

@@ -404,7 +404,7 @@ int enc424j600_init(struct netif *netif) {
 	driver_error_t *error;
 
 	if ((error = spi_setup(CONFIG_SPI_ETHERNET_SPI, 1, CONFIG_SPI_ETHERNET_CS, 0, CONFIG_SPI_ETHERNET_SPEED,
-			&spi_device))) {
+			SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
 		syslog(LOG_ERR, "enc424j600 cannot open spi%d", CONFIG_SPI_ETHERNET_SPI);
 		return 0;
 	}

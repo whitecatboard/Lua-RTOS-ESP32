@@ -52,4 +52,12 @@ restore-idf:
 	@cd $(IDF_PATH)/components/tcpip_adapter && git checkout tcpip_adapter_lwip.c
 	@cd $(IDF_PATH)/components/newlib/include/sys && git checkout syslimits.h
 	
+flash-args:
+	@echo $(subst --port $(ESPPORT),, \
+			$(subst python /components/esptool_py/esptool/esptool.py,, \
+				$(subst $(IDF_PATH),, $(ESPTOOLPY_WRITE_FLASH))\
+			)\
+	 	  ) \
+	 $(subst /build/, , $(subst /build/bootloader/,, $(subst $(PROJECT_PATH), , $(ESPTOOL_ALL_FLASH_ARGS))))
+	
 include $(IDF_PATH)/make/project.mk

@@ -61,7 +61,7 @@ void luaA_pushobject(lua_State *L, const TValue *o) {
 
 /* Find an entry in a rotable and return it */
 static const IRAM_ATTR TValue *luaR_auxfind(const luaR_entry *pentry, const char *k, luaR_numkey nk, unsigned *ppos) {
-	const TValue *res = luaO_nilobject;
+	const TValue *res = NULL;
 	const luaR_entry *entry = pentry;
 	int i = 0;
 
@@ -119,7 +119,7 @@ static const IRAM_ATTR TValue *luaR_auxfind(const luaR_entry *pentry, const char
 const IRAM_ATTR TValue *luaR_findglobal(const char *name) {
 	// Try to get from cache
 	#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
-	const TValue *res;
+	const TValue *res = NULL;
 
 	res = rotable_cache_get(lua_rotable, name);
 	if (res) {

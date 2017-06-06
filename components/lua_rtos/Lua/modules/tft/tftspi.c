@@ -576,13 +576,13 @@ static void ST7735_initR(uint8_t options) {
 // Init tft SPI interface
 //-----------------------------------
 int tft_spi_init(lua_State* L, uint8_t typ, uint8_t cs, uint8_t tcs) {
-	driver_error_t *error = spi_setup(CONFIG_LUA_RTOS_TFT_SPI, 1, cs, 0, CONFIG_LUA_RTOS_TFT_HZ, &disp_spi);
+	driver_error_t *error = spi_setup(CONFIG_LUA_RTOS_TFT_SPI, 1, cs, 0, CONFIG_LUA_RTOS_TFT_HZ, SPI_FLAG_WRITE, &disp_spi);
 	if (error) {
 		return luaL_driver_error(L, error);
 	}
 
 	if (typ == 3) {
-		driver_error_t *error = spi_setup(CONFIG_LUA_RTOS_TFT_TP_SPI, 1, tcs, 0, CONFIG_LUA_RTOS_TFT_TP_HZ, &disp_spi);
+		driver_error_t *error = spi_setup(CONFIG_LUA_RTOS_TFT_TP_SPI, 1, tcs, 0, CONFIG_LUA_RTOS_TFT_TP_HZ, SPI_FLAG_READ, &disp_spi);
 		if (error) {
 			return luaL_driver_error(L, error);
 		}
