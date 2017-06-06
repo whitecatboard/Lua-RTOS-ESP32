@@ -143,3 +143,32 @@ static int luaB_try (lua_State *L) {
     
     return 0;
 }
+
+static int luaB_compile (lua_State *L) {
+	const char *src = luaL_checkstring(L, 1);
+	const char *dst = luaL_optstring(L, 2, "");
+
+	if (strcmp(src, dst) == 0) {
+		luaL_error(L, "%s and %s are identical. Can't compile.", src, dst);
+	}
+
+	if (!*dst) {
+		char *tmp;
+
+		tmp = malloc(strlen(src) + 2);
+		if (!tmp) {
+			luaL_error(L, "not enough memory");
+		}
+
+		strcpy(tmp, src);
+		strcat(tmp, "c");
+
+		luac(src, tmp);
+
+		free(tmp);
+	} else {
+		luac(src, dst);
+	}
+
+	return 0;
+}

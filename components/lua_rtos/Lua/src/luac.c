@@ -35,6 +35,22 @@ static char Output[]={ OUTPUT };	/* default output file name */
 static const char* output=Output;	/* actual output file name */
 static const char* progname=PROGNAME;	/* actual program name */
 
+// Lua RTOS
+#define LUAC_LUA_RTOS 1
+
+#if LUAC_LUA_RTOS
+#include <setjmp.h>
+static jmp_buf ex_buf__;
+static lua_State* L = NULL;
+static FILE* D = NULL;
+// Lua RTOS
+
+#define exit(reason) \
+	if (D) fclose(D); \
+	if (L) lua_close(L); \
+	longjmp(ex_buf__, reason);
+#endif
+
 static void fatal(const char* message)
 {
  fprintf(stderr,"%s: %s\n",progname,message);
@@ -178,7 +194,11 @@ static int pmain(lua_State* L)
  if (listing) luaU_print(f,listing>1);
  if (dumping)
  {
+#if !LUAC_LUA_RTOS
   FILE* D= (output==NULL) ? stdout : fopen(output,"wb");
+#else
+  D= (output==NULL) ? stdout : fopen(output,"wb");
+#endif
   if (D==NULL) cannot("open");
   lua_lock(L);
   luaU_dump(L,f,writer,D,stripping);
@@ -189,9 +209,12 @@ static int pmain(lua_State* L)
  return 0;
 }
 
-int main(int argc, char* argv[])
+// LUA RTOS BEGIN
+int luac_main(int argc, char* argv[])
 {
+#if !LUAC_LUA_RTOS
  lua_State* L;
+#endif
  int i=doargs(argc,argv);
  argc-=i; argv+=i;
  if (argc<=0) usage("no input files given");
@@ -204,6 +227,24 @@ int main(int argc, char* argv[])
  lua_close(L);
  return EXIT_SUCCESS;
 }
+
+int luac(char *src, char *dst) {
+	char* argv[] = {
+		"luac",
+		"-o",
+		dst,
+		"-s",
+		src
+	};
+
+	int ret = 0;
+	if (!(ret = setjmp(ex_buf__))) {
+		ret = luac_main(5, argv);
+	}
+
+	return ret;
+}
+// LUA RTOS END
 
 /*
 ** $Id: luac.c,v 1.75 2015/03/12 01:58:27 lhf Exp $

@@ -477,6 +477,7 @@ static const LUA_REG_TYPE base_funcs[] = {
 #if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
   { LSTRKEY( "cache" 		  ),			LFUNCVAL( rotable_cache_dump  	) },
 #endif
+  { LSTRKEY( "compile" 		  ),			LFUNCVAL( luaB_compile   		) },
   { LSTRKEY( "try" 			  ),			LFUNCVAL( luaB_try 				) },
   { LSTRKEY( "assert" 		  ),			LFUNCVAL( luaB_assert 			) },
   { LSTRKEY( "collectgarbage" ),			LFUNCVAL( luaB_collectgarbage 	) },

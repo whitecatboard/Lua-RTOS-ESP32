@@ -45,10 +45,11 @@ typedef struct {
 	const uint8_t mandatory;
 	const uint8_t optional;
 	const char *usage;
-	const uint8_t error_pos;
+	const uint8_t error_pos; // When an error occurs, where is the error pos in Lua stack?
 } command_t;
 
 static const command_t command[] = {
+	{"luac", NULL, "compile", 1, 0, "luac source destination", 2},
 	{"cat", "os", "cat", 1, 0, "cat filename", 4},
 	{"cd", "os", "cd", 0, 1, "cd path", 4},
 	{"cp", "os", "cp", 2, 0, "cp from to", 4},
@@ -197,8 +198,12 @@ void lua_shell(lua_State* L, char *buffer) {
 			}
 
 			// Call to corresponding module / function
-			lua_getglobal(L, command[cindex].module);
-			lua_getfield(L, -1, command[cindex].function);
+			if (command[cindex].module) {
+				lua_getglobal(L, command[cindex].module);
+				lua_getfield(L, -1, command[cindex].function);
+			} else {
+			    lua_getglobal(L, command[cindex].function);
+			}
 
 			// Prepare arguments
 			int i, args = 0;
