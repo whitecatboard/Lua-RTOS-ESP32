@@ -45,28 +45,29 @@ typedef struct {
 	const uint8_t mandatory;
 	const uint8_t optional;
 	const char *usage;
-	const uint8_t error_pos; // When an error occurs, where is the error pos in Lua stack?
+	const uint8_t returns;
 } command_t;
 
 static const command_t command[] = {
-	{"luac", NULL, "compile", 1, 0, "luac source destination", 2},
-	{"cat", "os", "cat", 1, 0, "cat filename", 4},
-	{"cd", "os", "cd", 0, 1, "cd path", 4},
-	{"cp", "os", "cp", 2, 0, "cp from to", 4},
+	{"luac", NULL, "compile", 1, 0, "luac source destination", 0},
+	{"cat", "os", "cat", 1, 0, "cat filename", 0},
+	{"cd", "os", "cd", 0, 1, "cd path", 0},
+	{"cp", "os", "cp", 2, 0, "cp from to", 0},
 	{"dmesg", "os", "dmesg", 0, 0, NULL, 0},
 	{"clear", "os", "clear", 0, 0, NULL, 0},
-	{"edit", "os", "edit", 1, 0, "edit [filename]", 4},
+	{"edit", "os", "edit", 1, 0, "edit [filename]", 0},
 	{"exit", "os", "exit", 0, 0, NULL, 0},
-	{"ls", "os", "ls", 0, 1, "ls [pattern]", 4},
-	{"dir", "os", "ls", 0, 1, "dir [pattern]", 4},
-	{"mkdir", "os", "mkdir", 1, 0, "mkdir path", 4},
-	{"more", "os", "more", 1, 0, "more filename", 4},
-	{"mv", "os", "rename", 2, 0, "mv old new", 4},
-	{"pwd", "os", "pwd", 0, 0, NULL, 0},
-	{"remove", "os", "remove", 1, 0, "remove filename", 4},
-	{"rename", "os", "rename", 2, 0, "rename old new", 4},
-	{"rm", "os", "remove", 1, 0, "rm filename", 4},
-	{"unlink", "os", "remove", 1, 0, "unlink filename", 4},
+	{"reboot", "os", "exit", 0, 0, NULL, 0},
+	{"ls", "os", "ls", 0, 1, "ls [pattern]", 0},
+	{"dir", "os", "ls", 0, 1, "dir [pattern]", 0},
+	{"mkdir", "os", "mkdir", 1, 0, "mkdir path", 0},
+	{"more", "os", "more", 1, 0, "more filename", 0},
+	{"mv", "os", "rename", 2, 0, "mv old new", 0},
+	{"pwd", "os", "pwd", 0, 0, NULL, 1},
+	{"remove", "os", "remove", 1, 0, "remove filename", 0},
+	{"rename", "os", "rename", 2, 0, "rename old new", 0},
+	{"rm", "os", "remove", 1, 0, "rm filename", 0},
+	{"unlink", "os", "remove", 1, 0, "unlink filename", 0},
 	{NULL, NULL, NULL, 0, 0, NULL, 0},
 };
 
@@ -205,6 +206,8 @@ void lua_shell(lua_State* L, char *buffer) {
 			    lua_getglobal(L, command[cindex].function);
 			}
 
+			int top = lua_gettop(L);
+
 			// Prepare arguments
 			int i, args = 0;
 
@@ -216,22 +219,45 @@ void lua_shell(lua_State* L, char *buffer) {
 			    args++;
 			}
 
-			// Call
-		    lua_pcall(L, args, 4, 0);
+			// In the stack there are:
+			// nil
+			// a reference to the module (if any)
+			// a reference to the function
+			// the function arguments
+
+			// Call, and make room for 4 return values
+		    lua_pcall(L, args, 4, NULL);
+
+		    // After the call the stack is
+		    // a reference to the module (if any)
+		    //
+		    // If error:
+		    //    nil= top vaiable
+		    //    error description = top + 1 variable
+		    //
+		    // If no error:
+		    //    the return values
 
 		    // Check for errors
-		    if (command[cindex].error_pos) {
-				if (lua_type(L, command[cindex].error_pos) == LUA_TSTRING) {
-					const char *msg = lua_tostring(L, command[cindex].error_pos);
+		    if ((lua_type(L, top) == LUA_TNIL) && (lua_type(L, top + 1) == LUA_TSTRING))  {
+		    	const char *msg = lua_tostring(L, top + 1);
+				if (msg) {
+					printf("%s\r\n", msg);
+			    }
 
-					if (msg) {
-						printf("%s\r\n", msg);
-					}
-			     }
+		    	// Clear stack
+				lua_settop(L, 0);
+		    } else {
+		    	if ((lua_type(L, top) != LUA_TNIL) && (command[cindex].returns)) {
+			    	lua_copy(L, top, 2);
+			    	lua_settop(L, top);
+		    	} else {
+			    	// Clear stack
+					lua_settop(L, 0);
+		    	}
 		    }
 
-			lua_settop(L, 0);
-			*buffer = 0x00;
+		    *buffer = 0x00;
 		}
 	}
 }
