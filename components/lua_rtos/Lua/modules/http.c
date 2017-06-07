@@ -33,20 +33,22 @@
 #include "lauxlib.h"
 
 static int lhttp_start(lua_State* L) {
-    http_start(L);
-    
-    return 0;
+    return http_start(L);
 }
 
 static int lhttp_stop(lua_State* L) {
     http_stop();
-    
     return 0;
+}
+
+static int lhttp_print(lua_State* L) {
+    return http_print(L);
 }
 
 static const luaL_Reg lhttp[] = {
     {"start", lhttp_start},
     {"stop", lhttp_stop},
+    {"print_chunk", lhttp_print},
     {NULL, NULL}
 };
 

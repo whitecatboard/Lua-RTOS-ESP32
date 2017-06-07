@@ -1,7 +1,10 @@
 /*
- * Lua RTOS, lua captivedns module
+ * Lua RTOS, http lua page preprocessor
  *
  * Copyright (C) 2015 - 2017
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ *
+ * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -24,45 +27,9 @@
  * this software.
  */
 
-#include "luartos.h"
+#ifndef HTTP_PREPROCESSOR_H_
+#define HTTP_PREPROCESSOR_H_
 
-#if LUA_USE_HTTP
-
-#include "net.h"
-
-#include "lwip/err.h"
-
-#include <drivers/net.h>
-
-extern int captivedns_start(lua_State* L);
-extern void captivedns_stop();
-
-static int lcaptivedns_start(lua_State* L) {
-	driver_error_t *error;
-
-	if ((error = net_check_connectivity())) {
-    	return luaL_driver_error(L, error);
-	}
-
-	return captivedns_start(L);
-}
-
-static int lcaptivedns_stop(lua_State* L) {
-	driver_error_t *error;
-
-	if ((error = net_check_connectivity())) {
-    	return luaL_driver_error(L, error);
-	}
-
-	captivedns_stop();
-
-	return 0;
-}
-
-static const LUA_REG_TYPE captivedns_map[] = {
-    { LSTRKEY( "start" ),	 LFUNCVAL( lcaptivedns_start   ) },
-    { LSTRKEY( "stop"  ),	 LFUNCVAL( lcaptivedns_stop    ) },
-	{ LNILKEY, LNILVAL }
-};
+int http_process_lua_page(const char *ipath, const char *opath);
 
 #endif

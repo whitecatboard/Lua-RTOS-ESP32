@@ -98,9 +98,10 @@ captivedns_inc_pcb_refcount(void)
     /* set up local port for the pcb -> listen on all interfaces on all src/dest IPs */
     udp_bind(captivedns_pcb, IP_ADDR_ANY, PORT);
     udp_recv(captivedns_pcb, captivedns_recv, NULL);
-  }
 
-  captivedns_pcb_refcount++;
+		//we only need one captivedns pcb
+	  captivedns_pcb_refcount++;
+  }
 
   return ERR_OK;
 }
@@ -109,10 +110,9 @@ captivedns_inc_pcb_refcount(void)
 static void
 captivedns_dec_pcb_refcount(void)
 {
-  LWIP_ASSERT("captivedns_pcb_refcount(): refcount error", (captivedns_pcb_refcount > 0));
-  captivedns_pcb_refcount--;
-
-  if(captivedns_pcb_refcount == 0) {
+  if(captivedns_pcb_refcount) {
+	  captivedns_pcb_refcount--;
+	  
     udp_remove(captivedns_pcb);
     captivedns_pcb = NULL;
   }
@@ -172,20 +172,28 @@ captivedns_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t 
   pbuf_free(p);
 }
 
-void captivedns_start() {
+int captivedns_start(lua_State* L) {
 	driver_error_t *error;
 
 	uint8_t mode;
-	if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return; //FIXME
-
+	if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) {
+		return luaL_error(L, "couldn't get wifi mode");
+	}
+	
 	if (mode == WIFI_MODE_STA) {
-		return; //FIXME should report reason
+		return luaL_error(L, "wrong wifi mode");
 	}
 
-	// Get WIFI IF info
-	if ((error = wifi_check_error(tcpip_adapter_get_ip_info(ESP_IF_WIFI_AP, &esp_info)))) return; //FIXME
-
-	captivedns_inc_pcb_refcount();
+	// get WIFI IF info
+	if ((error = wifi_check_error(tcpip_adapter_get_ip_info(ESP_IF_WIFI_AP, &esp_info)))) {
+		return luaL_error(L, "couldn't get interface information");
+	}
+	
+	if(captivedns_inc_pcb_refcount()!=ERR_OK) {
+		return luaL_error(L, "couldn't start captivedns service");
+	}
+	
+	return 0;
 }
 
 void captivedns_stop() {
