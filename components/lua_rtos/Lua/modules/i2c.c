@@ -60,7 +60,11 @@ static int li2c_setup( lua_State* L ) {
     int sda = luaL_checkinteger(L, 4);
     int scl = luaL_checkinteger(L, 5);
 
-    if ((error = i2c_setup(id, mode, speed, sda, scl, 0, 0))) {
+    if ((error = i2c_pin_map(id, sda, scl))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    if ((error = i2c_setup(id, mode, speed, 0, 0))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -85,10 +89,8 @@ static int li2c_attach( lua_State* L ) {
     int id = luaL_checkinteger(L, 1);
     int mode = luaL_checkinteger(L, 2);
     int speed = luaL_checkinteger(L, 3);
-    int sda = luaL_checkinteger(L, 4);
-    int scl = luaL_checkinteger(L, 5);
 
-    if ((error = i2c_setup(id, mode, speed, sda, scl, 0, 0))) {
+    if ((error = i2c_setup(id, mode, speed, 0, 0))) {
     	return luaL_driver_error(L, error);
     }
 

@@ -134,7 +134,13 @@ static driver_error_t *sensor_owire_setup(sensor_instance_t *unit) {
 static driver_error_t *sensor_i2c_setup(sensor_instance_t *unit) {
 	driver_error_t *error;
 
-    if ((error = i2c_setup(unit->setup.i2c.id, I2C_MASTER, unit->setup.i2c.speed, unit->setup.i2c.sda, unit->setup.i2c.scl, 0, 0))) {
+	if ((unit->setup.i2c.sda >= 0) || (unit->setup.i2c.scl >= 0)) {
+	    if ((error = i2c_pin_map(unit->setup.i2c.id, unit->setup.i2c.sda, unit->setup.i2c.scl))) {
+	    	return error;
+	    }
+	}
+
+    if ((error = i2c_setup(unit->setup.i2c.id, I2C_MASTER, unit->setup.i2c.speed, 0, 0))) {
     	return error;
     }
 	return NULL;

@@ -123,7 +123,7 @@ typedef struct sensor_value {
 typedef struct {
 	union {
 		struct {
-			uint8_t gpio;
+			int8_t gpio;
 		} gpio;
 
 		struct {
@@ -133,7 +133,7 @@ typedef struct {
 		} adc;
 
 		struct {
-			uint8_t gpio;
+			int8_t gpio;
 			uint8_t owdevice;
 			uint64_t owsensor;
 		} owire;
@@ -141,8 +141,8 @@ typedef struct {
 		struct {
 			uint8_t  id;
 			uint16_t speed;
-			uint8_t  sda;
-			uint8_t  scl;
+			int8_t  sda;
+			int8_t  scl;
 			uint16_t address;
 			void     *userdata;
 		} i2c;

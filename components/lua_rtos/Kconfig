@@ -213,12 +213,12 @@ menu "Lua RTOS"
 			config LUA_RTOS_I2C1_SCL
 				int "I2C1 SCL"
 				range 0 39
-				default 35
+				default 32
 		
 			config LUA_RTOS_I2C1_SDA
 				int "I2C1 SDA"
 				range 0 39
-				default 25
+				default 33
 		endmenu
 		
 		menu "SPI pin map"

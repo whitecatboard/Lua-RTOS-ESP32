@@ -51,7 +51,7 @@ extern TM_One_Wire_Devices_t ow_devices[MAX_ONEWIRE_PINS];
 extern LUA_REG_TYPE sensor_error_map[];
 extern const sensor_t sensors[];
 
-static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_setup_t *setup ) {
+static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_setup_t *setup, uint8_t attach ) {
 	switch (sensor->interface) {
 		case ADC_INTERFACE:
 			setup->adc.unit = luaL_checkinteger(L, 2);
@@ -64,11 +64,19 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 			break;
 
 		case I2C_INTERFACE:
-			setup->i2c.id = luaL_checkinteger(L, 2);
-			setup->i2c.speed = luaL_checkinteger(L, 3);
-			setup->i2c.sda = luaL_checkinteger(L, 4);
-			setup->i2c.scl = luaL_checkinteger(L, 5);
-			setup->i2c.address = luaL_checkinteger(L, 6);
+			if (attach) {
+				setup->i2c.id = luaL_checkinteger(L, 2);
+				setup->i2c.speed = luaL_checkinteger(L, 3);
+				setup->i2c.sda = -1;
+				setup->i2c.scl = -1;
+				setup->i2c.address = luaL_checkinteger(L, 4);
+			} else {
+				setup->i2c.id = luaL_checkinteger(L, 2);
+				setup->i2c.speed = luaL_checkinteger(L, 3);
+				setup->i2c.sda = luaL_checkinteger(L, 4);
+				setup->i2c.scl = luaL_checkinteger(L, 5);
+				setup->i2c.address = luaL_checkinteger(L, 6);
+			}
 			break;
 
 		case OWIRE_INTERFACE:
@@ -138,7 +146,7 @@ static int lsensor_setup( lua_State* L ) {
 	}
 
 	// Prepare setup
-	lsensor_setup_prepare(L, sensor, &setup);
+	lsensor_setup_prepare(L, sensor, &setup, 0);
 
 	// Setup sensor
 	if ((error = sensor_setup(sensor, &setup, &instance))) {
@@ -175,7 +183,7 @@ static int lsensor_attach( lua_State* L ) {
 	}
 
 	// Prepare setup
-	lsensor_setup_prepare(L, sensor, &setup);
+	lsensor_setup_prepare(L, sensor, &setup, 1);
 
 	// Setup sensor
 	if ((error = sensor_setup(sensor, &setup, &instance))) {
