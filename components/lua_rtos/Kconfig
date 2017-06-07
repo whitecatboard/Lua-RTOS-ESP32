@@ -199,36 +199,26 @@ menu "Lua RTOS"
 			endchoice
 		endmenu
 		
-		menu "UART pin map"
-			config LUA_RTOS_UART0_RX
-				int "UART0 RX"
+		menu "I2C pin map"
+			config LUA_RTOS_I2C0_SCL
+				int "I2C0 SCL"
 				range 0 39
-				default 3
+				default 21
+		
+			config LUA_RTOS_I2C0_SDA
+				int "I2C0 SDA"
+				range 0 39
+				default 22
 
-			config LUA_RTOS_UART0_TX
-				int "UART0 TX"
+			config LUA_RTOS_I2C1_SCL
+				int "I2C1 SCL"
 				range 0 39
-				default 1
-
-			config LUA_RTOS_UART1_RX
-				int "UART1 RX"
+				default 35
+		
+			config LUA_RTOS_I2C1_SDA
+				int "I2C1 SDA"
 				range 0 39
-				default 9
-
-			config LUA_RTOS_UART1_TX
-				int "UART1 TX"
-				range 0 39
-				default 10
-
-			config LUA_RTOS_UART2_RX
-				int "UART2 RX"
-				range 0 39
-				default 16
-
-			config LUA_RTOS_UART2_TX
-				int "UART2 TX"
-				range 0 39
-				default 17
+				default 25
 		endmenu
 		
 		menu "SPI pin map"
@@ -262,6 +252,39 @@ menu "Lua RTOS"
 				range 0 39
 				default 18
 		endmenu
+		
+		menu "UART pin map"
+			config LUA_RTOS_UART0_RX
+				int "UART0 RX"
+				range 0 39
+				default 3
+
+			config LUA_RTOS_UART0_TX
+				int "UART0 TX"
+				range 0 39
+				default 1
+
+			config LUA_RTOS_UART1_RX
+				int "UART1 RX"
+				range 0 39
+				default 9
+
+			config LUA_RTOS_UART1_TX
+				int "UART1 TX"
+				range 0 39
+				default 10
+
+			config LUA_RTOS_UART2_RX
+				int "UART2 RX"
+				range 0 39
+				default 16
+
+			config LUA_RTOS_UART2_TX
+				int "UART2 TX"
+				range 0 39
+				default 17
+		endmenu
+		
 
 		menu "SPI Ethernet"
 				config SPI_ETHERNET

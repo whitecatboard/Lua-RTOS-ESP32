@@ -92,7 +92,7 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
 }
 
 int luaL_deprecated(lua_State* L, const char *old, const char *new) {
-	printf("%s is deprecated. It will be removed in the future. Please, use %s.,\r\n", old, new);
+	printf("%s is deprecated. It will be removed in the future. Please, use %s.\r\n", old, new);
 
 	return 0;
 }
