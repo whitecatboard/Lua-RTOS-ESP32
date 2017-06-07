@@ -51,6 +51,39 @@ static int lspi_setup(lua_State* L) {
 	int spi_mode = 0;
 	int flags = SPI_FLAG_WRITE | SPI_FLAG_READ;
 
+	luaL_deprecated(L, "spi.setup", "spi.attach");
+
+	id = luaL_checkinteger(L, 1);
+	is_master = luaL_checkinteger(L, 2) == 1;
+	cs = luaL_checkinteger(L, 3);
+	clock = luaL_checkinteger(L, 4);
+	data_bits = luaL_checkinteger(L, 5);
+	spi_mode = luaL_checkinteger(L, 6);
+
+	if (lua_gettop(L) == 7) {
+		flags = luaL_checkinteger(L, 7);
+	}
+
+	spi_userdata *spi = (spi_userdata *)lua_newuserdata(L, sizeof(spi_userdata));
+
+	if ((error = spi_setup(id, is_master, cs, spi_mode, clock * 1000, flags, &spi->spi_device))) {
+	    return luaL_driver_error(L, error);
+	}
+
+    luaL_getmetatable(L, "spi.ins");
+    lua_setmetatable(L, -2);
+
+	(void)data_bits;
+	return 1;
+}
+
+static int lspi_attach(lua_State* L) {
+	int id, data_bits, is_master, cs;
+	driver_error_t *error;
+	uint32_t clock;
+	int spi_mode = 0;
+	int flags = SPI_FLAG_WRITE | SPI_FLAG_READ;
+
 	id = luaL_checkinteger(L, 1);
 	is_master = luaL_checkinteger(L, 2) == 1;
 	cs = luaL_checkinteger(L, 3);
@@ -170,6 +203,7 @@ static int lspi_ins_gc (lua_State *L) {
 
 static const LUA_REG_TYPE lspi_map[] = {
 	{ LSTRKEY( "setup"      ),	 LFUNCVAL( lspi_setup    ) },
+	{ LSTRKEY( "attach"     ),	 LFUNCVAL( lspi_attach   ) },
 	{ LSTRKEY( "error"      ),   LROVAL  ( spi_error_map ) },
 	{ LSTRKEY( "WRITE"      ),	 LINTVAL ( SPI_FLAG_WRITE) },
 	{ LSTRKEY( "READ"       ),	 LINTVAL ( SPI_FLAG_READ ) },

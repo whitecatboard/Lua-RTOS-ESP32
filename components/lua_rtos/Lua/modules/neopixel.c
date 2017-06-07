@@ -50,6 +50,28 @@ static int lneopixel_setup( lua_State* L ) {
     int type, gpio, pixels;
 	driver_error_t *error;
 
+	luaL_deprecated(L, "neopixel.setup", "neopixel.attach");
+
+    type = luaL_checkinteger( L, 1 );
+    gpio = luaL_checkinteger( L, 2 );
+    pixels = luaL_checkinteger( L, 3 );
+
+    neopixel_userdata *neopixel = (neopixel_userdata *)lua_newuserdata(L, sizeof(neopixel_userdata));
+
+    if ((error = neopixel_setup(type, gpio, pixels, &neopixel->unit))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    luaL_getmetatable(L, "neopixel.inst");
+    lua_setmetatable(L, -2);
+
+    return 1;
+}
+
+static int lneopixel_attach( lua_State* L ) {
+    int type, gpio, pixels;
+	driver_error_t *error;
+
     type = luaL_checkinteger( L, 1 );
     gpio = luaL_checkinteger( L, 2 );
     pixels = luaL_checkinteger( L, 3 );
@@ -117,6 +139,7 @@ static int lneopixel_update( lua_State* L ) {
 
 static const LUA_REG_TYPE lneopixel_map[] = {
     { LSTRKEY( "setup"   ),	     LFUNCVAL ( lneopixel_setup    ) },
+    { LSTRKEY( "attach"  ),	     LFUNCVAL ( lneopixel_attach   ) },
 	{ LSTRKEY( "error"   ),      LROVAL   ( neopixel_error_map ) },
 	{ LSTRKEY( "WS2812B" ),      LINTVAL  ( NeopixelWS2812B    ) },
 	{ LNILKEY, LNILVAL }

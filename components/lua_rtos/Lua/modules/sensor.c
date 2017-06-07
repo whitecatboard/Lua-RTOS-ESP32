@@ -127,6 +127,45 @@ static int lsensor_setup( lua_State* L ) {
 	sensor_instance_t *instance = NULL;
 	sensor_setup_t setup;
 
+	luaL_deprecated(L, "sensor.setup", "sensor.attach");
+
+    const char *id = luaL_checkstring( L, 1 );
+
+	// Get sensor definition
+	sensor = get_sensor(id);
+	if (!sensor) {
+    	return luaL_exception(L, SENSOR_ERR_NOT_FOUND);
+	}
+
+	// Prepare setup
+	lsensor_setup_prepare(L, sensor, &setup);
+
+	// Setup sensor
+	if ((error = sensor_setup(sensor, &setup, &instance))) {
+    	return luaL_driver_error(L, error);
+    }
+
+	// Create user data
+    sensor_userdata *data = (sensor_userdata *)lua_newuserdata(L, sizeof(sensor_userdata));
+    if (!data) {
+    	return luaL_exception(L, SENSOR_ERR_NOT_ENOUGH_MEMORY);
+    }
+
+    data->instance = instance;
+    data->adquired = 0;
+
+    luaL_getmetatable(L, "sensor.ins");
+    lua_setmetatable(L, -2);
+
+    return 1;
+}
+
+static int lsensor_attach( lua_State* L ) {
+	driver_error_t *error;
+	const sensor_t *sensor;
+	sensor_instance_t *instance = NULL;
+	sensor_setup_t setup;
+
     const char *id = luaL_checkstring( L, 1 );
 
 	// Get sensor definition
@@ -586,7 +625,7 @@ static int lsensor_ins_gc (lua_State *L) {
 }
 
 static const LUA_REG_TYPE lsensor_map[] = {
-    { LSTRKEY( "attach"  	 ),	LFUNCVAL( lsensor_setup  	  ) },
+    { LSTRKEY( "attach"  	 ),	LFUNCVAL( lsensor_attach     ) },
     { LSTRKEY( "setup"  	 ),	LFUNCVAL( lsensor_setup  	  ) },
 	{ LSTRKEY( "list"   	 ),	LFUNCVAL( lsensor_list   	  ) },
 	{ LSTRKEY( "enumerate"   ),	LFUNCVAL( lsensor_enumerate   ) },

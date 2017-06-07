@@ -54,6 +54,7 @@ static int luart_setup( lua_State* L ) {
 	driver_error_t *error;
 	int flags = UART_FLAG_WRITE | UART_FLAG_READ;
 
+	luaL_deprecated(L, "uart.setup", "uart.attach");
 
 	int id = luaL_checkinteger(L, 1);
     int bauds = luaL_checkinteger(L, 2);
@@ -79,6 +80,42 @@ static int luart_setup( lua_State* L ) {
 
     int real_bauds = uart_get_br(id);
     
+    if (real_bauds != 0) {
+        lua_pushinteger(L, real_bauds);
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+static int luart_attach( lua_State* L ) {
+	driver_error_t *error;
+	int flags = UART_FLAG_WRITE | UART_FLAG_READ;
+
+	int id = luaL_checkinteger(L, 1);
+    int bauds = luaL_checkinteger(L, 2);
+    int databits = luaL_checkinteger(L, 3);
+    int parity = luaL_checkinteger(L, 4);
+    int stop_bits = luaL_checkinteger(L, 5);
+    int buffer = luaL_optinteger(L, 6, 1024);
+
+	if (lua_gettop(L) == 7) {
+		flags = luaL_checkinteger(L, 7);
+	}
+
+    // Setup
+    error = uart_init(id, bauds, databits, parity, stop_bits, flags, buffer);
+    if (error) {
+        return luaL_driver_error(L, error);
+    }
+
+    error = uart_setup_interrupts(id);
+    if (error) {
+        return luaL_driver_error(L, error);
+    }
+
+    int real_bauds = uart_get_br(id);
+
     if (real_bauds != 0) {
         lua_pushinteger(L, real_bauds);
         return 1;
@@ -233,6 +270,7 @@ static int luart_unlock( lua_State* L ) {
 
 static const LUA_REG_TYPE uart_map[] = {
     { LSTRKEY( "setup"    ),	 LFUNCVAL( luart_setup ) },
+    { LSTRKEY( "attach"   ),	 LFUNCVAL( luart_attach ) },
     { LSTRKEY( "write"    ),	 LFUNCVAL( luart_write ) },
     { LSTRKEY( "read"     ),	 LFUNCVAL( luart_read ) },
     { LSTRKEY( "consume"  ),	 LFUNCVAL( luart_consume ) },
