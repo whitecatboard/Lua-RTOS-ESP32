@@ -174,7 +174,7 @@ driver_error_t *driver_operation_error(const driver_t *driver, unsigned int exce
 }
 
 // Try to obtain a lock on an unit driver
-driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit) {
+driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit, uint8_t flags) {
     mtx_lock(&driver_mtx);
 
 	driver_unit_lock_t *target_lock = (driver_unit_lock_t *)target_driver->lock;
@@ -196,7 +196,7 @@ driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_un
 
 			mtx_unlock(&driver_mtx);
 
-			if ((error = target_driver->lock_resources(target_unit, NULL))) {
+			if ((error = target_driver->lock_resources(target_unit, flags, NULL))) {
 				// Target driver has no locks, then grant access
 				#if DRIVER_LOCK_DEBUG
 				syslog(LOG_DEBUG,"driver lock by %s%d on %s%d revoked\r\n",

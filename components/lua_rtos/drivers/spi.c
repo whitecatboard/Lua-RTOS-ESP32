@@ -92,7 +92,6 @@ DRIVER_REGISTER_ERROR(SPI, spi, NoMoreDevicesAllowed, "no more devices allowed",
 DRIVER_REGISTER_ERROR(SPI, spi, InvalidDevice, "invalid device", SPI_ERR_INVALID_DEVICE);
 DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSetup, "invalid device", SPI_ERR_DEVICE_NOT_SETUP);
 DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSelected, "device is not selected", SPI_ERR_DEVICE_IS_NOT_SELECTED);
-DRIVER_REGISTER_ERROR(SPI, spi, InvalidFlag, "invalid flag", SPI_ERR_INVALID_FLAG);
 
 typedef struct {
 	uint8_t  setup;
@@ -353,20 +352,20 @@ static driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
 
     // Lock pins
     if (flags & SPI_FLAG_READ) {
-        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].miso))) {
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].miso, flags))) {
         	// Revoked lock on pin
         	return driver_lock_error(SPI_DRIVER, lock_error);
         }
     }
 
     if (flags & SPI_FLAG_WRITE) {
-        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].mosi))) {
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].mosi, flags))) {
         	// Revoked lock on pin
         	return driver_lock_error(SPI_DRIVER, lock_error);
         }
     }
 
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].clk))) {
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].clk, flags))) {
     	// Revoked lock on pin
     	return driver_lock_error(SPI_DRIVER, lock_error);
     }
@@ -793,14 +792,6 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "cs, selected pin cannot be output");
     }
 
-    if (flags & (~SPI_FLAG_ALL)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_FLAG, NULL);
-    }
-
-    if (!(flags & (SPI_FLAG_ALL))) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_FLAG, NULL);
-    }
-
     // Lock resources
     if (!spi_bus[unit].setup) {
         if ((error = spi_lock_bus_resources(unit, flags))) {
@@ -809,7 +800,7 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode
     }
 
     driver_unit_lock_error_t *lock_error = NULL;
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, cs))) {
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, cs, flags))) {
     	return driver_lock_error(SPI_DRIVER, lock_error);
     }
 

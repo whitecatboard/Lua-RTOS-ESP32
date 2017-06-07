@@ -69,7 +69,7 @@ static driver_error_t *sensor_adc_setup(sensor_instance_t *unit) {
 	driver_error_t *error;
 
 	// Lock ADC channel
-    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, ADC_DRIVER, unit->setup.adc.channel))) {
+    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, ADC_DRIVER, unit->setup.adc.channel, DRIVER_ALL_FLAGS))) {
     	// Revoked lock on ADC channel
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
@@ -85,7 +85,7 @@ static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
 
 	// Lock gpio
-    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup.gpio.gpio))) {
+    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup.gpio.gpio, DRIVER_ALL_FLAGS))) {
     	// Revoked lock on gpio
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }

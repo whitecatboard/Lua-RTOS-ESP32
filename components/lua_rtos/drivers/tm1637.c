@@ -259,13 +259,13 @@ driver_error_t *tm1637_setup(uint8_t scl, uint8_t sda, int *deviceid) {
 	*deviceid = (scl << 8) | sda;
 
 	// Lock scl
-    if ((lock_error = driver_lock(TM1637_DRIVER, *deviceid, GPIO_DRIVER, scl))) {
+    if ((lock_error = driver_lock(TM1637_DRIVER, *deviceid, GPIO_DRIVER, scl, DRIVER_ALL_FLAGS))) {
     	// Revoked lock on ADC channel
     	return driver_lock_error(TM1637_DRIVER, lock_error);
     }
 
 	// Lock sda
-    if ((lock_error = driver_lock(TM1637_DRIVER, *deviceid, GPIO_DRIVER, sda))) {
+    if ((lock_error = driver_lock(TM1637_DRIVER, *deviceid, GPIO_DRIVER, sda, DRIVER_ALL_FLAGS))) {
     	// Revoked lock on ADC channel
     	return driver_lock_error(TM1637_DRIVER, lock_error);
     }

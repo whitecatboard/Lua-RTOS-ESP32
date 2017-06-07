@@ -226,7 +226,7 @@ void lua_shell(lua_State* L, char *buffer) {
 			// the function arguments
 
 			// Call, and make room for 4 return values
-		    lua_pcall(L, args, 4, NULL);
+		    lua_pcall(L, args, 4, 0);
 
 		    // After the call the stack is
 		    // a reference to the module (if any)

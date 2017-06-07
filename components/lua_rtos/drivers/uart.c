@@ -90,7 +90,6 @@ DRIVER_REGISTER_ERROR(UART, uart, InvalidParity, "invalid parity", UART_ERR_INVA
 DRIVER_REGISTER_ERROR(UART, uart, InvalidStopBits, "invalid stop bits", UART_ERR_INVALID_STOP_BITS);
 DRIVER_REGISTER_ERROR(UART, uart, NotEnoughtMemory, "not enough memory", UART_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_ERROR(UART, uart, NotSetup, "is not setup", UART_ERR_IS_NOT_SETUP);
-DRIVER_REGISTER_ERROR(UART, uart, InvalidFlag, "invalid flag", UART_ERR_INVALID_FLAG);
 
 // Flags for determine some UART states
 #define UART_FLAG_INIT		(1 << 1)
@@ -407,14 +406,14 @@ driver_error_t *uart_lock_resources(int unit, uint8_t flags, void *resources) {
 
     // Lock this pins
     if (flags & UART_FLAG_READ) {
-        if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart_resources->rx))) {
+        if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart_resources->rx, flags))) {
         	// Revoked lock on pin
         	return driver_lock_error(UART_DRIVER, lock_error);
         }
     }
 
     if (flags & UART_FLAG_WRITE) {
-        if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart_resources->tx))) {
+        if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart_resources->tx, flags))) {
         	// Revoked lock on pin
         	return driver_lock_error(UART_DRIVER, lock_error);
         }
@@ -429,14 +428,6 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
 		return driver_operation_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
 	}
-
-    if (flags & (~UART_FLAG_ALL)) {
-		return driver_operation_error(SPI_DRIVER, UART_ERR_INVALID_FLAG, NULL);
-    }
-
-    if (!(flags & (UART_FLAG_ALL))) {
-		return driver_operation_error(SPI_DRIVER, UART_ERR_INVALID_FLAG, NULL);
-    }
 
 	// Create the queue signal, and start a task
 	if (!signal_q) {

@@ -38,6 +38,8 @@
 #include <sys/resource.h>
 #include <sys/driver.h>
 
+#define DRIVER_ALL_FLAGS   0xff
+
 #define ADC_DRIVER_ID      1
 #define GPIO_DRIVER_ID     2
 #define I2C_DRIVER_ID      3
@@ -115,7 +117,7 @@ typedef struct driver {
 	void (*init)();             		  // Init function for driver that must be caller in system init
 
 	// Driver lock function
-	driver_error_t *(*lock_resources)(int,void *);
+	driver_error_t *(*lock_resources)(int,uint8_t, void *);
 } driver_t;
 
 typedef struct driver_unit_lock {
@@ -142,7 +144,7 @@ const char *driver_get_name(driver_error_t *error);
 driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error_t *lock_error);
 driver_error_t *driver_setup_error(const driver_t *driver, unsigned int code, const char *msg);
 driver_error_t *driver_operation_error(const driver_t *driver, unsigned int code, const char *msg);
-driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit);
+driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit, uint8_t flags);
 void _driver_init();
 
 #define DRIVER_SECTION(s) __attribute__((used,unused,section(s)))

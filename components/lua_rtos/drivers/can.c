@@ -61,13 +61,13 @@ driver_error_t *can_setup(uint32_t unit, uint16_t speed) {
 	driver_unit_lock_error_t *lock_error = NULL;
 
     // Lock TX pin
-    if ((lock_error = driver_lock(CAN_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_CAN_TX))) {
+    if ((lock_error = driver_lock(CAN_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_CAN_TX, DRIVER_ALL_FLAGS))) {
     	// Revoked lock on pin
     	return driver_lock_error(CAN_DRIVER, lock_error);
     }
 
     // Lock RX pin
-    if ((lock_error = driver_lock(CAN_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_CAN_RX))) {
+    if ((lock_error = driver_lock(CAN_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_CAN_RX, DRIVER_ALL_FLAGS))) {
     	// Revoked lock on pin
     	return driver_lock_error(CAN_DRIVER, lock_error);
     }
