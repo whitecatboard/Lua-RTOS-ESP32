@@ -228,13 +228,13 @@ int luac_main(int argc, char* argv[])
  return EXIT_SUCCESS;
 }
 
-int luac(char *src, char *dst) {
+int luac(const char *src, const char *dst) {
 	char* argv[] = {
 		"luac",
 		"-o",
-		dst,
+		(char *)dst,
 		"-s",
-		src
+		(char *)src
 	};
 
 	int ret = 0;

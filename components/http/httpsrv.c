@@ -198,10 +198,9 @@ int http_print(lua_State* L) {
 }
 
 void send_file(FILE *f, char *path, struct stat *statbuf, char *requestdata) {
-	int n, inLua, line;
+	int n;
 	char data[HTTP_BUFF_SIZE];
 
-	char *p1, *p2;
 	FILE *file = fopen(path, "r");
 
 	if (!file) {

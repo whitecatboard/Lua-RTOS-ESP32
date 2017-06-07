@@ -1,6 +1,8 @@
 #include "lua.h"
 #include "lauxlib.h"
 
+int luac(const char *src, const char *dst);
+
 int stackDump(lua_State *L) {
     int i;
     int top = lua_gettop(L);
@@ -163,7 +165,7 @@ static int luaB_compile (lua_State *L) {
 		strcpy(tmp, src);
 		strcat(tmp, "c");
 
-		luac(src, tmp);
+		luac(src, (const char *)tmp);
 
 		free(tmp);
 	} else {
