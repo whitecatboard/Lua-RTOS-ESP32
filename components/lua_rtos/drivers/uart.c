@@ -505,7 +505,7 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 	// For the console, create the queue signal, and start a task for process signals
     // received from the console
 	#if CONFIG_LUA_RTOS_USE_CONSOLE
-		if (unit == CONFIG_LUA_RTOS_USE_CONSOLE) {
+		if (unit == CONSOLE_UART) {
 			if (!signal_q) {
 				signal_q = xQueueCreate(1, sizeof(console_deferred_data));
 				xTaskCreatePinnedToCore(console_deferred_intr_handler, "signal", configMINIMAL_STACK_SIZE, NULL, 21, NULL, 0);
