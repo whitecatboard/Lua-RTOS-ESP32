@@ -47,8 +47,8 @@
 typedef struct i2c {
 	uint8_t mode;
 	uint8_t setup;
-	uint8_t sda;
-	uint8_t scl;
+	int8_t sda;
+	int8_t scl;
 	struct mtx mtx;
 } i2c_t;
 
@@ -65,6 +65,7 @@ typedef struct i2c {
 #define I2C_ERR_NOT_ACK					 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  6)
 #define I2C_ERR_TIMEOUT					 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  7)
 #define I2C_ERR_PIN_NOT_ALLOWED		     (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  8)
+#define I2C_ERR_CANNOT_CHANGE_PINMAP     (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  10)
 
 /**
  * @brief Change the I2C pin map. Pin map is hard coded in Kconfig, but it can be

@@ -36,6 +36,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <sys/macros.h>
 #include <sys/list.h>
 #include <sys/mutex.h>
 #include <sys/driver.h>
@@ -63,9 +64,10 @@ DRIVER_REGISTER_ERROR(I2C, i2c, InvalidTransaction, "invalid transaction", I2C_E
 DRIVER_REGISTER_ERROR(I2C, i2c, AckNotReceived, "not ack received", I2C_ERR_NOT_ACK);
 DRIVER_REGISTER_ERROR(I2C, i2c, Timeout, "timeout", I2C_ERR_TIMEOUT);
 DRIVER_REGISTER_ERROR(I2C, i2c, PinNowAllowed, "pin not allowed", I2C_ERR_PIN_NOT_ALLOWED);
+DRIVER_REGISTER_ERROR(I2C, i2c, CannotChangePinMap, "cannot change pin map once the I2C unit has an attached device", I2C_ERR_CANNOT_CHANGE_PINMAP);
 
 // i2c info needed by driver
-static i2c_t i2c[CPU_LAST_I2C + 1];
+i2c_t i2c[CPU_LAST_I2C + 1];
 
 // Transaction list
 static struct list transactions;
@@ -227,6 +229,35 @@ driver_error_t *i2c_pin_map(int unit, int sda, int scl) {
 
 	mtx_lock(&i2c[unit].mtx);
 
+	if (i2c[unit].setup) {
+	   	mtx_unlock(&i2c[unit].mtx);
+		return driver_operation_error(I2C_DRIVER, I2C_ERR_CANNOT_CHANGE_PINMAP, NULL);
+	}
+
+	// Sanity checks on pinmap
+    if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << i2c[unit].scl))) && (scl >= 0)) {
+    	mtx_unlock(&i2c[unit].mtx);
+
+		return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "scl, selected pin cannot be output");
+    }
+
+    if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << i2c[unit].sda))) && (sda >= 0)) {
+    	mtx_unlock(&i2c[unit].mtx);
+
+    	return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda, selected pin cannot be output");
+    }
+
+    if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << i2c[unit].sda))) && (sda >= 0)) {
+    	mtx_unlock(&i2c[unit].mtx);
+
+    	return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda, selected pin cannot be input");
+    }
+
+    if (!TEST_UNIQUE2(i2c[unit].sda, i2c[unit].scl)) {
+    	mtx_unlock(&i2c[unit].mtx);
+		return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda and scl must be different");
+    }
+
     // Update pin map, if needed
 	if (scl >= 0) {
 		i2c[unit].scl = scl;
@@ -236,26 +267,7 @@ driver_error_t *i2c_pin_map(int unit, int sda, int scl) {
 		i2c[unit].sda = sda;
 	}
 
-	// Sanity checks on pinmap
-    if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << i2c[unit].scl))) {
-    	mtx_unlock(&i2c[unit].mtx);
-
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "scl, selected pin cannot be output");
-    }
-
-    if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << i2c[unit].sda))) {
-    	mtx_unlock(&i2c[unit].mtx);
-
-    	return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda, selected pin cannot be output");
-    }
-
-    if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << i2c[unit].sda))) {
-    	mtx_unlock(&i2c[unit].mtx);
-
-    	return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda, selected pin cannot be input");
-    }
-
-    mtx_unlock(&i2c[unit].mtx);
+	mtx_unlock(&i2c[unit].mtx);
 
 	return NULL;
 }
