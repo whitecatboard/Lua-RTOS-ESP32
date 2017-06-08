@@ -118,6 +118,21 @@ static int lspi_pins(lua_State* L) {
 	return table;
 }
 
+static int lspi_setpins(lua_State* L) {
+	driver_error_t *error;
+
+	int id = luaL_checkinteger(L, 1);
+	int miso = luaL_checkinteger(L, 2);
+	int mosi = luaL_checkinteger(L, 3);
+	int clk = luaL_checkinteger(L, 4);
+
+	if ((error = spi_pin_map(id, miso, mosi, clk))) {
+	    return luaL_driver_error(L, error);
+	}
+
+	return 0;
+}
+
 static int lspi_setup(lua_State* L) {
 	int id, data_bits, is_master, cs;
 	driver_error_t *error;
@@ -273,6 +288,7 @@ static const LUA_REG_TYPE lspi_map[] = {
 	{ LSTRKEY( "setup"      ),	 LFUNCVAL( lspi_setup    ) },
 	{ LSTRKEY( "attach"     ),	 LFUNCVAL( lspi_attach   ) },
 	{ LSTRKEY( "pins"       ),	 LFUNCVAL( lspi_pins     ) },
+	{ LSTRKEY( "setpins"    ),	 LFUNCVAL( lspi_setpins  ) },
 	{ LSTRKEY( "error"      ),   LROVAL  ( spi_error_map ) },
 	{ LSTRKEY( "WRITE"      ),	 LINTVAL ( SPI_FLAG_WRITE) },
 	{ LSTRKEY( "READ"       ),	 LINTVAL ( SPI_FLAG_READ ) },
