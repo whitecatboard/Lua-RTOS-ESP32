@@ -80,8 +80,6 @@ static int lpwm_attach( lua_State* L ) {
     int32_t freq;
     double duty;
 
-	luaL_deprecated(L, "pwm.setup", "pwm.attach");
-
     pwm_userdata *pwm = (pwm_userdata *)lua_newuserdata(L, sizeof(pwm_userdata));
 
     pwm->unit = 0;

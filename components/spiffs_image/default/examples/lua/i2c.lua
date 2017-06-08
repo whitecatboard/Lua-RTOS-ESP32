@@ -10,7 +10,7 @@
 -- ----------------------------------------------------------------
 
 -- Setup i2c
-eeprom = i2c.setup(i2c.I2C0, i2c.MASTER, 1, pio.GPIO16, pio.GPIO27)
+eeprom = i2c.attach(i2c.I2C0, i2c.MASTER, 1)
 
 -- Write
 for i=0,100 do
