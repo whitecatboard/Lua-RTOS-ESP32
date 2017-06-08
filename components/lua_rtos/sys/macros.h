@@ -31,6 +31,16 @@
 #define _LUA_RTOS_SYS_MACROS_H_
 
 /**
+ * @brief Test that all elements in a 43size set are different.
+ *
+ * @param a first element
+ * @param b second element
+ * @param c third element
+ *
+ */
+#define TEST_UNIQUE3(a,b,c) ((a!=b) && (a!=c) && (b!=c))
+
+/**
  * @brief Test that all elements in a 4-size set are different.
  *
  * @param a first element

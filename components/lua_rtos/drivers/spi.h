@@ -32,6 +32,8 @@
 
 #include <sys/driver.h>
 
+#define SPI_USE_IDF_DRIVER 0
+
 // Number of SPI devices per bus
 #define SPI_BUS_DEVICES 3
 
@@ -50,11 +52,39 @@
 #define SPI_ERR_INVALID_DEVICE 			 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  6)
 #define SPI_ERR_DEVICE_NOT_SETUP     	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  7)
 #define SPI_ERR_DEVICE_IS_NOT_SELECTED 	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  8)
+#define SPI_ERR_CANNOT_CHANGE_PINMAP 	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  9)
 
 // Flags
 #define SPI_FLAG_WRITE 0x01
 #define SPI_FLAG_READ  0x02
 #define SPI_FLAG_ALL (SPI_FLAG_WRITE | SPI_FLAG_READ)
+
+typedef struct {
+	uint8_t  setup;
+	int8_t  cs;
+	uint32_t speed;
+	uint8_t  mode;
+#if !SPI_USE_IDF_DRIVER
+	uint32_t divisor;
+#else
+	spi_device_handle_t h;
+#endif
+} spi_device_t;
+
+typedef struct {
+	SemaphoreHandle_t mtx; // Recursive mutex for access the bus
+	uint8_t setup;         // Bus is setup?
+	int last_device;       // Last device that used the bus
+	int selected_device;   // Device that owns the bus
+
+	// Current pin assignment
+	int8_t miso;
+	int8_t mosi;
+	int8_t clk;
+
+	// Spi devices attached to the bus
+	spi_device_t device[SPI_BUS_DEVICES];
+} spi_bus_t;
 
 /**
  * @brief Select SPI device for start a transaction over the SPI bus to the device. This function is thread safe.
@@ -246,6 +276,25 @@ void spi_ll_bulk_write32_be(int deviceid, uint32_t nelements, uint32_t *data);
 void spi_ll_bulk_read32_be(int deviceid, uint32_t nelements, uint32_t *data);
 
 /**
+ * @brief Change the SPI pin map. Pin map is hard coded in Kconfig, but it can be
+ *        change in development environments. This function is thread safe.
+ *
+ * @param unit SPI unit. 2 = HSPI, 3 = VSPI.
+ * @param miso MISO signal gpio number.
+ * @param mosi MOSI signal gpio number.
+ * @param clk CLK signal gpio number.
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs. Error can be an operation error or a lock error.
+ *
+ *     	 SPI_ERR_INVALID_UNIT
+ *     	 SPI_ERR_PIN_NOT_ALLOWED
+ *     	 SPI_ERR_CANNOT_CHANGE_PINMAP
+ */
+driver_error_t *spi_pin_map(int unit, int miso, int mosi, int clk);
+
+/**
  * @brief Setup SPI device attached to a SPI bus. This function is thread safe.
  *
  * @param unit SPI unit. 2 = HSPI, 3 = VSPI.
@@ -266,7 +315,7 @@ void spi_ll_bulk_read32_be(int deviceid, uint32_t nelements, uint32_t *data);
  *     	 SPI_ERR_PIN_NOT_ALLOWED
  *     	 SPI_ERR_NO_MORE_DEVICES_ALLOWED
  */
-driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid);
+driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid);
 
 /**
  * @brief Select SPI device for start a transaction over the SPI bus to the device. This function is thread safe.
