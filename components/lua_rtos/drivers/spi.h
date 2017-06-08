@@ -35,6 +35,11 @@
 // Number of SPI devices per bus
 #define SPI_BUS_DEVICES 3
 
+// Native pins
+#define SPI_DEFAULT_MISO(unit) (unit==2?GPIO12:(unit==3?GPIO19:-1))
+#define SPI_DEFAULT_MOSI(unit) (unit==2?GPIO13:(unit==3?GPIO23:-1))
+#define SPI_DEFAULT_CLK(unit)  (unit==2?GPIO14:(unit==3?GPIO18:-1))
+
 // SPI errors
 #define SPI_ERR_INVALID_MODE             (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  0)
 #define SPI_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  1)

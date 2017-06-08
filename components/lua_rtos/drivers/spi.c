@@ -112,14 +112,9 @@ typedef struct {
 	int selected_device;   // Device that owns the bus
 
 	// Current pin assignment
-	uint8_t miso;
-	uint8_t mosi;
-	uint8_t clk;
-
-	// Default pin assignment
-	uint8_t dmiso;
-	uint8_t dmosi;
-	uint8_t dclk;
+	int8_t miso;
+	int8_t mosi;
+	int8_t clk;
 
 	// Spi devices attached to the bus
 	spi_device_t device[SPI_BUS_DEVICES];
@@ -144,18 +139,10 @@ static void _spi_init() {
 	spi_bus[2].mosi  = CONFIG_LUA_RTOS_SPI2_MOSI;
 	spi_bus[2].clk   = CONFIG_LUA_RTOS_SPI2_CLK;
 
-	spi_bus[2].dmiso = GPIO12;
-	spi_bus[2].dmosi = GPIO13;
-	spi_bus[2].dclk  = GPIO14;
-
 	// SPI3
 	spi_bus[3].miso  = CONFIG_LUA_RTOS_SPI3_MISO;
 	spi_bus[3].mosi  = CONFIG_LUA_RTOS_SPI3_MOSI;
 	spi_bus[3].clk   = CONFIG_LUA_RTOS_SPI3_CLK;
-
-	spi_bus[3].dmiso = GPIO19;
-	spi_bus[3].dmosi = GPIO23;
-	spi_bus[3].dclk  = GPIO18;
 
 	spi_bus[2].mtx = xSemaphoreCreateRecursiveMutex();
 	spi_bus[3].mtx = xSemaphoreCreateRecursiveMutex();
@@ -382,7 +369,7 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 	}
 
 	if (flags & SPI_FLAG_READ) {
-	    if (spi_bus[unit].miso == spi_bus[unit].dmiso) {
+	    if (spi_bus[unit].miso == SPI_DEFAULT_MISO(unit)) {
 	    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_SPI);
 	    } else {
 	        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_GPIO);
@@ -403,7 +390,7 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 	}
 
 	if (flags & SPI_FLAG_WRITE) {
-	    if (spi_bus[unit].mosi == spi_bus[unit].dmosi) {
+	    if (spi_bus[unit].mosi == SPI_DEFAULT_MOSI(unit)) {
 	    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].mosi], PIN_FUNC_SPI);
 	    } else {
 	        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].mosi], PIN_FUNC_GPIO);
@@ -423,7 +410,7 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 	    }
 	}
 
-    if (spi_bus[unit].clk == spi_bus[unit].dclk) {
+    if (spi_bus[unit].clk == SPI_DEFAULT_CLK(unit)) {
     	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].clk], PIN_FUNC_SPI);
     } else {
         PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].clk], PIN_FUNC_GPIO);
