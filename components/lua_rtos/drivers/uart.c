@@ -2,7 +2,7 @@
  * Lua RTOS, UART driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -73,6 +73,7 @@
 #include <stdarg.h>
 #include <signal.h>
 
+#include <sys/macros.h>
 #include <sys/status.h>
 #include <sys/driver.h>
 #include <sys/syslog.h>
@@ -90,6 +91,8 @@ DRIVER_REGISTER_ERROR(UART, uart, InvalidParity, "invalid parity", UART_ERR_INVA
 DRIVER_REGISTER_ERROR(UART, uart, InvalidStopBits, "invalid stop bits", UART_ERR_INVALID_STOP_BITS);
 DRIVER_REGISTER_ERROR(UART, uart, NotEnoughtMemory, "not enough memory", UART_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_ERROR(UART, uart, NotSetup, "is not setup", UART_ERR_IS_NOT_SETUP);
+DRIVER_REGISTER_ERROR(UART, uart, PinNowAllowed, "pin not allowed", UART_ERR_PIN_NOT_ALLOWED);
+DRIVER_REGISTER_ERROR(UART, uart, CannotChangePinMap, "cannot change pin map once the UART unit has an attached device", UART_ERR_CANNOT_CHANGE_PINMAP);
 
 // Flags for determine some UART states
 #define UART_FLAG_INIT		(1 << 1)
@@ -106,23 +109,15 @@ static const char *names[] = {
 };
 
 // UART array
-struct uart {
-    uint8_t          flags;
-    QueueHandle_t    q;         // RX queue
-    uint16_t         qs;        // Queue size
-    uint32_t         brg;       // Baud rate
-    pthread_mutex_t  mtx;		// Mutex
-};
-
-static struct uart uart[NUART] = {
+struct uart uart[NUART] = {
     {
-        0, NULL, 0, 115200, PTHREAD_MUTEX_INITIALIZER
+        0, NULL, 0, 115200, PTHREAD_MUTEX_INITIALIZER, CONFIG_LUA_RTOS_UART0_RX,CONFIG_LUA_RTOS_UART0_TX,
     },
     {
-        0, NULL, 0, 115200, PTHREAD_MUTEX_INITIALIZER
+        0, NULL, 0, 115200, PTHREAD_MUTEX_INITIALIZER, CONFIG_LUA_RTOS_UART1_RX,CONFIG_LUA_RTOS_UART1_TX,
     },
     {
-        0, NULL, 0, 115200, PTHREAD_MUTEX_INITIALIZER
+        0, NULL, 0, 115200, PTHREAD_MUTEX_INITIALIZER, CONFIG_LUA_RTOS_UART2_RX,CONFIG_LUA_RTOS_UART2_TX,
     },
 };
 
@@ -161,28 +156,6 @@ static void console_deferred_intr_handler(void *args) {
  * Helper functions
  */
 
-static void uart_pins(int8_t unit, uint8_t *rx, uint8_t *tx) {
-	switch (unit) {
-		case 0:
-			if (rx) *rx = CONFIG_LUA_RTOS_UART0_RX;
-			if (tx) *tx = CONFIG_LUA_RTOS_UART0_TX;
-
-			break;
-
-		case 1:
-			if (rx) *rx = CONFIG_LUA_RTOS_UART1_RX;
-			if (tx) *tx = CONFIG_LUA_RTOS_UART1_TX;
-
-			break;
-
-		case 2:
-			if (rx) *rx = CONFIG_LUA_RTOS_UART2_RX;
-			if (tx) *tx = CONFIG_LUA_RTOS_UART2_TX;
-
-			break;
-	}
-}
-
 // Configure the UART comm parameters
 static void uart_comm_param_config(int8_t unit, UartBautRate brg, UartBitsNum4Char data, UartParityMode parity, UartStopBitsNum stop) {
 	wait_tx_empty(unit);
@@ -197,7 +170,7 @@ static void uart_comm_param_config(int8_t unit, UartBautRate brg, UartBitsNum4Ch
 }
 
 // Configure the UART pins
-static void uart_pin_config(int8_t unit, uint8_t flags, uint8_t rx, uint8_t tx) {
+static void uart_pin_config(int8_t unit, uint8_t flags) {
 	wait_tx_empty(unit);
 
 	int tx_sig, rx_sig;
@@ -223,18 +196,18 @@ static void uart_pin_config(int8_t unit, uint8_t flags, uint8_t rx, uint8_t tx) 
     }
 
     // Configure TX
-    if (flags & UART_FLAG_WRITE) {
-        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[tx], PIN_FUNC_GPIO);
-        gpio_set_direction(tx, GPIO_MODE_OUTPUT);
-        gpio_matrix_out(tx, tx_sig, 0, 0);
+    if ((flags & UART_FLAG_WRITE) && (uart[unit].tx >= 0)) {
+        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[uart[unit].tx], PIN_FUNC_GPIO);
+        gpio_set_direction(uart[unit].tx, GPIO_MODE_OUTPUT);
+        gpio_matrix_out(uart[unit].tx, tx_sig, 0, 0);
     }
 
     // Configure RX
-    if (flags & UART_FLAG_READ) {
-        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[rx], PIN_FUNC_GPIO);
-        gpio_set_pull_mode(rx, GPIO_PULLUP_ONLY);
-        gpio_set_direction(rx, GPIO_MODE_INPUT);
-        gpio_matrix_in(rx, rx_sig, 0);
+    if ((flags & UART_FLAG_READ) && (uart[unit].rx >= 0)) {
+        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[uart[unit].rx], PIN_FUNC_GPIO);
+        gpio_set_pull_mode(uart[unit].rx, GPIO_PULLUP_ONLY);
+        gpio_set_direction(uart[unit].rx, GPIO_MODE_INPUT);
+        gpio_matrix_in(uart[unit].rx, rx_sig, 0);
     }
 }
 
@@ -393,33 +366,58 @@ void IRAM_ATTR uart_rx_intr_handler(void *para) {
 
 // Lock resources needed by the UART
 driver_error_t *uart_lock_resources(int unit, uint8_t flags, void *resources) {
-	uart_resources_t tmp_uart_resources;
-
-	if (!resources) {
-		resources = &tmp_uart_resources;
-	}
-
-	uart_resources_t *uart_resources = (uart_resources_t *)resources;
     driver_unit_lock_error_t *lock_error = NULL;
 
-    uart_pins(unit, &uart_resources->rx, &uart_resources->tx);
-
     // Lock this pins
-    if (flags & UART_FLAG_READ) {
-        if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart_resources->rx, flags))) {
+    if ((flags & UART_FLAG_READ) && (uart[unit].rx >= 0)) {
+        if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart[unit].rx, flags))) {
         	// Revoked lock on pin
         	return driver_lock_error(UART_DRIVER, lock_error);
         }
     }
 
-    if (flags & UART_FLAG_WRITE) {
-        if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart_resources->tx, flags))) {
+    if ((flags & UART_FLAG_WRITE) && (uart[unit].tx >= 0)) {
+        if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart[unit].tx, flags))) {
         	// Revoked lock on pin
         	return driver_lock_error(UART_DRIVER, lock_error);
         }
     }
 
     return NULL;
+}
+
+driver_error_t *uart_pin_map(int unit, int rx, int tx) {
+    // Sanity checks
+	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
+		return driver_operation_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
+	}
+    if (uart[unit].flags & UART_FLAG_INIT) {
+		return driver_operation_error(SPI_DRIVER, UART_ERR_CANNOT_CHANGE_PINMAP, NULL);
+    }
+
+    if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << rx))) && (rx >= 0)) {
+		return driver_operation_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, selected pin cannot be input");
+    }
+
+    if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << tx))) && (tx >= 0)) {
+		return driver_operation_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "tx, selected pin cannot be input");
+    }
+
+    if (!TEST_UNIQUE2(rx, tx)) {
+		return driver_operation_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, and tx must be different");
+    }
+
+    // Update rx
+    if (rx >= 0) {
+    	uart[unit].rx  = rx;
+    }
+
+    // Update tx
+    if (tx >= 0) {
+    	uart[unit].tx  = tx;
+    }
+
+	return NULL;
 }
 
 // Init UART. Interrupts are not enabled.
@@ -429,18 +427,23 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 		return driver_operation_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
 	}
 
-	// Create the queue signal, and start a task
-	if (!signal_q) {
-		signal_q = xQueueCreate(1, sizeof(console_deferred_data));
+    if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << uart[unit].rx))) && (uart[unit].rx >= 0)) {
+		return driver_operation_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, selected pin cannot be input");
+    }
 
-	    xTaskCreatePinnedToCore(console_deferred_intr_handler, "signal", configMINIMAL_STACK_SIZE, NULL, 21, NULL, 0);
-	}
+    if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << uart[unit].tx))) && (uart[unit].tx >= 0)) {
+		return driver_operation_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "tx, selected pin cannot be input");
+    }
 
-	// Get data bits, and sanity checks
+    if (!TEST_UNIQUE2(uart[unit].rx, uart[unit].tx)) {
+		return driver_operation_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, and tx must be different");
+    }
+
+    // Get data bits, and sanity checks
     UartBitsNum4Char esp_databits = EIGHT_BITS;
     switch (databits) {
-    	case 5: esp_databits = FIVE_BITS; break;
-    	case 6: esp_databits = SIX_BITS; break;
+    	case 5: esp_databits = FIVE_BITS ; break;
+    	case 6: esp_databits = SIX_BITS  ; break;
     	case 7: esp_databits = SEVEN_BITS; break;
     	case 8: esp_databits = EIGHT_BITS; break;
     	default:
@@ -452,7 +455,7 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
     switch (parity) {
     	case 0: esp_parity = NONE_BITS;break;
     	case 1: esp_parity = EVEN_BITS;break;
-    	case 2: esp_parity = ODD_BITS;break;
+    	case 2: esp_parity = ODD_BITS ;break;
     	default:
     		return driver_operation_error(UART_DRIVER, UART_ERR_INVALID_PARITY, NULL);
     }
@@ -469,16 +472,15 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 
     // Lock resources
     driver_error_t *error;
-    uart_resources_t resources;
 
-    if ((error = uart_lock_resources(unit, flags, &resources))) {
+    if ((error = uart_lock_resources(unit, flags, NULL))) {
 		return error;
 	}
 
 	// There are not errors, continue with init ...
 
-    // If requestes queue size is greater than current size, delete queue and create
-	// a new one
+    // If the requested queue size is greater than current queue size,
+	// delete it and create a new one
     if (qs > uart[unit].qs) {
 		if (uart[unit].q) {
 			vQueueDelete(uart[unit].q);
@@ -500,7 +502,18 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
         pthread_mutex_init(&uart[unit].mtx, &attr);
     }
 
-    uart_pin_config(unit, flags, resources.rx, resources.tx);
+	// For the console, create the queue signal, and start a task for process signals
+    // received from the console
+	#if CONFIG_LUA_RTOS_USE_CONSOLE
+		if (unit == CONFIG_LUA_RTOS_USE_CONSOLE) {
+			if (!signal_q) {
+				signal_q = xQueueCreate(1, sizeof(console_deferred_data));
+				xTaskCreatePinnedToCore(console_deferred_intr_handler, "signal", configMINIMAL_STACK_SIZE, NULL, 21, NULL, 0);
+			}
+		}
+	#endif
+
+	uart_pin_config(unit, flags);
 	uart_comm_param_config(unit, brg, esp_databits, esp_parity, esp_stop_bits);
 
     uart[unit].brg = brg; 
@@ -510,14 +523,14 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 
 	if ((flags & (UART_FLAG_READ | UART_FLAG_WRITE)) == (UART_FLAG_READ | UART_FLAG_WRITE)) {
 	    syslog(LOG_INFO, "%s: at pins rx=%s%d/tx=%s%d",names[unit],
-	            gpio_portname(resources.rx), gpio_name(resources.rx),
-	            gpio_portname(resources.tx), gpio_name(resources.tx));
+	            gpio_portname(uart[unit].rx), gpio_name(uart[unit].rx),
+	            gpio_portname(uart[unit].tx), gpio_name(uart[unit].tx));
 	} else if ((flags & (UART_FLAG_READ | UART_FLAG_WRITE)) == UART_FLAG_WRITE) {
 	    syslog(LOG_INFO, "%s: at pins tx=%s%d",names[unit],
-	            gpio_portname(resources.tx), gpio_name(resources.tx));
+	            gpio_portname(uart[unit].tx), gpio_name(uart[unit].tx));
 	} else if ((flags & (UART_FLAG_READ | UART_FLAG_WRITE)) == UART_FLAG_READ) {
 	    syslog(LOG_INFO, "%s: at pins rx=%s%d",names[unit],
-	            gpio_portname(resources.rx), gpio_name(resources.rx));
+	            gpio_portname(uart[unit].rx), gpio_name(uart[unit].rx));
 	}
 
     syslog(LOG_INFO, "%s: speed %d bauds", names[unit],brg);

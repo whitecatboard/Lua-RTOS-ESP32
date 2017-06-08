@@ -46,8 +46,84 @@
 #include <drivers/cpu.h>
 #include <drivers/uart.h>
 
+extern struct uart uart[NUART];
+
 static int uart_exists(int id) {
     return ((id >= CPU_FIRST_UART) && (id <= CPU_LAST_UART));
+}
+
+static int luart_pins(lua_State* L) {
+	uint8_t table = 0;
+	uint16_t count = 0, i = 0;
+	int unit = CPU_FIRST_UART;
+
+	// Check if user wants result as a table, or wants result
+	// on the console
+	if (lua_gettop(L) == 1) {
+		luaL_checktype(L, 1, LUA_TBOOLEAN);
+		if (lua_toboolean(L, 1)) {
+			table = 1;
+		}
+	}
+
+	if (table){
+		lua_createtable(L, count, 0);
+	}
+
+	for(unit = CPU_FIRST_UART; unit <= CPU_LAST_UART;unit++) {
+		if (!table) {
+			printf("UART%d: ", unit);
+
+			printf("rx=");
+			if (uart[unit].rx >= 0) {
+				printf("%s%d ", gpio_portname(uart[unit].rx), gpio_name(uart[unit].rx));
+			} else {
+				printf("unused");
+			}
+
+			printf("tx=");
+			if (uart[unit].tx >= 0) {
+				printf("%s%d ", gpio_portname(uart[unit].tx), gpio_name(uart[unit].tx));
+			} else {
+				printf("unused");
+			}
+
+			printf("\r\n");
+		} else {
+			lua_pushinteger(L, i);
+
+			lua_createtable(L, 0, 3);
+
+			lua_pushinteger(L, unit);
+	        lua_setfield (L, -2, "id");
+
+	        lua_pushinteger(L, uart[unit].rx);
+			lua_setfield (L, -2, "rx");
+
+			lua_pushinteger(L, uart[unit].tx);
+	        lua_setfield (L, -2, "tx");
+
+			 lua_settable(L,-3);
+		}
+
+		i++;
+	}
+
+	return table;
+}
+
+static int luart_setpins(lua_State* L) {
+	driver_error_t *error;
+
+	int id = luaL_checkinteger(L, 1);
+	int rx = luaL_checkinteger(L, 2);
+	int tx = luaL_checkinteger(L, 3);
+
+	if ((error = uart_pin_map(id, rx, tx))) {
+	    return luaL_driver_error(L, error);
+	}
+
+	return 0;
 }
 
 static int luart_setup( lua_State* L ) {
@@ -271,6 +347,8 @@ static int luart_unlock( lua_State* L ) {
 static const LUA_REG_TYPE uart_map[] = {
     { LSTRKEY( "setup"    ),	 LFUNCVAL( luart_setup ) },
     { LSTRKEY( "attach"   ),	 LFUNCVAL( luart_attach ) },
+    { LSTRKEY( "pins"     ),	 LFUNCVAL( luart_pins ) },
+	{ LSTRKEY( "setpins"  ),	 LFUNCVAL( luart_setpins  ) },
     { LSTRKEY( "write"    ),	 LFUNCVAL( luart_write ) },
     { LSTRKEY( "read"     ),	 LFUNCVAL( luart_read ) },
     { LSTRKEY( "consume"  ),	 LFUNCVAL( luart_consume ) },
