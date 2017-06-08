@@ -57,7 +57,8 @@ typedef enum {
 	SPI_INTERFACE,
 	I2C_INTERFACE,
 	OWIRE_INTERFACE,
-	GPIO_INTERFACE
+	GPIO_INTERFACE,
+	UART_INTERFACE
 } sensor_interface_t;
 
 // Sensor data type
@@ -146,6 +147,13 @@ typedef struct {
 			uint16_t address;
 			void     *userdata;
 		} i2c;
+		struct {
+			uint8_t  id;
+			uint32_t speed;
+			uint8_t	 data_bits;
+			uint8_t  parity;
+			uint8_t  stop_bits;
+		} uart;
 	};
 } sensor_setup_t;
 

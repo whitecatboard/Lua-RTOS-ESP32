@@ -90,6 +90,14 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 
 			break;
 
+		case UART_INTERFACE:
+				setup->uart.id = luaL_checkinteger(L, 2);
+				setup->uart.speed = luaL_checkinteger(L, 3);
+				setup->uart.data_bits = luaL_checkinteger(L, 4);
+				setup->uart.parity = luaL_checkinteger(L, 5);
+				setup->uart.stop_bits = luaL_checkinteger(L, 6);
+			break;
+
 		default:
 			break;
 	}
@@ -398,6 +406,7 @@ static int lsensor_list( lua_State* L ) {
 			case I2C_INTERFACE:   strcpy(interface, "I2C"); break;
 			case OWIRE_INTERFACE: strcpy(interface, "1-WIRE"); break;
 			case GPIO_INTERFACE:  strcpy(interface, "GPIO"); break;
+			case UART_INTERFACE:   strcpy(interface, "UART"); break;
 			default:
 				break;
 		}
