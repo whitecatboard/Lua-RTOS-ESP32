@@ -49,7 +49,7 @@ static int lspi_setup(lua_State* L) {
 	driver_error_t *error;
 	uint32_t clock;
 	int spi_mode = 0;
-	int flags = SPI_FLAG_WRITE | SPI_FLAG_READ;
+	int flags = DRIVER_ALL_FLAGS;
 
 	luaL_deprecated(L, "spi.setup", "spi.attach");
 
@@ -59,10 +59,7 @@ static int lspi_setup(lua_State* L) {
 	clock = luaL_checkinteger(L, 4);
 	data_bits = luaL_checkinteger(L, 5);
 	spi_mode = luaL_checkinteger(L, 6);
-
-	if (lua_gettop(L) == 7) {
-		flags = luaL_checkinteger(L, 7);
-	}
+	flags = luaL_optinteger(L, 7, SPI_FLAG_WRITE | SPI_FLAG_READ);
 
 	spi_userdata *spi = (spi_userdata *)lua_newuserdata(L, sizeof(spi_userdata));
 
@@ -82,7 +79,7 @@ static int lspi_attach(lua_State* L) {
 	driver_error_t *error;
 	uint32_t clock;
 	int spi_mode = 0;
-	int flags = SPI_FLAG_WRITE | SPI_FLAG_READ;
+	int flags = DRIVER_ALL_FLAGS;
 
 	id = luaL_checkinteger(L, 1);
 	is_master = luaL_checkinteger(L, 2) == 1;
@@ -90,10 +87,7 @@ static int lspi_attach(lua_State* L) {
 	clock = luaL_checkinteger(L, 4);
 	data_bits = luaL_checkinteger(L, 5);
 	spi_mode = luaL_checkinteger(L, 6);
-
-	if (lua_gettop(L) == 7) {
-		flags = luaL_checkinteger(L, 7);
-	}
+	flags = luaL_optinteger(L, 7, SPI_FLAG_WRITE | SPI_FLAG_READ);
 
 	spi_userdata *spi = (spi_userdata *)lua_newuserdata(L, sizeof(spi_userdata));
 

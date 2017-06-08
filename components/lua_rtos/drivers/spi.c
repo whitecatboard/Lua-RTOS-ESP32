@@ -71,6 +71,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <sys/macros.h>
 #include <sys/syslog.h>
 #include <sys/driver.h>
 
@@ -762,11 +763,11 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_MODE, NULL);
     }
 
-    if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << spi_bus[unit].miso))) {
+    if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << spi_bus[unit].miso))) && (flags & SPI_FLAG_READ)) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "miso, selected pin cannot be input");
     }
 
-    if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << spi_bus[unit].mosi))) {
+    if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << spi_bus[unit].mosi))) && (flags & SPI_FLAG_WRITE)) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "mosi, selected pin cannot be output");
     }
 
@@ -776,6 +777,10 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode
 
     if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << cs))) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "cs, selected pin cannot be output");
+    }
+
+    if (!TEST_UNIQUE4(spi_bus[unit].mosi, spi_bus[unit].miso, spi_bus[unit].clk, cs)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "miso, mosi and cs must be different");
     }
 
     // Lock resources
