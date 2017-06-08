@@ -285,6 +285,55 @@ menu "Lua RTOS"
 				default 17
 		endmenu
 		
+		menu "External ADC"
+			config ADC_MCP3008
+				bool "Use SPI ADC MCP3008"
+				default n
+				help
+					MCP3008 is an ADC converter with SPI interface. 8 channels, resolution of 10 bits.
+
+			config ADC_MCP3008_SPI
+				depends on ADC_MCP3008
+					int "MCP3008 SPI port"
+					range 2 3
+					default 2
+
+			config ADC_MCP3008_CS
+				depends on ADC_MCP3008
+					int "MCP3008 CS GPIO number"
+						range 0 39
+						default 15
+
+			config ADC_MCP3008_SPEED
+				depends on ADC_MCP3008
+					int "MCP3008 speed in Hertz"
+					range 1000000 3600000
+					default 1000000						
+
+			config ADC_MCP3208
+				bool "Use SPI ADC MCP3208"
+				default n
+				help
+					MCP3208 is an ADC converter with SPI interface. 8 channels, resolution of 12 bits.
+
+			config ADC_MCP3208_SPI
+				depends on ADC_MCP3208
+					int "MCP3208 SPI port"
+					range 2 3
+					default 2
+
+			config ADC_MCP3208_CS
+				depends on ADC_MCP3208
+					int "MCP3208 CS GPIO number"
+						range 0 39
+						default 15
+
+			config ADC_MCP3208_SPEED
+				depends on ADC_MCP3208
+					int "MCP3208 speed in Hertz"
+					range 1000000 3600000
+					default 1000000						
+		endmenu
 
 		menu "SPI Ethernet"
 				config SPI_ETHERNET

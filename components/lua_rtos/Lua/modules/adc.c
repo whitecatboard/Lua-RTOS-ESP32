@@ -2,7 +2,7 @@
  * Lua RTOS, Lua ADC module
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -119,8 +119,12 @@ static const LUA_REG_TYPE ladc_map[] = {
     { LSTRKEY( "attach" ),		  LFUNCVAL( ladc_attach  ) },
 	ADC_ADC0
 	ADC_ADC1
+#if CONFIG_ADC_MCP3008
 	ADC_ADC2
+#endif
+#if CONFIG_ADC_MCP3208
 	ADC_ADC3
+#endif
 	ADC_ADC_CH0
 	ADC_ADC_CH1
 	ADC_ADC_CH2

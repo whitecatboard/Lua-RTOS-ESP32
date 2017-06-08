@@ -375,11 +375,10 @@ static driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
 
 static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 #if !SPI_USE_IDF_DRIVER
-
 	// Enable SPI unit
 	switch (unit) {
 		case 2: periph_module_enable(PERIPH_HSPI_MODULE);break;
-		case 3:periph_module_enable(PERIPH_VSPI_MODULE);break;
+		case 3: periph_module_enable(PERIPH_VSPI_MODULE);break;
 	}
 
 	if (flags & SPI_FLAG_READ) {

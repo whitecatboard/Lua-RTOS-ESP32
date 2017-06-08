@@ -93,13 +93,13 @@ driver_error_t *adc_internal_setup(int8_t unit, int8_t channel) {
 		return error;
 	}
 
-	// Configure all channels with a 12-bit resolution
-	adc1_config_width(ADC_WIDTH_12Bit);
-
 	// Lock the resources needed
 	if ((error = adc_lock_resources(channel, &resources))) {
 		return error;
 	}
+
+	// Configure all channels with a 12-bit resolution
+	adc1_config_width(ADC_WIDTH_12Bit);
 
 	// No attenuation
 	adc1_config_channel_atten(channel, ADC_ATTEN_0db);
