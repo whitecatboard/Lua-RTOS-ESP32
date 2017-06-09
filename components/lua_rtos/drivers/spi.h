@@ -30,6 +30,8 @@
 #ifndef _SPI_H_
 #define _SPI_H_
 
+#include "driver/spi_master.h"
+
 #include <sys/driver.h>
 
 #define SPI_USE_IDF_DRIVER 0
