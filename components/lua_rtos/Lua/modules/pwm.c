@@ -104,6 +104,8 @@ static int lpwm_setupchan( lua_State* L ) {
     int32_t freq;
     double duty;
 
+	luaL_deprecated(L, "pwm.setupchan", "pwm.attach");
+
     pwm_userdata *pwm = (pwm_userdata *)lua_newuserdata(L, sizeof(pwm_userdata));
 
     pwm->unit = luaL_checkinteger( L, 1 );
