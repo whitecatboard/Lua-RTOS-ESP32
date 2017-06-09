@@ -70,17 +70,13 @@ static driver_error_t *sensor_adc_setup(sensor_instance_t *unit) {
 	driver_error_t *error;
 
 	// Lock ADC channel
-    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, ADC_DRIVER, unit->setup.adc.channel, DRIVER_ALL_FLAGS, NULL))) {
+    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, ADC_DRIVER, unit->setup.adc.channel, DRIVER_ALL_FLAGS, unit->sensor->id))) {
     	// Revoked lock on ADC channel
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
 
 	if ((error = adc_setup(unit->setup.adc.unit, unit->setup.adc.channel, 0, unit->setup.adc.resolution))) {
 		return error;
-	}
-
-	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, ADC_DRIVER, unit->unit, DRIVER_ALL_FLAGS, NULL))) {
-		return driver_lock_error(SENSOR_DRIVER, lock_error);
 	}
 
 	return NULL;
@@ -90,7 +86,7 @@ static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
 
 	// Lock gpio
-    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup.gpio.gpio, DRIVER_ALL_FLAGS, NULL))) {
+    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup.gpio.gpio, DRIVER_ALL_FLAGS, unit->sensor->id))) {
     	// Revoked lock on gpio
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
@@ -139,6 +135,11 @@ static driver_error_t *sensor_owire_setup(sensor_instance_t *unit) {
 static driver_error_t *sensor_i2c_setup(sensor_instance_t *unit) {
 	driver_error_t *error;
 
+    driver_unit_lock_error_t *lock_error = NULL;
+	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, I2C_DRIVER, unit->setup.i2c.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+		return driver_lock_error(SENSOR_DRIVER, lock_error);
+	}
+
 	if ((unit->setup.i2c.sda >= 0) || (unit->setup.i2c.scl >= 0)) {
 	    if ((error = i2c_pin_map(unit->setup.i2c.id, unit->setup.i2c.sda, unit->setup.i2c.scl))) {
 	    	return error;
@@ -149,18 +150,18 @@ static driver_error_t *sensor_i2c_setup(sensor_instance_t *unit) {
     	return error;
     }
 
-    driver_unit_lock_error_t *lock_error = NULL;
-	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, I2C_DRIVER, unit->setup.i2c.id, DRIVER_ALL_FLAGS, NULL))) {
-		return driver_lock_error(SENSOR_DRIVER, lock_error);
-	}
-
 	return NULL;
 }
 
 static driver_error_t *sensor_uart_setup(sensor_instance_t *unit) {
 	driver_error_t *error;
 
-    if ((error = uart_init(
+    driver_unit_lock_error_t *lock_error = NULL;
+	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, UART_DRIVER,unit->setup.uart.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+		return driver_lock_error(SENSOR_DRIVER, lock_error);
+	}
+
+	if ((error = uart_init(
     		unit->setup.uart.id, unit->setup.uart.speed, unit->setup.uart.data_bits,
 			unit->setup.uart.parity, unit->setup.uart.stop_bits, DRIVER_ALL_FLAGS, 1024
 	))) {
@@ -170,11 +171,6 @@ static driver_error_t *sensor_uart_setup(sensor_instance_t *unit) {
     if ((error = uart_setup_interrupts(unit->setup.uart.id))) {
         return error;
     }
-
-    driver_unit_lock_error_t *lock_error = NULL;
-	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, UART_DRIVER, unit->unit, DRIVER_ALL_FLAGS, NULL))) {
-		return driver_lock_error(SENSOR_DRIVER, lock_error);
-	}
 
 	return NULL;
 }
