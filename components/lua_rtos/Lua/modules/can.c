@@ -173,7 +173,7 @@ static int lcan_stats(lua_State* L) {
 
 static const LUA_REG_TYPE lcan_map[] = {
     { LSTRKEY( "setup"   ),		  LFUNCVAL( lcan_setup   ) },
-    { LSTRKEY( "attach   ),		  LFUNCVAL( lcan_attach  ) },
+    { LSTRKEY( "attach"  ),		  LFUNCVAL( lcan_attach  ) },
     { LSTRKEY( "send"    ),		  LFUNCVAL( lcan_send    ) },
     { LSTRKEY( "receive" ),		  LFUNCVAL( lcan_recv    ) },
     { LSTRKEY( "dump"    ),		  LFUNCVAL( lcan_dump    ) },
