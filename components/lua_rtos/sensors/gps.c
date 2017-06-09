@@ -41,8 +41,6 @@
 #include <drivers/sensor.h>
 #include <drivers/uart.h>
 
-static int8_t uart;
-
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) gps_sensor = {
 	.id = "GPS",
@@ -57,6 +55,8 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) gps_senso
 };
 
 static void gps(void *args) {
+	int uart = (int)args;
+
 	char sentence[MAX_NMA_SIZE];
 
 	for(;;) {
@@ -69,9 +69,7 @@ static void gps(void *args) {
  * Operation functions
  */
 driver_error_t *gps_setup(sensor_instance_t *unit) {
-	uart = unit->setup.uart.id;
-
-	xTaskCreatePinnedToCore(gps, "gps", configMINIMAL_STACK_SIZE, NULL, 21, NULL, 0);
+	xTaskCreatePinnedToCore(gps, "gps", configMINIMAL_STACK_SIZE, (void *)((int)unit->setup.uart.id), 21, NULL, 0);
 
 	return NULL;
 }

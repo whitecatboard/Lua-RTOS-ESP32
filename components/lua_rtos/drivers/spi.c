@@ -79,6 +79,9 @@
 
 #define PIN_FUNC_SPI 1
 
+// Driver locks
+static driver_unit_lock_t spi_locks[(CPU_LAST_SPI + 1) * SPI_BUS_DEVICES];
+
 // Driver message errors
 DRIVER_REGISTER_ERROR(SPI, spi, InvalidMode, "invalid mode", SPI_ERR_INVALID_MODE);
 DRIVER_REGISTER_ERROR(SPI, spi, InvalidUnit, "invalid unit", SPI_ERR_INVALID_UNIT);
@@ -310,21 +313,21 @@ static driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
 
     // Lock pins
     if ((flags & SPI_FLAG_READ) && (spi_bus[unit].miso >= 0)) {
-        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].miso, flags))) {
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].miso, flags, "MISO"))) {
         	// Revoked lock on pin
         	return driver_lock_error(SPI_DRIVER, lock_error);
         }
     }
 
     if ((flags & SPI_FLAG_WRITE)  && (spi_bus[unit].mosi >= 0)) {
-        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].mosi, flags))) {
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].mosi, flags, "MOSI"))) {
         	// Revoked lock on pin
         	return driver_lock_error(SPI_DRIVER, lock_error);
         }
     }
 
     if (spi_bus[unit].clk >= 0){
-        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].clk, flags))) {
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].clk, flags, "CLK"))) {
         	// Revoked lock on pin
         	return driver_lock_error(SPI_DRIVER, lock_error);
         }
@@ -816,7 +819,7 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode,
     }
 
     driver_unit_lock_error_t *lock_error = NULL;
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, cs, flags))) {
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, cs, flags, "CS"))) {
     	return driver_lock_error(SPI_DRIVER, lock_error);
     }
 
@@ -1241,4 +1244,4 @@ driver_error_t *spi_bulk_read32_be(int deviceid, uint32_t nelements, uint32_t *d
     return NULL;
 }
 
-DRIVER_REGISTER(SPI,spi,NULL,_spi_init,NULL);
+DRIVER_REGISTER(SPI,spi,spi_locks,_spi_init,NULL);

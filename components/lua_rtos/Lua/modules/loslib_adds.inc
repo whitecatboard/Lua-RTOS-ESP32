@@ -15,10 +15,12 @@
 #include <unistd.h>
 #include <vfs.h>
 
+#include <sys/driver.h>
 #include <sys/stat.h>
 #include <sys/syslog.h>
 #include <sys/status.h>
 #include <sys/console.h>
+#include <drivers/spi.h>
 #include <drivers/cpu.h>
 #include <sys/mount.h>
 
@@ -27,6 +29,7 @@
 extern const char *__progname;
 extern uint32_t boot_count;
 extern uint8_t flash_unique_id[8];
+extern const driver_t drivers[];
 
 char lua_syslog_level = 0xff;
 FILE *lua_stdout_file = NULL;
@@ -645,4 +648,53 @@ static int os_exists(lua_State *L) {
 	else lua_pushboolean(L, true);
 
 	return 1;
+}
+
+static int os_locks(lua_State *L) {
+    const driver_t *cdriver = drivers;
+    int lock = 0;
+    int first = 0;
+    int has_locks = 0;
+    int unit = 0;
+
+    while (cdriver->name) {
+    	if (cdriver->lock) {
+    		first = 1;
+    		has_locks = 0;
+
+			for(lock = 0; lock < cdriver->locks; lock++) {
+				unit = lock;
+				if (cdriver->lock[lock].owner) {
+					has_locks = 1;
+
+					if (first){
+			    		printf("%s\r\n", cdriver->name);
+					}
+
+					first = 0;
+
+					if (strcmp(cdriver->name, "spi") == 0) {
+						unit = ((lock / SPI_BUS_DEVICES) << 8) | (lock % SPI_BUS_DEVICES);
+					} else {
+						unit = lock;
+					}
+
+					char *oname = driver_target_name(cdriver, unit, NULL);
+					char *tname = driver_target_name(cdriver->lock[lock].owner, cdriver->lock[lock].unit, cdriver->lock[lock].tag);
+
+					printf("  %s locked by %s\r\n", oname, tname);
+
+					free(oname);
+					free(tname);
+				}
+			}
+
+			if (has_locks) {
+	    		printf("\r\n");
+			}
+    	}
+    	cdriver++;
+    }
+
+	return 0;
 }

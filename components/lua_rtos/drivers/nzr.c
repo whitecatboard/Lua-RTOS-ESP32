@@ -76,7 +76,7 @@ driver_error_t *nzr_setup(nzr_timing_t *timing, uint8_t gpio, uint32_t *unit) {
 	}
 
     // Lock the GPIO
-    if ((lock_error = driver_lock(NZR_DRIVER, *unit, GPIO_DRIVER, gpio, DRIVER_ALL_FLAGS))) {
+    if ((lock_error = driver_lock(NZR_DRIVER, *unit, GPIO_DRIVER, gpio, DRIVER_ALL_FLAGS, NULL))) {
     	list_remove(&nzr_list, *unit, 1);
     	// Revoked lock on pin
     	return driver_lock_error(NZR_DRIVER, lock_error);

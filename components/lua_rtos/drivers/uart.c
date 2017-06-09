@@ -84,6 +84,9 @@
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
 
+// Driver locks
+static driver_unit_lock_t uart_locks[NUART];
+
 DRIVER_REGISTER_ERROR(UART, uart, CannotSetup, "can't setup", UART_ERR_CANT_INIT);
 DRIVER_REGISTER_ERROR(UART, uart, InvalidUnit, "invalid unit", UART_ERR_INVALID_UNIT);
 DRIVER_REGISTER_ERROR(UART, uart, InvalidDataBits, "invalid data bits", UART_ERR_INVALID_DATA_BITS);
@@ -370,14 +373,14 @@ driver_error_t *uart_lock_resources(int unit, uint8_t flags, void *resources) {
 
     // Lock this pins
     if ((flags & UART_FLAG_READ) && (uart[unit].rx >= 0)) {
-        if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart[unit].rx, flags))) {
+        if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart[unit].rx, flags, "RX"))) {
         	// Revoked lock on pin
         	return driver_lock_error(UART_DRIVER, lock_error);
         }
     }
 
     if ((flags & UART_FLAG_WRITE) && (uart[unit].tx >= 0)) {
-        if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart[unit].tx, flags))) {
+        if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart[unit].tx, flags, "TX"))) {
         	// Revoked lock on pin
         	return driver_lock_error(UART_DRIVER, lock_error);
         }
@@ -789,4 +792,4 @@ void uart_stop(int unit) {
 	}
 }
 
-DRIVER_REGISTER(UART,uart,NULL,NULL,uart_lock_resources);
+DRIVER_REGISTER(UART,uart,uart_locks,NULL,uart_lock_resources);

@@ -79,6 +79,7 @@
 #define EVENT_DRIVER driver_get_by_name("event")
 #define SPI_ETH_DRIVER driver_get_by_name("spi_eth")
 #define CAN_DRIVER driver_get_by_name("can")
+#define PWBUS_DRIVER driver_get_by_name("pwbus")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 
@@ -109,20 +110,48 @@ typedef struct {
     struct driver_unit_lock_error *lock_error;
 } driver_error_t;
 
+/**
+ * @brief This structure maintains basic information about a
+ *        driver, such as the driver name, the error messages for
+ *        each exception, etc ...
+ */
 typedef struct driver {
-	const char *name;           		  // Driver name
-	const int  exception_base;  	      // Constant for add to driver errors (from 1 to n)
-	const driver_message_t *error;         // Error messages
-	const struct driver_unit_lock *lock;  // Driver lock array
-	void (*init)();             		  // Init function for driver that must be caller in system init
+	const char *name;           		  /*!< Driver name */
+	const int  exception_base;  	      /*!< The exception base number for this driver. When a exception is raised the exception number is exception_base + exception number */
+	const driver_message_t *error;        /*!< Array of exception error messages */
+	const struct driver_unit_lock *lock;  /*!< Array locks */
+	const int locks;					  /*!< Number of locks */
+	void (*init)();             		  /*!< Driver initialization functions, called at system init */
 
 	// Driver lock function
 	driver_error_t *(*lock_resources)(int,uint8_t, void *);
 } driver_t;
 
+/**
+ * @brief This structure maintains information about a lock. Drivers
+ *        usually define an array of driver_unit_lock_t structures
+ *        (one for each driver unit), and each array entry keep the
+ *        driver unit that owns the lock.
+ *
+ *        Example:
+ *
+ *        The GPIO driver defines the gpio_locks array,
+ *        with one entry for each GPIO.
+ *
+ *        Imagine that the UART driver requires a lock on GPIO15 (rx pin)
+ *        and on GPIO14 (tx pin) for the UART0.This information is stored
+ *        in gpio_locks[14] and gpio_locks[15], with the following information:
+ *
+ *        gpio_locks[14] = {pointer to UART driver structure, 0}
+ *        gpio_locks[15] = {pointer to UART driver structure, 0}
+ *
+ *        gpio_locks[14] says that GPIO14 is owned by UART0.
+ *        gpio_locks[15] says that GPIO15 is owned by UART0.
+ */
 typedef struct driver_unit_lock {
-	const driver_t *owner; // Who owns the lock
-	int unit;
+	const driver_t *owner; /*!< Which driver owns the lock */
+	int unit;			   /*!< Which unit driver owns the lock */
+	const char *tag;       /*!< A tag, used, for example for set the signal name */
 } driver_unit_lock_t;
 
 typedef struct driver_unit_lock_error {
@@ -135,8 +164,28 @@ typedef struct driver_unit_lock_error {
 	int target_unit;
 } driver_unit_lock_error_t;
 
+/**
+ * @brief Search for a driver into the driver's array by name and get
+ *        the driver structure.
+ *
+ * @param name Driver name.
+ *
+ * @return NULL if driver not found, or a pointer to a driver_t structure
+ *         if driver is found.
+ */
 const driver_t *driver_get_by_name(const char *name);
+
+/**
+ * @brief Search for a driver into the driver's array by exception base
+ *        and get the driver structure.
+ *
+ * @param exception_base Driver exception base.
+ *
+ * @return NULL if driver not found, or a pointer to a driver_t structure
+ *         if driver is found.
+ */
 const driver_t *driver_get_by_exception_base(const int exception_base);
+
 const char *driver_get_err_msg(driver_error_t *error);
 const char *driver_get_err_msg_by_exception(int exception);
 const char *driver_get_name(driver_error_t *error);
@@ -144,8 +193,9 @@ const char *driver_get_name(driver_error_t *error);
 driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error_t *lock_error);
 driver_error_t *driver_setup_error(const driver_t *driver, unsigned int code, const char *msg);
 driver_error_t *driver_operation_error(const driver_t *driver, unsigned int code, const char *msg);
-driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit, uint8_t flags);
+driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit, uint8_t flags, const char *tag);
 void _driver_init();
+char *driver_target_name(const driver_t *target_driver, int target_unit, const char *tag);
 
 #define DRIVER_SECTION(s) __attribute__((used,unused,section(s)))
 
@@ -158,7 +208,7 @@ void _driver_init();
 #define DRIVER_TOSTRING(x) DRIVER_TOSTRING_EVALUATOR(x)
 
 #define DRIVER_REGISTER(name,lname,locka,initf,lockf) \
-	const DRIVER_SECTION(DRIVER_TOSTRING(.drivers)) driver_t DRIVER_CONCAT(driver_,lname) = {DRIVER_TOSTRING(lname),  DRIVER_EXCEPTION_BASE(DRIVER_CONCAT(name,_DRIVER_ID)),  (void *)DRIVER_CONCAT(lname,_errors), locka, initf, lockf};
+	const DRIVER_SECTION(DRIVER_TOSTRING(.drivers)) driver_t DRIVER_CONCAT(driver_,lname) = {DRIVER_TOSTRING(lname),  DRIVER_EXCEPTION_BASE(DRIVER_CONCAT(name,_DRIVER_ID)),  (void *)DRIVER_CONCAT(lname,_errors), locka, ((locka!=NULL)?(sizeof(locka)/sizeof(driver_unit_lock_t)):0), initf, lockf};
 #endif
 
 #define DRIVER_REGISTER_ERROR(name, lname, key, msg, exception) \

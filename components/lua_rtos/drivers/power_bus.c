@@ -44,6 +44,8 @@ DRIVER_REGISTER_ERROR(PWBUS, pwbus, InvalidPin, "invalid pin", PWBUS_ERR_INVALID
  * Helper functions
  */
 static void _pwbus_init() {
+	driver_lock(PWBUS_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_POWER_BUS_PIN, DRIVER_ALL_FLAGS, NULL);
+
 	gpio_pin_output(CONFIG_LUA_RTOS_POWER_BUS_PIN);
 	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
 	power = 0;

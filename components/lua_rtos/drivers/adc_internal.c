@@ -70,7 +70,7 @@ static driver_error_t *adc_lock_resources(int8_t channel, void *resources) {
     adc_pins(channel, &adc_resources->pin);
 
     // Lock this pins
-    if ((lock_error = driver_lock(ADC_DRIVER, channel, GPIO_DRIVER, adc_resources->pin, DRIVER_ALL_FLAGS))) {
+    if ((lock_error = driver_lock(ADC_DRIVER, channel, GPIO_DRIVER, adc_resources->pin, DRIVER_ALL_FLAGS, NULL))) {
     	// Revoked lock on pin
     	return driver_lock_error(ADC_DRIVER, lock_error);
     }

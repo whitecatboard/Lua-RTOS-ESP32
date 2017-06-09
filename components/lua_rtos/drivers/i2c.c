@@ -110,12 +110,12 @@ static driver_error_t *i2c_lock_resources(int unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
 
 	// Lock sda
-	if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].sda, DRIVER_ALL_FLAGS))) {
+	if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].sda, DRIVER_ALL_FLAGS, "SDA"))) {
     	return driver_lock_error(I2C_DRIVER, lock_error);
     }
 
 	// Lock scl
-	if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].scl, DRIVER_ALL_FLAGS))) {
+	if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].scl, DRIVER_ALL_FLAGS, "SCL"))) {
     	return driver_lock_error(I2C_DRIVER, lock_error);
     }
 

@@ -270,14 +270,14 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, uint8_t *unit) 
 	}
 
 	// Lock the step pin
-    if ((lock_error = driver_lock(STEPPER_DRIVER, *unit, GPIO_DRIVER, step_pin, DRIVER_ALL_FLAGS))) {
+    if ((lock_error = driver_lock(STEPPER_DRIVER, *unit, GPIO_DRIVER, step_pin, DRIVER_ALL_FLAGS, "STEP"))) {
     	// Revoked lock on pin
 		mtx_unlock(&stepper_mutex);
     	return driver_lock_error(STEPPER_DRIVER, lock_error);
     }
 
 	// Lock the dir pin
-    if ((lock_error = driver_lock(STEPPER_DRIVER, *unit, GPIO_DRIVER, dir_pin, DRIVER_ALL_FLAGS))) {
+    if ((lock_error = driver_lock(STEPPER_DRIVER, *unit, GPIO_DRIVER, dir_pin, DRIVER_ALL_FLAGS, "DIR"))) {
     	// Revoked lock on pin
 		mtx_unlock(&stepper_mutex);
     	return driver_lock_error(STEPPER_DRIVER, lock_error);
