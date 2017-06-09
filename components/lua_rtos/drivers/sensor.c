@@ -160,12 +160,6 @@ static driver_error_t *sensor_i2c_setup(sensor_instance_t *unit) {
 static driver_error_t *sensor_uart_setup(sensor_instance_t *unit) {
 	driver_error_t *error;
 
-	if ((unit->setup.i2c.sda >= 0) || (unit->setup.i2c.scl >= 0)) {
-	    if ((error = i2c_pin_map(unit->setup.i2c.id, unit->setup.i2c.sda, unit->setup.i2c.scl))) {
-	    	return error;
-	    }
-	}
-
     if ((error = uart_init(
     		unit->setup.uart.id, unit->setup.uart.speed, unit->setup.uart.data_bits,
 			unit->setup.uart.parity, unit->setup.uart.stop_bits, DRIVER_ALL_FLAGS, 1024
