@@ -528,8 +528,8 @@ menu "Lua RTOS"
 			config LUA_RTOS_SD_HZ
 				depends on LUA_RTOS_USE_FAT
 					int "SDCARD speed in Hertz"
-					range 1000000 15000000
-					default 15000000						
+					range 1000000 16000000
+					default 16000000						
 		endmenu
 		
 		menu "TFT"									

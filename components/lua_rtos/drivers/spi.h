@@ -34,7 +34,7 @@
 
 #include <sys/driver.h>
 
-#define SPI_USE_IDF_DRIVER 0
+#define SPI_USE_IDF_DRIVER 1
 
 // Number of SPI devices per bus
 #define SPI_BUS_DEVICES 3
