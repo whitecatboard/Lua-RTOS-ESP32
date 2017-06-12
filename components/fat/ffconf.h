@@ -96,7 +96,7 @@
 */
 
 
-#define	_USE_LFN	3
+#define	_USE_LFN	2
 #define	_MAX_LFN	PATH_MAX
 /* The _USE_LFN option switches the LFN feature.
 /

@@ -1,8 +1,8 @@
 /*
- * Lua RTOS, power bus driver
+ * Lua RTOS, GPS sensor (geolocation)
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -29,49 +29,12 @@
 
 #include "luartos.h"
 
-#if CONFIG_LUA_RTOS_USE_POWER_BUS
+#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 
 #include <sys/driver.h>
+#include <drivers/sensor.h>
 
-#include <drivers/gpio.h>
-#include <drivers/power_bus.h>
-
-static int power = 0;
-
-DRIVER_REGISTER_ERROR(PWBUS, pwbus, InvalidPin, "invalid pin", PWBUS_ERR_INVALID_PIN);
-
-/*
- * Helper functions
- */
-static void _pwbus_init() {
-	driver_lock(PWBUS_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_POWER_BUS_PIN, DRIVER_ALL_FLAGS, NULL);
-
-	gpio_pin_output(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	power = 0;
-}
-
-/*
- * Operation functions
- */
-driver_error_t *pwbus_on() {
-	if (power) return NULL;
-
-	gpio_pin_set(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	power = 1;
-
-	return NULL;
-}
-
-driver_error_t *pwbus_off() {
-	if (!power) return NULL;
-
-	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	power = 0;
-
-	return NULL;
-}
-
-DRIVER_REGISTER(PWBUS,pwbus,NULL,_pwbus_init,NULL);
+driver_error_t *gps_setup(sensor_instance_t *unit);
+driver_error_t *gps_acquire(sensor_instance_t *unit, sensor_value_t *values);
 
 #endif

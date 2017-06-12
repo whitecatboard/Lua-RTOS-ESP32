@@ -70,7 +70,7 @@ static driver_error_t *adc_lock_resources(int8_t channel, void *resources) {
     adc_pins(channel, &adc_resources->pin);
 
     // Lock this pins
-    if ((lock_error = driver_lock(ADC_DRIVER, channel, GPIO_DRIVER, adc_resources->pin, DRIVER_ALL_FLAGS))) {
+    if ((lock_error = driver_lock(ADC_DRIVER, channel, GPIO_DRIVER, adc_resources->pin, DRIVER_ALL_FLAGS, NULL))) {
     	// Revoked lock on pin
     	return driver_lock_error(ADC_DRIVER, lock_error);
     }
@@ -93,13 +93,13 @@ driver_error_t *adc_internal_setup(int8_t unit, int8_t channel) {
 		return error;
 	}
 
-	// Configure all channels with a 12-bit resolution
-	adc1_config_width(ADC_WIDTH_12Bit);
-
 	// Lock the resources needed
 	if ((error = adc_lock_resources(channel, &resources))) {
 		return error;
 	}
+
+	// Configure all channels with a 12-bit resolution
+	adc1_config_width(ADC_WIDTH_12Bit);
 
 	// No attenuation
 	adc1_config_channel_atten(channel, ADC_ATTEN_0db);

@@ -158,7 +158,7 @@ driver_error_t *pwm_lock_resources(int8_t unit, int8_t channel, void *resources)
     // Lock timer
 
     // Lock pin
-    if ((lock_error = driver_lock(PWM_DRIVER, channel, GPIO_DRIVER, pwm_resources->pin, DRIVER_ALL_FLAGS))) {
+    if ((lock_error = driver_lock(PWM_DRIVER, channel, GPIO_DRIVER, pwm_resources->pin, DRIVER_ALL_FLAGS, NULL))) {
     	// Revoked lock on pin
     	return driver_lock_error(PWM_DRIVER, lock_error);
     }

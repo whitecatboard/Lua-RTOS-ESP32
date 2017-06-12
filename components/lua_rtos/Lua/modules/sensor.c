@@ -51,7 +51,7 @@ extern TM_One_Wire_Devices_t ow_devices[MAX_ONEWIRE_PINS];
 extern LUA_REG_TYPE sensor_error_map[];
 extern const sensor_t sensors[];
 
-static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_setup_t *setup ) {
+static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_setup_t *setup, uint8_t attach ) {
 	switch (sensor->interface) {
 		case ADC_INTERFACE:
 			setup->adc.unit = luaL_checkinteger(L, 2);
@@ -64,11 +64,19 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 			break;
 
 		case I2C_INTERFACE:
-			setup->i2c.id = luaL_checkinteger(L, 2);
-			setup->i2c.speed = luaL_checkinteger(L, 3);
-			setup->i2c.sda = luaL_checkinteger(L, 4);
-			setup->i2c.scl = luaL_checkinteger(L, 5);
-			setup->i2c.address = luaL_checkinteger(L, 6);
+			if (attach) {
+				setup->i2c.id = luaL_checkinteger(L, 2);
+				setup->i2c.speed = luaL_checkinteger(L, 3);
+				setup->i2c.sda = -1;
+				setup->i2c.scl = -1;
+				setup->i2c.address = luaL_checkinteger(L, 4);
+			} else {
+				setup->i2c.id = luaL_checkinteger(L, 2);
+				setup->i2c.speed = luaL_checkinteger(L, 3);
+				setup->i2c.sda = luaL_checkinteger(L, 4);
+				setup->i2c.scl = luaL_checkinteger(L, 5);
+				setup->i2c.address = luaL_checkinteger(L, 6);
+			}
 			break;
 
 		case OWIRE_INTERFACE:
@@ -80,6 +88,14 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 				setup->owire.owsensor = luaL_checkinteger(L, 3);
 			}
 
+			break;
+
+		case UART_INTERFACE:
+				setup->uart.id = luaL_checkinteger(L, 2);
+				setup->uart.speed = luaL_checkinteger(L, 3);
+				setup->uart.data_bits = luaL_checkinteger(L, 4);
+				setup->uart.parity = luaL_checkinteger(L, 5);
+				setup->uart.stop_bits = luaL_checkinteger(L, 6);
 			break;
 
 		default:
@@ -127,6 +143,8 @@ static int lsensor_setup( lua_State* L ) {
 	sensor_instance_t *instance = NULL;
 	sensor_setup_t setup;
 
+	luaL_deprecated(L, "sensor.setup", "sensor.attach");
+
     const char *id = luaL_checkstring( L, 1 );
 
 	// Get sensor definition
@@ -136,7 +154,44 @@ static int lsensor_setup( lua_State* L ) {
 	}
 
 	// Prepare setup
-	lsensor_setup_prepare(L, sensor, &setup);
+	lsensor_setup_prepare(L, sensor, &setup, 0);
+
+	// Setup sensor
+	if ((error = sensor_setup(sensor, &setup, &instance))) {
+    	return luaL_driver_error(L, error);
+    }
+
+	// Create user data
+    sensor_userdata *data = (sensor_userdata *)lua_newuserdata(L, sizeof(sensor_userdata));
+    if (!data) {
+    	return luaL_exception(L, SENSOR_ERR_NOT_ENOUGH_MEMORY);
+    }
+
+    data->instance = instance;
+    data->adquired = 0;
+
+    luaL_getmetatable(L, "sensor.ins");
+    lua_setmetatable(L, -2);
+
+    return 1;
+}
+
+static int lsensor_attach( lua_State* L ) {
+	driver_error_t *error;
+	const sensor_t *sensor;
+	sensor_instance_t *instance = NULL;
+	sensor_setup_t setup;
+
+    const char *id = luaL_checkstring( L, 1 );
+
+	// Get sensor definition
+	sensor = get_sensor(id);
+	if (!sensor) {
+    	return luaL_exception(L, SENSOR_ERR_NOT_FOUND);
+	}
+
+	// Prepare setup
+	lsensor_setup_prepare(L, sensor, &setup, 1);
 
 	// Setup sensor
 	if ((error = sensor_setup(sensor, &setup, &instance))) {
@@ -351,6 +406,7 @@ static int lsensor_list( lua_State* L ) {
 			case I2C_INTERFACE:   strcpy(interface, "I2C"); break;
 			case OWIRE_INTERFACE: strcpy(interface, "1-WIRE"); break;
 			case GPIO_INTERFACE:  strcpy(interface, "GPIO"); break;
+			case UART_INTERFACE:   strcpy(interface, "UART"); break;
 			default:
 				break;
 		}
@@ -586,7 +642,7 @@ static int lsensor_ins_gc (lua_State *L) {
 }
 
 static const LUA_REG_TYPE lsensor_map[] = {
-    { LSTRKEY( "attach"  	 ),	LFUNCVAL( lsensor_setup  	  ) },
+    { LSTRKEY( "attach"  	 ),	LFUNCVAL( lsensor_attach     ) },
     { LSTRKEY( "setup"  	 ),	LFUNCVAL( lsensor_setup  	  ) },
 	{ LSTRKEY( "list"   	 ),	LFUNCVAL( lsensor_list   	  ) },
 	{ LSTRKEY( "enumerate"   ),	LFUNCVAL( lsensor_enumerate   ) },

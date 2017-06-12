@@ -2,7 +2,7 @@
  * Lua RTOS, ADC driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -26,6 +26,8 @@
  * arising out of or in connection with the use or performance of
  * this software.
  */
+
+#include "sdkconfig.h"
 
 #include "luartos.h"
 
@@ -114,15 +116,19 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t re
 			break;
 
 		case 2:
-			adc_mcp3008_setup(unit, channel, 2, 15);
+#if CONFIG_ADC_MCP3008
+			adc_mcp3008_setup(unit, channel, CONFIG_ADC_MCP3008_SPI, CONFIG_ADC_MCP3008_CS);
 			adc_unit[unit].channel[channel].max_resolution = 10;
 			adc_unit[unit].channel[channel].vref = vref;
+#endif
 			break;
 
 		case 3:
-			adc_mcp3208_setup(unit, channel, 2, 16);
+#if CONFIG_ADC_MCP3208
+			adc_mcp3208_setup(unit, channel, CONFIG_ADC_MCP3208_SPI, CONFIG_ADC_MCP3208_CS);
 			adc_unit[unit].channel[channel].max_resolution = 12;
 			adc_unit[unit].channel[channel].vref = vref;
+#endif
 			break;
 	}
 
@@ -154,11 +160,15 @@ driver_error_t *adc_read(uint8_t unit, uint8_t channel, int *raw, double *mvols)
 			break;
 
 		case 2:
+#if CONFIG_ADC_MCP3008
 			adc_mcp3008_read(unit, channel, raw);
+#endif
 			break;
 
 		case 3:
+#if CONFIG_ADC_MCP3208
 			adc_mcp3208_read(unit, channel, raw);
+#endif
 			break;
 	}
 

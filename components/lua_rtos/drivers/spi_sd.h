@@ -1,12 +1,15 @@
 /*
- * Lua RTOS, power bus driver
+ * SD flash card disk driver.
  *
+ * Copyright (C) 2014 Serge Vakulenko, <serge@vak.ru>
+ *
+ * -------------------------------------------------------------
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Lua RTOS integration
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- *
- * All rights reserved.
+ * -------------------------------------------------------------
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -27,51 +30,24 @@
  * this software.
  */
 
-#include "luartos.h"
-
-#if CONFIG_LUA_RTOS_USE_POWER_BUS
+#ifndef SD_H
+#define SD_H
 
 #include <sys/driver.h>
 
-#include <drivers/gpio.h>
-#include <drivers/power_bus.h>
+#define NSD             1
+#define NPARTITIONS     4
+#define SECTSIZE        512
 
-static int power = 0;
+// SD SPI errors
+#define SPI_SD_ERR_CANT_INIT             (DRIVER_EXCEPTION_BASE(SPI_SD_DRIVER_ID) |  0)
 
-DRIVER_REGISTER_ERROR(PWBUS, pwbus, InvalidPin, "invalid pin", PWBUS_ERR_INVALID_PIN);
+driver_error_t *sd_init(int unit);
 
-/*
- * Helper functions
- */
-static void _pwbus_init() {
-	driver_lock(PWBUS_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_POWER_BUS_PIN, DRIVER_ALL_FLAGS, NULL);
-
-	gpio_pin_output(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	power = 0;
-}
-
-/*
- * Operation functions
- */
-driver_error_t *pwbus_on() {
-	if (power) return NULL;
-
-	gpio_pin_set(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	power = 1;
-
-	return NULL;
-}
-
-driver_error_t *pwbus_off() {
-	if (!power) return NULL;
-
-	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	power = 0;
-
-	return NULL;
-}
-
-DRIVER_REGISTER(PWBUS,pwbus,NULL,_pwbus_init,NULL);
+int sd_size(int unit);
+int sd_write(int unit, unsigned offset, char *data, unsigned bcount);
+int sd_read(int unit, unsigned int offset, char *data, unsigned int bcount);
+int sd_has_partition(int unit, int type);
+int sd_has_partitions(int unit);
 
 #endif

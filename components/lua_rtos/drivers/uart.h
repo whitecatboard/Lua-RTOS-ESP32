@@ -2,7 +2,7 @@
  * Lua RTOS, UART driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -63,8 +63,18 @@
 #include "soc/io_mux_reg.h"
 
 #include <stdint.h>
-
+#include <pthread/pthread.h>
 #include <sys/driver.h>
+
+struct uart {
+    uint8_t          flags;
+    QueueHandle_t    q;         // RX queue
+    uint16_t         qs;        // Queue size
+    uint32_t         brg;       // Baud rate
+    pthread_mutex_t  mtx;		// Mutex
+    int8_t           rx;
+    int8_t           tx;
+};
 
 // Resources used by the UART
 typedef struct {
@@ -83,6 +93,8 @@ typedef struct {
 #define UART_ERR_INVALID_STOP_BITS		  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  4)
 #define UART_ERR_NOT_ENOUGH_MEMORY		  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  5)
 #define UART_ERR_IS_NOT_SETUP 			  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  6)
+#define UART_ERR_PIN_NOT_ALLOWED		  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  7)
+#define UART_ERR_CANNOT_CHANGE_PINMAP	  (DRIVER_EXCEPTION_BASE(UART_DRIVER_ID) |  8)
 
 // Flags
 #define UART_FLAG_WRITE 0x01
@@ -105,6 +117,7 @@ driver_error_t *uart_unlock(int unit);
 void uart_ll_lock(int unit);
 void uart_ll_unlock(int unit);
 
+driver_error_t *uart_pin_map(int unit, int rx, int tx);
 void     uart_write(int8_t unit, char byte);
 void     uart_writes(int8_t unit, char *s);
 uint8_t uart_read(int8_t unit, char *c, uint32_t timeout);

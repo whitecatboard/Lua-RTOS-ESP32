@@ -2,7 +2,7 @@
  * Lua RTOS, SPI wrapper
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -39,17 +39,108 @@
 #include "spi.h"
 #include "modules.h"
 
+#include <drivers/gpio.h>
+#include <drivers/cpu.h>
 #include <drivers/spi.h>
 
 // This variables are defined at linker time
 extern LUA_REG_TYPE spi_error_map[];
+
+extern spi_bus_t spi_bus[CPU_LAST_SPI + 1];
+
+static int lspi_pins(lua_State* L) {
+	uint8_t table = 0;
+	uint16_t count = 0, i = 0;
+	int unit = CPU_FIRST_SPI;
+
+	// Check if user wants result as a table, or wants result
+	// on the console
+	if (lua_gettop(L) == 1) {
+		luaL_checktype(L, 1, LUA_TBOOLEAN);
+		if (lua_toboolean(L, 1)) {
+			table = 1;
+		}
+	}
+
+	if (table){
+		lua_createtable(L, count, 0);
+	}
+
+	for(unit = CPU_FIRST_SPI; unit <= CPU_LAST_SPI;unit++) {
+		if (!table) {
+			printf("SPI%d: ", unit);
+
+			printf("miso=");
+			if (spi_bus[unit].miso >= 0) {
+				printf("%s%d ", gpio_portname(spi_bus[unit].miso), gpio_name(spi_bus[unit].miso));
+			} else {
+				printf("unused");
+			}
+
+			printf("mosi=");
+			if (spi_bus[unit].mosi >= 0) {
+				printf("%s%d ", gpio_portname(spi_bus[unit].mosi), gpio_name(spi_bus[unit].mosi));
+			} else {
+				printf("unused");
+			}
+
+			printf("clk=");
+			if (spi_bus[unit].clk >= 0) {
+				printf("%s%d ", gpio_portname(spi_bus[unit].clk), gpio_name(spi_bus[unit].clk));
+			} else {
+				printf("unused");
+			}
+
+			printf("\r\n");
+		} else {
+			lua_pushinteger(L, i);
+
+			lua_createtable(L, 0, 4);
+
+			lua_pushinteger(L, unit);
+	        lua_setfield (L, -2, "id");
+
+	        lua_pushinteger(L, spi_bus[unit].miso);
+			lua_setfield (L, -2, "miso");
+
+			lua_pushinteger(L, spi_bus[unit].mosi);
+	        lua_setfield (L, -2, "mosi");
+
+	        lua_pushinteger(L, spi_bus[unit].clk);
+			lua_setfield (L, -2, "clk");
+
+			 lua_settable(L,-3);
+		}
+
+		i++;
+	}
+
+	return table;
+}
+
+static int lspi_setpins(lua_State* L) {
+	driver_error_t *error;
+
+	int id = luaL_checkinteger(L, 1);
+	int miso = luaL_checkinteger(L, 2);
+	int mosi = luaL_checkinteger(L, 3);
+	int clk = luaL_checkinteger(L, 4);
+
+	if ((error = spi_pin_map(id, miso, mosi, clk))) {
+	    return luaL_driver_error(L, error);
+	}
+
+	return 0;
+}
 
 static int lspi_setup(lua_State* L) {
 	int id, data_bits, is_master, cs;
 	driver_error_t *error;
 	uint32_t clock;
 	int spi_mode = 0;
-	int flags = SPI_FLAG_WRITE | SPI_FLAG_READ;
+	int flags = DRIVER_ALL_FLAGS;
+
+	luaL_deprecated(L, "spi.setup", "spi.attach");
 
 	id = luaL_checkinteger(L, 1);
 	is_master = luaL_checkinteger(L, 2) == 1;
@@ -57,10 +148,35 @@ static int lspi_setup(lua_State* L) {
 	clock = luaL_checkinteger(L, 4);
 	data_bits = luaL_checkinteger(L, 5);
 	spi_mode = luaL_checkinteger(L, 6);
+	flags = luaL_optinteger(L, 7, SPI_FLAG_WRITE | SPI_FLAG_READ);
 
-	if (lua_gettop(L) == 7) {
-		flags = luaL_checkinteger(L, 7);
+	spi_userdata *spi = (spi_userdata *)lua_newuserdata(L, sizeof(spi_userdata));
+
+	if ((error = spi_setup(id, is_master, cs, spi_mode, clock * 1000, flags, &spi->spi_device))) {
+	    return luaL_driver_error(L, error);
 	}
+
+    luaL_getmetatable(L, "spi.ins");
+    lua_setmetatable(L, -2);
+
+	(void)data_bits;
+	return 1;
+}
+
+static int lspi_attach(lua_State* L) {
+	int id, data_bits, is_master, cs;
+	driver_error_t *error;
+	uint32_t clock;
+	int spi_mode = 0;
+	int flags = DRIVER_ALL_FLAGS;
+
+	id = luaL_checkinteger(L, 1);
+	is_master = luaL_checkinteger(L, 2) == 1;
+	cs = luaL_checkinteger(L, 3);
+	clock = luaL_checkinteger(L, 4);
+	data_bits = luaL_checkinteger(L, 5);
+	spi_mode = luaL_checkinteger(L, 6);
+	flags = luaL_optinteger(L, 7, SPI_FLAG_WRITE | SPI_FLAG_READ);
 
 	spi_userdata *spi = (spi_userdata *)lua_newuserdata(L, sizeof(spi_userdata));
 
@@ -170,6 +286,9 @@ static int lspi_ins_gc (lua_State *L) {
 
 static const LUA_REG_TYPE lspi_map[] = {
 	{ LSTRKEY( "setup"      ),	 LFUNCVAL( lspi_setup    ) },
+	{ LSTRKEY( "attach"     ),	 LFUNCVAL( lspi_attach   ) },
+	{ LSTRKEY( "pins"       ),	 LFUNCVAL( lspi_pins     ) },
+	{ LSTRKEY( "setpins"    ),	 LFUNCVAL( lspi_setpins  ) },
 	{ LSTRKEY( "error"      ),   LROVAL  ( spi_error_map ) },
 	{ LSTRKEY( "WRITE"      ),	 LINTVAL ( SPI_FLAG_WRITE) },
 	{ LSTRKEY( "READ"       ),	 LINTVAL ( SPI_FLAG_READ ) },

@@ -32,3 +32,4 @@ void vfs_net_register();
 void vfs_spiffs_register();
 void vfs_tty_register();
 void vfs_spiffs_format();
+void vfs_fat_format();

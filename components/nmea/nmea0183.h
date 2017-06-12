@@ -1,8 +1,8 @@
 /*
- * Lua RTOS, power bus driver
+ * Lua RTOS, NMEA parser
  *
- * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * Copyright (C) 2015 - 2016
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -27,51 +27,17 @@
  * this software.
  */
 
-#include "luartos.h"
+#ifndef NMEA0183_H
+#define	NMEA0183_H
 
-#if CONFIG_LUA_RTOS_USE_POWER_BUS
+#include "sdkconfig.h"
 
-#include <sys/driver.h>
+#define MAX_NMA_SIZE 82
 
-#include <drivers/gpio.h>
-#include <drivers/power_bus.h>
+void nmea_parse(char *sentence);
+int nmea_new_pos();
+double nmea_lat();
+double nmea_lon();
+int nmea_sats();
 
-static int power = 0;
-
-DRIVER_REGISTER_ERROR(PWBUS, pwbus, InvalidPin, "invalid pin", PWBUS_ERR_INVALID_PIN);
-
-/*
- * Helper functions
- */
-static void _pwbus_init() {
-	driver_lock(PWBUS_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_POWER_BUS_PIN, DRIVER_ALL_FLAGS, NULL);
-
-	gpio_pin_output(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	power = 0;
-}
-
-/*
- * Operation functions
- */
-driver_error_t *pwbus_on() {
-	if (power) return NULL;
-
-	gpio_pin_set(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	power = 1;
-
-	return NULL;
-}
-
-driver_error_t *pwbus_off() {
-	if (!power) return NULL;
-
-	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	power = 0;
-
-	return NULL;
-}
-
-DRIVER_REGISTER(PWBUS,pwbus,NULL,_pwbus_init,NULL);
-
-#endif
+#endif	/* NMEA0183_H */

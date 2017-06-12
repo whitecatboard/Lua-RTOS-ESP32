@@ -49,7 +49,7 @@
 
 #include <fat/ff.h>
 
-#include <drivers/sd.h>
+#include "../drivers/spi_sd.h"
 
 static int IRAM_ATTR vfs_fat_open(const char *path, int flags, int mode);
 static size_t IRAM_ATTR vfs_fat_write(int fd, const void *data, size_t size);
@@ -83,28 +83,57 @@ static struct list files;
  */
 int IRAM_ATTR fat_result(FRESULT res) {
     switch (res) {
-        case FR_IS_DIR:
+    	case FR_OK:
+    		return 0;
+
+    	case FR_IS_DIR:
             return EISDIR;
 
-        case FR_OK:
-            return 0;
-
-        case FR_NO_FILE:
-        case FR_NO_PATH:
-        case FR_INVALID_NAME:
-            return ENOENT;
-
-        case FR_INVALID_DRIVE:
+    	case FR_LOCKED:
         case FR_WRITE_PROTECTED:
         case FR_DENIED:
             return EACCESS;
 
+        case FR_INVALID_OBJECT:
+        	return EBADF;
+
         case FR_EXIST:
             return EEXIST;
 
-        default:
-            return res;
+        case FR_MKFS_ABORTED:
+        	return EINTR;
+
+        case FR_INVALID_NAME:
+        case FR_INVALID_PARAMETER:
+        	return EINVAL;
+
+        case FR_INT_ERR:
+        case FR_DISK_ERR:
+        	return EIO;
+
+        case FR_TOO_MANY_OPEN_FILES:
+        	return ENFILE;
+
+        case FR_NO_FILE:
+        case FR_NO_PATH:
+            return ENOENT;
+
+        case FR_NOT_READY:
+        case FR_NOT_ENABLED:
+        case FR_NO_FILESYSTEM:
+        	return ENODEV;
+
+        case FR_NOT_ENOUGH_CORE:
+			return ENOMEM;
+
+        case FR_TIMEOUT:
+        	return ETIMEDOUT;
+
+        case FR_INVALID_DRIVE:
+        	return ENXIO;
     }
+
+    return ENOTSUP;
 }
 
 static int IRAM_ATTR vfs_fat_open(const char *path, int flags, int mode) {
@@ -359,11 +388,27 @@ static int IRAM_ATTR vfs_fat_stat(const char *path, struct stat * st) {
 }
 
 static int IRAM_ATTR vfs_fat_unlink(const char *path) {
-    return fat_result(f_unlink(path));
+	int res;
+
+	res = f_unlink(path);
+	if (res !=0) {
+		errno = fat_result(res);
+		return -1;
+	}
+
+	return 0;
 }
 
 static int IRAM_ATTR vfs_fat_rename(const char *src, const char *dst) {
-    return fat_result(f_rename(src, dst));
+	int res;
+
+	res = f_rename(src, dst);
+	if (res !=0) {
+		errno = fat_result(res);
+		return -1;
+	}
+
+	return 0;
 }
 
 static int IRAM_ATTR vfs_fat_mkdir(const char *path, mode_t mode) {
@@ -541,7 +586,7 @@ void vfs_fat_register() {
     ESP_ERROR_CHECK(esp_vfs_register("/fat", &vfs, NULL));
 
     // Mount sdcard
-    if (sd_init(0)) {
+    if (!sd_init(0)) {
         syslog(LOG_INFO, "fat init file system");
 
         if (!sd_has_partitions(0)) {
@@ -573,6 +618,22 @@ void vfs_fat_register() {
     	syslog(LOG_INFO, "fat%d can't mounted", 0);
     }
 
+}
+
+void vfs_fat_format() {
+    FRESULT res;
+
+	// First unregister
+	esp_vfs_unregister("/fat");
+	mount_set_mounted("fat", 0);
+
+	res = f_mount(&sd_fs[0], "", 1);
+	if (res == FR_OK) {
+		res = f_mkfs("", 0, 512);
+	}
+
+	// Register again
+	vfs_fat_register();
 }
 
 #endif

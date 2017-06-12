@@ -1,8 +1,8 @@
 /*
- * Lua RTOS, power bus driver
+ * Lua RTOS, some common macros used in Lua RTOS
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -27,51 +27,38 @@
  * this software.
  */
 
-#include "luartos.h"
+#ifndef _LUA_RTOS_SYS_MACROS_H_
+#define _LUA_RTOS_SYS_MACROS_H_
 
-#if CONFIG_LUA_RTOS_USE_POWER_BUS
-
-#include <sys/driver.h>
-
-#include <drivers/gpio.h>
-#include <drivers/power_bus.h>
-
-static int power = 0;
-
-DRIVER_REGISTER_ERROR(PWBUS, pwbus, InvalidPin, "invalid pin", PWBUS_ERR_INVALID_PIN);
-
-/*
- * Helper functions
+/**
+ * @brief Test that all elements in a 2-size set are different.
+ *
+ * @param a first element
+ * @param b second element
+ * @param c third element
+ *
  */
-static void _pwbus_init() {
-	driver_lock(PWBUS_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_POWER_BUS_PIN, DRIVER_ALL_FLAGS, NULL);
+#define TEST_UNIQUE2(a,b) ((a!=b))
 
-	gpio_pin_output(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	power = 0;
-}
-
-/*
- * Operation functions
+/**
+ * @brief Test that all elements in a 3-size set are different.
+ *
+ * @param a first element
+ * @param b second element
+ * @param c third element
+ *
  */
-driver_error_t *pwbus_on() {
-	if (power) return NULL;
+#define TEST_UNIQUE3(a,b,c) ((a!=b) && (a!=c) && (b!=c))
 
-	gpio_pin_set(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	power = 1;
-
-	return NULL;
-}
-
-driver_error_t *pwbus_off() {
-	if (!power) return NULL;
-
-	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	power = 0;
-
-	return NULL;
-}
-
-DRIVER_REGISTER(PWBUS,pwbus,NULL,_pwbus_init,NULL);
+/**
+ * @brief Test that all elements in a 4-size set are different.
+ *
+ * @param a first element
+ * @param b second element
+ * @param c third element
+ * @param d fourth elements
+ *
+ */
+#define TEST_UNIQUE4(a,b,c,d) ((a!=b) && (a!=c) && (a!=d) && (b!=c) && (b!=d) && (c!=d))
 
 #endif

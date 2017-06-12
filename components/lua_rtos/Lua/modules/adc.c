@@ -2,7 +2,7 @@
  * Lua RTOS, Lua ADC module
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -50,6 +50,32 @@ static int ladc_setup( lua_State* L ) {
     int id, res, channel, vref;
 	driver_error_t *error;
 
+	luaL_deprecated(L, "adc.setup", "adc.attach");
+
+    id = luaL_checkinteger( L, 1 );
+    channel = luaL_checkinteger( L, 2 );
+    res = luaL_checkinteger( L, 3 );
+    vref = luaL_optinteger( L, 4, 3300 );
+
+    adc_userdata *adc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
+
+    adc->adc = id;
+    adc->chan = channel;
+
+    if ((error = adc_setup(id, channel, vref, res))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    luaL_getmetatable(L, "adc.chan");
+    lua_setmetatable(L, -2);
+
+    return 1;
+}
+
+static int ladc_attach( lua_State* L ) {
+    int id, res, channel, vref;
+	driver_error_t *error;
+
     id = luaL_checkinteger( L, 1 );
     channel = luaL_checkinteger( L, 2 );
     res = luaL_checkinteger( L, 3 );
@@ -90,11 +116,15 @@ static int ladc_read( lua_State* L ) {
 
 static const LUA_REG_TYPE ladc_map[] = {
     { LSTRKEY( "setup" ),		  LFUNCVAL( ladc_setup   ) },
-    { LSTRKEY( "attach" ),		  LFUNCVAL( ladc_setup   ) },
+    { LSTRKEY( "attach" ),		  LFUNCVAL( ladc_attach  ) },
 	ADC_ADC0
 	ADC_ADC1
+#if CONFIG_ADC_MCP3008
 	ADC_ADC2
+#endif
+#if CONFIG_ADC_MCP3208
 	ADC_ADC3
+#endif
 	ADC_ADC_CH0
 	ADC_ADC_CH1
 	ADC_ADC_CH2

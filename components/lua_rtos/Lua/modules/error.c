@@ -90,3 +90,17 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     
     return luaL_error(L, driver_get_err_msg(error));
 }
+
+int luaL_deprecated(lua_State* L, const char *old, const char *new) {
+	// Build the deprecated message
+	luaL_where(L, 1);
+	lua_pushfstring(L, "WARNING %s is deprecated, please use %s instead\r\n", old, new);
+	lua_concat(L, 2);
+
+	printf(luaL_checkstring (L, -1));
+
+	// Remove string from the stack
+	lua_pop(L,1);
+
+	return 0;
+}

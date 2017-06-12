@@ -47,6 +47,45 @@
 // This variables are defined at linker time
 extern LUA_REG_TYPE tm1637_error_map[];
 
+static int lsdisplay_setup( lua_State* L ) {
+	driver_error_t *error;
+
+	luaL_deprecated(L, "sdisplay.setup", "sdisplay.attach");
+
+    const char *type = luaL_checkstring(L, 1);
+    if (strcmp(type,"TM1637") != 0) {
+    	luaL_error(L, "type is not supported");
+    }
+
+    int8_t scl = luaL_checkinteger(L, 2);
+    int8_t sda = luaL_checkinteger(L, 3);
+    int8_t segments = luaL_optinteger(L, 4, 4);
+    int8_t brightness = luaL_optinteger(L, 5, TM1637_BRIGHT_TYPICAL);
+
+    UNUSED(segments);
+
+    if ((brightness < 0) || (brightness > 7)) {
+    	luaL_error(L, "invalid brightness");
+    }
+
+	// Create user data
+	sdisplay_userdata *udata = (sdisplay_userdata *)lua_newuserdata(L, sizeof(sdisplay_userdata));
+    if (!udata) {
+    	return 0;
+    }
+
+    if ((error = tm1637_setup(scl, sda, &udata->device))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    udata->brightness = brightness;
+
+    luaL_getmetatable(L, "sdisplay.ins");
+    lua_setmetatable(L, -2);
+
+    return 1;
+}
+
 static int lsdisplay_attach( lua_State* L ) {
 	driver_error_t *error;
 
@@ -147,7 +186,7 @@ static int lsdisplay_ins_gc (lua_State *L) {
 
 static const LUA_REG_TYPE lsdisplay_map[] = {
     { LSTRKEY( "attach"  ),			LFUNCVAL( lsdisplay_attach ) },
-    { LSTRKEY( "setup"   ),			LFUNCVAL( lsdisplay_attach ) },
+    { LSTRKEY( "setup"   ),			LFUNCVAL( lsdisplay_setup  ) },
 	{ LSTRKEY( "error"   ), 		LROVAL  ( tm1637_error_map ) },
     { LNILKEY, LNILVAL }
 };

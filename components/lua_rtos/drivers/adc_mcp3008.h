@@ -2,7 +2,7 @@
  * Lua RTOS, ADC MCP3008 driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -30,8 +30,6 @@
 #define _ADC_MCP3008_H
 
 #include <sys/driver.h>
-
-#define ADC_MCP3008_SPEED 20
 
 driver_error_t *adc_mcp3008_setup(int8_t unit, int8_t channel, uint8_t spi, uint8_t cs);
 driver_error_t *adc_mcp3008_read(int8_t unit, int8_t channel, int *raw);

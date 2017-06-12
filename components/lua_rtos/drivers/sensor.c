@@ -42,6 +42,7 @@
 #include <drivers/gpio.h>
 #include <drivers/owire.h>
 #include <drivers/i2c.h>
+#include <drivers/uart.h>
 #include <drivers/power_bus.h>
 
 // This variable is defined at linker time
@@ -69,7 +70,7 @@ static driver_error_t *sensor_adc_setup(sensor_instance_t *unit) {
 	driver_error_t *error;
 
 	// Lock ADC channel
-    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, ADC_DRIVER, unit->setup.adc.channel, DRIVER_ALL_FLAGS))) {
+    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, ADC_DRIVER, unit->setup.adc.channel, DRIVER_ALL_FLAGS, unit->sensor->id))) {
     	// Revoked lock on ADC channel
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
@@ -85,7 +86,7 @@ static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
 
 	// Lock gpio
-    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup.gpio.gpio, DRIVER_ALL_FLAGS))) {
+    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup.gpio.gpio, DRIVER_ALL_FLAGS, unit->sensor->id))) {
     	// Revoked lock on gpio
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
@@ -134,9 +135,43 @@ static driver_error_t *sensor_owire_setup(sensor_instance_t *unit) {
 static driver_error_t *sensor_i2c_setup(sensor_instance_t *unit) {
 	driver_error_t *error;
 
-    if ((error = i2c_setup(unit->setup.i2c.id, I2C_MASTER, unit->setup.i2c.speed, unit->setup.i2c.sda, unit->setup.i2c.scl, 0, 0))) {
+    driver_unit_lock_error_t *lock_error = NULL;
+	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, I2C_DRIVER, unit->setup.i2c.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+		return driver_lock_error(SENSOR_DRIVER, lock_error);
+	}
+
+	if ((unit->setup.i2c.sda >= 0) || (unit->setup.i2c.scl >= 0)) {
+	    if ((error = i2c_pin_map(unit->setup.i2c.id, unit->setup.i2c.sda, unit->setup.i2c.scl))) {
+	    	return error;
+	    }
+	}
+
+    if ((error = i2c_setup(unit->setup.i2c.id, I2C_MASTER, unit->setup.i2c.speed, 0, 0))) {
     	return error;
     }
+
+	return NULL;
+}
+
+static driver_error_t *sensor_uart_setup(sensor_instance_t *unit) {
+	driver_error_t *error;
+
+    driver_unit_lock_error_t *lock_error = NULL;
+	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, UART_DRIVER,unit->setup.uart.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+		return driver_lock_error(SENSOR_DRIVER, lock_error);
+	}
+
+	if ((error = uart_init(
+    		unit->setup.uart.id, unit->setup.uart.speed, unit->setup.uart.data_bits,
+			unit->setup.uart.parity, unit->setup.uart.stop_bits, DRIVER_ALL_FLAGS, 1024
+	))) {
+    	return error;
+    }
+
+    if ((error = uart_setup_interrupts(unit->setup.uart.id))) {
+        return error;
+    }
+
 	return NULL;
 }
 
@@ -220,6 +255,7 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 		case GPIO_INTERFACE: error = sensor_gpio_setup(instance);break;
 		case OWIRE_INTERFACE: error = sensor_owire_setup(instance);break;
 		case I2C_INTERFACE: error = sensor_i2c_setup(instance);break;
+		case UART_INTERFACE: error = sensor_uart_setup(instance);break;
 		default:
 			return driver_setup_error(SENSOR_DRIVER, SENSOR_ERR_INTERFACE_NOT_SUPPORTED, NULL);
 			break;
@@ -283,7 +319,6 @@ driver_error_t *sensor_read(sensor_instance_t *unit, const char *id, sensor_valu
 	int idx = 0;
 
 	*value = NULL;
-
 	for(idx=0;idx <  SENSOR_MAX_DATA;idx++) {
 		if (unit->sensor->data[idx].id) {
 			if (strcmp(unit->sensor->data[idx].id,id) == 0) {

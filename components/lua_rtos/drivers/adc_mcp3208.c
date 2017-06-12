@@ -2,7 +2,7 @@
  * Lua RTOS, ADC MCP3208 driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -27,6 +27,10 @@
  * this software.
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_ADC_MCP3208
+
 #include <sys/syslog.h>
 
 #include <drivers/gpio.h>
@@ -41,7 +45,7 @@ driver_error_t *adc_mcp3208_setup(int8_t unit, int8_t channel, uint8_t spi, uint
 
     // Init SPI bus
 	if (spi_device == -1) {
-		if ((error = spi_setup(spi, 1, cs, 0, ADC_MCP3208_SPEED, SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
+		if ((error = spi_setup(spi, 1, cs, 0, CONFIG_ADC_MCP3208_SPEED, SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
 			return error;
 		}
 	}
@@ -66,3 +70,5 @@ driver_error_t *adc_mcp3208_read(int8_t unit, int8_t channel, int *raw) {
 
     return NULL;
 }
+
+#endif

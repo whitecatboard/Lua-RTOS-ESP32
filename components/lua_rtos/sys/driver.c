@@ -55,7 +55,6 @@ static struct mtx driver_mtx;
 // Drivers are registered in their soure code file using DRIVER_REGISTER macro
 extern const driver_t drivers[];
 
-// Get driver info by it's name
 const driver_t *driver_get_by_name(const char *name) {
 	const driver_t *cdriver;
 
@@ -71,7 +70,6 @@ const driver_t *driver_get_by_name(const char *name) {
 	return NULL;
 }
 
-// Get driver info by it's exception base
 const driver_t *driver_get_by_exception_base(const int exception_base) {
 	const driver_t *cdriver;
 
@@ -173,22 +171,116 @@ driver_error_t *driver_operation_error(const driver_t *driver, unsigned int exce
     return error;
 }
 
-// Try to obtain a lock on an unit driver
-driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit, uint8_t flags) {
+char *driver_target_name(const driver_t *target_driver, int target_unit, const char *tag) {
+	int unit = -1;
+	int device = -1;
+
+	// In some cases the target driver can have more than one device
+	// attached. This is the case of the SPI driver, in which a SPI unit
+	// (spi bus) have one or more devices attached.
+	//
+	// In this case we split the target_unit into the target_unit and the
+	// target_device.
+	if (strcmp(target_driver->name, "spi") == 0) {
+		if (target_unit > CPU_LAST_SPI) {
+			unit = (target_unit & 0xff00) >> 8;
+			device = (target_unit & 0x00ff);
+		}
+	}
+
+	char *buffer = malloc(80);
+	if (!buffer) {
+		panic("not enough memory");
+	}
+
+	if (unit >= 0) {
+		if (tag) {
+			sprintf(buffer, "%s%d (%s) (device %d)", target_driver->name, unit, tag, device);
+		} else {
+			sprintf(buffer, "%s%d (device %d)", target_driver->name, unit, device);
+		}
+	} else {
+		if (tag) {
+			sprintf(buffer, "%s%d (%s)", target_driver->name, target_unit, tag);
+		} else {
+			sprintf(buffer, "%s%d", target_driver->name, target_unit);
+		}
+	}
+
+	return buffer;
+}
+
+static int lock_index(const driver_t *driver, int unit) {
+	int tunit = -1;
+	int tdevice = -1;
+	int index = 0;
+
+	// In some cases the target driver can have more than one device
+	// attached. This is the case of the SPI driver, in which a SPI unit
+	// (spi bus) have one or more devices attached.
+	//
+	// In this case we split the target_unit into the target_unit and the
+	// target_device.
+	if (strcmp(driver->name, "spi") == 0) {
+		if (unit > CPU_LAST_SPI) {
+			tunit = (unit & 0xff00) >> 8;
+			tdevice = (unit & 0x00ff);
+		}
+	}
+
+	if (tunit >= 0) {
+		index = (tunit * SPI_BUS_DEVICES) + tdevice;
+	} else {
+		index = unit;
+	}
+
+	return index;
+}
+
+void driver_unlock_all(const driver_t *owner_driver, int owner_unit) {
+    const driver_t *cdriver = drivers;
+    driver_unit_lock_t *target_lock;
+    int i;
+
     mtx_lock(&driver_mtx);
 
+    while (cdriver->name) {
+    	if (cdriver->lock) {
+    		target_lock = (driver_unit_lock_t *)cdriver->lock;
+    		for(i=0; i < cdriver->locks;i++) {
+    			if ((target_lock[i].owner == owner_driver) && (target_lock[i].unit == owner_unit)) {
+    				target_lock[i].owner = NULL;
+    				target_lock[i].unit = 0;
+    				target_lock[i].tag = NULL;
+    			}
+    		}
+    	}
+
+    	cdriver++;
+    }
+
+	mtx_unlock(&driver_mtx);
+}
+
+// Try to obtain a lock on an unit driver
+driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit, uint8_t flags, const char *tag) {
+	mtx_lock(&driver_mtx);
+
+    // Get the target driver lock array
 	driver_unit_lock_t *target_lock = (driver_unit_lock_t *)target_driver->lock;
 
 	#if DRIVER_LOCK_DEBUG
-	syslog(LOG_DEBUG,"driver lock by %s%d on %s%d\r\n",
-			owner_driver->name, owner_unit,
-			target_driver->name, target_unit
+	char *name = driver_target_name(target_driver, target_unit, NULL);
+
+	syslog(LOG_DEBUG,"driver lock by %s%d on %s\r\n",
+			owner_driver->name, owner_unit, name
 	);
+
 	#endif
 
 	if (!target_lock) {
 		#if DRIVER_LOCK_DEBUG
-		syslog(LOG_DEBUG,"target driver haven't lock control\r\n");
+		syslog(LOG_DEBUG,"driver %s haven't lock control\r\n", target_driver->name);
 		#endif
 
 		if (target_driver->lock_resources) {
@@ -199,20 +291,24 @@ driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_un
 			if ((error = target_driver->lock_resources(target_unit, flags, NULL))) {
 				// Target driver has no locks, then grant access
 				#if DRIVER_LOCK_DEBUG
-				syslog(LOG_DEBUG,"driver lock by %s%d on %s%d revoked\r\n",
+				syslog(LOG_DEBUG,"driver lock by %s%d on %s revoked\r\n",
 						owner_driver->name, owner_unit,
-						target_driver->name, target_unit
+						name
 				);
+				free(name);
 				#endif
+
+				driver_unlock_all(owner_driver, owner_unit);
 
 				return error->lock_error;
 			} else {
 				// Target driver has no locks, then grant access
 				#if DRIVER_LOCK_DEBUG
-				syslog(LOG_DEBUG,"driver lock by %s%d on %s%d granted\r\n",
+				syslog(LOG_DEBUG,"driver lock by %s%d on %s granted\r\n",
 						owner_driver->name, owner_unit,
-						target_driver->name, target_unit
+						name
 				);
+				free(name);
 				#endif
 
 				return NULL;
@@ -221,31 +317,33 @@ driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_un
 
 		// Target driver has no locks, then grant access
 		#if DRIVER_LOCK_DEBUG
-		syslog(LOG_DEBUG,"driver lock by %s%d on %s%d granted\r\n",
+		syslog(LOG_DEBUG,"driver lock by %s%d on %s granted\r\n",
 				owner_driver->name, owner_unit,
-				target_driver->name, target_unit
+				name
 		);
+		free(name);
 		#endif
 
 		mtx_unlock(&driver_mtx);
 
 		return NULL;
-	} else {
-		#if DRIVER_LOCK_DEBUG
-		syslog(LOG_DEBUG,"target driver have lock control\r\n");
-		#endif
 	}
 
-	if (target_lock[target_unit].owner) {
+	#if DRIVER_LOCK_DEBUG
+	syslog(LOG_DEBUG,"driver %s have lock control\r\n", target_driver->name);
+	#endif
+
+	if (target_lock[lock_index(target_driver, target_unit)].owner) {
 		// Target unit has a lock
 
-		if ((target_lock[target_unit].owner == owner_driver) && ((target_lock[target_unit].unit == owner_unit))) {
+		if ((target_lock[lock_index(target_driver, target_unit)].owner == owner_driver) && ((target_lock[lock_index(target_driver, target_unit)].unit == owner_unit))) {
 			// Target unit is locked by owner_driver, then grant access
 			#if DRIVER_LOCK_DEBUG
-			syslog(LOG_DEBUG,"driver lock by %s%d on %s%d granted\r\n",
+			syslog(LOG_DEBUG,"driver lock by %s%d on %s granted\r\n",
 					owner_driver->name, owner_unit,
-					target_driver->name, target_unit
+					name
 			);
+			free(name);
 			#endif
 
 			mtx_unlock(&driver_mtx);
@@ -258,34 +356,40 @@ driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_un
 				panic("not enough memory");
 			}
 
-			error->lock = &target_lock[target_unit];
+			error->lock = &target_lock[lock_index(target_driver, target_unit)];
 			error->owner_driver = owner_driver;
 			error->owner_unit = owner_unit;
 			error->target_driver = target_driver;
 			error->target_unit = target_unit;
 
 			#if DRIVER_LOCK_DEBUG
-			syslog(LOG_DEBUG,"driver lock by %s%d on %s%d revoked\r\n",
+			syslog(LOG_DEBUG,"driver lock by %s%d on %s revoked\r\n",
 					owner_driver->name, owner_unit,
-					target_driver->name, target_unit
+					name
 			);
+			free(name);
 			#endif
 
 			mtx_unlock(&driver_mtx);
 
+			driver_unlock_all(owner_driver, owner_unit);
+
 			return error;
 		}
 	} else {
+		// Target unit hasn't a lock, then grant access
+
 		#if DRIVER_LOCK_DEBUG
-		syslog(LOG_DEBUG,"driver lock by %s%d on %s%d granted\r\n",
+		syslog(LOG_DEBUG,"driver lock by %s%d on %s granted\r\n",
 				owner_driver->name, owner_unit,
-				target_driver->name, target_unit
+				name
 		);
+		free(name);
 		#endif
 
-		// Target unit hasn't a lock, then grant access
-		target_lock[target_unit].owner = owner_driver;
-		target_lock[target_unit].unit = owner_unit;
+		target_lock[lock_index(target_driver, target_unit)].owner = owner_driver;
+		target_lock[lock_index(target_driver, target_unit)].unit = owner_unit;
+		target_lock[lock_index(target_driver, target_unit)].tag = tag;
 
 		mtx_unlock(&driver_mtx);
 

@@ -105,29 +105,34 @@ xQueueHandle lmicCommand;
 driver_error_t *lmic_lock_resources(int unit, void *resources) {
     driver_unit_lock_error_t *lock_error = NULL;
 
+	if ((lock_error = driver_lock(LORA_DRIVER, unit, SPI_DRIVER, spi_device, DRIVER_ALL_FLAGS, NULL))) {
+			// Revoked lock on pin
+			return driver_lock_error(LORA_DRIVER, lock_error);
+	}
+
 	#if !CONFIG_LUA_RTOS_USE_POWER_BUS
-    if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_RST, DRIVER_ALL_FLAGS))) {
+    if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_RST, DRIVER_ALL_FLAGS, "RST"))) {
     	// Revoked lock on pin
     	return driver_lock_error(LORA_DRIVER, lock_error);
     }
 	#endif
 
 	#if CONFIG_LUA_RTOS_LORA_NODE_DIO0
-	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_DIO0, DRIVER_ALL_FLAGS))) {
-			// Revoked lock on pin
-			return driver_lock_error(LORA_DRIVER, lock_error);
+	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_DIO0, DRIVER_ALL_FLAGS, "DIO0"))) {
+		// Revoked lock on pin
+		return driver_lock_error(LORA_DRIVER, lock_error);
 	}
 	#endif
 
 	#if CONFIG_LUA_RTOS_LORA_NODE_DIO1
-	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_DIO1, DRIVER_ALL_FLAGS))) {
+	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_DIO1, DRIVER_ALL_FLAGS, "DIO1"))) {
 		// Revoked lock on pin
 		return driver_lock_error(LORA_DRIVER, lock_error);
 	}
 	#endif
 
 	#if CONFIG_LUA_RTOS_LORA_NODE_DIO2
-	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_DIO2, DRIVER_ALL_FLAGS))) {
+	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_DIO2, DRIVER_ALL_FLAGS, "DIO2"))) {
 		// Revoked lock on pin
 		return driver_lock_error(LORA_DRIVER, lock_error);
 	}

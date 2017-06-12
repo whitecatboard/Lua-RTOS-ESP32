@@ -115,6 +115,22 @@ static char *hex_str_pad(lua_State* L, const char  *str, int len) {
 static int llora_setup(lua_State* L) {
 	driver_error_t *error;
 
+	luaL_deprecated(L, "lora.setup", "lora.attach");
+
+    int band = luaL_checkinteger(L, 1);
+
+    // Setup in base of frequency
+    error = lora_setup(band);
+    if (error) {
+        return luaL_driver_error(L, error);
+    }
+
+    return 0;
+}
+
+static int llora_attach(lua_State* L) {
+	driver_error_t *error;
+
     int band = luaL_checkinteger(L, 1);
 
     // Setup in base of frequency
@@ -404,6 +420,7 @@ static int llora_gw_start(lua_State* L) {
 static const LUA_REG_TYPE lora_map[] = {
 #if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
     { LSTRKEY( "setup" ),        LFUNCVAL( llora_setup ) },
+    { LSTRKEY( "attach" ),       LFUNCVAL( llora_attach ) },
     { LSTRKEY( "setDevAddr" ),   LFUNCVAL( llora_set_setDevAddr ) },
     { LSTRKEY( "setDevEui" ),    LFUNCVAL( llora_set_DevEui ) },
     { LSTRKEY( "setAppEui" ),    LFUNCVAL( llora_set_AppEui ) },

@@ -2,7 +2,7 @@
  * Lua RTOS, SPI driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -52,8 +52,6 @@
 
 #include "luartos.h"
 
-#define SPI_USE_IDF_DRIVER 0
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -71,6 +69,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <sys/macros.h>
 #include <sys/syslog.h>
 #include <sys/driver.h>
 
@@ -80,7 +79,8 @@
 
 #define PIN_FUNC_SPI 1
 
-extern unsigned port_interruptNesting[portNUM_PROCESSORS];
+// Driver locks
+static driver_unit_lock_t spi_locks[(CPU_LAST_SPI + 1) * SPI_BUS_DEVICES];
 
 // Driver message errors
 DRIVER_REGISTER_ERROR(SPI, spi, InvalidMode, "invalid mode", SPI_ERR_INVALID_MODE);
@@ -92,40 +92,9 @@ DRIVER_REGISTER_ERROR(SPI, spi, NoMoreDevicesAllowed, "no more devices allowed",
 DRIVER_REGISTER_ERROR(SPI, spi, InvalidDevice, "invalid device", SPI_ERR_INVALID_DEVICE);
 DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSetup, "invalid device", SPI_ERR_DEVICE_NOT_SETUP);
 DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSelected, "device is not selected", SPI_ERR_DEVICE_IS_NOT_SELECTED);
+DRIVER_REGISTER_ERROR(SPI, spi, CannotChangePinMap, "cannot change pin map once the SPI unit has an attached device", SPI_ERR_CANNOT_CHANGE_PINMAP);
 
-typedef struct {
-	uint8_t  setup;
-	uint8_t  cs;
-	uint32_t speed;
-	uint8_t  mode;
-#if !SPI_USE_IDF_DRIVER
-	uint32_t divisor;
-#else
-	spi_device_handle_t h;
-#endif
-} spi_device_t;
-
-typedef struct {
-	SemaphoreHandle_t mtx; // Recursive mutex for access the bus
-	uint8_t setup;         // Bus is setup?
-	int last_device;       // Last device that used the bus
-	int selected_device;   // Device that owns the bus
-
-	// Current pin assignment
-	uint8_t miso;
-	uint8_t mosi;
-	uint8_t clk;
-
-	// Default pin assignment
-	uint8_t dmiso;
-	uint8_t dmosi;
-	uint8_t dclk;
-
-	// Spi devices attached to the bus
-	spi_device_t device[SPI_BUS_DEVICES];
-} spi_bus_t;
-
-static spi_bus_t spi_bus[CPU_LAST_SPI + 1];
+spi_bus_t spi_bus[CPU_LAST_SPI + 1];
 
 /*
  * Helper functions
@@ -144,18 +113,10 @@ static void _spi_init() {
 	spi_bus[2].mosi  = CONFIG_LUA_RTOS_SPI2_MOSI;
 	spi_bus[2].clk   = CONFIG_LUA_RTOS_SPI2_CLK;
 
-	spi_bus[2].dmiso = GPIO12;
-	spi_bus[2].dmosi = GPIO13;
-	spi_bus[2].dclk  = GPIO14;
-
 	// SPI3
 	spi_bus[3].miso  = CONFIG_LUA_RTOS_SPI3_MISO;
 	spi_bus[3].mosi  = CONFIG_LUA_RTOS_SPI3_MOSI;
 	spi_bus[3].clk   = CONFIG_LUA_RTOS_SPI3_CLK;
-
-	spi_bus[3].dmiso = GPIO19;
-	spi_bus[3].dmosi = GPIO23;
-	spi_bus[3].dclk  = GPIO18;
 
 	spi_bus[2].mtx = xSemaphoreCreateRecursiveMutex();
 	spi_bus[3].mtx = xSemaphoreCreateRecursiveMutex();
@@ -169,7 +130,7 @@ static void spi_unlock(uint8_t unit) {
 	while (xSemaphoreGiveRecursive(spi_bus[unit].mtx) == pdTRUE);
 }
 
-static int spi_get_device_by_cs(int unit, uint8_t cs) {
+static int spi_get_device_by_cs(int unit, int8_t cs) {
 	int i;
 
 	for(i=0;i < SPI_BUS_DEVICES;i++) {
@@ -351,23 +312,25 @@ static driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
     driver_unit_lock_error_t *lock_error = NULL;
 
     // Lock pins
-    if (flags & SPI_FLAG_READ) {
-        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].miso, flags))) {
+    if ((flags & SPI_FLAG_READ) && (spi_bus[unit].miso >= 0)) {
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].miso, flags, "MISO"))) {
         	// Revoked lock on pin
         	return driver_lock_error(SPI_DRIVER, lock_error);
         }
     }
 
-    if (flags & SPI_FLAG_WRITE) {
-        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].mosi, flags))) {
+    if ((flags & SPI_FLAG_WRITE)  && (spi_bus[unit].mosi >= 0)) {
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].mosi, flags, "MOSI"))) {
         	// Revoked lock on pin
         	return driver_lock_error(SPI_DRIVER, lock_error);
         }
     }
 
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].clk, flags))) {
-    	// Revoked lock on pin
-    	return driver_lock_error(SPI_DRIVER, lock_error);
+    if (spi_bus[unit].clk >= 0){
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].clk, flags, "CLK"))) {
+        	// Revoked lock on pin
+        	return driver_lock_error(SPI_DRIVER, lock_error);
+        }
     }
 
     return NULL;
@@ -375,15 +338,14 @@ static driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
 
 static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 #if !SPI_USE_IDF_DRIVER
-
 	// Enable SPI unit
 	switch (unit) {
 		case 2: periph_module_enable(PERIPH_HSPI_MODULE);break;
-		case 3:periph_module_enable(PERIPH_VSPI_MODULE);break;
+		case 3: periph_module_enable(PERIPH_VSPI_MODULE);break;
 	}
 
 	if (flags & SPI_FLAG_READ) {
-	    if (spi_bus[unit].miso == spi_bus[unit].dmiso) {
+	    if (spi_bus[unit].miso == SPI_DEFAULT_MISO(unit)) {
 	    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_SPI);
 	    } else {
 	        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_GPIO);
@@ -404,7 +366,7 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 	}
 
 	if (flags & SPI_FLAG_WRITE) {
-	    if (spi_bus[unit].mosi == spi_bus[unit].dmosi) {
+	    if (spi_bus[unit].mosi == SPI_DEFAULT_MOSI(unit)) {
 	    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].mosi], PIN_FUNC_SPI);
 	    } else {
 	        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].mosi], PIN_FUNC_GPIO);
@@ -424,7 +386,7 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 	    }
 	}
 
-    if (spi_bus[unit].clk == spi_bus[unit].dclk) {
+    if (spi_bus[unit].clk == SPI_DEFAULT_CLK(unit)) {
     	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].clk], PIN_FUNC_SPI);
     } else {
         PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].clk], PIN_FUNC_GPIO);
@@ -460,7 +422,7 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
  * Low-level functions
  *
  */
-int spi_ll_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid) {
+int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid) {
 	// Check if there's some device un bus with the same cs
 	// If there's one, we want to reconfigure device
 	int device = spi_get_device_by_cs(unit, cs);
@@ -646,34 +608,6 @@ int IRAM_ATTR spi_ll_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data)
 	return 0;
 }
 
-void IRAM_ATTR spi_ll_bulk_write32_be(int deviceid, uint32_t nelements, uint32_t *data) {
-	int unit = (deviceid & 0xff00) >> 8;
-
-	int i = 0;
-
-    if (GET_PERI_REG_MASK(SPI_CTRL_REG(unit), (SPI_WR_BIT_ORDER | SPI_RD_BIT_ORDER))) {
-        for(;i < nelements;i++) {
-        	data[i] = __builtin_bswap32(data[i]);
-        }
-    }
-
-    spi_master_op(deviceid, 4, nelements, (uint8_t *)data, NULL);
-}
-
-void IRAM_ATTR spi_ll_bulk_read32_be(int deviceid, uint32_t nelements, uint32_t *data) {
-	int unit = (deviceid & 0xff00) >> 8;
-
-	int i = 0;
-
-    spi_master_op(deviceid, 4, nelements, NULL, (uint8_t *)data);
-
-    if (GET_PERI_REG_MASK(SPI_CTRL_REG(unit), (SPI_WR_BIT_ORDER | SPI_RD_BIT_ORDER))) {
-        for(;i < nelements;i++) {
-        	data[i] = __builtin_bswap32(data[i]);
-        }
-    }
-}
-
 void IRAM_ATTR spi_ll_select(int deviceid) {
 	int unit = (deviceid & 0xff00) >> 8;
 	int device = (deviceid & 0x00ff);
@@ -760,7 +694,60 @@ void IRAM_ATTR spi_ll_deselect(int deviceid) {
  * Operation functions
  *
  */
-driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid) {
+driver_error_t *spi_pin_map(int unit, int miso, int mosi, int clk) {
+    // Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+    }
+
+	spi_lock(unit);
+
+    if (spi_bus[unit].setup) {
+    	spi_unlock(unit);
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_CANNOT_CHANGE_PINMAP, NULL);
+    }
+
+    if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << spi_bus[unit].miso))) && (miso >= 0)) {
+    	spi_unlock(unit);
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "miso, selected pin cannot be input");
+    }
+
+    if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << spi_bus[unit].mosi))) && (mosi >= 0)) {
+    	spi_unlock(unit);
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "mosi, selected pin cannot be output");
+    }
+
+    if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << spi_bus[unit].clk))) && (clk >= 0)) {
+    	spi_unlock(unit);
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "clk, selected pin cannot be output");
+    }
+
+    if (!TEST_UNIQUE3(spi_bus[unit].mosi, spi_bus[unit].miso, spi_bus[unit].clk)) {
+    	spi_unlock(unit);
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "miso, mosi and clk must be different");
+    }
+
+    // Update miso
+    if (miso >= 0) {
+    	spi_bus[unit].miso  = miso;
+    }
+
+    // Update mosi
+    if (mosi >= 0) {
+    	spi_bus[unit].mosi  = mosi;
+    }
+
+    // Update clk
+    if (clk >= 0) {
+    	spi_bus[unit].clk   = clk;
+    }
+
+    spi_unlock(unit);
+
+	return NULL;
+}
+
+driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid) {
 	driver_error_t *error = NULL;
 
     // Sanity checks
@@ -776,11 +763,11 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_MODE, NULL);
     }
 
-    if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << spi_bus[unit].miso))) {
+    if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << spi_bus[unit].miso))) && (flags & SPI_FLAG_READ)) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "miso, selected pin cannot be input");
     }
 
-    if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << spi_bus[unit].mosi))) {
+    if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << spi_bus[unit].mosi))) && (flags & SPI_FLAG_WRITE)) {
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "mosi, selected pin cannot be output");
     }
 
@@ -792,6 +779,10 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode
 		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "cs, selected pin cannot be output");
     }
 
+    if (!TEST_UNIQUE4(spi_bus[unit].mosi, spi_bus[unit].miso, spi_bus[unit].clk, cs)) {
+		return driver_operation_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "miso, mosi, clk and cs must be different");
+    }
+
     // Lock resources
     if (!spi_bus[unit].setup) {
         if ((error = spi_lock_bus_resources(unit, flags))) {
@@ -800,7 +791,7 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, uint8_t cs, uint8_t mode
     }
 
     driver_unit_lock_error_t *lock_error = NULL;
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, cs, flags))) {
+    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, cs, flags, "CS"))) {
     	return driver_lock_error(SPI_DRIVER, lock_error);
     }
 
@@ -1173,56 +1164,4 @@ driver_error_t *spi_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data) 
 	return NULL;
 }
 
-driver_error_t *spi_bulk_write32_be(int deviceid, uint32_t nelements, uint32_t *data) {
-	int unit = (deviceid & 0xff00) >> 8;
-	int device = (deviceid & 0x00ff);
-
-	// Sanity checks
-	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
-	}
-
-	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
-	}
-
-	if (!spi_bus[unit].device[device].setup) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
-	}
-
-	if (spi_bus[unit].selected_device != deviceid) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
-	}
-
-	spi_ll_bulk_write32_be(deviceid, nelements, data);
-
-    return NULL;
-}
-
-driver_error_t *spi_bulk_read32_be(int deviceid, uint32_t nelements, uint32_t *data) {
-	int unit = (deviceid & 0xff00) >> 8;
-	int device = (deviceid & 0x00ff);
-
-	// Sanity checks
-	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
-	}
-
-	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
-	}
-
-	if (!spi_bus[unit].device[device].setup) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
-	}
-
-	if (spi_bus[unit].selected_device != deviceid) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
-	}
-
-	spi_ll_bulk_read32_be(deviceid, nelements, data);
-
-    return NULL;
-}
-
-DRIVER_REGISTER(SPI,spi,NULL,_spi_init,NULL);
+DRIVER_REGISTER(SPI,spi,spi_locks,_spi_init,NULL);

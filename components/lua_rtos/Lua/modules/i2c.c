@@ -40,17 +40,96 @@
 
 #include <drivers/i2c.h>
 #include <drivers/cpu.h>
+#include <drivers/gpio.h>
 
 extern LUA_REG_TYPE i2c_error_map[];
 extern driver_message_t i2c_errors[];
+extern i2c_t i2c[CPU_LAST_I2C + 1];
 
 typedef struct {
 	int unit;
 	int transaction;
 } i2c_user_data_t;
 
+static int li2c_pins(lua_State* L) {
+	uint8_t table = 0;
+	uint16_t count = 0, i = 0;
+	int unit = CPU_FIRST_I2C;
+
+	// Check if user wants result as a table, or wants result
+	// on the console
+	if (lua_gettop(L) == 1) {
+		luaL_checktype(L, 1, LUA_TBOOLEAN);
+		if (lua_toboolean(L, 1)) {
+			table = 1;
+		}
+	}
+
+	if (table){
+		lua_createtable(L, count, 0);
+	}
+
+	for(unit = CPU_FIRST_I2C; unit <= CPU_LAST_I2C;unit++) {
+		if (!table) {
+			printf("I2C%d: ", unit);
+
+			printf("sda=");
+			if (i2c[unit].sda >= 0) {
+				printf("%s%d ", gpio_portname(i2c[unit].sda), gpio_name(i2c[unit].sda));
+			} else {
+				printf("unused");
+			}
+
+			printf("scl=");
+			if (i2c[unit].scl >= 0) {
+				printf("%s%d ", gpio_portname(i2c[unit].scl), gpio_name(i2c[unit].scl));
+			} else {
+				printf("unused");
+			}
+
+
+			printf("\r\n");
+		} else {
+			lua_pushinteger(L, i);
+
+			lua_createtable(L, 0, 3);
+
+			lua_pushinteger(L, unit);
+	        lua_setfield (L, -2, "id");
+
+	        lua_pushinteger(L, i2c[unit].sda);
+			lua_setfield (L, -2, "sda");
+
+			lua_pushinteger(L, i2c[unit].scl);
+	        lua_setfield (L, -2, "scl");
+
+			 lua_settable(L,-3);
+		}
+
+		i++;
+	}
+
+	return table;
+}
+
+static int li2c_setpins(lua_State* L) {
+	driver_error_t *error;
+
+	int id = luaL_checkinteger(L, 1);
+	int sda = luaL_checkinteger(L, 2);
+	int scl = luaL_checkinteger(L, 3);
+
+	if ((error = i2c_pin_map(id, sda, scl))) {
+	    return luaL_driver_error(L, error);
+	}
+
+	return 0;
+}
+
 static int li2c_setup( lua_State* L ) {
 	driver_error_t *error;
+
+	luaL_deprecated(L, "i2c.setup", "i2c.attach");
 
     int id = luaL_checkinteger(L, 1);
     int mode = luaL_checkinteger(L, 2);
@@ -58,7 +137,37 @@ static int li2c_setup( lua_State* L ) {
     int sda = luaL_checkinteger(L, 4);
     int scl = luaL_checkinteger(L, 5);
 
-    if ((error = i2c_setup(id, mode, speed, sda, scl, 0, 0))) {
+    if ((error = i2c_pin_map(id, sda, scl))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    if ((error = i2c_setup(id, mode, speed, 0, 0))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    // Allocate userdata
+    i2c_user_data_t *user_data = (i2c_user_data_t *)lua_newuserdata(L, sizeof(i2c_user_data_t));
+    if (!user_data) {
+       	return luaL_exception(L, I2C_ERR_NOT_ENOUGH_MEMORY);
+    }
+
+    user_data->unit = id;
+    user_data->transaction = I2C_TRANSACTION_INITIALIZER;
+
+    luaL_getmetatable(L, "i2c.trans");
+    lua_setmetatable(L, -2);
+
+    return 1;
+}
+
+static int li2c_attach( lua_State* L ) {
+	driver_error_t *error;
+
+    int id = luaL_checkinteger(L, 1);
+    int mode = luaL_checkinteger(L, 2);
+    int speed = luaL_checkinteger(L, 3);
+
+    if ((error = i2c_setup(id, mode, speed, 0, 0))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -185,6 +294,9 @@ static int li2c_trans_gc (lua_State *L) {
 
 static const LUA_REG_TYPE li2c_map[] = {
     { LSTRKEY( "setup"   ),			LFUNCVAL( li2c_setup   ) },
+    { LSTRKEY( "attach"  ),			LFUNCVAL( li2c_attach  ) },
+	{ LSTRKEY( "pins"    ),	 		LFUNCVAL( li2c_pins     ) },
+	{ LSTRKEY( "setpins" ),	 		LFUNCVAL( li2c_setpins  ) },
 	{ LSTRKEY( "MASTER"  ),			LINTVAL ( I2C_MASTER   ) },
 	{ LSTRKEY( "SLAVE"   ),			LINTVAL ( I2C_SLAVE    ) },
 	I2C_I2C0

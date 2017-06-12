@@ -2,7 +2,7 @@
  * Lua RTOS, I2C driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -34,7 +34,9 @@
 #include "driver/periph_ctrl.h"
 
 #include <stdint.h>
+#include <string.h>
 
+#include <sys/macros.h>
 #include <sys/list.h>
 #include <sys/mutex.h>
 #include <sys/driver.h>
@@ -61,12 +63,11 @@ DRIVER_REGISTER_ERROR(I2C, i2c, NotEnoughtMemory, "not enough memory", I2C_ERR_N
 DRIVER_REGISTER_ERROR(I2C, i2c, InvalidTransaction, "invalid transaction", I2C_ERR_INVALID_TRANSACTION);
 DRIVER_REGISTER_ERROR(I2C, i2c, AckNotReceived, "not ack received", I2C_ERR_NOT_ACK);
 DRIVER_REGISTER_ERROR(I2C, i2c, Timeout, "timeout", I2C_ERR_TIMEOUT);
+DRIVER_REGISTER_ERROR(I2C, i2c, PinNowAllowed, "pin not allowed", I2C_ERR_PIN_NOT_ALLOWED);
+DRIVER_REGISTER_ERROR(I2C, i2c, CannotChangePinMap, "cannot change pin map once the I2C unit has an attached device", I2C_ERR_CANNOT_CHANGE_PINMAP);
 
 // i2c info needed by driver
-static i2c_t i2c[CPU_LAST_I2C + 1] = {
-	{0,0, MUTEX_INITIALIZER},
-	{0,0, MUTEX_INITIALIZER},
-};
+i2c_t i2c[CPU_LAST_I2C + 1];
 
 // Transaction list
 static struct list transactions;
@@ -74,16 +75,47 @@ static struct list transactions;
 /*
  * Helper functions
  */
-static driver_error_t *i2c_lock_resources(int unit, i2c_resources_t *resources) {
+static void i2c_init() {
+	int i;
+
+	// Disable i2c modules
+	periph_module_disable(PERIPH_I2C0_MODULE);
+	periph_module_disable(PERIPH_I2C1_MODULE);
+
+	// Set driver structure to 0;
+	memset(i2c, 0, sizeof(i2c_t) * (CPU_LAST_I2C + 1));
+
+	// Init transaction list
+    list_init(&transactions, 0);
+
+    // Init mutexes and pin maps
+    for(i=0;i < CPU_LAST_I2C + 1;i++) {
+        mtx_init(&i2c[i].mtx, NULL, NULL, 0);
+
+        switch (i) {
+        case 0:
+        	i2c[i].scl = CONFIG_LUA_RTOS_I2C0_SCL;
+        	i2c[i].sda = CONFIG_LUA_RTOS_I2C0_SDA;
+        	break;
+
+        case 1:
+        	i2c[i].scl = CONFIG_LUA_RTOS_I2C1_SCL;
+        	i2c[i].sda = CONFIG_LUA_RTOS_I2C1_SDA;
+        	break;
+        }
+    }
+}
+
+static driver_error_t *i2c_lock_resources(int unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
 
 	// Lock sda
-	if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, resources->sda, DRIVER_ALL_FLAGS))) {
+	if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].sda, DRIVER_ALL_FLAGS, "SDA"))) {
     	return driver_lock_error(I2C_DRIVER, lock_error);
     }
 
 	// Lock scl
-	if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, resources->scl, DRIVER_ALL_FLAGS))) {
+	if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].scl, DRIVER_ALL_FLAGS, "SCL"))) {
     	return driver_lock_error(I2C_DRIVER, lock_error);
     }
 
@@ -164,19 +196,6 @@ static driver_error_t *i2c_flush_internal(int unit, int *transaction, i2c_cmd_ha
 /*
  * Operation functions
  */
-
-void i2c_init() {
-	int i;
-
-	// Init transaction list
-    list_init(&transactions, 0);
-
-    // Init mutexes
-    for(i=0;i < CPU_LAST_I2C;i++) {
-        mtx_init(&i2c[i].mtx, NULL, NULL, 0);
-    }
-}
-
 driver_error_t *i2c_flush(int unit, int *transaction, int new_transaction) {
 	driver_error_t *error;
 	i2c_cmd_handle_t cmd = NULL;
@@ -202,7 +221,58 @@ driver_error_t *i2c_flush(int unit, int *transaction, int new_transaction) {
 	return NULL;
 }
 
-driver_error_t *i2c_setup(int unit, int mode, int speed, int sda, int scl, int addr10_en, int addr) {
+driver_error_t *i2c_pin_map(int unit, int sda, int scl) {
+    // Sanity checks
+	if (!((1 << unit) & CPU_I2C_ALL)) {
+		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
+	}
+
+	mtx_lock(&i2c[unit].mtx);
+
+	if (i2c[unit].setup) {
+	   	mtx_unlock(&i2c[unit].mtx);
+		return driver_operation_error(I2C_DRIVER, I2C_ERR_CANNOT_CHANGE_PINMAP, NULL);
+	}
+
+	// Sanity checks on pinmap
+    if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << i2c[unit].scl))) && (scl >= 0)) {
+    	mtx_unlock(&i2c[unit].mtx);
+
+		return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "scl, selected pin cannot be output");
+    }
+
+    if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << i2c[unit].sda))) && (sda >= 0)) {
+    	mtx_unlock(&i2c[unit].mtx);
+
+    	return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda, selected pin cannot be output");
+    }
+
+    if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << i2c[unit].sda))) && (sda >= 0)) {
+    	mtx_unlock(&i2c[unit].mtx);
+
+    	return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda, selected pin cannot be input");
+    }
+
+    if (!TEST_UNIQUE2(i2c[unit].sda, i2c[unit].scl)) {
+    	mtx_unlock(&i2c[unit].mtx);
+		return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda and scl must be different");
+    }
+
+    // Update pin map, if needed
+	if (scl >= 0) {
+		i2c[unit].scl = scl;
+	}
+
+	if (sda >= 0) {
+		i2c[unit].sda = sda;
+	}
+
+	mtx_unlock(&i2c[unit].mtx);
+
+	return NULL;
+}
+
+driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr) {
 	driver_error_t *error;
 
     // Sanity checks
@@ -225,25 +295,26 @@ driver_error_t *i2c_setup(int unit, int mode, int speed, int sda, int scl, int a
 		i2c[unit].setup = 0;
 	}
 
-    // Lock resources
-    i2c_resources_t resources;
-
-    resources.sda = sda;
-    resources.scl = scl;
-
-    if ((error = i2c_lock_resources(unit, &resources))) {
+    if ((error = i2c_lock_resources(unit))) {
     	mtx_unlock(&i2c[unit].mtx);
 
 		return error;
+	}
+
+    // Enable module
+    if (unit == 0) {
+		periph_module_enable(PERIPH_I2C0_MODULE);
+	} else {
+		periph_module_enable(PERIPH_I2C1_MODULE);
 	}
 
     // Setup
     int buff_len = 0;
     i2c_config_t conf;
 
-    conf.sda_io_num = sda;
+    conf.sda_io_num = i2c[unit].sda;
     conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_io_num = scl;
+    conf.scl_io_num = i2c[unit].scl;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
 
     if (mode == I2C_MASTER) {
@@ -267,8 +338,8 @@ driver_error_t *i2c_setup(int unit, int mode, int speed, int sda, int scl, int a
 
     syslog(LOG_INFO,
         "i2c%u at pins scl=%s%d/sdc=%s%d", unit,
-        gpio_portname(scl), gpio_name(scl),
-        gpio_portname(sda), gpio_name(sda)
+        gpio_portname(i2c[unit].scl), gpio_name(i2c[unit].scl),
+        gpio_portname(i2c[unit].sda), gpio_name(i2c[unit].sda)
     );
 
     return NULL;
@@ -284,7 +355,7 @@ driver_error_t *i2c_start(int unit, int *transaction) {
 	}
 
 	if (i2c[unit].mode != I2C_MASTER) {
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, NULL);
+		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, "only allowed in master mode");
 	}
 
 	mtx_lock(&i2c[unit].mtx);
@@ -310,7 +381,7 @@ driver_error_t *i2c_stop(int unit, int *transaction) {
 	}
 
 	if (i2c[unit].mode != I2C_MASTER) {
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, NULL);
+		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, "only allowed in master mode");
 	}
 
 	mtx_lock(&i2c[unit].mtx);
