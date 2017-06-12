@@ -69,12 +69,7 @@ struct disk {
 
 	int spiio; /* interface to SPI port */
 	int unit; /* physical unit number */
-	int open; /* open/closed refcnt */
-	int wlabel; /* label writable? */
 	int dkindex; /* disk index for statistics */
-	u_int copenpart; /* character units open on this drive */
-	u_int bopenpart; /* block units open on this drive */
-	u_int openpart; /* all units open on this drive */
 	u_char ocr[4]; /* operation condition register */
 	u_char csd[16]; /* card-specific data */
 #define TRANS_SPEED_25MHZ   0x32
@@ -87,7 +82,6 @@ struct disk {
 };
 
 static struct disk sddrives[NSD]; /* Table of units */
-static struct mtx sd_mtx; /* SDCARD mutex */
 
 #define TIMO_WAIT_WDONE 400000
 #define TIMO_WAIT_WIDLE 399000
@@ -142,7 +136,6 @@ static void sd_wait_ready(int io, int limit, int *maxcount) {
 	int i;
 	unsigned char reply;
 
-	spi_ll_transfer(io, 0xFF, NULL);
 	for (i = 0; i < limit; i++) {
 		spi_ll_transfer(io, 0xFF, &reply);
 		if (reply == 0xFF) {
@@ -395,6 +388,7 @@ static int card_read_csd(int unit) {
 
 	/* Disable the card. */
 	sd_deselect(io);
+
 	return 1;
 }
 
@@ -538,7 +532,6 @@ int card_read(int unit, unsigned int offset, char *data, unsigned int bcount) {
 	int i;
 
 	/* Send read-multiple command. */
-	mtx_lock(&sd_mtx);
 	sd_select(io);
 	if (u->card_type != TYPE_SDHC)
 		offset <<= 9;
@@ -550,7 +543,6 @@ int card_read(int unit, unsigned int offset, char *data, unsigned int bcount) {
 				"sd%d card_read: bad READ_MULTIPLE reply = %d, offset = %08x\n",
 				unit, reply, offset);
 		sd_deselect(io);
-		mtx_unlock(&sd_mtx);
 		return 0;
 	}
 
@@ -566,7 +558,6 @@ int card_read(int unit, unsigned int offset, char *data, unsigned int bcount) {
 					"sd%d card_read: READ_MULTIPLE timed out, reply = %d\n",
 					unit, reply);
 			sd_deselect(io);
-			mtx_unlock(&sd_mtx);
 			return 0;
 		}
 	}
@@ -596,7 +587,6 @@ int card_read(int unit, unsigned int offset, char *data, unsigned int bcount) {
 	/* Stop a read-multiple sequence. */
 	card_cmd(unit, CMD_STOP, 0);
 	sd_deselect(io);
-	mtx_unlock(&sd_mtx);
 
 	return 1;
 }
@@ -612,14 +602,12 @@ int card_write(int unit, unsigned offset, char *data, unsigned bcount) {
 	int i;
 
 	/* Send pre-erase count. */
-	mtx_lock(&sd_mtx);
 	sd_select(io);
 	card_cmd(unit, CMD_APP, 0);
 	reply = card_cmd(unit, CMD_SET_WBECNT, (bcount + SECTSIZE - 1) / SECTSIZE);
 	if (reply != 0) {
 		/* Command rejected. */
 		sd_deselect(io);
-		mtx_unlock(&sd_mtx);
 		syslog(LOG_INFO,
 				"sd%d card_write: bad SET_WBECNT reply = %02x, count = %u\n",
 				unit, reply, (bcount + SECTSIZE - 1) / SECTSIZE);
@@ -633,7 +621,6 @@ int card_write(int unit, unsigned offset, char *data, unsigned bcount) {
 	if (reply != 0) {
 		/* Command rejected. */
 		sd_deselect(io);
-		mtx_unlock(&sd_mtx);
 		syslog(LOG_INFO, "sd%d card_write: bad WRITE_MULTIPLE reply = %02x\n",
 				unit, reply);
 		return 0;
@@ -664,7 +651,6 @@ int card_write(int unit, unsigned offset, char *data, unsigned bcount) {
 	if ((reply & 0x1f) != 0x05) {
 		/* Data rejected. */
 		sd_deselect(io);
-		mtx_unlock(&sd_mtx);
 		syslog(LOG_INFO, "sd%d card_write: data rejected, reply = %02x\n",
 				unit, reply);
 		return 0;
@@ -686,7 +672,6 @@ int card_write(int unit, unsigned offset, char *data, unsigned bcount) {
 	spi_ll_transfer(io, STOP_TRAN_TOKEN, NULL);
 	sd_wait_ready(io, TIMO_WAIT_WIDLE, &sd_timo_wait_widle);
 	sd_deselect(io);
-	mtx_unlock(&sd_mtx);
 	return 1;
 }
 
@@ -758,9 +743,6 @@ int sd_init(int unit) {
 	int ok = 1;
 
 	du->unit = unit;
-
-	// Create mutex
-	mtx_init(&sd_mtx, NULL, NULL, 0);
 
 	driver_error_t *error;
 	if ((error = spi_setup(CONFIG_LUA_RTOS_SD_SPI, 1, CONFIG_LUA_RTOS_SD_CS, 0,

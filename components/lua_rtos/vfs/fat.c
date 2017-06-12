@@ -575,4 +575,24 @@ void vfs_fat_register() {
 
 }
 
+void vfs_fat_format() {
+    FRESULT res;
+
+    res = f_mkfs("", 0, 512);
+    if (res == FR_NOT_ENABLED) {
+        res = f_mount(&sd_fs[0], "", 1);
+        if (res == FR_OK) {
+            res = f_mkfs("", 0, 512);
+        }
+    }
+
+    res = f_mount(&sd_fs[0], "", 1);
+
+    if (res == FR_OK) {
+       cpu_reset();
+    }
+
+    return res;
+}
+
 #endif
