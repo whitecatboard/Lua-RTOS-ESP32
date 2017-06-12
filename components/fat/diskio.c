@@ -13,7 +13,7 @@
 
 #include "diskio.h"		/* FatFs lower layer API */
 
-#include "drivers/sd.h"
+#include "../lua_rtos/drivers/spi_sd.h"
 
 /* Definitions of physical drive number for each drive */
 #define ATA		0	/* Example: Map ATA harddisk to physical drive 0 */
@@ -57,7 +57,7 @@ DRESULT disk_read (
 	UINT count		/* Number of sectors to read */
 )
 {
-    if (card_read(0, sector, (char *)buff, count * SECTSIZE)) {
+    if (sd_read(0, sector, (char *)buff, count * SECTSIZE)) {
         return RES_OK;
     } else {
         return RES_ERROR;
@@ -78,7 +78,7 @@ DRESULT disk_write (
 	UINT count			/* Number of sectors to write */
 )
 {
-    if (card_write(0, sector, (char *)buff, count * SECTSIZE)) {
+    if (sd_write(0, sector, (char *)buff, count * SECTSIZE)) {
         return RES_OK;
     } else {
         return RES_ERROR;
@@ -100,7 +100,7 @@ DRESULT disk_ioctl (
 {    
     switch (cmd) {
         case GET_SECTOR_COUNT:
-            *((unsigned long *)buff) = card_size(0);
+            *((unsigned long *)buff) = sd_size(0);
             break;
             
         case GET_SECTOR_SIZE:

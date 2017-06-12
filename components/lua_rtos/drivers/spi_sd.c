@@ -35,12 +35,10 @@
 
 #include <drivers/gpio.h>
 #include <drivers/spi.h>
-#include <drivers/sd.h>
+#include "spi_sd.h"
 
 #define RAWPART         0           /* whole disk */
 
-#define NPARTITIONS     4
-#define SECTSIZE        512
 #define MBR_MAGIC       0xaa55
 
 #ifndef SD_KHZ
@@ -77,7 +75,6 @@ struct disk {
 
 	int spiio; /* interface to SPI port */
 	int unit; /* physical unit number */
-	int dkindex; /* disk index for statistics */
 	u_char ocr[4]; /* operation condition register */
 	u_char csd[16]; /* card-specific data */
 #define TRANS_SPEED_25MHZ   0x32
@@ -251,7 +248,7 @@ static inline void sd_select(int io) {
  * Initialize a card.
  * Return nonzero if successful.
  */
-static int card_init(int unit) {
+int card_init(int unit) {
 	struct disk *u = &sddrives[unit];
 	int io = u->spiio;
 	int i, reply;
@@ -353,7 +350,7 @@ static int card_init(int unit) {
 /*
  * Get the value of CSD register.
  */
-static int card_read_csd(int unit) {
+static int sd_read_csd(int unit) {
 	struct disk *u = &sddrives[unit];
 	int io = u->spiio;
 	uint8_t reply;
@@ -375,7 +372,7 @@ static int card_read_csd(int unit) {
 			/* Command timed out. */
 			sd_deselect(io);
 			syslog(LOG_INFO,
-					"sd%d card_size: SEND_CSD timed out, reply = %d\n", unit,
+					"sd%d sd_size: SEND_CSD timed out, reply = %d\n", unit,
 					reply);
 			return 0;
 		}
@@ -401,12 +398,12 @@ static int card_read_csd(int unit) {
  * Get number of sectors on the disk.
  * Return nonzero if successful.
  */
-int card_size(int unit) {
+int sd_size(int unit) {
 	struct disk *u = &sddrives[unit];
 	unsigned csize, n;
 	int nsectors;
 
-	if (!card_read_csd(unit))
+	if (!sd_read_csd(unit))
 		return 0;
 
 	/* CSD register has different structure
@@ -458,7 +455,7 @@ static void card_high_speed(int unit) {
 			/* Command timed out. */
 			sd_deselect(io);
 			syslog(LOG_INFO,
-					"sd%d card_size: SWITCH_FUNC timed out, reply = %d\n",
+					"sd%d sd_size: SWITCH_FUNC timed out, reply = %d\n",
 					unit, reply);
 			return;
 		}
@@ -477,7 +474,7 @@ static void card_high_speed(int unit) {
 		/* The card has switched to high-speed mode. */
 		int khz;
 
-		card_read_csd(unit);
+		sd_read_csd(unit);
 		switch (u->csd[3]) {
 		default:
 			syslog(LOG_INFO, "sd%d Unknown speed csd[3] = %02x\n", unit,
@@ -490,15 +487,12 @@ static void card_high_speed(int unit) {
 			break;
 		case TRANS_SPEED_50MHZ:
 			/* 50 MHz - typical clock for SDHC cards. */
-			syslog(LOG_INFO, "sd%d fast clock 50MHz\n", unit);
 			khz = SD_FASTEST_KHZ;
 			break;
 		case TRANS_SPEED_100MHZ:
-			syslog(LOG_INFO, "sd%d fast clock 100MHz\n", unit);
 			khz = SD_FASTEST_KHZ;
 			break;
 		case TRANS_SPEED_200MHZ:
-			syslog(LOG_INFO, "sd%d fast clock 200MHz\n", unit);
 			khz = SD_FASTEST_KHZ;
 			break;
 		}
@@ -530,7 +524,7 @@ static void card_high_speed(int unit) {
  * Read a block of data.
  * Return nonzero if successful.
  */
-int card_read(int unit, unsigned int offset, char *data, unsigned int bcount) {
+int sd_read(int unit, unsigned int offset, char *data, unsigned int bcount) {
 	struct disk *u = &sddrives[unit];
 	int io = u->spiio;
 	uint8_t reply;
@@ -545,7 +539,7 @@ int card_read(int unit, unsigned int offset, char *data, unsigned int bcount) {
 	if (reply != 0) {
 		/* Command rejected. */
 		syslog(LOG_INFO,
-				"sd%d card_read: bad READ_MULTIPLE reply = %d, offset = %08x\n",
+				"sd%d sd_read: bad READ_MULTIPLE reply = %d, offset = %08x\n",
 				unit, reply, offset);
 		sd_deselect(io);
 		return 0;
@@ -560,7 +554,7 @@ int card_read(int unit, unsigned int offset, char *data, unsigned int bcount) {
 		if (i >= TIMO_READ) {
 			/* Command timed out. */
 			syslog(LOG_INFO,
-					"sd%d card_read: READ_MULTIPLE timed out, reply = %d\n",
+					"sd%d sd_read: READ_MULTIPLE timed out, reply = %d\n",
 					unit, reply);
 			sd_deselect(io);
 			return 0;
@@ -600,7 +594,7 @@ int card_read(int unit, unsigned int offset, char *data, unsigned int bcount) {
  * Write a block of data.
  * Return nonzero if successful.
  */
-int card_write(int unit, unsigned offset, char *data, unsigned bcount) {
+int sd_write(int unit, unsigned offset, char *data, unsigned bcount) {
 	struct disk *u = &sddrives[unit];
 	int io = sddrives[unit].spiio;
 	uint8_t reply;
@@ -614,7 +608,7 @@ int card_write(int unit, unsigned offset, char *data, unsigned bcount) {
 		/* Command rejected. */
 		sd_deselect(io);
 		syslog(LOG_INFO,
-				"sd%d card_write: bad SET_WBECNT reply = %02x, count = %u\n",
+				"sd%d sd_write: bad SET_WBECNT reply = %02x, count = %u\n",
 				unit, reply, (bcount + SECTSIZE - 1) / SECTSIZE);
 		return 0;
 	}
@@ -626,7 +620,7 @@ int card_write(int unit, unsigned offset, char *data, unsigned bcount) {
 	if (reply != 0) {
 		/* Command rejected. */
 		sd_deselect(io);
-		syslog(LOG_INFO, "sd%d card_write: bad WRITE_MULTIPLE reply = %02x\n",
+		syslog(LOG_INFO, "sd%d sd_write: bad WRITE_MULTIPLE reply = %02x\n",
 				unit, reply);
 		return 0;
 	}
@@ -656,7 +650,7 @@ int card_write(int unit, unsigned offset, char *data, unsigned bcount) {
 	if ((reply & 0x1f) != 0x05) {
 		/* Data rejected. */
 		sd_deselect(io);
-		syslog(LOG_INFO, "sd%d card_write: data rejected, reply = %02x\n",
+		syslog(LOG_INFO, "sd%d sd_write: data rejected, reply = %02x\n",
 				unit, reply);
 		return 0;
 	}
@@ -696,7 +690,7 @@ static int sd_setup(struct disk *u) {
 	/* Get the size of raw partition. */
 	bzero(u->part, sizeof(u->part));
 	u->part[RAWPART].dp_offset = 0;
-	u->part[RAWPART].dp_size = card_size(unit);
+	u->part[RAWPART].dp_size = sd_size(unit);
 	if (u->part[RAWPART].dp_size == 0) {
 		syslog(LOG_INFO, "sd%d cannot get card size\n", unit);
 		return 0;
@@ -720,7 +714,7 @@ static int sd_setup(struct disk *u) {
 
 	/* Read partition table. */
 	uint16_t buf[256];
-	if (!card_read(unit, 0, (char*) buf, sizeof(buf))) {
+	if (!sd_read(unit, 0, (char*) buf, sizeof(buf))) {
 		syslog(LOG_INFO, "sd%d cannot read partition table\n", unit);
 		return 0;
 	}
@@ -761,9 +755,6 @@ int sd_init(int unit) {
 	syslog(LOG_INFO, "sd%u is at spi%d, pin cs=%s%d", unit,
 	CONFIG_LUA_RTOS_SD_SPI, gpio_portname(CONFIG_LUA_RTOS_SD_CS),
 			gpio_name(CONFIG_LUA_RTOS_SD_CS));
-
-	/* Assign disk index. */
-	du->dkindex = 1;
 
 	ok = sd_setup(du);
 	if (!ok) {

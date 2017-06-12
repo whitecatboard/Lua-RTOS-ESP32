@@ -49,7 +49,7 @@
 
 #include <fat/ff.h>
 
-#include <drivers/sd.h>
+#include "../drivers/spi_sd.h"
 
 static int IRAM_ATTR vfs_fat_open(const char *path, int flags, int mode);
 static size_t IRAM_ATTR vfs_fat_write(int fd, const void *data, size_t size);
@@ -591,8 +591,6 @@ void vfs_fat_format() {
     if (res == FR_OK) {
        cpu_reset();
     }
-
-    return res;
 }
 
 #endif
