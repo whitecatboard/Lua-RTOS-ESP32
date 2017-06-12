@@ -608,34 +608,6 @@ int IRAM_ATTR spi_ll_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data)
 	return 0;
 }
 
-void IRAM_ATTR spi_ll_bulk_write32_be(int deviceid, uint32_t nelements, uint32_t *data) {
-	int unit = (deviceid & 0xff00) >> 8;
-
-	int i = 0;
-
-    if (GET_PERI_REG_MASK(SPI_CTRL_REG(unit), (SPI_WR_BIT_ORDER | SPI_RD_BIT_ORDER))) {
-        for(;i < nelements;i++) {
-        	data[i] = __builtin_bswap32(data[i]);
-        }
-    }
-
-    spi_master_op(deviceid, 4, nelements, (uint8_t *)data, NULL);
-}
-
-void IRAM_ATTR spi_ll_bulk_read32_be(int deviceid, uint32_t nelements, uint32_t *data) {
-	int unit = (deviceid & 0xff00) >> 8;
-
-	int i = 0;
-
-    spi_master_op(deviceid, 4, nelements, NULL, (uint8_t *)data);
-
-    if (GET_PERI_REG_MASK(SPI_CTRL_REG(unit), (SPI_WR_BIT_ORDER | SPI_RD_BIT_ORDER))) {
-        for(;i < nelements;i++) {
-        	data[i] = __builtin_bswap32(data[i]);
-        }
-    }
-}
-
 void IRAM_ATTR spi_ll_select(int deviceid) {
 	int unit = (deviceid & 0xff00) >> 8;
 	int device = (deviceid & 0x00ff);
@@ -1190,58 +1162,6 @@ driver_error_t *spi_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data) 
 	}
 
 	return NULL;
-}
-
-driver_error_t *spi_bulk_write32_be(int deviceid, uint32_t nelements, uint32_t *data) {
-	int unit = (deviceid & 0xff00) >> 8;
-	int device = (deviceid & 0x00ff);
-
-	// Sanity checks
-	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
-	}
-
-	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
-	}
-
-	if (!spi_bus[unit].device[device].setup) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
-	}
-
-	if (spi_bus[unit].selected_device != deviceid) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
-	}
-
-	spi_ll_bulk_write32_be(deviceid, nelements, data);
-
-    return NULL;
-}
-
-driver_error_t *spi_bulk_read32_be(int deviceid, uint32_t nelements, uint32_t *data) {
-	int unit = (deviceid & 0xff00) >> 8;
-	int device = (deviceid & 0x00ff);
-
-	// Sanity checks
-	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
-	}
-
-	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
-	}
-
-	if (!spi_bus[unit].device[device].setup) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
-	}
-
-	if (spi_bus[unit].selected_device != deviceid) {
-		return driver_operation_error(SPI_DRIVER, SPI_ERR_DEVICE_IS_NOT_SELECTED, NULL);
-	}
-
-	spi_ll_bulk_read32_be(deviceid, nelements, data);
-
-    return NULL;
 }
 
 DRIVER_REGISTER(SPI,spi,spi_locks,_spi_init,NULL);

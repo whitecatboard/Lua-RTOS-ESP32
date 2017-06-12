@@ -254,30 +254,6 @@ void spi_ll_bulk_read32(int deviceid, uint32_t nelements, uint32_t *data);
 int spi_ll_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data);
 
 /**
- * @brief Transfer a chunk of 32-bit data to the device. Data bust be transfer in big endian. Device must be selected
- *        before calling this function (use spi_ll_select for that). This function is thread safe.
- *        No sanity checks are done (use only in driver develop).
- *
- * @param deviceid Device identifier.
- * @param nelements Number of elements to transfer.
- * @param data A pointer to the buffer to transfer.
- *
- */
-void spi_ll_bulk_write32_be(int deviceid, uint32_t nelements, uint32_t *data);
-
-/**
- * @brief Read a chunk of 32-bit data from the device. Data bust be transfer in big endian. Device must be selected
- *        before calling this function (use spi_ll_select for that). This function is thread safe.
- *        No sanity checks are done (use only in driver develop).
- *
- * @param deviceid Device identifier.
- * @param nelements Number of elements to read.
- * @param data A pointer to the buffer to store the read data.
- *
- */
-void spi_ll_bulk_read32_be(int deviceid, uint32_t nelements, uint32_t *data);
-
-/**
  * @brief Change the SPI pin map. Pin map is hard coded in Kconfig, but it can be
  *        change in development environments. This function is thread safe.
  *
@@ -568,41 +544,5 @@ driver_error_t *spi_bulk_read32(int deviceid, uint32_t nelements, uint32_t *data
  *     	 SPI_ERR_NOT_ENOUGH_MEMORY
  */
 driver_error_t *spi_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data);
-
-/**
- * @brief Transfer a chunk of 32-bit data to the device. Data bust be transfer in big endian. Device must be selected
- *        before calling this function (use spi_select for that). This function is thread safe.
- *
- * @param deviceid Device identifier.
- * @param nelements Number of elements to transfer.
- * @param data A pointer to the buffer to transfer.
- *
- * @return
- *     - NULL success
- *     - Pointer to driver_error_t if some error occurs.
- *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_IS_NOT_SELECTED
- */
-driver_error_t *spi_bulk_write32_be(int deviceid, uint32_t nelements, uint32_t *data);
-
-/**
- * @brief Read a chunk of 32-bit data from the device. Data bust be transfer in big endian. Device must be selected
- *        before calling this function (use spi_select for that). This function is thread safe.
- *
- * @param deviceid Device identifier.
- * @param nelements Number of elements to read.
- * @param data A pointer to the buffer to store the read data.
- *
- * @return
- *     - NULL success
- *     - Pointer to driver_error_t if some error occurs.
- *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_IS_NOT_SELECTED
- */
-driver_error_t *spi_bulk_read32_be(int deviceid, uint32_t nelements, uint32_t *data);
 
 #endif
