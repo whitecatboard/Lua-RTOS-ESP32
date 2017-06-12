@@ -180,7 +180,7 @@ static int lspi_attach(lua_State* L) {
 
 	spi_userdata *spi = (spi_userdata *)lua_newuserdata(L, sizeof(spi_userdata));
 
-	if ((error = spi_setup(id, is_master, cs, spi_mode, clock * 1000, flags, &spi->spi_device))) {
+	if ((error = spi_setup(id, is_master, cs, spi_mode, clock, flags, &spi->spi_device))) {
 	    return luaL_driver_error(L, error);
 	}
 
