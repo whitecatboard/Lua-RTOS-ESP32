@@ -29,13 +29,16 @@
 
 #include "sdkconfig.h"
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 
+#include <sys/syslog.h>
+
 static char *GPGGA = "GPGGA";  // GPGGA sentence string
-static char *GPRMC = "GPRMC";  // GPRMC sentence string
-static int  date_updated = 0;  // 0 = date is not updated yet, 1 = updated
+//static char *GPRMC = "GPRMC";  // GPRMC sentence string
+//static int  date_updated = 0;  // 0 = date is not updated yet, 1 = updated
 
 // Last position data
 static double lat, lon;
@@ -203,6 +206,7 @@ static void nmea_GPGGA(char *sentence) {
     }
 }
 
+#if 0
 // Recommended minimum specific GPS/Transit data
 // $GPRMC,081836,A,3751.65,S,14507.36,E,000.0,360.0,130998,011.3,E*62
 //
@@ -229,8 +233,6 @@ static void nmea_GPRMC(char *sentence) {
     char  tmp[3];
     int  month,day,hours,minutes,seconds;
     uint16_t year;
-
-    time_t start;
 
     token = c = sentence;
     while (*c) {
@@ -287,23 +289,30 @@ static void nmea_GPRMC(char *sentence) {
         }
     }
 
-#if 0
     checksum = (int)strtol(token, NULL, 16);
     if (checksum == computed_checksum) {
         if (year >= 15) {
             date_updated = 1;
 
-            if (start < 1420070400) {
-                time(&start);
+            time_t newtime;
+            struct tm tms;
 
-                syslog(LOG_DEBUG, "nmea01843 setting system time to %d-%d-%d %d:%d:%d",year,month,day,hours,minutes,seconds);
-                set_time_ymdhms(year,month,day,hours,minutes,seconds);
-            }
+            memset(&tms, 0, sizeof(struct tm));
+
+            tms.tm_hour = hours;
+            tms.tm_min = minutes;
+            tms.tm_sec = seconds;
+            tms.tm_year = year;
+            tms.tm_mon = month;
+            tms.tm_mday = day;
+            newtime = mktime(&tms);
+
+            settimeofday((const time_t *)&newtime);
+            syslog(LOG_DEBUG, "nmea01843 setting system time to %d-%d-%d %d:%d:%d",year,month,day,hours,minutes,seconds);
         }
     }
-#endif
-
 }
+#endif
 
 void nmea_parse(char *sentence) {
     char *c;
@@ -321,8 +330,8 @@ void nmea_parse(char *sentence) {
 
             if (strncmp(GPGGA, token, 5) == 0) {
                 nmea_GPGGA(c);
-            } else if ((strncmp(GPRMC, token, 5) == 0) && (!date_updated)) {
-                nmea_GPRMC(c);
+            //} else if ((strncmp(GPRMC, token, 5) == 0) && (!date_updated)) {
+            //    nmea_GPRMC(c);
             } else {
                 break;
             }
