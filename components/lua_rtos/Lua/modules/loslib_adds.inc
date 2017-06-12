@@ -400,16 +400,17 @@ static int os_format(lua_State *L) {
 
     // This if check is for future use, to determine drive number
     if (strcmp(device,"spiffs") == 0) {
+#if !CONFIG_LUA_RTOS_USE_SPIFFS
+        return luaL_error(L, "device %s not exists for format", device);
+#endif
     } else if (strcmp(device,"fat") == 0) {
+#if !CONFIG_LUA_RTOS_USE_FAT
+        return luaL_error(L, "device %s not exists for format", device);
+#endif
     } else {
         return luaL_error(L, "device %s not exists for format", device); 
     }
     
-    //if (strcmp(device,"sd") == 0) {
-    //    return luaL_error(L, "device %s not allowed for format", device);
-    //}
-
-    // Check for mounted device
     if (!mount_is_mounted(device)) {
          return luaL_error(L, "device %s is not mounted", device);            
     }
@@ -425,11 +426,16 @@ static int os_format(lua_State *L) {
     printf("\n");
     
     if ((response == 'y') || (response == 'Y')) {
-        if (strcmp(device,"spiffs") == 0) {
-        	printf("Formatting...\r\n");
+    	printf("Formatting...\r\n");
+
+    	if (strcmp(device,"spiffs") == 0) {
+#if CONFIG_LUA_RTOS_USE_SPIFFS
         	vfs_spiffs_format();
+#endif
         } else if (strcmp(device,"fat") == 0) {
+#if CONFIG_LUA_RTOS_USE_FAT
         	 vfs_fat_format();
+#endif
         }
     } else {
         printf("Format cancelled\n");

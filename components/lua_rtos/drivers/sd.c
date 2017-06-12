@@ -22,6 +22,10 @@
  * this software.
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_USE_SPI_SD
+
 #include <strings.h>
 #include <stdio.h>
 
@@ -47,6 +51,10 @@
 #endif
 #ifndef SD_FASTEST_KHZ
 #define SD_FASTEST_KHZ  25000       /* max speed for pic32mz SPI is 50 MHz */
+#endif
+
+#if USE_LED_ACT
+extern unsigned int activity;
 #endif
 
 /*
@@ -210,18 +218,15 @@ static int card_cmd(unsigned int unit, unsigned int cmd, unsigned int addr) {
  * Control an LED to show SD activity
  */
 static inline void sd_led(int val) {
-#ifdef SD_LED_PORT
-#ifndef SD_LED_INVERT
-	if (val)
-	LAT_SET(SD_LED_PORT) = 1 << SD_LED_PIN;
-	else
-	LAT_CLR(SD_LED_PORT) = 1 << SD_LED_PIN;
-#else
-	if (val)
-	LAT_CLR(SD_LED_PORT) = 1 << SD_LED_PIN;
-	else
-	LAT_SET(SD_LED_PORT) = 1 << SD_LED_PIN;
-#endif
+#if USE_LED_ACT
+    gpio_pin_output(SD_LED);
+    if (val) {
+        activity = 1;
+        gpio_pin_set(SD_LED);
+    } else {
+        gpio_pin_clr(SD_LED);
+        activity = 0;
+    }
 #endif
 }
 
@@ -793,3 +798,5 @@ int sd_has_partition(int unit, int type) {
 
 	return 0;
 }
+
+#endif
