@@ -111,7 +111,7 @@ driver_error_t *lmic_lock_resources(int unit, void *resources) {
 	}
 
 	#if !CONFIG_LUA_RTOS_USE_POWER_BUS
-    if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_RST, DRIVER_ALL_FLAGS))) {
+    if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_RST, DRIVER_ALL_FLAGS, "RST"))) {
     	// Revoked lock on pin
     	return driver_lock_error(LORA_DRIVER, lock_error);
     }
