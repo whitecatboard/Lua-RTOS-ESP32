@@ -586,7 +586,7 @@ void vfs_fat_register() {
     ESP_ERROR_CHECK(esp_vfs_register("/fat", &vfs, NULL));
 
     // Mount sdcard
-    if (sd_init(0)) {
+    if (!sd_init(0)) {
         syslog(LOG_INFO, "fat init file system");
 
         if (!sd_has_partitions(0)) {

@@ -62,6 +62,7 @@
 #define EVENT_DRIVER_ID    20
 #define SPI_ETH_DRIVER_ID  21
 #define CAN_DRIVER_ID      22
+#define SPI_SD_DRIVER_ID   23
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -80,6 +81,7 @@
 #define SPI_ETH_DRIVER driver_get_by_name("spi_eth")
 #define CAN_DRIVER driver_get_by_name("can")
 #define PWBUS_DRIVER driver_get_by_name("pwbus")
+#define SPI_SD_DRIVER driver_get_by_name("spi_sd")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 

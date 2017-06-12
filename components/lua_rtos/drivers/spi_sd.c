@@ -3,6 +3,14 @@
  *
  * Copyright (C) 2014 Serge Vakulenko, <serge@vak.ru>
  *
+ * -------------------------------------------------------------
+ * Copyright (C) 2015 - 2017
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Lua RTOS integration
+ *
+ * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ * -------------------------------------------------------------
+ *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
  * granted, provided that the above copyright notice appear in all
@@ -29,6 +37,7 @@
 #include <strings.h>
 #include <stdio.h>
 
+#include <sys/driver.h>
 #include <sys/mutex.h>
 #include <sys/disklabel.h>
 #include <sys/syslog.h>
@@ -133,6 +142,8 @@ int sd_timo_wait_widle;
 #define DATA_START_BLOCK        0xFE    /* start data for single block */
 #define STOP_TRAN_TOKEN         0xFD    /* stop token for write multiple */
 #define WRITE_MULTIPLE_TOKEN    0xFC    /* start data for write multiple */
+
+DRIVER_REGISTER_ERROR(SPI_SD, spi_sd, CannotSetup, "can't setup", SPI_SD_ERR_CANT_INIT);
 
 /*
  * Wait while busy, up to 300 msec.
@@ -737,7 +748,9 @@ static int sd_setup(struct disk *u) {
  * Test to see if device is present.
  * Return true if found and initialized ok.
  */
-int sd_init(int unit) {
+driver_error_t *sd_init(int unit) {
+	driver_unit_lock_error_t *lock_error = NULL;
+
 	struct disk *du = &sddrives[unit];
 	int ok = 1;
 
@@ -752,6 +765,11 @@ int sd_init(int unit) {
 		return 0;
 	}
 
+	if ((lock_error = driver_lock(SPI_SD_DRIVER, unit, SPI_DRIVER, du->spiio, DRIVER_ALL_FLAGS, "spi sd"))) {
+			// Revoked lock on pin
+			return driver_lock_error(SPI_SD_DRIVER, lock_error);
+	}
+
 	syslog(LOG_INFO, "sd%u is at spi%d, pin cs=%s%d", unit,
 	CONFIG_LUA_RTOS_SD_SPI, gpio_portname(CONFIG_LUA_RTOS_SD_CS),
 			gpio_name(CONFIG_LUA_RTOS_SD_CS));
@@ -761,7 +779,7 @@ int sd_init(int unit) {
 		syslog(LOG_ERR, "sd%u can't init sdcard", unit);
 	}
 
-	return ok;
+	return NULL;
 }
 
 int sd_has_partitions(int unit) {
@@ -789,5 +807,7 @@ int sd_has_partition(int unit, int type) {
 
 	return 0;
 }
+
+DRIVER_REGISTER(SPI_SD,spi_sd,NULL, NULL,NULL);
 
 #endif
