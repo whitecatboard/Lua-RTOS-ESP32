@@ -66,10 +66,23 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 		case I2C_INTERFACE:
 			if (attach) {
 				setup->i2c.id = luaL_checkinteger(L, 2);
-				setup->i2c.speed = luaL_checkinteger(L, 3);
+
+				if (lua_gettop(L) >= 3) {
+					setup->i2c.speed = luaL_checkinteger(L, 3);
+				} else {
+					// Default speed
+					setup->i2c.speed = 0;
+				}
+
 				setup->i2c.sda = -1;
 				setup->i2c.scl = -1;
-				setup->i2c.address = luaL_checkinteger(L, 4);
+
+				if (lua_gettop(L) >= 4) {
+					setup->i2c.address = luaL_checkinteger(L, 4);
+				} else {
+					// Default address
+					setup->i2c.address = 0;
+				}
 			} else {
 				setup->i2c.id = luaL_checkinteger(L, 2);
 				setup->i2c.speed = luaL_checkinteger(L, 3);

@@ -89,6 +89,7 @@ typedef struct {
 	const sensor_data_t data[SENSOR_MAX_DATA];
 	const sensor_data_t properties[SENSOR_MAX_PROPERTIES];
 	const sensor_setup_f_t setup;
+	const sensor_setup_f_t presetup;
 	const sensor_acquire_f_t acquire;
 	const sensor_set_f_t set;
 	const sensor_get_f_t get;
@@ -164,6 +165,7 @@ typedef struct sensor_instance {
 	sensor_value_t properties[SENSOR_MAX_PROPERTIES];
 	const sensor_t *sensor;
 	sensor_setup_t setup;
+	sensor_setup_t presetup;
 } sensor_instance_t;
 
 const sensor_t *get_sensor(const char *id);
@@ -184,7 +186,7 @@ driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value
 #define SENSOR_ERR_NOT_FOUND				(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  6)
 #define SENSOR_ERR_INTERFACE_NOT_SUPPORTED	(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  7)
 #define SENSOR_ERR_NOT_SETUP				(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  8)
-
+#define SENSOR_ERR_INVALID_ADDRESS			(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  9)
 #endif
 
 #endif /* _SENSORS_H_ */

@@ -58,6 +58,7 @@ DRIVER_REGISTER_ERROR(SENSOR, sensor, SetUndefined, "set function is not defined
 DRIVER_REGISTER_ERROR(SENSOR, sensor, NotFound, "not found", SENSOR_ERR_NOT_FOUND);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, InterfaceNotSupported, "interface not supported", SENSOR_ERR_INTERFACE_NOT_SUPPORTED);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, NotSetup, "sensor is not setup", SENSOR_ERR_NOT_SETUP);
+DRIVER_REGISTER_ERROR(SENSOR, sensor, InvalidAddress, "invalid address", SENSOR_ERR_INVALID_ADDRESS);
 
 // List of instantiated sensors
 struct list sensor_list;
@@ -247,6 +248,16 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 		free(instance);
 
 		return driver_setup_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
+	}
+
+	// Call to specific pre setup function, if any
+	if (instance->sensor->presetup) {
+		if ((error = instance->sensor->presetup(instance))) {
+			// Remove instance
+			list_remove(&sensor_list, instance->unit, 1);
+
+			return error;
+		}
 	}
 
 	// Setup sensor interface

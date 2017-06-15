@@ -77,9 +77,10 @@ const sensor_t __attribute__((used,unused,section(".sensors"))) bme280_sensor = 
 	.properties = {
 		{.id = "mode", .type = SENSOR_DATA_INT},
 		{.id = "standbytime", .type = SENSOR_DATA_INT},
-		{.id = "address", .type = SENSOR_DATA_INT},
+//		{.id = "address", .type = SENSOR_DATA_INT},
 		{.id = "smode", .type = SENSOR_DATA_STRING},
 	},
+	.presetup = bme280_presetup,
 	.setup = bme280_setup,
 	.acquire = bme280_acquire,
 	.set = bme280_set,
@@ -2409,18 +2410,37 @@ int bm280_get_mode(sensor_instance_t *unit, char *buf) {
  * Optional parameters can be given: addres is detected automaticaly
  */
 //-----------------------------------------------------
+driver_error_t *bme280_presetup(sensor_instance_t *unit) {
+	// Set default values, if not provided
+	if (unit->setup.i2c.address == 0) {
+		unit->setup.i2c.address = BME280_I2C_ADDRESS1;
+	}
+
+	if (unit->setup.i2c.speed == 0) {
+		unit->setup.i2c.speed = 400;
+	}
+
+	return NULL;
+}
+
 driver_error_t *bme280_setup(sensor_instance_t *unit) {
     s32 com_rslt = ERROR;
 
+    // Sanity checks
+	if ((unit->setup.i2c.address != BME280_I2C_ADDRESS1) && (unit->setup.i2c.address != BME280_I2C_ADDRESS2)) {
+		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_INVALID_ADDRESS, NULL);
+	}
+
     p_bme280 = calloc(sizeof(struct bme280_user_data_t), sizeof(char));
     if (!p_bme280) {
-		return driver_setup_error(SENSOR_DRIVER, BME20_ERR_INVALID_CHANNEL, "cannot allocate memory");
+		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, "NULL");
     }
 
 	// Set default mode & standby time & address
 	unit->properties[0].integerd.value = BME280_SLEEP_MODE;
 	unit->properties[1].integerd.value = BME280_STANDBY_TIME_125_MS;
-	unit->properties[2].integerd.value = unit->setup.i2c.address; // BME280_I2C_ADDRESS1;
+	unit->properties[2].integerd.value = unit->setup.i2c.address;
+
 	// Allocate space for buffer
 	char *buffer = (char *)calloc(32, 1);
 	if (!buffer) {
