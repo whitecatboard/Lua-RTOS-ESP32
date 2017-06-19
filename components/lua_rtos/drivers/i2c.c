@@ -319,7 +319,7 @@ driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr
 
     if (mode == I2C_MASTER) {
         conf.mode = I2C_MODE_MASTER;
-        conf.master.clk_speed = speed * 1000;
+        conf.master.clk_speed = speed;
         buff_len = 0;
     } else {
     	conf.mode = I2C_MODE_SLAVE;

@@ -2417,7 +2417,7 @@ driver_error_t *bme280_presetup(sensor_instance_t *unit) {
 	}
 
 	if (unit->setup.i2c.speed == 0) {
-		unit->setup.i2c.speed = 400;
+		unit->setup.i2c.speed = 400000;
 	}
 
 	return NULL;

@@ -142,7 +142,7 @@ typedef struct {
 
 		struct {
 			uint8_t  id;
-			uint16_t speed;
+			uint32_t speed;
 			int8_t  sda;
 			int8_t  scl;
 			uint16_t address;

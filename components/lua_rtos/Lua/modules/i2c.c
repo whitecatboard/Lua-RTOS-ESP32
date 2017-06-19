@@ -265,18 +265,32 @@ static int li2c_read( lua_State* L ) {
 static int li2c_write(lua_State* L) {
 	driver_error_t *error;
 	i2c_user_data_t *user_data;
+	int total = lua_gettop(L), i, j;
+	char data;
+	const char *sval;
+	size_t len;
 
 	// Get user data
 	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c.trans");
     luaL_argcheck(L, user_data, 1, "i2c transaction expected");
 
-    char data = (char)(luaL_checkinteger(L, 2) & 0xff);
-    
-    esp_err_t i2c_master_write_byte(i2c_cmd_handle_t cmd_handle, uint8_t data, bool ack_en);
+	for (i = 2; i <= total; i++) {
+		if(lua_isnumber(L, i)) {
+			data = (char)(luaL_checkinteger(L, i) & 0xff);
 
-    if ((error = i2c_write(user_data->unit, &user_data->transaction, &data, sizeof(data)))) {
-    	return luaL_driver_error(L, error);
-    }
+		    if ((error = i2c_write(user_data->unit, &user_data->transaction, &data, sizeof(data)))) {
+		    	return luaL_driver_error(L, error);
+		    }
+		}
+		else if(lua_isstring( L, i )) {
+			sval = lua_tolstring(L, i, &len);
+			for(j = 0; j < len; j ++) {
+			    if ((error = i2c_write(user_data->unit, &user_data->transaction, (char *)&sval[j], sizeof(sval[j])))) {
+			    	return luaL_driver_error(L, error);
+			    }
+			}
+		}
+	}
 
     return 0;
 }

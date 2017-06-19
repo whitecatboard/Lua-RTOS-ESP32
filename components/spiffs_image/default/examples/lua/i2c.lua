@@ -9,34 +9,68 @@
 -- values. 
 -- ----------------------------------------------------------------
 
--- Setup i2c
-eeprom = i2c.attach(i2c.I2C0, i2c.MASTER, 1)
-
--- Write
-for i=0,100 do
-	eeprom:start()
-	eeprom:address(0x51, false)
-	eeprom:write(0x00)
-	eeprom:write(i)
-	eeprom:write(i)
-	eeprom:stop()
-
-	-- This is only for test purposes
-	-- It should be done by ACKNOWLEDGE POLLING
-	tmr.delayms(20)
+-- Attach the eeprom to the i2c bus
+function eeprom_attach()
+	eeprom = i2c.attach(i2c.I2C0, i2c.MASTER, 400000)
 end
 
--- Read and test
-for i=0,100 do
-	eeprom:start()
-	eeprom:address(0x51, false)
-	eeprom:write(0x00)
-	eeprom:write(i)
-	eeprom:start()
-	eeprom:address(0x51, true)
-	if (eeprom:read() ~= i) then
-		print("Error for "..i)
+-- Once the internally-timed write cycle has started and the EEPROM
+-- inputs are disabled, acknowledge polling can be initiated.
+-- This involves sending a start condition followed by the device address word.
+-- If this fails (timeout, or ack not received) we can't write.
+function eeprom_poll(devAddress) 
+	local done = false
+	
+	while not done do
+		try(
+		  function() 
+	  		eeprom:start()
+			eeprom:address(devAddress, false)
+	  		eeprom:stop()
+			done = true
+		  end
+		)
 	end
-	eeprom:stop()
 end
 
+-- Write to eeprom (byte)
+function eeprom_write(devAddress, address, value)
+	eeprom:start()
+	eeprom:address(devAddress, false)
+	eeprom:write(0x00, i, i)
+	eeprom:stop()
+
+	eeprom_poll(devAddress)
+end
+
+-- Read from eeprom (byte)
+function eeprom_read(devAddress, address)
+	local read
+
+	eeprom:start()
+	eeprom:address(devAddress, false)
+	eeprom:write(0x00, address)
+	eeprom:start()
+	eeprom:address(devAddress, true)
+
+	read = eeprom:read()
+	
+	eeprom:stop()
+
+	return read
+end
+
+-- Attach eeprom
+eeprom_attach()
+
+-- Write test bytes
+for i=0,100 do
+	eeprom_write(0x51, i, i)
+end
+
+-- Check bytes
+for i=0,100 do
+	if (eeprom_read(0x51, i) ~= i) then
+		error("Readed "..read..", expected "..i)
+	end
+end
