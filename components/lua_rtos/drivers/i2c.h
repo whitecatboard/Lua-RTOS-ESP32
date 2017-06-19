@@ -102,6 +102,8 @@ driver_error_t *i2c_pin_map(int unit, int sda, int scl);
  */
 driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr);
 
+driver_error_t *i2c_setspeed(int unit, int speed);
+
 /**
  * @brief Start an I2C transaction, if configured in master mode. This function is thread safe.
  *        The transaction stores all the I2C in a buffer until i2c_stop or i2c_flush is called.

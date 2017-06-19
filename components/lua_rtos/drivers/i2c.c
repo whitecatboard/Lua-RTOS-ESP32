@@ -280,6 +280,10 @@ driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr
 		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
 	}
 
+	if (speed == -1) {
+		speed = 400000;
+	}
+
 	mtx_lock(&i2c[unit].mtx);
 
 	// If unit is setup, remove first
@@ -337,12 +341,35 @@ driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr
 	mtx_unlock(&i2c[unit].mtx);
 
     syslog(LOG_INFO,
-        "i2c%u at pins scl=%s%d/sdc=%s%d", unit,
+        "i2c%u at pins scl=%s%d/sdc=%s%d at speed %d hz", unit,
         gpio_portname(i2c[unit].scl), gpio_name(i2c[unit].scl),
-        gpio_portname(i2c[unit].sda), gpio_name(i2c[unit].sda)
+        gpio_portname(i2c[unit].sda), gpio_name(i2c[unit].sda),
+		speed
     );
 
     return NULL;
+}
+
+driver_error_t *i2c_setspeed(int unit, int speed) {
+	driver_error_t *error;
+
+	// Sanity checks
+	if ((error = i2c_check(unit))) {
+		return error;
+	}
+
+	mtx_lock(&i2c[unit].mtx);
+
+	int half_cycle = (I2C_APB_CLK_FREQ / speed) / 2;
+
+	i2c_set_period(unit, (I2C_APB_CLK_FREQ / speed) - half_cycle - 1,  half_cycle - 1);
+	i2c_set_start_timing(unit, half_cycle, half_cycle);
+	i2c_set_stop_timing(unit, half_cycle, half_cycle);
+	i2c_set_data_timing(unit, half_cycle / 2, half_cycle / 2);
+
+	mtx_unlock(&i2c[unit].mtx);
+
+	return NULL;
 }
 
 driver_error_t *i2c_start(int unit, int *transaction) {

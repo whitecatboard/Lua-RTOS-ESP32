@@ -161,11 +161,15 @@ static int li2c_setup( lua_State* L ) {
 }
 
 static int li2c_attach( lua_State* L ) {
+	int speed = -1;
 	driver_error_t *error;
 
     int id = luaL_checkinteger(L, 1);
     int mode = luaL_checkinteger(L, 2);
-    int speed = luaL_checkinteger(L, 3);
+
+    if (lua_gettop(L) == 3) {
+    	speed = luaL_checkinteger(L, 3);
+    }
 
     if ((error = i2c_setup(id, mode, speed, 0, 0))) {
     	return luaL_driver_error(L, error);
@@ -184,6 +188,23 @@ static int li2c_attach( lua_State* L ) {
     lua_setmetatable(L, -2);
 
     return 1;
+}
+
+static int li2c_setspeed( lua_State* L ) {
+	driver_error_t *error;
+	i2c_user_data_t *user_data;
+
+	// Get user data
+	user_data = (i2c_user_data_t *)luaL_checkudata(L, 1, "i2c.trans");
+    luaL_argcheck(L, user_data, 1, "i2c transaction expected");
+
+	int speed = luaL_checkinteger(L, 2);
+
+    if ((error = i2c_setspeed(user_data->unit, speed))) {
+    	return luaL_driver_error(L, error);
+    }
+
+     return 0;
 }
 
 static int li2c_start( lua_State* L ) {
@@ -326,6 +347,7 @@ static const LUA_REG_TYPE li2c_trans_map[] = {
     { LSTRKEY( "address"     ),		LFUNCVAL( li2c_address   ) },
     { LSTRKEY( "read"        ),		LFUNCVAL( li2c_read      ) },
     { LSTRKEY( "write"       ),		LFUNCVAL( li2c_write     ) },
+    { LSTRKEY( "setspeed"    ),		LFUNCVAL( li2c_setspeed  ) },
     { LSTRKEY( "stop"        ),		LFUNCVAL( li2c_stop      ) },
     { LSTRKEY( "__metatable" ),  	LROVAL  ( li2c_trans_map ) },
 	{ LSTRKEY( "__index"     ),   	LROVAL  ( li2c_trans_map ) },
