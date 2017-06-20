@@ -605,6 +605,7 @@ skip:
         return luaL_error(L, lua_tostring(L, -1));
     }
 
+#if 0
     lua_remove(L, -1);
     
     lua_getglobal(L, "thread"); 
@@ -612,14 +613,17 @@ skip:
 
     lua_remove(L, -2);   // Remove "thread" from the stack
     lua_insert(L, -2);   // Switch "thread" with parsed function
+#endif
     
-    status = lua_pcall(L, 1, 1, 0);
+    status = lua_pcall(L, 1, 0, 0);
     if (status != LUA_OK) {
         if (code && from_uart) free(code);
         return luaL_error(L, lua_tostring(L, -1));
     }
 
+#if 0
     lua_pop(L, 1);
+#endif
 
     if (code && from_uart) free(code);
 
