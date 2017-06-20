@@ -530,6 +530,9 @@ static int os_run (lua_State *L) {
     
     from_uart = 1;
     code = (char *)calloc(1,1024);
+    if (!code) {
+    	luaL_error(L, "not enough memory");
+    }
 
     lua_pop(L, 1);
 
@@ -547,7 +550,7 @@ static int os_run (lua_State *L) {
 
     for(;;) {
         // Wait for chunk size
-        if (!uart_read(CONSOLE_UART, &chunk_size, 1000)) {
+        if (!uart_read(CONSOLE_UART, &chunk_size, 2000)) {
             break;
         }
 
@@ -558,11 +561,15 @@ static int os_run (lua_State *L) {
         }
         
         code = realloc(code, code_size + chunk_size + 1);
+        if (!code) {
+        	free(code);
+        	luaL_error(L, "not enough memory");
+        }
 
         // Read chunk
         cchunk = code + code_size;
         for(i=0; i < chunk_size; i++) {
-            if (!uart_read(CONSOLE_UART, cchunk++, 1000)) {
+            if (!uart_read(CONSOLE_UART, cchunk++, 2000)) {
                 break;
             }
         }
