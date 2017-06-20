@@ -77,8 +77,10 @@ DRIVER_REGISTER_ERROR(THREAD, thread, CannotMonitorAsTable, "you can't monitor t
 // List of Lua threads (this threads are created from Lua)
 static struct list lua_threads;
 
+#if 0
 // Lis of all pthreads (this threads are created from Lua or from System)
 extern struct list thread_list;
+#endif
 
 void thread_terminated(void *args) {
     struct lthread *thread;
@@ -347,13 +349,14 @@ monitor_loop:
 		i++;
 	}
 
+#if 0
 	// For each thread ...
 	struct pthread *pthread;
 	i = 0;
 	idx = list_first(&thread_list);
 
 	while (idx >= 0) {
-		list_get(&thread_list, idx, (void **)&pthread);
+		list_get(&	, idx, (void **)&pthread);
 
 		stack = _pthread_stack(pthread->thread);
 		stack_free = _pthread_stack_free(pthread->thread);
@@ -390,6 +393,7 @@ monitor_loop:
 		idx = list_next(&lua_threads, idx);
 		i++;
 	}
+#endif
 
 	if (monitor) {
 		printf("\n\nPress q for exit");
