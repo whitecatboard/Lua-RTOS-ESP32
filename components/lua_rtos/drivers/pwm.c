@@ -284,6 +284,22 @@ driver_error_t *pwm_stop(int8_t unit, int8_t channel) {
 	return NULL;
 }
 
+// Set new frequency
+driver_error_t *pwm_set_freq(int8_t unit, int8_t channel, int32_t freq) {
+	driver_error_t *error = NULL;
+
+	// Sanity checks
+	if ((error = pwm_check_unit(unit, 0))) return error;
+	if ((error = pwm_check_channel(unit, channel, 0))) return error;
+
+	// Change frequency if needed
+	if (ledc_get_freq(LEDC_HIGH_SPEED_MODE, pwm[unit][channel].timer) != freq) {
+		ledc_set_freq(LEDC_HIGH_SPEED_MODE, pwm[unit][channel].timer, freq);
+	}
+
+	return NULL;
+}
+
 // Set new duty cycle
 driver_error_t *pwm_set_duty(int8_t unit, int8_t channel, double duty) {
 	driver_error_t *error = NULL;
@@ -295,8 +311,13 @@ driver_error_t *pwm_set_duty(int8_t unit, int8_t channel, double duty) {
 
 	// Duty is expressed in %, and we bust to convert to a value from
 	// 0 and (2 ^ bits) - 1
-	ledc_set_duty(LEDC_HIGH_SPEED_MODE, channel, (int32_t)(duty * (double)PWM_MAX_VAL));
-	ledc_update_duty(LEDC_HIGH_SPEED_MODE, channel);
+	int32_t duty_val = (int32_t)(duty * (double)PWM_MAX_VAL);
+
+	// Update duty if needed
+	if (ledc_get_duty(LEDC_HIGH_SPEED_MODE, channel) != duty_val) {
+		ledc_set_duty(LEDC_HIGH_SPEED_MODE, channel, duty_val);
+		ledc_update_duty(LEDC_HIGH_SPEED_MODE, channel);
+	}
 
 	return NULL;
 }

@@ -123,6 +123,23 @@ static int lpwm_setupchan( lua_State* L ) {
     return 1;
 }
 
+static int lpwm_setfreq(lua_State* L) {
+    pwm_userdata *pwm = NULL;
+	driver_error_t *error;
+	int32_t freq;
+
+    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm.inst");
+    luaL_argcheck(L, pwm, 1, "pwm expected");
+
+    freq = luaL_checknumber(L, 2);
+
+    if ((error = pwm_set_freq(pwm->unit, pwm->channel, freq))) {
+    	return luaL_driver_error(L, error);
+    }
+
+    return 0;
+}
+
 static int lpwm_setduty(lua_State* L) {
     pwm_userdata *pwm = NULL;
 	driver_error_t *error;
@@ -198,6 +215,7 @@ static const LUA_REG_TYPE lpwm_map[] = {
 
 static const LUA_REG_TYPE lpwm_channel_map[] = {
   { LSTRKEY( "setduty"        ),	 LFUNCVAL( lpwm_setduty                ) },
+  { LSTRKEY( "setfreq"        ),	 LFUNCVAL( lpwm_setfreq                ) },
   { LSTRKEY( "start"          ),	 LFUNCVAL( lpwm_start                  ) },
   { LSTRKEY( "stop"           ),	 LFUNCVAL( lpwm_stop                   ) },
   { LSTRKEY( "__metatable"    ),	 LROVAL  ( lpwm_channel_map            ) },
