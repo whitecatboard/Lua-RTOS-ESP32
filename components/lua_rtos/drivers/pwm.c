@@ -29,6 +29,8 @@
 
 #include "luartos.h"
 
+#include "esp_log.h"
+
 #include "driver/periph_ctrl.h"
 #include "driver/ledc.h"
 
@@ -44,10 +46,6 @@
 
 #include <drivers/pwm.h>
 
-// Resolution to use
-#define PWM_BITS 12
-#define PWM_MAX_VAL 4095.0
-
 // This macro gets a reference for this driver into drivers array
 #define PWM_DRIVER driver_get_by_name("pwm")
 
@@ -59,32 +57,35 @@ DRIVER_REGISTER_ERROR(PWM, pwm, CannotSetup, "can't setup", PWM_ERR_CANT_INIT);
 DRIVER_REGISTER_ERROR(PWM, pwm, InvalidUnit, "invalid unit", PWM_ERR_INVALID_UNIT);
 DRIVER_REGISTER_ERROR(PWM, pwm, InvalidChannel, "invalid channel", PWM_ERR_INVALID_CHANNEL);
 DRIVER_REGISTER_ERROR(PWM, pwm, InvalidDuty, "invalid duty", PWM_ERR_INVALID_DUTY);
+DRIVER_REGISTER_ERROR(PWM, pwm, InvalidFrequency, "invalid frequency", PWM_ERR_INVALID_FREQUENCY);
 
 // PWM structures
 struct pwm {
     int8_t timer;
     int8_t pin;
     int8_t setup;
+    int8_t started;
+    int8_t bits;
 };
 
 struct pwm pwm[CPU_LAST_PWM + 1][CPU_LAST_PWM_CH + 1] = {
 	{
-		{0,-1,0},
-		{0,-1,0},
-		{1,-1,0},
-		{1,-1,0},
-		{2,-1,0},
-		{2,-1,0},
-		{3,-1,0},
-		{3,-1,0},
-		{0,-1,0},
-		{0,-1,0},
-		{1,-1,0},
-		{1,-1,0},
-		{2,-1,0},
-		{2,-1,0},
-		{3,-1,0},
-		{3,-1,0},
+		{0,-1,0,0,15},
+		{0,-1,0,0,15},
+		{1,-1,0,0,15},
+		{1,-1,0,0,15},
+		{2,-1,0,0,15},
+		{2,-1,0,0,15},
+		{3,-1,0,0,15},
+		{3,-1,0,0,15},
+		{0,-1,0,0,15},
+		{0,-1,0,0,15},
+		{1,-1,0,0,15},
+		{1,-1,0,0,15},
+		{2,-1,0,0,15},
+		{2,-1,0,0,15},
+		{3,-1,0,0,15},
+		{3,-1,0,0,15},
 	}
 };
 
@@ -138,6 +139,17 @@ static driver_error_t *pwm_check_duty(double duty, int8_t setup) {
 	return NULL;
 }
 
+static driver_error_t *pwm_check_freq(int32_t freq, int8_t setup) {
+	if ((freq <= 0)) {
+		if (setup) {
+			return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid frequency");
+		} else {
+			return driver_setup_error(PWM_DRIVER, PWM_ERR_INVALID_FREQUENCY, NULL);
+		}
+	}
+	return NULL;
+}
+
 /*
  * Operation functions
  *
@@ -173,6 +185,7 @@ driver_error_t *pwm_setup(int8_t unit, int8_t channel, int8_t pin, int32_t freq,
 	if ((error = pwm_check_unit(unit, 1))) return error;
 	if ((error = pwm_check_channel(unit, channel, 1))) return error;
 	if ((error = pwm_check_duty(duty, 1))) return error;
+	if ((error = pwm_check_freq(freq, 1))) return error;
 
 	if (!(pin & GPIO_ALL)) {
 		return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid pin");
@@ -213,20 +226,40 @@ driver_error_t *pwm_setup(int8_t unit, int8_t channel, int8_t pin, int32_t freq,
 
 	pwm[unit][channel].setup = 1;
     pwm[unit][channel].pin = pin;
+    pwm[unit][channel].started = 0;
 
     // Setup timer
-    ledc_timer_config_t timer_conf = {
-		.bit_num = PWM_BITS,
-		.freq_hz = freq,
-		.speed_mode = LEDC_HIGH_SPEED_MODE,
-		.timer_num = resources.timer,
-     };
-     ledc_timer_config(&timer_conf);
+    int bits;
+    esp_err_t resp;
+
+    esp_log_level_set("ledc", ESP_LOG_NONE);
+
+    for(bits = 15;bits >= 10;bits--) {
+        ledc_timer_config_t timer_conf = {
+    		.bit_num = bits,
+    		.freq_hz = freq,
+    		.speed_mode = LEDC_HIGH_SPEED_MODE,
+    		.timer_num = resources.timer,
+         };
+
+         resp = ledc_timer_config(&timer_conf);
+         if (resp == ESP_OK) {
+        	 break;
+         }
+    }
+
+    esp_log_level_set("ledc", ESP_LOG_ERROR);
+
+    if (resp != ESP_OK) {
+		return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid frequency");
+    }
+
+    pwm[unit][channel].bits = bits;
 
      // Setup channel
      ledc_channel_config_t ledc_conf = {
 		.channel = channel,
-		.duty = (int32_t)(duty * (double)PWM_MAX_VAL),
+		.duty = (int32_t)(duty * (double)(~(0xffffffff << pwm[unit][channel].bits))),
 		.gpio_num = resources.pin,
 		.intr_type = LEDC_INTR_DISABLE,
 		.speed_mode = LEDC_HIGH_SPEED_MODE,
@@ -261,6 +294,8 @@ driver_error_t *pwm_start(int8_t unit, int8_t channel) {
 	// Start timer
 	ledc_timer_resume(LEDC_HIGH_SPEED_MODE, pwm[unit][channel].timer);
 
+	pwm[unit][channel].started = 1;
+
 	return NULL;
 }
 
@@ -281,6 +316,8 @@ driver_error_t *pwm_stop(int8_t unit, int8_t channel) {
 
 	gpio_pin_clr(pwm[unit][channel].pin);
 
+	pwm[unit][channel].started = 0;
+
 	return NULL;
 }
 
@@ -291,10 +328,47 @@ driver_error_t *pwm_set_freq(int8_t unit, int8_t channel, int32_t freq) {
 	// Sanity checks
 	if ((error = pwm_check_unit(unit, 0))) return error;
 	if ((error = pwm_check_channel(unit, channel, 0))) return error;
+	if ((error = pwm_check_freq(freq, 0))) return error;
 
 	// Change frequency if needed
 	if (ledc_get_freq(LEDC_HIGH_SPEED_MODE, pwm[unit][channel].timer) != freq) {
-		ledc_set_freq(LEDC_HIGH_SPEED_MODE, pwm[unit][channel].timer, freq);
+		if (pwm[unit][channel].started) {
+			// Pause timer
+			ledc_timer_pause(LEDC_HIGH_SPEED_MODE, pwm[unit][channel].timer);
+		}
+
+	    // Setup timer
+	    int bits;
+	    esp_err_t resp;
+
+	    esp_log_level_set("ledc", ESP_LOG_NONE);
+
+	    for(bits = 15;bits >= 10;bits--) {
+	        ledc_timer_config_t timer_conf = {
+	    		.bit_num = bits,
+	    		.freq_hz = freq,
+	    		.speed_mode = LEDC_HIGH_SPEED_MODE,
+	    		.timer_num = pwm[unit][channel].timer,
+	         };
+
+	         resp = ledc_timer_config(&timer_conf);
+	         if (resp == ESP_OK) {
+	        	 break;
+	         }
+	    }
+
+	    esp_log_level_set("ledc", ESP_LOG_ERROR);
+
+	    if (resp != ESP_OK) {
+			return driver_operation_error(PWM_DRIVER, PWM_ERR_INVALID_FREQUENCY, NULL);
+	    }
+
+	    pwm[unit][channel].bits = bits;
+
+		if (pwm[unit][channel].started) {
+			// Start timer
+			ledc_timer_resume(LEDC_HIGH_SPEED_MODE, pwm[unit][channel].timer);
+		}
 	}
 
 	return NULL;
@@ -311,7 +385,7 @@ driver_error_t *pwm_set_duty(int8_t unit, int8_t channel, double duty) {
 
 	// Duty is expressed in %, and we bust to convert to a value from
 	// 0 and (2 ^ bits) - 1
-	int32_t duty_val = (int32_t)(duty * (double)PWM_MAX_VAL);
+	int32_t duty_val = (int32_t)(duty * (double)(~(0xffffffff << pwm[unit][channel].bits)));
 
 	// Update duty if needed
 	if (ledc_get_duty(LEDC_HIGH_SPEED_MODE, channel) != duty_val) {
