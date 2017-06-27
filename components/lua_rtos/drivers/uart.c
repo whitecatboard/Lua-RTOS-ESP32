@@ -129,6 +129,8 @@ struct uart uart[NUART] = {
  */
 static xQueueHandle signal_q = NULL;
 
+static uint8_t console_raw = 0;
+
 typedef struct {
 	uint8_t type;
 	uint8_t data;
@@ -220,7 +222,7 @@ static int IRAM_ATTR queue_byte(int8_t unit, uint8_t byte, uint8_t *status, int 
 	*status = 0;
 
     if (unit == CONSOLE_UART) {
-        if (byte == 0x04) {
+        if ((byte == 0x04) && (!console_raw)) {
             if (!status_get(STATUS_LUA_RUNNING)) {
             	*status = 1;
             } else {
@@ -230,7 +232,7 @@ static int IRAM_ATTR queue_byte(int8_t unit, uint8_t byte, uint8_t *status, int 
 			status_set(STATUS_LUA_ABORT_BOOT_SCRIPTS);
 
             return 0;
-        } else if (byte == 0x03) {
+        } else if ((byte == 0x03) && (!console_raw)) {
         	if (status_get(STATUS_LUA_RUNNING)) {
 				*signal = SIGINT;
 				if (_pthread_has_signal(*signal)) {
@@ -244,7 +246,7 @@ static int IRAM_ATTR queue_byte(int8_t unit, uint8_t byte, uint8_t *status, int 
         }
     }
 	
-	if (status_get(STATUS_LUA_RUNNING)) {
+	if (status_get(STATUS_LUA_RUNNING) || console_raw) {
 		return 1;
 	} else {
 		return 0;
@@ -291,6 +293,10 @@ driver_error_t *uart_unlock(int unit) {
 	uart_ll_unlock(unit);
 
 	return NULL;
+}
+
+void IRAM_ATTR uart_ll_set_raw(uint8_t raw) {
+	console_raw = raw;
 }
 
 void IRAM_ATTR uart_rx_intr_handler(void *para) {

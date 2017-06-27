@@ -69,8 +69,8 @@ driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	}
 
 	// Calculate temperature
-	// TMP36 has a resolution of 0.5 ºC, so round to 1 decimal place
-	values->floatd.value = floor(10.0 * (((float)mvolts - 500) / 10)) / 10.0;
+	// Round to 1 decimal place
+	values->floatd.value = floor((float)10.0 * (((float)mvolts - (float)500) / (float)10.0)) / (float)10.0;
 
 	return NULL;
 }

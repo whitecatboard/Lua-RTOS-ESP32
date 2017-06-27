@@ -116,6 +116,7 @@ driver_error_t *uart_unlock(int unit);
 
 void uart_ll_lock(int unit);
 void uart_ll_unlock(int unit);
+void uart_ll_set_raw(uint8_t raw);
 
 driver_error_t *uart_pin_map(int unit, int rx, int tx);
 void     uart_write(int8_t unit, char byte);

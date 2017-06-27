@@ -538,6 +538,7 @@ static int os_run (lua_State *L) {
 
     // Lock tty, avoid other threads to write to console
     uart_ll_lock(CONSOLE_UART);
+    uart_ll_set_raw(1);
 
     // Clear received buffer
     uart_consume(CONSOLE_UART);
@@ -563,6 +564,8 @@ static int os_run (lua_State *L) {
         code = realloc(code, code_size + chunk_size + 1);
         if (!code) {
         	free(code);
+        	uart_ll_set_raw(0);
+        	uart_ll_unlock(CONSOLE_UART);
         	luaL_error(L, "not enough memory");
         }
 
@@ -585,14 +588,16 @@ static int os_run (lua_State *L) {
         
     if (!done) {
         // Unlock tty, permit other threads to write to console
-    	uart_unlock(CONSOLE_UART);
+    	uart_ll_set_raw(0);
+    	uart_ll_unlock(CONSOLE_UART);
 
         free(code);
 
         return luaL_error(L, "timeout");
     }
        
-	uart_unlock(CONSOLE_UART);
+	uart_ll_set_raw(0);
+	uart_ll_unlock(CONSOLE_UART);
 
 skip:
 	// Call load

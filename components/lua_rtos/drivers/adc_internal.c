@@ -98,11 +98,11 @@ driver_error_t *adc_internal_setup(int8_t unit, int8_t channel) {
 		return error;
 	}
 
-	// Configure all channels with a 12-bit resolution
-	adc1_config_width(ADC_WIDTH_12Bit);
-
 	// No attenuation
 	adc1_config_channel_atten(channel, ADC_ATTEN_0db);
+
+	// Configure all channels with a 12-bit resolution
+	adc1_config_width(ADC_WIDTH_12Bit);
 
 	syslog(LOG_INFO, "adc%d: at pin %s%d", device, gpio_portname(resources.pin), gpio_name(resources.pin));
 
