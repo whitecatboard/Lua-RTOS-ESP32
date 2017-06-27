@@ -31,6 +31,7 @@
 
 #if CONFIG_LUA_RTOS_USE_POWER_BUS
 
+#include <sys/delay.h>
 #include <sys/driver.h>
 
 #include <drivers/gpio.h>
@@ -59,6 +60,9 @@ driver_error_t *pwbus_on() {
 
 	gpio_pin_set(CONFIG_LUA_RTOS_POWER_BUS_PIN);
 	power = 1;
+
+	// Wait some time for power stabilization
+	delay(100);
 
 	return NULL;
 }

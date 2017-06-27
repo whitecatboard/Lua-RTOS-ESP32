@@ -101,6 +101,10 @@ static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
 static driver_error_t *sensor_owire_setup(sensor_instance_t *unit) {
 	driver_error_t *error;
 
+	#if CONFIG_LUA_RTOS_USE_POWER_BUS
+	pwbus_on();
+	#endif
+
 	// Check if owire interface is setup on the given gpio
 	int dev = owire_checkpin(unit->setup.owire.gpio);
 	if (dev < 0) {
@@ -146,6 +150,10 @@ static driver_error_t *sensor_i2c_setup(sensor_instance_t *unit) {
 	    	return error;
 	    }
 	}
+
+	#if CONFIG_LUA_RTOS_USE_POWER_BUS
+	pwbus_on();
+	#endif
 
     if ((error = i2c_setup(unit->setup.i2c.id, I2C_MASTER, unit->setup.i2c.speed, 0, 0))) {
     	return error;
