@@ -52,6 +52,7 @@ DRIVER_REGISTER_ERROR(ADC, adc, InvalidUnit, "invalid unit", ADC_ERR_INVALID_UNI
 DRIVER_REGISTER_ERROR(ADC, adc, InvalidChannel, "invalid channel", ADC_ERR_INVALID_CHANNEL);
 DRIVER_REGISTER_ERROR(ADC, adc, InvalidResolution, "invalid resolution", ADC_ERR_INVALID_RESOLUTION);
 DRIVER_REGISTER_ERROR(ADC, adc, NotEnoughtMemory, "not enough memory", ADC_ERR_NOT_ENOUGH_MEMORY);
+DRIVER_REGISTER_ERROR(ADC, adc, InvalidPin, "invalid pin", ADC_ERR_INVALID_PIN);
 
 /*
  * Helper functions
@@ -61,30 +62,6 @@ DRIVER_REGISTER_ERROR(ADC, adc, NotEnoughtMemory, "not enough memory", ADC_ERR_N
  * Operation functions
  */
 
-// Get the ADC device number
-driver_error_t *adc_device(int8_t unit, int8_t channel, uint8_t *device) {
-	// Sanity checks
-	if ((unit < CPU_FIRST_ADC) || (unit > CPU_LAST_ADC)) {
-		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, NULL);
-	}
-
-	if ((unit < CPU_FIRST_ADC_CH) || (unit > CPU_LAST_ADC_CH)) {
-		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
-	}
-
-	if (unit == 1) {
-		if (!((1 << channel) & CPU_ADC_ALL)) {
-			return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
-		}
-
-		*device = channel;
-	} else {
-		*device = ((CPU_LAST_ADC_CH + 1)) + channel;
-	}
-
-	return NULL;
-}
-
 // Setup ADC channel
 driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t resolution) {
 	// Sanity checks
@@ -92,8 +69,14 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t re
 		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, NULL);
 	}
 
-	if ((unit < CPU_FIRST_ADC_CH) || (unit > CPU_LAST_ADC_CH)) {
-		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+	if (unit == CPU_FIRST_ADC) {
+		if (!(CPU_ADC_ALL & (GPIO_BIT_MASK << channel))) {
+			return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+		}
+	} else {
+		if ((unit < CPU_FIRST_ADC_CH) || (unit > CPU_LAST_ADC_CH)) {
+			return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+		}
 	}
 
 	// Allocate space for channels and locks, if needed

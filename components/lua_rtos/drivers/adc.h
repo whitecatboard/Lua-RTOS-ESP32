@@ -64,8 +64,8 @@ typedef struct {
 #define ADC_ERR_INVALID_CHANNEL          (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  1)
 #define ADC_ERR_INVALID_RESOLUTION       (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  2)
 #define ADC_ERR_NOT_ENOUGH_MEMORY	 	 (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  3)
+#define ADC_ERR_INVALID_PIN				 (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  4)
 
-driver_error_t *adc_device(int8_t unit, int8_t channel, uint8_t *device);
 driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t resolution);
 driver_error_t *adc_read(uint8_t unit, uint8_t channel, int *raw, double *mvols);
 

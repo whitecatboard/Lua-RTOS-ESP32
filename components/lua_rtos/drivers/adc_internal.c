@@ -83,15 +83,24 @@ static driver_error_t *adc_lock_resources(int8_t channel, void *resources) {
  *
  */
 
+driver_error_t * adc_internal_pin_to_channel(uint8_t pin, uint8_t *chan) {
+	switch (pin) {
+		case GPIO36: *chan = 0; break;
+		case GPIO39: *chan = 3; break;
+		case GPIO32: *chan = 4; break;
+		case GPIO33: *chan = 5; break;
+		case GPIO34: *chan = 6; break;
+		case GPIO35: *chan = 7; break;
+		default:
+			return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_PIN, NULL);
+	}
+
+	return NULL;
+}
+
 driver_error_t *adc_internal_setup(int8_t unit, int8_t channel) {
 	driver_error_t *error;
 	adc_resources_t resources = {0};
-	uint8_t device;
-
-	// Get ADC device
-	if ((error = adc_device(unit, channel, &device))) {
-		return error;
-	}
 
 	// Lock the resources needed
 	if ((error = adc_lock_resources(channel, &resources))) {
@@ -104,7 +113,7 @@ driver_error_t *adc_internal_setup(int8_t unit, int8_t channel) {
 	// Configure all channels with a 12-bit resolution
 	adc1_config_width(ADC_WIDTH_12Bit);
 
-	syslog(LOG_INFO, "adc%d: at pin %s%d", device, gpio_portname(resources.pin), gpio_name(resources.pin));
+	syslog(LOG_INFO, "adc%d: at pin %s%d", unit, gpio_portname(resources.pin), gpio_name(resources.pin));
 
 	return NULL;
 }
