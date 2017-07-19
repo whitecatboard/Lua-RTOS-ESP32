@@ -106,7 +106,7 @@ static int luaos_pushline (lua_State *L, int firstline) {
 	  lua_shell(L, buffer);
   }
 #endif
-  
+
   lua_pop(L, 1);  /* remove prompt */
   l = strlen(b);
   if (l > 0 && b[l-1] == '\n')  /* line ends with newline? */

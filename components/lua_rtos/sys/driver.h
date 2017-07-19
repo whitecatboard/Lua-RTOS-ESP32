@@ -63,6 +63,10 @@
 #define SPI_ETH_DRIVER_ID  21
 #define CAN_DRIVER_ID      22
 #define SPI_SD_DRIVER_ID   23
+#define PCD8544_DRIVER_ID  24
+#define GDISPLAY_DRIVER_ID 25
+#define ST7735_DRIVER_ID   26
+#define ILI9341_DRIVER_ID  27
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -82,6 +86,10 @@
 #define CAN_DRIVER driver_get_by_name("can")
 #define PWBUS_DRIVER driver_get_by_name("pwbus")
 #define SPI_SD_DRIVER driver_get_by_name("spi_sd")
+#define PCD8544_DRIVER driver_get_by_name("pcd8544")
+#define GDISPLAY_DRIVER driver_get_by_name("gdisplay")
+#define ST7735_DRIVER driver_get_by_name("ST7735")
+#define ILI9341_DRIVER driver_get_by_name("ILI9341")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 

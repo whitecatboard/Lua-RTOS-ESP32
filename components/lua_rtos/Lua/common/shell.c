@@ -54,6 +54,7 @@ static const command_t command[] = {
 	{"cd", "os", "cd", 0, 1, "cd path", 0},
 	{"cp", "os", "cp", 2, 0, "cp from to", 0},
 	{"dmesg", "os", "dmesg", 0, 0, NULL, 0},
+	{"do", "_G", "dofile", 1, 0, "do [lua script]", 0},
 	{"clear", "os", "clear", 0, 0, NULL, 0},
 	{"edit", "os", "edit", 1, 0, "edit [filename]", 0},
 	{"exit", "os", "exit", 0, 0, NULL, 0},
@@ -134,44 +135,51 @@ void lua_shell(lua_State* L, char *buffer) {
 	memset(tokens, 0, sizeof(tokens));
 
 	// Search tokens in buffer ...
-	while (*cbuffer) {
+	while (*cbuffer && (itoken < 10)) {
 		cbuffer = lua_token_skip_spaces(cbuffer);
 		tokens[itoken].tb = cbuffer;
 		tokens[itoken].te = cbuffer;
 
 		if (*cbuffer) {
 			cbuffer = lua_token_skip_valid(cbuffer);
-			tokens[itoken].te = cbuffer;
+			if (*cbuffer) {
+				tokens[itoken].te = cbuffer;
 
-			if (itoken == 0) {
-				// If it's first token, search token into the shell command list.
-				// If a command is not find exit.
-				if ((cindex = get_command(tokens[itoken].tb, tokens[itoken].te)) < 0) {
-					itoken++;
-					break;
+				if (itoken == 0) {
+					// If it's first token, search token into the shell command list.
+					// If a command is not find exit.
+					if ((cindex = get_command(tokens[itoken].tb, tokens[itoken].te)) < 0) {
+						itoken++;
+						break;
+					}
 				}
-			}
 
-			cbuffer++;
-			itoken++;
+				cbuffer++;
+				itoken++;
+			}
 		}
 	}
 
+	if (itoken >= 10) {
+		return;
+	}
+
 	// Process command
+#if 0
 	if ((cindex < 0) && (itoken == 1)) {
 		// Not a command
 		// May be it's a lua script?
 	    struct stat s;
 
 	    int tl = tokens[0].te - tokens[0].tb + 1;
-	    if (tl > sizeof(arg)) {
+	    if ((tl > sizeof(arg) - 1) || (tl > PATH_MAX)) {
 	    	return;
 	    }
 
 		memcpy(arg, tokens[0].tb, tl);
-		arg[tokens[0].te - tokens[0].tb + 1] = 0x00;
+		arg[tl] = 0x00;
 
-	    if (stat(arg, &s) < 0) {
+		if (stat(arg, &s) < 0) {
 			return;
 	    }
 
@@ -184,10 +192,10 @@ void lua_shell(lua_State* L, char *buffer) {
 			strlcat(buffer,"dofile(\"",256);
 			strlcat(buffer,arg, 256);
 			strlcat(buffer,"\")", 256);
-
 			return;
 		}
 	} else {
+#endif
 		if (cindex >= 0) {
 			// Check for mandatory arguments
 			if ((itoken - 1) < command[cindex].mandatory) {
@@ -259,5 +267,7 @@ void lua_shell(lua_State* L, char *buffer) {
 
 		    *buffer = 0x00;
 		}
+#if 0
 	}
+#endif
 }

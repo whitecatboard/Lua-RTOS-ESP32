@@ -29,6 +29,38 @@ SECTIONS {
 	/* exception names exported to Lua modules */
 	/* TO DO */
 	/*   Generate this entries automatically */
+    gdisplay_errors = ABSOLUTE(.);
+    KEEP(*(.gdisplay_errors))
+    LONG(0) LONG(0)
+
+    gdisplay_error_map = ABSOLUTE(.);
+    KEEP(*(.gdisplay_error_map))
+    LONG(0) LONG(0)
+
+    ili9341_errors = ABSOLUTE(.);
+    KEEP(*(.ili9341_errors))
+    LONG(0) LONG(0)
+
+    ili9341_error_map = ABSOLUTE(.);
+    KEEP(*(.ili9341_error_map))
+    LONG(0) LONG(0)
+
+    st7735_errors = ABSOLUTE(.);
+    KEEP(*(.st7735_errors))
+    LONG(0) LONG(0)
+
+    st7735_error_map = ABSOLUTE(.);
+    KEEP(*(.st7735_error_map))
+    LONG(0) LONG(0)
+
+    pcd8544_errors = ABSOLUTE(.);
+    KEEP(*(.pcd8544_errors))
+    LONG(0) LONG(0)
+
+    pcd8544_error_map = ABSOLUTE(.);
+    KEEP(*(.pcd8544_error_map))
+    LONG(0) LONG(0)
+
     spi_sd_errors = ABSOLUTE(.);
     KEEP(*(.spi_sd_errors))
     LONG(0) LONG(0)

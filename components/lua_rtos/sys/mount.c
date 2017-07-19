@@ -3,7 +3,7 @@
  * the default root's directory.
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -483,6 +483,7 @@ char *mount_resolve_to_physical(const char *path) {
 		// Allocate space for physical path, and build it
 		ppath = (char *)malloc(PATH_MAX + 1);
 		if (!ppath) {
+			errno = ENOMEM;
 			free(npath);
 			return NULL;
 		}
@@ -500,6 +501,7 @@ char *mount_resolve_to_physical(const char *path) {
 		// Allocate space for physical path, and build it
 		ppath = (char *)malloc(PATH_MAX + 1);
 		if (!ppath) {
+			errno = ENOMEM;
 			free(npath);
 			return NULL;
 		}
@@ -539,6 +541,7 @@ char *mount_resolve_to_logical(const char *path) {
 		if (mount_path) {
 			lpath = (char *)malloc(PATH_MAX + 1);
 			if (!lpath) {
+				errno = ENOMEM;
 				free(npath);
 				return NULL;
 			}
@@ -558,6 +561,7 @@ char *mount_resolve_to_logical(const char *path) {
 	} else {
 		lpath = (char *)malloc(PATH_MAX + 1);
 		if (!lpath) {
+			errno = ENOMEM;
 			free(npath);
 			return NULL;
 		}

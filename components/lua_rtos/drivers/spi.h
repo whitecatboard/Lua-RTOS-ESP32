@@ -57,27 +57,30 @@
 #define SPI_ERR_CANNOT_CHANGE_PINMAP 	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  9)
 
 // Flags
-#define SPI_FLAG_WRITE 0x01
-#define SPI_FLAG_READ  0x02
-#define SPI_FLAG_ALL (SPI_FLAG_WRITE | SPI_FLAG_READ)
+#define SPI_FLAG_WRITE  (1 << 0)
+#define SPI_FLAG_READ   (1 << 1)
+#define SPI_FLAG_NO_DMA (1 << 2)
+#define SPI_FLAG_3WIRE  (1 << 3)
 
 typedef struct {
 	uint8_t  setup;
-	int8_t  cs;
+	int8_t   cs;
 	uint32_t speed;
 	uint8_t  mode;
-#if !SPI_USE_IDF_DRIVER
 	uint32_t divisor;
-#else
+	uint8_t  dma;
+	uint8_t  sio;
 	spi_device_handle_t h;
-#endif
 } spi_device_t;
 
 typedef struct {
 	SemaphoreHandle_t mtx; // Recursive mutex for access the bus
 	uint8_t setup;         // Bus is setup?
+	uint8_t last_dma;      // Last device uses dma?
 	int last_device;       // Last device that used the bus
 	int selected_device;   // Device that owns the bus
+
+	uint32_t prev[12];
 
 	// Current pin assignment
 	int8_t miso;

@@ -18,8 +18,11 @@
 / Sep 03,'12 R0.01b Added JD_TBLCLIP option.
 /----------------------------------------------------------------------------*/
 
-#include "tjpgd.h"
+#include "sdkconfig.h"
 
+#if CONFIG_LUA_RTOS_LUA_USE_GDISPLAY
+
+#include "tjpgd.h"
 
 /*-----------------------------------------------*/
 /* Zigzag-order to raster-order conversion table */
@@ -967,5 +970,4 @@ JRESULT jd_decomp (
 	return rc;
 }
 
-
-
+#endif

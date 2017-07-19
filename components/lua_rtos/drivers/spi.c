@@ -78,6 +78,13 @@
 #include <drivers/cpu.h>
 
 #define PIN_FUNC_SPI 1
+#define SPI_MAX_SIZE (4096 - 4)
+
+extern uint32_t _rodata_start;
+extern uint32_t _lit4_end;
+
+extern void spi_flash_disable_interrupts_caches_and_other_cpu();
+extern void spi_flash_enable_interrupts_caches_and_other_cpu();
 
 // Driver locks
 static driver_unit_lock_t spi_locks[(CPU_LAST_SPI + 1) * SPI_BUS_DEVICES];
@@ -103,9 +110,11 @@ static void _spi_init() {
 	memset(spi_bus, 0, sizeof(spi_bus_t) * (CPU_LAST_SPI + 1));
 
 	spi_bus[2].last_device = -1;
+	spi_bus[2].last_dma = -1;
 	spi_bus[2].selected_device = -1;
 
 	spi_bus[3].last_device = -1;
+	spi_bus[3].last_dma = -1;
 	spi_bus[3].selected_device = -1;
 
 	// SPI2
@@ -149,8 +158,6 @@ static int spi_get_free_device(int unit) {
 
 	return -1;
 }
-
-#if !SPI_USE_IDF_DRIVER
 
 typedef union {
     uint32_t regValue;
@@ -223,85 +230,175 @@ static uint32_t spi_set_clock(int fapb, int hz, int duty_cycle, uint32_t *eff_cl
 
     return clock.regValue;
 }
-#endif
 
 static void IRAM_ATTR spi_master_op(int deviceid, uint32_t word_size, uint32_t len, uint8_t *in, uint8_t *out) {
 	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
 
-#if !SPI_USE_IDF_DRIVER
-	// SPI hardware registers index
-	uint32_t idx = 0;
+	if (!spi_bus[unit].device[device].dma) {
+		// SPI hardware registers index
+		uint32_t idx = 0;
 
-	// TX / RX buffer
-	uint8_t buffer[64];
+		// TX / RX buffer
+		uint8_t buffer[64];
 
-	// This is the number of bytes / bits to transfer for current chunk
-	uint32_t cbytes;
-	uint16_t cbits;
+		// This is the number of bytes / bits to transfer for current chunk
+		uint32_t cbytes;
+		uint16_t cbits;
 
-	// Number of bytes to transmit
-	uint32_t bytes = word_size * len;
+		// Number of bytes to transmit
+		uint32_t bytes = word_size * len;
 
-	while (bytes) {
-		// Fill TX buffer
-		cbytes = ((bytes > 64)?64:bytes);
-		if (in) {
-			memcpy(buffer, in, cbytes);
-			in = in + cbytes;
-		} else {
-			memset(buffer, 0xff, cbytes);
-		}
-		cbits = cbytes << 3;
+		while (bytes) {
+			// Fill TX buffer
+			cbytes = ((bytes > 64)?64:bytes);
+			if (in) {
+				memcpy(buffer, in, cbytes);
+				in = in + cbytes;
+			} else {
+				memset(buffer, 0xff, cbytes);
+			}
+			cbits = cbytes << 3;
 
-		// Decrement bytes
-		bytes = bytes - cbytes;
+			// Decrement bytes
+			bytes = bytes - cbytes;
 
-		// Wait for SPI bus ready
-		while (READ_PERI_REG(SPI_CMD_REG(unit))&SPI_USR);
+			// Wait for SPI bus ready
+			while (READ_PERI_REG(SPI_CMD_REG(unit))&SPI_USR);
 
-		// Set MOSI / MISO bit length
-		SET_PERI_REG_BITS(SPI_MOSI_DLEN_REG(unit), SPI_USR_MOSI_DBITLEN, cbits - 1, SPI_USR_MOSI_DBITLEN_S);
-		SET_PERI_REG_BITS(SPI_MISO_DLEN_REG(unit), SPI_USR_MISO_DBITLEN, cbits - 1, SPI_USR_MISO_DBITLEN_S);
+			// Set MOSI / MISO bit length
+			SET_PERI_REG_BITS(SPI_MOSI_DLEN_REG(unit), SPI_USR_MOSI_DBITLEN, cbits - 1, SPI_USR_MOSI_DBITLEN_S);
+			SET_PERI_REG_BITS(SPI_MISO_DLEN_REG(unit), SPI_USR_MISO_DBITLEN, cbits - 1, SPI_USR_MISO_DBITLEN_S);
 
-		// Populate HW buffers with TX buffer contents
-		idx = 0;
-		while ((idx << 5) < cbits) {
-			WRITE_PERI_REG((SPI_W0_REG(unit) + (idx << 2)), ((uint32_t *)buffer)[idx]);
-			idx++;
-		}
-
-		// Start transfer
-		SET_PERI_REG_MASK(SPI_CMD_REG(unit), SPI_USR);
-
-		// Wait for SPI bus ready
-		while (READ_PERI_REG(SPI_CMD_REG(unit))&SPI_USR);
-
-		if (out) {
-			// Populate RX buffer from HW buffers
+			// Populate HW buffers with TX buffer contents
 			idx = 0;
 			while ((idx << 5) < cbits) {
-				((uint32_t *)buffer)[idx] = READ_PERI_REG((SPI_W0_REG(unit) + (idx << 2)));
+				WRITE_PERI_REG((SPI_W0_REG(unit) + (idx << 2)), ((uint32_t *)buffer)[idx]);
 				idx++;
 			}
 
-			memcpy((void *)out, (void *)buffer, cbytes);
-			out = out + cbytes;
+			// Start transfer
+			SET_PERI_REG_MASK(SPI_CMD_REG(unit), SPI_USR);
+
+			// Wait for SPI bus ready
+			while (READ_PERI_REG(SPI_CMD_REG(unit))&SPI_USR);
+
+			if (out) {
+				// Populate RX buffer from HW buffers
+				idx = 0;
+				while ((idx << 5) < cbits) {
+					((uint32_t *)buffer)[idx] = READ_PERI_REG((SPI_W0_REG(unit) + (idx << 2)));
+					idx++;
+				}
+
+				memcpy((void *)out, (void *)buffer, cbytes);
+				out = out + cbytes;
+			}
+		}
+	} else {
+		int device = (deviceid & 0x00ff);
+		esp_err_t ret;
+		spi_transaction_t t;
+		uint8_t *bin = NULL;
+		uint8_t *nbin = NULL;
+		uint8_t ro = 0;
+
+		// esp-idf driver used DMA, but data in FLASH can't be transferred by DMA, so in this case
+		// we copy to RAM
+		if (in) {
+			if (((&_rodata_start) <= (uint32_t *)in) && ((uint32_t *) in <= (&_lit4_end))) {
+				ro = 1;
+				bin = malloc(word_size * len);
+				assert(bin != NULL);
+
+				nbin = bin;
+				memcpy(bin, in, word_size * len);
+			} else {
+				bin = in;
+			}
+		}
+
+		// Lua RTOS SPI driver don't specify max_transfer_sz for spi bus
+		// config, so max tranfer size is limited to 4 Kb. If we need to
+		// transfer more than 4 Kb the transfer is split into 4 Kb chunks
+		int size;
+
+		while (len > 0) {
+			if (len >  SPI_MAX_SIZE / word_size) {
+				size = SPI_MAX_SIZE / word_size;
+			} else {
+				size = len;
+			}
+
+			memset(&t, 0, sizeof(t));
+			t.length = size * word_size * 8;
+			t.tx_buffer = (bin == NULL)?NULL:bin;
+			t.rx_buffer = (out == NULL)?NULL:out;
+
+			ret = spi_device_transmit(spi_bus[unit].device[device].h, &t);
+			assert(ret==ESP_OK);
+
+			len = len - size;
+
+			if (bin) {
+				bin = bin + size * word_size;
+			}
+
+			if (out) {
+				out = out + size * word_size;
+			}
+		}
+
+		if (ro) {
+			free(nbin);
 		}
 	}
-#else
-	int device = (deviceid & 0x00ff);
+}
 
-	esp_err_t ret;
-	spi_transaction_t t;
+static void IRAM_ATTR spi_ll_save_registers(int unit) {
+	spi_bus[unit].prev[0] = READ_PERI_REG(SPI_USER_REG(unit));
+	spi_bus[unit].prev[1] = READ_PERI_REG(SPI_USER1_REG(unit));
+	spi_bus[unit].prev[2] = READ_PERI_REG(SPI_USER2_REG(unit));
+	spi_bus[unit].prev[3] = READ_PERI_REG(SPI_CTRL_REG(unit));
+	spi_bus[unit].prev[4] = READ_PERI_REG(SPI_CTRL2_REG(unit));
+	spi_bus[unit].prev[5] = READ_PERI_REG(SPI_SLAVE_REG(unit));
+	spi_bus[unit].prev[6] = READ_PERI_REG(SPI_PIN_REG(unit));
+	spi_bus[unit].prev[7] = READ_PERI_REG(SPI_CLOCK_REG(unit));
 
-	memset(&t, 0, sizeof(t));
-	t.length = len * word_size * 8;
-	t.tx_buffer = (in == NULL)?NULL:in;
-	t.rx_buffer = (out == NULL)?NULL:out;
+	spi_bus[unit].prev[8] = READ_PERI_REG(SPI_DMA_CONF_REG(unit));
+	spi_bus[unit].prev[9] = READ_PERI_REG(SPI_DMA_OUT_LINK_REG(unit));
+	spi_bus[unit].prev[10] = READ_PERI_REG(SPI_DMA_IN_LINK_REG(unit));
+	spi_bus[unit].prev[11] = READ_PERI_REG(SPI_SLAVE_REG(unit));
 
-	ret = spi_device_transmit(spi_bus[unit].device[device].h, &t);
-	assert(ret==ESP_OK);
-#endif
+	WRITE_PERI_REG(SPI_USER_REG(unit), 0);
+	WRITE_PERI_REG(SPI_USER1_REG(unit), 0);
+	WRITE_PERI_REG(SPI_USER2_REG(unit), 0);
+	WRITE_PERI_REG(SPI_CTRL_REG(unit), 0);
+	WRITE_PERI_REG(SPI_CTRL2_REG(unit), 0);
+	WRITE_PERI_REG(SPI_SLAVE_REG(unit), 0);
+	WRITE_PERI_REG(SPI_PIN_REG(unit), 0);
+	WRITE_PERI_REG(SPI_CLOCK_REG(unit), 0);
+
+	WRITE_PERI_REG(SPI_DMA_CONF_REG(unit), 0);
+	WRITE_PERI_REG(SPI_DMA_OUT_LINK_REG(unit), 0);
+	WRITE_PERI_REG(SPI_DMA_IN_LINK_REG(unit), 0);
+	WRITE_PERI_REG(SPI_SLAVE_REG(unit), 0);
+}
+
+static void IRAM_ATTR spi_ll_restore_registers(int unit) {
+	WRITE_PERI_REG(SPI_USER_REG(unit),  spi_bus[unit].prev[0]);
+	WRITE_PERI_REG(SPI_USER1_REG(unit), spi_bus[unit].prev[1]);
+	WRITE_PERI_REG(SPI_USER2_REG(unit), spi_bus[unit].prev[2]);
+	WRITE_PERI_REG(SPI_CTRL_REG(unit),  spi_bus[unit].prev[3]);
+	WRITE_PERI_REG(SPI_CTRL2_REG(unit), spi_bus[unit].prev[4]);
+	WRITE_PERI_REG(SPI_SLAVE_REG(unit), spi_bus[unit].prev[5]);
+	WRITE_PERI_REG(SPI_PIN_REG(unit),   spi_bus[unit].prev[6]);
+	WRITE_PERI_REG(SPI_CLOCK_REG(unit), spi_bus[unit].prev[7]);
+
+	WRITE_PERI_REG(SPI_DMA_CONF_REG(unit), spi_bus[unit].prev[8]);
+	WRITE_PERI_REG(SPI_DMA_OUT_LINK_REG(unit), spi_bus[unit].prev[9]);
+	WRITE_PERI_REG(SPI_DMA_IN_LINK_REG(unit), spi_bus[unit].prev[10]);
+	WRITE_PERI_REG(SPI_SLAVE_REG(unit), spi_bus[unit].prev[11]);
 }
 
 /*
@@ -337,85 +434,85 @@ static driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
 }
 
 static void spi_setup_bus(uint8_t unit, uint8_t flags) {
-#if !SPI_USE_IDF_DRIVER
-	// Enable SPI unit
-	switch (unit) {
-		case 2: periph_module_enable(PERIPH_HSPI_MODULE);break;
-		case 3: periph_module_enable(PERIPH_VSPI_MODULE);break;
-	}
+	if (flags & SPI_FLAG_NO_DMA) {
+		// Enable SPI unit
+		switch (unit) {
+			case 2: periph_module_enable(PERIPH_HSPI_MODULE);break;
+			case 3: periph_module_enable(PERIPH_VSPI_MODULE);break;
+		}
 
-	if (flags & SPI_FLAG_READ) {
-	    if (spi_bus[unit].miso == SPI_DEFAULT_MISO(unit)) {
-	    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_SPI);
+		if (flags & SPI_FLAG_READ) {
+		    if (spi_bus[unit].miso == SPI_DEFAULT_MISO(unit)) {
+		    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_SPI);
+		    } else {
+		        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_GPIO);
+		        gpio_set_direction(spi_bus[unit].miso, GPIO_MODE_INPUT);
+
+		        switch(unit) {
+		        	case 2:
+		                gpio_matrix_out(spi_bus[unit].miso, HSPIQ_OUT_IDX, 0, 0);
+		                gpio_matrix_in(spi_bus[unit].miso, HSPIQ_IN_IDX, 0);
+		                break;
+
+		        	case 3:
+		                gpio_matrix_out(spi_bus[unit].miso, VSPIQ_OUT_IDX, 0, 0);
+		                gpio_matrix_in(spi_bus[unit].miso, VSPIQ_IN_IDX, 0);
+		                break;
+		        }
+		    }
+		}
+
+		if (flags & SPI_FLAG_WRITE) {
+		    if (spi_bus[unit].mosi == SPI_DEFAULT_MOSI(unit)) {
+		    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].mosi], PIN_FUNC_SPI);
+		    } else {
+		        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].mosi], PIN_FUNC_GPIO);
+		        gpio_set_direction(spi_bus[unit].mosi, GPIO_MODE_OUTPUT);
+
+		        switch(unit) {
+		        	case 2:
+		                gpio_matrix_out(spi_bus[unit].mosi, HSPID_OUT_IDX, 0, 0);
+		                gpio_matrix_in(spi_bus[unit].mosi, HSPID_IN_IDX, 0);
+		                break;
+
+		        	case 3:
+		                gpio_matrix_out(spi_bus[unit].mosi, VSPID_OUT_IDX, 0, 0);
+		                gpio_matrix_in(spi_bus[unit].mosi, VSPID_IN_IDX, 0);
+		                break;
+		        }
+		    }
+		}
+
+	    if (spi_bus[unit].clk == SPI_DEFAULT_CLK(unit)) {
+	    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].clk], PIN_FUNC_SPI);
 	    } else {
-	        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].miso], PIN_FUNC_GPIO);
-	        gpio_set_direction(spi_bus[unit].miso, GPIO_MODE_INPUT);
+	        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].clk], PIN_FUNC_GPIO);
+	        gpio_set_direction(spi_bus[unit].clk, GPIO_MODE_OUTPUT);
 
 	        switch(unit) {
 	        	case 2:
-	                gpio_matrix_out(spi_bus[unit].miso, HSPIQ_OUT_IDX, 0, 0);
-	                gpio_matrix_in(spi_bus[unit].miso, HSPIQ_IN_IDX, 0);
+	                gpio_matrix_out(spi_bus[unit].clk, HSPICLK_OUT_IDX, 0, 0);
 	                break;
 
 	        	case 3:
-	                gpio_matrix_out(spi_bus[unit].miso, VSPIQ_OUT_IDX, 0, 0);
-	                gpio_matrix_in(spi_bus[unit].miso, VSPIQ_IN_IDX, 0);
+	                gpio_matrix_out(spi_bus[unit].clk, VSPICLK_OUT_IDX, 0, 0);
 	                break;
 	        }
 	    }
+	} else {
+	    esp_err_t ret;
+
+	    spi_bus_config_t buscfg={
+	        .miso_io_num=spi_bus[unit].miso,
+	        .mosi_io_num=spi_bus[unit].mosi,
+	        .sclk_io_num=spi_bus[unit].clk,
+	        .quadwp_io_num=-1,
+	        .quadhd_io_num=-1
+	    };
+
+	    ret = spi_bus_initialize(unit - 1, &buscfg, 1);
+	    assert(ret==ESP_OK);
 	}
-
-	if (flags & SPI_FLAG_WRITE) {
-	    if (spi_bus[unit].mosi == SPI_DEFAULT_MOSI(unit)) {
-	    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].mosi], PIN_FUNC_SPI);
-	    } else {
-	        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].mosi], PIN_FUNC_GPIO);
-	        gpio_set_direction(spi_bus[unit].mosi, GPIO_MODE_OUTPUT);
-
-	        switch(unit) {
-	        	case 2:
-	                gpio_matrix_out(spi_bus[unit].mosi, HSPID_OUT_IDX, 0, 0);
-	                gpio_matrix_in(spi_bus[unit].mosi, HSPID_IN_IDX, 0);
-	                break;
-
-	        	case 3:
-	                gpio_matrix_out(spi_bus[unit].mosi, VSPID_OUT_IDX, 0, 0);
-	                gpio_matrix_in(spi_bus[unit].mosi, VSPID_IN_IDX, 0);
-	                break;
-	        }
-	    }
-	}
-
-    if (spi_bus[unit].clk == SPI_DEFAULT_CLK(unit)) {
-    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].clk], PIN_FUNC_SPI);
-    } else {
-        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[unit].clk], PIN_FUNC_GPIO);
-        gpio_set_direction(spi_bus[unit].clk, GPIO_MODE_OUTPUT);
-
-        switch(unit) {
-        	case 2:
-                gpio_matrix_out(spi_bus[unit].clk, HSPICLK_OUT_IDX, 0, 0);
-                break;
-
-        	case 3:
-                gpio_matrix_out(spi_bus[unit].clk, VSPICLK_OUT_IDX, 0, 0);
-                break;
-        }
-    }
-#else
-    esp_err_t ret;
-
-    spi_bus_config_t buscfg={
-        .miso_io_num=spi_bus[unit].miso,
-        .mosi_io_num=spi_bus[unit].mosi,
-        .sclk_io_num=spi_bus[unit].clk,
-        .quadwp_io_num=-1,
-        .quadhd_io_num=-1
-    };
-
-    ret = spi_bus_initialize(unit - 1, &buscfg, 1);
-    assert(ret==ESP_OK);
-#endif
 }
 
 /*
@@ -440,10 +537,10 @@ int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t
 			spi_bus[unit].last_device = -1;
 		}
 
-#if SPI_USE_IDF_DRIVER
-		// Remove device first
-		spi_bus_remove_device(spi_bus[unit].device[device].h);
-#endif
+		if (spi_bus[unit].device[device].dma) {
+			// Remove device first
+			spi_bus_remove_device(spi_bus[unit].device[device].h);
+		}
 	}
 
 	// Setup bus, if not done yet
@@ -478,24 +575,29 @@ int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t
 
     spi_bus[unit].device[device].cs = cs;
 
-#if !SPI_USE_IDF_DRIVER
-    spi_bus[unit].device[device].mode = mode;
-    spi_bus[unit].device[device].speed = speed;
-    spi_bus[unit].device[device].divisor = spi_set_clock(APB_CLK_FREQ, speed, 128, NULL);
+    if (flags & SPI_FLAG_NO_DMA) {
+        spi_bus[unit].device[device].mode = mode;
+        spi_bus[unit].device[device].speed = speed;
+        spi_bus[unit].device[device].divisor = spi_set_clock(APB_CLK_FREQ, speed, 128, NULL);
+        spi_bus[unit].device[device].dma = 0;
+    } else {
+    	esp_err_t ret;
 
-#else
-	esp_err_t ret;
+        spi_device_interface_config_t devcfg={
+            .clock_speed_hz=speed,
+            .mode=mode,
+            .spics_io_num=-1,
+            .queue_size=7,
+			.flags=((flags & SPI_FLAG_3WIRE)?SPI_DEVICE_3WIRE:0)
+        };
 
-    spi_device_interface_config_t devcfg={
-        .clock_speed_hz=speed,
-        .mode=mode,
-        .spics_io_num=-1,
-        .queue_size=7,
-    };
+        ret = spi_bus_add_device(unit - 1, &devcfg, &spi_bus[unit].device[device].h);
+        assert(ret==ESP_OK);
 
-    ret = spi_bus_add_device(unit - 1, &devcfg, &spi_bus[unit].device[device].h);
-    assert(ret==ESP_OK);
-#endif
+        spi_bus[unit].device[device].dma = 1;
+    }
+
+    spi_bus[unit].device[device].sio = ((flags & SPI_FLAG_3WIRE)?1:0);
 
     spi_bus[unit].setup = 1;
     spi_bus[unit].device[device].setup = 1;
@@ -518,24 +620,24 @@ void spi_ll_set_speed(int deviceid, uint32_t speed) {
 
 	spi_bus[unit].last_device = -1;
 	spi_bus[unit].device[device].speed = speed;
-#if !SPI_USE_IDF_DRIVER
-    spi_bus[unit].device[device].divisor = spi_set_clock(APB_CLK_FREQ, speed, 128, NULL);
-#else
-	esp_err_t ret;
 
-	spi_bus_remove_device(spi_bus[unit].device[device].h);
+	if (!spi_bus[unit].device[device].dma) {
+	    spi_bus[unit].device[device].divisor = spi_set_clock(APB_CLK_FREQ, speed, 128, NULL);
+	} else {
+		esp_err_t ret;
 
-    spi_device_interface_config_t devcfg={
-        .clock_speed_hz=spi_bus[unit].device[device].speed,
-        .mode = spi_bus[unit].device[device].mode,
-        .spics_io_num = -1,
-        .queue_size=7,
-    };
+		spi_bus_remove_device(spi_bus[unit].device[device].h);
 
-    ret = spi_bus_add_device(unit - 1, &devcfg, &spi_bus[unit].device[device].h);
-    assert(ret==ESP_OK);
+	    spi_device_interface_config_t devcfg={
+	        .clock_speed_hz=spi_bus[unit].device[device].speed,
+	        .mode = spi_bus[unit].device[device].mode,
+	        .spics_io_num = -1,
+	        .queue_size=7,
+	    };
 
-    #endif
+	    ret = spi_bus_add_device(unit - 1, &devcfg, &spi_bus[unit].device[device].h);
+	    assert(ret==ESP_OK);
+	}
 }
 
 void IRAM_ATTR spi_ll_transfer(int deviceid, uint8_t data, uint8_t *read) {
@@ -615,63 +717,86 @@ void IRAM_ATTR spi_ll_select(int deviceid) {
 	spi_lock(unit);
 
 	if (spi_bus[unit].last_device != deviceid) {
-#if !SPI_USE_IDF_DRIVER
-        // Complete operations, if pending
-        CLEAR_PERI_REG_MASK(SPI_SLAVE_REG(unit), SPI_TRANS_DONE << 5);
-        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CS_SETUP);
+		// Test if there is a change in the SPI bus about the use of DMA
+		if (spi_bus[unit].last_dma != spi_bus[unit].device[device].dma) {
+			// There is a change
+			spi_flash_disable_interrupts_caches_and_other_cpu();
 
-        // Set mode
-    	switch (spi_bus[unit].device[device].mode) {
-    		case 0: // CKP=0, CPHA = 0
-    		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit) , SPI_CK_IDLE_EDGE);
-    		    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
-                break;
+			if (spi_bus[unit].last_dma == 1) {
+				spi_ll_save_registers(unit);
 
-    		case 1: // CKP=0, CPHA = 1
-    		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
-    		    SET_PERI_REG_MASK(SPI_USER_REG(unit) ,  SPI_CK_OUT_EDGE);
-    		    break;
+			} else if (spi_bus[unit].last_dma == 0) {
+				spi_ll_restore_registers(unit);
+			}
 
-    		case 2: // CKP=1, CPHA = 0
-    		    SET_PERI_REG_MASK(SPI_PIN_REG(unit)   , SPI_CK_IDLE_EDGE);
-    		    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
-    		    break;
+			spi_flash_enable_interrupts_caches_and_other_cpu();
+		}
 
-    		case 3: // CKP=1, CPHA = 1
-    		    SET_PERI_REG_MASK(SPI_PIN_REG(unit) ,   SPI_CK_IDLE_EDGE);
-    		    SET_PERI_REG_MASK(SPI_USER_REG(unit),   SPI_CK_OUT_EDGE);
-    	}
+		if (!spi_bus[unit].device[device].dma) {
+	        // Complete operations, if pending
+	        CLEAR_PERI_REG_MASK(SPI_SLAVE_REG(unit), SPI_TRANS_DONE << 5);
+	        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CS_SETUP);
 
-    	// Set bit order to MSB
-        CLEAR_PERI_REG_MASK(SPI_CTRL_REG(unit), SPI_WR_BIT_ORDER | SPI_RD_BIT_ORDER);
+	        // Set mode
+	    	switch (spi_bus[unit].device[device].mode) {
+	    		case 0: // CKP=0, CPHA = 0
+	    		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit) , SPI_CK_IDLE_EDGE);
+	    		    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
+	                break;
 
-        // Enable full-duplex communication
-        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_DOUTDIN);
+	    		case 1: // CKP=0, CPHA = 1
+	    		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
+	    		    SET_PERI_REG_MASK(SPI_USER_REG(unit) ,  SPI_CK_OUT_EDGE);
+	    		    break;
 
-        // Configure as master
-        WRITE_PERI_REG(SPI_USER1_REG(unit), 0);
-    	SET_PERI_REG_BITS(SPI_CTRL2_REG(unit), SPI_MISO_DELAY_MODE, 0, SPI_MISO_DELAY_MODE_S);
-    	CLEAR_PERI_REG_MASK(SPI_SLAVE_REG(unit), SPI_SLAVE_MODE);
+	    		case 2: // CKP=1, CPHA = 0
+	    		    SET_PERI_REG_MASK(SPI_PIN_REG(unit)   , SPI_CK_IDLE_EDGE);
+	    		    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
+	    		    break;
 
-        // Set clock
-        WRITE_PERI_REG(SPI_CLOCK_REG(unit), spi_bus[unit].device[device].divisor);
+	    		case 3: // CKP=1, CPHA = 1
+	    		    SET_PERI_REG_MASK(SPI_PIN_REG(unit) ,   SPI_CK_IDLE_EDGE);
+	    		    SET_PERI_REG_MASK(SPI_USER_REG(unit),   SPI_CK_OUT_EDGE);
+	    	}
 
-        // Enable MOSI / MISO / CS
-        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CS_SETUP | SPI_CS_HOLD | SPI_USR_MOSI | SPI_USR_MISO);
-        SET_PERI_REG_MASK(SPI_CTRL2_REG(unit), ((0x4 & SPI_MISO_DELAY_NUM) << SPI_MISO_DELAY_NUM_S));
+	    	// Set bit order to MSB
+	        CLEAR_PERI_REG_MASK(SPI_CTRL_REG(unit), SPI_WR_BIT_ORDER | SPI_RD_BIT_ORDER);
 
-        // Don't use command phase
-        CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_COMMAND);
-        SET_PERI_REG_BITS(SPI_USER2_REG(unit), SPI_USR_COMMAND_BITLEN, 0, SPI_USR_COMMAND_BITLEN_S);
+	        // Full-Duplex
+	        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_DOUTDIN);
 
-        // Don't use address phase
-        CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_ADDR);
-        SET_PERI_REG_BITS(SPI_USER1_REG(unit), SPI_USR_ADDR_BITLEN, 0, SPI_USR_ADDR_BITLEN_S);
-#endif
+	        // Enable 3-wire / 4-wire
+	        if (spi_bus[unit].device[device].sio) {
+		        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_SIO);
+	        } else {
+	        	CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_SIO);
+	        }
 
-        spi_bus[unit].last_device = deviceid;
-        spi_bus[unit].selected_device = deviceid;
+	        // Configure as master
+	        WRITE_PERI_REG(SPI_USER1_REG(unit), 0);
+	    	SET_PERI_REG_BITS(SPI_CTRL2_REG(unit), SPI_MISO_DELAY_MODE, 0, SPI_MISO_DELAY_MODE_S);
+	    	CLEAR_PERI_REG_MASK(SPI_SLAVE_REG(unit), SPI_SLAVE_MODE);
+
+	        // Set clock
+	        WRITE_PERI_REG(SPI_CLOCK_REG(unit), spi_bus[unit].device[device].divisor);
+
+	        // Enable MOSI / MISO / CS
+	        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CS_SETUP | SPI_CS_HOLD | SPI_USR_MOSI | SPI_USR_MISO);
+	        SET_PERI_REG_MASK(SPI_CTRL2_REG(unit), ((0x4 & SPI_MISO_DELAY_NUM) << SPI_MISO_DELAY_NUM_S));
+
+	        // Don't use command phase
+	        CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_COMMAND);
+	        SET_PERI_REG_BITS(SPI_USER2_REG(unit), SPI_USR_COMMAND_BITLEN, 0, SPI_USR_COMMAND_BITLEN_S);
+
+	        // Don't use address phase
+	        CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_USR_ADDR);
+	        SET_PERI_REG_BITS(SPI_USER1_REG(unit), SPI_USR_ADDR_BITLEN, 0, SPI_USR_ADDR_BITLEN_S);
+		}
     }
+
+    spi_bus[unit].last_device = deviceid;
+    spi_bus[unit].selected_device = deviceid;
+    spi_bus[unit].last_dma = spi_bus[unit].device[device].dma;
 
 	// Select device
     gpio_ll_pin_clr(spi_bus[unit].device[device].cs);

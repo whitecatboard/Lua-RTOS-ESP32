@@ -532,69 +532,55 @@ menu "Lua RTOS"
 					default 15
 		endmenu
 		
-		menu "TFT"									
-			config LUA_RTOS_TFT_SPI
-				depends on LUA_RTOS_LUA_USE_TFT
-					int "TFT SPI port"
+		menu "Graphic Display"									
+			config LUA_RTOS_GDISPLAY_SPI
+				depends on LUA_RTOS_LUA_USE_GDISPLAY
+					int "Display SPI port"
 					range 1 3
 					default 3
 				help
-					Select the SPI port number where TFT is attached.
+					Select the SPI port number where display is attached.
 
-			config LUA_RTOS_TFT_HZ
-				depends on LUA_RTOS_LUA_USE_TFT
-					int "TFT communication speed in Hz"
-					range 1000000 40000000
-					default 10000000
-
-			config LUA_RTOS_TFT_CS
-				depends on LUA_RTOS_LUA_USE_TFT
-					int "TFT SPI CS GPIO number"
+			config LUA_RTOS_GDISPLAY_CS
+				depends on LUA_RTOS_LUA_USE_GDISPLAY
+					int "Display SPI CS GPIO number"
 					range 0 39
 					default 14
 				help
-					GPIO where TFT CS signal is attached.
+					GPIO where display CS signal is attached.
 
-			config LUA_RTOS_TFT_RESET
-				depends on LUA_RTOS_LUA_USE_TFT
-					int "TFT RESET GPIO number"
-					range 0 39
-					default 0
+			config LUA_RTOS_GDISPLAY_RESET
+				depends on LUA_RTOS_LUA_USE_GDISPLAY
+					int "Display RESET GPIO number"
+					range -1 39
+					default -1
 				help
-					GPIO where TFT RESET signal is attached. Select 0 if no RESET is used.
+					GPIO where display RESET signal is attached. Select -1 if no RESET is used.
 
-			config LUA_RTOS_TFT_CMD
-				depends on LUA_RTOS_LUA_USE_TFT
-					int "TFT CMD GPIO number"
+			config LUA_RTOS_GDISPLAY_CMD
+				depends on LUA_RTOS_LUA_USE_GDISPLAY
+					int "Display CMD GPIO number"
 					range 0 39
 					default 26
 				help
-					GPIO where TFT CMD signal is attached.
+					GPIO where display CMD signal is attached.
 
-			config LUA_RTOS_TFT_TP_SPI
-				depends on LUA_RTOS_LUA_USE_TFT
-					int "TFT touch pannel SPI port"
+			config LUA_RTOS_GDISPLAY_TP_SPI
+				depends on LUA_RTOS_LUA_USE_GDISPLAY
+					int "Display touch pannel SPI port"
 					range 1 3
 					default 3
 				help
-					Select the SPI port number where TFT touch pannel is attached.
+					Select the SPI port number where display touch pannel is attached.
 
-			config LUA_RTOS_TFT_TP_HZ
-				depends on LUA_RTOS_LUA_USE_TFT
-					int "TFT touch pannel communication speed in Hz"
-					range 1000000 3000000
-					default 2500000
-
-			config LUA_RTOS_TFT_TP_CS
-				depends on LUA_RTOS_LUA_USE_TFT
-					int "TFT touch pannel SPI CS GPIO number"
+			config LUA_RTOS_GDISPLAY_TP_CS
+				depends on LUA_RTOS_LUA_USE_GDISPLAY
+					int "Display touch pannel SPI CS GPIO number"
 					range 0 39
 					default 21
 				help
-					GPIO where TFT touch pannel CS signal is attached.
+					GPIO where display touch pannel CS signal is attached.
 				endmenu
-	 			menu "Segment Displays"	
-	 			endmenu								
 		endmenu		
 	
 		menu "HTTP server"
@@ -738,9 +724,9 @@ menu "Lua RTOS"
 					bool "Include stepper module in build"
 					default y
 	
-				config LUA_RTOS_LUA_USE_TFT
-					bool "Include TFT module in build"
-					default n
+				config LUA_RTOS_LUA_USE_GDISPLAY
+					bool "Include gdisplay module in build"
+					default y
 
 				config LUA_RTOS_LUA_USE_SDISPLAY
 					bool "Include Segment Display module in build"
