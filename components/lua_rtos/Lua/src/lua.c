@@ -166,7 +166,15 @@ static void l_message (const char *pname, const char *msg) {
 static int report (lua_State *L, int status) {
   if (status != LUA_OK) {
     const char *msg = lua_tostring(L, -1);
-    l_message(progname, msg);
+
+    // LUA RTOS BEGIN
+	//l_message(progname, msg);
+
+	if (msg) {
+    	l_message(progname, msg);
+    }
+    // LUA RTOS END
+
     lua_pop(L, 1);  /* remove message */
   }
   return status;
