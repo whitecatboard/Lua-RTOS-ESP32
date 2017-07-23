@@ -29,6 +29,14 @@ SECTIONS {
 	/* exception names exported to Lua modules */
 	/* TO DO */
 	/*   Generate this entries automatically */
+    timer_errors = ABSOLUTE(.);
+    KEEP(*(.timer_errors))
+    LONG(0) LONG(0)
+
+    timer_error_map = ABSOLUTE(.);
+    KEEP(*(.timer_error_map))
+    LONG(0) LONG(0)
+
     gdisplay_errors = ABSOLUTE(.);
     KEEP(*(.gdisplay_errors))
     LONG(0) LONG(0)

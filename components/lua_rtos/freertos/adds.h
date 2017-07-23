@@ -1,3 +1,6 @@
+#ifndef FREERTOS_ADDS_H
+#define FREERTOS_ADDS_H
+
 #include "lua.h"
 
 #include "freertos/FreeRTOS.h"
@@ -38,3 +41,5 @@ uint8_t uxGetCoreID(TaskHandle_t h);
 void uxSetCoreID(int core);
 int uxGetStack(TaskHandle_t h);
 void uxSetStack(int stack);
+
+#endif

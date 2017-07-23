@@ -38,6 +38,9 @@
 
 #include <stdint.h>
 
+// Global state
+static lua_State *gL = NULL;
+
 #if 0
 // Define a spinklock for protect critical regions in Lua RTOS
 static portMUX_TYPE luartos_spinlock = portMUX_INITIALIZER_UNLOCKED;
@@ -91,7 +94,13 @@ void uxSetLuaState(lua_State* L) {
 	// Get Lua RTOS specific TCB parts for current task
 	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle(), THREAD_LOCAL_STORAGE_POINTER_ID))) {
 		// Store current lua state into Lua RTOS specific TCB parts
-		lua_rtos_tcb->L = L;		
+		lua_rtos_tcb->L = L;
+	}
+
+	// If this is the first thread (Lua thread) store
+	// state in global state
+	if ((uxGetThreadId() == 1) && (gL == NULL)) {
+		gL = L;
 	}
 }
 
@@ -104,6 +113,10 @@ lua_State* pvGetLuaState() {
 
 		// Get current lua state from Lua RTOS specific TCB parts
 		L = lua_rtos_tcb->L;
+	}
+
+	if (L == NULL) {
+		L = gL;
 	}
 
 	return L;
