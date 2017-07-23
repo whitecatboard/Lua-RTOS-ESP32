@@ -53,7 +53,7 @@
 #include <dirent.h>
 
 static int IRAM_ATTR vfs_spiffs_open(const char *path, int flags, int mode);
-static size_t IRAM_ATTR vfs_spiffs_write(int fd, const void *data, size_t size);
+static ssize_t IRAM_ATTR vfs_spiffs_write(int fd, const void *data, size_t size);
 static ssize_t IRAM_ATTR vfs_spiffs_read(int fd, void * dst, size_t size);
 static int IRAM_ATTR vfs_spiffs_fstat(int fd, struct stat * st);
 static int IRAM_ATTR vfs_spiffs_close(int fd);
@@ -290,7 +290,7 @@ static int IRAM_ATTR vfs_spiffs_open(const char *path, int flags, int mode) {
     return fd;
 }
 
-static size_t IRAM_ATTR vfs_spiffs_write(int fd, const void *data, size_t size) {
+static ssize_t IRAM_ATTR vfs_spiffs_write(int fd, const void *data, size_t size) {
 	vfs_spiffs_file_t *file;
 	int res;
 

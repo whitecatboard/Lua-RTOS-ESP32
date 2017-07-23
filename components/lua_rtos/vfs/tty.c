@@ -66,7 +66,7 @@ static int IRAM_ATTR vfs_tty_open(const char *path, int flags, int mode) {
     return unit;
 }
 
-static size_t IRAM_ATTR vfs_tty_write(int fd, const void *data, size_t size) {
+static ssize_t IRAM_ATTR vfs_tty_write(int fd, const void *data, size_t size) {
     const char *data_c = (const char *)data;
     int unit = fd;
 

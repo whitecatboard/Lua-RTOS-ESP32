@@ -42,7 +42,7 @@
 #include <stdio.h>
 
 static int IRAM_ATTR vfs_net_open(const char *path, int flags, int mode);
-static size_t IRAM_ATTR vfs_net_write(int fd, const void *data, size_t size);
+static ssize_t IRAM_ATTR vfs_net_write(int fd, const void *data, size_t size);
 static ssize_t IRAM_ATTR vfs_net_read(int fd, void * dst, size_t size);
 static int IRAM_ATTR vfs_net_close(int fd);
 
@@ -55,7 +55,7 @@ static int IRAM_ATTR vfs_net_open(const char *path, int flags, int mode) {
     return s;
 }
 
-static size_t IRAM_ATTR vfs_net_write(int fd, const void *data, size_t size) {
+static ssize_t IRAM_ATTR vfs_net_write(int fd, const void *data, size_t size) {
 	return (ssize_t)lwip_send(fd, data, size, 0);
 }
 
