@@ -31,11 +31,13 @@
 #include "timer.h"
 #include "esp_attr.h"
 #include "driver/timer.h"
+#include "driver/periph_ctrl.h"
 #include "soc/timer_group_struct.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 
 #include <math.h>
 #include <string.h>
@@ -52,18 +54,32 @@ DRIVER_REGISTER_ERROR(TIMER, timer, NoMoreTimers, "no more timers available", TI
 DRIVER_REGISTER_ERROR(TIMER, timer, InvalidPeriod, "invalid period", TIMER_ERR_INVALID_PERIOD);
 DRIVER_REGISTER_ERROR(TIMER, timer, NotSetup, "is not setup", TIMER_ERR_IS_NOT_SETUP);
 
-// Timer array with needed information about timers
-static tmr_t tmr[CPU_LAST_TIMER + 1];
+typedef struct {
+	tmr_t timer[CPU_LAST_TIMER + 1]; ///< Timer array with needed information about timers
+	xQueueHandle queue;			     ///< Alarm queue for deferred callbacks
+	TaskHandle_t task;			     ///< Task handle for deferred callbacks
+} tmr_driver_t;
 
-// Alarm queue
-static xQueueHandle queue = NULL;
+// Driver info
+static tmr_driver_t *tmr = NULL;
+
+// Recursive mutex
+static SemaphoreHandle_t mtx;
 
 /*
  * Helper functions
  */
 
+static void inline tmr_lock() {
+	xSemaphoreTakeRecursive(mtx, portMAX_DELAY);
+}
+
+static void inline tmr_unlock() {
+	while (xSemaphoreGiveRecursive(mtx) == pdTRUE);
+}
+
 static void tmr_init() {
-	memset(tmr, 0, sizeof(tmr));
+	mtx = xSemaphoreCreateRecursiveMutex();
 }
 
 #if 0
@@ -71,7 +87,7 @@ static int get_free_tmr(int *groupn, int *idx) {
 	int i;
 
 	for(i=0; i < CPU_LAST_TIMER + 1;i++) {
-		if (!tmr[i].setup) {
+		if (!tmr->timer[i].setup) {
 			switch (i) {
 				case 0: *groupn = 0; *idx = 0; return 0;
 				case 1: *groupn = 0; *idx = 1; return 0;
@@ -84,6 +100,24 @@ static int get_free_tmr(int *groupn, int *idx) {
 	return -1;
 }
 #endif
+
+static int have_timers(int8_t groupn) {
+	int i;
+
+	for(i=0; i < CPU_LAST_TIMER + 1;i++) {
+		if ((groupn == 0) && (i > 1)) {
+			continue;
+		}
+
+		if ((groupn == 1) && (i < 2)) {
+			continue;
+		}
+
+		if (tmr->timer[i].setup) return 1;
+	}
+
+	return 0;
+}
 
 static void IRAM_ATTR get_group_idx(int8_t unit, int *groupn, int *idx) {
 	switch (unit) {
@@ -98,10 +132,10 @@ static void alarm_task(void *arg) {
 	tmr_alarm_t alarm;
 
     for(;;) {
-        xQueueReceive(queue, &alarm, portMAX_DELAY);
+        xQueueReceive(tmr->queue, &alarm, portMAX_DELAY);
 
-        if (tmr[alarm.unit].callback) {
-        	tmr[alarm.unit].callback((void *)((int)alarm.unit));
+        if (tmr->timer[alarm.unit].callback) {
+        	tmr->timer[alarm.unit].callback((void *)((int)alarm.unit));
         }
     }
 }
@@ -136,11 +170,11 @@ static void IRAM_ATTR isr(void *arg) {
 
     	alarm.unit = unit;
 
-    	if (tmr[alarm.unit].deferred) {
-    		xQueueSendFromISR(queue, &alarm, &high_priority_task_awoken);
+    	if (tmr->timer[alarm.unit].deferred) {
+    		xQueueSendFromISR(tmr->queue, &alarm, &high_priority_task_awoken);
     	} else {
-    		if (tmr[alarm.unit].callback) {
-    			tmr[alarm.unit].callback((void *)((int)alarm.unit));
+    		if (tmr->timer[alarm.unit].callback) {
+    			tmr->timer[alarm.unit].callback((void *)((int)alarm.unit));
     		}
     	}
     	// Enable alarm again
@@ -156,11 +190,23 @@ static void IRAM_ATTR isr(void *arg) {
  * Low-level functions
  *
  */
-void tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t deferred) {
+int tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t deferred) {
 	int groupn, idx;
 
-	if (tmr[unit].setup) {
-		return;
+	tmr_lock();
+
+	// Allocate space for driver info
+	if (!tmr) {
+		tmr = calloc(1, sizeof(tmr_driver_t));
+		if (!tmr) {
+			tmr_unlock();
+			return -1;
+		}
+	}
+
+	if (tmr->timer[unit].setup) {
+		tmr_unlock();
+		return 0;
 	}
 
 	// For deferred callbacks a queue and a task is needed.
@@ -168,10 +214,22 @@ void tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_
 	// executed from a task.
 	if (deferred) {
 		// Create queue if not created
-		if (!queue) {
-			queue = xQueueCreate(10, sizeof(tmr_alarm_t));
-			if (queue) {
-				xTaskCreatePinnedToCore(alarm_task, "tmral", CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE, NULL, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY, NULL, xPortGetCoreID());
+		if (!tmr->queue) {
+			tmr->queue = xQueueCreate(10, sizeof(tmr_alarm_t));
+			if (!tmr->queue) {
+				tmr_unlock();
+				return -1;
+			}
+		}
+
+		// Create task if not created
+		if (!tmr->task) {
+			BaseType_t xReturn;
+
+			xReturn = xTaskCreatePinnedToCore(alarm_task, "tmral", CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE, NULL, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY, &tmr->task, xPortGetCoreID());
+			if (xReturn != pdPASS) {
+				tmr_unlock();
+				return -1;
 			}
 		}
 	}
@@ -199,25 +257,83 @@ void tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_
 
     // Enable timer interrupt
     timer_enable_intr(groupn, idx);
-    timer_isr_register(groupn, idx, isr, (void *)((int)unit), ESP_INTR_FLAG_IRAM, NULL);
+    timer_isr_register(groupn, idx, isr, (void *)((int)unit), ESP_INTR_FLAG_IRAM, &tmr->timer[unit].isrh);
 
-    tmr[unit].setup = 1;
-    tmr[unit].callback = callback;
-    tmr[unit].deferred = deferred;
+    tmr->timer[unit].setup = 1;
+    tmr->timer[unit].callback = callback;
+    tmr->timer[unit].deferred = deferred;
+
+	tmr_unlock();
+
+	return 0;
+}
+
+void tmr_ll_unsetup(uint8_t unit) {
+	tmr_lock();
+
+	if (!tmr->timer[unit].setup) {
+		tmr_unlock();
+		return;
+	}
+
+	tmr->timer[unit].callback = NULL;
+	tmr->timer[unit].deferred = 0;
+	tmr->timer[unit].setup = 0;
+
+	// Stop timer
+	tmr_ll_stop(unit);
+
+	// Remove interrupt
+	esp_intr_free((intr_handle_t)tmr->timer[unit].isrh);
+
+	// If we not have timers destroy queue and task if
+	// allocated
+	if (!have_timers(-1)) {
+		if (tmr->task) {
+			vTaskDelete(tmr->task);
+		}
+
+		if (tmr->queue) {
+			vQueueDelete(tmr->queue);
+		}
+
+		free(tmr);
+		tmr = NULL;
+	}
+
+#if 0
+	// This fails
+
+	// If we don't have timers in group 0 disable module
+	if (!have_timers(0)) {
+		periph_module_disable(PERIPH_TIMG0_MODULE);
+	}
+
+	// If we don't have timers in group 1 disable module
+	if (!have_timers(1)) {
+		periph_module_disable(PERIPH_TIMG1_MODULE);
+	}
+#endif
+
+	tmr_unlock();
 }
 
 void tmr_ll_start(uint8_t unit) {
 	int groupn, idx;
 
+	tmr_lock();
 	get_group_idx(unit, &groupn, &idx);
 	timer_start(groupn, idx);
+	tmr_unlock();
 }
 
 void tmr_ll_stop(uint8_t unit) {
 	int groupn, idx;
 
+	tmr_lock();
 	get_group_idx(unit, &groupn, &idx);
 	timer_pause(groupn, idx);
+	tmr_unlock();
 }
 
 /*
@@ -233,7 +349,20 @@ driver_error_t *tmr_setup(int8_t unit, uint32_t micros, void(*callback)(void *),
 		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_INVALID_PERIOD, NULL);
 	}
 
-	tmr_ll_setup(unit, micros, callback, deferred);
+	if (tmr_ll_setup(unit, micros, callback, deferred) < 0) {
+		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_NOT_ENOUGH_MEMORY, NULL);
+	}
+
+	return NULL;
+}
+
+driver_error_t *tmr_unsetup(int8_t unit) {
+	// Sanity checks
+	if ((unit < CPU_FIRST_TIMER) || (unit > CPU_LAST_TIMER)) {
+		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
+	}
+
+	tmr_ll_unsetup(unit);
 
 	return NULL;
 }
@@ -244,7 +373,7 @@ driver_error_t *tmr_start(int8_t unit) {
 		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
 	}
 
-	if (!tmr[unit].setup) {
+	if (!tmr->timer[unit].setup) {
 		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_IS_NOT_SETUP, NULL);
 	}
 
@@ -259,7 +388,7 @@ driver_error_t *tmr_stop(int8_t unit) {
 		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
 	}
 
-	if (!tmr[unit].setup) {
+	if (!tmr->timer[unit].setup) {
 		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_IS_NOT_SETUP, NULL);
 	}
 

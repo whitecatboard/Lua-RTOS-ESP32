@@ -30,6 +30,8 @@
 #ifndef TIMER_H
 #define	TIMER_H
 
+#include "driver/timer.h"
+
 #include <stdint.h>
 
 #include <sys/driver.h>
@@ -42,6 +44,7 @@ typedef struct {
 	uint8_t setup;
 	void (*callback)(void *);
 	uint8_t deferred;
+	timer_isr_handle_t isrh;
 } tmr_t;
 
 typedef void(*tmr_isr_t)(void *);
@@ -63,8 +66,19 @@ typedef void(*tmr_isr_t)(void *);
  * @param deferred If 0, the callback are executed in the isr. If 1, the callback
  *                 is deferred and is called outside the interrupt. Non deferred
  *                 callbacks must reside in IRAM.
+ *
+ * @return 0 if success, -1 if error (memory error)
+ *
  */
-void tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t deferred);
+int tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t deferred);
+
+/**
+ * @brief Removes a timer and the resources that uses.
+ * 		  tmr_start function.  No sanity checks are done (use only in driver develop).
+ *
+ * @param unit Hardware timer, from 0 to 3.
+ */
+void tmr_ll_unsetup(uint8_t unit);
 
 /**
  * @brief Start a previous configured timer. No sanity checks are done (use only in driver develop).
@@ -101,6 +115,20 @@ void tmr_ll_stop(uint8_t unit);
  *     	 SPI_ERR_NOT_ENOUGH_MEMORY
  */
 driver_error_t *tmr_setup(int8_t unit, uint32_t micros, void(*callback)(void *), uint8_t deferred);
+
+/**
+ * @brief Removes a timer and the resources that uses.
+ * 		  tmr_start function.  No sanity checks are done (use only in driver develop).
+ *
+ * @param unit Hardware timer, from 0 to 3.
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs.
+ *
+ *     	 TIMER_ERR_INVALID_UNIT
+ */
+driver_error_t *tmr_unsetup(int8_t unit);
 
 /**
  * @brief Start a previous configured timer.

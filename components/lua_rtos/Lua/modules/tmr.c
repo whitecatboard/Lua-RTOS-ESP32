@@ -78,7 +78,7 @@ static void callback_hw_func(void *arg) {
 }
 
 static void callback_sw_func(TimerHandle_t xTimer) {
-	int callback = (int)pvTimerGetTimerID(xTimer);
+	tmr_userdata *tmr = (tmr_userdata *)pvTimerGetTimerID(xTimer);
 	lua_State *TL;
 	lua_State *L;
 	int tref;
@@ -88,7 +88,7 @@ static void callback_sw_func(TimerHandle_t xTimer) {
 
     tref = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, tmr->callback);
     lua_xmove(L, TL, 1);
     lua_pcall(TL, 0, 0, 0);
     luaL_unref(TL, LUA_REGISTRYINDEX, tref);
@@ -170,6 +170,7 @@ static int ltmr_hw_attach( lua_State* L ) {
     }
 
     tmr->type = TmrHW;
+    tmr->callback = callback;
 
     if ((error = tmr_setup(id, micros, callback_hw_func, 1))) {
     	return luaL_driver_error(L, error);
@@ -189,8 +190,8 @@ static int ltmr_sw_attach( lua_State* L ) {
        	return luaL_exception(L, TIMER_ERR_NOT_ENOUGH_MEMORY);
     }
 
-	uint32_t micros = luaL_checkinteger(L, 1);
-	if (micros < 1000) {
+	uint32_t millis = luaL_checkinteger(L, 1);
+	if (millis < 1) {
 		return luaL_exception(L, TIMER_ERR_INVALID_PERIOD);
 	}
 
@@ -200,8 +201,9 @@ static int ltmr_sw_attach( lua_State* L ) {
     int callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     tmr->type = TmrSW;
+    tmr->callback = callback;
 
-    tmr->h = xTimerCreate("tmr", (micros / 1000) / portTICK_PERIOD_MS, pdTRUE, (void *)callback, callback_sw_func);
+    tmr->h = xTimerCreate("tmr", millis / portTICK_PERIOD_MS, pdTRUE, (void *)tmr, callback_sw_func);
     if (!tmr->h) {
     	return luaL_exception(L, TIMER_ERR_NOT_ENOUGH_MEMORY);
     }
@@ -256,11 +258,37 @@ static int ltmr_stop( lua_State* L ) {
     return 0;
 }
 
+static int ltmr_detach (lua_State *L) {
+	tmr_userdata *tmr = NULL;
+	tmr = (tmr_userdata *)luaL_checkudata(L, 1, "tmr.timer");
+
+	if (tmr->type == TmrHW) {
+		tmr_ll_unsetup(tmr->unit);
+	} else {
+		xTimerStop(tmr->h, portMAX_DELAY);
+		xTimerDelete(tmr->h, portMAX_DELAY);
+	}
+
+	luaL_unref(L, LUA_REGISTRYINDEX, tmr->callback);
+	memset(tmr, 0, sizeof(tmr_userdata));
+
+	return 0;
+}
+
+// Destructor
+static int ltmr_gc (lua_State *L) {
+	ltmr_detach(L);
+
+	return 0;
+}
+
 static const LUA_REG_TYPE tmr_timer_map[] = {
 	{ LSTRKEY( "start" ),			LFUNCVAL( ltmr_start    ) },
 	{ LSTRKEY( "stop" ),			LFUNCVAL( ltmr_stop     ) },
+	{ LSTRKEY( "detach" ),			LFUNCVAL( ltmr_detach 	) },
     { LSTRKEY( "__metatable" ),	    LROVAL  ( tmr_timer_map ) },
 	{ LSTRKEY( "__index"     ),     LROVAL  ( tmr_timer_map ) },
+    { LSTRKEY( "__gc" ),	 	    LROVAL  ( ltmr_gc 		) },
     { LNILKEY, LNILVAL }
 };
 

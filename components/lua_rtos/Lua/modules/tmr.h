@@ -41,6 +41,7 @@ typedef struct {
 	tmr_type_t type;
 	int8_t unit;
 	TimerHandle_t h;
+	int callback;
 } tmr_userdata;
 
 #ifdef CPU_TIMER0
