@@ -2,7 +2,7 @@
  * Lua RTOS, ADC internal driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -30,10 +30,11 @@
 #ifndef _ADC_INTERNAL_H
 #define	_ADC_INTERNAL_H
 
+#include <drivers/adc.h>
 #include <stdint.h>
 
 driver_error_t * adc_internal_pin_to_channel(uint8_t pin, uint8_t *chan);
-driver_error_t *adc_internal_setup(int8_t unit, int8_t channel);
+driver_error_t *adc_internal_setup(int8_t unit, int8_t channel, adc_channel_t *chan);
 driver_error_t *adc_internal_read(int8_t unit, int8_t channel, int *raw);
 
 #endif	/* _ADC_INTERNAL_H */

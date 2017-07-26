@@ -53,6 +53,7 @@ DRIVER_REGISTER_ERROR(ADC, adc, InvalidChannel, "invalid channel", ADC_ERR_INVAL
 DRIVER_REGISTER_ERROR(ADC, adc, InvalidResolution, "invalid resolution", ADC_ERR_INVALID_RESOLUTION);
 DRIVER_REGISTER_ERROR(ADC, adc, NotEnoughtMemory, "not enough memory", ADC_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_ERROR(ADC, adc, InvalidPin, "invalid pin", ADC_ERR_INVALID_PIN);
+DRIVER_REGISTER_ERROR(ADC, adc, InvalidVref, "invalid vref", ADC_ERR_INVALID_VREF);
 
 /*
  * Helper functions
@@ -93,14 +94,27 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t re
 	// Store channel configuration
 	switch (unit) {
 		case 1:
-			adc_internal_setup(unit, channel);
+			if (vref > 3300) {
+				return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_VREF, "3300 mVolts max");
+			}
+
+			adc_internal_setup(unit, channel, &adc_unit[unit].channel[channel]);
 			adc_unit[unit].channel[channel].max_resolution = 12;
-			adc_unit[unit].channel[channel].vref = CPU_ADC_REF;
+
+			if (vref <= 1100) {
+				adc_unit[unit].channel[channel].vref = 1100;
+			} else if (vref <= 1500) {
+				adc_unit[unit].channel[channel].vref = 1500;
+			} else if (vref <= 2200) {
+				adc_unit[unit].channel[channel].vref = 2200;
+			} else {
+				adc_unit[unit].channel[channel].vref = 3300;
+			}
 			break;
 
 		case 2:
 #if CONFIG_ADC_MCP3008
-			adc_mcp3008_setup(unit, channel, CONFIG_ADC_MCP3008_SPI, CONFIG_ADC_MCP3008_CS);
+			adc_mcp3008_setup(unit, channel, CONFIG_ADC_MCP3008_SPI, CONFIG_ADC_MCP3008_CS, &adc_unit[unit].channel[channel]);
 			adc_unit[unit].channel[channel].max_resolution = 10;
 			adc_unit[unit].channel[channel].vref = vref;
 #endif
@@ -108,7 +122,7 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t re
 
 		case 3:
 #if CONFIG_ADC_MCP3208
-			adc_mcp3208_setup(unit, channel, CONFIG_ADC_MCP3208_SPI, CONFIG_ADC_MCP3208_CS);
+			adc_mcp3208_setup(unit, channel, CONFIG_ADC_MCP3208_SPI, CONFIG_ADC_MCP3208_CS, &adc_unit[unit].channel[channel]);
 			adc_unit[unit].channel[channel].max_resolution = 12;
 			adc_unit[unit].channel[channel].vref = vref;
 #endif

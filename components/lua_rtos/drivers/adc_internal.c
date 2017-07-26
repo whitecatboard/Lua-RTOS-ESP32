@@ -2,7 +2,7 @@
  * Lua RTOS, ADC internal driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -98,22 +98,35 @@ driver_error_t * adc_internal_pin_to_channel(uint8_t pin, uint8_t *chan) {
 	return NULL;
 }
 
-driver_error_t *adc_internal_setup(int8_t unit, int8_t channel) {
+driver_error_t *adc_internal_setup(int8_t unit, int8_t channel,  adc_channel_t *chan) {
 	driver_error_t *error;
 	adc_resources_t resources = {0};
+	adc_atten_t atten;
 
 	// Lock the resources needed
 	if ((error = adc_lock_resources(channel, &resources))) {
 		return error;
 	}
 
-	// No attenuation
-	adc1_config_channel_atten(channel, ADC_ATTEN_0db);
+	// Computes the required attenuation
+	if (chan->vref <= 1100) {
+		atten = ADC_ATTEN_0db;
+	} else if (chan->vref <= 1500) {
+		atten = ADC_ATTEN_2_5db;
+	} else if (chan->vref <= 2200) {
+		atten = ADC_ATTEN_6db;
+	} else {
+		atten = ADC_ATTEN_11db;
+	}
+
+	adc1_config_channel_atten(channel, atten);
 
 	// Configure all channels with a 12-bit resolution
 	adc1_config_width(ADC_WIDTH_12Bit);
 
-	syslog(LOG_INFO, "adc%d: at pin %s%d", unit, gpio_portname(resources.pin), gpio_name(resources.pin));
+	if (!chan->setup) {
+		syslog(LOG_INFO, "adc%d: at pin %s%d", unit, gpio_portname(resources.pin), gpio_name(resources.pin));
+	}
 
 	return NULL;
 }

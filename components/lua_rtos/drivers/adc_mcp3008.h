@@ -29,9 +29,10 @@
 #ifndef _ADC_MCP3008_H
 #define _ADC_MCP3008_H
 
+#include <drivers/adc.h>
 #include <sys/driver.h>
 
-driver_error_t *adc_mcp3008_setup(int8_t unit, int8_t channel, uint8_t spi, uint8_t cs);
+driver_error_t *adc_mcp3008_setup(int8_t unit, int8_t channel, uint8_t spi, uint8_t cs, adc_channel_t *chan);
 driver_error_t *adc_mcp3008_read(int8_t unit, int8_t channel, int *raw);
 
 #endif /* _ADC_MCP3008_H */

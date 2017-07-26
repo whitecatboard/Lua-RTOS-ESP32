@@ -40,7 +40,7 @@
 
 static int spi_device = -1;
 
-driver_error_t *adc_mcp3208_setup(int8_t unit, int8_t channel, uint8_t spi, uint8_t cs) {
+driver_error_t *adc_mcp3208_setup(int8_t unit, int8_t channel, uint8_t spi, uint8_t cs, adc_channel_t *chan) {
 	driver_error_t *error;
 
     // Init SPI bus
@@ -50,7 +50,9 @@ driver_error_t *adc_mcp3208_setup(int8_t unit, int8_t channel, uint8_t spi, uint
 		}
 	}
 
-	syslog(LOG_INFO, "adc MCP3208 channel %d at spi%d, cs=%s%d", channel, spi, gpio_portname(cs), gpio_name(cs));
+	if (!chan->setup) {
+		syslog(LOG_INFO, "adc MCP3208 channel %d at spi%d, cs=%s%d", channel, spi, gpio_portname(cs), gpio_name(cs));
+	}
 
 	return NULL;
 }

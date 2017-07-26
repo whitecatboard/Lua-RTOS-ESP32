@@ -43,6 +43,7 @@
 #include <string.h>
 
 #include <drivers/adc.h>
+#include <drivers/adc_internal.h>
 
 extern LUA_REG_TYPE adc_error_map[];
 
@@ -86,7 +87,7 @@ static int ladc_attach( lua_State* L ) {
     if (id == 1) {
     	if (channel >= 32) {
     		// Is a pin number
-    	    if ((error = adc_internal_pin_to_channel(channel, &channel))) {
+    	    if ((error = adc_internal_pin_to_channel(channel, (uint8_t *)&channel))) {
     	    	return luaL_driver_error(L, error);
     	    }
     	}
