@@ -29,6 +29,14 @@ SECTIONS {
 	/* exception names exported to Lua modules */
 	/* TO DO */
 	/*   Generate this entries automatically */
+    encoder_errors = ABSOLUTE(.);
+    KEEP(*(.encoder_errors))
+    LONG(0) LONG(0)
+
+    encoder_error_map = ABSOLUTE(.);
+    KEEP(*(.encoder_error_map))
+    LONG(0) LONG(0)
+
     timer_errors = ABSOLUTE(.);
     KEEP(*(.timer_errors))
     LONG(0) LONG(0)

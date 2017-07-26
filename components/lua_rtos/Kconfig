@@ -772,6 +772,10 @@ menu "Lua RTOS"
 					config LUA_RTOS_LUA_USE_UART
 						bool "Include uart module in build"
 						default y
+
+					config LUA_RTOS_LUA_USE_ENCODER
+						bool "Include encoder module in build"
+						default y
 			endmenu
 			menu "Communication Modules"
 					config LUA_RTOS_LUA_USE_NET

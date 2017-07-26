@@ -68,6 +68,7 @@
 #define ST7735_DRIVER_ID   26
 #define ILI9341_DRIVER_ID  27
 #define TIMER_DRIVER_ID    28
+#define ENCODER_DRIVER_ID    29
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -92,6 +93,7 @@
 #define ST7735_DRIVER driver_get_by_name("ST7735")
 #define ILI9341_DRIVER driver_get_by_name("ILI9341")
 #define TIMER_DRIVER driver_get_by_name("TIMER")
+#define ENCODER_DRIVER driver_get_by_name("ENCODER")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 
