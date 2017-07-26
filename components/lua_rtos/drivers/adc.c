@@ -98,9 +98,6 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t re
 				return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_VREF, "3300 mVolts max");
 			}
 
-			adc_internal_setup(unit, channel, &adc_unit[unit].channel[channel]);
-			adc_unit[unit].channel[channel].max_resolution = 12;
-
 			if (vref <= 1100) {
 				adc_unit[unit].channel[channel].vref = 1100;
 			} else if (vref <= 1500) {
@@ -110,21 +107,25 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t re
 			} else {
 				adc_unit[unit].channel[channel].vref = 3300;
 			}
+
+			adc_internal_setup(unit, channel, &adc_unit[unit].channel[channel]);
+			adc_unit[unit].channel[channel].max_resolution = 12;
+
 			break;
 
 		case 2:
 #if CONFIG_ADC_MCP3008
-			adc_mcp3008_setup(unit, channel, CONFIG_ADC_MCP3008_SPI, CONFIG_ADC_MCP3008_CS, &adc_unit[unit].channel[channel]);
 			adc_unit[unit].channel[channel].max_resolution = 10;
 			adc_unit[unit].channel[channel].vref = vref;
+			adc_mcp3008_setup(unit, channel, CONFIG_ADC_MCP3008_SPI, CONFIG_ADC_MCP3008_CS, &adc_unit[unit].channel[channel]);
 #endif
 			break;
 
 		case 3:
 #if CONFIG_ADC_MCP3208
-			adc_mcp3208_setup(unit, channel, CONFIG_ADC_MCP3208_SPI, CONFIG_ADC_MCP3208_CS, &adc_unit[unit].channel[channel]);
 			adc_unit[unit].channel[channel].max_resolution = 12;
 			adc_unit[unit].channel[channel].vref = vref;
+			adc_mcp3208_setup(unit, channel, CONFIG_ADC_MCP3208_SPI, CONFIG_ADC_MCP3208_CS, &adc_unit[unit].channel[channel]);
 #endif
 			break;
 	}
