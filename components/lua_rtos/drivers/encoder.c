@@ -237,6 +237,8 @@ static void IRAM_ATTR encoder_isr(void* arg) {
 			}
 		}
 	}
+
+	encoder->sw_value = SW==0?1:0;
 }
 
 /*
@@ -367,9 +369,10 @@ driver_error_t *encoder_unsetup(encoder_h_t *h) {
 	return NULL;
 }
 
-driver_error_t *encoder_read(encoder_h_t *h, int32_t *val) {
+driver_error_t *encoder_read(encoder_h_t *h, int32_t *val, uint8_t *sw) {
 	portDISABLE_INTERRUPTS();
 	*val = h->counter;
+	*sw = h->sw_value;
 	portENABLE_INTERRUPTS();
 
 	return NULL;

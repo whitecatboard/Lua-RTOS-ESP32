@@ -60,7 +60,7 @@ static void callback_func(int callback, uint32_t value, uint8_t button) {
 	    lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
 	    lua_xmove(L, TL, 1);
         lua_pushinteger(TL, value);
-        lua_pushboolean(TL, button);
+        lua_pushinteger(TL, button);
 	    lua_pcall(TL, 2, 0, 0);
         luaL_unref(TL, LUA_REGISTRYINDEX, tref);
 	}
@@ -69,6 +69,7 @@ static void callback_func(int callback, uint32_t value, uint8_t button) {
 static int lencoder_attach( lua_State* L ) {
 	driver_error_t *error;
 	int sw;
+	int callback;
 
 	int a = luaL_checkinteger(L, 1);
 	int b = luaL_checkinteger(L, 2);
@@ -79,10 +80,14 @@ static int lencoder_attach( lua_State* L ) {
 		sw = luaL_checkinteger(L, 3);
 	}
 
-	luaL_checktype(L, 4, LUA_TFUNCTION);
-    lua_pushvalue(L, 4);
+	if (lua_isfunction(L, 4)) {
+		luaL_checktype(L, 4, LUA_TFUNCTION);
+		lua_pushvalue(L, 4);
 
-    int callback = luaL_ref(L, LUA_REGISTRYINDEX);
+		callback = luaL_ref(L, LUA_REGISTRYINDEX);
+	} else {
+		callback = LUA_NOREF;
+	}
 
 	encoder_userdata *userdata = (encoder_userdata *)lua_newuserdata(L, sizeof(encoder_userdata));
     if (!userdata) {
@@ -95,9 +100,11 @@ static int lencoder_attach( lua_State* L ) {
     	return luaL_driver_error(L, error);
     }
 
-    // Register callback, the id of the callback is the callback reference
-    if ((error = encoder_register_callback(encoder, callback_func, callback, 1))) {
-    	return luaL_driver_error(L, error);
+    if (callback != LUA_NOREF) {
+        // Register callback, the id of the callback is the callback reference
+        if ((error = encoder_register_callback(encoder, callback_func, callback, 1))) {
+        	return luaL_driver_error(L, error);
+        }
     }
 
     userdata->callback = callback;
@@ -113,14 +120,16 @@ static int lencoder_read (lua_State *L) {
 	encoder_userdata *userdata = (encoder_userdata *)luaL_checkudata(L, 1, "encoder.enc");
 	driver_error_t *error;
 	int32_t val;
+	uint8_t button;
 
-    if ((error = encoder_read(userdata->encoder, &val))) {
+    if ((error = encoder_read(userdata->encoder, &val, &button))) {
     	return luaL_driver_error(L, error);
     }
 
     lua_pushinteger(L, val);
+    lua_pushinteger(L, button);
 
-	return 1;
+	return 2;
 }
 
 static int lencoder_write(lua_State *L) {
@@ -128,7 +137,6 @@ static int lencoder_write(lua_State *L) {
 	driver_error_t *error;
 
 	int32_t val = luaL_checkinteger(L, 1);
-
 
     if ((error = encoder_write(userdata->encoder, val))) {
     	return luaL_driver_error(L, error);
@@ -184,7 +192,7 @@ MODULE_REGISTER_MAPPED(ENCODER, encoder, encoder_map, luaopen_encoder);
 /*
 
 function new_pos(value, button)
-   if (button) then
+   if (button == 0) then
       print("push")
    else
       print(value)

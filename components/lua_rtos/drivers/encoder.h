@@ -47,6 +47,7 @@ typedef struct {
 	int8_t SW;            		 ///< SW pin
 	uint8_t state;      		 ///< Current state's machine state
 	int32_t counter;    		 ///< Current counter value
+	uint8_t sw_value;			 ///< Current switch value
 	encoder_callback_t callback; ///< Callback function
 	int callback_id;             ///< Callback id
 	uint8_t deferred;            ///< Deferred callback?
@@ -65,7 +66,7 @@ typedef struct {
 driver_error_t *encoder_setup(int8_t a, int8_t b, int8_t sw, encoder_h_t **h);
 driver_error_t *encoder_unsetup(encoder_h_t *h);
 driver_error_t *encoder_register_callback(encoder_h_t *h, encoder_callback_t callback, int id, uint8_t deferred);
-driver_error_t *encoder_read(encoder_h_t *h, int32_t *val);
+driver_error_t *encoder_read(encoder_h_t *h, int32_t *val, uint8_t *sw);
 driver_error_t *encoder_write(encoder_h_t *h, int32_t val);
 
 #endif	/* ENCODER_H */
