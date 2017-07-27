@@ -132,6 +132,8 @@ typedef struct {
 			uint8_t unit;
 			uint8_t channel;
 			uint8_t resolution;
+			int16_t vrefp;
+			int16_t vrefn;
 		} adc;
 
 		struct {

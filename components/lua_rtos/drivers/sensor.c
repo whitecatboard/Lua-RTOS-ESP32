@@ -76,7 +76,7 @@ static driver_error_t *sensor_adc_setup(sensor_instance_t *unit) {
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
 
-	if ((error = adc_setup(unit->setup.adc.unit, unit->setup.adc.channel, CONFIG_ADC_INTERNAL_VREF_P, CONFIG_ADC_INTERNAL_VREF_N, unit->setup.adc.resolution))) {
+	if ((error = adc_setup(unit->setup.adc.unit, unit->setup.adc.channel, unit->setup.adc.vrefp, unit->setup.adc.vrefn, unit->setup.adc.resolution))) {
 		return error;
 	}
 

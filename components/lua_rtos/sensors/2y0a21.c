@@ -2,7 +2,7 @@
  * Lua RTOS, 2Y0A21 sensor (proximity)
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -27,9 +27,14 @@
  * this software.
  */
 
-#include "luartos.h"
+/*
+ * Extracted from:
+ *
+ * https://github.com/jeroendoggen/Arduino-GP2Y0A21YK-library/blob/master/DistanceGP2Y0A21YK/DistanceGP2Y0A21YK.cpp
+ *
+ */
 
-#if 0
+#include "luartos.h"
 
 #include "2y0a21.h"
 
@@ -39,6 +44,9 @@
 
 #include <drivers/sensor.h>
 #include <drivers/adc.h>
+
+driver_error_t *s2y0a21_setup(sensor_instance_t *unit);
+driver_error_t *s2y0a21_acquire(sensor_instance_t *unit, sensor_value_t *values);
 
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) s2y0a21_sensor = {
@@ -52,37 +60,56 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) s2y0a21_s
 };
 
 /*
+ * Helper functions
+ */
+
+driver_error_t  *distance(sensor_instance_t *unit, sensor_value_t *values, int *d) {
+	driver_error_t *error;
+	int p = 0;
+	int sum = 0;
+	int foo = 0;
+	int previous = 0;
+	int raw = 0;
+	double mvolts = 0;
+
+	for (int i = 0; i < 25; i++) {
+		// Read value
+		if ((error = adc_read(unit->setup.adc.unit, unit->setup.adc.channel, &raw, &mvolts))) {
+			return error;
+		}
+
+		foo = 27.728 * pow(mvolts / 1000.0, -1.2045);
+
+		if (foo >= (93 * previous)) {
+			previous = foo;
+			sum = sum + foo;
+			p++;
+
+		}
+	}
+
+	*d = sum / p;
+
+	return NULL;
+
+}
+
+/*
  * Operation functions
  */
 driver_error_t *s2y0a21_setup(sensor_instance_t *unit) {
-	driver_error_t *error;
-
-	// Sensor out is from 0V to 3.3V
-	// ESP32 ADC reference is 1.1V
-	// We need to attenuate ADC input by 11db 1/3.6
-	if ((error = adc_setup_channel(unit->setup.adc.channel, unit->setup.adc.resolution, ADC_ATTEN_11db))) {
-		return error;
-	}
-
 	return NULL;
 }
 
 driver_error_t *s2y0a21_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	driver_error_t *error;
-	int raw = 0;
-	double mvolts = 0;
+	int d;
 
-	// Read value
-	if ((error = adc_read(unit->setup.adc.channel, &raw, &mvolts))) {
+	if ((error = distance(unit, values, &d))) {
 		return error;
 	}
 
-	mvolts = mvolts * 3.6;
-
-	// Calculate distance
-	values->floatd.value = 29.988 * pow(mvolts / 1000.0, -1.173);
+	values->floatd.value = (float)d;
 
 	return NULL;
 }
-
-#endif
