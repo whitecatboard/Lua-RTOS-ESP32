@@ -39,11 +39,12 @@
 
 // ADC channel
 typedef struct {
-	uint8_t setup;
-	uint8_t max_resolution;
-	uint8_t resolution;
-	uint16_t max_val;
-	uint16_t vref;
+	uint8_t setup;           ///< Channel is setup?
+	uint8_t max_resolution;  ///< Max resolution supported for channel
+	uint8_t resolution;      ///< Current resolution
+	uint16_t max_val;        ///< Max value, depends on resolution
+	int16_t pvref;           ///< Positive voltage reference in mvolts
+	int16_t nvref;           ///< Negative voltage reference in mvolts
 } adc_channel_t;
 
 typedef struct {
@@ -67,7 +68,7 @@ typedef struct {
 #define ADC_ERR_INVALID_PIN				 (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  4)
 #define ADC_ERR_INVALID_VREF		     (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  5)
 
-driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t resolution);
+driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t pvref, int16_t nvref, uint8_t resolution);
 driver_error_t *adc_read(uint8_t unit, uint8_t channel, int *raw, double *mvols);
 
 #endif	/* ADC_H */

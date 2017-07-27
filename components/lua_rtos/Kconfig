@@ -285,6 +285,22 @@ menu "Lua RTOS"
 				default 17
 		endmenu
 		
+		menu "Internal ADC"
+			config ADC_INTERNAL_VREF_P
+				int "vref+"
+				range 0 3300
+				default 3300
+				help
+					Positive voltage reference in mVolts.	
+					
+			config ADC_INTERNAL_VREF_N
+				int "vref-"
+				range 0 3300
+				default 0
+				help
+					Negative voltage reference in mVolts.	
+		endmenu
+		
 		menu "External ADC"
 			config ADC_MCP3008
 				bool "Use SPI ADC MCP3008"

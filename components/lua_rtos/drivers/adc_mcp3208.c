@@ -58,17 +58,17 @@ driver_error_t *adc_mcp3208_setup(int8_t unit, int8_t channel, uint8_t spi, uint
 }
 
 driver_error_t *adc_mcp3208_read(int8_t unit, int8_t channel, int *raw) {
-    uint8_t msb, lsb;
+	uint8_t buff[3];
+
+	buff[0] =  ((0x18 | channel) & 0x1f) >> 2;
+	buff[1] =  ((0x18 | channel) & 0x03) << 6;
 
     spi_ll_select(spi_device);
-
-    spi_ll_transfer(spi_device, ((0x18 | channel) & 0x1f) >> 2, &msb);
-    spi_ll_transfer(spi_device, ((0x18 | channel) & 0x03) << 6, &msb);
-    spi_ll_transfer(spi_device, 0, &lsb);
+    spi_ll_bulk_rw(spi_device, 3, buff);
 
     spi_ll_deselect(spi_device);
 
-    *raw = ((msb & 0x0f) << 8 | lsb);
+    *raw = (buff[1] & 0b1111) << 8 | buff[2];
 
     return NULL;
 }

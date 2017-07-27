@@ -64,7 +64,7 @@ DRIVER_REGISTER_ERROR(ADC, adc, InvalidVref, "invalid vref", ADC_ERR_INVALID_VRE
  */
 
 // Setup ADC channel
-driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t resolution) {
+driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t pvref, int16_t nvref, uint8_t resolution) {
 	// Sanity checks
 	if ((unit < CPU_FIRST_ADC) || (unit > CPU_LAST_ADC)) {
 		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, NULL);
@@ -94,18 +94,24 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t re
 	// Store channel configuration
 	switch (unit) {
 		case 1:
-			if (vref > 3300) {
-				return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_VREF, "3300 mVolts max");
+			if (pvref > CONFIG_ADC_INTERNAL_VREF_P) {
+				return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_VREF, "vref+");
 			}
 
-			if (vref <= 1100) {
-				adc_unit[unit].channel[channel].vref = 1100;
-			} else if (vref <= 1500) {
-				adc_unit[unit].channel[channel].vref = 1500;
-			} else if (vref <= 2200) {
-				adc_unit[unit].channel[channel].vref = 2200;
+			if (nvref != 0) {
+				return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_VREF, "vref-");
+			}
+
+			adc_unit[unit].channel[channel].nvref = 0;
+
+			if (pvref <= 1100) {
+				adc_unit[unit].channel[channel].pvref = 1100;
+			} else if (pvref <= 1500) {
+				adc_unit[unit].channel[channel].pvref = 1500;
+			} else if (pvref <= 2200) {
+				adc_unit[unit].channel[channel].pvref = 2200;
 			} else {
-				adc_unit[unit].channel[channel].vref = 3300;
+				adc_unit[unit].channel[channel].pvref = CONFIG_ADC_INTERNAL_VREF_P;
 			}
 
 			adc_internal_setup(unit, channel, &adc_unit[unit].channel[channel]);
@@ -116,7 +122,8 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t re
 		case 2:
 #if CONFIG_ADC_MCP3008
 			adc_unit[unit].channel[channel].max_resolution = 10;
-			adc_unit[unit].channel[channel].vref = vref;
+			adc_unit[unit].channel[channel].pvref = pvref;
+			adc_unit[unit].channel[channel].nvref = nvref;
 			adc_mcp3008_setup(unit, channel, CONFIG_ADC_MCP3008_SPI, CONFIG_ADC_MCP3008_CS, &adc_unit[unit].channel[channel]);
 #endif
 			break;
@@ -124,7 +131,8 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, uint16_t vref, uint8_t re
 		case 3:
 #if CONFIG_ADC_MCP3208
 			adc_unit[unit].channel[channel].max_resolution = 12;
-			adc_unit[unit].channel[channel].vref = vref;
+			adc_unit[unit].channel[channel].pvref = pvref;
+			adc_unit[unit].channel[channel].nvref = nvref;
 			adc_mcp3208_setup(unit, channel, CONFIG_ADC_MCP3208_SPI, CONFIG_ADC_MCP3208_CS, &adc_unit[unit].channel[channel]);
 #endif
 			break;
@@ -183,7 +191,7 @@ driver_error_t *adc_read(uint8_t unit, uint8_t channel, int *raw, double *mvols)
 	}
 
 	// Convert raw value to millivolts
-	*mvols = ((double)(*raw) * (double)adc_unit[unit].channel[channel].vref) / (double)max_val;
+	*mvols = (double)adc_unit[unit].channel[channel].nvref +  ((double)(*raw) * (double)(adc_unit[unit].channel[channel].pvref - adc_unit[unit].channel[channel].nvref)) / (double)max_val;
 
 	return NULL;
 }

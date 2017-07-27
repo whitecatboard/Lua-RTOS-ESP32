@@ -109,11 +109,11 @@ driver_error_t *adc_internal_setup(int8_t unit, int8_t channel,  adc_channel_t *
 	}
 
 	// Computes the required attenuation
-	if (chan->vref <= 1100) {
+	if (chan->pvref <= 1100) {
 		atten = ADC_ATTEN_0db;
-	} else if (chan->vref <= 1500) {
+	} else if (chan->pvref <= 1500) {
 		atten = ADC_ATTEN_2_5db;
-	} else if (chan->vref <= 2200) {
+	} else if (chan->pvref <= 2200) {
 		atten = ADC_ATTEN_6db;
 	} else {
 		atten = ADC_ATTEN_11db;

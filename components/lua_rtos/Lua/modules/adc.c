@@ -27,7 +27,7 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_ADC
 
@@ -48,7 +48,7 @@
 extern LUA_REG_TYPE adc_error_map[];
 
 static int ladc_setup( lua_State* L ) {
-    int id, res, channel, vref;
+    int id, res, channel, pvref, nvref;
 	driver_error_t *error;
 
 	luaL_deprecated(L, "adc.setup", "adc.attach");
@@ -56,14 +56,15 @@ static int ladc_setup( lua_State* L ) {
     id = luaL_checkinteger( L, 1 );
     channel = luaL_checkinteger( L, 2 );
     res = luaL_checkinteger( L, 3 );
-    vref = luaL_optinteger( L, 4, 3300 );
+    pvref = luaL_optinteger( L, 4, CONFIG_ADC_INTERNAL_VREF_P );
+    nvref = luaL_optinteger( L, 5, CONFIG_ADC_INTERNAL_VREF_N );
 
     adc_userdata *adc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
 
     adc->adc = id;
     adc->chan = channel;
 
-    if ((error = adc_setup(id, channel, vref, res))) {
+    if ((error = adc_setup(id, channel, pvref, nvref, res))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -74,13 +75,14 @@ static int ladc_setup( lua_State* L ) {
 }
 
 static int ladc_attach( lua_State* L ) {
-    int id, res, channel, vref;
+    int id, res, channel, pvref, nvref;
 	driver_error_t *error;
 
     id = luaL_checkinteger( L, 1 );
     channel = luaL_checkinteger( L, 2 );
     res = luaL_checkinteger( L, 3 );
-    vref = luaL_optinteger( L, 4, 3300 );
+    pvref = luaL_optinteger( L, 4, 3300 );
+    nvref = luaL_optinteger( L, 5, 0 );
 
     adc_userdata *adc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
 
@@ -96,7 +98,7 @@ static int ladc_attach( lua_State* L ) {
     adc->adc = id;
     adc->chan = channel;
     
-    if ((error = adc_setup(id, channel, vref, res))) {
+    if ((error = adc_setup(id, channel, pvref, nvref, res))) {
     	return luaL_driver_error(L, error);
     }
 
