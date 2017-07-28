@@ -52,8 +52,6 @@
 #define evSPI_ETH_CONNECTED 	     ( 1 << 3 )
 #define evSPI_ETH_CANT_CONNECT       ( 1 << 4 )
 
-#define NETWORK_AVAILABLE() (status_get(STATUS_WIFI_CONNECTED) || status_get(STATUS_SPI_ETH_CONNECTED))
-
 typedef struct {
     ip4_addr_t ip;
     ip4_addr_t netmask;
