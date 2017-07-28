@@ -39,6 +39,8 @@
 #ifndef ILI9341_H
 #define	ILI9341_H
 
+#if LUA_RTOS_LUA_USE_GDISPLAY
+
 // Display constants
 #define DELAY 0x80
 
@@ -106,5 +108,7 @@ void ili9341_set_orientation(uint8_t m);
 
 void ili9341_tp_get(int *x, int *y, int *z, uint8_t raw);
 void ili9341_tp_set_cal(int calx, int caly);
+
+#endif
 
 #endif	/* ILI9341_H */

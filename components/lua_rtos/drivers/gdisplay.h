@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#if LUA_RTOS_LUA_USE_GDISPLAY
+
 #define DELAY 0x80
 
 typedef struct {
@@ -69,5 +71,7 @@ void gdisplay_ll_on();
 void gdisplay_ll_off();
 void gdisplay_ll_invert(uint8_t on);
 void gdisplay_ll_set_orientation(uint8_t m);
+
+#endif
 
 #endif /* DRIVERS_GDISPLAY_H_ */

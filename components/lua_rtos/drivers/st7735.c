@@ -41,6 +41,9 @@
  */
 
 #include "sdkconfig.h"
+
+#if LUA_RTOS_LUA_USE_GDISPLAY
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -506,3 +509,5 @@ void st7735_clear(uint32_t color) {
 }
 
 DRIVER_REGISTER(ST7735,st7735,NULL,NULL,NULL);
+
+#endif

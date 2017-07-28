@@ -29,6 +29,8 @@
 
 #include "sdkconfig.h"
 
+#if LUA_RTOS_LUA_USE_GDISPLAY
+
 #include "freertos/FreeRTOS.h"
 
 #include <string.h>
@@ -230,3 +232,5 @@ void pcd8544_invert(uint8_t on) {
 }
 
 DRIVER_REGISTER(PCD8544,pcd8544,NULL,NULL,NULL);
+
+#endif
