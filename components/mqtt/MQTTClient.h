@@ -765,6 +765,15 @@ DLLExport int MQTTClient_unsubscribe(MQTTClient handle, const char* topic);
 DLLExport int MQTTClient_unsubscribeMany(MQTTClient handle, int count, char* const* topic);
 
 /** 
+  * This function returns if a connection is established
+  * @param handle A valid client handle from a successful call to
+  * MQTTClient_create().
+  * @return ::MQTTCLIENT_SUCCESS if the client is connected.
+  * An error code is returned if there is no connection.
+  */
+DLLExport int MQTTClient_connected(MQTTClient handle);
+
+/** 
   * This function attempts to publish a message to a given topic (see also
   * MQTTClient_publishMessage()). An ::MQTTClient_deliveryToken is issued when 
   * this function returns successfully. If the client application needs to 

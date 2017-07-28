@@ -736,14 +736,14 @@ void MQTTProtocol_freeMessageList(List* msgList)
 * @param dest_size the size of the memory pointed to by dest: copy no more than this -1 (allow for null).  Must be >= 1
 * @return the destination string pointer
 */
-char* MQTTStrncpy(char *dest, const char *src, size_t dest_size)
+char* MQTTStrncpyInt(char *dest, const char *src, size_t dest_size, bool warn_truncate)
 {
   size_t count = dest_size;
   char *temp = dest;
 
   FUNC_ENTRY; 
-  if (dest_size < strlen(src))
-    Log(TRACE_MIN, -1, "the src string is truncated");
+  if (dest_size < strlen(src) && 0 != warn_truncate)
+    Log(TRACE_MIN, -1, "the src string is truncated from %i to %i - src string was: %s", strlen(src), dest_size, src);
 
   /* We must copy only the first (dest_size - 1) bytes */
   while (count > 1 && (*temp++ = *src++))
@@ -755,6 +755,10 @@ char* MQTTStrncpy(char *dest, const char *src, size_t dest_size)
   return dest;
 }
 
+char* MQTTStrncpy(char *dest, const char *src, size_t dest_size)
+{
+	return MQTTStrncpyInt(dest, src, dest_size, 1);
+}
 
 /**
 * Duplicate a string, safely, allocating space on the heap

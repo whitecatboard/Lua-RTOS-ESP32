@@ -42,12 +42,14 @@
 
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <mqtt/MQTTClient.h>
 #include <mqtt/MQTTClientPersistence.h>
 
 #include <sys/mutex.h>
 #include <sys/delay.h>
+#include <sys/status.h>
 
 void MQTTClient_init();
 
@@ -60,6 +62,7 @@ extern LUA_REG_TYPE mqtt_error_map[];
 #define LUA_MQTT_ERR_CANT_SUBSCRIBE     (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  3)
 #define LUA_MQTT_ERR_CANT_PUBLISH       (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  4)
 #define LUA_MQTT_ERR_CANT_DISCONNECT    (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  5)
+#define LUA_MQTT_ERR_LOST_CONNECTION    (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  6)
 
 DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotCreateClient, "can't create client", LUA_MQTT_ERR_CANT_CREATE_CLIENT);
 DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotSetCallbacks, "can't set callbacks", LUA_MQTT_ERR_CANT_SET_CALLBACKS);
@@ -67,8 +70,11 @@ DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotConnect, "can't connect", LUA_MQTT_ERR_C
 DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotSubscribeToTopic, "can't subscribe to topic", LUA_MQTT_ERR_CANT_SUBSCRIBE);
 DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotPublishToTopic, "can't publish to topic", LUA_MQTT_ERR_CANT_PUBLISH);
 DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotDisconnect, "can't disconnect", LUA_MQTT_ERR_CANT_DISCONNECT);
+DRIVER_REGISTER_ERROR(MQTT, mqtt, LostConnection, "lost connection", LUA_MQTT_ERR_LOST_CONNECTION);
 
 static int client_inited = 0;
+//needs to be persistent for connectionLost MQTTClient_connect to work
+static MQTTClient_SSLOptions ssl_opts = MQTTClient_SSLOptions_initializer;
 
 typedef struct {
     char *topic;
@@ -119,32 +125,66 @@ static int add_subs_callback(mqtt_userdata *mqtt, const char *topic, int call) {
 
 static int messageArrived(void *context, char * topicName, int topicLen, MQTTClient_message* m) {
     mqtt_userdata *mqtt = (mqtt_userdata *)context;
-    mqtt_subs_callback *callback;
-    int call = 0;
-    
-    mtx_lock(&mqtt->callback_mtx);
+    if (mqtt) {
 
-    callback = mqtt->callbacks;
-    while (callback) {
-        if (strcmp(callback->topic, topicName) == 0) {
-            call = callback->callback;
-            if (call != LUA_NOREF) {
-                lua_rawgeti(mqtt->L, LUA_REGISTRYINDEX, call);
-                lua_pushinteger(mqtt->L, m->payloadlen);
-                lua_pushlstring(mqtt->L, m->payload, m->payloadlen);
-                lua_call(mqtt->L, 2, 0);
-            }
-        }
-        
-        callback = callback->next;
-    }
+		  mqtt_subs_callback *callback;
+		  int call = 0;
+		  
+		  mtx_lock(&mqtt->callback_mtx);
 
-    mtx_unlock(&mqtt->callback_mtx);
-    
-    MQTTClient_freeMessage(&m);
-    MQTTClient_free(topicName);
-    
+		  callback = mqtt->callbacks;
+		  while (callback) {
+		      if (strcmp(callback->topic, topicName) == 0) {
+		          call = callback->callback;
+		          if (call != LUA_NOREF) {
+		              lua_rawgeti(mqtt->L, LUA_REGISTRYINDEX, call);
+		              lua_pushinteger(mqtt->L, m->payloadlen);
+		              lua_pushlstring(mqtt->L, m->payload, m->payloadlen);
+		              lua_call(mqtt->L, 2, 0);
+		          }
+		      }
+		      
+		      callback = callback->next;
+		  }
+
+		  mtx_unlock(&mqtt->callback_mtx);
+		  
+		  MQTTClient_freeMessage(&m);
+		  MQTTClient_free(topicName);
+
+		}    
     return 1;
+}
+
+static void connectionLost(void* context, char* cause) {
+    mqtt_userdata *mqtt = (mqtt_userdata *)context;
+    if (mqtt) {
+	    mtx_lock(&mqtt->callback_mtx); //protect from being deleted by our own module
+
+			int rc = -1;
+			if (NETWORK_AVAILABLE()) {
+		    
+				for(int retries = 8; rc < 0 && retries; retries--) {
+					rc = MQTTClient_connect(mqtt->client, &mqtt->conn_opts);
+			    //printf( "mqtt: connection reconnect: %i\n", rc);
+					if (rc < 0) {
+						sleep(1); //wait before retrying (this does only sleep the THREAD, NOT the cpu)
+					}
+				}
+				
+			}
+			else
+		    printf( "mqtt: connection lost - no network available\n");
+
+			if (rc < 0) {
+		    printf( "mqtt: connection lost\n");
+			}
+			else {
+		    printf( "mqtt: reconnected\n");
+			}
+
+	    mtx_unlock(&mqtt->callback_mtx);
+    }
 }
 
 // Lua: result = setup( id, clock )
@@ -182,17 +222,30 @@ static int lmqtt_client( lua_State* L ){
     
     rc = MQTTClient_create(&mqtt->client, url, clientId, MQTTCLIENT_PERSISTENCE_NONE, NULL);
     if (rc < 0){
-    	return luaL_exception(L, LUA_MQTT_ERR_CANT_CREATE_CLIENT);
+      return luaL_exception(L, LUA_MQTT_ERR_CANT_CREATE_CLIENT);
     }
 
-    rc = MQTTClient_setCallbacks(mqtt->client, mqtt, NULL, messageArrived, NULL);
+    rc = MQTTClient_setCallbacks(mqtt->client, mqtt, connectionLost, messageArrived, NULL);
     if (rc < 0){
-    	return luaL_exception(L, LUA_MQTT_ERR_CANT_SET_CALLBACKS);
+      return luaL_exception(L, LUA_MQTT_ERR_CANT_SET_CALLBACKS);
     }
 
    luaL_getmetatable(L, "mqtt.cli");
    lua_setmetatable(L, -2);
 
+    return 1;
+}
+
+static int lmqtt_connected( lua_State* L ) {
+    int rc;
+    mqtt_userdata *mqtt = NULL;
+    
+    mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt.cli");
+    luaL_argcheck(L, mqtt, 1, "mqtt expected");
+    
+    rc = MQTTClient_connected(mqtt->client);
+
+		lua_pushinteger( L, rc == MQTTCLIENT_SUCCESS ? 1 : 0 );
     return 1;
 }
 
@@ -210,7 +263,6 @@ static int lmqtt_connect( lua_State* L ) {
     password = luaL_checkstring( L, 3  );
 
     MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
-    MQTTClient_SSLOptions ssl_opts = MQTTClient_SSLOptions_initializer;
     
     conn_opts.connectTimeout = 4;
     conn_opts.keepAliveInterval = 60;
@@ -226,12 +278,12 @@ static int lmqtt_connect( lua_State* L ) {
 retry:
     rc = MQTTClient_connect(mqtt->client, &mqtt->conn_opts);
     if (rc < 0){
-    	if (retries < 2) {
-    		retries++;
-    		goto retry;
-    	}
+      if (retries < 2) {
+        retries++;
+        goto retry;
+      }
 
-    	return luaL_exception(L, LUA_MQTT_ERR_CANT_CONNECT);
+      return luaL_exception(L, LUA_MQTT_ERR_CANT_CONNECT);
     }    
     
     return 0;
@@ -265,7 +317,7 @@ static int lmqtt_subscribe( lua_State* L ) {
     if (rc == 0) {
         return 0;
     } else {
-    	return luaL_exception(L, LUA_MQTT_ERR_CANT_SUBSCRIBE);
+      return luaL_exception(L, LUA_MQTT_ERR_CANT_SUBSCRIBE);
     }
 }
 
@@ -291,7 +343,7 @@ static int lmqtt_publish( lua_State* L ) {
     if (rc == 0) {
         return 0;
     } else {
-    	return luaL_exception(L, LUA_MQTT_ERR_CANT_PUBLISH);
+      return luaL_exception(L, LUA_MQTT_ERR_CANT_PUBLISH);
     }
 }
 
@@ -307,7 +359,7 @@ static int lmqtt_disconnect( lua_State* L ) {
     if (rc == 0) {
         return 0;
     } else {
-    	return luaL_exception(L, LUA_MQTT_ERR_CANT_DISCONNECT);
+      return luaL_exception(L, LUA_MQTT_ERR_CANT_DISCONNECT);
     }
 }
 
@@ -344,7 +396,7 @@ static int lmqtt_client_gc (lua_State *L) {
 }
 
 static const LUA_REG_TYPE lmqtt_map[] = {
-  { LSTRKEY( "client"      ),	 LFUNCVAL( lmqtt_client     ) },
+  { LSTRKEY( "client"      ),   LFUNCVAL( lmqtt_client     ) },
 
   { LSTRKEY("QOS0"), LINTVAL(0) },
   { LSTRKEY("QOS1"), LINTVAL(1) },
@@ -356,11 +408,12 @@ static const LUA_REG_TYPE lmqtt_map[] = {
 };
 
 static const LUA_REG_TYPE lmqtt_client_map[] = {
-  { LSTRKEY( "connect"     ),	 LFUNCVAL( lmqtt_connect    ) },
-  { LSTRKEY( "disconnect"  ),	 LFUNCVAL( lmqtt_disconnect ) },
-  { LSTRKEY( "subscribe"   ),	 LFUNCVAL( lmqtt_subscribe  ) },
-  { LSTRKEY( "publish"     ),	 LFUNCVAL( lmqtt_publish    ) },
-  { LSTRKEY( "__metatable" ),	 LROVAL  ( lmqtt_client_map ) },
+  { LSTRKEY( "connect"     ),   LFUNCVAL( lmqtt_connect    ) },
+  { LSTRKEY( "connected"   ),   LFUNCVAL( lmqtt_connected  ) },
+  { LSTRKEY( "disconnect"  ),   LFUNCVAL( lmqtt_disconnect ) },
+  { LSTRKEY( "subscribe"   ),   LFUNCVAL( lmqtt_subscribe  ) },
+  { LSTRKEY( "publish"     ),   LFUNCVAL( lmqtt_publish    ) },
+  { LSTRKEY( "__metatable" ),   LROVAL  ( lmqtt_client_map ) },
   { LSTRKEY( "__index"     ),    LROVAL  ( lmqtt_client_map ) },
   { LSTRKEY( "__gc"        ),    LROVAL  ( lmqtt_client_gc  ) },
   { LNILKEY, LNILVAL }

@@ -38,6 +38,8 @@
 #include <openssl/ssl.h>
 #include <string.h>
 
+#include <sys/status.h>
+
 extern Sockets s;
 
 void SSLSocket_addPendingRead(int sock);
@@ -64,7 +66,7 @@ int SSLSocket_error(char* aString, SSL* ssl, int sock, int rc)
         error = SSL_get_error(ssl, rc);
 
     if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
-			Log(TRACE_MIN, -1, "SSLSocket error WANT_READ/WANT_WRITE");
+			Log(TRACE_MIN, -1, "SSLSocket error WANT_READ/WANT_WRITE in %s for socket %d", aString, sock);
     else
     {
         if (strcmp(aString, "shutdown") != 0)
@@ -183,25 +185,25 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 	if (net->ctx == NULL)
 		if ((net->ctx = SSL_CTX_new(TLS_client_method())) == NULL)	/* TLS_client_method for compatibility with SSLv2, SSLv3 and TLSv1 */
 		{
-			SSLSocket_error("SSL_CTX_new", NULL, net->socket, rc);
+			rc = SSLSocket_error("SSL_CTX_new", NULL, net->socket, rc);
 			goto exit;
 		}
 	
 	if (opts->keyStore)
 	{
-		SSLSocket_error("keyStore not supported!", NULL, net->socket, rc);
+		rc = SSLSocket_error("keyStore not supported!", NULL, net->socket, rc);
 		goto free_ctx;
 	}
 
 	if (opts->trustStore)
 	{
-		SSLSocket_error("trustStore not supported!", NULL, net->socket, rc);
+		rc = SSLSocket_error("trustStore not supported!", NULL, net->socket, rc);
 		goto free_ctx;
 	}
 
 	if (opts->enabledCipherSuites != NULL)
 	{
-		SSLSocket_error("enabledCipherSuites not supported!", NULL, net->socket, rc);
+		rc = SSLSocket_error("enabledCipherSuites not supported!", NULL, net->socket, rc);
 		goto free_ctx;
 	}       
 
@@ -292,7 +294,14 @@ int SSLSocket_getch(SSL* ssl, int socket, char* c)
 		if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
 		{
 			rc = TCPSOCKET_INTERRUPTED;
-			SocketBuffer_interrupted(socket, 0);
+			if(!NETWORK_AVAILABLE()) {
+				//we should discard 'half-received' data when the socket (wifi) is gone...
+				//so we basically call connectionLost here...
+				rc = TCPSOCKET_INTERRUPTED_FINAL;
+			}
+			else {
+				SocketBuffer_interrupted(socket, 0);
+			}
 		}
 	}
 	else if (rc == 0)

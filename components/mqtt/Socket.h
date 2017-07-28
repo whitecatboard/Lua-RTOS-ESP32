@@ -65,6 +65,7 @@
 #endif
 /** must be the same as SOCKETBUFFER_INTERRUPTED */
 #define TCPSOCKET_INTERRUPTED -22
+#define TCPSOCKET_INTERRUPTED_FINAL -23
 #define SSL_FATAL -3
 
 #if !defined(INET6_ADDRSTRLEN)
