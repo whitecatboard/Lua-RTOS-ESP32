@@ -37,6 +37,9 @@
  */
 
 #include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_GDISPLAY
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -422,3 +425,5 @@ void ili9341_tp_get(int *x, int *y, int *z, uint8_t raw) {
 }
 
 DRIVER_REGISTER(ILI9341,ili9341,NULL,NULL,NULL);
+
+#endif

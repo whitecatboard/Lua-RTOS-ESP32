@@ -1,5 +1,7 @@
 #include "sdkconfig.h"
 
+#if CONFIG_LUA_RTOS_LUA_USE_GDISPLAY
+
 #include "esp_attr.h"
 
 #include "freertos/FreeRTOS.h"
@@ -356,3 +358,5 @@ void gdisplay_ll_set_orientation(uint8_t orientation) {
 		buff_pixels = caps.width * caps.height;
 	}
 }
+
+#endif

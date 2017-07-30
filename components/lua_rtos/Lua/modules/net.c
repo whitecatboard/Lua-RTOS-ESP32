@@ -236,6 +236,11 @@ static int lnet_stat(lua_State* L) {
 	return table;
 }
 
+static int lnet_connected(lua_State* L) {
+  lua_pushboolean( L, NETWORK_AVAILABLE() );
+  return 1;
+}
+
 static const LUA_REG_TYPE service_map[] = {
 	{ LSTRKEY( "sntp" ), LROVAL ( sntp_map ) },
 #if LUA_USE_HTTP
@@ -246,6 +251,7 @@ static const LUA_REG_TYPE service_map[] = {
 
 static const LUA_REG_TYPE net_map[] = {
 	{ LSTRKEY( "stat" ), LFUNCVAL ( lnet_stat ) },
+	{ LSTRKEY( "connected" ), LFUNCVAL ( lnet_connected ) },
 	{ LSTRKEY( "lookup" ), LFUNCVAL ( lnet_lookup ) },
 	{ LSTRKEY( "packip" ), LFUNCVAL ( lnet_packip ) },
 	{ LSTRKEY( "unpackip" ), LFUNCVAL ( lnet_unpackip ) },

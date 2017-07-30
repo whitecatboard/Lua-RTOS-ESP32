@@ -38,6 +38,8 @@
 
 #include <stdint.h>
 
+#define NETWORK_AVAILABLE() (status_get(STATUS_WIFI_CONNECTED) || status_get(STATUS_SPI_ETH_CONNECTED))
+
 #define STATUS_SYSCALLS_INITED	       0x0000
 #define STATUS_LUA_RUNNING			   0x0001
 #define STATUS_LUA_INTERPRETER  	   0x0002

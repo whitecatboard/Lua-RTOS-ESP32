@@ -61,7 +61,7 @@ char* MQTTProtocol_addressPort(const char* uri, int* port)
 		size_t addr_len = colon_pos - uri;
 		buf = malloc(addr_len + 1);
 		*port = atoi(colon_pos + 1);
-		MQTTStrncpy(buf, uri, addr_len+1);
+		MQTTStrncpyInt(buf, uri, addr_len+1, 0);
 	}
 	else
 		*port = DEFAULT_PORT;
@@ -97,8 +97,9 @@ int MQTTProtocol_connect(const char* ip_address, Clients* aClient, int MQTTVersi
 
 	addr = MQTTProtocol_addressPort(ip_address, &port);
 	rc = Socket_new(addr, port, &(aClient->net.socket));
-	if (rc == EINPROGRESS || rc == EWOULDBLOCK)
+	if (rc == EINPROGRESS || rc == EWOULDBLOCK) {
 		aClient->connect_state = 1; /* TCP connect called - wait for connect completion */
+	}
 	else if (rc == 0)
 	{	/* TCP connect completed. If SSL, send SSL connect */
 #if defined(OPENSSL)

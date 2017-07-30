@@ -30,7 +30,9 @@
 #ifndef PCD8544_H_
 #define PCD8544_H_
 
-#include "luartos.h"
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_GDISPLAY
 
 #include <stdint.h>
 
@@ -70,5 +72,7 @@ void pcd8544_set_orientation(uint8_t m);
 void pcd8544_on();
 void pcd8544_off();
 void pcd8544_invert(uint8_t on);
+
+#endif
 
 #endif /* PCD8544_H_ */

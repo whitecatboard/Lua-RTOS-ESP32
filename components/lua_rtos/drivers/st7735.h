@@ -43,6 +43,10 @@
 #ifndef ST7735S_H
 #define	ST7735S_H
 
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_GDISPLAY
+
 #define ST7735_BUFFER 1920
 
 // Display constants
@@ -177,5 +181,7 @@ void st7735_invert(uint8_t on);
 void st7735_addr_window(uint8_t write, int x0, int y0, int x1, int y1);
 void st7735_color(uint16_t *color, uint32_t len);
 void st7735_clear(uint32_t color);
+
+#endif
 
 #endif	/* ST7735S_H */

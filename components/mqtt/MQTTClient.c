@@ -107,6 +107,7 @@ static mutex_type connect_mutex = NULL;
 extern mutex_type stack_mutex;
 extern mutex_type heap_mutex;
 extern mutex_type log_mutex;
+static mutex_type connectionlost_mutex = NULL;
 BOOL APIENTRY DllMain(HANDLE hModule,
 					  DWORD  ul_reason_for_call,
 					  LPVOID lpReserved)
@@ -125,6 +126,7 @@ BOOL APIENTRY DllMain(HANDLE hModule,
 				heap_mutex = CreateMutex(NULL, 0, NULL);
 				log_mutex = CreateMutex(NULL, 0, NULL);
 				socket_mutex = CreateMutex(NULL, 0, NULL);
+				connectionlost_mutex = CreateMutex(NULL, 0, NULL);
 			}
 		case DLL_THREAD_ATTACH:
 			Log(TRACE_MAX, -1, "DLL thread attach");
@@ -151,6 +153,9 @@ static mutex_type unsubscribe_mutex = &unsubscribe_mutex_store;
 static pthread_mutex_t connect_mutex_store = PTHREAD_MUTEX_INITIALIZER;
 static mutex_type connect_mutex = &connect_mutex_store;
 
+static pthread_mutex_t connectionlost_mutex_store = PTHREAD_MUTEX_INITIALIZER;
+static mutex_type connectionlost_mutex = &connectionlost_mutex_store;
+
 void MQTTClient_init()
 {
 	pthread_mutexattr_t attr;
@@ -168,6 +173,8 @@ void MQTTClient_init()
 		printf("MQTTClient: error %d initializing unsubscribe_mutex\n", rc);
 	if ((rc = pthread_mutex_init(connect_mutex, &attr)) != 0)
 		printf("MQTTClient: error %d initializing connect_mutex\n", rc);
+	if ((rc = pthread_mutex_init(connectionlost_mutex, &attr)) != 0)
+		printf("MQTTClient: error %d initializing connectionlost_mutex\n", rc);
 }
 
 #define WINAPI
@@ -185,7 +192,7 @@ MQTTPacket* MQTTClient_cycle(int* sock, unsigned long timeout, int* rc);
 int MQTTClient_cleanSession(Clients* client);
 void MQTTClient_stop();
 int MQTTClient_disconnect_internal(MQTTClient handle, int timeout);
-int MQTTClient_disconnect1(MQTTClient handle, int timeout, int internal, int stop);
+int MQTTClient_disconnect1(MQTTClient handle, int timeout, int call_connection_lost, int stop);
 void MQTTClient_writeComplete(int socket);
 
 typedef struct
@@ -510,7 +517,10 @@ thread_return_type WINAPI connectionLost_call(void* context)
 {
 	MQTTClients* m = (MQTTClients*)context;
 
+	Thread_lock_mutex(connectionlost_mutex);
 	(*(m->cl))(m->context, NULL);
+	Thread_unlock_mutex(connectionlost_mutex);
+	
 	return 0;
 }
 
@@ -553,8 +563,11 @@ thread_return_type WINAPI MQTTClient_run(void* n)
 		}
 		if (rc == SOCKET_ERROR)
 		{
-			if (m->c->connected)
+			if (m->c->connected) {
+				Thread_lock_mutex(connectionlost_mutex);
 				MQTTClient_disconnect_internal(m, 0);
+				Thread_unlock_mutex(connectionlost_mutex);
+			}
 			else 
 			{
 				if (m->c->connect_state == 2 && !Thread_check_sem(m->connect_sem))
@@ -627,7 +640,7 @@ thread_return_type WINAPI MQTTClient_run(void* n)
 			}
 #if defined(OPENSSL)
 			else if (m->c->connect_state == 2 && !Thread_check_sem(m->connect_sem))
-			{			
+			{
 				rc = SSLSocket_connect(m->c->net.ssl, m->c->net.socket);
 				if (rc == 1 || rc == SSL_FATAL)
 				{
@@ -864,7 +877,7 @@ int MQTTClient_connectURIVersion(MQTTClient handle, MQTTClient_connectOptions* o
 					if ((rc = SSL_set_session(m->c->net.ssl, m->c->session)) != 1)
 						Log(TRACE_MIN, -1, "Failed to set SSL session with stored data, non critical");
 				rc = SSLSocket_connect(m->c->net.ssl, m->c->net.socket);
-				if (rc == TCPSOCKET_INTERRUPTED)
+				if (rc == TCPSOCKET_INTERRUPTED || rc == -1)
 					m->c->connect_state = 2;  /* the connect is still in progress */
 				else if (rc == SSL_FATAL)
 				{
@@ -905,7 +918,7 @@ int MQTTClient_connectURIVersion(MQTTClient handle, MQTTClient_connectOptions* o
 	}
 	
 #if defined(OPENSSL)
-	if (m->c->connect_state == 2) /* SSL connect sent - wait for completion */
+	if (m->c->connect_state == 2 && MQTTCLIENT_SUCCESS == rc) /* SSL connect sent - wait for completion */
 	{
 		Thread_unlock_mutex(mqttclient_mutex);
 		MQTTClient_waitfor(handle, CONNECT, &rc, millisecsTimeout - MQTTClient_elapsed(start));
@@ -1448,6 +1461,23 @@ int MQTTClient_unsubscribe(MQTTClient handle, const char* topic)
 	return rc;
 }
 
+int MQTTClient_connected(MQTTClient handle)
+{
+	int rc = MQTTCLIENT_SUCCESS;
+	MQTTClients* m = handle;
+
+	FUNC_ENTRY;
+	Thread_lock_mutex(mqttclient_mutex);
+
+	if (m == NULL || m->c == NULL)
+		rc = MQTTCLIENT_FAILURE;
+	else if (m->c->connected == 0)
+		rc = MQTTCLIENT_DISCONNECTED;
+		
+	Thread_unlock_mutex(mqttclient_mutex);
+	FUNC_EXIT_RC(rc);
+	return rc;
+}
 
 int MQTTClient_publish(MQTTClient handle, const char* topicName, int payloadlen, void* payload,
 							 int qos, int retained, MQTTClient_deliveryToken* deliveryToken)
@@ -1625,6 +1655,12 @@ MQTTPacket* MQTTClient_cycle(int* sock, unsigned long timeout, int* rc)
 				pack = MQTTPacket_Factory(&m->c->net, rc);
 				if (*rc == TCPSOCKET_INTERRUPTED)
 					*rc = 0;
+				if (*rc == TCPSOCKET_INTERRUPTED_FINAL) {
+					MQTTClient_disconnect_internal(m, 0);
+					Thread_unlock_mutex(mqttclient_mutex);
+					*rc = SOCKET_ERROR;
+					return NULL;
+				}
 			}
 		}
 		if (pack)
