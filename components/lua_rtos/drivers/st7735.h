@@ -43,7 +43,9 @@
 #ifndef ST7735S_H
 #define	ST7735S_H
 
-#if LUA_RTOS_LUA_USE_GDISPLAY
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_GDISPLAY
 
 #define ST7735_BUFFER 1920
 

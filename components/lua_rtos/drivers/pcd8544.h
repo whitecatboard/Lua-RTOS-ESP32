@@ -30,9 +30,9 @@
 #ifndef PCD8544_H_
 #define PCD8544_H_
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
-#if LUA_RTOS_LUA_USE_GDISPLAY
+#if CONFIG_LUA_RTOS_LUA_USE_GDISPLAY
 
 #include <stdint.h>
 

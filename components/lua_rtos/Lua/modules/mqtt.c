@@ -245,8 +245,9 @@ static int lmqtt_connected( lua_State* L ) {
     
     rc = MQTTClient_connected(mqtt->client);
 
-		lua_pushinteger( L, rc == MQTTCLIENT_SUCCESS ? 1 : 0 );
-    return 1;
+    lua_pushboolean( L, rc == MQTTCLIENT_SUCCESS ? 1 : 0 );
+
+	return 1;
 }
 
 static int lmqtt_connect( lua_State* L ) {
