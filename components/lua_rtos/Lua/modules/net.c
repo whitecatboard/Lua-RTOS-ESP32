@@ -237,7 +237,7 @@ static int lnet_stat(lua_State* L) {
 }
 
 static int lnet_connected(lua_State* L) {
-  lua_pushinteger( L, NETWORK_AVAILABLE() );
+  lua_pushboolean( L, NETWORK_AVAILABLE() );
   return 1;
 }
 

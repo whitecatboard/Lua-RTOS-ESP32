@@ -29,7 +29,7 @@
 
 #include "sdkconfig.h"
 
-#if LUA_RTOS_LUA_USE_GDISPLAY
+#if CONFIG_LUA_RTOS_LUA_USE_GDISPLAY
 
 #include "freertos/FreeRTOS.h"
 

@@ -39,7 +39,9 @@
 #ifndef ILI9341_H
 #define	ILI9341_H
 
-#if LUA_RTOS_LUA_USE_GDISPLAY
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_GDISPLAY
 
 // Display constants
 #define DELAY 0x80

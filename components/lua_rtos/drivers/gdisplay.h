@@ -1,9 +1,10 @@
 #ifndef DRIVERS_GDISPLAY_H_
 #define DRIVERS_GDISPLAY_H_
 
+#include "sdkconfig.h"
 #include <stdint.h>
 
-#if LUA_RTOS_LUA_USE_GDISPLAY
+#if CONFIG_LUA_RTOS_LUA_USE_GDISPLAY
 
 #define DELAY 0x80
 
