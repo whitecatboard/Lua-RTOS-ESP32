@@ -65,10 +65,15 @@ char *strcasestr(const char *haystack, const char *needle);
 driver_error_t *wifi_stat(ifconfig_t *info);
 driver_error_t *wifi_check_error(esp_err_t error);
 
+extern int captivedns_start(lua_State* L);
+extern void captivedns_stop();
+extern int captivedns_running();
+
 static lua_State *LL=NULL;
 static u8_t wifi_mode = WIFI_MODE_STA;
 static u8_t http_refcount = 0;
 static u8_t volatile http_shutdown = 0;
+static u8_t http_captiverun = 0;
 static char ip4addr[IP4ADDR_STRLEN_MAX];
 static int server = 0;
 
@@ -496,6 +501,50 @@ int process(FILE *f) {
 	return 0;
 }
 
+static void http_net_callback(system_event_t *event){
+	syslog(LOG_DEBUG, "event: %d\r\n", event->event_id);
+
+	switch (event->event_id) {
+#if CONFIG_WIFI_ENABLED
+		case SYSTEM_EVENT_STA_START:                /**< ESP32 station start */
+			if (wifi_mode != WIFI_MODE_STA) {
+				wifi_mode = WIFI_MODE_STA;
+
+				syslog(LOG_DEBUG, "http: switched to non-captive mode\n");
+				http_captiverun = captivedns_running();
+				if (http_captiverun) {
+					syslog(LOG_DEBUG, "http: auto-stopping captive dns service\n");
+					captivedns_stop();
+				}
+			}
+			break;
+
+		case SYSTEM_EVENT_AP_START:                 /**< ESP32 soft-AP start */
+			if (wifi_mode != WIFI_MODE_AP) {
+				driver_error_t *error;
+				ifconfig_t info;
+
+				wifi_mode = WIFI_MODE_AP;
+				if ((error = wifi_stat(&info))) {
+					strcpy(ip4addr, "0.0.0.0");
+				}
+				else {
+					strcpy(ip4addr, inet_ntoa(info.ip));
+				}
+				syslog(LOG_DEBUG, "http: switched to captive mode on %s\n", ip4addr);
+				if (http_captiverun) {
+					syslog(LOG_DEBUG, "http: auto-restarting captive dns service\n");
+					captivedns_start(LL);
+				}
+			}
+			break;
+#endif
+
+		default :
+			break;
+	}
+}
+
 static void *http_thread(void *arg) {
 	struct sockaddr_in sin;
 
@@ -503,7 +552,8 @@ static void *http_thread(void *arg) {
 		server = socket(AF_INET, SOCK_STREAM, 0);
 		LWIP_ASSERT("httpd_init: socket failed", server >= 0);
 		if(0 > server) {
-			pthread_exit(NULL); //FIXME add error handling here
+			syslog(LOG_ERR, "couldn't create server socket\n");
+			pthread_exit(NULL);
 		}
 
 		u8_t one = 1;
@@ -516,13 +566,15 @@ static void *http_thread(void *arg) {
 		int rc = bind(server, (struct sockaddr *) &sin, sizeof (sin));
 		LWIP_ASSERT("httpd_init: bind failed", rc == 0);
 		if(0 != rc) {
-			pthread_exit(NULL); //FIXME add error handling here
+			syslog(LOG_ERR, "couldn't bind to port %d\n", CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
+			pthread_exit(NULL);
 		}
 
 		listen(server, 5);
 		LWIP_ASSERT("httpd_init: listen failed", server >= 0);
 		if(0 > server) {
-			pthread_exit(NULL); //FIXME add error handling here
+			syslog(LOG_ERR, "couldn't listen on port %d\n", CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
+			pthread_exit(NULL);
 		}
 
 		// Set the timeout for accept
@@ -563,6 +615,11 @@ static void *http_thread(void *arg) {
 
 	syslog(LOG_INFO, "http: server shutting down on port %d\n", CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
 
+	driver_error_t *error;
+	if ((error = net_event_unregister_callback(http_net_callback))) {
+		syslog(LOG_WARNING, "couldn't unregister net callback\n");
+	}
+
 	/* it's not ideal to keep the server_socket open as it is blocked
 	   but now at least the httpsrv can be restarted from lua scripts.
 	   if we'd properly close the socket we would need to bind() again
@@ -593,15 +650,30 @@ int http_start(lua_State* L) {
 		driver_error_t *error;
 
 		LL=L;
+		strcpy(ip4addr, "0.0.0.0");
 
+#if CONFIG_WIFI_ENABLED
 		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&wifi_mode)))) {
 			return luaL_error(L, "couldn't get wifi mode");
 		}
-	
-		if ((error = wifi_stat(&info))) {
-			return luaL_error(L, "couldn't get wifi IP");
+		if (wifi_mode != WIFI_MODE_STA) {
+			if ((error = wifi_stat(&info))) {
+				return luaL_error(L, "couldn't get wifi IP");
+			}
+			strcpy(ip4addr, inet_ntoa(info.ip));
+		}
+#else
+#if CONFIG_SPI_ETHERNET
+		if ((error = spi_eth_stat(&info))) {
+			return luaL_error(L, "couldn't get spi eth IP");
 		}
 		strcpy(ip4addr, inet_ntoa(info.ip));
+#endif
+#endif
+
+		if ((error = net_event_register_callback(http_net_callback))) {
+			syslog(LOG_WARNING, "couldn't register net callback, please restart http service from lua after changing connectivity\n");
+		}
 
 		// Init thread attributes
 		pthread_attr_init(&attr);

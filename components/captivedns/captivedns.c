@@ -200,4 +200,8 @@ void captivedns_stop() {
 	captivedns_dec_pcb_refcount();
 }
 
+int captivedns_running() {
+	return (captivedns_pcb_refcount>0 ? 1 : 0);
+}
+
 #endif
