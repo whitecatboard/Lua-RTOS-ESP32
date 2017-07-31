@@ -139,6 +139,8 @@ void _sys_init() {
     _pthread_init();
 
     status_set(STATUS_SYSCALLS_INITED);
+    status_set(STATUS_LUA_SHELL);
+    status_set(STATUS_LUA_HISTORY);
 
     _signal_init();
 

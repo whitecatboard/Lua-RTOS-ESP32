@@ -72,23 +72,6 @@ CFLAGS += -DPATH_MAX=64
 CFLAGS += -DMAXNAMLEN=64
 
 #
-# Display driver configuration
-#
-CFLAGS += -DDISPLAY_SPI=3
-CFLAGS += -DDISPLAY_CS=5
-CFLAGS += -DDISPLAY_RE=25
-CFLAGS += -DDISPLAY_RS=26
-
-#
-# I2C driver configuration
-#
-CFLAGS += -DI2C1_PINS=0
-CFLAGS += -DI2C2_PINS=0
-CFLAGS += -DI2C3_PINS=0
-CFLAGS += -DI2C4_PINS=0
-CFLAGS += -DI2C5_PINS=0
-
-#
 # Lua configuration
 #
 CFLAGS += -DDEBUG_FREE_MEM=0           # Enable LUA free mem debug utility (only for debug purposes)
@@ -96,10 +79,6 @@ CFLAGS += -DLUA_USE_LUA_LOCK=0		   # Enable if Lua must use real lua_lock / lua_
 # CFLAGS += -DSTRCACHE_N=1
 # CFLAGS += -DSTRCACHE_M=1
 # CFLAGS += -DMINSTRTABSIZE=32
-CFLAGS += -DLUA_USE_SHELL=1
-CFLAGS += -DLUA_USE_EDITOR=1
-CFLAGS += -DLUA_USE_HISTORY=1
-
 
 # Define BUILD_TIME flag, with the EPOCH time when Lua RTOS is build.
 # This is used for set system time when RTC is not set.

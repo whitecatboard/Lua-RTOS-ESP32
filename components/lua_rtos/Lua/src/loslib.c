@@ -441,10 +441,8 @@ static const LUA_REG_TYPE syslib[] =
   { LSTRKEY( "luainterpreter" ), LFUNCVAL( os_lua_interpreter ) },
   { LSTRKEY( "resetreason" ), LFUNCVAL( os_reset_reason ) },
   { LSTRKEY( "bootcount" ),  LFUNCVAL( os_bootcount ) },
-  { LSTRKEY( "flashEUI" ),  LFUNCVAL( os_flash_unique_id ) },
-#if (LUA_USE_EDITOR == 1)
+  { LSTRKEY( "flashEUI" ),   LFUNCVAL( os_flash_unique_id ) },
   { LSTRKEY( "edit" ),       LFUNCVAL( os_edit ) },
-#endif
   { LSTRKEY( "LOG_INFO" ),   LINTVAL( LOG_INFO ) },
   { LSTRKEY( "LOG_EMERG" ),  LINTVAL( LOG_EMERG ) },
   { LSTRKEY( "LOG_ALERT" ),  LINTVAL( LOG_ALERT ) },

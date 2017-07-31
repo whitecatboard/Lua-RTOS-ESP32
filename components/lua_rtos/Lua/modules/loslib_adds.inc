@@ -61,18 +61,22 @@ static int os_stdout(lua_State *L) {
 }
 
 static int os_shell(lua_State *L) { 
-    luaL_checktype(L, 1, LUA_TBOOLEAN);
+	if (lua_gettop(L) == 1) {
+	    luaL_checktype(L, 1, LUA_TBOOLEAN);
 
-	if (lua_toboolean( L, 1 )) {
-		status_set(STATUS_LUA_SHELL);
+		if (lua_toboolean( L, 1 )) {
+			status_set(STATUS_LUA_SHELL);
+		} else {
+			status_clear(STATUS_LUA_SHELL);
+		}
+
+	    return 0;
 	} else {
-		status_clear(STATUS_LUA_SHELL);
+		lua_pushboolean(L, status_get(STATUS_LUA_SHELL));
+		return 1;
 	}
-    
-    return 0;
 }
 
-#if LUA_USE_EDITOR
 static int os_edit (lua_State *L) {
     const char *path = luaL_checkstring(L, 1);
 
@@ -88,7 +92,6 @@ static int os_edit (lua_State *L) {
     console_clear();
     return 0;    
 }
-#endif
 
 static int os_sleep(lua_State *L) {
 	unsigned int seconds = luaL_checkinteger(L, 1);
@@ -457,15 +460,20 @@ static int os_lua_interpreter(lua_State *L) {
 }
 
 static int os_history(lua_State *L) { 
-    luaL_checktype(L, 1, LUA_TBOOLEAN);
-    
-	if (lua_toboolean( L, 1 )) {
-		status_set(STATUS_LUA_HISTORY);
+	if (lua_gettop(L) == 1) {
+		luaL_checktype(L, 1, LUA_TBOOLEAN);
+
+		if (lua_toboolean( L, 1 )) {
+			status_set(STATUS_LUA_HISTORY);
+		} else {
+			status_clear(STATUS_LUA_HISTORY);
+		}
+
+		return 0;
 	} else {
-		status_clear(STATUS_LUA_HISTORY);
+		lua_pushboolean(L, status_get(STATUS_LUA_HISTORY));
+		return 1;
 	}
-    
-    return 0;
 }
 
 static int os_cp(lua_State *L) {

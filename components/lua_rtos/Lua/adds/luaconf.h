@@ -198,17 +198,8 @@
 #define LIOLIB_REG_ADDS {"receive", f_receive}, {"send", f_send},
 #define LIOLIB_OPEN_ADDS
 
-#if LUA_USE_SHELL
-    #define LOSLIB_REG_SHELL {"shell",     os_shell},
-#else
-    #define LOSLIB_REG_SHELL
-#endif
-
-#if LUA_USE_EDITOR
-    #define LOSLIB_REG_EDITOR {"edit",      os_edit},
-#else
-    #define LOSLIB_REG_EDITOR
-#endif
+#define LOSLIB_REG_SHELL {"shell",     os_shell},
+#define LOSLIB_REG_EDITOR {"edit",      os_edit},
 
 #if 0
 #define LOSLIB_REG_ADDS \

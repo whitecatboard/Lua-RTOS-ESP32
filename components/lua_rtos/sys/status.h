@@ -2,7 +2,7 @@
  * Lua RTOS, Lua RTOS status management
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -57,7 +57,7 @@
 #define STATUS_SPI_ETH_STARTED         0x000e
 #define STATUS_SPI_ETH_CONNECTED       0x000f
 
-extern uint32_t LuaOS_status[];
+extern uint32_t LuaRTOS_status[];
 
 void IRAM_ATTR status_set(uint16_t flag);
 void IRAM_ATTR status_clear(uint16_t flag);

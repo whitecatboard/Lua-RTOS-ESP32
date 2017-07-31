@@ -31,9 +31,7 @@
 // SUCH DAMAGE.
 // 
 
-#include "luartos.h"
-
-#if LUA_USE_EDITOR
+#include "sdkconfig.h"
 
 #include <signal.h>
 #include <stdlib.h>
@@ -2143,5 +2141,3 @@ setvbuf(stdout, NULL, 0, 8192);
   //sigprocmask(SIG_SETMASK, &orig_sigmask, NULL);
   return 0;
 }
-
-#endif

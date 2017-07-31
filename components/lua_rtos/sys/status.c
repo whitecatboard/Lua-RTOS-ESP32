@@ -2,7 +2,7 @@
  * Lua RTOS, LuaOS status management
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -29,20 +29,20 @@
 
 #include <sys/status.h>
 
-uint32_t LuaOS_status[] = {0};
+uint32_t LuaRTOS_status[] = {0};
 
 void IRAM_ATTR status_set(uint16_t flag) {
-	LuaOS_status[(flag >> 8)] |= (1 << (flag & 0x00ff));
+	LuaRTOS_status[(flag >> 8)] |= (1 << (flag & 0x00ff));
 }
 
 void IRAM_ATTR status_clear(uint16_t flag) {
-	LuaOS_status[(flag >> 8)] &= ~(1 << (flag & 0x00ff));
+	LuaRTOS_status[(flag >> 8)] &= ~(1 << (flag & 0x00ff));
 }
 
 int IRAM_ATTR status_get(uint16_t flag) {
 	int value;
 
-	value = (LuaOS_status[(flag >> 8)] & (1 << (flag & 0x00ff)));
+	value = (LuaRTOS_status[(flag >> 8)] & (1 << (flag & 0x00ff)));
 
 	return value;
 }

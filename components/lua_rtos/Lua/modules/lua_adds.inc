@@ -101,11 +101,9 @@ static int luaos_pushline (lua_State *L, int firstline) {
   if (readstatus == 0)
     return 0;  /* no input (prompt will be popped by caller) */
   
-#if LUA_USE_SHELL
   if (status_get(STATUS_LUA_SHELL)) {
 	  lua_shell(L, buffer);
   }
-#endif
 
   lua_pop(L, 1);  /* remove prompt */
   l = strlen(b);

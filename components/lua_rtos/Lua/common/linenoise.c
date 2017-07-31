@@ -117,9 +117,7 @@
 #include <sys/types.h>
 #include <reent.h>
 
-#if LUA_USE_HISTORY
 #include <sys/mount.h>
-#endif
 
 #include "linenoise.h"
 
@@ -173,10 +171,8 @@ enum KEY_ACTION{
 
 static void refreshLine(struct linenoiseState *l);
 
-#if LUA_USE_HISTORY
 static void linenoiseHistoryAdd(struct linenoiseState *l);
 static void linenoiseHistoryGet(struct linenoiseState *l, int up);
-#endif
 
 /* Debugging macro. */
 #if 0
@@ -515,9 +511,7 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
             if (mlmode) linenoiseEditMoveEnd(&l);
             
             if (l.len > 0) {
-				#if LUA_USE_HISTORY
                 linenoiseHistoryAdd(&l);
-				#endif
             }
             
             return (int)l.len;
@@ -577,14 +571,10 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
                 } else {
                     switch(seq[1]) {
                     case 'A': /* Up */
-						#if LUA_USE_HISTORY
                         linenoiseHistoryGet(&l,1);
-						#endif
                         break;
                     case 'B': /* Down */
-						#if LUA_USE_HISTORY
                         linenoiseHistoryGet(&l,0);
-						#endif
                         break;
                     case 'C': /* Right */
                         linenoiseEditMoveRight(&l);
@@ -656,7 +646,6 @@ static int linenoiseRaw(char *buf, size_t buflen, const char *prompt) {
     return count;
 }
 
-#if LUA_USE_HISTORY
 static void linenoiseHistoryAdd(struct linenoiseState *l) {
     FILE *fp;
     const char *fname;
@@ -766,7 +755,6 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
     refreshLine(l);
     fclose(fp);
 }
-#endif
 
 /* The high level function that is the main API of the linenoise library.
  * This function checks if the terminal has basic capabilities, just checking
