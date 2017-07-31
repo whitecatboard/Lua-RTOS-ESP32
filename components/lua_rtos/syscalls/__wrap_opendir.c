@@ -17,9 +17,9 @@ DIR* __wrap_opendir(const char* name) {
 	char *ppath;
 	DIR *dir;
 
-	if (!name || !*name) {
+	if (!name || *name == 0x00) {
 		errno = ENOENT;
-		return (DIR*)-1;
+		return (DIR*)NULL;
 	}
 
 	ppath = mount_resolve_to_physical(name);
@@ -30,6 +30,6 @@ DIR* __wrap_opendir(const char* name) {
 
 		return dir;
 	} else {
-		return (DIR*)-1;
+		return (DIR*)NULL;
 	}
 }

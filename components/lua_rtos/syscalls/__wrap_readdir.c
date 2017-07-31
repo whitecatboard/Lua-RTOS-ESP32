@@ -19,7 +19,7 @@ DIR* __wrap_readdir(const char* name) {
 
 	if (!name || !*name) {
 		errno = ENOENT;
-		return (DIR*)-1;
+		return (DIR*)NULL;
 	}
 
 	ppath = mount_resolve_to_physical(name);
@@ -30,6 +30,6 @@ DIR* __wrap_readdir(const char* name) {
 
 		return dir;
 	} else {
-		return (DIR*)-1;
+		return (DIR*)NULL;
 	}
 }
