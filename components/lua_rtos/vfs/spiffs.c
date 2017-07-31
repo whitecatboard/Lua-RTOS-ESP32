@@ -587,6 +587,8 @@ static int IRAM_ATTR vfs_spiffs_rename(const char *src, const char *dst) {
 }
 
 static DIR* vfs_spiffs_opendir(const char* name) {
+    char npath[PATH_MAX + 1];
+    uint8_t valid = 0;
 	vfs_spiffs_dir_t *dir = calloc(1, sizeof(vfs_spiffs_dir_t));
 
 	if (!dir) {
@@ -594,15 +596,43 @@ static DIR* vfs_spiffs_opendir(const char* name) {
 		return NULL;
 	}
 
-	if (!SPIFFS_opendir(&fs, name, &dir->spiffs_dir)) {
-        free(dir);
-        errno = spiffs_result(fs.err_code);
-        return NULL;
+    // Check path, must be an existing directory
+    uint8_t base_is_dir = 0;
+    uint8_t full_is_dir = 0;
+    uint8_t is_file = 0;
+
+    check_path(name, &base_is_dir, &full_is_dir, &is_file);
+
+	strlcpy(npath, name, PATH_MAX);
+    if (full_is_dir) {
+        struct spiffs_dirent e;
+
+        dir_path(npath, 0);
+
+    	SPIFFS_opendir(&fs, "/", &dir->spiffs_dir);
+    	while (SPIFFS_readdir(&dir->spiffs_dir, &e)) {
+    		if (!strncmp(name, (const char *)e.name, min(strlen((char *)e.name), strlen(name)))) {
+    			valid = 1;
+    			break;
+    		}
+    	}
+    	SPIFFS_closedir(&dir->spiffs_dir);
     }
 
-	strlcpy(dir->path, name, MAXNAMLEN);
+    if (valid) {
+    	if (!SPIFFS_opendir(&fs, name, &dir->spiffs_dir)) {
+            free(dir);
+            errno = spiffs_result(fs.err_code);
+            return NULL;
+        }
 
-	return (DIR *)dir;
+    	strlcpy(dir->path, name, MAXNAMLEN);
+
+    	return (DIR *)dir;
+    } else {
+    	errno = ENOENT;
+    	return NULL;
+    }
 }
 
 static struct dirent* vfs_spiffs_readdir(DIR* pdir) {
