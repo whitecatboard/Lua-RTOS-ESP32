@@ -37,7 +37,7 @@ end
 function eeprom_write(devAddress, address, value)
 	eeprom:start()
 	eeprom:address(devAddress, false)
-	eeprom:write(0x00, i, i)
+	eeprom:write(0x00, address, value)
 	eeprom:stop()
 
 	eeprom_poll(devAddress)
