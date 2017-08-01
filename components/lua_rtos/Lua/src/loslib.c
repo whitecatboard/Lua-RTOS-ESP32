@@ -157,8 +157,25 @@ static int os_execute (lua_State *L) {
 
 
 static int os_remove (lua_State *L) {
+  // LUA RTOS BEGIN
+#if 0
   const char *filename = luaL_checkstring(L, 1);
   return luaL_fileresult(L, remove(filename) == 0, filename);
+#else
+  struct stat statbuf;
+  const char *filename = luaL_checkstring(L, 1);
+
+  if (stat(filename, &statbuf) != 0) {
+	  return luaL_fileresult(L, 0, filename);
+  }
+
+  if (S_ISDIR(statbuf.st_mode)) {
+	  return luaL_fileresult(L, rmdir(filename) == 0, filename);
+  } else {
+	  return luaL_fileresult(L, remove(filename) == 0, filename);
+  }
+#endif
+  // LUA RTOS END
 }
 
 

@@ -28,6 +28,7 @@ LDFLAGS += -Wl,--wrap=mkdir
 LDFLAGS += -Wl,--wrap=opendir
 #LDFLAGS += -Wl,--wrap=closedir
 #LDFLAGS += -Wl,--wrap=readdir
+LDFLAGS += -Wl,--wrap=rmdir
 
 LDFLAGS += -Wl,--wrap=lwip_socket
 LDFLAGS += -Wl,--wrap=lwip_accept_r

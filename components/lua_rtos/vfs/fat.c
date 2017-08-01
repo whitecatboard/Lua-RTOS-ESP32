@@ -52,7 +52,7 @@
 #include "../drivers/spi_sd.h"
 
 static int IRAM_ATTR vfs_fat_open(const char *path, int flags, int mode);
-static size_t IRAM_ATTR vfs_fat_write(int fd, const void *data, size_t size);
+static ssize_t IRAM_ATTR vfs_fat_write(int fd, const void *data, size_t size);
 static ssize_t IRAM_ATTR vfs_fat_read(int fd, void * dst, size_t size);
 static int IRAM_ATTR vfs_fat_fstat(int fd, struct stat * st);
 static int IRAM_ATTR vfs_fat_close(int fd);
@@ -206,7 +206,7 @@ static int IRAM_ATTR vfs_fat_open(const char *path, int flags, int mode) {
     return fd;
 }
 
-static size_t IRAM_ATTR vfs_fat_write(int fd, const void *data, size_t size) {
+static ssize_t IRAM_ATTR vfs_fat_write(int fd, const void *data, size_t size) {
 	vfs_fat_file_t *file;
 	int res;
 
@@ -381,7 +381,16 @@ static int IRAM_ATTR vfs_fat_stat(const char *path, struct stat * st) {
 	int res;
 
 	fd = vfs_fat_open(path, 0, 0);
+	if (fd < 0) {
+		return -1;
+	}
+
 	res = vfs_fat_fstat(fd, st);
+	if (res < 0) {
+		errno = fat_result(res);
+		return -1;
+	}
+
 	vfs_fat_close(fd);
 
 	return res;
@@ -389,6 +398,77 @@ static int IRAM_ATTR vfs_fat_stat(const char *path, struct stat * st) {
 
 static int IRAM_ATTR vfs_fat_unlink(const char *path) {
 	int res;
+
+	res = f_unlink(path);
+	if (res !=0) {
+		errno = fat_result(res);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int IRAM_ATTR vfs_fat_rmdir(const char *path) {
+	vfs_fat_dir_t *dir = calloc(1, sizeof(vfs_fat_dir_t));
+	int res;
+	int file_num = 0;
+	FILINFO fno;
+
+	if (!dir) {
+		errno = ENOMEM;
+		return NULL;
+	}
+
+	// Check for empty directory
+    if ((res = f_opendir(&dir->fat_dir, path)) != FR_OK) {
+        free(dir);
+
+        errno = fat_result(res);
+        return -1;
+    }
+
+    for(;;) {
+    	*(fno.lfname) = '\0';
+
+        // Read directory
+        res = f_readdir(&dir->fat_dir, &fno);
+
+        // Break condition
+        if (res != FR_OK || fno.fname[0] == 0) {
+            break;
+        }
+
+        if (fno.fname[0] == '.') {
+            if (fno.fname[1] == '.') {
+                if (!fno.fname[2]) {
+                    continue;
+                }
+            }
+
+            if (!fno.fname[1]) {
+                continue;
+            }
+        }
+
+        if (fno.fattrib & (AM_HID | AM_SYS | AM_VOL)) {
+            continue;
+        }
+
+        file_num++;
+    }
+
+    if ((res = f_closedir(&dir->fat_dir)) != 0) {
+    	free(dir);
+    	errno = fat_result(res);
+    	return -1;
+    }
+
+    free(dir);
+
+    if (file_num > 0) {
+    	errno = ENOTEMPTY;
+    	return -1;
+    }
 
 	res = f_unlink(path);
 	if (res !=0) {
@@ -554,6 +634,7 @@ static int IRAM_ATTR vfs_fat_closedir(DIR* pdir) {
 	}
 
     if ((res = f_closedir(&dir->fat_dir)) != 0) {
+    	free(dir);
     	errno = fat_result(res);
     	return -1;
     }
@@ -581,6 +662,7 @@ void vfs_fat_register() {
 		.opendir = &vfs_fat_opendir,
 		.readdir = &vfs_fat_readdir,
 		.closedir = &vfs_fat_closedir,
+		.rmdir = &vfs_fat_rmdir,
     };
 	
     ESP_ERROR_CHECK(esp_vfs_register("/fat", &vfs, NULL));

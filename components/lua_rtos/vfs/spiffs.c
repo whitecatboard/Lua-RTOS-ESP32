@@ -133,12 +133,14 @@ static void dir_path(char *npath, uint8_t base) {
     strlcat(npath,"/.", PATH_MAX);
 }
 
-static void check_path(const char *path, uint8_t *base_is_dir, uint8_t *full_is_dir, uint8_t *is_file) {
+static void check_path(const char *path, uint8_t *base_is_dir, uint8_t *full_is_dir, uint8_t *is_file, int *files) {
     char bpath[PATH_MAX + 1]; // Base path
     char fpath[PATH_MAX + 1]; // Full path
     struct spiffs_dirent e;
     spiffs_DIR d;
+    int file_num = 0;
 
+    *files = 0;
     *base_is_dir = 0;
     *full_is_dir = 0;
     *is_file = 0;
@@ -164,8 +166,16 @@ static void check_path(const char *path, uint8_t *base_is_dir, uint8_t *full_is_
 		if (!strcmp(path, (const char *)e.name)) {
 			*is_file = 1;
 		}
+
+		if (!strncmp(fpath, (const char *)e.name, min(strlen((char *)e.name), strlen(fpath) - 1))) {
+			if (strcmp(fpath, (const char *)e.name)) {
+				file_num++;
+			}
+		}
 	}
 	SPIFFS_closedir(&d);
+
+	*files = file_num;
 }
 
 /*
@@ -242,8 +252,9 @@ static int IRAM_ATTR vfs_spiffs_open(const char *path, int flags, int mode) {
     uint8_t base_is_dir = 0;
     uint8_t full_is_dir = 0;
     uint8_t is_file = 0;
+    int file_num = 0;
 
-    check_path(path, &base_is_dir, &full_is_dir, &is_file);
+    check_path(path, &base_is_dir, &full_is_dir, &is_file, &file_num);
 
     if (full_is_dir) {
     	// We want to open a directory.
@@ -456,7 +467,17 @@ static int IRAM_ATTR vfs_spiffs_stat(const char * path, struct stat * st) {
 	int res;
 
 	fd = vfs_spiffs_open(path, 0, 0);
+	if (fd < 0) {
+    	errno = spiffs_result(fs.err_code);
+    	return -1;
+	}
+
 	res = vfs_spiffs_fstat(fd, st);
+	if (fd < 0) {
+    	errno = spiffs_result(fs.err_code);
+    	return -1;
+	}
+
 	vfs_spiffs_close(fd);
 
 	return res;
@@ -469,54 +490,35 @@ static int IRAM_ATTR vfs_spiffs_unlink(const char *path) {
     uint8_t base_is_dir = 0;
     uint8_t full_is_dir = 0;
     uint8_t is_file = 0;
+    int file_num = 0;
 
-    check_path(path, &base_is_dir, &full_is_dir, &is_file);
+    check_path(path, &base_is_dir, &full_is_dir, &is_file, &file_num);
 
-	strlcpy(npath, path, PATH_MAX);
+    strlcpy(npath, path, PATH_MAX);
     if (full_is_dir) {
-    	// We need to remove all tree
-        struct spiffs_dirent e;
-        spiffs_DIR d;
-
-        dir_path(npath, 0);
-
-    	SPIFFS_opendir(&fs, "/", &d);
-    	while (SPIFFS_readdir(&d, &e)) {
-    		if (!strncmp(path, (const char *)e.name, min(strlen((char *)e.name), strlen(path)))) {
-    	        // Open SPIFFS file
-    	    	spiffs_file FP = SPIFFS_open(&fs, (char *)e.name, SPIFFS_RDWR, 0);
-    	        if (FP < 0) {
-    	        	errno = spiffs_result(fs.err_code);
-    	        	return -1;
-    	        }
-
-    	        // Remove SPIFSS file
-    	        if (SPIFFS_fremove(&fs, FP) < 0) {
-    	            errno = spiffs_result(fs.err_code);
-    	        	SPIFFS_close(&fs, FP);
-    	        	return -1;
-    	        }
-
-    	    	SPIFFS_close(&fs, FP);
-    		}
-    	}
-    	SPIFFS_closedir(&d);
+    	errno = EISDIR;
+    	return -1;
     } else {
-        // Open SPIFFS file
-    	spiffs_file FP = SPIFFS_open(&fs, npath, SPIFFS_RDWR, 0);
-        if (FP < 0) {
-        	errno = spiffs_result(fs.err_code);
-        	return -1;
-        }
+    	if (!is_file) {
+    		errno = ENOENT;
+    		return -1;
+    	} else {
+            // Open SPIFFS file
+        	spiffs_file FP = SPIFFS_open(&fs, npath, SPIFFS_RDWR, 0);
+            if (FP < 0) {
+            	errno = spiffs_result(fs.err_code);
+            	return -1;
+            }
 
-        // Remove SPIFSS file
-        if (SPIFFS_fremove(&fs, FP) < 0) {
-            errno = spiffs_result(fs.err_code);
+            // Remove SPIFSS file
+            if (SPIFFS_fremove(&fs, FP) < 0) {
+                errno = spiffs_result(fs.err_code);
+            	SPIFFS_close(&fs, FP);
+            	return -1;
+            }
+
         	SPIFFS_close(&fs, FP);
-        	return -1;
-        }
-
-    	SPIFFS_close(&fs, FP);
+    	}
     }
 
 	return 0;
@@ -531,13 +533,15 @@ static int IRAM_ATTR vfs_spiffs_rename(const char *src, const char *dst) {
     uint8_t src_base_is_dir = 0;
     uint8_t src_full_is_dir = 0;
     uint8_t src_is_file = 0;
+    int src_files = 0;
 
     uint8_t dst_base_is_dir = 0;
     uint8_t dst_full_is_dir = 0;
     uint8_t dst_is_file = 0;
+    int dst_files = 0;
 
-    check_path(src, &src_base_is_dir, &src_full_is_dir, &src_is_file);
-    check_path(dst, &dst_base_is_dir, &dst_full_is_dir, &dst_is_file);
+    check_path(src, &src_base_is_dir, &src_full_is_dir, &src_is_file, &src_files);
+    check_path(dst, &dst_base_is_dir, &dst_full_is_dir, &dst_is_file, &dst_files);
 
     // Sanity checks
     if (src_is_file && dst_full_is_dir) {
@@ -588,7 +592,6 @@ static int IRAM_ATTR vfs_spiffs_rename(const char *src, const char *dst) {
 
 static DIR* vfs_spiffs_opendir(const char* name) {
     char npath[PATH_MAX + 1];
-    uint8_t valid = 0;
 	vfs_spiffs_dir_t *dir = calloc(1, sizeof(vfs_spiffs_dir_t));
 
 	if (!dir) {
@@ -600,26 +603,12 @@ static DIR* vfs_spiffs_opendir(const char* name) {
     uint8_t base_is_dir = 0;
     uint8_t full_is_dir = 0;
     uint8_t is_file = 0;
+    int file_num = 0;
 
-    check_path(name, &base_is_dir, &full_is_dir, &is_file);
+    check_path(name, &base_is_dir, &full_is_dir, &is_file, &file_num);
 
 	strlcpy(npath, name, PATH_MAX);
     if (full_is_dir) {
-        struct spiffs_dirent e;
-
-        dir_path(npath, 0);
-
-    	SPIFFS_opendir(&fs, "/", &dir->spiffs_dir);
-    	while (SPIFFS_readdir(&dir->spiffs_dir, &e)) {
-    		if (!strncmp(name, (const char *)e.name, min(strlen((char *)e.name), strlen(name)))) {
-    			valid = 1;
-    			break;
-    		}
-    	}
-    	SPIFFS_closedir(&dir->spiffs_dir);
-    }
-
-    if (valid) {
     	if (!SPIFFS_opendir(&fs, name, &dir->spiffs_dir)) {
             free(dir);
             errno = spiffs_result(fs.err_code);
@@ -632,6 +621,55 @@ static DIR* vfs_spiffs_opendir(const char* name) {
     } else {
     	errno = ENOENT;
     	return NULL;
+    }
+}
+
+static int vfs_spiffs_rmdir(const char* name) {
+    char npath[PATH_MAX + 1];
+	vfs_spiffs_dir_t *dir = calloc(1, sizeof(vfs_spiffs_dir_t));
+
+	if (!dir) {
+		errno = ENOMEM;
+		return NULL;
+	}
+
+    // Check path, must be an existing directory
+	// files in directory
+    uint8_t base_is_dir = 0;
+    uint8_t full_is_dir = 0;
+    uint8_t is_file = 0;
+    int file_num = 0;
+
+    check_path(name, &base_is_dir, &full_is_dir, &is_file, &file_num);
+    if (full_is_dir) {
+    	if (file_num > 0) {
+    		errno = ENOTEMPTY;
+    		return -1;
+    	} else {
+    	    strlcpy(npath, name, PATH_MAX);
+    	    dir_path(npath, 0);
+
+	        // Open SPIFFS file
+	    	spiffs_file FP = SPIFFS_open(&fs, npath, SPIFFS_RDWR, 0);
+	        if (FP < 0) {
+	        	errno = spiffs_result(fs.err_code);
+	        	return -1;
+	        }
+
+	        // Remove SPIFSS file
+	        if (SPIFFS_fremove(&fs, FP) < 0) {
+	            errno = spiffs_result(fs.err_code);
+	        	SPIFFS_close(&fs, FP);
+	        	return -1;
+	        }
+
+	    	SPIFFS_close(&fs, FP);
+
+        	return 0;
+    	}
+    } else {
+       	errno = ENOENT;
+		return -1;
     }
 }
 
@@ -780,8 +818,9 @@ static int IRAM_ATTR vfs_spiffs_mkdir(const char *path, mode_t mode) {
     uint8_t base_is_dir = 0;
     uint8_t full_is_dir = 0;
     uint8_t is_file = 0;
+    int file_num = 0;
 
-    check_path(path, &base_is_dir, &full_is_dir, &is_file);
+    check_path(path, &base_is_dir, &full_is_dir, &is_file, &file_num);
 
     // Sanity checks
     if (is_file) {
@@ -845,6 +884,7 @@ void vfs_spiffs_register() {
 		.opendir = &vfs_spiffs_opendir,
 		.readdir = &vfs_spiffs_readdir,
 		.closedir = &vfs_piffs_closedir,
+		.rmdir = &vfs_spiffs_rmdir,
     };
 	
     ESP_ERROR_CHECK(esp_vfs_register("/spiffs", &vfs, NULL));
