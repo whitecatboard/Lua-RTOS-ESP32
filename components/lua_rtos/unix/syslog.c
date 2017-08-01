@@ -244,3 +244,11 @@ int setlogmask(int pmask) {
     
     return (omask);
 }
+
+int getlogmask() {
+	return LogMask;
+}
+
+int getlogstat() {
+	return LogStat;
+}

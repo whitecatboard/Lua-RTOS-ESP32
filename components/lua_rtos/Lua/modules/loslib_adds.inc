@@ -106,28 +106,34 @@ static int os_reset_reason(lua_State *L) {
 	return 1;
 }
 
-static int os_loglevel(lua_State *L) {   
-    int total = lua_gettop(L);
-    int mask = 0;
-    int flag = 0;
-    int i;
-    
-    for(i=1;i<=total;i++) {
-        flag = luaL_checkinteger(L, i);
-        if (((flag < 0) || (flag > 7)) && (flag != 0xff)) {
-            return luaL_error(L, "invalid flag");        
-        }
-        
-        if (flag == 0xff) {
-            mask |= LOG_UPTO(LOG_DEBUG);          
-        } else {
-            mask |= LOG_UPTO(flag);
-        }
-    }
-    
-    setlogmask(mask);
+static int os_loglevel(lua_State *L) {
+	if (lua_gettop(L) > 0) {
+		int total = lua_gettop(L);
+		int mask = 0;
+		int flag = 0;
+		int i;
 
-    return 0;    
+		for(i=1;i<=total;i++) {
+			flag = luaL_checkinteger(L, i);
+			if (((flag < 0) || (flag > 7)) && (flag != 0xff)) {
+				return luaL_error(L, "invalid flag");
+			}
+
+			if (flag == 0xff) {
+				mask |= LOG_UPTO(LOG_DEBUG);
+			} else {
+				mask |= LOG_UPTO(flag);
+			}
+		}
+
+		setlogmask(mask);
+
+		return 0;
+	} else {
+		int mask = getlogmask();
+		lua_pushinteger(L, mask);
+		return 1;
+	}
 }
 
 static int more(const char *path, int stop) {
@@ -364,19 +370,25 @@ static int os_board(lua_State *L) {
 }
 
 static int os_logcons(lua_State *L) { 
-    int mask = LOG_NDELAY;
-    
-    luaL_checktype(L, 1, LUA_TBOOLEAN);
-    int cons = lua_toboolean( L, 1 );
+    if (lua_gettop(L) == 1) {
+    	int mask = LOG_NDELAY;
 
-    if (cons) {
-        mask = mask | LOG_CONS;
+		luaL_checktype(L, 1, LUA_TBOOLEAN);
+		int cons = lua_toboolean( L, 1 );
+
+		if (cons) {
+			mask = mask | LOG_CONS;
+		}
+
+		closelog();
+		openlog(__progname, mask , LOG_LOCAL1);
+
+		return 0;
+    } else {
+    	int mask = getlogstat();
+    	lua_pushboolean(L, mask & LOG_CONS);
+    	return 1;
     }
-    
-    closelog();
-    openlog(__progname, mask , LOG_LOCAL1);
-
-    return 0;
 }
 
 static int os_stats(lua_State *L) {
