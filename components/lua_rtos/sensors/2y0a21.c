@@ -74,7 +74,7 @@ driver_error_t  *distance(sensor_instance_t *unit, sensor_value_t *values, int *
 
 	for (int i = 0; i < 25; i++) {
 		// Read value
-		if ((error = adc_read(unit->setup.adc.unit, unit->setup.adc.channel, &raw, &mvolts))) {
+		if ((error = adc_read(&unit->setup.adc.h, &raw, &mvolts))) {
 			return error;
 		}
 

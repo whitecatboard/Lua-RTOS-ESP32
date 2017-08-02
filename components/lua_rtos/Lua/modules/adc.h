@@ -34,8 +34,7 @@
 #include "drivers/cpu.h"
 
 typedef struct {
-    unsigned int adc;
-    unsigned int chan;
+    adc_channel_h_t h;
 } adc_userdata;
 
 #ifdef CPU_ADC0
@@ -60,6 +59,12 @@ typedef struct {
 #define ADC_ADC3 {LSTRKEY(CPU_ADC3_NAME), LINTVAL(CPU_ADC3)},
 #else
 #define ADC_ADC3
+#endif
+
+#ifdef CPU_ADC4
+#define ADC_ADC4 {LSTRKEY(CPU_ADC4_NAME), LINTVAL(CPU_ADC4)},
+#else
+#define ADC_ADC4
 #endif
 
 #ifdef CPU_ADC_CH0

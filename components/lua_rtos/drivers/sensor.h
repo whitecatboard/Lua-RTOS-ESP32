@@ -35,6 +35,7 @@
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 
 #include <sys/driver.h>
+#include <drivers/adc.h>
 
 #define SENSOR_FAMILY_TEMP "Temperature"
 #define SENSOR_FAMILY_HUM  "Humidity"
@@ -131,9 +132,11 @@ typedef struct {
 		struct {
 			uint8_t unit;
 			uint8_t channel;
+			int16_t devid;
 			uint8_t resolution;
 			int16_t vrefp;
 			int16_t vrefn;
+			adc_channel_h_t h;
 		} adc;
 
 		struct {
@@ -147,7 +150,7 @@ typedef struct {
 			uint32_t speed;
 			int8_t  sda;
 			int8_t  scl;
-			uint16_t address;
+			int16_t devid;
 			void     *userdata;
 		} i2c;
 		struct {

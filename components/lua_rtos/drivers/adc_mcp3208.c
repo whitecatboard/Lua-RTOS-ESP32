@@ -40,25 +40,27 @@
 
 static int spi_device = -1;
 
-driver_error_t *adc_mcp3208_setup(int8_t unit, int8_t channel, uint8_t spi, uint8_t cs, adc_channel_t *chan) {
+driver_error_t *adc_mcp3208_setup(adc_channel_t *chan) {
 	driver_error_t *error;
 
     // Init SPI bus
 	if (spi_device == -1) {
-		if ((error = spi_setup(spi, 1, cs, 0, CONFIG_ADC_MCP3208_SPEED, SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
+		if ((error = spi_setup(CONFIG_ADC_MCP3208_SPI, 1, chan->devid, 0, CONFIG_ADC_MCP3208_SPEED, SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
 			return error;
 		}
 	}
 
 	if (!chan->setup) {
-		syslog(LOG_INFO, "adc MCP3208 channel %d at spi%d, cs=%s%d", channel, spi, gpio_portname(cs), gpio_name(cs));
+		syslog(LOG_INFO, "adc MCP3208 channel %d at spi%d, cs=%s%d", chan->channel, CONFIG_ADC_MCP3208_SPI, gpio_portname(CONFIG_ADC_MCP3208_CS), gpio_name(CONFIG_ADC_MCP3208_CS));
 	}
 
 	return NULL;
 }
 
-driver_error_t *adc_mcp3208_read(int8_t unit, int8_t channel, int *raw) {
+driver_error_t *adc_mcp3208_read(adc_channel_t *chan, int *raw) {
 	uint8_t buff[3];
+
+	int channel = chan->channel;
 
 	buff[0] =  ((0x18 | channel) & 0x1f) >> 2;
 	buff[1] =  ((0x18 | channel) & 0x03) << 6;

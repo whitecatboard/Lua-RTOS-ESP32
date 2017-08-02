@@ -33,8 +33,16 @@
 #include <drivers/adc.h>
 #include <stdint.h>
 
+typedef struct {
+	driver_unit_lock_t *lock;
+} adc_lock_t;
+
+typedef struct {
+	uint8_t pin;
+} adc_resources_t;
+
 driver_error_t * adc_internal_pin_to_channel(uint8_t pin, uint8_t *chan);
-driver_error_t *adc_internal_setup(int8_t unit, int8_t channel, adc_channel_t *chan);
-driver_error_t *adc_internal_read(int8_t unit, int8_t channel, int *raw);
+driver_error_t *adc_internal_setup(adc_channel_t *chan);
+driver_error_t *adc_internal_read(adc_channel_t *chan, int *raw);
 
 #endif	/* _ADC_INTERNAL_H */

@@ -64,7 +64,7 @@ driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	double mvolts = 0;
 
 	// Read value
-	if ((error = adc_read(unit->setup.adc.unit, unit->setup.adc.channel, &raw, &mvolts))) {
+	if ((error = adc_read(&unit->setup.adc.h, &raw, &mvolts))) {
 		return error;
 	}
 

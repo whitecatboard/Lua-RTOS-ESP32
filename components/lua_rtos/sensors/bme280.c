@@ -2412,8 +2412,8 @@ int bm280_get_mode(sensor_instance_t *unit, char *buf) {
 //-----------------------------------------------------
 driver_error_t *bme280_presetup(sensor_instance_t *unit) {
 	// Set default values, if not provided
-	if (unit->setup.i2c.address == 0) {
-		unit->setup.i2c.address = BME280_I2C_ADDRESS1;
+	if (unit->setup.i2c.devid == 0) {
+		unit->setup.i2c.devid = BME280_I2C_ADDRESS1;
 	}
 
 	if (unit->setup.i2c.speed == 0) {
@@ -2427,7 +2427,7 @@ driver_error_t *bme280_setup(sensor_instance_t *unit) {
     s32 com_rslt = ERROR;
 
     // Sanity checks
-	if ((unit->setup.i2c.address != BME280_I2C_ADDRESS1) && (unit->setup.i2c.address != BME280_I2C_ADDRESS2)) {
+	if ((unit->setup.i2c.devid != BME280_I2C_ADDRESS1) && (unit->setup.i2c.devid != BME280_I2C_ADDRESS2)) {
 		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_INVALID_ADDRESS, NULL);
 	}
 
@@ -2439,7 +2439,7 @@ driver_error_t *bme280_setup(sensor_instance_t *unit) {
 	// Set default mode & standby time & address
 	unit->properties[0].integerd.value = BME280_SLEEP_MODE;
 	unit->properties[1].integerd.value = BME280_STANDBY_TIME_125_MS;
-	unit->properties[2].integerd.value = unit->setup.i2c.address;
+	unit->properties[2].integerd.value = unit->setup.i2c.devid;
 
 	// Allocate space for buffer
 	char *buffer = (char *)calloc(32, 1);

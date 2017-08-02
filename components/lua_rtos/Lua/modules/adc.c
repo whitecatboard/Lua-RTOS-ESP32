@@ -55,16 +55,13 @@ static int ladc_setup( lua_State* L ) {
 
     id = luaL_checkinteger( L, 1 );
     channel = luaL_checkinteger( L, 2 );
-    res = luaL_checkinteger( L, 3 );
-    pvref = luaL_optinteger( L, 4, CONFIG_ADC_INTERNAL_VREF_P );
-    nvref = luaL_optinteger( L, 5, CONFIG_ADC_INTERNAL_VREF_N );
+    res = luaL_optinteger( L, 3, 0 );
+    pvref = luaL_optinteger( L, 4, 0 );
+    nvref = luaL_optinteger( L, 5, 0 );
 
     adc_userdata *adc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
 
-    adc->adc = id;
-    adc->chan = channel;
-
-    if ((error = adc_setup(id, channel, pvref, nvref, res))) {
+    if ((error = adc_setup(id, channel, 0, pvref, nvref, res, &adc->h))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -80,8 +77,8 @@ static int ladc_attach( lua_State* L ) {
 
     id = luaL_checkinteger( L, 1 );
     channel = luaL_checkinteger( L, 2 );
-    res = luaL_checkinteger( L, 3 );
-    pvref = luaL_optinteger( L, 4, 3300 );
+    res = luaL_optinteger( L, 3, 0 );
+    pvref = luaL_optinteger( L, 4, 0 );
     nvref = luaL_optinteger( L, 5, 0 );
 
     adc_userdata *adc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
@@ -95,10 +92,7 @@ static int ladc_attach( lua_State* L ) {
     	}
     }
 
-    adc->adc = id;
-    adc->chan = channel;
-    
-    if ((error = adc_setup(id, channel, pvref, nvref, res))) {
+    if ((error = adc_setup(id, channel, 0, pvref, nvref, res, &adc->h))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -117,11 +111,11 @@ static int ladc_read( lua_State* L ) {
     adc = (adc_userdata *)luaL_checkudata(L, 1, "adc.chan");
     luaL_argcheck(L, adc, 1, "adc expected");
 
-    if ((error = adc_read(adc->adc, adc->chan, &raw, &mvlots))) {
+    if ((error = adc_read(&adc->h, &raw, &mvlots))) {
     	return luaL_driver_error(L, error);
     } else {
-        lua_pushinteger( L, raw );
-        lua_pushnumber( L, mvlots);
+		lua_pushinteger(L, raw);
+		lua_pushnumber(L, mvlots);
         return 2;
     }
 }
@@ -136,6 +130,9 @@ static const LUA_REG_TYPE ladc_map[] = {
 #endif
 #if CONFIG_ADC_MCP3208
 	ADC_ADC3
+#endif
+#if CONFIG_ADC_ADS1115
+	ADC_ADC4
 #endif
 	ADC_ADC_CH0
 	ADC_ADC_CH1

@@ -59,6 +59,7 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 			setup->adc.resolution = luaL_checkinteger(L, 4);
 			setup->adc.vrefp = luaL_optinteger( L, 5, CONFIG_ADC_INTERNAL_VREF_P );
 			setup->adc.vrefn = luaL_optinteger( L, 6, CONFIG_ADC_INTERNAL_VREF_N );
+			setup->adc.devid = 0;
 			break;
 
 		case GPIO_INTERFACE:
@@ -80,17 +81,17 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 				setup->i2c.scl = -1;
 
 				if (lua_gettop(L) >= 4) {
-					setup->i2c.address = luaL_checkinteger(L, 4);
+					setup->i2c.devid = luaL_checkinteger(L, 4);
 				} else {
 					// Default address
-					setup->i2c.address = 0;
+					setup->i2c.devid = 0;
 				}
 			} else {
 				setup->i2c.id = luaL_checkinteger(L, 2);
 				setup->i2c.speed = luaL_checkinteger(L, 3);
 				setup->i2c.sda = luaL_checkinteger(L, 4);
 				setup->i2c.scl = luaL_checkinteger(L, 5);
-				setup->i2c.address = luaL_checkinteger(L, 6);
+				setup->i2c.devid = luaL_checkinteger(L, 6);
 			}
 			break;
 
