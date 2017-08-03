@@ -85,14 +85,14 @@ static int lmdns_start( lua_State* L ){
     }
 
 		if(hostname != 0) {
-			rc = mdns_set_hostname(mdns->client, hostname)
+			rc = mdns_set_hostname(mdns->client, hostname);
 		  if (rc < 0){
 		    printf( "mdns: could not set hostname\n");
 		  }
 		}
 		
 		if(instance != 0) {
-			rc = mdns_set_instance(mdns->client, instance)
+			rc = mdns_set_instance(mdns->client, instance);
 		  if (rc < 0){
 		    printf( "mdns: could not set instance name\n");
 		  }
