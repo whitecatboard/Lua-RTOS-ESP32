@@ -111,7 +111,6 @@ driver_error_t *adc_internal_setup(adc_channel_t *chan) {
 		return error;
 	}
 
-	printf("pvref %d\r\n", chan->pvref);
 	// Computes the required attenuation
 	if (chan->pvref <= 1100) {
 		atten = ADC_ATTEN_0db;
