@@ -2,7 +2,7 @@
  * Lua RTOS, Lua sensor module
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -27,9 +27,12 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/adds.h"
 
 #include "lua.h"
 #include "lualib.h"
@@ -50,6 +53,54 @@ extern TM_One_Wire_Devices_t ow_devices[MAX_ONEWIRE_PINS];
 // This variables are defined at linker time
 extern LUA_REG_TYPE sensor_error_map[];
 extern const sensor_t sensors[];
+
+static void callback_func(int callback, sensor_instance_t *instance, sensor_value_t *data) {
+	lua_State *TL;
+	lua_State *L;
+	int tref;
+	int idx;
+	const sensor_t *csensor = instance->sensor;
+
+	if (callback != LUA_NOREF) {
+	    L = pvGetLuaState();
+	    TL = lua_newthread(L);
+
+	    tref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+	    lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
+	    lua_xmove(L, TL, 1);
+
+	    // Count properties
+	    int cnt = 0;
+	    for(idx=0; idx < SENSOR_MAX_PROPERTIES; idx++) {
+	    	if (csensor->properties[idx].id) {
+	    		cnt++;
+	    	}
+	    }
+
+	    // Create a table with all the properties values
+        lua_createtable(TL, 0, cnt);
+
+        for(idx=0; idx < SENSOR_MAX_PROPERTIES; idx++) {
+			if (csensor->data[idx].id) {
+			    lua_pushstring(TL, (char *)csensor->data[idx].id);
+
+				switch (csensor->data[idx].type) {
+					case SENSOR_NO_DATA:     lua_pushnil(TL); break;
+					case SENSOR_DATA_INT:    lua_pushinteger(TL, data[idx].integerd.value); break;
+					case SENSOR_DATA_FLOAT:  lua_pushnumber (TL, data[idx].floatd.value); break;
+					case SENSOR_DATA_DOUBLE: lua_pushnumber (TL, data[idx].doubled.value); break;
+					case SENSOR_DATA_STRING: lua_pushstring (TL, data[idx].stringd.value); break;
+				}
+
+				lua_settable(TL, -3);
+			}
+		}
+
+        lua_pcall(TL, 1, 0, 0);
+        luaL_unref(TL, LUA_REGISTRYINDEX, tref);
+	}
+}
 
 static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_setup_t *setup, uint8_t attach ) {
 	switch (sensor->interface) {
@@ -645,6 +696,25 @@ static int lsensor_enumerate( lua_State* L ) {
 	return table;
 }
 
+static int lsensor_callback(lua_State* L) {
+    sensor_userdata *udata = NULL;
+	driver_error_t *error;
+
+	udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor.ins");
+    luaL_argcheck(L, udata, 1, "sensor expected");
+
+	luaL_checktype(L, 2, LUA_TFUNCTION);
+	lua_pushvalue(L, 2);
+
+	int callback = luaL_ref(L, LUA_REGISTRYINDEX);
+
+	if ((error = sensor_register_callback(udata->instance, callback_func, callback, 1))) {
+		return luaL_driver_error(L, error);
+    }
+
+	return 0;
+}
+
 // Destructor
 static int lsensor_ins_gc (lua_State *L) {
     sensor_userdata *udata = NULL;
@@ -672,6 +742,7 @@ static const LUA_REG_TYPE lsensor_ins_map[] = {
   	{ LSTRKEY( "read"        ),	LFUNCVAL( lsensor_read 	    ) },
   	{ LSTRKEY( "set"         ),	LFUNCVAL( lsensor_set 	    ) },
   	{ LSTRKEY( "get"         ),	LFUNCVAL( lsensor_get 	    ) },
+  	{ LSTRKEY( "callback"    ),	LFUNCVAL( lsensor_callback  ) },
     { LSTRKEY( "__metatable" ),	LROVAL  ( lsensor_ins_map   ) },
 	{ LSTRKEY( "__index"     ), LROVAL  ( lsensor_ins_map   ) },
 	{ LSTRKEY( "__gc"        ), LROVAL  ( lsensor_ins_gc    ) },

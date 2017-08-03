@@ -2,7 +2,7 @@
  * Lua RTOS, sensor driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -27,12 +27,17 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+
 #include <string.h>
 
+#include <sys/status.h>
 #include <sys/list.h>
 #include <sys/driver.h>
 #include <sys/syslog.h>
@@ -59,13 +64,56 @@ DRIVER_REGISTER_ERROR(SENSOR, sensor, NotFound, "not found", SENSOR_ERR_NOT_FOUN
 DRIVER_REGISTER_ERROR(SENSOR, sensor, InterfaceNotSupported, "interface not supported", SENSOR_ERR_INTERFACE_NOT_SUPPORTED);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, NotSetup, "sensor is not setup", SENSOR_ERR_NOT_SETUP);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, InvalidAddress, "invalid address", SENSOR_ERR_INVALID_ADDRESS);
+DRIVER_REGISTER_ERROR(SENSOR, sensor, NoMoreCallbacks, "no more callbacks available", SENSOR_ERR_NO_MORE_CALLBACKS);
 
 // List of instantiated sensors
 struct list sensor_list;
 
+static xQueueHandle queue = NULL;
+static TaskHandle_t task = NULL;
+
 /*
  * Helper functions
  */
+
+static void sensor_task(void *arg) {
+	sensor_deferred_data_t data;
+
+    for(;;) {
+        xQueueReceive(queue, &data, portMAX_DELAY);
+        data.callback(data.callback_id, data.instance, data.data);
+    }
+}
+
+static void IRAM_ATTR isr(void* arg) {
+	// Get sensor instance
+	sensor_instance_t *unit = (sensor_instance_t *)arg;
+
+	// Read pin value
+	if (unit->sensor->int_driven_on_val == gpio_ll_pin_get(unit->setup.gpio.gpio)) {
+		unit->data[0].integerd.value = 1;
+	} else {
+		unit->data[0].integerd.value = 0;
+	}
+
+	// Queue callbacks
+	int i;
+
+	sensor_deferred_data_t data;
+	for(i=0;i < SENSOR_MAX_CALLBACKS;i++) {
+		if (unit->callbacks[i].callback) {
+			data.instance = unit;
+			data.callback = unit->callbacks[i].callback;
+			data.callback_id = unit->callbacks[i].callback_id;
+			memcpy(data.data, unit->data, sizeof(unit->data));
+
+			xQueueSendFromISR(queue, &data, NULL);
+
+			break;
+		}
+	}
+}
+
 static driver_error_t *sensor_adc_setup(sensor_instance_t *unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
 	driver_error_t *error;
@@ -92,8 +140,30 @@ static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
 
-    gpio_pin_output(unit->setup.gpio.gpio);
-	gpio_pin_set(unit->setup.gpio.gpio);
+    if (unit->sensor->int_driven) {
+        // Configure pins as input
+        gpio_config_t io_conf;
+
+        io_conf.intr_type = GPIO_INTR_ANYEDGE;
+        io_conf.mode = GPIO_MODE_INPUT;
+        io_conf.pin_bit_mask = (1ULL << unit->setup.gpio.gpio);
+        io_conf.pull_down_en = 0;
+        io_conf.pull_up_en = 1;
+
+        gpio_config(&io_conf);
+
+    	// Configure interrupts
+        if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
+        	gpio_install_isr_service(0);
+
+        	status_set(STATUS_ISR_SERVICE_INSTALLED);
+        }
+
+        gpio_isr_handler_add(unit->setup.gpio.gpio, isr, (void *)unit);
+    } else {
+        gpio_pin_output(unit->setup.gpio.gpio);
+    	gpio_pin_set(unit->setup.gpio.gpio);
+    }
 
 	return NULL;
 }
@@ -227,7 +297,7 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 
 	// Sanity checks
 	if (!sensor->acquire) {
-		return driver_error(SENSOR_DRIVER, SENSOR_ERR_ACQUIRE_UNDEFINED, NULL);
+		//return driver_error(SENSOR_DRIVER, SENSOR_ERR_ACQUIRE_UNDEFINED, NULL);
 	}
 
 	// Create a sensor instance
@@ -312,24 +382,32 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 	#endif
 
 	// Allocate space for sensor data
-	if (!(value = calloc(1, sizeof(sensor_value_t) * SENSOR_MAX_DATA))) {
-		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
+	// This is done only if sensor is not interrupt driven, because in
+	// interrupt driven sensors the sensor value is set in the ISR
+	if (!unit->sensor->int_driven) {
+		if (!(value = calloc(1, sizeof(sensor_value_t) * SENSOR_MAX_DATA))) {
+			return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
+		}
 	}
 
 	// Call to specific acquire function, if any
-	if ((error = unit->sensor->acquire(unit, value))) {
+	if (unit->sensor->acquire) {
+		if ((error = unit->sensor->acquire(unit, value))) {
+			free(value);
+			return error;
+		}
+	}
+
+	if (!unit->sensor->int_driven) {
+		// Copy sensor values into instance
+		// Note that we only copy raw values as value types are set in sensor_setup from sensor
+		// definition
+		for(i=0;i < SENSOR_MAX_DATA;i++) {
+			unit->data[i].raw = value[i].raw;
+		}
+
 		free(value);
-		return error;
 	}
-
-	// Copy sensor values into instance
-	// Note that we only copy raw values as value types are set in sensor_setup from sensor
-	// definition
-	for(i=0;i < SENSOR_MAX_DATA;i++) {
-		unit->data[i].raw = value[i].raw;
-	}
-
-	free(value);
 
 	return NULL;
 }
@@ -393,6 +471,50 @@ driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value
 	}
 
 	return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL);
+}
+
+driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callback_t callback, int id, uint8_t deferred) {
+	int i;
+
+	portDISABLE_INTERRUPTS();
+
+	// Find for a free callback
+	for(i=0;i < SENSOR_MAX_CALLBACKS;i++) {
+		if (unit->callbacks[i].callback == NULL) {
+			unit->callbacks[i].callback = callback;
+			unit->callbacks[i].callback_id = id;
+			break;
+		}
+	}
+
+	if (i == SENSOR_MAX_CALLBACKS) {
+		portENABLE_INTERRUPTS();
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NO_MORE_CALLBACKS, NULL);
+	}
+
+	// Create queue if needed
+	if (!queue) {
+		queue = xQueueCreate(10, sizeof(sensor_deferred_data_t));
+		if (!queue) {
+			portENABLE_INTERRUPTS();
+			return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
+		}
+	}
+
+	// Create task if needed
+	if (!task) {
+		BaseType_t xReturn;
+
+		xReturn = xTaskCreatePinnedToCore(sensor_task, "sensor", CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE, NULL, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY, &task, xPortGetCoreID());
+		if (xReturn != pdPASS) {
+			portENABLE_INTERRUPTS();
+			return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
+		}
+	}
+
+	portENABLE_INTERRUPTS();
+
+	return NULL;
 }
 
 DRIVER_REGISTER(SENSOR,sensor,NULL,sensor_init,NULL);

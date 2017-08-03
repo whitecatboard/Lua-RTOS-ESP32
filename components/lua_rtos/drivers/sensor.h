@@ -51,6 +51,7 @@ typedef driver_error_t *(*sensor_get_f_t)(struct sensor_instance *, const char *
 
 #define SENSOR_MAX_DATA       6
 #define SENSOR_MAX_PROPERTIES 4
+#define SENSOR_MAX_CALLBACKS  4
 
 // Sensor interface
 typedef enum {
@@ -87,6 +88,8 @@ typedef struct {
 typedef struct {
 	const char *id;
 	const sensor_interface_t interface;
+	const uint8_t int_driven;
+	const uint8_t int_driven_on_val;
 	const sensor_data_t data[SENSOR_MAX_DATA];
 	const sensor_data_t properties[SENSOR_MAX_PROPERTIES];
 	const sensor_setup_f_t setup;
@@ -163,15 +166,33 @@ typedef struct {
 	};
 } sensor_setup_t;
 
+struct sensor_instance;
+
+// Sensor callback
+typedef void (*sensor_callback_t)(int, struct sensor_instance *, sensor_value_t *);
+
 // Sensor instance
 typedef struct sensor_instance {
 	int unit;
 	sensor_value_t data[SENSOR_MAX_DATA];
 	sensor_value_t properties[SENSOR_MAX_PROPERTIES];
+
+	struct {
+		sensor_callback_t callback;
+		int callback_id;
+	} callbacks[SENSOR_MAX_CALLBACKS];
+
 	const sensor_t *sensor;
 	sensor_setup_t setup;
 	sensor_setup_t presetup;
 } sensor_instance_t;
+
+typedef struct {
+	sensor_instance_t *instance;
+	sensor_callback_t callback;
+	sensor_value_t data[SENSOR_MAX_DATA];
+	int callback_id;
+} sensor_deferred_data_t;
 
 const sensor_t *get_sensor(const char *id);
 const sensor_data_t *sensor_get_property(const sensor_t *sensor, const char *property);
@@ -180,6 +201,7 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit);
 driver_error_t *sensor_read(sensor_instance_t *unit, const char *id, sensor_value_t **value);
 driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value_t *value);
 driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value_t **value);
+driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callback_t callback, int id, uint8_t deferred);
 
 // SENSOR errors
 #define SENSOR_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  0)
@@ -192,6 +214,8 @@ driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value
 #define SENSOR_ERR_INTERFACE_NOT_SUPPORTED	(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  7)
 #define SENSOR_ERR_NOT_SETUP				(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  8)
 #define SENSOR_ERR_INVALID_ADDRESS			(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  9)
+#define SENSOR_ERR_NO_MORE_CALLBACKS		(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) | 10)
+
 #endif
 
 #endif /* _SENSORS_H_ */
