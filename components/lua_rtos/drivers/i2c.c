@@ -290,11 +290,13 @@ driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr
 	if (i2c[unit].setup) {
 		i2c_driver_delete(unit);
 
+#if 0
 		if (unit == 0) {
 			periph_module_disable(PERIPH_I2C0_MODULE);
 		} else {
 			periph_module_disable(PERIPH_I2C1_MODULE);
 		}
+#endif
 
 		i2c[unit].setup = 0;
 	}
