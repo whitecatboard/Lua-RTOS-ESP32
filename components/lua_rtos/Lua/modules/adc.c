@@ -122,18 +122,15 @@ static int ladc_read( lua_State* L ) {
 
 static const LUA_REG_TYPE ladc_map[] = {
     { LSTRKEY( "setup" ),		  LFUNCVAL( ladc_setup   ) },
-    { LSTRKEY( "attach" ),		  LFUNCVAL( ladc_attach  ) },
+    { LSTRKEY( "attach"),		  LFUNCVAL( ladc_attach  ) },
 	ADC_ADC0
 	ADC_ADC1
-#if CONFIG_ADC_MCP3008
 	ADC_ADC2
-#endif
-#if CONFIG_ADC_MCP3208
 	ADC_ADC3
-#endif
-#if CONFIG_ADC_ADS1115
 	ADC_ADC4
-#endif
+    { LSTRKEY( "MCP3008" ),		  LINTVAL( CPU_LAST_ADC + 1 ) },
+    { LSTRKEY( "MCP3208" ),		  LINTVAL( CPU_LAST_ADC + 2 ) },
+    { LSTRKEY( "ADS1115" ),		  LINTVAL( CPU_LAST_ADC + 3 ) },
 	ADC_ADC_CH0
 	ADC_ADC_CH1
 	ADC_ADC_CH2

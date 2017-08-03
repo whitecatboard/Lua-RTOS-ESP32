@@ -92,17 +92,40 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 	driver_error_t *error;
 
 	// Sanity checks
-	if ((unit < CPU_FIRST_ADC) || (unit > CPU_LAST_ADC)) {
-		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, NULL);
-	}
+	if (unit <= CPU_LAST_ADC) {
+		// Internal ADC
+		if ((unit < CPU_FIRST_ADC) || (unit > CPU_LAST_ADC)) {
+			return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, NULL);
+		}
 
-	if (unit == CPU_FIRST_ADC) {
-		if (!(CPU_ADC_ALL & (GPIO_BIT_MASK << channel))) {
-			return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+		if (unit == CPU_FIRST_ADC) {
+			if (!(CPU_ADC_ALL & (GPIO_BIT_MASK << channel))) {
+				return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+			}
+		} else {
+			if ((unit < CPU_FIRST_ADC_CH) || (unit > CPU_LAST_ADC_CH)) {
+				return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+			}
 		}
 	} else {
-		if ((unit < CPU_FIRST_ADC_CH) || (unit > CPU_LAST_ADC_CH)) {
-			return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+		switch (unit) {
+			case CPU_LAST_ADC + 1:
+				#if !CONFIG_ADC_MCP3008
+					return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, "MCP3008 not enabled");
+				#endif
+				break;
+
+			case CPU_LAST_ADC + 2:
+				#if !CONFIG_ADC_MCP3208
+					return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, "MCP3208 not enabled");
+				#endif
+				break;
+
+			case CPU_LAST_ADC + 3:
+				#if !CONFIG_ADC_ADS1115
+					return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, "ADS1115 not enabled");
+				#endif
+				break;
 		}
 	}
 
@@ -173,7 +196,7 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 
 			break;
 
-		case 2:
+		case CPU_LAST_ADC + 1:
 #if CONFIG_ADC_MCP3008
 			chan->max_resolution = 10;
 			chan->pvref = pvref;
@@ -185,7 +208,7 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 #endif
 			break;
 
-		case 3:
+		case CPU_LAST_ADC + 2:
 #if CONFIG_ADC_MCP3208
 			chan->max_resolution = 12;
 			chan->pvref = pvref;
@@ -196,7 +219,7 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 			}
 #endif
 			break;
-		case 4:
+		case CPU_LAST_ADC + 3:
 #if CONFIG_ADC_ADS1115
 			if (pvref <= 256) {
 				pvref = 256;
@@ -309,19 +332,19 @@ driver_error_t *adc_read(adc_channel_h_t *h, int *raw, double *mvols) {
 			error = adc_internal_read(chan, raw);
 			break;
 
-		case 2:
+		case CPU_LAST_ADC + 1:
 #if CONFIG_ADC_MCP3008
 			error = adc_mcp3008_read(chan, raw);
 #endif
 			break;
 
-		case 3:
+		case CPU_LAST_ADC + 2:
 #if CONFIG_ADC_MCP3208
 			error = adc_mcp3208_read(chan, raw);
 #endif
 			break;
 
-		case 4:
+		case CPU_LAST_ADC + 3:
 #if CONFIG_ADC_ADS1115
 			error = adc_ads1115_read(chan, raw);
 #endif

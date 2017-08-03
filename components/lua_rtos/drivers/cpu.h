@@ -242,7 +242,7 @@ typedef uint64_t gpio_pin_mask_t;
 
 // Unit bounds
 #define CPU_FIRST_ADC 1
-#define CPU_LAST_ADC  4
+#define CPU_LAST_ADC  1
 
 // Channel bounds
 #define CPU_FIRST_ADC_CH 0
@@ -250,15 +250,9 @@ typedef uint64_t gpio_pin_mask_t;
 
 // ESP32 available ADC units
 #define CPU_ADC1     1
-#define CPU_ADC2     2
-#define CPU_ADC3     3
-#define CPU_ADC4     4
 
 // ESP32 available ADC unit names
 #define CPU_ADC1_NAME  "ADC1"
-#define CPU_ADC2_NAME  "MCP3008"
-#define CPU_ADC3_NAME  "MCP3208"
-#define CPU_ADC4_NAME  "ADS1115"
 
 // ESP32 available ADC channels
 #define CPU_ADC_CH0  0
