@@ -165,7 +165,7 @@ static void console_deferred_intr_handler(void *args) {
 static void uart_comm_param_config(int8_t unit, UartBautRate brg, UartBitsNum4Char data, UartParityMode parity, UartStopBitsNum stop) {
 	wait_tx_empty(unit);
 
-	uart_div_modify(unit, (APB_CLK_FREQ << 4) / brg);
+	uart_set_baudrate(unit, brg);
 
     WRITE_PERI_REG(UART_CONF0_REG(unit),
                    ((parity == NONE_BITS) ? 0x0 : (UART_PARITY_EN | parity))
