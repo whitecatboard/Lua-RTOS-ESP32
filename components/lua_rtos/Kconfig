@@ -819,6 +819,11 @@ menu "Lua RTOS"
 						bool "Include MQTT module in build"
 						default n
 
+					config LUA_RTOS_LUA_USE_MDNS
+						depends on WIFI_ENABLED || ETHERNET
+						bool "Include MDNS module in build"
+						default n
+
 					config LUA_RTOS_LUA_USE_CAN
 						bool "Include CAN module in build"
 						default y
