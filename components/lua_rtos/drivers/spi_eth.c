@@ -102,7 +102,7 @@ driver_error_t *spi_eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t 
 
 driver_error_t *spi_eth_start() {
 	if (!status_get(STATUS_SPI_ETH_SETUP)) {
-		return driver_operation_error(SPI_ETH_DRIVER, SPI_ETH_ERR_NOT_INIT, NULL);
+		return driver_error(SPI_ETH_DRIVER, SPI_ETH_ERR_NOT_INIT, NULL);
 	}
 
 	if (!status_get(STATUS_SPI_ETH_STARTED)) {
@@ -117,10 +117,10 @@ driver_error_t *spi_eth_start() {
 		    status_set(STATUS_SPI_ETH_STARTED);
 	    } else if (uxBits & (evSPI_ETH_CANT_CONNECT)) {
 	    	status_clear(STATUS_SPI_ETH_STARTED);
-	    	return driver_operation_error(SPI_ETH_DRIVER, SPI_ETH_ERR_CANT_CONNECT, NULL);
+	    	return driver_error(SPI_ETH_DRIVER, SPI_ETH_ERR_CANT_CONNECT, NULL);
 	    } else {
 	    	status_clear(STATUS_SPI_ETH_STARTED);
-	    	return driver_operation_error(SPI_ETH_DRIVER, SPI_ETH_ERR_CANT_CONNECT, NULL);
+	    	return driver_error(SPI_ETH_DRIVER, SPI_ETH_ERR_CANT_CONNECT, NULL);
 	    }
 	}
 
@@ -129,7 +129,7 @@ driver_error_t *spi_eth_start() {
 
 driver_error_t *spi_eth_stop() {
 	if (!status_get(STATUS_SPI_ETH_SETUP)) {
-		return driver_operation_error(SPI_ETH_DRIVER, SPI_ETH_ERR_NOT_INIT, NULL);
+		return driver_error(SPI_ETH_DRIVER, SPI_ETH_ERR_NOT_INIT, NULL);
 	}
 
 	if (status_get(STATUS_SPI_ETH_STARTED)) {

@@ -222,7 +222,7 @@ static void gdisplay_fill_arc_offsetted(int cx, int cy, int radius, int thicknes
 driver_error_t *gdisplay_arc(int cx, int cy, int r, int th, float start, float end, uint32_t color) {
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	if (th < 1) th = 1;
@@ -238,7 +238,7 @@ driver_error_t *gdisplay_arc(int cx, int cy, int r, int th, float start, float e
 driver_error_t *gdisplay_arc_fill(int cx, int cy, int r, int th, float start, float end, uint32_t color, uint32_t fill) {
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	if (th < 1) th = 1;

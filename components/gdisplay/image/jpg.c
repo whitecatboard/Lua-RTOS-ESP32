@@ -151,14 +151,14 @@ driver_error_t *gdisplay_image_jpg(int x, int y, int8_t maxscale, const char *fn
 
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 	if ((maxscale < 0) || (maxscale > 3)) maxscale = 3;
 
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
 
 	if (caps->bytes_per_pixel == 0) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "display only support 2 colors");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "display only support 2 colors");
 	}
 
 	// Image from file
@@ -167,7 +167,7 @@ driver_error_t *gdisplay_image_jpg(int x, int y, int8_t maxscale, const char *fn
 
     dev.fhndl = fopen(fname, "r");
     if (!dev.fhndl) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, strerror(errno));
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, strerror(errno));
     }
 
 	// Adjust position
@@ -179,7 +179,7 @@ driver_error_t *gdisplay_image_jpg(int x, int y, int8_t maxscale, const char *fn
 	work = malloc(sz_work);
 	if (!work) {
 		fclose(dev.fhndl);
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	gdisplay_begin();
@@ -259,14 +259,14 @@ driver_error_t *gdisplay_image_jpg(int x, int y, int8_t maxscale, const char *fn
 			fclose(dev.fhndl);
 			free(work);
 			if (dev.membuff) free(dev.membuff);
-			return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMG_PROCESSING_ERROR, "decompression error");
+			return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMG_PROCESSING_ERROR, "decompression error");
 		}
 	}
 	else {
 		fclose(dev.fhndl);
 		free(work);
 		if (dev.membuff) free(dev.membuff);
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMG_PROCESSING_ERROR, "prepare error");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMG_PROCESSING_ERROR, "prepare error");
 	}
 
 	free(work);  // free work buffer

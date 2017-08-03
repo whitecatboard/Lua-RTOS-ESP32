@@ -2428,12 +2428,12 @@ driver_error_t *bme280_setup(sensor_instance_t *unit) {
 
     // Sanity checks
 	if ((unit->setup.i2c.devid != BME280_I2C_ADDRESS1) && (unit->setup.i2c.devid != BME280_I2C_ADDRESS2)) {
-		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_INVALID_ADDRESS, NULL);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_INVALID_ADDRESS, NULL);
 	}
 
     p_bme280 = calloc(sizeof(struct bme280_user_data_t), sizeof(char));
     if (!p_bme280) {
-		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, "NULL");
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, "NULL");
     }
 
 	// Set default mode & standby time & address
@@ -2444,7 +2444,7 @@ driver_error_t *bme280_setup(sensor_instance_t *unit) {
 	// Allocate space for buffer
 	char *buffer = (char *)calloc(32, 1);
 	if (!buffer) {
-		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 	sprintf(buffer, "SLEEP");
 	unit->properties[3].stringd.value = buffer;
@@ -2506,7 +2506,7 @@ driver_error_t *bme280_setup(sensor_instance_t *unit) {
 		_bme280_get(&temp, &hum, &pres);
 	}
 	else {
-		return driver_setup_error(SENSOR_DRIVER, BME20_ERR_INVALID_CHANNEL, "cannot detect device");
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_CANT_INIT, "cannot detect device");
 	}
 
 	return NULL;
@@ -2515,7 +2515,7 @@ driver_error_t *bme280_setup(sensor_instance_t *unit) {
 //-------------------------------------------------------------------------------
 driver_error_t *bme280_acquire(sensor_instance_t *unit, sensor_value_t *values) {
     if (!unit->setup.i2c.userdata) {
-		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_SETUP, NULL);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_SETUP, NULL);
     }
     p_bme280 = unit->setup.i2c.userdata;
 
@@ -2534,7 +2534,7 @@ driver_error_t *bme280_acquire(sensor_instance_t *unit, sensor_value_t *values) 
 //---------------------------------------------------------------------------------------------
 driver_error_t *bme280_get(sensor_instance_t *unit, const char *id, sensor_value_t *property) {
     if (!unit->setup.i2c.userdata) {
-		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_SETUP, NULL);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_SETUP, NULL);
     }
     p_bme280 = unit->setup.i2c.userdata;
 
@@ -2553,7 +2553,7 @@ driver_error_t *bme280_get(sensor_instance_t *unit, const char *id, sensor_value
 			// Allocate space for buffer
 			char *buffer = (char *)calloc(32, 1);
 			if (!buffer) {
-				return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
+				return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 			}
 		}
 		bm280_get_mode(unit, property->stringd.value);
@@ -2573,7 +2573,7 @@ driver_error_t *bme280_get(sensor_instance_t *unit, const char *id, sensor_value
 //--------------------------------------------------------------------------------------------
 driver_error_t *bme280_set(sensor_instance_t *unit, const char *id, sensor_value_t *property) {
     if (!unit->setup.i2c.userdata) {
-		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_SETUP, NULL);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_SETUP, NULL);
     }
     p_bme280 = unit->setup.i2c.userdata;
 
@@ -2601,7 +2601,7 @@ driver_error_t *bme280_set(sensor_instance_t *unit, const char *id, sensor_value
 								// Allocate space for buffer
 								char *buffer = (char *)calloc(32, 1);
 								if (!buffer) {
-									return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
+									return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 								}
 							}
 							bm280_get_mode(unit, unit->properties[3].stringd.value);
@@ -2610,7 +2610,7 @@ driver_error_t *bme280_set(sensor_instance_t *unit, const char *id, sensor_value
 				}
 			}
 			else {
-				return driver_setup_error(SENSOR_DRIVER, BME20_ERR_INVALID_MODE, "mode: 0 (sleep), 1 (forced), 3 (normal)");
+				return driver_error(SENSOR_DRIVER, SENSOR_ERR_CANT_INIT, "mode: 0 (sleep), 1 (forced), 3 (normal)");
 			}
 		}
 	}

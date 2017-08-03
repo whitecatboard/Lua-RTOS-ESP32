@@ -103,9 +103,9 @@ static int8_t pwm_timer(int8_t unit, int8_t channel) {
 static driver_error_t *pwm_check_unit(int8_t unit, int8_t setup) {
 	if ((unit < CPU_FIRST_PWM) || (unit > CPU_LAST_PWM)) {
 		if (setup) {
-			return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid unit");
+			return driver_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid unit");
 		} else {
-			return driver_setup_error(PWM_DRIVER, PWM_ERR_INVALID_UNIT, NULL);
+			return driver_error(PWM_DRIVER, PWM_ERR_INVALID_UNIT, NULL);
 		}
 	}
 
@@ -117,9 +117,9 @@ static driver_error_t *pwm_check_channel(int8_t unit, int8_t channel, int8_t set
 		case 0:
 			if (!((1 << channel) & (CPU_PWM0_ALL)) && (channel != -1)) {
 				if (setup) {
-					return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid channel");
+					return driver_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid channel");
 				} else {
-					return driver_setup_error(PWM_DRIVER, PWM_ERR_INVALID_CHANNEL, NULL);
+					return driver_error(PWM_DRIVER, PWM_ERR_INVALID_CHANNEL, NULL);
 				}
 			}
 			break;
@@ -131,9 +131,9 @@ static driver_error_t *pwm_check_channel(int8_t unit, int8_t channel, int8_t set
 static driver_error_t *pwm_check_duty(double duty, int8_t setup) {
 	if ((duty < 0) || (duty > 1)) {
 		if (setup) {
-			return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid duty");
+			return driver_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid duty");
 		} else {
-			return driver_setup_error(PWM_DRIVER, PWM_ERR_INVALID_DUTY, NULL);
+			return driver_error(PWM_DRIVER, PWM_ERR_INVALID_DUTY, NULL);
 		}
 	}
 	return NULL;
@@ -142,9 +142,9 @@ static driver_error_t *pwm_check_duty(double duty, int8_t setup) {
 static driver_error_t *pwm_check_freq(int32_t freq, int8_t setup) {
 	if ((freq <= 0)) {
 		if (setup) {
-			return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid frequency");
+			return driver_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid frequency");
 		} else {
-			return driver_setup_error(PWM_DRIVER, PWM_ERR_INVALID_FREQUENCY, NULL);
+			return driver_error(PWM_DRIVER, PWM_ERR_INVALID_FREQUENCY, NULL);
 		}
 	}
 	return NULL;
@@ -188,7 +188,7 @@ driver_error_t *pwm_setup(int8_t unit, int8_t channel, int8_t pin, int32_t freq,
 	if ((error = pwm_check_freq(freq, 1))) return error;
 
 	if (!(pin & GPIO_ALL)) {
-		return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid pin");
+		return driver_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid pin");
 	}
 
 	// Enable module
@@ -251,7 +251,7 @@ driver_error_t *pwm_setup(int8_t unit, int8_t channel, int8_t pin, int32_t freq,
     esp_log_level_set("ledc", ESP_LOG_ERROR);
 
     if (resp != ESP_OK) {
-		return driver_setup_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid frequency");
+		return driver_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid frequency");
     }
 
     pwm[unit][channel].bits = bits;
@@ -360,7 +360,7 @@ driver_error_t *pwm_set_freq(int8_t unit, int8_t channel, int32_t freq) {
 	    esp_log_level_set("ledc", ESP_LOG_ERROR);
 
 	    if (resp != ESP_OK) {
-			return driver_operation_error(PWM_DRIVER, PWM_ERR_INVALID_FREQUENCY, NULL);
+			return driver_error(PWM_DRIVER, PWM_ERR_INVALID_FREQUENCY, NULL);
 	    }
 
 	    pwm[unit][channel].bits = bits;

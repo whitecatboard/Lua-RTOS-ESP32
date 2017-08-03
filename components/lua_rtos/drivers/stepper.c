@@ -246,11 +246,11 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, uint8_t *unit) 
 
 	// Sanity checks
 	if (step_pin > 31 ) {
-		return driver_operation_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_PIN, "must be between 0 and 31");
+		return driver_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_PIN, "must be between 0 and 31");
 	}
 
 	if (dir_pin > 31 ) {
-		return driver_operation_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_PIN, "must be between 0 and 31");
+		return driver_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_PIN, "must be between 0 and 31");
 	}
 
 	mtx_lock(&stepper_mutex);
@@ -266,7 +266,7 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, uint8_t *unit) 
 	if (i > NSTEP) {
 		// No free unit
 		mtx_unlock(&stepper_mutex);
-		return driver_operation_error(STEPPER_DRIVER, STEPPER_ERR_NO_MORE_UNITS, NULL);
+		return driver_error(STEPPER_DRIVER, STEPPER_ERR_NO_MORE_UNITS, NULL);
 	}
 
 	// Lock the step pin
@@ -317,11 +317,11 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, uint8_t *unit) 
 driver_error_t *stepper_move(uint8_t unit, uint8_t dir, uint32_t steps, uint32_t ramp, double ifreq, double efreq) {
 	// Sanity checks
 	if (dir > 1) {
-		return driver_operation_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_DIRECTION, NULL);
+		return driver_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_DIRECTION, NULL);
 	}
 	if (unit > NSTEP) {
 		// Invalid unit
-		return driver_operation_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_UNIT, NULL);
+		return driver_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_UNIT, NULL);
 	}
 
 	mtx_lock(&stepper_mutex);
@@ -329,7 +329,7 @@ driver_error_t *stepper_move(uint8_t unit, uint8_t dir, uint32_t steps, uint32_t
 	if (!stepper[unit].setup) {
 		// Unit not setup
 		mtx_unlock(&stepper_mutex);
-		return driver_operation_error(STEPPER_DRIVER, STEPPER_ERR_UNIT_NOT_SETUP, NULL);
+		return driver_error(STEPPER_DRIVER, STEPPER_ERR_UNIT_NOT_SETUP, NULL);
 	}
 
 	stepper[unit].steps = steps;

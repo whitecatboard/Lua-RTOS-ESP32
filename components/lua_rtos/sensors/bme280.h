@@ -67,12 +67,6 @@
 #include <drivers/sensor.h>
 /************************************************/
 
-// BME280 driver errors
-#define BME280_ERR_CANT_INIT        (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  0)
-#define BME20_ERR_INVALID_CHANNEL   (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  1)
-#define BME20_ERR_INVALID_MODE      (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  2)
-#define BME20_ERR_INVALID_STANDBY   (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  3)
-
 /*unsigned integer types*/
 typedef	uint8_t u8;/**< used for unsigned 8bit */
 typedef	uint16_t u16;/**< used for unsigned 16bit */

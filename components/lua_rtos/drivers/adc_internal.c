@@ -92,7 +92,7 @@ driver_error_t * adc_internal_pin_to_channel(uint8_t pin, uint8_t *chan) {
 		case GPIO34: *chan = 6; break;
 		case GPIO35: *chan = 7; break;
 		default:
-			return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_PIN, NULL);
+			return driver_error(ADC_DRIVER, ADC_ERR_INVALID_PIN, NULL);
 	}
 
 	return NULL;

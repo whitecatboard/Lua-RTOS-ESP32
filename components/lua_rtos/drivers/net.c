@@ -224,7 +224,7 @@ driver_error_t *net_init() {
 
 driver_error_t *net_check_connectivity() {
 	if (!NETWORK_AVAILABLE()) {
-		return driver_operation_error(NET_DRIVER, NET_ERR_NOT_AVAILABLE,NULL);
+		return driver_error(NET_DRIVER, NET_ERR_NOT_AVAILABLE,NULL);
 	}
 
 	return NULL;
@@ -275,7 +275,7 @@ driver_error_t *net_event_register_callback(net_event_register_callback_t func) 
 		}
 	}
 
-	return driver_operation_error(NET_DRIVER, NET_ERR_NO_MORE_CALLBACKS,NULL);
+	return driver_error(NET_DRIVER, NET_ERR_NO_MORE_CALLBACKS,NULL);
 }
 
 driver_error_t *net_event_unregister_callback(net_event_register_callback_t func) {
@@ -288,7 +288,7 @@ driver_error_t *net_event_unregister_callback(net_event_register_callback_t func
 		}
 	}
 
-	return driver_operation_error(NET_DRIVER, NET_ERR_NO_MORE_CALLBACKS,NULL);
+	return driver_error(NET_DRIVER, NET_ERR_NO_MORE_CALLBACKS,NULL);
 }
 
 DRIVER_REGISTER(NET,net,NULL,NULL,NULL);

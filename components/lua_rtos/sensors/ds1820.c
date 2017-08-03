@@ -14,7 +14,7 @@
 
 #include "sensors/ds1820.h"
 #include "time.h"
-#include "drivers/owire.h"
+#include <drivers/owire.h>
 #include <sys/driver.h>
 
 static int ds_parasite_pwr = 0;
@@ -634,12 +634,12 @@ driver_error_t *ds1820_setup(sensor_instance_t *unit) {
 
 	uint8_t numDS182 = numDS1820dev(dev);
 	if ((numDS182 == 0) || (ds_dev > numDS182) || (ds_dev == 0)) {
-		return driver_setup_error(SENSOR_DRIVER, OWIRE_ERR_INVALID_CHANNEL, "device not on bus");
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_CANT_INIT, "device not on bus");
 	}
 
 	// check for DS1820 device
 	if (!TM_DS18B20_Is(&(ow_devices[dev].roms[ds_dev-1][0]))) {
-		return driver_setup_error(SENSOR_DRIVER, OWIRE_ERR_INVALID_CHANNEL, "not DS1820 device");
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_CANT_INIT, "not DS1820 device");
 	}
 
 	// Set default resolution (10 bits)
@@ -753,7 +753,7 @@ driver_error_t *ds1820_get(sensor_instance_t *unit, const char *id, sensor_value
 		// Allocate space for buffer
 		char *buffer = (char *)calloc(1, 32);
 		if (!buffer) {
-			return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
+			return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
 
 		ds1820_getrom(unit, buffer);
@@ -768,7 +768,7 @@ driver_error_t *ds1820_get(sensor_instance_t *unit, const char *id, sensor_value
 		// Allocate space for buffer
 		char *buffer = (char *)calloc(1, 32);
 		if (!buffer) {
-			return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
+			return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
 
 		ds1820_gettype(unit, buffer);

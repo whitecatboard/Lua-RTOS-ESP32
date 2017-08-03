@@ -89,23 +89,23 @@ driver_error_t *wifi_check_error(esp_err_t error) {
 	if (error == ESP_ERR_WIFI_OK) return NULL;
 
 	switch (error) {
-		case ESP_ERR_WIFI_FAIL:        return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_FAIL,NULL);
-		case ESP_ERR_WIFI_NO_MEM:      return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NO_MEM,NULL);
-		case ESP_ERR_WIFI_NOT_INIT:    return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_INIT,NULL);
-		case ESP_ERR_WIFI_NOT_STARTED: return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_START,NULL);
-		case ESP_ERR_WIFI_IF:          return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_IF,NULL);
-		case ESP_ERR_WIFI_STATE:       return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_STATE,NULL);
-		case ESP_ERR_WIFI_CONN:        return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_CONN,NULL);
-		case ESP_ERR_WIFI_NVS:         return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NVS,NULL);
-		case ESP_ERR_WIFI_MAC:         return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_MAC,NULL);
-		case ESP_ERR_WIFI_SSID:        return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_SSID,NULL);
-		case ESP_ERR_WIFI_PASSWORD:    return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_PASSWORD,NULL);
-		case ESP_ERR_WIFI_TIMEOUT:     return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_TIMEOUT,NULL);
-		case ESP_ERR_WIFI_WAKE_FAIL:   return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WAKE_FAIL,NULL);
-		case ESP_ERR_WIFI_MODE:        return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_MODE,NULL);
-		case ESP_ERR_WIFI_ARG:		   return driver_operation_error(WIFI_DRIVER, WIFI_ERR_INVALID_ARGUMENT,NULL);
-		case ESP_ERR_WIFI_NOT_SUPPORT: return driver_operation_error(WIFI_DRIVER, WIFI_ERR_NOT_SUPPORT,NULL);
-		case ESP_ERR_WIFI_NOT_STOPPED: return driver_operation_error(WIFI_DRIVER, WIFI_ERR_NOT_STOPPED,NULL);
+		case ESP_ERR_WIFI_FAIL:        return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_FAIL,NULL);
+		case ESP_ERR_WIFI_NO_MEM:      return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NO_MEM,NULL);
+		case ESP_ERR_WIFI_NOT_INIT:    return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_INIT,NULL);
+		case ESP_ERR_WIFI_NOT_STARTED: return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_START,NULL);
+		case ESP_ERR_WIFI_IF:          return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_IF,NULL);
+		case ESP_ERR_WIFI_STATE:       return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_STATE,NULL);
+		case ESP_ERR_WIFI_CONN:        return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_CONN,NULL);
+		case ESP_ERR_WIFI_NVS:         return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NVS,NULL);
+		case ESP_ERR_WIFI_MAC:         return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_MAC,NULL);
+		case ESP_ERR_WIFI_SSID:        return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_SSID,NULL);
+		case ESP_ERR_WIFI_PASSWORD:    return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_PASSWORD,NULL);
+		case ESP_ERR_WIFI_TIMEOUT:     return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_TIMEOUT,NULL);
+		case ESP_ERR_WIFI_WAKE_FAIL:   return driver_error(WIFI_DRIVER, WIFI_ERR_WAKE_FAIL,NULL);
+		case ESP_ERR_WIFI_MODE:        return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_MODE,NULL);
+		case ESP_ERR_WIFI_ARG:		   return driver_error(WIFI_DRIVER, WIFI_ERR_INVALID_ARGUMENT,NULL);
+		case ESP_ERR_WIFI_NOT_SUPPORT: return driver_error(WIFI_DRIVER, WIFI_ERR_NOT_SUPPORT,NULL);
+		case ESP_ERR_WIFI_NOT_STOPPED: return driver_error(WIFI_DRIVER, WIFI_ERR_NOT_STOPPED,NULL);
 
 		default: {
 			char *buffer;
@@ -117,7 +117,7 @@ driver_error_t *wifi_check_error(esp_err_t error) {
 
 			sprintf(buffer, "missing wifi error case %d", error);
 
-			return driver_operation_error(WIFI_DRIVER, WIFI_ERR_CANT_INIT, buffer);
+			return driver_error(WIFI_DRIVER, WIFI_ERR_CANT_INIT, buffer);
 		}
 	}
 
@@ -215,7 +215,7 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 			// Allocate space for AP list
 			*list = (wifi_ap_record_t *)malloc(sizeof(wifi_ap_record_t) * (*count));
 			if (!*list) {
-				return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NO_MEM,NULL);
+				return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NO_MEM,NULL);
 			}
 
 			// Get AP list
@@ -250,7 +250,7 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int pow
 	// Sanity checks
 	if (mode == WIFI_MODE_AP) {
 		if (*password && strlen(password) < 8) {
-			return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_PASSWORD, "if provided the password must have more than 7 characters");
+			return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_PASSWORD, "if provided the password must have more than 7 characters");
 		}
 	}
 
@@ -310,7 +310,7 @@ driver_error_t *wifi_start() {
 	driver_error_t *error;
 
 	if (!status_get(STATUS_WIFI_SETUP)) {
-		return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_INIT, NULL);
+		return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_INIT, NULL);
 	}
 
 	if (!status_get(STATUS_WIFI_STARTED)) {
@@ -330,7 +330,7 @@ driver_error_t *wifi_start() {
 
 			if (uxBits & (evWIFI_CANT_CONNECT)) {
 				esp_wifi_stop();
-				return driver_operation_error(WIFI_DRIVER, WIFI_ERR_CANT_CONNECT, NULL);
+				return driver_error(WIFI_DRIVER, WIFI_ERR_CANT_CONNECT, NULL);
 			}
 		 }
 	}
@@ -342,7 +342,7 @@ driver_error_t *wifi_stop() {
 	driver_error_t *error;
 
 	if (!status_get(STATUS_WIFI_SETUP)) {
-		return driver_operation_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_INIT, NULL);
+		return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_INIT, NULL);
 	}
 
 	if (status_get(STATUS_WIFI_STARTED)) {

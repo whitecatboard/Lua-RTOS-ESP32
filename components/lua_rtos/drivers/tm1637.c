@@ -281,23 +281,23 @@ driver_error_t *tm1637_setup(uint8_t scl, uint8_t sda, int *deviceid) {
 
 driver_error_t *tm1637_clear(int deviceid) {
 	if (tm1637_display(deviceid, 0x00,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
-		return driver_operation_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
+		return driver_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
 	}
 
 	if (tm1637_display(deviceid, 0x01,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
-		return driver_operation_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
+		return driver_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
 	}
 
 	if (tm1637_display(deviceid, 0x02,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
-		return driver_operation_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
+		return driver_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
 	}
 
 	if (tm1637_display(deviceid, 0x03,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
-		return driver_operation_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
+		return driver_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
 	}
 
 	if (tm1637_display(deviceid, 0x04,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
-		return driver_operation_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
+		return driver_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
 	}
 
 	return NULL;
@@ -310,12 +310,12 @@ driver_error_t *tm1637_write(int deviceid, const char *data, uint8_t brightness)
 	while (*cdata) {
 		if (*(cdata + 1) == '.') {
 			if (tm1637_display(deviceid, pos,(uint8_t)*cdata,TM1637_POINT_ON,brightness) < 0) {
-				return driver_operation_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
+				return driver_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
 			}
 			cdata++;
 		} else {
 			if (tm1637_display(deviceid, pos,(uint8_t)*cdata,TM1637_POINT_OFF,brightness) < 0) {
-				return driver_operation_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
+				return driver_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
 			}
 		}
 

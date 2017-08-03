@@ -283,13 +283,13 @@ static void lora_init(osjob_t *j) {
 driver_error_t *lora_setup(int band) {
 	#if CONFIG_LUA_RTOS_LORA_NODE_BAND_EU868
 	if (band != 868) {
-		return driver_operation_error(LORA_DRIVER, LORA_ERR_INVALID_BAND, NULL);
+		return driver_error(LORA_DRIVER, LORA_ERR_INVALID_BAND, NULL);
 	}
 	#endif
 
 	#if CONFIG_LUA_RTOS_LORA_NODE_BAND_US915
 	if (band != 915) {
-		return driver_operation_error(LORA_DRIVER, LORA_ERR_INVALID_BAND, NULL);
+		return driver_error(LORA_DRIVER, LORA_ERR_INVALID_BAND, NULL);
 	}
 	#endif
 
@@ -332,7 +332,7 @@ driver_error_t *lora_mac_set(const char command, const char *value) {
 
     if (!setup) {
         mtx_unlock(&lora_mtx);
-		return driver_operation_error(LORA_DRIVER, LORA_ERR_NOT_SETUP, NULL);
+		return driver_error(LORA_DRIVER, LORA_ERR_NOT_SETUP, NULL);
     }
 
 	switch(command) {
@@ -343,7 +343,7 @@ driver_error_t *lora_mac_set(const char command, const char *value) {
 		case LORA_MAC_SET_DEVEUI:
 			#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
 			mtx_unlock(&lora_mtx);
-			return driver_operation_error(LORA_DRIVER, LORA_ERR_INVALID_ARGUMENT, "in this board DevEui is assigned automatically");
+			return driver_error(LORA_DRIVER, LORA_ERR_INVALID_ARGUMENT, "in this board DevEui is assigned automatically");
 			#else
 			// DEVEUI must be in little-endian format
 			hex_string_to_val((char *)value, (char *)DEVEUI, 8, 1);
@@ -370,12 +370,12 @@ driver_error_t *lora_mac_set(const char command, const char *value) {
 		
 		case LORA_MAC_SET_DR:
 			if ((atoi((char *)value) < 0) || (atoi((char *)value) > 15)) {
-				return driver_operation_error(LORA_DRIVER, LORA_ERR_INVALID_DR, NULL);
+				return driver_error(LORA_DRIVER, LORA_ERR_INVALID_DR, NULL);
 			}
 
 			u1_t dr = data_rates[atoi((char *)value)];
 			if (dr == DR_NONE) {
-				return driver_operation_error(LORA_DRIVER, LORA_ERR_INVALID_DR, NULL);
+				return driver_error(LORA_DRIVER, LORA_ERR_INVALID_DR, NULL);
 			}
 
 			current_dr = dr;
@@ -493,17 +493,17 @@ driver_error_t *lora_join() {
     // Sanity checks
     if (!setup) {
     	mtx_unlock(&lora_mtx);
-		return driver_operation_error(LORA_DRIVER, LORA_ERR_NOT_SETUP, NULL);
+		return driver_error(LORA_DRIVER, LORA_ERR_NOT_SETUP, NULL);
     }
 
     if (!lora_must_join()) {
         mtx_unlock(&lora_mtx);
-		return driver_operation_error(LORA_DRIVER, LORA_ERR_ABP_EXPECTED, NULL);
+		return driver_error(LORA_DRIVER, LORA_ERR_ABP_EXPECTED, NULL);
     }
 
     if (!lora_can_participate_otaa()) {
         mtx_unlock(&lora_mtx);
-		return driver_operation_error(LORA_DRIVER, LORA_ERR_KEYS_NOT_CONFIGURED, NULL);
+		return driver_error(LORA_DRIVER, LORA_ERR_KEYS_NOT_CONFIGURED, NULL);
     }
 
     // Join, if needed
@@ -531,12 +531,12 @@ driver_error_t *lora_join() {
 
     if (uxBits & (evLORA_JOIN_DENIED)) {
 	    mtx_unlock(&lora_mtx);   
-		return driver_operation_error(LORA_DRIVER, LORA_ERR_NOT_JOINED, NULL);
+		return driver_error(LORA_DRIVER, LORA_ERR_NOT_JOINED, NULL);
     }
 	
 	mtx_unlock(&lora_mtx);
 
-	return driver_operation_error(LORA_DRIVER, LORA_ERR_UNEXPECTED_RESPONSE, NULL);
+	return driver_error(LORA_DRIVER, LORA_ERR_UNEXPECTED_RESPONSE, NULL);
 }
 
 driver_error_t *lora_tx(int cnf, int port, const char *data) {
@@ -547,23 +547,23 @@ driver_error_t *lora_tx(int cnf, int port, const char *data) {
 
     if (!setup) {
         mtx_unlock(&lora_mtx);
-        return driver_operation_error(LORA_DRIVER, LORA_ERR_NOT_SETUP, NULL);
+        return driver_error(LORA_DRIVER, LORA_ERR_NOT_SETUP, NULL);
     }
 
     if (lora_must_join()) {
     	if (lora_can_participate_otaa()) {
             if (!joined) {
                 mtx_unlock(&lora_mtx);
-                return driver_operation_error(LORA_DRIVER, LORA_ERR_NOT_JOINED, NULL);
+                return driver_error(LORA_DRIVER, LORA_ERR_NOT_JOINED, NULL);
             }
     	} else {
             mtx_unlock(&lora_mtx);
-            return driver_operation_error(LORA_DRIVER, LORA_ERR_KEYS_NOT_CONFIGURED, NULL);
+            return driver_error(LORA_DRIVER, LORA_ERR_KEYS_NOT_CONFIGURED, NULL);
     	}
     } else {
     	if (!lora_can_participate_abp()) {
             mtx_unlock(&lora_mtx);
-            return driver_operation_error(LORA_DRIVER, LORA_ERR_KEYS_NOT_CONFIGURED, NULL);
+            return driver_error(LORA_DRIVER, LORA_ERR_KEYS_NOT_CONFIGURED, NULL);
     	} else {
     		if (!session_init) {
     			LMIC_setSession (0x1, DEVADDR, NWKSKEY, APPSKEY);
@@ -582,7 +582,7 @@ driver_error_t *lora_tx(int cnf, int port, const char *data) {
 	payload = (uint8_t *)malloc(payload_len + 1);
 	if (!payload) {
 		mtx_unlock(&lora_mtx);
-		return driver_operation_error(LORA_DRIVER, LORA_ERR_NO_MEM, NULL);
+		return driver_error(LORA_DRIVER, LORA_ERR_NO_MEM, NULL);
 	}
 	
 	// Convert input payload (coded in hex string) into a byte buffer
@@ -611,12 +611,12 @@ driver_error_t *lora_tx(int cnf, int port, const char *data) {
 
     if (uxBits & (evLORA_ACK_NOT_RECEIVED)) {
         mtx_unlock(&lora_mtx);
-        return driver_operation_error(LORA_DRIVER, LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED, NULL);
+        return driver_error(LORA_DRIVER, LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED, NULL);
     }
 	
 	mtx_unlock(&lora_mtx);
 
-    return driver_operation_error(LORA_DRIVER, LORA_ERR_UNEXPECTED_RESPONSE, NULL);
+    return driver_error(LORA_DRIVER, LORA_ERR_UNEXPECTED_RESPONSE, NULL);
 }
 
 void lora_set_rx_callback(lora_rx *callback) {

@@ -50,23 +50,23 @@ driver_error_t *gdisplay_image_type(const char *fname, image_type *type) {
 
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	if (stat(fname, &sb) != 0) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, strerror(errno));
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, strerror(errno));
 	}
 
     f = fopen(fname, "r");
 	if (!f) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, strerror(errno));
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, strerror(errno));
 	}
 
 	// Read
     rd = fread(&buffer, 1, sizeof(buffer), f);
 	if (rd != sizeof(buffer)) {
 		fclose(f);
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "reading header");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "reading header");
 	}
 
 	if ((buffer[0] == 0x42) && (buffer[1] == 0x4d)) {

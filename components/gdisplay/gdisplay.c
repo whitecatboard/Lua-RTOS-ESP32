@@ -215,13 +215,13 @@ driver_error_t *gdisplay_init(uint8_t chipset, uint8_t orient, uint8_t buffered)
 
 	// Sanity checks
 	if ((orient != PORTRAIT) && (orient != PORTRAIT_FLIP) && (orient != LANDSCAPE) && (orient != LANDSCAPE_FLIP)) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_ORIENTATION, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_ORIENTATION, NULL);
 	}
 
 	// Get display data
 	display = (gdisplay_t *)gdisplay_get(chipset);
 	if (!display) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_CHIPSET, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_CHIPSET, NULL);
 	}
 
 	cursorx = 0;
@@ -244,7 +244,7 @@ driver_error_t *gdisplay_init(uint8_t chipset, uint8_t orient, uint8_t buffered)
 			buffer = calloc((caps->width * caps->height) / 8, 1);
 		}
 		if (!buffer) {
-			return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_NOT_ENOUGH_MEMORY, NULL);
+			return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
 
 		bbx1 = 5000;
@@ -282,7 +282,7 @@ driver_error_t *gdisplay_init(uint8_t chipset, uint8_t orient, uint8_t buffered)
 driver_error_t *gdisplay_width(int *awidth) {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
@@ -294,7 +294,7 @@ driver_error_t *gdisplay_width(int *awidth) {
 driver_error_t *gdisplay_height(int *aheight) {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
@@ -307,14 +307,14 @@ driver_error_t *gdisplay_height(int *aheight) {
 driver_error_t *gdisplay_rgb_to_color(int r, int g, int b, uint32_t *color) {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
 
 	if (caps->bytes_per_pixel == 0) {
 		if (((r != 255) || (g != 255) || (b != 255)) && ((r != 0) || (g != 0) || (b != 0))) {
-			return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_COLOR, "only 2 colors allowed");
+			return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_COLOR, "only 2 colors allowed");
 		}
 
 		if (r == 255) {
@@ -327,15 +327,15 @@ driver_error_t *gdisplay_rgb_to_color(int r, int g, int b, uint32_t *color) {
 	}
 
 	if ((r < 0) || (r > 255)) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_COLOR, "R component");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_COLOR, "R component");
 	}
 
 	if ((g < 0) || (g > 255)) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_COLOR, "G component");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_COLOR, "G component");
 	}
 
 	if ((b < 0) || (b > 255)) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_COLOR, "B component");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_COLOR, "B component");
 	}
 
 	*color = (
@@ -350,13 +350,13 @@ driver_error_t *gdisplay_rgb_to_color(int r, int g, int b, uint32_t *color) {
 driver_error_t *gdisplay_color_to_rgb(uint32_t color, int *r, int *g, int *b) {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
 	if (caps->bytes_per_pixel == 0) {
 		if ((color != GDISPLAY_BLACK) && (color != GDISPLAY_WHITE)) {
-			return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_COLOR, "only 2 colors allowed");
+			return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_COLOR, "only 2 colors allowed");
 		}
 
 		if (color == GDISPLAY_BLACK) {
@@ -399,7 +399,7 @@ driver_error_t *gdisplay_hsb(float _hue, float _sat, float _brightness, uint32_t
 
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER,
+		return driver_error(GDISPLAY_DRIVER,
 				GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
@@ -480,7 +480,7 @@ driver_error_t *gdisplay_clear(uint32_t color) {
 
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_begin();
@@ -510,7 +510,7 @@ driver_error_t *gdisplay_clear(uint32_t color) {
 driver_error_t *gdisplay_on() {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_ll_on();
@@ -521,7 +521,7 @@ driver_error_t *gdisplay_on() {
 driver_error_t *gdisplay_off() {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_ll_off();
@@ -571,11 +571,11 @@ void gdisplay_set_offset(int noffset) {
 driver_error_t *gdisplay_set_orientation(uint16_t orient) {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	if ((rotation != PORTRAIT) && (rotation != PORTRAIT_FLIP) && (rotation != LANDSCAPE) && (rotation != LANDSCAPE_FLIP)) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_ORIENTATION, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_ORIENTATION, NULL);
 	}
 
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
@@ -599,7 +599,7 @@ driver_error_t *gdisplay_set_orientation(uint16_t orient) {
 driver_error_t *gdisplay_set_rotation(uint16_t newrot) {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	rotation = newrot;
@@ -647,7 +647,7 @@ void gdisplay_set_angle_offset(float noffset) {
 driver_error_t *gdisplay_set_clip_window(int x0, int y0, int x1, int y1) {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	if (x0 < 0) {
@@ -679,7 +679,7 @@ driver_error_t *gdisplay_set_clip_window(int x0, int y0, int x1, int y1) {
 driver_error_t *gdisplay_get_clip_window(int *x0, int *y0, int *x1, int *y1) {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	*x0 = dispWin.x1;
@@ -693,7 +693,7 @@ driver_error_t *gdisplay_get_clip_window(int *x0, int *y0, int *x1, int *y1) {
 driver_error_t *gdisplay_reset_clip_window() {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
@@ -709,7 +709,7 @@ driver_error_t *gdisplay_reset_clip_window() {
 driver_error_t *gdisplay_invert(uint8_t on) {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_ll_invert(on);
@@ -732,7 +732,7 @@ driver_error_t *gdisplay_type(int8_t *dtype) {
 driver_error_t *gdisplay_lock() {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	pthread_mutex_lock(&mtx);
@@ -744,7 +744,7 @@ driver_error_t *gdisplay_lock() {
 driver_error_t *gdisplay_unlock() {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_end();
@@ -756,7 +756,7 @@ driver_error_t *gdisplay_unlock() {
 driver_error_t *gdisplay_touch_get(int *x, int *y, int *z) {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
@@ -764,7 +764,7 @@ driver_error_t *gdisplay_touch_get(int *x, int *y, int *z) {
 	if (caps->touch_get) {
 		caps->touch_get(x, y, z, 0);
 	} else {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_TOUCH_NOT_SUPPORTED, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_TOUCH_NOT_SUPPORTED, NULL);
 	}
 
 	return NULL;
@@ -773,7 +773,7 @@ driver_error_t *gdisplay_touch_get(int *x, int *y, int *z) {
 driver_error_t *gdisplay_touch_get_raw(int *x, int *y, int *z) {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
@@ -781,7 +781,7 @@ driver_error_t *gdisplay_touch_get_raw(int *x, int *y, int *z) {
 	if (caps->touch_get) {
 		caps->touch_get(x, y, z, 1);
 	} else {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_TOUCH_NOT_SUPPORTED, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_TOUCH_NOT_SUPPORTED, NULL);
 	}
 
 	return NULL;
@@ -790,7 +790,7 @@ driver_error_t *gdisplay_touch_get_raw(int *x, int *y, int *z) {
 driver_error_t *gdisplay_touch_set_cal(int x, int y) {
 	// Sanity checks
 	if (!init) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
@@ -798,7 +798,7 @@ driver_error_t *gdisplay_touch_set_cal(int x, int y) {
 	if (caps->touch_cal) {
 		caps->touch_cal(x, y);
 	} else {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_TOUCH_NOT_SUPPORTED, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_TOUCH_NOT_SUPPORTED, NULL);
 	}
 
 	return NULL;

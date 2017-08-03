@@ -141,23 +141,8 @@ driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error
     return error;
 }
 
-// Create a driver error of type setup
-driver_error_t *driver_setup_error(const driver_t *driver, unsigned int exception, const char *msg) {
-	driver_error_t *error;
-
-    error = (driver_error_t *)malloc(sizeof(driver_error_t));
-    if (error) {
-        error->type = SETUP;
-        error->driver = driver;
-        error->exception = exception;
-        error->msg = msg;
-    }
-
-    return error;
-}
-
 // Create a driver error of type operation
-driver_error_t *driver_operation_error(const driver_t *driver, unsigned int exception, const char *msg) {
+driver_error_t *driver_error(const driver_t *driver, unsigned int exception, const char *msg) {
 	driver_error_t *error;
 
 	error = (driver_error_t *)malloc(sizeof(driver_error_t));

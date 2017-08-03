@@ -85,7 +85,7 @@ driver_error_t *gdisplay_image_bmp(int x, int y, const char *fname) {
 
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
@@ -93,58 +93,58 @@ driver_error_t *gdisplay_image_bmp(int x, int y, const char *fname) {
     // Allocate buffer for reading one line of display data
     buf = malloc(caps->width * 3);
     if (!buf) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_NOT_ENOUGH_MEMORY, NULL);
     }
 
     fhndl = fopen(fname, "r");
 	if (!fhndl) {
 		free(buf);
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, strerror(errno));
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, strerror(errno));
 	}
 
     xrd = fread(&header, sizeof(bmp_header_t), 1, fhndl);  // read header
 	if (xrd != 1) {
 		free(buf);
 		fclose(fhndl);
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "reading header");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "reading header");
 	}
 
 	// Sanity checks
 	if (header.type != 0x4d42) {
 		free(buf);
 		fclose(fhndl);
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "unknown signature");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "unknown signature");
 	}
 
 	if ((header.header_size != 40) && (header.header_size != 108)) {
 		free(buf);
 		fclose(fhndl);
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "bad header size");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "bad header size");
 	}
 
 	if (header.planes != 1) {
 		free(buf);
 		fclose(fhndl);
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "only 1 color plane supported");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "only 1 color plane supported");
 	}
 
 	if ((header.bits != 1) && (header.bits != 8) && (header.bits != 24)) {
 		free(buf);
 		fclose(fhndl);
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "only 1, 8 and 24 bits per pixel supported");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "only 1, 8 and 24 bits per pixel supported");
 	}
 
 	if (header.compression != 0) {
 		free(buf);
 		fclose(fhndl);
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "compression not supported");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "compression not supported");
 	}
 
 	if (caps->bytes_per_pixel == 0) {
 		if (header.bits != 1) {
 			free(buf);
 			fclose(fhndl);
-			return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "display only support 2 colors");
+			return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "display only support 2 colors");
 		}
 	}
 
@@ -154,20 +154,20 @@ driver_error_t *gdisplay_image_bmp(int x, int y, const char *fname) {
 
 		palette = malloc(palette_size);
 		if (!palette) {
-			return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_NOT_ENOUGH_MEMORY, "palette");
+			return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_NOT_ENOUGH_MEMORY, "palette");
 		}
 
 		if (fseek(fhndl, header.offset - palette_size, SEEK_SET) != 0) {
 			free(buf);
 			fclose(fhndl);
-			return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, strerror(errno));
+			return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, strerror(errno));
 		}
 
 		int rd = fread(palette, 1, palette_size, fhndl);
 		if (rd != palette_size) {
 			free(buf);
 			fclose(fhndl);
-			return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, strerror(errno));
+			return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, strerror(errno));
 		}
 	}
 
@@ -192,7 +192,7 @@ driver_error_t *gdisplay_image_bmp(int x, int y, const char *fname) {
 		free(buf);
 		fclose(fhndl);
 
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "image out of screen");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IMAGE, "image out of screen");
 	}
 
 	int i,j,k;

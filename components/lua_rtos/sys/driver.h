@@ -109,7 +109,6 @@ typedef struct {
 
 typedef enum {
     LOCK,		// Someone needs a resource which is locked
-    SETUP,      // Something fails during setup
 	OPERATION   // Something fails during normal operation
 } driver_error_type;
 
@@ -205,8 +204,7 @@ const char *driver_get_err_msg_by_exception(int exception);
 const char *driver_get_name(driver_error_t *error);
 
 driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error_t *lock_error);
-driver_error_t *driver_setup_error(const driver_t *driver, unsigned int code, const char *msg);
-driver_error_t *driver_operation_error(const driver_t *driver, unsigned int code, const char *msg);
+driver_error_t *driver_error(const driver_t *driver, unsigned int code, const char *msg);
 driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit, uint8_t flags, const char *tag);
 void _driver_init();
 char *driver_target_name(const driver_t *target_driver, int target_unit, const char *tag);

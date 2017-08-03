@@ -59,7 +59,7 @@ driver_error_t *gdisplay_hline(int x0, int y0, int w, uint32_t color) {
 
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_begin();
@@ -78,7 +78,7 @@ driver_error_t *gdisplay_vline(int x0, int y0, int h, uint32_t color) {
 
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	if (h < 0) {
@@ -100,7 +100,7 @@ driver_error_t *gdisplay_vline(int x0, int y0, int h, uint32_t color) {
 driver_error_t *gdisplay_line(int x0, int y0, int x1, int y1, uint32_t color) {
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	if (x0 == x1) {
@@ -185,7 +185,7 @@ driver_error_t *gdisplay_line(int x0, int y0, int x1, int y1, uint32_t color) {
 driver_error_t *gdisplay_line_by_angle(int x, int y, int length, int angle, int offset, int start, uint32_t color) {
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	if (start >= length) start = length - 1;

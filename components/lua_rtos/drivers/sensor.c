@@ -114,7 +114,7 @@ static driver_error_t *sensor_owire_setup(sensor_instance_t *unit) {
 		}
 		int dev = owire_checkpin(unit->setup.owire.gpio);
 		if (dev < 0) {
-			return driver_setup_error(SENSOR_DRIVER, SENSOR_ERR_CANT_INIT, NULL);
+			return driver_error(SENSOR_DRIVER, SENSOR_ERR_CANT_INIT, NULL);
 		}
 		vTaskDelay(10 / portTICK_RATE_MS);
 		owdevice_input(dev);
@@ -131,7 +131,7 @@ static driver_error_t *sensor_owire_setup(sensor_instance_t *unit) {
 
 	// check if owire bus is setup
 	if (ow_devices[unit->setup.owire.owdevice].device.pin == 0) {
-		return driver_setup_error(SENSOR_DRIVER, SENSOR_ERR_CANT_INIT, NULL);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_CANT_INIT, NULL);
 	}
 
 	return NULL;
@@ -227,12 +227,12 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 
 	// Sanity checks
 	if (!sensor->acquire) {
-		return driver_setup_error(SENSOR_DRIVER, SENSOR_ERR_ACQUIRE_UNDEFINED, NULL);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_ACQUIRE_UNDEFINED, NULL);
 	}
 
 	// Create a sensor instance
 	if (!(instance = (sensor_instance_t *)calloc(1, sizeof(sensor_instance_t)))) {
-		return driver_setup_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	// Store reference to sensor into instance
@@ -255,7 +255,7 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 	if (list_add(&sensor_list, instance, &instance->unit)) {
 		free(instance);
 
-		return driver_setup_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	// Call to specific pre setup function, if any
@@ -276,7 +276,7 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 		case I2C_INTERFACE: error = sensor_i2c_setup(instance);break;
 		case UART_INTERFACE: error = sensor_uart_setup(instance);break;
 		default:
-			return driver_setup_error(SENSOR_DRIVER, SENSOR_ERR_INTERFACE_NOT_SUPPORTED, NULL);
+			return driver_error(SENSOR_DRIVER, SENSOR_ERR_INTERFACE_NOT_SUPPORTED, NULL);
 			break;
 	}
 
@@ -313,7 +313,7 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 
 	// Allocate space for sensor data
 	if (!(value = calloc(1, sizeof(sensor_value_t) * SENSOR_MAX_DATA))) {
-		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	// Call to specific acquire function, if any
@@ -347,7 +347,7 @@ driver_error_t *sensor_read(sensor_instance_t *unit, const char *id, sensor_valu
 		}
 	}
 
-	return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL);
+	return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL);
 }
 
 driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value_t *value) {
@@ -355,7 +355,7 @@ driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value
 
 	// Sanity checks
 	if (!unit->sensor->set) {
-		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_SET_UNDEFINED, NULL);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_SET_UNDEFINED, NULL);
 	}
 
 	for(idx=0;idx < SENSOR_MAX_PROPERTIES;idx++) {
@@ -367,7 +367,7 @@ driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value
 		}
 	}
 
-	return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL);
+	return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL);
 }
 
 driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value_t **value) {
@@ -377,7 +377,7 @@ driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value
 
 	// Sanity checks
 	if (!unit->sensor->get) {
-		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_SET_UNDEFINED, NULL);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_SET_UNDEFINED, NULL);
 	}
 
 	for(idx=0;idx < SENSOR_MAX_PROPERTIES;idx++) {
@@ -392,7 +392,7 @@ driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value
 		}
 	}
 
-	return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL);
+	return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL);
 }
 
 DRIVER_REGISTER(SENSOR,sensor,NULL,sensor_init,NULL);

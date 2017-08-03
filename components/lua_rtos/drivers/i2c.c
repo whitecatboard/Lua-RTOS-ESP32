@@ -125,11 +125,11 @@ static driver_error_t *i2c_lock_resources(int unit) {
 static driver_error_t *i2c_check(int unit) {
     // Sanity checks
 	if (!((1 << unit) & CPU_I2C_ALL)) {
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
 	}
 
 	if (!i2c[unit].setup) {
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_IS_NOT_SETUP, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_IS_NOT_SETUP, NULL);
 	}
 
 	return NULL;
@@ -139,7 +139,7 @@ static driver_error_t *i2c_get_command(int unit, int *transaction, i2c_cmd_handl
     if (list_get(&transactions, *transaction, (void **)cmd)) {
     	mtx_unlock(&i2c[unit].mtx);
 
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
     }
 
     return NULL;
@@ -158,7 +158,7 @@ static driver_error_t *i2c_create_or_get_command(int unit, int *transaction, i2c
 		*cmd = i2c_cmd_link_create();
 		if (!*cmd) {
 			mtx_unlock(&i2c[unit].mtx);
-			return driver_operation_error(I2C_DRIVER, I2C_ERR_NOT_ENOUGH_MEMORY, NULL);
+			return driver_error(I2C_DRIVER, I2C_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
 
 		// Add transaction to list
@@ -167,7 +167,7 @@ static driver_error_t *i2c_create_or_get_command(int unit, int *transaction, i2c
 
 			i2c_cmd_link_delete(*cmd);
 			mtx_unlock(&i2c[unit].mtx);
-			return driver_operation_error(I2C_DRIVER, I2C_ERR_NOT_ENOUGH_MEMORY, NULL);
+			return driver_error(I2C_DRIVER, I2C_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
 	}
 
@@ -184,10 +184,10 @@ static driver_error_t *i2c_flush_internal(int unit, int *transaction, i2c_cmd_ha
 
 	if (err == ESP_FAIL) {
     	mtx_unlock(&i2c[unit].mtx);
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_NOT_ACK, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_NOT_ACK, NULL);
 	} else if (err == ESP_ERR_TIMEOUT) {
     	mtx_unlock(&i2c[unit].mtx);
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_TIMEOUT, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_TIMEOUT, NULL);
 	}
 
 	return NULL;
@@ -224,38 +224,38 @@ driver_error_t *i2c_flush(int unit, int *transaction, int new_transaction) {
 driver_error_t *i2c_pin_map(int unit, int sda, int scl) {
     // Sanity checks
 	if (!((1 << unit) & CPU_I2C_ALL)) {
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
 	}
 
 	mtx_lock(&i2c[unit].mtx);
 
 	if (i2c[unit].setup) {
 	   	mtx_unlock(&i2c[unit].mtx);
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_CANNOT_CHANGE_PINMAP, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_CANNOT_CHANGE_PINMAP, NULL);
 	}
 
 	// Sanity checks on pinmap
     if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << i2c[unit].scl))) && (scl >= 0)) {
     	mtx_unlock(&i2c[unit].mtx);
 
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "scl, selected pin cannot be output");
+		return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "scl, selected pin cannot be output");
     }
 
     if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << i2c[unit].sda))) && (sda >= 0)) {
     	mtx_unlock(&i2c[unit].mtx);
 
-    	return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda, selected pin cannot be output");
+    	return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda, selected pin cannot be output");
     }
 
     if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << i2c[unit].sda))) && (sda >= 0)) {
     	mtx_unlock(&i2c[unit].mtx);
 
-    	return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda, selected pin cannot be input");
+    	return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda, selected pin cannot be input");
     }
 
     if (!TEST_UNIQUE2(i2c[unit].sda, i2c[unit].scl)) {
     	mtx_unlock(&i2c[unit].mtx);
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda and scl must be different");
+		return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda and scl must be different");
     }
 
     // Update pin map, if needed
@@ -277,7 +277,7 @@ driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr
 
     // Sanity checks
 	if (!((1 << unit) & CPU_I2C_ALL)) {
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
 	}
 
 	if (speed == -1) {
@@ -382,7 +382,7 @@ driver_error_t *i2c_start(int unit, int *transaction) {
 	}
 
 	if (i2c[unit].mode != I2C_MASTER) {
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, "only allowed in master mode");
+		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, "only allowed in master mode");
 	}
 
 	mtx_lock(&i2c[unit].mtx);
@@ -408,7 +408,7 @@ driver_error_t *i2c_stop(int unit, int *transaction) {
 	}
 
 	if (i2c[unit].mode != I2C_MASTER) {
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, "only allowed in master mode");
+		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, "only allowed in master mode");
 	}
 
 	mtx_lock(&i2c[unit].mtx);
@@ -418,7 +418,7 @@ driver_error_t *i2c_stop(int unit, int *transaction) {
     if (list_get(&transactions, *transaction, (void **)&cmd)) {
     	mtx_unlock(&i2c[unit].mtx);
 
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
     }
 
 	i2c_master_stop(cmd);
@@ -443,7 +443,7 @@ driver_error_t *i2c_write_address(int unit, int *transaction, char address, int 
 	}
 
 	if (i2c[unit].mode != I2C_MASTER) {
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, NULL);
 	}
 
 	mtx_lock(&i2c[unit].mtx);
@@ -453,7 +453,7 @@ driver_error_t *i2c_write_address(int unit, int *transaction, char address, int 
     if (list_get(&transactions, *transaction, (void **)&cmd)) {
     	mtx_unlock(&i2c[unit].mtx);
 
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
     }
 
     i2c_master_write_byte(cmd, address << 1 | (read?I2C_MASTER_READ:I2C_MASTER_WRITE), ACK_CHECK_EN);
@@ -472,7 +472,7 @@ driver_error_t *i2c_write(int unit, int *transaction, char *data, int len) {
 	}
 
 	if (i2c[unit].mode != I2C_MASTER) {
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, NULL);
 	}
 
 	mtx_lock(&i2c[unit].mtx);
@@ -482,7 +482,7 @@ driver_error_t *i2c_write(int unit, int *transaction, char *data, int len) {
     if (list_get(&transactions, *transaction, (void **)&cmd)) {
     	mtx_unlock(&i2c[unit].mtx);
 
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
     }
 
     if (len > 1) {
@@ -505,7 +505,7 @@ driver_error_t *i2c_read(int unit, int *transaction, char *data, int len) {
 	}
 
 	if (i2c[unit].mode != I2C_MASTER) {
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, NULL);
 	}
 
 	mtx_lock(&i2c[unit].mtx);
@@ -515,7 +515,7 @@ driver_error_t *i2c_read(int unit, int *transaction, char *data, int len) {
     if (list_get(&transactions, *transaction, (void **)&cmd)) {
     	mtx_unlock(&i2c[unit].mtx);
 
-		return driver_operation_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
     }
 
     if (len > 1) {

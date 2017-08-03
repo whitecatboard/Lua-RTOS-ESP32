@@ -449,7 +449,7 @@ static int getStringWidth(char* str) {
 driver_error_t *gdisplay_set_font(uint8_t font, const char *file) {
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	cfont.font = NULL;
@@ -495,7 +495,7 @@ driver_error_t *gdisplay_set_font(uint8_t font, const char *file) {
 driver_error_t *gdisplay_get_font_height(int *height) {
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	if (cfont.bitmap == 1) {
@@ -517,11 +517,11 @@ driver_error_t *gdisplay_print(int x, int y, char *st, int color, int fill) {
 
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	if (cfont.bitmap == 0) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_FONT, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_FONT, NULL);
 	}
 
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
@@ -670,11 +670,11 @@ driver_error_t *gdisplay_string_pos(int x, int y, const char *buf, int *posx, in
 
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	if (cfont.bitmap == 0) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_FONT, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_FONT, NULL);
 	}
 
 	// for rotated string x cannot be RIGHT or CENTER

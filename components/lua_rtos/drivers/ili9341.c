@@ -284,7 +284,7 @@ driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation) {
 
 	// Allocate buffer
 	if (!gdisplay_ll_allocate_buffer(ST7735_BUFFER)) {
-		return driver_operation_error(ST7735_DRIVER, ST7735_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(ST7735_DRIVER, ST7735_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
     // Clear screen (black)

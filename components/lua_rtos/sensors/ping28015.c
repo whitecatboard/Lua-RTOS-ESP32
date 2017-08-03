@@ -114,7 +114,7 @@ driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *value
 	}
 
 	if (time > 800) {
-		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_TIMEOUT, NULL);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_TIMEOUT, NULL);
 	}
 
 	// Echo Return Pulse
@@ -130,7 +130,7 @@ driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *value
 	portENABLE_INTERRUPTS();
 
 	if (time > 185000) {
-		return driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_TIMEOUT, NULL);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_TIMEOUT, NULL);
 	}
 
 	/*

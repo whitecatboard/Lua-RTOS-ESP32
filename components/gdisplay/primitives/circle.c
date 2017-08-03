@@ -115,11 +115,11 @@ void _gdisplay_circle_fill_helper(int x0, int y0, int r, uint8_t cornername, int
 driver_error_t *gdisplay_circle(int x, int y, int radius, uint32_t color) {
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	if (radius < 0) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_RADIUS, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_RADIUS, NULL);
 	}
 
 	gdisplay_begin();
@@ -159,11 +159,11 @@ driver_error_t *gdisplay_circle(int x, int y, int radius, uint32_t color) {
 driver_error_t *gdisplay_circle_fill(int x, int y, int radius, uint32_t color, uint32_t fill) {
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	if (radius < 0) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_RADIUS, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_RADIUS, NULL);
 	}
 
 	gdisplay_begin();

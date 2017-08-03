@@ -379,11 +379,11 @@ static int lsensor_read( lua_State* L ) {
 						numread++;
 						break;
 					default:
-						return luaL_driver_error(L, driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL));
+						return luaL_driver_error(L, driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL));
 				}
     		}
     	}
-    	if (numread == 0) return luaL_driver_error(L, driver_operation_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL));
+    	if (numread == 0) return luaL_driver_error(L, driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL));
 
     	udata->adquired = 0;
     	return numread;

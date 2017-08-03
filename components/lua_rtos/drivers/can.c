@@ -79,7 +79,7 @@ driver_error_t *can_setup(uint32_t unit, uint16_t speed) {
 	CAN_cfg.rx_queue = xQueueCreate(10,sizeof(CAN_frame_t));;
 
 	if (!CAN_cfg.rx_queue) {
-		return driver_operation_error(CAN_DRIVER, CAN_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(CAN_DRIVER, CAN_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	// Start CAN module
@@ -98,7 +98,7 @@ driver_error_t *can_tx(uint32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t
 
 	// Sanity checks
 	if (len > 8) {
-		return driver_operation_error(CAN_DRIVER, CAN_ERR_INVALID_FRAME_LENGTH, NULL);
+		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_FRAME_LENGTH, NULL);
 	}
 
 	// Populate frame

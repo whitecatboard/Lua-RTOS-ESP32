@@ -77,10 +77,10 @@ driver_error_t *os_init () {
         // Create thread
         res = pthread_create(&thread, &attr, os_runloop, NULL);
         if (res) {
-    		return driver_setup_error(LORA_DRIVER, LORA_ERR_CANT_SETUP, "cannot start run_loop");
+    		return driver_error(LORA_DRIVER, LORA_ERR_CANT_SETUP, "cannot start run_loop");
         }
     } else {
-		return driver_setup_error(LORA_DRIVER, LORA_ERR_CANT_SETUP, "radio phy not detected");
+		return driver_error(LORA_DRIVER, LORA_ERR_CANT_SETUP, "radio phy not detected");
     }
 
     return NULL;

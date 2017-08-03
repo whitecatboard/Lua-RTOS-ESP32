@@ -73,7 +73,7 @@ driver_error_t *servo_setup(int8_t pin, servo_instance_t **instance) {
 	// Allocate space for a servo instance
 	*instance = calloc(1,sizeof(servo_instance_t));
 	if (!*instance) {
-		return driver_setup_error(SERVO_DRIVER, SERVO_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(SERVO_DRIVER, SERVO_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	(*instance)->pin = pin;

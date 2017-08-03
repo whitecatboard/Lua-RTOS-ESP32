@@ -268,11 +268,11 @@ void IRAM_ATTR uart_ll_unlock(int unit) {
 driver_error_t *uart_lock(int unit) {
 	// Sanity checks
 	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
+		return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
 	}
 
 	if (!((uart[unit].flags & UART_FLAG_INIT) && (uart[unit].flags & UART_FLAG_IRQ_INIT))) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
+		return driver_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
 	}
 
 	uart_ll_lock(unit);
@@ -283,11 +283,11 @@ driver_error_t *uart_lock(int unit) {
 driver_error_t *uart_unlock(int unit) {
 	// Sanity checks
 	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
+		return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
 	}
 
 	if (!((uart[unit].flags & UART_FLAG_INIT) && (uart[unit].flags & UART_FLAG_IRQ_INIT))) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
+		return driver_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
 	}
 
 	uart_ll_unlock(unit);
@@ -398,22 +398,22 @@ driver_error_t *uart_lock_resources(int unit, uint8_t flags, void *resources) {
 driver_error_t *uart_pin_map(int unit, int rx, int tx) {
     // Sanity checks
 	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
+		return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
 	}
     if (uart[unit].flags & UART_FLAG_INIT) {
-		return driver_operation_error(SPI_DRIVER, UART_ERR_CANNOT_CHANGE_PINMAP, NULL);
+		return driver_error(SPI_DRIVER, UART_ERR_CANNOT_CHANGE_PINMAP, NULL);
     }
 
     if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << rx))) && (rx >= 0)) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, selected pin cannot be input");
+		return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, selected pin cannot be input");
     }
 
     if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << tx))) && (tx >= 0)) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "tx, selected pin cannot be input");
+		return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "tx, selected pin cannot be input");
     }
 
     if (!TEST_UNIQUE2(rx, tx)) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, and tx must be different");
+		return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, and tx must be different");
     }
 
     // Update rx
@@ -433,19 +433,19 @@ driver_error_t *uart_pin_map(int unit, int rx, int tx) {
 driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t parity, uint8_t stop_bits, uint8_t flags, uint32_t qs) {
 	// Sanity checks
 	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
+		return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
 	}
 
     if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << uart[unit].rx))) && (uart[unit].rx >= 0)) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, selected pin cannot be input");
+		return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, selected pin cannot be input");
     }
 
     if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << uart[unit].tx))) && (uart[unit].tx >= 0)) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "tx, selected pin cannot be input");
+		return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "tx, selected pin cannot be input");
     }
 
     if (!TEST_UNIQUE2(uart[unit].rx, uart[unit].tx)) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, and tx must be different");
+		return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, and tx must be different");
     }
 
     // Get data bits, and sanity checks
@@ -456,7 +456,7 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
     	case 7: esp_databits = SEVEN_BITS; break;
     	case 8: esp_databits = EIGHT_BITS; break;
     	default:
-    		return driver_operation_error(UART_DRIVER, UART_ERR_INVALID_DATA_BITS, NULL);
+    		return driver_error(UART_DRIVER, UART_ERR_INVALID_DATA_BITS, NULL);
     }
 
     // Get parity, and sanity checks
@@ -466,7 +466,7 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
     	case 1: esp_parity = EVEN_BITS;break;
     	case 2: esp_parity = ODD_BITS ;break;
     	default:
-    		return driver_operation_error(UART_DRIVER, UART_ERR_INVALID_PARITY, NULL);
+    		return driver_error(UART_DRIVER, UART_ERR_INVALID_PARITY, NULL);
     }
 
     // Get stop bits, and sanity checks
@@ -476,7 +476,7 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
     	case 1: esp_stop_bits = ONE_STOP_BIT; break;
     	case 2: esp_stop_bits = TWO_STOP_BIT; break;
     	default:
-    		return driver_operation_error(UART_DRIVER, UART_ERR_INVALID_STOP_BITS, NULL);
+    		return driver_error(UART_DRIVER, UART_ERR_INVALID_STOP_BITS, NULL);
     }
 
     // Lock resources
@@ -497,7 +497,7 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 
 		uart[unit].q  = xQueueCreate(qs, sizeof(uint8_t));
 		if (!uart[unit].q) {
-			driver_operation_error(UART_DRIVER, UART_ERR_NOT_ENOUGH_MEMORY, NULL);
+			driver_error(UART_DRIVER, UART_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
 	}
 
@@ -550,7 +550,7 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 // Enable UART interrupts
 driver_error_t *uart_setup_interrupts(int8_t unit) {
 	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
+		return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
 	}
 
 	if (uart[unit].flags & UART_FLAG_IRQ_INIT) {
@@ -623,11 +623,11 @@ driver_error_t *uart_consume(int8_t unit) {
 
 	// Sanity checks
 	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
+		return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
 	}
 
 	if (!((uart[unit].flags & UART_FLAG_INIT) && (uart[unit].flags & UART_FLAG_IRQ_INIT))) {
-		return driver_operation_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
+		return driver_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
 	}
 
     while(uart_read(unit,&tmp,1));

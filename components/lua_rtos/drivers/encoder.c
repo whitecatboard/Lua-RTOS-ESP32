@@ -249,19 +249,19 @@ driver_error_t *encoder_setup(int8_t a, int8_t b, int8_t sw, encoder_h_t **h) {
 
 	// Sanity checks
 	if ((a < 0) && (b < 0)) {
-		return driver_operation_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "a and b pins are required");
+		return driver_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "a and b pins are required");
 	}
 
 	if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << a))) {
-		return driver_operation_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "A, must be an input PIN");
+		return driver_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "A, must be an input PIN");
 	}
 
 	if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << b))) {
-		return driver_operation_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "B, must be an input PIN");
+		return driver_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "B, must be an input PIN");
 	}
 
 	if ((sw > 0) && (!(GPIO_ALL_IN & (GPIO_BIT_MASK << sw)))) {
-		return driver_operation_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "SW, must be an input PIN");
+		return driver_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "SW, must be an input PIN");
 	}
 
 	// Lock resources
@@ -283,7 +283,7 @@ driver_error_t *encoder_setup(int8_t a, int8_t b, int8_t sw, encoder_h_t **h) {
     // Allocate space for the encoder
     encoder_h_t *encoder = calloc(1, sizeof(encoder_h_t));
     if (!encoder) {
-		return driver_operation_error(ENCODER_DRIVER, ENCODER_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(ENCODER_DRIVER, ENCODER_ERR_NOT_ENOUGH_MEMORY, NULL);
     }
 
     encoder->A = a;
@@ -398,7 +398,7 @@ driver_error_t *encoder_register_callback(encoder_h_t *h, encoder_callback_t cal
 			queue = xQueueCreate(10, sizeof(encoder_deferred_data_t));
 			if (!queue) {
 				portENABLE_INTERRUPTS();
-				return driver_operation_error(ENCODER_DRIVER, ENCODER_ERR_NOT_ENOUGH_MEMORY, NULL);
+				return driver_error(ENCODER_DRIVER, ENCODER_ERR_NOT_ENOUGH_MEMORY, NULL);
 			}
 		}
 
@@ -408,7 +408,7 @@ driver_error_t *encoder_register_callback(encoder_h_t *h, encoder_callback_t cal
 			xReturn = xTaskCreatePinnedToCore(encoder_task, "encoder", CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE, NULL, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY, &task, xPortGetCoreID());
 			if (xReturn != pdPASS) {
 				portENABLE_INTERRUPTS();
-				return driver_operation_error(ENCODER_DRIVER, ENCODER_ERR_NOT_ENOUGH_MEMORY, NULL);
+				return driver_error(ENCODER_DRIVER, ENCODER_ERR_NOT_ENOUGH_MEMORY, NULL);
 			}
 		}
 	}

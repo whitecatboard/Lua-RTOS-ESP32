@@ -74,7 +74,7 @@ driver_error_t *owire_lock_resources(int8_t pin, void *resources) {
 
     owdev = owire_checkpin(0);
 	if (owdev == -1) {
-		return driver_setup_error(OWIRE_DRIVER, OWIRE_ERR_CANT_INIT, "max devices reached");
+		return driver_error(OWIRE_DRIVER, OWIRE_ERR_CANT_INIT, "max devices reached");
 	}
 
 	owire_resources_t tmp_owire_resources;
@@ -106,7 +106,7 @@ driver_error_t *owire_setup_pin(int8_t pin) {
 
 	// Sanity checks
 	if ((pin < OWIRE_FIRST_PIN) || (pin > OWIRE_LAST_PIN)) {
-		return driver_setup_error(OWIRE_DRIVER, OWIRE_ERR_CANT_INIT, "invalid pin");
+		return driver_error(OWIRE_DRIVER, OWIRE_ERR_CANT_INIT, "invalid pin");
 	}
 
     // Lock resources

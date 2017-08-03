@@ -67,11 +67,11 @@ driver_error_t *neopixel_rgb(uint32_t unit, uint32_t pixel, uint8_t r, uint8_t g
 
 	// Get instance
     if (list_get(&neopixel_list, (int)unit, (void **)&instance)) {
-		return driver_operation_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_UNIT, NULL);
+		return driver_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_UNIT, NULL);
     }
 
     if (pixel > instance->npixels) {
-		return driver_operation_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_PIXEL, NULL);
+		return driver_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_PIXEL, NULL);
     }
 
     instance->pixels[pixel].r = r;
@@ -86,7 +86,7 @@ driver_error_t *neopixel_setup(neopixel_controller_t controller, uint8_t gpio, u
 	uint32_t nzr_unit;
 
 	if (controller > 1) {
-		return driver_operation_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_CONTROLLER, NULL);
+		return driver_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_CONTROLLER, NULL);
 	}
 
 	// Setup NZR
@@ -97,7 +97,7 @@ driver_error_t *neopixel_setup(neopixel_controller_t controller, uint8_t gpio, u
 	// Create an instance
 	neopixel_instance_t *instance = (neopixel_instance_t *)calloc(1,sizeof(neopixel_instance_t));
 	if (!instance) {
-		return driver_operation_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	// Populate instance
@@ -106,7 +106,7 @@ driver_error_t *neopixel_setup(neopixel_controller_t controller, uint8_t gpio, u
 	instance->pixels = (neopixel_pixel_t *)calloc(1,sizeof(neopixel_pixel_t) * pixels);
 	if (!instance->pixels) {
 		free(instance);
-		return driver_operation_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	// Add instance
@@ -114,7 +114,7 @@ driver_error_t *neopixel_setup(neopixel_controller_t controller, uint8_t gpio, u
 		free(instance->pixels);
 		free(instance);
 
-		return driver_setup_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	return NULL;
@@ -126,7 +126,7 @@ driver_error_t *neopixel_update(uint32_t unit) {
 
 	// Get instance
     if (list_get(&neopixel_list, (int)unit, (void **)&instance)) {
-		return driver_operation_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_UNIT, NULL);
+		return driver_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_UNIT, NULL);
     }
 
     // Send buffer

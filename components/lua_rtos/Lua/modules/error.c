@@ -2,7 +2,7 @@
  * Lua RTOS, Lua helper functions for throw an error from a driver error
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -56,21 +56,6 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
         free(err.lock_error);
 
         return ret_val;
-    } else if (err.type == SETUP) {
-    	if (err.msg) {
-            ret_val = luaL_error(L,
-                "%d:%s (%s)",
-    			err.exception,
-    			driver_get_err_msg(&err),
-                err.msg
-            );
-    	} else {
-            ret_val = luaL_error(L,
-                "%d:%s",
-    			err.exception,
-    			driver_get_err_msg(&err)
-            );
-    	}
     } else if (err.type == OPERATION) {
     	if (err.msg) {
             ret_val = luaL_error(L,

@@ -342,15 +342,15 @@ void tmr_ll_stop(uint8_t unit) {
 driver_error_t *tmr_setup(int8_t unit, uint32_t micros, void(*callback)(void *), uint8_t deferred) {
 	// Sanity checks
 	if ((unit < CPU_FIRST_TIMER) || (unit > CPU_LAST_TIMER)) {
-		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
+		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
 	}
 
 	if (micros < 5) {
-		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_INVALID_PERIOD, NULL);
+		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_PERIOD, NULL);
 	}
 
 	if (tmr_ll_setup(unit, micros, callback, deferred) < 0) {
-		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(TIMER_DRIVER, TIMER_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	return NULL;
@@ -359,7 +359,7 @@ driver_error_t *tmr_setup(int8_t unit, uint32_t micros, void(*callback)(void *),
 driver_error_t *tmr_unsetup(int8_t unit) {
 	// Sanity checks
 	if ((unit < CPU_FIRST_TIMER) || (unit > CPU_LAST_TIMER)) {
-		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
+		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
 	}
 
 	tmr_ll_unsetup(unit);
@@ -370,11 +370,11 @@ driver_error_t *tmr_unsetup(int8_t unit) {
 driver_error_t *tmr_start(int8_t unit) {
 	// Sanity checks
 	if ((unit < CPU_FIRST_TIMER) || (unit > CPU_LAST_TIMER)) {
-		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
+		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
 	}
 
 	if (!tmr->timer[unit].setup) {
-		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_IS_NOT_SETUP, NULL);
+		return driver_error(TIMER_DRIVER, TIMER_ERR_IS_NOT_SETUP, NULL);
 	}
 
 	tmr_ll_start(unit);
@@ -385,11 +385,11 @@ driver_error_t *tmr_start(int8_t unit) {
 driver_error_t *tmr_stop(int8_t unit) {
 	// Sanity checks
 	if ((unit < CPU_FIRST_TIMER) || (unit > CPU_LAST_TIMER)) {
-		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
+		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
 	}
 
 	if (!tmr->timer[unit].setup) {
-		return driver_operation_error(TIMER_DRIVER, TIMER_ERR_IS_NOT_SETUP, NULL);
+		return driver_error(TIMER_DRIVER, TIMER_ERR_IS_NOT_SETUP, NULL);
 	}
 
 	tmr_ll_stop(unit);

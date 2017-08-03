@@ -85,7 +85,7 @@ void gdisplay_polygon_helper(int cx, int cy, int sides, int diameter, uint32_t c
 driver_error_t *gdisplay_polygon(int cx, int cy, int sides, int diameter, int deg, uint32_t color) {
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER,
+		return driver_error(GDISPLAY_DRIVER,
 				GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
@@ -99,7 +99,7 @@ driver_error_t *gdisplay_polygon(int cx, int cy, int sides, int diameter, int de
 driver_error_t *gdisplay_polygon_fill(int cx, int cy, int sides, int diameter, int deg, uint32_t color, uint32_t fill) {
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER,
+		return driver_error(GDISPLAY_DRIVER,
 				GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 

@@ -46,7 +46,7 @@
 driver_error_t *gdisplay_triangle(int x0, int y0, int x1, int y1, int x2, int y2, uint32_t color) {
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	gdisplay_begin();
@@ -65,7 +65,7 @@ driver_error_t * gdisplay_triangle_fill(int x0, int y0, int x1, int y1, int x2, 
 
 	// Sanity checks
 	if (!gdisplay_is_init()) {
-		return driver_operation_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_IS_NOT_SETUP, "init display first");
 	}
 
 	// Sort coordinates by Y order (y2 >= y1 >= y0)

@@ -95,35 +95,35 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 	if (unit <= CPU_LAST_ADC) {
 		// Internal ADC
 		if ((unit < CPU_FIRST_ADC) || (unit > CPU_LAST_ADC)) {
-			return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, NULL);
+			return driver_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, NULL);
 		}
 
 		if (unit == CPU_FIRST_ADC) {
 			if (!(CPU_ADC_ALL & (GPIO_BIT_MASK << channel))) {
-				return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+				return driver_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
 			}
 		} else {
 			if ((unit < CPU_FIRST_ADC_CH) || (unit > CPU_LAST_ADC_CH)) {
-				return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+				return driver_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
 			}
 		}
 	} else {
 		switch (unit) {
 			case CPU_LAST_ADC + 1:
 				#if !CONFIG_ADC_MCP3008
-					return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, "MCP3008 not enabled");
+					return driver_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, "MCP3008 not enabled");
 				#endif
 				break;
 
 			case CPU_LAST_ADC + 2:
 				#if !CONFIG_ADC_MCP3208
-					return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, "MCP3208 not enabled");
+					return driver_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, "MCP3208 not enabled");
 				#endif
 				break;
 
 			case CPU_LAST_ADC + 3:
 				#if !CONFIG_ADC_ADS1115
-					return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, "ADS1115 not enabled");
+					return driver_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, "ADS1115 not enabled");
 				#endif
 				break;
 		}
@@ -160,7 +160,7 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 	// Create space for the channel
 	chan = calloc(1, sizeof(adc_channel_t));
 	if (!chan) {
-		return driver_operation_error(ADC_DRIVER, ADC_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(ADC_DRIVER, ADC_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	// Store channel configuration
@@ -173,11 +173,11 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 		case 1:
 			// Sanity check on vref+ / vref-
 			if (pvref > CONFIG_ADC_INTERNAL_VREF_P) {
-				return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_VREF, "vref+");
+				return driver_error(ADC_DRIVER, ADC_ERR_INVALID_VREF, "vref+");
 			}
 
 			if (nvref != 0) {
-				return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_VREF, "vref-");
+				return driver_error(ADC_DRIVER, ADC_ERR_INVALID_VREF, "vref-");
 			}
 
 			chan->nvref = nvref;
@@ -236,7 +236,7 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 			}
 
 			if (nvref != 0) {
-				return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_VREF, "vref-");
+				return driver_error(ADC_DRIVER, ADC_ERR_INVALID_VREF, "vref-");
 			}
 
 			// Apply default adress
@@ -258,7 +258,7 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 
 	// Sanity checks on resolution
 	if ((chan->resolution < 6) || (chan->resolution > chan->max_resolution)) {
-		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_RESOLUTION, NULL);
+		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_RESOLUTION, NULL);
 	}
 
     switch (chan->resolution) {
@@ -310,7 +310,7 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 
     if (list_add(&channels, chan, &index)) {
     	free(chan);
-		return driver_operation_error(ADC_DRIVER, ADC_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(ADC_DRIVER, ADC_ERR_NOT_ENOUGH_MEMORY, NULL);
     }
 
     *h = (adc_channel_h_t)index;
@@ -324,7 +324,7 @@ driver_error_t *adc_read(adc_channel_h_t *h, int *raw, double *mvols) {
 
     // Get channel
 	if (list_get(&channels, (int)*h, (void **)&chan)) {
-		return driver_operation_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
 	}
 
 	switch (chan->unit) {

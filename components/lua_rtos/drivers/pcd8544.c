@@ -116,7 +116,7 @@ driver_error_t *pcd8544_init(uint8_t chipset, uint8_t orient) {
 
 	// Allocate buffer
 	if (!gdisplay_ll_allocate_buffer((LCDWIDTH * LCDHEIGHT) / 8)) {
-		return driver_operation_error(PCD8544_DRIVER, PCD8544_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(PCD8544_DRIVER, PCD8544_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	pcd8544_ll_clear();

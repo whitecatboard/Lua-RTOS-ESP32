@@ -96,7 +96,7 @@ driver_error_t *gpio_pin_output(uint8_t pin) {
 
 	// Sanity checks
 	if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
-		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 	}
 
     io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
@@ -115,7 +115,7 @@ driver_error_t *gpio_pin_input(uint8_t pin) {
 
 	// Sanity checks
 	if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
-		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 	}
 
 	io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
@@ -132,7 +132,7 @@ driver_error_t *gpio_pin_input(uint8_t pin) {
 driver_error_t *gpio_pin_set(uint8_t pin) {
 	// Sanity checks
 	if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
-		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 	}
 
 	gpio_ll_pin_set(pin);
@@ -143,7 +143,7 @@ driver_error_t *gpio_pin_set(uint8_t pin) {
 driver_error_t *gpio_pin_clr(uint8_t pin) {
 	// Sanity checks
 	if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
-		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 	}
 
 	gpio_ll_pin_clr(pin);
@@ -156,7 +156,7 @@ driver_error_t *gpio_pin_inv(uint8_t pin) {
 
 	// Sanity checks
 	if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
-		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 	}
 
 	gpio_ll_pin_inv(pin);
@@ -167,7 +167,7 @@ driver_error_t *gpio_pin_inv(uint8_t pin) {
 driver_error_t *gpio_pin_get(uint8_t pin, uint8_t *val) {
 	// Sanity checks
 	if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
-		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 	}
 
 	*val = gpio_ll_pin_get(pin);
@@ -178,7 +178,7 @@ driver_error_t *gpio_pin_get(uint8_t pin, uint8_t *val) {
 driver_error_t *gpio_pin_pullup(uint8_t pin) {
 	// Sanity checks
 	if (!(GPIO_ALL & (GPIO_BIT_MASK << pin))) {
-		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
 	}
 
 	gpio_set_pull_mode(pin, GPIO_PULLUP_ONLY);
@@ -189,7 +189,7 @@ driver_error_t *gpio_pin_pullup(uint8_t pin) {
 driver_error_t *gpio_pin_pulldwn(uint8_t pin) {
 	// Sanity checks
 	if (!(GPIO_ALL & (GPIO_BIT_MASK << pin))) {
-		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
 	}
 
 	gpio_set_pull_mode(pin, GPIO_PULLDOWN_ONLY);
@@ -200,7 +200,7 @@ driver_error_t *gpio_pin_pulldwn(uint8_t pin) {
 driver_error_t *gpio_pin_nopull(uint8_t pin) {
 	// Sanity checks
 	if (!(GPIO_ALL & (GPIO_BIT_MASK << pin))) {
-		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
 	}
 
 	gpio_set_pull_mode(pin, GPIO_FLOATING);
@@ -220,11 +220,11 @@ driver_error_t *gpio_pin_input_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 
 	// Sanity checks
 	if (!(GPIO_PORT_ALL & port)) {
-		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
 	}
 
 	if (!(GPIO_ALL_IN & pinmask)) {
-		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 	}
 
     io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
@@ -245,7 +245,7 @@ driver_error_t *gpio_pin_output_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 
 	// Sanity checks
 	if (!(GPIO_ALL_OUT & pinmask)) {
-		return driver_operation_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 	}
 
     io_conf.intr_type = GPIO_PIN_INTR_DISABLE;

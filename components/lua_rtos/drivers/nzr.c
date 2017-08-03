@@ -61,7 +61,7 @@ driver_error_t *nzr_setup(nzr_timing_t *timing, uint8_t gpio, uint32_t *unit) {
 	// Allocate space for instance
 	instance = (nzr_instance_t *)calloc(1, sizeof(nzr_instance_t));
 	if (!instance) {
-		return driver_operation_error(NZR_DRIVER, NZR_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(NZR_DRIVER, NZR_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	// Copy values to instance
@@ -72,7 +72,7 @@ driver_error_t *nzr_setup(nzr_timing_t *timing, uint8_t gpio, uint32_t *unit) {
 	if (list_add(&nzr_list, instance, (int *)unit)) {
 		free(instance);
 
-		return driver_setup_error(NZR_DRIVER, NZR_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(NZR_DRIVER, NZR_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
     // Lock the GPIO
@@ -101,7 +101,7 @@ driver_error_t *nzr_send(uint32_t unit, uint8_t *data, uint32_t bits) {
 
 	// Get instance
     if (list_get(&nzr_list, (int)unit, (void **)&instance)) {
-		return driver_operation_error(NZR_DRIVER, NRZ_ERR_INVALID_UNIT, NULL);
+		return driver_error(NZR_DRIVER, NRZ_ERR_INVALID_UNIT, NULL);
     }
 
 	portDISABLE_INTERRUPTS();
