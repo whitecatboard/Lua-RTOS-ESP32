@@ -40,9 +40,6 @@ LUALIB_API int ( luaopen_adc )( lua_State *L );
 #define AUXLIB_MQTT  "mqtt"
 LUALIB_API int ( luaopen_mqtt )( lua_State *L );
 
-#define AUXLIB_MDNS  "mdns"
-LUALIB_API int ( luaopen_mdns )( lua_State *L );
-
 #define AUXLIB_THREAD "thread"
 LUALIB_API int (luaopen_thread) (lua_State* L);
 
@@ -51,9 +48,6 @@ LUALIB_API int (luaopen_screen) (lua_State* L);
 
 #define AUXLIB_GPS "gps"
 LUALIB_API int (luaopen_gps) (lua_State* L);
-
-#define AUXLIB_HTTP "http"
-LUALIB_API int (luaopen_http) (lua_State* L);
 
 #define AUXLIB_STEPPER "stepper"
 LUALIB_API int (luaopen_stepper) (lua_State* L);
