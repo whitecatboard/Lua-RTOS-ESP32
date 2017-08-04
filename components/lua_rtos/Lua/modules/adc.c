@@ -83,15 +83,6 @@ static int ladc_attach( lua_State* L ) {
 
     adc_userdata *adc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
 
-    if (id == 1) {
-    	if (channel >= 32) {
-    		// Is a pin number
-    	    if ((error = adc_internal_pin_to_channel(channel, (uint8_t *)&channel))) {
-    	    	return luaL_driver_error(L, error);
-    	    }
-    	}
-    }
-
     if ((error = adc_setup(id, channel, 0, pvref, nvref, res, &adc->h))) {
     	return luaL_driver_error(L, error);
     }

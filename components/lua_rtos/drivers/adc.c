@@ -99,11 +99,14 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 		}
 
 		if (unit == CPU_FIRST_ADC) {
-			if (!(CPU_ADC_ALL & (GPIO_BIT_MASK << channel))) {
-				return driver_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+			if (channel >= 32) {
+				// Is a pin number
+				if ((error = adc_internal_pin_to_channel(channel, (uint8_t *)&channel))) {
+					return driver_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+				}
 			}
-		} else {
-			if ((unit < CPU_FIRST_ADC_CH) || (unit > CPU_LAST_ADC_CH)) {
+
+			if (!(CPU_ADC_ALL & (GPIO_BIT_MASK << channel))) {
 				return driver_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
 			}
 		}
@@ -275,7 +278,7 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
         case 16: chan->max_val = 65535;break;
     }
 
-	// Setup the channel
+    // Setup the channel
 	switch (unit) {
 		case 1:
 			 error = adc_internal_setup(chan);
@@ -368,7 +371,22 @@ driver_error_t *adc_read(adc_channel_h_t *h, int *raw, double *mvols) {
 	}
 
 	// Convert raw value to mVolts
-	*mvols = (double)chan->nvref +  (double)((*raw) * (chan->pvref - chan->nvref)) / (double)max_val;
+	if (mvols) {
+		*mvols = (double)chan->nvref +  (double)((*raw) * (chan->pvref - chan->nvref)) / (double)max_val;
+	}
+
+	return NULL;
+}
+
+driver_error_t *adc_get_channel(adc_channel_h_t *h, adc_channel_t **chan) {
+	adc_channel_t *channel;
+
+    // Get channel
+	if (list_get(&channels, (int)*h, (void **)&channel)) {
+		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
+	}
+
+	*chan = channel;
 
 	return NULL;
 }

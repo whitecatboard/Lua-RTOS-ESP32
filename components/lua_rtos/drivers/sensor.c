@@ -44,6 +44,7 @@
 
 #include <drivers/sensor.h>
 #include <drivers/adc.h>
+#include <drivers/adc_internal.h>
 #include <drivers/gpio.h>
 #include <drivers/owire.h>
 #include <drivers/i2c.h>

@@ -93,4 +93,6 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
  */
 driver_error_t *adc_read(adc_channel_h_t *h, int *raw, double *mvols);
 
+driver_error_t *adc_get_channel(adc_channel_h_t *h, adc_channel_t **chan);
+
 #endif	/* ADC_H */
