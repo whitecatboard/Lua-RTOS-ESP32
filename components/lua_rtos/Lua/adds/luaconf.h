@@ -120,6 +120,12 @@
     #define LINIT_REG_MQTT
 #endif
 
+#if CONFIG_LUA_RTOS_LUA_USE_MDNS
+    #define LINIT_REG_MDNS {AUXLIB_MDNS, luaopen_mdns},
+#else
+    #define LINIT_REG_MDNS
+#endif
+
 #if CONFIG_LUA_RTOS_LUA_USE_THREAD
     #define LINIT_REG_THREAD {AUXLIB_THREAD, luaopen_thread },
 #else
@@ -182,6 +188,7 @@
   LINIT_REG_ADC \
   LINIT_REG_SPI \
   LINIT_REG_MQTT \
+  LINIT_REG_MDNS \
   LINIT_REG_THREAD \
   LINIT_REG_SCREEN \
   LINIT_REG_UART \

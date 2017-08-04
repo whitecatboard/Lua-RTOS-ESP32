@@ -40,6 +40,9 @@ LUALIB_API int ( luaopen_adc )( lua_State *L );
 #define AUXLIB_MQTT  "mqtt"
 LUALIB_API int ( luaopen_mqtt )( lua_State *L );
 
+#define AUXLIB_MDNS  "mdns"
+LUALIB_API int ( luaopen_mdns )( lua_State *L );
+
 #define AUXLIB_THREAD "thread"
 LUALIB_API int (luaopen_thread) (lua_State* L);
 
