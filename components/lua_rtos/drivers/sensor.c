@@ -66,11 +66,9 @@ DRIVER_REGISTER_ERROR(SENSOR, sensor, NotSetup, "sensor is not setup", SENSOR_ER
 DRIVER_REGISTER_ERROR(SENSOR, sensor, InvalidAddress, "invalid address", SENSOR_ERR_INVALID_ADDRESS);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, NoMoreCallbacks, "no more callbacks available", SENSOR_ERR_NO_MORE_CALLBACKS);
 
-// List of instantiated sensors
-struct list sensor_list;
-
 static xQueueHandle queue = NULL;
 static TaskHandle_t task = NULL;
+uint8_t attached = 0;
 
 /*
  * Helper functions
@@ -141,6 +139,8 @@ static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
     }
 
     if (unit->sensor->int_driven) {
+    	portDISABLE_INTERRUPTS();
+
         // Configure pins as input
         gpio_config_t io_conf;
 
@@ -160,6 +160,8 @@ static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
         }
 
         gpio_isr_handler_add(unit->setup.gpio.gpio, isr, (void *)unit);
+
+        portENABLE_INTERRUPTS();
     } else {
         gpio_pin_output(unit->setup.gpio.gpio);
     	gpio_pin_set(unit->setup.gpio.gpio);
@@ -257,11 +259,6 @@ static driver_error_t *sensor_uart_setup(sensor_instance_t *unit) {
 /*
  * Operation functions
  */
-void sensor_init() {
-	// Init sensor list
-    list_init(&sensor_list, 0);
-}
-
 const sensor_t *get_sensor(const char *id) {
 	const sensor_t *csensor;
 
@@ -321,19 +318,10 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 		instance->properties[i].type = sensor->properties[i].type;
 	}
 
-	// Add instance to sensor_list
-	if (list_add(&sensor_list, instance, &instance->unit)) {
-		free(instance);
-
-		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
-	}
-
 	// Call to specific pre setup function, if any
 	if (instance->sensor->presetup) {
 		if ((error = instance->sensor->presetup(instance))) {
-			// Remove instance
-			list_remove(&sensor_list, instance->unit, 1);
-
+			free(instance);
 			return error;
 		}
 	}
@@ -351,23 +339,52 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 	}
 
 	if (error) {
-		// Remove instance
-		list_remove(&sensor_list, instance->unit, 1);
-
+		free(instance);
 		return error;
 	}
 
 	// Call to specific setup function, if any
 	if (instance->sensor->setup) {
 		if ((error = instance->sensor->setup(instance))) {
-			// Remove instance
-			list_remove(&sensor_list, instance->unit, 1);
-
-			return error;
+			free(instance);			return error;
 		}
 	}
 
 	*unit = instance;
+
+	attached++;
+
+	return NULL;
+}
+
+driver_error_t *sensor_unsetup(sensor_instance_t *unit) {
+	portDISABLE_INTERRUPTS();
+
+	if (attached == 0) {
+		portENABLE_INTERRUPTS();
+		return NULL;
+	}
+
+	// Remove interrupts
+	if (unit->sensor->int_driven) {
+		gpio_isr_handler_remove(unit->setup.gpio.gpio);
+	}
+
+	if (attached == 1) {
+		if (task) {
+			vTaskDelete(task);
+		}
+
+		if (queue) {
+			vQueueDelete(queue);
+		}
+	}
+
+	attached--;
+
+	free(unit);
+
+	portENABLE_INTERRUPTS();
 
 	return NULL;
 }
@@ -517,6 +534,6 @@ driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callbac
 	return NULL;
 }
 
-DRIVER_REGISTER(SENSOR,sensor,NULL,sensor_init,NULL);
+DRIVER_REGISTER(SENSOR,sensor,NULL,NULL,NULL);
 
 #endif

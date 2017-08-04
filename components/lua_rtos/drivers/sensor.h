@@ -197,6 +197,7 @@ typedef struct {
 const sensor_t *get_sensor(const char *id);
 const sensor_data_t *sensor_get_property(const sensor_t *sensor, const char *property);
 driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sensor_instance_t **unit);
+driver_error_t *sensor_unsetup(sensor_instance_t *unit);
 driver_error_t *sensor_acquire(sensor_instance_t *unit);
 driver_error_t *sensor_read(sensor_instance_t *unit, const char *id, sensor_value_t **value);
 driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value_t *value);

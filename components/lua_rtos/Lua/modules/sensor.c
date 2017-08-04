@@ -717,12 +717,21 @@ static int lsensor_callback(lua_State* L) {
 
 // Destructor
 static int lsensor_ins_gc (lua_State *L) {
-    sensor_userdata *udata = NULL;
+	sensor_userdata *udata =  (sensor_userdata *)luaL_checkudata(L, 1, "sensor.ins");;
+	driver_error_t *error;
 
-    udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor.ins");
-	if (udata) {
-		free(udata->instance);
+	// Destroy callbacks
+	int i;
+	for(i=0; i < SENSOR_MAX_CALLBACKS; i++) {
+		if (udata->instance->callbacks[i].callback_id) {
+			luaL_unref(L, LUA_REGISTRYINDEX, udata->instance->callbacks[i].callback_id);
+		}
 	}
+
+	// Destroy sensor
+    if ((error = sensor_unsetup(udata->instance))) {
+    	return luaL_driver_error(L, error);
+    }
 
 	return 0;
 }
