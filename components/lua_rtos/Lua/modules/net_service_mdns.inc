@@ -56,7 +56,6 @@
 #define LUA_MDNS_ERR_CANT_FIND_SERVICE   (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  3)
 #define LUA_MDNS_ERR_CANT_ADD_SERVICE    (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  4)
 #define LUA_MDNS_ERR_CANT_REMOVE_SERVICE (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  5)
-#define LUA_MDNS_ERR_CANT_XXX            (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  9)
 
 DRIVER_REGISTER_ERROR(MDNS, mdns, CannotCreateService, "can't create service", LUA_MDNS_ERR_CANT_CREATE_SERVICE);
 DRIVER_REGISTER_ERROR(MDNS, mdns, CannotStop, "can't stop", LUA_MDNS_ERR_CANT_STOP);
@@ -64,7 +63,6 @@ DRIVER_REGISTER_ERROR(MDNS, mdns, CannotResolveHost, "can't resolve host", LUA_M
 DRIVER_REGISTER_ERROR(MDNS, mdns, CannotFindService, "can't find service", LUA_MDNS_ERR_CANT_FIND_SERVICE);
 DRIVER_REGISTER_ERROR(MDNS, mdns, CannotAddService, "can't add service", LUA_MDNS_ERR_CANT_ADD_SERVICE);
 DRIVER_REGISTER_ERROR(MDNS, mdns, CannotRemoveService, "can't remove service", LUA_MDNS_ERR_CANT_REMOVE_SERVICE);
-DRIVER_REGISTER_ERROR(MDNS, mdns, CannotXXX, "can't xxx", LUA_MDNS_ERR_CANT_XXX);
 
 typedef struct {
     lua_State *L;
@@ -121,16 +119,51 @@ static int lmdns_resolve_host( lua_State* L ) {
 
     rc = mdns_query(mdns->client, hostname, 0, 1000);
     if (rc) {
-        size_t i;
-        for(i=0; i<rc; i++) {
+				char tmp[17];
+
+        lua_newtable(L);
+        for(size_t i=0; i<rc; i++) {
             const mdns_result_t * res = mdns_result_get(mdns->client, i);
             if (res) {
-								//XXX FIXME: put into table
+								//put row into table
                 printf("mdns %u: " IPSTR " " IPV6STR, i+1, IP2STR(&res->addr), IPV62STR(res->addrv6));
+
+								lua_newtable(L);
+								lua_pushnumber(L, i+1);
+								lua_pushvalue(L, -2);
+								lua_settable(L, -4);
+
+								// host - remove me?
+									lua_pushstring(L, "hostname");
+									lua_pushstring(L, (res->host)?res->host:"");
+									lua_settable(L, -3);
+								//
+
+								// instance - remove me?
+									lua_pushstring(L, "instance");
+									lua_pushstring(L, (res->instance)?res->instance:"");
+									lua_settable(L, -3);
+								//
+
+								// ip
+									lua_pushstring(L, "ip");
+									sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&res->addr),ip4_addr2_16(&res->addr),ip4_addr3_16(&res->addr),ip4_addr4_16(&res->addr));
+									lua_pushstring(L, tmp);
+									lua_settable(L, -3);
+								//
+								
+								/* ipv6 XXX fixme: convert to string
+									lua_pushstring(L, "ipv6");
+									lua_pushstring(L, IPV62STR(res->addrv6));
+									lua_settable(L, -3);
+								//*/
+								
+								lua_pop(L, 1);
+															 
             }
         }
         mdns_result_free(mdns->client);
-				//XXX return rc;
+				return 1; //one table
     }
 
     return luaL_exception(L, LUA_MDNS_ERR_CANT_RESOLVE_HOST);
@@ -146,19 +179,66 @@ static int lmdns_find_service( lua_State* L ) {
 
     rc = mdns_query(mdns->client, service, protocol, 1000);
     if (rc) {
-        size_t i;
-        for(i=0; i<rc; i++) {
+				char tmp[17];
+
+        lua_newtable(L);
+        for(size_t i=0; i<rc; i++) {
             const mdns_result_t * res = mdns_result_get(mdns->client, i);
             if (res) {
-								//XXX FIXME: put into table
+								//put row into table
                 printf("mdns %u: %s \"%s\" " IPSTR " " IPV6STR " %u %s", i+1, 
 											 (res->host)?res->host:"", (res->instance)?res->instance:"", 
 											 IP2STR(&res->addr), IPV62STR(res->addrv6),
 											 res->port, (res->txt)?res->txt:"");
+
+								lua_newtable(L);
+								lua_pushnumber(L, i+1);
+								lua_pushvalue(L, -2);
+								lua_settable(L, -4);
+
+								// host
+									lua_pushstring(L, "hostname");
+									lua_pushstring(L, (res->host)?res->host:"");
+									lua_settable(L, -3);
+								//
+
+								// instance
+									lua_pushstring(L, "instance");
+									lua_pushstring(L, (res->instance)?res->instance:"");
+									lua_settable(L, -3);
+								//
+
+								// ip
+									lua_pushstring(L, "ip");
+									sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&res->addr),ip4_addr2_16(&res->addr),ip4_addr3_16(&res->addr),ip4_addr4_16(&res->addr));
+									lua_pushstring(L, tmp);
+									lua_settable(L, -3);
+								//
+								
+								/* ipv6 XXX fixme: convert to string
+									lua_pushstring(L, "ipv6");
+									lua_pushstring(L, IPV62STR(res->addrv6));
+									lua_settable(L, -3);
+								//*/
+								
+								// port
+									lua_pushstring(L, "port");
+									lua_pushinteger(L, res->port);
+									lua_settable(L, -3);
+								//
+								
+								// txt
+									lua_pushstring(L, "txt");
+									lua_pushstring(L, (res->txt)?res->txt:"");
+									lua_settable(L, -3);
+								//
+								
+								lua_pop(L, 1);
+															 
             }
         }
         mdns_result_free(mdns->client);
-				//XXX return rc;
+				return 1; //one table
     }
 
     return luaL_exception(L, LUA_MDNS_ERR_CANT_FIND_SERVICE);
@@ -171,9 +251,22 @@ static int lmdns_add_service( lua_State* L ) {
     const char *protocol = luaL_checkstring( L, 3 );
     int port = luaL_checkinteger( L, 4 );
     const char *instance = 0;
+    size_t txt_items = 0;
+		const char ** txt_data = 0;
+    
 		if (lua_gettop(L) > 4) {
 		  instance = luaL_checkstring( L, 5 );
-			//XXX fixme: add TXT
+
+			if (lua_gettop(L) > 5 && lua_istable(L, 6)) {
+
+				txt_items = lua_rawlen(L, 6); // size of the txt table
+				txt_data = (const char **)malloc(sizeof(char *) * txt_items);
+				for(int i=0; i<txt_items; i++) {
+					lua_rawgeti(L, 6, i+1);
+					txt_data[i] = lua_tostring(L, -1);
+					lua_pop(L,1);
+				}
+			}
 		}
 
     luaL_argcheck(L, mdns, 1, "mdns expected");
@@ -190,8 +283,11 @@ static int lmdns_add_service( lua_State* L ) {
 		  }
 		}
 
-		//XXX fixme: add TXT
-		//mdns_service_txt_set
+		if (txt_items>0) {
+			mdns_service_txt_set(mdns->client, service, protocol, txt_items, txt_data);
+			free(txt_data);
+			txt_data = 0;
+		}
 
     return 0;
 }
@@ -207,18 +303,6 @@ static int lmdns_remove_service( lua_State* L ) {
     rc = mdns_service_remove(mdns->client, service, protocol);
     if(rc != 0) {
       return luaL_exception(L, LUA_MDNS_ERR_CANT_REMOVE_SERVICE);
-    }
-    return 0;
-}
-
-static int lmdns_xxx( lua_State* L ) {
-    int rc;
-    mdns_userdata *mdns = (mdns_userdata *)luaL_checkudata(L, 1, "mdns.cli");
-    luaL_argcheck(L, mdns, 1, "mdns expected");
-    
-    rc = 0; //mdns_(mdns->client);
-    if(rc != 0) {
-      return luaL_exception(L, LUA_MDNS_ERR_CANT_XXX);
     }
     return 0;
 }
@@ -264,7 +348,6 @@ static const LUA_REG_TYPE lmdns_service_map[] = {
   { LSTRKEY( "findservice"   ), LFUNCVAL( lmdns_find_service   ) },
   { LSTRKEY( "addservice"    ), LFUNCVAL( lmdns_add_service    ) },
   { LSTRKEY( "removeservice" ), LFUNCVAL( lmdns_remove_service ) },
-  { LSTRKEY( "xxx"   ),         LFUNCVAL( lmdns_xxx            ) },
   { LSTRKEY( "__metatable" ),   LROVAL  ( lmdns_service_map    ) },
   { LSTRKEY( "__index"     ),   LROVAL  ( lmdns_service_map    ) },
   { LSTRKEY( "__gc"        ),   LROVAL  ( lmdns_service_gc     ) },

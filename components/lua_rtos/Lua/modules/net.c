@@ -283,7 +283,9 @@ static const LUA_REG_TYPE net_map[] = {
 };
 
 int luaopen_net(lua_State* L) {
+#if CONFIG_LUA_RTOS_LUA_USE_MDNS
 	luaopen_mdns(L);
+#endif
 	return 0;
 }
 
