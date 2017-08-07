@@ -119,7 +119,7 @@ static int lmdns_resolve_host( lua_State* L ) {
 
     rc = mdns_query(mdns->client, hostname, 0, 1000);
     if (rc) {
-				char tmp[17];
+				char tmp[46];
 
         lua_newtable(L);
         for(size_t i=0; i<rc; i++) {
@@ -147,14 +147,15 @@ static int lmdns_resolve_host( lua_State* L ) {
 
 								// ip
 									lua_pushstring(L, "ip");
-									sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&res->addr),ip4_addr2_16(&res->addr),ip4_addr3_16(&res->addr),ip4_addr4_16(&res->addr));
+									sprintf(tmp, IPSTR, ip4_addr1_16(&res->addr),ip4_addr2_16(&res->addr),ip4_addr3_16(&res->addr),ip4_addr4_16(&res->addr));
 									lua_pushstring(L, tmp);
 									lua_settable(L, -3);
 								//
 								
-								/* ipv6 XXX fixme: convert to string
+								// ipv6
 									lua_pushstring(L, "ipv6");
-									lua_pushstring(L, IPV62STR(res->addrv6));
+									sprintf(tmp, IPV6STR, IPV62STR(res->addrv6));
+									lua_pushstring(L, tmp);
 									lua_settable(L, -3);
 								//*/
 								
@@ -179,7 +180,7 @@ static int lmdns_find_service( lua_State* L ) {
 
     rc = mdns_query(mdns->client, service, protocol, 1000);
     if (rc) {
-				char tmp[17];
+				char tmp[46];
 
         lua_newtable(L);
         for(size_t i=0; i<rc; i++) {
@@ -210,16 +211,17 @@ static int lmdns_find_service( lua_State* L ) {
 
 								// ip
 									lua_pushstring(L, "ip");
-									sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&res->addr),ip4_addr2_16(&res->addr),ip4_addr3_16(&res->addr),ip4_addr4_16(&res->addr));
+									sprintf(tmp, IPSTR, ip4_addr1_16(&res->addr),ip4_addr2_16(&res->addr),ip4_addr3_16(&res->addr),ip4_addr4_16(&res->addr));
 									lua_pushstring(L, tmp);
 									lua_settable(L, -3);
 								//
 								
-								/* ipv6 XXX fixme: convert to string
+								// ipv6
 									lua_pushstring(L, "ipv6");
-									lua_pushstring(L, IPV62STR(res->addrv6));
+									sprintf(tmp, IPV6STR, IPV62STR(res->addrv6));
+									lua_pushstring(L, tmp);
 									lua_settable(L, -3);
-								//*/
+								//
 								
 								// port
 									lua_pushstring(L, "port");
@@ -334,23 +336,23 @@ static int lmdns_service_gc (lua_State *L) {
 static const LUA_REG_TYPE mdns_map[] = {
   { LSTRKEY( "start"      ),   LFUNCVAL( lmdns_start     ) },
 
-  { LSTRKEY("WIFI_STA"), LINTVAL(TCPIP_ADAPTER_IF_STA) },
-  { LSTRKEY("WIFI_AP"), LINTVAL(TCPIP_ADAPTER_IF_AP) },
-  { LSTRKEY("ETH"), LINTVAL(TCPIP_ADAPTER_IF_ETH) },
-  { LSTRKEY("SPI_ETH"), LINTVAL(TCPIP_ADAPTER_IF_SPI_ETH) },
+  { LSTRKEY( "WIFI_STA" ),     LINTVAL( TCPIP_ADAPTER_IF_STA     ) },
+  { LSTRKEY( "WIFI_AP"  ),     LINTVAL( TCPIP_ADAPTER_IF_AP      ) },
+  { LSTRKEY( "ETH"      ),     LINTVAL( TCPIP_ADAPTER_IF_ETH     ) },
+  { LSTRKEY( "SPI_ETH"  ),     LINTVAL( TCPIP_ADAPTER_IF_SPI_ETH ) },
 
   { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE lmdns_service_map[] = {
-  { LSTRKEY( "stop"  ),         LFUNCVAL( lmdns_stop           ) },
-  { LSTRKEY( "resolvehost"   ), LFUNCVAL( lmdns_resolve_host   ) },
-  { LSTRKEY( "findservice"   ), LFUNCVAL( lmdns_find_service   ) },
-  { LSTRKEY( "addservice"    ), LFUNCVAL( lmdns_add_service    ) },
-  { LSTRKEY( "removeservice" ), LFUNCVAL( lmdns_remove_service ) },
-  { LSTRKEY( "__metatable" ),   LROVAL  ( lmdns_service_map    ) },
-  { LSTRKEY( "__index"     ),   LROVAL  ( lmdns_service_map    ) },
-  { LSTRKEY( "__gc"        ),   LROVAL  ( lmdns_service_gc     ) },
+  { LSTRKEY( "stop"  ),         LFUNCVAL( lmdns_stop             ) },
+  { LSTRKEY( "resolvehost"   ), LFUNCVAL( lmdns_resolve_host     ) },
+  { LSTRKEY( "findservice"   ), LFUNCVAL( lmdns_find_service     ) },
+  { LSTRKEY( "addservice"    ), LFUNCVAL( lmdns_add_service      ) },
+  { LSTRKEY( "removeservice" ), LFUNCVAL( lmdns_remove_service   ) },
+  { LSTRKEY( "__metatable" ),   LROVAL  ( lmdns_service_map      ) },
+  { LSTRKEY( "__index"     ),   LROVAL  ( lmdns_service_map      ) },
+  { LSTRKEY( "__gc"        ),   LROVAL  ( lmdns_service_gc       ) },
   { LNILKEY, LNILVAL }
 };
 
