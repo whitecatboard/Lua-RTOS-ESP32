@@ -476,6 +476,8 @@ void pthreadTask(void *taskArgs) {
 
         free(status);
     }
+#else
+		(void)status;
 #endif
     // Inform from thread end to joined threads
     index = list_first(&thread->join_list);

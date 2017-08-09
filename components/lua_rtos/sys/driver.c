@@ -29,8 +29,6 @@
 
 #include "luartos.h"
 
-#include "lora.h"
-
 #include <stdlib.h>
 #include <string.h>
 
