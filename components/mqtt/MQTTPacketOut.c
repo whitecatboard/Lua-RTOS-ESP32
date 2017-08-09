@@ -32,8 +32,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "Heap.h"
-
 
 /**
  * Send an MQTT CONNECT packet down a socket.

@@ -33,8 +33,6 @@
 #include "StackTrace.h"
 #include "Socket.h"
 
-#include "Heap.h"
-
 #include <openssl/ssl.h>
 #include <string.h>
 
