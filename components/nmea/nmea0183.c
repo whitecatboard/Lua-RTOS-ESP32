@@ -27,6 +27,8 @@
  * this software.
  */
 
+#if LUA_USE_GPS
+
 #include "sdkconfig.h"
 
 #include <stdlib.h>
@@ -358,3 +360,5 @@ double nmea_lat() {
 int nmea_sats() {
     return sats;
 }
+
+#endif

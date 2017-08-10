@@ -30,6 +30,7 @@
 #include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if LUA_USE_GPS
 
 #include "gps.h"
 #include "nmea0183.h"
@@ -82,6 +83,7 @@ driver_error_t *gps_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	return NULL;
 }
 
+#endif
 #endif
 
 /*
