@@ -49,6 +49,8 @@
 
 #include <sys/status.h>
 
+#define DEFAULT_TIMEOUT_SECONDS 2
+
 // Module errors
 #define LUA_MDNS_ERR_CANT_CREATE_SERVICE (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  0)
 #define LUA_MDNS_ERR_CANT_STOP           (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  1)
@@ -110,61 +112,94 @@ static int lmdns_start( lua_State* L ){
     return 1;
 }
 
+static int results_to_table( lua_State* L, mdns_userdata *mdns )
+{
+		char tmp[46];
+		size_t count = mdns_result_get_count(mdns->client);
+
+    lua_newtable(L);
+    for(size_t i=0; i<count; i++) {
+        const mdns_result_t * res = mdns_result_get(mdns->client, i);
+        if (res) {
+        
+						/*
+            printf("mdns %u: " IPSTR " " IPV6STR "\n", i+1, 
+                   IP2STR(&res->addr), IPV62STR(res->addrv6));
+
+            printf("mdns %u: %s \"%s\" " IPSTR " " IPV6STR " %u %s\n", i+1, 
+						       (res->host)?res->host:"", (res->instance)?res->instance:"", 
+						       IP2STR(&res->addr), IPV62STR(res->addrv6),
+						       res->port, (res->txt)?res->txt:"");
+						*/
+
+						//put row into table
+						
+						lua_newtable(L);
+						lua_pushnumber(L, i+1);
+						lua_pushvalue(L, -2);
+						lua_settable(L, -4);
+
+						if(res->host) {
+							lua_pushstring(L, "hostname");
+							lua_pushstring(L, (res->host)?res->host:"");
+							lua_settable(L, -3);
+						}
+
+						if(res->instance) {
+							lua_pushstring(L, "instance");
+							lua_pushstring(L, (res->instance)?res->instance:"");
+							lua_settable(L, -3);
+						}
+
+						if(!ip4_addr_isany(&res->addr)) {
+							lua_pushstring(L, "ip");
+							sprintf(tmp, IPSTR, ip4_addr1_16(&res->addr),ip4_addr2_16(&res->addr),ip4_addr3_16(&res->addr),ip4_addr4_16(&res->addr));
+							lua_pushstring(L, tmp);
+							lua_settable(L, -3);
+						}
+
+						if(!ip6_addr_isany(&res->addrv6)) {
+							lua_pushstring(L, "ipv6");
+							sprintf(tmp, IPV6STR, IPV62STR(res->addrv6));
+							lua_pushstring(L, tmp);
+							lua_settable(L, -3);
+						}
+
+						if(res->port) {
+							lua_pushstring(L, "port");
+							lua_pushinteger(L, res->port);
+							lua_settable(L, -3);
+						}
+
+						if(res->txt) {
+							lua_pushstring(L, "txt");
+							lua_pushstring(L, (res->txt)?res->txt:"");
+							lua_settable(L, -3);
+						}
+
+						lua_pop(L, 1);
+													 
+        }
+    }
+    mdns_result_free(mdns->client);
+		return 1; //one table
+}
+
 static int lmdns_resolve_host( lua_State* L ) {
     int rc;
     mdns_userdata *mdns = (mdns_userdata *)luaL_checkudata(L, 1, "mdns.cli");
     const char *hostname = luaL_checkstring( L, 2 );
+    int seconds = DEFAULT_TIMEOUT_SECONDS;
+		if (lua_gettop(L) > 2) {
+    	seconds = luaL_checkinteger( L, 3 );
+			if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
+		}
 
     luaL_argcheck(L, mdns, 1, "mdns expected");
 
-    rc = mdns_query(mdns->client, hostname, 0, 1000);
+    rc = mdns_query(mdns->client, hostname, 0, 1000*seconds);
     if (rc) {
-				char tmp[46];
-
-        lua_newtable(L);
-        for(size_t i=0; i<rc; i++) {
-            const mdns_result_t * res = mdns_result_get(mdns->client, i);
-            if (res) {
-								//put row into table
-                printf("mdns %u: " IPSTR " " IPV6STR, i+1, IP2STR(&res->addr), IPV62STR(res->addrv6));
-
-								lua_newtable(L);
-								lua_pushnumber(L, i+1);
-								lua_pushvalue(L, -2);
-								lua_settable(L, -4);
-
-								// host - remove me?
-									lua_pushstring(L, "hostname");
-									lua_pushstring(L, (res->host)?res->host:"");
-									lua_settable(L, -3);
-								//
-
-								// instance - remove me?
-									lua_pushstring(L, "instance");
-									lua_pushstring(L, (res->instance)?res->instance:"");
-									lua_settable(L, -3);
-								//
-
-								// ip
-									lua_pushstring(L, "ip");
-									sprintf(tmp, IPSTR, ip4_addr1_16(&res->addr),ip4_addr2_16(&res->addr),ip4_addr3_16(&res->addr),ip4_addr4_16(&res->addr));
-									lua_pushstring(L, tmp);
-									lua_settable(L, -3);
-								//
-								
-								// ipv6
-									lua_pushstring(L, "ipv6");
-									sprintf(tmp, IPV6STR, IPV62STR(res->addrv6));
-									lua_pushstring(L, tmp);
-									lua_settable(L, -3);
-								//*/
-								
-								lua_pop(L, 1);
-															 
-            }
-        }
-        mdns_result_free(mdns->client);
-				return 1; //one table
+    		return results_to_table(L, mdns);
     }
 
     return luaL_exception(L, LUA_MDNS_ERR_CANT_RESOLVE_HOST);
@@ -175,72 +210,17 @@ static int lmdns_find_service( lua_State* L ) {
     mdns_userdata *mdns = (mdns_userdata *)luaL_checkudata(L, 1, "mdns.cli");
     const char *service = luaL_checkstring( L, 2 );
     const char *protocol = luaL_checkstring( L, 3 );
-
+    int seconds = DEFAULT_TIMEOUT_SECONDS;
+		if (lua_gettop(L) > 3) {
+    	seconds = luaL_checkinteger( L, 4 );
+			if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
+		}
+		
     luaL_argcheck(L, mdns, 1, "mdns expected");
 
-    rc = mdns_query(mdns->client, service, protocol, 1000);
+    rc = mdns_query(mdns->client, service, protocol, 1000*seconds);
     if (rc) {
-				char tmp[46];
-
-        lua_newtable(L);
-        for(size_t i=0; i<rc; i++) {
-            const mdns_result_t * res = mdns_result_get(mdns->client, i);
-            if (res) {
-								//put row into table
-                printf("mdns %u: %s \"%s\" " IPSTR " " IPV6STR " %u %s", i+1, 
-											 (res->host)?res->host:"", (res->instance)?res->instance:"", 
-											 IP2STR(&res->addr), IPV62STR(res->addrv6),
-											 res->port, (res->txt)?res->txt:"");
-
-								lua_newtable(L);
-								lua_pushnumber(L, i+1);
-								lua_pushvalue(L, -2);
-								lua_settable(L, -4);
-
-								// host
-									lua_pushstring(L, "hostname");
-									lua_pushstring(L, (res->host)?res->host:"");
-									lua_settable(L, -3);
-								//
-
-								// instance
-									lua_pushstring(L, "instance");
-									lua_pushstring(L, (res->instance)?res->instance:"");
-									lua_settable(L, -3);
-								//
-
-								// ip
-									lua_pushstring(L, "ip");
-									sprintf(tmp, IPSTR, ip4_addr1_16(&res->addr),ip4_addr2_16(&res->addr),ip4_addr3_16(&res->addr),ip4_addr4_16(&res->addr));
-									lua_pushstring(L, tmp);
-									lua_settable(L, -3);
-								//
-								
-								// ipv6
-									lua_pushstring(L, "ipv6");
-									sprintf(tmp, IPV6STR, IPV62STR(res->addrv6));
-									lua_pushstring(L, tmp);
-									lua_settable(L, -3);
-								//
-								
-								// port
-									lua_pushstring(L, "port");
-									lua_pushinteger(L, res->port);
-									lua_settable(L, -3);
-								//
-								
-								// txt
-									lua_pushstring(L, "txt");
-									lua_pushstring(L, (res->txt)?res->txt:"");
-									lua_settable(L, -3);
-								//
-								
-								lua_pop(L, 1);
-															 
-            }
-        }
-        mdns_result_free(mdns->client);
-				return 1; //one table
+	    	return results_to_table(L, mdns);
     }
 
     return luaL_exception(L, LUA_MDNS_ERR_CANT_FIND_SERVICE);
@@ -324,9 +304,10 @@ static int lmdns_stop( lua_State* L ) {
 // Destructor
 static int lmdns_service_gc (lua_State *L) {
     mdns_userdata *mdns = NULL;
-    
+
     mdns = (mdns_userdata *)luaL_testudata(L, 1, "mdns.cli");
     if (mdns) {        
+		    mdns_service_remove_all(mdns->client);
 				mdns_free(mdns->client);
     }
    
