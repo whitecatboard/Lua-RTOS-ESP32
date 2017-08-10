@@ -213,6 +213,10 @@ SECTIONS {
     KEEP(*(.gpio_error_map))
     LONG(0) LONG(0)
 
+    mdns_errors = ABSOLUTE(.);
+    KEEP(*(.mdns_errors))
+    LONG(0) LONG(0)
+
     mqtt_errors = ABSOLUTE(.);
     KEEP(*(.mqtt_errors))
     LONG(0) LONG(0)
