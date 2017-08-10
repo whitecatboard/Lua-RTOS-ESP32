@@ -54,7 +54,6 @@
 #include "Thread.h"
 #include "SocketBuffer.h"
 #include "StackTrace.h"
-#include "Heap.h"
 
 #include <string.h>
 #include <sys/time.h>

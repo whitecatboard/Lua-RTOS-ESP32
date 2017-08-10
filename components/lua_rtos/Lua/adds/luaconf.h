@@ -150,12 +150,6 @@
     #define LINIT_REG_GPS
 #endif
 
-#if LUA_USE_HTTP
-    #define LINIT_REG_HTTP {AUXLIB_HTTP, luaopen_http},
-#else
-    #define LINIT_REG_HTTP
-#endif
-
 #if LUA_USE_STEPPER
     #define LINIT_REG_STEPPER {AUXLIB_STEPPER, luaopen_stepper},
 #else
@@ -187,7 +181,6 @@
   LINIT_REG_UART \
   LINIT_REG_PWM \
   LINIT_REG_GPS \
-  LINIT_REG_HTTP \
   LINIT_REG_STEPPER \
   LINIT_REG_I2C \
   LINIT_REG_LORA \

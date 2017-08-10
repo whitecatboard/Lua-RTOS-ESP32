@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if CONFIG_WIFI_ENABLED && CONFIG_LUA_RTOS_LUA_USE_NET
+#if CONFIG_WIFI_ENABLED && CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_LUA_RTOS_LUA_USE_SCP_NET
 
 #include "libssh2_config.h"
 #include <libssh2.h>

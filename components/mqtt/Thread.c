@@ -47,7 +47,6 @@
 #include <sys/stat.h>
 #include <limits.h>
 #endif
-#include <memory.h>
 #include <stdlib.h>
 
 /**

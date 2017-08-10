@@ -658,7 +658,7 @@ menu "Lua RTOS"
 		endmenu
 		
 		menu "Lua"
-			menu "Tunning"
+			menu "Tuning"
 			config LUA_RTOS_LUA_STACK_SIZE
 				int "Lua interpreter stack size"
 				range 1024 40960
@@ -853,6 +853,11 @@ menu "Lua RTOS"
 					config LUA_RTOS_LUA_USE_MQTT
 						depends on WIFI_ENABLED || ETHERNET
 						bool "Include MQTT module in build"
+						default n
+
+					config LUA_RTOS_LUA_USE_MDNS
+						depends on WIFI_ENABLED || ETHERNET
+						bool "Include MDNS module in build"
 						default n
 
 					config LUA_RTOS_LUA_USE_CAN

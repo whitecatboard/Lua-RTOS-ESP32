@@ -30,9 +30,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <memory.h>
-
-#include "Heap.h"
 
 #if defined(WIN32) || defined(WIN64)
 #define iov_len len

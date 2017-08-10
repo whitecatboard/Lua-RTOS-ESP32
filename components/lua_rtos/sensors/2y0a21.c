@@ -36,6 +36,8 @@
 
 #include "luartos.h"
 
+#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+
 #include "2y0a21.h"
 
 #include <math.h>
@@ -113,3 +115,5 @@ driver_error_t *s2y0a21_acquire(sensor_instance_t *unit, sensor_value_t *values)
 
 	return NULL;
 }
+
+#endif

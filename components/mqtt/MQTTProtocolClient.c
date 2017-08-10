@@ -36,7 +36,6 @@
 #endif
 #include "SocketBuffer.h"
 #include "StackTrace.h"
-#include "Heap.h"
 
 #if !defined(min)
 #define min(A,B) ( (A) < (B) ? (A):(B))

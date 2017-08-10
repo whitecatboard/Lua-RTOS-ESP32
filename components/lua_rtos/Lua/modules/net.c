@@ -42,6 +42,7 @@
 #include "net_service_http.inc"
 #include "net_service_curl.inc"
 #include "net_service_captivedns.inc"
+#include "net_service_mdns.inc"
 #include "net_ssh.inc"
 
 #include <stdint.h>
@@ -247,6 +248,9 @@ static const LUA_REG_TYPE service_map[] = {
 	{ LSTRKEY( "http" ), LROVAL ( http_map ) },
 	{ LSTRKEY( "captivedns" ), LROVAL ( captivedns_map ) },
 #endif
+#if CONFIG_LUA_RTOS_LUA_USE_MDNS
+	{ LSTRKEY( "mdns" ), LROVAL ( mdns_map ) },
+#endif
 };
 
 static const LUA_REG_TYPE net_map[] = {
@@ -279,6 +283,9 @@ static const LUA_REG_TYPE net_map[] = {
 };
 
 int luaopen_net(lua_State* L) {
+#if CONFIG_LUA_RTOS_LUA_USE_MDNS
+	luaopen_mdns(L);
+#endif
 	return 0;
 }
 

@@ -1,0 +1,10 @@
+--- component.mk.orig	2017-08-03 22:33:00.262095000 +0200
++++ component.mk	2017-08-03 22:29:42.494095000 +0200
+@@ -0,0 +1,7 @@
++#
++# Component Makefile
++#
++
++COMPONENT_ADD_INCLUDEDIRS := include
++
++COMPONENT_SRCDIRS := .

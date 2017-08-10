@@ -95,7 +95,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_HTTP
+#if CONFIG_LUA_RTOS_LUA_USE_CURL_NET
 
 #include "curl/curl.h"
 #include "quickmail/quickmail.h"

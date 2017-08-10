@@ -2,6 +2,16 @@
 # Component Makefile
 #
 
+ifdef CONFIG_LUA_RTOS_USE_FAT
+
 COMPONENT_SRCDIRS := . option
 COMPONENT_ADD_INCLUDEDIRS := .					  
 COMPONENT_PRIV_INCLUDEDIRS := 
+
+else
+
+# disable FAT support
+COMPONENT_SRCDIRS :=
+COMPONENT_ADD_INCLUDEDIRS :=
+
+endif

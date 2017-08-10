@@ -45,21 +45,14 @@ static int lhttp_start(lua_State* L) {
 	driver_error_t *error;
 
 	if ((error = net_check_connectivity())) {
-    	return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
 	return http_start(L);
 }
 
 static int lhttp_stop(lua_State* L) {
-	driver_error_t *error;
-
-	if ((error = net_check_connectivity())) {
-    	return luaL_driver_error(L, error);
-	}
-
 	http_stop();
-
 	return 0;
 }
 
@@ -67,7 +60,7 @@ static int lhttp_print(lua_State* L) {
 	driver_error_t *error;
 
 	if ((error = net_check_connectivity())) {
-    	return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
 	return http_print(L);
