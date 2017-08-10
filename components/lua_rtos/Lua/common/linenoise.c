@@ -144,7 +144,6 @@ struct linenoiseState {
     size_t cols;        /* Number of columns in terminal. */
     size_t maxrows;     /* Maximum num of rows used so far (multiline mode) */
     int history_index;  /* The history index we are currently editing. */
-    FILE *history;
 };
 
 enum KEY_ACTION{
@@ -700,7 +699,7 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
     }
     
     if (l->history_index == -1) {
-		fseek(fp, 0, SEEK_END);
+        fseek(fp, 0, SEEK_END);
         pos = ftell(fp);
     } else {       
         pos = l->history_index;
