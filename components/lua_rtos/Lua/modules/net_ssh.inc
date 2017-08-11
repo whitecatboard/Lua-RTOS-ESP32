@@ -123,8 +123,8 @@ static int l_scp_get(lua_State* L) {
         return luaL_fileresult(L, 0, dst);
     }
 
+    char mem[1024];
     while(got < fileinfo.st_size) {
-        char mem[1024];
         int amount=sizeof(mem);
 
         if ((fileinfo.st_size -got) < amount) {
@@ -157,8 +157,136 @@ static int l_scp_get(lua_State* L) {
 	return 0;
 }
 
+static int l_scp_put(lua_State* L) {
+	const char* host = luaL_checkstring(L, 1);
+	int port = luaL_checkinteger(L, 2);
+	const char* src = luaL_checkstring(L, 3);
+	const char* dst = luaL_checkstring(L, 4);
+	const char* user = luaL_checkstring(L, 5);
+	const char* password = luaL_checkstring(L, 6);
+
+	// Resolve name
+	char str_port[6];
+	itoa(port,str_port,10);
+
+    const struct addrinfo hints = {
+        .ai_family = AF_INET,
+        .ai_socktype = SOCK_STREAM,
+    };
+
+    struct addrinfo *res;
+
+    int err = getaddrinfo(host, str_port, &hints, &res);
+    if (err != 0 || res == NULL) {
+    	return luaL_error(L, "can't resolve name");
+    }
+
+    // Init ssh
+    int rc;
+
+    rc = libssh2_init (0);
+    if (rc != 0) {
+    	return luaL_error(L, "can't init ssh");
+    }
+
+    // Open stream for save file
+    FILE *fp;
+    fp = fopen(src, "rb");
+    if (!fp) {
+        fclose(fp);
+        return luaL_fileresult(L, 0, src);
+    }
+
+    // Open socket
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+
+    if(connect(sock, res->ai_addr, res->ai_addrlen) != 0) {
+    	return luaL_error(L, "can't connect");
+    }
+
+    // Create a session instance
+    LIBSSH2_SESSION *session;
+    session = libssh2_session_init();
+    if (!session) {
+    	return luaL_error(L, "can't create ssh session");
+    }
+
+    rc = libssh2_session_handshake(session, sock);
+    if(rc) {
+    	return luaL_error(L, "can't establish ssh session");
+    }
+
+    if (libssh2_userauth_password(session, user, password)) {
+    	l_ssh_shutdown(session);
+        fclose(fp);
+        close(sock);
+        libssh2_exit();
+    	return luaL_error(L, "can't authenticate by password");
+    }
+
+    // Send file
+    LIBSSH2_CHANNEL *channel;
+    libssh2_struct_stat fileinfo;
+    stat(src, &fileinfo);
+
+    channel = libssh2_scp_send_ex(session, dst, 0644, (size_t)fileinfo.st_size, 0, 0);
+    if (!channel) {
+    	l_ssh_shutdown(session);
+        fclose(fp);
+        libssh2_channel_free(channel);
+        close(sock);
+        libssh2_exit();
+    	return luaL_error(L, "can't put file");
+    }
+
+    size_t nread;
+    char *ptr;
+    char mem[1024];
+    do {
+        nread = fread(mem, 1, sizeof(mem), fp);
+        if (nread <= 0) {
+            /* end of file */
+            break;
+        }
+        ptr = mem;
+
+        do {
+            /* write the same data over and over, until error or completion */
+            rc = libssh2_channel_write(channel, ptr, nread);
+            if (rc < 0) {
+								l_ssh_shutdown(session);
+									fclose(fp);
+									libssh2_channel_free(channel);
+									close(sock);
+									libssh2_exit();
+                return luaL_error(L, "error sending file");
+            }
+            else {
+                /* rc indicates how many bytes were written this time */
+                ptr += rc;
+                nread -= rc;
+            }
+        } while (nread);
+
+    } while (1);
+
+    fclose(fp);
+
+    libssh2_channel_send_eof(channel);
+    libssh2_channel_wait_eof(channel);
+    libssh2_channel_wait_closed(channel);
+
+    libssh2_channel_free(channel);
+    l_ssh_shutdown(session);
+    close(sock);
+    libssh2_exit();
+
+	return 0;
+}
+
 static const LUA_REG_TYPE scp_map[] = {
 	{ LSTRKEY( "get" ),	 LFUNCVAL( l_scp_get   ) },
+	{ LSTRKEY( "put" ),	 LFUNCVAL( l_scp_put   ) },
 	{ LNILKEY, LNILVAL }
 };
 
@@ -169,5 +297,6 @@ static const LUA_REG_TYPE scp_map[] = {
 Example:
 
 net.scp.get("your_domain.com",22,"/server_path/server_file","/local_path/local_file","user","pass")
+net.scp.put("your_domain.com",22,"/local_path/local_file","/server_path/server_file","user","pass")
 
 */
