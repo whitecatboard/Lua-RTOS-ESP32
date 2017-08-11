@@ -41,22 +41,15 @@ static int lsntp_start(lua_State* L) {
     	return luaL_driver_error(L, error);
 	}
 
-    sntp_setoperatingmode(SNTP_OPMODE_POLL);
-    sntp_setservername(0, "pool.ntp.org");
-    sntp_init();
+  sntp_setoperatingmode(SNTP_OPMODE_POLL);
+  sntp_setservername(0, "pool.ntp.org");
+  sntp_init();
 
 	return 0;
 }
 
 static int lsntp_stop(lua_State* L) {
-	driver_error_t *error;
-
-	if ((error = net_check_connectivity())) {
-    	return luaL_driver_error(L, error);
-	}
-
 	sntp_stop();
-
 	return 0;
 }
 

@@ -38,8 +38,6 @@
 #include <signal.h>
 #include <ctype.h>
 
-#include "Heap.h"
-
 int Socket_close_only(int socket);
 int Socket_continueWrites(fd_set* pwset);
 

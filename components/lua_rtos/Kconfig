@@ -658,7 +658,7 @@ menu "Lua RTOS"
 		endmenu
 		
 		menu "Lua"
-			menu "Tunning"
+			menu "Tuning"
 			config LUA_RTOS_LUA_STACK_SIZE
 				int "Lua interpreter stack size"
 				range 1024 40960

@@ -210,15 +210,15 @@ static int lwifi_stat(lua_State* L) {
 		lua_pushstring(L, "wf");
 		lua_setfield (L, -2, "interface");
 
-		sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&info.ip),ip4_addr2_16(&info.ip),ip4_addr3_16(&info.ip),ip4_addr4_16(&info.ip));
+		sprintf(tmp, IPSTR, ip4_addr1_16(&info.ip),ip4_addr2_16(&info.ip),ip4_addr3_16(&info.ip),ip4_addr4_16(&info.ip));
 		lua_pushstring(L, tmp);
 		lua_setfield (L, -2, "ip");
 
-		sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&info.gw),ip4_addr2_16(&info.gw),ip4_addr3_16(&info.gw),ip4_addr4_16(&info.gw));
+		sprintf(tmp, IPSTR, ip4_addr1_16(&info.gw),ip4_addr2_16(&info.gw),ip4_addr3_16(&info.gw),ip4_addr4_16(&info.gw));
 		lua_pushstring(L, tmp);
 		lua_setfield (L, -2, "gw");
 
-		sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&info.netmask),ip4_addr2_16(&info.netmask),ip4_addr3_16(&info.netmask),ip4_addr4_16(&info.netmask));
+		sprintf(tmp, IPSTR, ip4_addr1_16(&info.netmask),ip4_addr2_16(&info.netmask),ip4_addr3_16(&info.netmask),ip4_addr4_16(&info.netmask));
 		lua_pushstring(L, tmp);
 		lua_setfield (L, -2, "netmask");
 	}

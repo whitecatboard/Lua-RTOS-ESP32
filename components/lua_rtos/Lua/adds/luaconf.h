@@ -120,12 +120,6 @@
     #define LINIT_REG_MQTT
 #endif
 
-#if CONFIG_LUA_RTOS_LUA_USE_MDNS
-    #define LINIT_REG_MDNS {AUXLIB_MDNS, luaopen_mdns},
-#else
-    #define LINIT_REG_MDNS
-#endif
-
 #if CONFIG_LUA_RTOS_LUA_USE_THREAD
     #define LINIT_REG_THREAD {AUXLIB_THREAD, luaopen_thread },
 #else
@@ -156,12 +150,6 @@
     #define LINIT_REG_GPS
 #endif
 
-#if LUA_USE_HTTP
-    #define LINIT_REG_HTTP {AUXLIB_HTTP, luaopen_http},
-#else
-    #define LINIT_REG_HTTP
-#endif
-
 #if LUA_USE_STEPPER
     #define LINIT_REG_STEPPER {AUXLIB_STEPPER, luaopen_stepper},
 #else
@@ -188,13 +176,11 @@
   LINIT_REG_ADC \
   LINIT_REG_SPI \
   LINIT_REG_MQTT \
-  LINIT_REG_MDNS \
   LINIT_REG_THREAD \
   LINIT_REG_SCREEN \
   LINIT_REG_UART \
   LINIT_REG_PWM \
   LINIT_REG_GPS \
-  LINIT_REG_HTTP \
   LINIT_REG_STEPPER \
   LINIT_REG_I2C \
   LINIT_REG_LORA \
