@@ -654,7 +654,6 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
     const char *fname;
     
     if (!status_get(STATUS_LUA_HISTORY)) return;
-  	syslog(LOG_DEBUG, "adding linenoise history %s at %i\n", l->buf, l->history_index);
 
     if (mount_is_mounted("fat")) {
     	if (mount_is_mounted("spiffs")) {
@@ -664,18 +663,16 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
     	}
     } else {
     	if(!ram_history_init) {
-	    	syslog(LOG_INFO, "storing history into ram\n");
+	    	syslog(LOG_DEBUG, "storing history into ram\n");
     		list_init(&ram_history, 0);
     		ram_history_init = 1;
     	}
     	
   		char *buf = 0;
     	if(l->history_index>=0 && l->history_index <= (ram_history.indexes-1)) {
-		  	syslog(LOG_DEBUG, "getting ram history id %i\n",l->history_index);
 				int err = list_get(&ram_history, l->history_index, (void **)&buf);
 				if (!err) {
 					if(0 == strcmp(l->buf, buf)) {
-			    	syslog(LOG_DEBUG, "keeping command in ram history %i: %s\n",l->history_index,l->buf);
 						return;
 					}
 				}
@@ -693,7 +690,6 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
 		    }
 		    else {
 					l->history_index = id;
-					syslog(LOG_DEBUG, "stored command as ram history %i: %s\n",id,l->buf);
 		  	}
     	}
     	l->history_index++;
@@ -718,7 +714,6 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
     const char *fname;
     
     if (!status_get(STATUS_LUA_HISTORY)) return;
-  	syslog(LOG_DEBUG, "getting linenoise history %s from %i\n", up ? "up":"down", l->history_index);
     
     if (mount_is_mounted("fat")) {
     	if (mount_is_mounted("spiffs")) {
@@ -728,7 +723,7 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
     	}
     } else {
     	if(!ram_history_init) {
-	    	syslog(LOG_INFO, "ram history not yet initialized\n");
+	    	syslog(LOG_DEBUG, "ram history not yet initialized\n");
     		return;
     	}
   		char *buf = 0;
@@ -749,7 +744,6 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
 				return;
 			}
   		
-    	syslog(LOG_DEBUG, "getting ram history id %i\n",l->history_index);
   		int err = list_get(&ram_history, l->history_index, (void **)&buf);
   		if (err) {
   			l->buf[0] = '\0';
@@ -757,7 +751,6 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
   		else {
   			memcpy(l->buf,buf,strlen(buf)+1);
   		}
-    	syslog(LOG_DEBUG, "got ram history command length %i: %s\n",strlen(buf), buf);
   		l->len = l->pos = strlen(l->buf);
     	refreshLine(l);
     	return;
