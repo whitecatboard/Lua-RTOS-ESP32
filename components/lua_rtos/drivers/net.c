@@ -43,6 +43,7 @@
 #include <string.h>
 
 #include <sys/status.h>
+#include <sys/syslog.h>
 
 #include <drivers/net.h>
 #include <drivers/wifi.h>
@@ -88,6 +89,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
 		case SYSTEM_EVENT_STA_CONNECTED:            /**< ESP32 station connected to AP */
 			status_set(STATUS_WIFI_CONNECTED);
+			tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_STA);
 			break;
 
 		case SYSTEM_EVENT_STA_DISCONNECTED:         /**< ESP32 station disconnected from AP */
@@ -129,6 +131,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
 		case SYSTEM_EVENT_AP_START:                 /**< ESP32 soft-AP start */
 			status_set(STATUS_WIFI_CONNECTED);
+			tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_AP);
 			break;
 
 		case SYSTEM_EVENT_AP_STOP:                  /**< ESP32 soft-AP stop */
@@ -146,6 +149,15 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 			break;
 
 		case SYSTEM_EVENT_AP_STA_GOT_IP6:           /**< ESP32 station or ap interface v6IP addr is preferred */
+			{
+				wifi_mode_t mode;
+				esp_err_t err = esp_wifi_get_mode(&mode);
+				if(!err) {
+					ip6_addr_t adr;
+					tcpip_adapter_get_ip6_linklocal( (mode == WIFI_MODE_STA) ? ESP_IF_WIFI_STA : ESP_IF_WIFI_AP, &adr);
+					syslog(LOG_DEBUG, "%s got IPv6 " IPV6STR "\n", (mode == WIFI_MODE_STA) ? "STA" : "AP", IPV62STR(adr));
+				}
+			}
  			xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
 			break;
 #endif
@@ -158,6 +170,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 			break;
 
 		case SYSTEM_EVENT_ETH_CONNECTED:            /**< ESP32 ethernet phy link up */
+			tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_ETH);
 			break;
 
 		case SYSTEM_EVENT_ETH_DISCONNECTED:         /**< ESP32 ethernet phy link down */
@@ -176,6 +189,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
 		case SYSTEM_EVENT_SPI_ETH_CONNECTED:        /**< ESP32 spi ethernet phy link up */
 			status_set(STATUS_SPI_ETH_CONNECTED);
+			tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_SPI_ETH);
 			break;
 
 		case SYSTEM_EVENT_SPI_ETH_DISCONNECTED:     /**< ESP32 spi ethernet phy link down */
