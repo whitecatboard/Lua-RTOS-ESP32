@@ -57,6 +57,7 @@ typedef struct {
     ip4_addr_t netmask;
     ip4_addr_t gw;
     uint8_t    mac[6];
+    ip6_addr_t ip6;
 } ifconfig_t;
 
 // NET errors

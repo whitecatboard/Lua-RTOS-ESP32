@@ -356,6 +356,7 @@ driver_error_t *wifi_stop() {
 
 driver_error_t *wifi_stat(ifconfig_t *info) {
 	tcpip_adapter_ip_info_t esp_info;
+	ip6_addr_t adr;
 	uint8_t mac[6] = {0,0,0,0,0,0};
 
 	driver_error_t *error;
@@ -372,6 +373,8 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 	// Get WIFI IF info
 	if ((error = wifi_check_error(tcpip_adapter_get_ip_info(interface, &esp_info)))) return error;
 
+	if ((error = wifi_check_error(tcpip_adapter_get_ip6_linklocal(interface, &adr)))) ip6_addr_set(&adr,IP6_ADDR_ANY6);
+
 	// Get MAC info
 	if (status_get(STATUS_WIFI_STARTED)) {
 		if ((error = wifi_check_error(esp_wifi_get_mac(interface, mac)))) return error;
@@ -381,6 +384,7 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 	info->gw = esp_info.gw;
 	info->ip = esp_info.ip;
 	info->netmask = esp_info.netmask;
+	info->ip6 = adr;
 
 	memcpy(info->mac, mac, sizeof(mac));
 

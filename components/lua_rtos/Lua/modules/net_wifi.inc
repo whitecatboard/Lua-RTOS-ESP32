@@ -200,12 +200,26 @@ static int lwifi_stat(lua_State* L) {
 			info.mac[4],info.mac[5]
 		);
 
-		printf("   ip address %s netmask %s\r\n", ipa, maska);
-		printf("   gw address %s\r\n\r\n", gwa);
-	} else {
-		char tmp[17];
+		printf("    ip  address %s / netmask %s\r\n", ipa, maska);
+		printf("    gw  address %s\r\n", gwa);
 
-		lua_createtable(L, 0, 4);
+		if (!ip6_addr_cmp(IP6_ADDR_ANY6, &info.ip6)) {
+			char tmp[46];
+			sprintf(tmp, IPV6STR, IPV62STR(info.ip6));
+			printf("    ip6 address %s\r\n", tmp);
+		}
+
+		printf("\r\n");
+
+	} else {
+		char tmp[46];
+		tmp[0] = 0;
+
+		if (!ip6_addr_cmp(IP6_ADDR_ANY6, &info.ip6)) {
+			sprintf(tmp, IPV6STR, IPV62STR(info.ip6));
+		}
+
+		lua_createtable(L, 0, strlen(tmp) > 0 ? 5:4);
 
 		lua_pushstring(L, "wf");
 		lua_setfield (L, -2, "interface");
@@ -221,6 +235,11 @@ static int lwifi_stat(lua_State* L) {
 		sprintf(tmp, IPSTR, ip4_addr1_16(&info.netmask),ip4_addr2_16(&info.netmask),ip4_addr3_16(&info.netmask),ip4_addr4_16(&info.netmask));
 		lua_pushstring(L, tmp);
 		lua_setfield (L, -2, "netmask");
+
+		if (strlen(tmp) > 0 ) {
+			lua_pushstring(L, tmp);
+			lua_setfield (L, -2, "ip6");
+		}
 	}
 
 	return table;
