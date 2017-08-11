@@ -75,6 +75,7 @@
 ** lua_saveline defines how to "save" a read line in a "history".
 ** lua_freeline defines how to free a line read by lua_readline.
 */
+#if 0
 #if !defined(lua_readline)	/* { */
 
 #if defined(LUA_USE_READLINE)	/* { */
@@ -96,7 +97,7 @@
 #endif				/* } */
 
 #endif				/* } */
-
+#endif
 
 
 
