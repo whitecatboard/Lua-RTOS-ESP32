@@ -263,6 +263,7 @@ static const LUA_REG_TYPE net_map[] = {
 
 #if CONFIG_LUA_RTOS_LUA_USE_SCP_NET
 	{ LSTRKEY( "scp" ), LROVAL ( scp_map ) },
+	{ LSTRKEY( "ssh" ), LROVAL ( ssh_map ) },
 #endif
 
 #if CONFIG_WIFI_ENABLED && CONFIG_LUA_RTOS_LUA_USE_NET
