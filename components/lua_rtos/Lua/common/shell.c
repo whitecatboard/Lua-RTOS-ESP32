@@ -165,27 +165,103 @@ void lua_shell(lua_State* L, char *buffer) {
 	}
 
 	// Process command
-#if 0
-	if ((cindex < 0) && (itoken == 1)) {
-		// Not a command
-		// May be it's a lua script?
-	    struct stat s;
+	if (cindex >= 0) {
+		// Check for mandatory arguments
+		if ((itoken - 1) < command[cindex].mandatory) {
+			if (command[cindex].usage) {
+				printf("usage: %s\r\n", command[cindex].usage);
+				*buffer = 0x00;
+				return;
+			}
+		}
 
-	    int tl = tokens[0].te - tokens[0].tb + 1;
-	    if ((tl > sizeof(arg) - 1) || (tl > PATH_MAX)) {
-	    	return;
-	    }
+		// Call to corresponding module / function
+		if (command[cindex].module) {
+			lua_getglobal(L, command[cindex].module);
+			lua_getfield(L, -1, command[cindex].function);
+		} else {
+				lua_getglobal(L, command[cindex].function);
+		}
+
+		int top = lua_gettop(L);
+
+		// Prepare arguments
+		int i, args = 0;
+
+		for(i = 1; i < itoken; i++) {
+			memcpy(arg, tokens[i].tb, tokens[i].te - tokens[i].tb + 1);
+			arg[tokens[i].te - tokens[i].tb + 1] = 0x00;
+
+				lua_pushstring(L, arg);
+				args++;
+		}
+
+		// In the stack there are:
+		// nil
+		// a reference to the module (if any)
+		// a reference to the function
+		// the function arguments
+
+		// Call, and make room for 4 return values
+			lua_pcall(L, args, 4, 0);
+
+			// After the call the stack is
+			// a reference to the module (if any)
+			//
+			// If error:
+			//		nil= top vaiable
+			//		error description = top + 1 variable
+			//
+			// If no error:
+			//		the return values
+
+			// Check for errors
+			if ((lua_type(L, top) == LUA_TNIL) && (lua_type(L, top + 1) == LUA_TSTRING))	{
+				const char *msg = lua_tostring(L, top + 1);
+			if (msg) {
+				printf("%s\r\n", msg);
+				}
+
+				// Clear stack
+			lua_settop(L, 0);
+			} else {
+				if ((lua_type(L, top) != LUA_TNIL) && (command[cindex].returns)) {
+					lua_copy(L, top, 2);
+					lua_settop(L, top);
+				} else {
+					// Clear stack
+				lua_settop(L, 0);
+				}
+			}
+
+			*buffer = 0x00;
+	}
+	else if ((cindex < 0) && (itoken == 1)) {
+		// Not a command - maybe it's a lua script?
+
+		int tl = tokens[0].te - tokens[0].tb + 1;
+		if ((tl > sizeof(arg) - 1) || (tl > PATH_MAX)) {
+			return;
+		}
 
 		memcpy(arg, tokens[0].tb, tl);
 		arg[tl] = 0x00;
 
+		// for execution without "do " the file extension must be ".lua"
+		if(arg[tl-4] != '.' || arg[tl-3] != 'l' || arg[tl-2] != 'u' || arg[tl-1] != 'a') {
+			return;
+		}
+
+		// check if a file system element with that name exists
+		struct stat s;
 		if (stat(arg, &s) < 0) {
 			return;
-	    }
+		}
 
 		if (s.st_mode == S_IFDIR) {
 			return;
-		} else if (s.st_mode == S_IFREG) {
+		}
+		else if (s.st_mode == S_IFREG) {
 			*buffer = 0x00;
 
 			// It's a file
@@ -194,80 +270,6 @@ void lua_shell(lua_State* L, char *buffer) {
 			strlcat(buffer,"\")", 256);
 			return;
 		}
-	} else {
-#endif
-		if (cindex >= 0) {
-			// Check for mandatory arguments
-			if ((itoken - 1) < command[cindex].mandatory) {
-				if (command[cindex].usage) {
-					printf("usage: %s\r\n", command[cindex].usage);
-					*buffer = 0x00;
-					return;
-				}
-			}
-
-			// Call to corresponding module / function
-			if (command[cindex].module) {
-				lua_getglobal(L, command[cindex].module);
-				lua_getfield(L, -1, command[cindex].function);
-			} else {
-			    lua_getglobal(L, command[cindex].function);
-			}
-
-			int top = lua_gettop(L);
-
-			// Prepare arguments
-			int i, args = 0;
-
-			for(i = 1; i < itoken; i++) {
-				memcpy(arg, tokens[i].tb, tokens[i].te - tokens[i].tb + 1);
-				arg[tokens[i].te - tokens[i].tb + 1] = 0x00;
-
-			    lua_pushstring(L, arg);
-			    args++;
-			}
-
-			// In the stack there are:
-			// nil
-			// a reference to the module (if any)
-			// a reference to the function
-			// the function arguments
-
-			// Call, and make room for 4 return values
-		    lua_pcall(L, args, 4, 0);
-
-		    // After the call the stack is
-		    // a reference to the module (if any)
-		    //
-		    // If error:
-		    //    nil= top vaiable
-		    //    error description = top + 1 variable
-		    //
-		    // If no error:
-		    //    the return values
-
-		    // Check for errors
-		    if ((lua_type(L, top) == LUA_TNIL) && (lua_type(L, top + 1) == LUA_TSTRING))  {
-		    	const char *msg = lua_tostring(L, top + 1);
-				if (msg) {
-					printf("%s\r\n", msg);
-			    }
-
-		    	// Clear stack
-				lua_settop(L, 0);
-		    } else {
-		    	if ((lua_type(L, top) != LUA_TNIL) && (command[cindex].returns)) {
-			    	lua_copy(L, top, 2);
-			    	lua_settop(L, top);
-		    	} else {
-			    	// Clear stack
-					lua_settop(L, 0);
-		    	}
-		    }
-
-		    *buffer = 0x00;
-		}
-#if 0
 	}
-#endif
+	
 }

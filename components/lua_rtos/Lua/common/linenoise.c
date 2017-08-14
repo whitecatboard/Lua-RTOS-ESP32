@@ -115,12 +115,13 @@
 #include <ctype.h>
 #include <sys/status.h>
 #include <sys/types.h>
+#include <sys/list.h>
 #include <reent.h>
 
 #include <sys/mount.h>
+#include <sys/syslog.h>
 
 #include "linenoise.h"
-
 #include "lua.h"
 
 #define LINENOISE_MAX_LINE LUA_MAXINPUT
@@ -144,8 +145,10 @@ struct linenoiseState {
     size_t cols;        /* Number of columns in terminal. */
     size_t maxrows;     /* Maximum num of rows used so far (multiline mode) */
     int history_index;  /* The history index we are currently editing. */
-    FILE *history;
 };
+
+static int ram_history_init = 0;
+static struct list ram_history;
 
 enum KEY_ACTION{
 	KEY_NULL = 0,	    /* NULL */
@@ -659,6 +662,37 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
     		fname = "/history";
     	}
     } else {
+    	if(!ram_history_init) {
+	    	syslog(LOG_DEBUG, "storing history into ram\n");
+    		list_init(&ram_history, 0);
+    		ram_history_init = 1;
+    	}
+    	
+  		char *buf = 0;
+    	if(l->history_index>=0 && l->history_index <= (ram_history.indexes-1)) {
+				int err = list_get(&ram_history, l->history_index, (void **)&buf);
+				if (!err) {
+					if(0 == strcmp(l->buf, buf)) {
+						return;
+					}
+				}
+    	}
+    	
+    	int id = 0;
+    	char *dup = strndup(l->buf, l->len);
+    	if (!dup) {
+	    	syslog(LOG_WARNING, "error allocating string: %s\n",l->buf);
+	    }
+    	else {
+		  	int err = list_add(&ram_history, dup, &id);
+				if (err) {
+		    	syslog(LOG_WARNING, "error adding ram history entry: %s\n",dup);
+		    }
+		    else {
+					l->history_index = id;
+		  	}
+    	}
+    	l->history_index++;
     	return;
     }
 
@@ -668,9 +702,7 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
     }
     
     fputs("\n", fp);
-    
     fputs(l->buf, fp);
-    
     fclose(fp);
     
     l->history_index = -1;
@@ -690,6 +722,37 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
     		fname = "/history";
     	}
     } else {
+    	if(!ram_history_init) {
+	    	syslog(LOG_DEBUG, "ram history not yet initialized\n");
+    		return;
+    	}
+  		char *buf = 0;
+  		int lastcmd = ram_history.indexes - 1;
+
+  		if (l->history_index == -1) {
+  			l->history_index = lastcmd + 1;
+  		}
+
+  		l->history_index += (up ? -1 : +1);
+
+  		if (l->history_index < 0) {
+  			l->history_index = 0;
+  		} else if (l->history_index > lastcmd) {
+  			l->history_index = lastcmd + 1;
+				l->buf[0] = l->len = l->pos = 0;
+		  	refreshLine(l);
+				return;
+			}
+  		
+  		int err = list_get(&ram_history, l->history_index, (void **)&buf);
+  		if (err) {
+  			l->buf[0] = '\0';
+  		}
+  		else {
+  			memcpy(l->buf,buf,strlen(buf)+1);
+  		}
+  		l->len = l->pos = strlen(l->buf);
+    	refreshLine(l);
     	return;
     }
 
@@ -700,7 +763,7 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
     }
     
     if (l->history_index == -1) {
-		fseek(fp, 0, SEEK_END);
+        fseek(fp, 0, SEEK_END);
         pos = ftell(fp);
     } else {       
         pos = l->history_index;
@@ -747,13 +810,35 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
         else 
             l->history_index = 0;
         
-        l->buf[0] = '\0';
-
-        l->len = l->pos = 0;
+				l->buf[0] = l->len = l->pos = 0;
     }
 
     refreshLine(l);
     fclose(fp);
+}
+
+void linenoiseHistoryClear() {
+    const char *fname;
+    
+    if (status_get(STATUS_LUA_HISTORY)) return;
+  	syslog(LOG_DEBUG, "clearing linenoise history\n");
+
+    if (mount_is_mounted("fat")) {
+    	if (mount_is_mounted("spiffs")) {
+    		fname = "/sd/history";
+    	} else {
+    		fname = "/history";
+    	}
+    } else {
+    	if(ram_history_init) {
+	    	list_destroy(&ram_history, 1);
+	    	ram_history_init = 0;
+    	}
+    	
+    	return;
+    }
+
+    remove(fname);
 }
 
 /* The high level function that is the main API of the linenoise library.
@@ -763,7 +848,6 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
  * something even in the most desperate of the conditions. */
 int linenoise(char *buf, const char *prompt) {
     int count;
-
     count = linenoiseRaw(buf,LINENOISE_MAX_LINE,prompt);
     if (count == -1) return -1;
     return count;

@@ -31,6 +31,7 @@
 #include "linenoise.h"
 #include "shell.h"
 #include "cache.h"
+#include "luaconf.h"
 
 #include <limits.h>
 

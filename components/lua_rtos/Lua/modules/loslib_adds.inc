@@ -30,6 +30,7 @@ extern const char *__progname;
 extern uint32_t boot_count;
 extern uint8_t flash_unique_id[8];
 extern const driver_t drivers[];
+extern void linenoiseHistoryClear();
 
 char lua_syslog_level = 0xff;
 FILE *lua_stdout_file = NULL;
@@ -479,6 +480,7 @@ static int os_history(lua_State *L) {
 			status_set(STATUS_LUA_HISTORY);
 		} else {
 			status_clear(STATUS_LUA_HISTORY);
+			linenoiseHistoryClear();
 		}
 
 		return 0;

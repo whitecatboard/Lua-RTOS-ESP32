@@ -27,6 +27,8 @@
  * this software.
  */
 
+#if LUA_USE_GPS
+
 #ifndef NMEA0183_H
 #define	NMEA0183_H
 
@@ -41,3 +43,4 @@ double nmea_lon();
 int nmea_sats();
 
 #endif	/* NMEA0183_H */
+#endif
