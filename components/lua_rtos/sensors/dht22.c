@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, DHT11 sensor (temperature & humidity)
+ * Lua RTOS, DHT22 sensor (temperature & humidity)
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
@@ -31,7 +31,7 @@
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 
-#include "dht11.h"
+#include "dht22.h"
 
 #include "freertos/FreeRTOS.h"
 #include "esp_attr.h"
@@ -46,21 +46,21 @@
 #include <drivers/sensor.h>
 
 // Sensor specification and registration
-static const sensor_t __attribute__((used,unused,section(".sensors"))) dht11_sensor = {
-	.id = "DHT11",
+static const sensor_t __attribute__((used,unused,section(".sensors"))) dht22_sensor = {
+	.id = "DHT22",
 	.interface = GPIO_INTERFACE,
 	.data = {
 		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
 		{.id = "humidity"   , .type = SENSOR_DATA_FLOAT},
 	},
-	.setup = dht11_setup,
-	.acquire = dht11_acquire
+	.setup = dht22_setup,
+	.acquire = dht22_acquire
 };
 
 /*
  * Helper functions
  */
-static int dht11_bus_monitor(uint8_t pin, uint8_t level, int16_t timeout) {
+static int dht22_bus_monitor(uint8_t pin, uint8_t level, int16_t timeout) {
 	uint8_t val = level;
 	uint32_t start, end, elapsed;
 
@@ -91,7 +91,7 @@ static int dht11_bus_monitor(uint8_t pin, uint8_t level, int16_t timeout) {
 /*
  * Operation functions
  */
-driver_error_t *dht11_setup(sensor_instance_t *unit) {
+driver_error_t *dht22_setup(sensor_instance_t *unit) {
 	// Get pin from instance
 	uint8_t pin = unit->setup.gpio.gpio;
 
@@ -102,8 +102,8 @@ driver_error_t *dht11_setup(sensor_instance_t *unit) {
 	return NULL;
 }
 
-driver_error_t *dht11_acquire(sensor_instance_t *unit, sensor_value_t *values) {
-	uint8_t data[5] = {0,0,0,0,0}; // dht11 returns 5 byte of date in each transfer
+driver_error_t *dht22_acquire(sensor_instance_t *unit, sensor_value_t *values) {
+	uint8_t data[5] = {0,0,0,0,0}; // dht22 returns 5 byte of date in each transfer
 	uint8_t byte = 0;		 	   // Current byte transferred by sensor
 	uint8_t cnt = 7;			   // Current bit into current byte transferred by sensor
 	int bit = 0;                   // Current transferred bit by sensor
@@ -118,24 +118,24 @@ driver_error_t *dht11_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	// Put data bus to 0
 	gpio_pin_output(pin);
 	gpio_pin_clr(pin);
-	delay(18);
+	delay(5);
 
 	// Configure pin as input and enable pull-up
 	gpio_pin_input(pin);
 	gpio_pin_pullup(pin);
 
 	// Wait response from sensor 1 -> 0 -> 1 -> 0
-	elapsed = dht11_bus_monitor(pin, 1, 50);if (elapsed == -1) goto timeout;
-	elapsed = dht11_bus_monitor(pin, 0, 90);if (elapsed == -1) goto timeout;
-	elapsed = dht11_bus_monitor(pin, 1, 90);if (elapsed == -1) goto timeout;
+	elapsed = dht22_bus_monitor(pin, 1, 50);if (elapsed == -1) goto timeout;
+	elapsed = dht22_bus_monitor(pin, 0, 90);if (elapsed == -1) goto timeout;
+	elapsed = dht22_bus_monitor(pin, 1, 90);if (elapsed == -1) goto timeout;
 
 	// Wait for first bit
 	for(bit=0;bit < 40;bit++) {
 		// Wait for bit 0 -> 1 -> 0
-		elapsed = dht11_bus_monitor(pin, 0, 60);if (elapsed == -1) goto timeout;
-		elapsed = dht11_bus_monitor(pin, 1, 80);if (elapsed == -1) goto timeout;
+		elapsed = dht22_bus_monitor(pin, 0, 80);if (elapsed == -1) goto timeout;
+		elapsed = dht22_bus_monitor(pin, 1, 80);if (elapsed == -1) goto timeout;
 
-		if (elapsed > 60) {
+		if (elapsed >= 70) {
 			data[byte] |= (1 << cnt);
 		}
 
@@ -146,8 +146,6 @@ driver_error_t *dht11_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 			cnt--;
 		}
 	}
-
-	dht11_bus_monitor(pin, 1, 80);if (elapsed == -1) goto timeout;
 
 	// Check CRC
 	uint8_t crc = 0;
@@ -170,13 +168,18 @@ timeout:
 exit:
 	portENABLE_INTERRUPTS();
 
-	values[0].floatd.value = (float)(data[2]);
-	values[1].floatd.value = (float)(data[0]);
+	values[0].floatd.value = (float)(((uint16_t)data[2]) << 8 | (uint16_t)data[3]) / 10.0;
 
+	// Apply temperature sing
+	if (data[2] & 0b1000000) {
+		values[0].floatd.value = -1 * values[0].floatd.value;
+	}
 
-	// Next value can get in 1 seconds
+	values[1].floatd.value = (float)(((uint16_t)data[0]) << 8 | (uint16_t)data[1]) / 10.0;
+
+	// Next value can get in 2 seconds
 	gettimeofday(&unit->next, NULL);
-	unit->next.tv_sec += 1;
+	unit->next.tv_sec += 2;
 
 	return NULL;
 }

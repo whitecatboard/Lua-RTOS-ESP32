@@ -66,6 +66,7 @@ DRIVER_REGISTER_ERROR(SENSOR, sensor, InterfaceNotSupported, "interface not supp
 DRIVER_REGISTER_ERROR(SENSOR, sensor, NotSetup, "sensor is not setup", SENSOR_ERR_NOT_SETUP);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, InvalidAddress, "invalid address", SENSOR_ERR_INVALID_ADDRESS);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, NoMoreCallbacks, "no more callbacks available", SENSOR_ERR_NO_MORE_CALLBACKS);
+DRIVER_REGISTER_ERROR(SENSOR, sensor, InvalidData, "invalid data", SENSOR_ERR_INVALID_DATA);
 
 static xQueueHandle queue = NULL;
 static TaskHandle_t task = NULL;
@@ -173,6 +174,9 @@ static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
 
 static driver_error_t *sensor_owire_setup(sensor_instance_t *unit) {
 	driver_error_t *error;
+
+	// By default we always can get sensor data
+    gettimeofday(&unit->next, NULL);
 
 	#if CONFIG_LUA_RTOS_USE_POWER_BUS
 	pwbus_on();
@@ -394,6 +398,17 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 	driver_error_t *error = NULL;
 	sensor_value_t *value = NULL;
 	int i = 0;
+
+	// Check if we can get data
+	uint64_t next_available_data = unit->next.tv_sec * 1000000 +unit->next.tv_usec;
+
+	struct timeval now;
+    gettimeofday(&now, NULL);
+	uint64_t now_usec = now.tv_sec * 1000000 + now.tv_usec;
+
+    if (now_usec < next_available_data) {
+    	return NULL;
+    }
 
 	#if CONFIG_LUA_RTOS_USE_POWER_BUS
 	pwbus_on();

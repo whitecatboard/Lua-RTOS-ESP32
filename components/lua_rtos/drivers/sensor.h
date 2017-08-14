@@ -30,9 +30,12 @@
 #ifndef _SENSORS_H_
 #define _SENSORS_H_
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+
+#include <time.h>
+#include <sys/time.h>
 
 #include <sys/driver.h>
 #include <drivers/adc.h>
@@ -176,6 +179,7 @@ typedef struct sensor_instance {
 	int unit;
 	sensor_value_t data[SENSOR_MAX_DATA];
 	sensor_value_t properties[SENSOR_MAX_PROPERTIES];
+	struct timeval next;
 
 	struct {
 		sensor_callback_t callback;
@@ -216,6 +220,7 @@ driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callbac
 #define SENSOR_ERR_NOT_SETUP				(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  8)
 #define SENSOR_ERR_INVALID_ADDRESS			(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  9)
 #define SENSOR_ERR_NO_MORE_CALLBACKS		(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) | 10)
+#define SENSOR_ERR_INVALID_DATA				(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) | 11)
 
 #endif
 

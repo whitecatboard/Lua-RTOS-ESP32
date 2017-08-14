@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, DHT11 sensor (temperature & humidity)
+ * Lua RTOS, DHT22 sensor (temperature & humidity)
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
@@ -35,7 +35,7 @@
 
 #include <drivers/sensor.h>
 
-driver_error_t *dht11_setup(sensor_instance_t *unit);
-driver_error_t *dht11_acquire(sensor_instance_t *unit, sensor_value_t *values);
+driver_error_t *dht22_setup(sensor_instance_t *unit);
+driver_error_t *dht22_acquire(sensor_instance_t *unit, sensor_value_t *values);
 
 #endif
