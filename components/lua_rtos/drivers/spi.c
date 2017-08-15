@@ -884,7 +884,7 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode,
 		return driver_error(SPI_DRIVER, SPI_ERR_SLAVE_NOT_ALLOWED, NULL);
     }
 
-    if (mode >= 3) {
+    if (mode > 3) {
 		return driver_error(SPI_DRIVER, SPI_ERR_INVALID_MODE, NULL);
     }
 
