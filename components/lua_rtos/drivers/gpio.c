@@ -35,6 +35,7 @@
 #include <sys/driver.h>
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
+#include <drivers/timer.h>
 
 // Driver locks
 static driver_unit_lock_t gpio_locks[CPU_LAST_GPIO + 1];
@@ -43,10 +44,12 @@ static driver_unit_lock_t gpio_locks[CPU_LAST_GPIO + 1];
 DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPinDirection, "invalid pin direction", GPIO_ERR_INVALID_PIN_DIRECTION);
 DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPin, "invalid pin", GPIO_ERR_INVALID_PIN);
 DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPort, "invalid port", GPIO_ERR_INVALID_PORT);
+DRIVER_REGISTER_ERROR(GPIO, gpio, NotEnoughtMemory, "not enough memory", GPIO_ERR_NOT_ENOUGH_MEMORY);
 
 /*
  * Low level gpio operations
  */
+
 void IRAM_ATTR gpio_ll_pin_set(uint8_t pin) {
 	if (pin < 32) {
 		GPIO.out_w1ts = (1 << pin);

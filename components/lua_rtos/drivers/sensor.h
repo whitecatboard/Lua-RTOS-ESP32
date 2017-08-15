@@ -39,6 +39,8 @@
 
 #include <sys/driver.h>
 #include <drivers/adc.h>
+#include <drivers/gpio.h>
+#include <drivers/gpio_debouncing.h>
 
 #define SENSOR_FAMILY_TEMP "Temperature"
 #define SENSOR_FAMILY_HUM  "Humidity"
@@ -55,6 +57,11 @@ typedef driver_error_t *(*sensor_get_f_t)(struct sensor_instance *, const char *
 #define SENSOR_MAX_DATA       6
 #define SENSOR_MAX_PROPERTIES 4
 #define SENSOR_MAX_CALLBACKS  4
+
+#define SENSOR_FLAG_ON_OFF          (1 << 0)
+#define SENSOR_FLAG_ON_H            (1 << 1)
+#define SENSOR_FLAG_ON_L            (1 << 2)
+#define SENSOR_FLAG_DEBOUNCING      (1 << 3)
 
 // Sensor interface
 typedef enum {
@@ -91,8 +98,7 @@ typedef struct {
 typedef struct {
 	const char *id;
 	const sensor_interface_t interface;
-	const uint8_t int_driven;
-	const uint8_t int_driven_on_val;
+	const uint32_t flags;
 	const sensor_data_t data[SENSOR_MAX_DATA];
 	const sensor_data_t properties[SENSOR_MAX_PROPERTIES];
 	const sensor_setup_f_t setup;

@@ -119,7 +119,7 @@ static int have_timers(int8_t groupn) {
 	return 0;
 }
 
-static void IRAM_ATTR get_group_idx(int8_t unit, int *groupn, int *idx) {
+void IRAM_ATTR get_group_idx(int8_t unit, int *groupn, int *idx) {
 	switch (unit) {
 		case 0: *groupn = 0; *idx = 0; return;
 		case 1: *groupn = 0; *idx = 1; return;

@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, Hall effect switch sensor (example 44E402)
+ * Lua RTOS, Push switch sensor
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
@@ -34,10 +34,10 @@
 #include <drivers/sensor.h>
 
 // Sensor specification and registration
-static const sensor_t __attribute__((used,unused,section(".sensors"))) hall_switch_sensor = {
-	.id = "HALL_SWITCH",
+static const sensor_t __attribute__((used,unused,section(".sensors"))) push_switch_sensor = {
+	.id = "PUSH_SWITCH",
 	.interface = GPIO_INTERFACE,
-	.flags = (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_L),
+	.flags = (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_L | SENSOR_FLAG_DEBOUNCING) | (1000 << 16),
 	.data = {
 		{.id = "on", .type = SENSOR_DATA_INT},
 	}

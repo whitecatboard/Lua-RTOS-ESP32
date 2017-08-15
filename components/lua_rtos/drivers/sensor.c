@@ -85,21 +85,57 @@ static void sensor_task(void *arg) {
     }
 }
 
+static void IRAM_ATTR debouncing(void *arg, uint8_t val) {
+	// Get sensor instance
+	sensor_instance_t *unit = (sensor_instance_t *)arg;
+
+	// Store sensor data
+	if (unit->sensor->flags & SENSOR_FLAG_ON_H) {
+		unit->data[0].integerd.value = val;
+	} else if (unit->sensor->flags & SENSOR_FLAG_ON_L) {
+		unit->data[0].integerd.value = !val;
+	} else {
+		return;
+	}
+
+	// Queue callbacks
+	sensor_deferred_data_t data;
+	int i;
+
+	for(i=0;i < SENSOR_MAX_CALLBACKS;i++) {
+		if (unit->callbacks[i].callback) {
+			data.instance = unit;
+			data.callback = unit->callbacks[i].callback;
+			data.callback_id = unit->callbacks[i].callback_id;
+			memcpy(data.data, unit->data, sizeof(unit->data));
+
+			xQueueSendFromISR(queue, &data, NULL);
+
+			break;
+		}
+	}
+};
+
 static void IRAM_ATTR isr(void* arg) {
 	// Get sensor instance
 	sensor_instance_t *unit = (sensor_instance_t *)arg;
 
-	// Read pin value
-	if (unit->sensor->int_driven_on_val == gpio_ll_pin_get(unit->setup.gpio.gpio)) {
-		unit->data[0].integerd.value = 1;
+	// Get pin value
+	uint8_t val = gpio_ll_pin_get(unit->setup.gpio.gpio);
+
+	// Store sensor data
+	if (unit->sensor->flags & SENSOR_FLAG_ON_H) {
+		unit->data[0].integerd.value = val;
+	} else if (unit->sensor->flags & SENSOR_FLAG_ON_L) {
+		unit->data[0].integerd.value = !val;
 	} else {
-		unit->data[0].integerd.value = 0;
+		return;
 	}
 
 	// Queue callbacks
+	sensor_deferred_data_t data;
 	int i;
 
-	sensor_deferred_data_t data;
 	for(i=0;i < SENSOR_MAX_CALLBACKS;i++) {
 		if (unit->callbacks[i].callback) {
 			data.instance = unit;
@@ -140,30 +176,39 @@ static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
 
-    if (unit->sensor->int_driven) {
-    	portDISABLE_INTERRUPTS();
+    if (unit->sensor->flags | SENSOR_FLAG_ON_OFF) {
+    	if (unit->sensor->flags | SENSOR_FLAG_DEBOUNCING) {
+    		driver_error_t *error;
+    		uint16_t threshold = (unit->sensor->flags & 0xffff0000) >> 16;
 
-        // Configure pins as input
-        gpio_config_t io_conf;
+    		if ((error = gpio_debouncing_register(1 << unit->setup.gpio.gpio, threshold, debouncing, (void *)unit))) {
+    			return error;
+    		}
+    	} else {
+        	portDISABLE_INTERRUPTS();
 
-        io_conf.intr_type = GPIO_INTR_ANYEDGE;
-        io_conf.mode = GPIO_MODE_INPUT;
-        io_conf.pin_bit_mask = (1ULL << unit->setup.gpio.gpio);
-        io_conf.pull_down_en = 0;
-        io_conf.pull_up_en = 1;
+            // Configure pins as input
+            gpio_config_t io_conf;
 
-        gpio_config(&io_conf);
+            io_conf.intr_type = GPIO_INTR_ANYEDGE;
+            io_conf.mode = GPIO_MODE_INPUT;
+            io_conf.pin_bit_mask = (1ULL << unit->setup.gpio.gpio);
+            io_conf.pull_down_en = 0;
+            io_conf.pull_up_en = 1;
 
-    	// Configure interrupts
-        if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
-        	gpio_install_isr_service(0);
+            gpio_config(&io_conf);
 
-        	status_set(STATUS_ISR_SERVICE_INSTALLED);
-        }
+        	// Configure interrupts
+            if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
+            	gpio_install_isr_service(0);
 
-        gpio_isr_handler_add(unit->setup.gpio.gpio, isr, (void *)unit);
+            	status_set(STATUS_ISR_SERVICE_INSTALLED);
+            }
 
-        portENABLE_INTERRUPTS();
+            gpio_isr_handler_add(unit->setup.gpio.gpio, isr, (void *)unit);
+
+            portENABLE_INTERRUPTS();
+    	}
     } else {
         gpio_pin_output(unit->setup.gpio.gpio);
     	gpio_pin_set(unit->setup.gpio.gpio);
@@ -371,7 +416,7 @@ driver_error_t *sensor_unsetup(sensor_instance_t *unit) {
 	}
 
 	// Remove interrupts
-	if (unit->sensor->int_driven) {
+	if (unit->sensor->flags & SENSOR_FLAG_ON_OFF) {
 		gpio_isr_handler_remove(unit->setup.gpio.gpio);
 	}
 
@@ -417,7 +462,7 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 	// Allocate space for sensor data
 	// This is done only if sensor is not interrupt driven, because in
 	// interrupt driven sensors the sensor value is set in the ISR
-	if (!unit->sensor->int_driven) {
+	if (!unit->sensor->flags & SENSOR_FLAG_ON_OFF) {
 		if (!(value = calloc(1, sizeof(sensor_value_t) * SENSOR_MAX_DATA))) {
 			return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
@@ -431,7 +476,7 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 		}
 	}
 
-	if (!unit->sensor->int_driven) {
+	if (!unit->sensor->flags | SENSOR_FLAG_ON_OFF) {
 		// Copy sensor values into instance
 		// Note that we only copy raw values as value types are set in sensor_setup from sensor
 		// definition

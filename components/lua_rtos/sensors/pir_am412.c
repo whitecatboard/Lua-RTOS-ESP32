@@ -37,8 +37,7 @@
 static const sensor_t __attribute__((used,unused,section(".sensors"))) am412_sensor = {
 	.id = "AM412",
 	.interface = GPIO_INTERFACE,
-	.int_driven = 1,
-	.int_driven_on_val = 1,
+	.flags = (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_H),
 	.data = {
 		{.id = "presence", .type = SENSOR_DATA_INT},
 	}
