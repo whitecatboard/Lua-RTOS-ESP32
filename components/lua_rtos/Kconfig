@@ -651,9 +651,9 @@ menu "Lua RTOS"
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "DHT22"
 					default y		
-				config LUA_RTOS_USE_SENSOR_DS180
+				config LUA_RTOS_USE_SENSOR_DS1820
 					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "DS180"
+					bool "DS1820"
 					default y		
 				config LUA_RTOS_USE_SENSOR_GPS
 					depends on LUA_RTOS_LUA_USE_SENSOR
