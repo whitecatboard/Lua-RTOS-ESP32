@@ -27,9 +27,9 @@
  * this software.
  */
 
-#if LUA_USE_GPS
-
 #include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_USE_SENSOR_GPS
 
 #include <stdlib.h>
 #include <stdio.h>

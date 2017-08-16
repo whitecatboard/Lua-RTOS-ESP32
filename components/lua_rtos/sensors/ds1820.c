@@ -7,6 +7,7 @@
 #include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_DS1820
 
 #include <math.h>
 #include <string.h>
@@ -779,4 +780,5 @@ driver_error_t *ds1820_get(sensor_instance_t *unit, const char *id, sensor_value
 	return NULL;
 }
 
+#endif
 #endif

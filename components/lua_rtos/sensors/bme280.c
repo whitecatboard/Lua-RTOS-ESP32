@@ -54,6 +54,7 @@
 #include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_BME280
 
 #include "bme280.h"
 
@@ -2628,4 +2629,5 @@ driver_error_t *bme280_set(sensor_instance_t *unit, const char *id, sensor_value
 	return NULL;
 }
 
+#endif
 #endif

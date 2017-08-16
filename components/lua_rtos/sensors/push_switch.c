@@ -32,6 +32,7 @@
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 
 #include <drivers/sensor.h>
+#if CONFIG_LUA_RTOS_USE_SENSOR_PUSH_SWITCH
 
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) push_switch_sensor = {
@@ -43,4 +44,5 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) push_swit
 	}
 };
 
+#endif
 #endif

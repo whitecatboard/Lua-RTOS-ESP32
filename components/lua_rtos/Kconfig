@@ -633,8 +633,63 @@ menu "Lua RTOS"
 				help
 					GPIO where display touch pannel CS signal is attached.
 				endmenu
-		endmenu		
-	
+		
+			menu "Sensors"
+				config LUA_RTOS_USE_SENSOR_2Y0A21
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "2Y0A21"
+					default y		
+				config LUA_RTOS_USE_SENSOR_BME280
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "BME280"
+					default y		
+				config LUA_RTOS_USE_SENSOR_DHT11
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "DHT11"
+					default y		
+				config LUA_RTOS_USE_SENSOR_DHT22
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "DHT22"
+					default y		
+				config LUA_RTOS_USE_SENSOR_DS180
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "DS180"
+					default y		
+				config LUA_RTOS_USE_SENSOR_GPS
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "GPS"
+					default y		
+				config LUA_RTOS_USE_SENSOR_HALL_SWITCH
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Hall effect switch"
+					default y		
+				config LUA_RTOS_USE_SENSOR_PING28015
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "PING28015"
+					default y		
+				config LUA_RTOS_USE_SENSOR_PIR_AM412
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "AM412 based PIR sensor"
+					default y		
+				config LUA_RTOS_USE_SENSOR_PUSH_SWITCH
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Push switch"
+					default y		
+				config LUA_RTOS_USE_SENSOR_THERMISTOR
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Thermistor"
+					default y		
+				config LUA_RTOS_USE_SENSOR_TILT_SWITCH
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Tilt Switch"
+					default y		
+				config LUA_RTOS_USE_SENSOR_TMP36
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "TMP36"
+					default y		
+			endmenu	
+		endmenu
+		
 		menu "HTTP server"
 			config LUA_RTOS_USE_HTTP_SERVER
 				depends on (WIFI_ENABLED || ETHERNET) && LUA_RTOS_LUA_USE_NET

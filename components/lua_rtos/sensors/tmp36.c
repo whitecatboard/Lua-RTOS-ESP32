@@ -30,6 +30,7 @@
 #include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_TMP36
 
 #include "tmp36.h"
 
@@ -75,4 +76,5 @@ driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	return NULL;
 }
 
+#endif
 #endif

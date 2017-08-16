@@ -30,6 +30,7 @@
 #include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_PING28015
 
 #include "ping28015.h"
 #include "freertos/FreeRTOS.h"
@@ -160,4 +161,5 @@ driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *value
 	return NULL;
 }
 
+#endif
 #endif

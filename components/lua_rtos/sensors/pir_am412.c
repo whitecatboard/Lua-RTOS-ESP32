@@ -30,6 +30,7 @@
 #include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_PIR_AM412
 
 #include <drivers/sensor.h>
 
@@ -43,4 +44,5 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) am412_sen
 	}
 };
 
+#endif
 #endif

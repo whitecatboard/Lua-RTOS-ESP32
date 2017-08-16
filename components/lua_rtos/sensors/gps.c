@@ -30,7 +30,7 @@
 #include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
-#if LUA_USE_GPS
+#if CONFIG_LUA_RTOS_USE_SENSOR_GPS
 
 #include "gps.h"
 #include "nmea0183.h"
@@ -85,16 +85,3 @@ driver_error_t *gps_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 
 #endif
 #endif
-
-/*
-
-gps = sensor.attach("GPS", uart.UART1, 9600, 8, uart.PARNONE, uart.STOP1)
-
-while true do
-	lon, lat, sats = gps:read("all")
-
-	print("lat: "..lat..", lon: "..lon..", sats: "..sats)
-	tmr.delay(1)
-end
-
-*/

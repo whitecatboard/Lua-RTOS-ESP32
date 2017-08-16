@@ -30,6 +30,7 @@
 #include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_DHT22
 
 #include "dht22.h"
 
@@ -184,4 +185,5 @@ exit:
 	return NULL;
 }
 
+#endif
 #endif

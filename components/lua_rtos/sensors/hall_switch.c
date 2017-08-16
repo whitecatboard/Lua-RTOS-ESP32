@@ -30,6 +30,7 @@
 #include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_HALL_SWITCH
 
 #include <drivers/sensor.h>
 
@@ -43,4 +44,5 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) hall_swit
 	}
 };
 
+#endif
 #endif

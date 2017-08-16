@@ -34,6 +34,7 @@
 #include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_THERMISTOR
 
 #include <math.h>
 
@@ -109,4 +110,5 @@ driver_error_t *thermistor_acquire(sensor_instance_t *unit, sensor_value_t *valu
 	return NULL;
 }
 
+#endif
 #endif
