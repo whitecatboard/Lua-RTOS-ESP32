@@ -663,33 +663,26 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
     	}
     } else {
     	if(!ram_history_init) {
-	    	syslog(LOG_DEBUG, "storing history into ram\n");
     		list_init(&ram_history, 0);
     		ram_history_init = 1;
     	}
     	
   		char *buf = 0;
     	if(l->history_index>=0 && l->history_index <= (ram_history.indexes-1)) {
-				int err = list_get(&ram_history, l->history_index, (void **)&buf);
-				if (!err) {
-					if(0 == strcmp(l->buf, buf)) {
-						return;
-					}
+			int err = list_get(&ram_history, l->history_index, (void **)&buf);
+			if (!err) {
+				if(0 == strcmp(l->buf, buf)) {
+					return;
 				}
+			}
     	}
     	
     	int id = 0;
     	char *dup = strndup(l->buf, l->len);
-    	if (!dup) {
-	    	syslog(LOG_WARNING, "error allocating string: %s\n",l->buf);
-	    }
-    	else {
+    	if (dup) {
 		  	int err = list_add(&ram_history, dup, &id);
-				if (err) {
-		    	syslog(LOG_WARNING, "error adding ram history entry: %s\n",dup);
-		    }
-		    else {
-					l->history_index = id;
+			if (!err) {
+				l->history_index = id;
 		  	}
     	}
     	l->history_index++;
