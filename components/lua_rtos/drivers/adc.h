@@ -51,6 +51,8 @@ typedef struct {
 	uint16_t max_val;        ///< Max value, depends on resolution
 	int16_t pvref;           ///< Positive voltage reference in mvolts
 	int16_t nvref;           ///< Negative voltage reference in mvolts
+	int16_t rpvref;          ///< Positive voltage reference in mvolts (valid range)
+	int16_t rnvref;          ///< Negative voltage reference in mvolts (valid range)
 } adc_channel_t;
 
 // ADC errors

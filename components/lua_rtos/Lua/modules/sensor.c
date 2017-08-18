@@ -108,8 +108,8 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 			setup->adc.unit = luaL_checkinteger(L, 2);
 			setup->adc.channel = luaL_checkinteger(L, 3);
 			setup->adc.resolution = luaL_optinteger(L, 4, 0);
-			setup->adc.vrefp = luaL_optinteger( L, 5, CONFIG_ADC_INTERNAL_VREF_P );
-			setup->adc.vrefn = luaL_optinteger( L, 6, CONFIG_ADC_INTERNAL_VREF_N );
+			setup->adc.vrefp = luaL_optinteger( L, 5, 0 );
+			setup->adc.vrefn = luaL_optinteger( L, 6, 0 );
 			setup->adc.devid = 0;
 			break;
 

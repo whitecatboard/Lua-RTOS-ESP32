@@ -51,7 +51,13 @@ driver_error_t *adc_mcp3008_setup(adc_channel_t *chan) {
 	}
 
 	if (!chan->setup) {
-		syslog(LOG_INFO, "adc MCP3208 channel %d at spi%d, cs=%s%d", chan->channel, CONFIG_ADC_MCP3208_SPI, gpio_portname(CONFIG_ADC_MCP3208_CS), gpio_name(CONFIG_ADC_MCP3208_CS));
+		syslog(
+				LOG_INFO,
+				"adc MCP3208 channel %d at spi%d, cs=%s%d, vref+ %d, vref- %d, %d bits of resolution",
+				chan->channel, CONFIG_ADC_MCP3208_SPI, gpio_portname(CONFIG_ADC_MCP3208_CS),
+				gpio_name(CONFIG_ADC_MCP3208_CS),
+				chan->pvref, chan->nvref, chan->resolution
+		);
 	}
 
     return NULL;

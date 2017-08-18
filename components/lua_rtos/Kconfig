@@ -639,6 +639,10 @@ menu "Lua RTOS"
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "2Y0A21"
 					default y		
+				config LUA_RTOS_USE_SENSOR_A49E
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "A49E"
+					default y							
 				config LUA_RTOS_USE_SENSOR_BME280
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "BME280"

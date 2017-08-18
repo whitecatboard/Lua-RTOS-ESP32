@@ -171,6 +171,10 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 	chan->channel = channel;
 	chan->devid = devid;
 	chan->resolution = resolution;
+	chan->pvref = pvref;
+	chan->nvref = nvref;
+	chan->rpvref = pvref;
+	chan->rnvref = nvref;
 
 	switch (unit) {
 		case 1:
@@ -186,13 +190,13 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 			chan->nvref = nvref;
 
 			if (pvref <= 1100) {
-				chan->pvref = 1100;
+				chan->rpvref = 1100;
 			} else if (pvref <= 1500) {
-				chan->pvref = 1500;
+				chan->rpvref = 1500;
 			} else if (pvref <= 2200) {
-				chan->pvref = 2200;
+				chan->rpvref = 2200;
 			} else {
-				chan->pvref = CONFIG_ADC_INTERNAL_VREF_P;
+				chan->rpvref = CONFIG_ADC_INTERNAL_VREF_P;
 			}
 
 			chan->max_resolution = 12;
@@ -202,8 +206,6 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 		case CPU_LAST_ADC + 1:
 #if CONFIG_ADC_MCP3008
 			chan->max_resolution = 10;
-			chan->pvref = pvref;
-			chan->nvref = nvref;
 
 			if (devid == 0) {
 				chan->devid = CONFIG_ADC_MCP3008_CS;
@@ -214,8 +216,6 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 		case CPU_LAST_ADC + 2:
 #if CONFIG_ADC_MCP3208
 			chan->max_resolution = 12;
-			chan->pvref = pvref;
-			chan->nvref = nvref;
 
 			if (devid == 0) {
 				chan->devid = CONFIG_ADC_MCP3208_CS;
@@ -225,17 +225,17 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 		case CPU_LAST_ADC + 3:
 #if CONFIG_ADC_ADS1115
 			if (pvref <= 256) {
-				pvref = 256;
+				chan->rpvref = 256;
 			} else if (pvref <= 512) {
-				pvref = 512;
+				chan->rpvref = 512;
 			} else if (pvref <= 1024) {
-				pvref = 1024;
+				chan->rpvref = 1024;
 			} else if (pvref <= 2048) {
-				pvref = 2048;
+				chan->rpvref = 2048;
 			} else if (pvref <= 4096) {
-				pvref = 4096;
+				chan->rpvref = 4096;
 			} else {
-				pvref = 6144;
+				chan->rpvref = 6144;
 			}
 
 			if (nvref != 0) {
@@ -248,8 +248,6 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 			}
 
 			chan->max_resolution = 15;
-			chan->pvref = pvref;
-			chan->nvref = nvref;
 #endif
 			break;
 	}
@@ -372,7 +370,7 @@ driver_error_t *adc_read(adc_channel_h_t *h, int *raw, double *mvols) {
 
 	// Convert raw value to mVolts
 	if (mvols) {
-		*mvols = (double)chan->nvref +  (double)((*raw) * (chan->pvref - chan->nvref)) / (double)max_val;
+		*mvols = (double)chan->rnvref +  (double)((*raw) * (chan->rpvref - chan->rnvref)) / (double)max_val;
 	}
 
 	return NULL;

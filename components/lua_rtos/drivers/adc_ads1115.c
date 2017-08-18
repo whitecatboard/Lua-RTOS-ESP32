@@ -104,7 +104,11 @@ driver_error_t *adc_ads1115_setup(adc_channel_t *chan) {
 	}
 
 	if (!chan->setup) {
-		syslog(LOG_INFO, "adc ADS1115 channel %d at i2c%d, address %x", channel, i2c, address);
+		syslog(
+				LOG_INFO,
+				"adc ADS1115 channel %d at i2c%d, address %x, vref+ %d, vref- %d, %d bits of resolution",
+				channel, i2c, address, chan->pvref, chan->nvref, chan->resolution
+		);
 	}
 
 	return NULL;

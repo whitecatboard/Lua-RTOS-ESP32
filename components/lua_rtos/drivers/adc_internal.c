@@ -112,11 +112,11 @@ driver_error_t *adc_internal_setup(adc_channel_t *chan) {
 	}
 
 	// Computes the required attenuation
-	if (chan->pvref <= 1100) {
+	if (chan->rpvref <= 1100) {
 		atten = ADC_ATTEN_0db;
-	} else if (chan->pvref <= 1500) {
+	} else if (chan->rpvref <= 1500) {
 		atten = ADC_ATTEN_2_5db;
-	} else if (chan->pvref <= 2200) {
+	} else if (chan->rpvref <= 2200) {
 		atten = ADC_ATTEN_6db;
 	} else {
 		atten = ADC_ATTEN_11db;
@@ -128,7 +128,11 @@ driver_error_t *adc_internal_setup(adc_channel_t *chan) {
 	adc1_config_width(ADC_WIDTH_12Bit);
 
 	if (!chan->setup) {
-		syslog(LOG_INFO, "adc%d: at pin %s%d", unit, gpio_portname(resources.pin), gpio_name(resources.pin));
+		syslog(
+				LOG_INFO,
+				"adc%d: at pin %s%d, vref+ %d, vref- %d, %d bits of resolution", unit, gpio_portname(resources.pin),
+				gpio_name(resources.pin), chan->pvref, chan->nvref, chan->resolution
+		);
 	}
 
 	return NULL;
