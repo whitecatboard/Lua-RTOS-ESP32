@@ -318,7 +318,7 @@ menu "Lua RTOS"
 
 			config ADC_ADS1115
 				bool "Use I2C ADC ADS1115"
-				default n
+				default y
 				help
 					ADS1115 is an ADC converter with I2C interface. 4 channels, resolution of 16 bits.
 
@@ -340,7 +340,7 @@ menu "Lua RTOS"
 
 			config ADC_MCP3008
 				bool "Use SPI ADC MCP3008"
-				default n
+				default y
 				help
 					MCP3008 is an ADC converter with SPI interface. 8 channels, resolution of 10 bits.
 
@@ -364,7 +364,7 @@ menu "Lua RTOS"
 
 			config ADC_MCP3208
 				bool "Use SPI ADC MCP3208"
-				default n
+				default y
 				help
 					MCP3208 is an ADC converter with SPI interface. 8 channels, resolution of 12 bits.
 
