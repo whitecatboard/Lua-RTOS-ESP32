@@ -382,6 +382,27 @@ driver_error_t *gpio_pin_clr_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 	return NULL;
 }
 
+
+// Invert gpio using a mask
+// If bit n on mask is set to 1 the gpio is inverted
+driver_error_t *gpio_pin_inv_mask(uint8_t port, gpio_pin_mask_t pinmask) {
+	driver_error_t *error = NULL;
+	gpio_pin_mask_t mask = GPIO_BIT_MASK;
+	int i;
+
+	for(i=0; i < GPIO_PER_PORT; i++) {
+		if (pinmask & mask) {
+			if ((error = gpio_pin_inv(i))) {
+				return error;
+			}
+		}
+
+		mask = (mask << 1);
+	}
+
+	return NULL;
+}
+
 // Get gpio values using a mask
 driver_error_t *gpio_pin_get_mask(uint8_t port, gpio_pin_mask_t pinmask, gpio_pin_mask_t *value) {
 	driver_error_t *error = NULL;

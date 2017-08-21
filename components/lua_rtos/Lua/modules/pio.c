@@ -124,7 +124,14 @@ static int pio_op(lua_State *L, unsigned port, gpio_pin_mask_t pinmask, int op, 
 			}
 			break;
 			
-		case PLATFORM_IO_PIN_CLEAR:
+
+        case PLATFORM_IO_PIN_INV:
+			if ((error = gpio_pin_inv_mask(port, pinmask))) {
+				return luaL_driver_error(L, error);
+			}
+			break;
+
+        case PLATFORM_IO_PIN_CLEAR:
 			if ((error = gpio_pin_clr_mask(port, pinmask))) {
 				return luaL_driver_error(L, error);
 			}
@@ -306,6 +313,10 @@ static int pio_gen_setval(lua_State *L, int optype, gpio_pin_mask_t val, int sta
     	return pioh_set_ports(L, stackidx, PLATFORM_IO_PORT_SET_VALUE, val);
 }
 
+static int pio_gen_invval(lua_State *L, int optype, gpio_pin_mask_t val, int stackidx) {
+    return pioh_set_pins(L, stackidx, PLATFORM_IO_PIN_INV);
+}
+
 // Module functions
 static int pio_pin_setdir(lua_State *L) {
 	return pio_gen_setdir(L, PIO_PIN_OP);
@@ -335,6 +346,10 @@ static int pio_pin_sethigh(lua_State *L) {
 
 static int pio_pin_setlow(lua_State *L) {
 	return pio_gen_setval(L, PIO_PIN_OP, 0, 1);
+}
+
+static int pio_pin_invval(lua_State *L) {
+	return pio_gen_invval(L, PIO_PIN_OP, 0, 1);
 }
 
 static int pio_pin_getval(lua_State *L) {
@@ -489,6 +504,7 @@ static const LUA_REG_TYPE pio_pin_map[] = {
     { LSTRKEY( "setval"    ),			LFUNCVAL( pio_pin_setval     ) },
     { LSTRKEY( "sethigh"   ),			LFUNCVAL( pio_pin_sethigh    ) },
     { LSTRKEY( "setlow"    ),			LFUNCVAL( pio_pin_setlow     ) },
+    { LSTRKEY( "inv"       ),			LFUNCVAL( pio_pin_invval     ) },
     { LSTRKEY( "getval"    ),			LFUNCVAL( pio_pin_getval     ) },
     { LSTRKEY( "num"  	   ),			LFUNCVAL( pio_pin_pinnum     ) },
     { LSTRKEY( "interrupt" ),			LFUNCVAL( pio_pin_interrupt  ) },
