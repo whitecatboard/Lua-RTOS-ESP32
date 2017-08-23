@@ -27,7 +27,9 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_NET
 
 #include "lua.h"
 #include "lauxlib.h"
@@ -244,7 +246,7 @@ static int lnet_connected(lua_State* L) {
 
 static const LUA_REG_TYPE service_map[] = {
 	{ LSTRKEY( "sntp" ), LROVAL ( sntp_map ) },
-#if LUA_USE_HTTP
+#if CONFIG_LUA_RTOS_USE_HTTP_SERVER
 	{ LSTRKEY( "http" ), LROVAL ( http_map ) },
 	{ LSTRKEY( "captivedns" ), LROVAL ( captivedns_map ) },
 #endif
@@ -299,3 +301,5 @@ MODULE_REGISTER_MAPPED(NET, net, net_map, luaopen_net);
 
  net.lookup("whitecarboard.org")
  */
+
+#endif

@@ -15,7 +15,7 @@
 / by use of this software.
 /----------------------------------------------------------------------------*/
 
-#include "luartos.h"
+#include "sdkconfig.h"
 #include <sys/console.h>
 
 #if CONFIG_LUA_RTOS_USE_FAT

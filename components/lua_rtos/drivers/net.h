@@ -27,6 +27,10 @@
  * this software.
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_NET
+
 #ifndef NET_H_
 #define NET_H_
 
@@ -132,5 +136,7 @@ driver_error_t *net_event_register_callback(net_event_register_callback_t func);
  *     	 NET_ERR_NO_MORE_CALLBACKS
  */
 driver_error_t *net_event_unregister_callback(net_event_register_callback_t func);
+
+#endif
 
 #endif

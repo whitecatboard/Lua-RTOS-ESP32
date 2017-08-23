@@ -27,7 +27,7 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #include "esp_vfs.h"
 #include "esp_attr.h"

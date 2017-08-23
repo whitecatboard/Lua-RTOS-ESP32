@@ -24,9 +24,9 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
-#if LUA_USE_HTTP
+#if CONFIG_LUA_RTOS_USE_HTTP_SERVER
 
 #include "net.h"
 

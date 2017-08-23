@@ -178,7 +178,7 @@ void _sys_init() {
 	    pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_STACK_SIZE);
 
 	    // Set priority
-	    sched.sched_priority = LUA_TASK_PRIORITY;
+	    sched.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
 	    pthread_attr_setschedparam(&attr, &sched);
 
 	    // Set CPU
@@ -200,7 +200,7 @@ void _sys_init() {
     cpu_show_flash_info();
 
     //Init filesystems
-	#if USE_NET_VFS
+	#if CONFIG_LUA_RTOS_LUA_USE_NET
     	vfs_net_register();
 	#endif
 

@@ -27,7 +27,7 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_LUA_RTOS_LUA_USE_SCP_NET
 

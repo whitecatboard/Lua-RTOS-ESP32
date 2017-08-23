@@ -7,7 +7,7 @@
 /* storage control modules to the FatFs module with a defined API.       */
 /*-----------------------------------------------------------------------*/
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_USE_FAT
 

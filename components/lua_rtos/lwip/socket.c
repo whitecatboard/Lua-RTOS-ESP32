@@ -42,7 +42,7 @@
  *
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #include "lwip/sockets.h"
 
@@ -50,7 +50,7 @@
 #include <stdint.h>
 #include <errno.h>
 
-#if USE_NET_VFS
+#if CONFIG_LUA_RTOS_LUA_USE_NET
 #if 0
 int _curl_socket = 0;
 #endif
@@ -87,7 +87,7 @@ extern int __real_lwip_close_r(int s);
 int __wrap_lwip_accept_r(int fd, struct sockaddr *addr, socklen_t *addrlen) {
 	int s = __real_lwip_accept_r(fd_to_socket(fd), addr, addrlen);
 
-#if USE_NET_VFS
+#if CONFIG_LUA_RTOS_LUA_USE_NET
 	if (s != -1) {
 		char device[15];
 
@@ -168,7 +168,7 @@ int __wrap_lwip_writev_r(int fd, const struct iovec *iov, int iovcnt) {
 }
 
 int __wrap_lwip_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout) {
-#if USE_NET_VFS
+#if CONFIG_LUA_RTOS_LUA_USE_NET
 	int vfs = maxfdp1 & (((1 << (16 - CONFIG_MAX_FD_BITS - 1)) - 1) << CONFIG_MAX_FD_BITS);
 	int maxfdp = ((1 << CONFIG_MAX_FD_BITS) - 1);
 	int i, s;
@@ -246,7 +246,7 @@ int __wrap_lwip_fcntl_r(int fd, int cmd, int val) {
 int __wrap_lwip_socket(int domain, int type, int protocol) {
 	int s = __real_lwip_socket(domain, type, protocol);
 
-#if USE_NET_VFS
+#if CONFIG_LUA_RTOS_LUA_USE_NET
 #if 0
 	if ((s != -1) && (!_curl_socket)) {
 #else

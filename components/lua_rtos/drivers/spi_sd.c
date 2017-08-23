@@ -60,7 +60,7 @@
 #define SD_FASTEST_KHZ  25000       /* max speed for pic32mz SPI is 50 MHz */
 #endif
 
-#if USE_LED_ACT
+#if CONFIG_LUA_RTOS_USE_LED_ACT
 extern unsigned int activity;
 #endif
 
@@ -226,13 +226,13 @@ static int card_cmd(unsigned int unit, unsigned int cmd, unsigned int addr) {
  * Control an LED to show SD activity
  */
 static inline void sd_led(int val) {
-#if USE_LED_ACT
-    gpio_pin_output(SD_LED);
+#if CONFIG_LUA_RTOS_USE_LED_ACT
+    gpio_pin_output(CONFIG_LUA_RTOS_LED_ACT);
     if (val) {
         activity = 1;
-        gpio_pin_set(SD_LED);
+        gpio_pin_set(CONFIG_LUA_RTOS_LED_ACT);
     } else {
-        gpio_pin_clr(SD_LED);
+        gpio_pin_clr(CONFIG_LUA_RTOS_LED_ACT);
         activity = 0;
     }
 #endif

@@ -2,7 +2,7 @@
  * Lua RTOS, WIFI driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -31,6 +31,10 @@
 #define WIFI_H_
 
 #include "sdkconfig.h"
+
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_NET
 
 #include "net.h"
 
@@ -67,5 +71,7 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int pow
 driver_error_t *wifi_start();
 driver_error_t *wifi_stop();
 driver_error_t *wifi_stat(ifconfig_t *info);
+
+#endif
 
 #endif

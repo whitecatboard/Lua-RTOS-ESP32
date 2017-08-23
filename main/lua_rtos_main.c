@@ -64,10 +64,10 @@ void app_main() {
 	
 	_sys_init();
 
-	#if USE_LED_ACT
+	#if CONFIG_LUA_RTOS_USE_LED_ACT
 	// Init leds
-	gpio_pin_output(LED_ACT);
-	gpio_pin_clr(LED_ACT);
+	gpio_pin_output(CONFIG_LUA_RTOS_LED_ACT);
+	gpio_pin_clr(CONFIG_LUA_RTOS_LED_ACT);
 	#endif
 
 	// Create and run a pthread for the Lua interpreter

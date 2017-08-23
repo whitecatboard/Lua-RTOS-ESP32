@@ -29,7 +29,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_SPI_ETHERNET
+#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_SPI_ETHERNET
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"

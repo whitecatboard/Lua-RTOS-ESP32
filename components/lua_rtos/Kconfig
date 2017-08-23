@@ -696,7 +696,7 @@ menu "Lua RTOS"
 		
 		menu "HTTP server"
 			config LUA_RTOS_USE_HTTP_SERVER
-				depends on (WIFI_ENABLED || ETHERNET) && LUA_RTOS_LUA_USE_NET
+				depends on LUA_RTOS_LUA_USE_NET
 					bool "Enable HTTP server"
 					default y
 
@@ -855,74 +855,70 @@ menu "Lua RTOS"
 					bool "Include pack module in build"
 					default y
 	
-			menu "Hardware Access Modules"
-					config LUA_RTOS_LUA_USE_ADC
-						bool "Include adc module in build"
-						default y	
-			
-					config LUA_RTOS_LUA_USE_I2C
-						bool "Include i2c module in build"
-						default y
+				config LUA_RTOS_LUA_USE_ADC
+					bool "Include adc module in build"
+					default y	
 		
-					config LUA_RTOS_LUA_USE_PIO
-						bool "Include pio (gpio) module in build"
-						default y
+				config LUA_RTOS_LUA_USE_I2C
+					bool "Include i2c module in build"
+					default y
 	
-					config LUA_RTOS_LUA_USE_PWM
-						bool "Include pwm module in build"
-						default y
-		
-					config LUA_RTOS_LUA_USE_SPI
-						bool "Include spi module in build"
-						default y
-		
-					config LUA_RTOS_LUA_USE_TMR
-						bool "Include tmr (timer) module in build"
-						default y
+				config LUA_RTOS_LUA_USE_PIO
+					bool "Include pio (gpio) module in build"
+					default y
+
+				config LUA_RTOS_LUA_USE_PWM
+					bool "Include pwm module in build"
+					default y
 	
-					config LUA_RTOS_LUA_USE_UART
-						bool "Include uart module in build"
-						default y
-
-					config LUA_RTOS_LUA_USE_ENCODER
-						bool "Include encoder module in build"
-						default y
-			endmenu
-			menu "Communication Modules"
-					config LUA_RTOS_LUA_USE_NET
-						depends on WIFI_ENABLED || ETHERNET
-						bool "Include net module in build"
-						default y
-
-					config LUA_RTOS_LUA_USE_CURL_NET
-						depends on LUA_RTOS_LUA_USE_NET
-						bool "Include curl support in net module"
-						default y
-
-					config LUA_RTOS_LUA_USE_SCP_NET
-						depends on LUA_RTOS_LUA_USE_NET
-						bool "Include scp support in net module"
-						default y
+				config LUA_RTOS_LUA_USE_SPI
+					bool "Include spi module in build"
+					default y
 	
-					config LUA_RTOS_LUA_USE_LORA
-						depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE || LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
-						bool "Include lora module in build"
-						default n
-	
-					config LUA_RTOS_LUA_USE_MQTT
-						depends on WIFI_ENABLED || ETHERNET
-						bool "Include MQTT module in build"
-						default n
+				config LUA_RTOS_LUA_USE_TMR
+					bool "Include tmr (timer) module in build"
+					default y
 
-					config LUA_RTOS_LUA_USE_MDNS
-						depends on WIFI_ENABLED || ETHERNET
-						bool "Include MDNS module in build"
-						default n
+				config LUA_RTOS_LUA_USE_UART
+					bool "Include uart module in build"
+					default y
 
-					config LUA_RTOS_LUA_USE_CAN
-						bool "Include CAN module in build"
-						default y
-			endmenu
+				config LUA_RTOS_LUA_USE_ENCODER
+					bool "Include encoder module in build"
+					default y
+
+				config LUA_RTOS_LUA_USE_NET
+					bool "Include net module in build"
+					default y
+
+				config LUA_RTOS_LUA_USE_CURL_NET
+					depends on LUA_RTOS_LUA_USE_NET
+					bool "Include curl support in net module"
+					default y
+				
+				config LUA_RTOS_LUA_USE_SCP_NET
+					depends on LUA_RTOS_LUA_USE_NET
+					bool "Include scp support in net module"
+					default y
+
+				config LUA_RTOS_LUA_USE_LORA
+					depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE || LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
+					bool "Include lora module in build"
+					default n
+
+				config LUA_RTOS_LUA_USE_MQTT
+					depends on LUA_RTOS_LUA_USE_NET
+					bool "Include MQTT module in build"
+					default y
+
+				config LUA_RTOS_LUA_USE_MDNS
+					depends on LUA_RTOS_LUA_USE_NET
+					bool "Include MDNS module in build"
+					default n
+
+				config LUA_RTOS_LUA_USE_CAN
+					bool "Include CAN module in build"
+					default y
 			endmenu
 		endmenu
 endmenu

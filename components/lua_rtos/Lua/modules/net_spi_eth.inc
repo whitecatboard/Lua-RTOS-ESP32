@@ -29,7 +29,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_SPI_ETHERNET && CONFIG_LUA_RTOS_LUA_USE_NET
+#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_SPI_ETHERNET
 
 #include <string.h>
 #include <stdio.h>

@@ -25,9 +25,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-#include "luartos.h"
 
-#if LUA_USE_HTTP
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_USE_HTTP_SERVER
 
 #include "preprocessor.h"
 
@@ -60,6 +61,7 @@
 #include "lualib.h"
 #include "lauxlib.h"
 #include <drivers/net.h>
+#include <drivers/spi_eth.h>
 
 char *strcasestr(const char *haystack, const char *needle);
 driver_error_t *wifi_stat(ifconfig_t *info);
@@ -650,7 +652,6 @@ int http_start(lua_State* L) {
 		LL=L;
 		strcpy(ip4addr, "0.0.0.0");
 
-#if CONFIG_WIFI_ENABLED
 		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&wifi_mode)))) {
 			return luaL_error(L, "couldn't get wifi mode");
 		}
@@ -660,14 +661,13 @@ int http_start(lua_State* L) {
 			}
 			strcpy(ip4addr, inet_ntoa(info.ip));
 		}
-#else
-#if CONFIG_SPI_ETHERNET
+
+		#if CONFIG_SPI_ETHERNET && 0
 		if ((error = spi_eth_stat(&info))) {
 			return luaL_error(L, "couldn't get spi eth IP");
 		}
 		strcpy(ip4addr, inet_ntoa(info.ip));
-#endif
-#endif
+		#endif
 
 		if ((error = net_event_register_callback(http_net_callback))) {
 			syslog(LOG_WARNING, "couldn't register net callback, please restart http service from lua after changing connectivity\n");

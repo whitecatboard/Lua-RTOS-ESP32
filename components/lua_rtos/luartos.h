@@ -27,61 +27,9 @@
 #endif
 
 /*
- * Lua modules to build
- *
- */
-#define USE_NET 1
-#define CONFIG_LUA_RTOS_LUA_USE_NET USE_NET
-
-#define USE_NET_VFS USE_NET
-
-#if CONFIG_LUA_RTOS_USE_HTTP_SERVER
-#define LUA_USE_HTTP 1
-#else
-	#if LUA_RTOS_USE_HTTP_SERVER
-	#define LUA_USE_HTTP 1
-	#else
-	#define LUA_USE_HTTP 0
-	#endif
-#endif
-
-/*
  * Lua RTOS
  */
-#define LUA_TASK_PRIORITY  CONFIG_LUA_RTOS_LUA_TASK_PRIORITY
 #define LUA_USE_ROTABLE	   1
-
-#if CONFIG_LUA_RTOS_USE_LED_ACT
-#define LED_ACT CONFIG_LUA_RTOS_LED_ACT
-#define USE_LED_ACT 1
-#else
-#define LED_ACT 0
-#define USE_LED_ACT 0
-#endif
-
-#define SD_LED LED_ACT
-
-/*
- * SPI
- */
-#define USE_SPI (CONFIG_LUA_RTOS_LUA_USE_SPI || CONFIG_LUA_RTOS_LUA_USE_LORA)
-
-/*
- * I2C
- */
-#define USE_I2C (CONFIG_LUA_RTOS_LUA_USE_I2C)
-
-/*
- * UART
- */
-#define USE_UART CONFIG_LUA_RTOS_LUA_USE_UART
-
-// Use console?
-#ifdef CONFIG_USE_CONSOLE
-#define USE_CONSOLE CONFIG_USE_CONSOLE
-#else
-#define USE_CONSOLE 1
-#endif
 
 // Get the UART assigned to the console
 #if CONFIG_LUA_RTOS_CONSOLE_UART0

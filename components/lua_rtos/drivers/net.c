@@ -27,6 +27,10 @@
  * this software.
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_NET
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 
@@ -282,3 +286,5 @@ driver_error_t *net_event_unregister_callback(net_event_register_callback_t func
 }
 
 DRIVER_REGISTER(NET,net,NULL,NULL,NULL);
+
+#endif

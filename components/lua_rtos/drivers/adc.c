@@ -29,8 +29,6 @@
 
 #include "sdkconfig.h"
 
-#include "luartos.h"
-
 #include "freertos/FreeRTOS.h"
 
 #include <stdint.h>
