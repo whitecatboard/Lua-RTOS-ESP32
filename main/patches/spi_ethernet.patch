@@ -1,25 +1,18 @@
 diff --git a/components/esp32/event_default_handlers.c b/components/esp32/event_default_handlers.c
-index 8f1f2e9..8bd7a66 100644
+index 8f1f2e9..b31377e 100644
 --- a/components/esp32/event_default_handlers.c
 +++ b/components/esp32/event_default_handlers.c
-@@ -62,12 +62,86 @@ static esp_err_t system_event_eth_stop_handle_default(system_event_t *event);
- static esp_err_t system_event_eth_connected_handle_default(system_event_t *event);
- static esp_err_t system_event_eth_disconnected_handle_default(system_event_t *event);
+@@ -68,6 +68,79 @@ static esp_err_t system_event_eth_disconnected_handle_default(system_event_t *ev
+ */
+ static system_event_handler_t default_event_handlers[SYSTEM_EVENT_MAX] = { 0 };
  
 +#ifdef CONFIG_SPI_ETHERNET
 +static esp_err_t system_event_spi_eth_start_handle_default(system_event_t *event);
 +static esp_err_t system_event_spi_eth_stop_handle_default(system_event_t *event);
 +static esp_err_t system_event_spi_eth_connected_handle_default(system_event_t *event);
 +static esp_err_t system_event_spi_eth_disconnected_handle_default(system_event_t *event);
-+#endif
++esp_err_t tcpip_adapter_spi_eth_start(uint8_t *mac, tcpip_adapter_ip_info_t *ip_info);
 +
- /* Default event handler functions
- 
-    Any entry in this table which is disabled by config will have a NULL handler.
- */
- static system_event_handler_t default_event_handlers[SYSTEM_EVENT_MAX] = { 0 };
- 
-+#ifdef CONFIG_SPI_ETHERNET
 +esp_err_t system_event_spi_eth_start_handle_default(system_event_t *event)
 +{
 +    tcpip_adapter_ip_info_t eth_ip;
@@ -89,7 +82,7 @@ index 8f1f2e9..8bd7a66 100644
  esp_err_t system_event_eth_start_handle_default(system_event_t *event)
  {
      tcpip_adapter_ip_info_t eth_ip;
-@@ -408,10 +482,3 @@ void esp_event_set_default_wifi_handlers()
+@@ -408,10 +481,3 @@ void esp_event_set_default_wifi_handlers()
       esp_register_shutdown_handler((shutdown_handler_t)esp_wifi_stop);
  }
  
@@ -156,7 +149,7 @@ index 2e6db6b..8a8cd9f 100644
  
  /* status of DHCP client or DHCP server */
 diff --git a/components/tcpip_adapter/tcpip_adapter_lwip.c b/components/tcpip_adapter/tcpip_adapter_lwip.c
-index b1bb85b..fca5d78 100644
+index b1bb85b..fefee23 100644
 --- a/components/tcpip_adapter/tcpip_adapter_lwip.c
 +++ b/components/tcpip_adapter/tcpip_adapter_lwip.c
 @@ -31,6 +31,7 @@
@@ -234,7 +227,43 @@ index b1bb85b..fca5d78 100644
          if (esp_netif[tcpip_if] == NULL) {
              return ESP_ERR_TCPIP_ADAPTER_IF_NOT_READY;
          }
-@@ -509,7 +524,6 @@ esp_err_t tcpip_adapter_get_ip6_linklocal(tcpip_adapter_if_t tcpip_if, ip6_addr_
+@@ -393,11 +408,17 @@ esp_err_t tcpip_adapter_set_ip_info(tcpip_adapter_if_t tcpip_if, tcpip_adapter_i
+         if (status != TCPIP_ADAPTER_DHCP_STOPPED) {
+             return ESP_ERR_TCPIP_ADAPTER_DHCP_NOT_STOPPED;
+         }
+-    } else if (tcpip_if == TCPIP_ADAPTER_IF_STA || tcpip_if == TCPIP_ADAPTER_IF_ETH ) {
++    } else if (tcpip_if == TCPIP_ADAPTER_IF_STA || tcpip_if == TCPIP_ADAPTER_IF_ETH || tcpip_if == TCPIP_ADAPTER_IF_SPI_ETH ) {
+         tcpip_adapter_dhcpc_get_status(tcpip_if, &status);
+ 
+-        if (status != TCPIP_ADAPTER_DHCP_STOPPED) {
+-            return ESP_ERR_TCPIP_ADAPTER_DHCP_NOT_STOPPED;
++        if (tcpip_if == TCPIP_ADAPTER_IF_SPI_ETH) {
++			if ((status != TCPIP_ADAPTER_DHCP_INIT) && (status != TCPIP_ADAPTER_DHCP_STOPPED)) {
++				return ESP_ERR_TCPIP_ADAPTER_DHCP_NOT_STOPPED;
++			}
++        } else {
++			if (status != TCPIP_ADAPTER_DHCP_STOPPED) {
++				return ESP_ERR_TCPIP_ADAPTER_DHCP_NOT_STOPPED;
++			}
+         }
+ #if LWIP_DNS /* don't build if not configured for use in lwipopts.h */
+         u8_t numdns = 0;
+@@ -417,7 +438,13 @@ esp_err_t tcpip_adapter_set_ip_info(tcpip_adapter_if_t tcpip_if, tcpip_adapter_i
+         netif_set_addr(p_netif, &ip_info->ip, &ip_info->netmask, &ip_info->gw);
+         if (!(ip4_addr_isany_val(ip_info->ip) || ip4_addr_isany_val(ip_info->ip) || ip4_addr_isany_val(ip_info->ip))) {
+             system_event_t evt;
+-            evt.event_id = SYSTEM_EVENT_STA_GOT_IP;
++
++            if( p_netif == esp_netif[TCPIP_ADAPTER_IF_SPI_ETH] ) {
++               evt.event_id = SYSTEM_EVENT_SPI_ETH_GOT_IP;
++            } else {
++               evt.event_id = SYSTEM_EVENT_STA_GOT_IP;
++            }
++
+             evt.event_info.got_ip.ip_changed = false;
+ 
+             if (memcmp(ip_info, &esp_ip_old[tcpip_if], sizeof(tcpip_adapter_ip_info_t))) {
+@@ -509,7 +536,6 @@ esp_err_t tcpip_adapter_get_ip6_linklocal(tcpip_adapter_if_t tcpip_if, ip6_addr_
      return ESP_OK;
  }
  
@@ -242,7 +271,7 @@ index b1bb85b..fca5d78 100644
  esp_err_t tcpip_adapter_get_mac(tcpip_adapter_if_t tcpip_if, uint8_t mac[6])
  {
      struct netif *p_netif;
-@@ -529,6 +543,7 @@ esp_err_t tcpip_adapter_get_mac(tcpip_adapter_if_t tcpip_if, uint8_t mac[6])
+@@ -529,6 +555,7 @@ esp_err_t tcpip_adapter_get_mac(tcpip_adapter_if_t tcpip_if, uint8_t mac[6])
      return ESP_ERR_TCPIP_ADAPTER_IF_NOT_READY;
  }
  
@@ -250,7 +279,7 @@ index b1bb85b..fca5d78 100644
  esp_err_t tcpip_adapter_set_mac(tcpip_adapter_if_t tcpip_if, uint8_t mac[6])
  {
      struct netif *p_netif;
-@@ -739,6 +754,8 @@ static void tcpip_adapter_dhcpc_cb(struct netif *netif)
+@@ -739,6 +766,8 @@ static void tcpip_adapter_dhcpc_cb(struct netif *netif)
          tcpip_if = TCPIP_ADAPTER_IF_STA;
      } else if(netif == esp_netif[TCPIP_ADAPTER_IF_ETH] ) {
          tcpip_if = TCPIP_ADAPTER_IF_ETH;
@@ -259,7 +288,21 @@ index b1bb85b..fca5d78 100644
      } else { 
          ESP_LOGD(TAG, "err netif=%p", netif);
          return;
-@@ -850,7 +867,7 @@ esp_err_t tcpip_adapter_dhcpc_start(tcpip_adapter_if_t tcpip_if)
+@@ -761,7 +790,12 @@ static void tcpip_adapter_dhcpc_cb(struct netif *netif)
+             ip4_addr_set(&ip_info->gw, ip_2_ip4(&netif->gw));
+ 
+             //notify event
+-            evt.event_id = SYSTEM_EVENT_STA_GOT_IP;
++            if( netif == esp_netif[TCPIP_ADAPTER_IF_SPI_ETH] ) {
++               evt.event_id = SYSTEM_EVENT_SPI_ETH_GOT_IP;
++            } else {
++               evt.event_id = SYSTEM_EVENT_STA_GOT_IP;
++            }
++
+             evt.event_info.got_ip.ip_changed = false;
+ 
+             if (memcmp(ip_info, ip_info_old, sizeof(tcpip_adapter_ip_info_t))) {
+@@ -850,30 +884,33 @@ esp_err_t tcpip_adapter_dhcpc_start(tcpip_adapter_if_t tcpip_if)
      TCPIP_ADAPTER_IPC_CALL(tcpip_if, 0, 0, 0, tcpip_adapter_dhcpc_start_api);
  
      /* only support sta now, need to support ethernet */
@@ -268,7 +311,51 @@ index b1bb85b..fca5d78 100644
          ESP_LOGD(TAG, "dhcp client invalid if=%d", tcpip_if);
          return ESP_ERR_TCPIP_ADAPTER_INVALID_PARAMS;
      }
-@@ -971,6 +988,8 @@ esp_interface_t tcpip_adapter_get_esp_if(void *dev)
+-
+     if (dhcpc_status[tcpip_if] != TCPIP_ADAPTER_DHCP_STARTED) {
+         struct netif *p_netif = esp_netif[tcpip_if];
+ 
+         tcpip_adapter_reset_ip_info(tcpip_if);
+ 
+         if (p_netif != NULL) {
++
+             if (netif_is_up(p_netif)) {
++
+                 ESP_LOGD(TAG, "dhcp client init ip/mask/gw to all-0");
+                 ip_addr_set_zero(&p_netif->ip_addr);
+                 ip_addr_set_zero(&p_netif->netmask);
+                 ip_addr_set_zero(&p_netif->gw);
+                 tcpip_adapter_start_ip_lost_timer(tcpip_if);
+             } else {
++
+                 ESP_LOGD(TAG, "dhcp client re init");
+                 dhcpc_status[tcpip_if] = TCPIP_ADAPTER_DHCP_INIT;
+                 return ESP_OK;
+             }
+ 
+             if (dhcp_start(p_netif) != ERR_OK) {
++
+                 ESP_LOGD(TAG, "dhcp client start failed");
+                 return ESP_ERR_TCPIP_ADAPTER_DHCPC_START_FAILED;
+             }
+@@ -884,6 +921,7 @@ esp_err_t tcpip_adapter_dhcpc_start(tcpip_adapter_if_t tcpip_if)
+             dhcpc_status[tcpip_if] = TCPIP_ADAPTER_DHCP_STARTED;
+             return ESP_OK;
+         } else {
++
+             ESP_LOGD(TAG, "dhcp client re init");
+             dhcpc_status[tcpip_if] = TCPIP_ADAPTER_DHCP_INIT;
+             return ESP_OK;
+@@ -904,7 +942,7 @@ esp_err_t tcpip_adapter_dhcpc_stop(tcpip_adapter_if_t tcpip_if)
+     TCPIP_ADAPTER_IPC_CALL(tcpip_if, 0, 0, 0, tcpip_adapter_dhcpc_stop_api);
+ 
+     /* only support sta now, need to support ethernet */
+-    if (tcpip_if != TCPIP_ADAPTER_IF_STA || tcpip_if >= TCPIP_ADAPTER_IF_MAX) {
++    if ((tcpip_if != TCPIP_ADAPTER_IF_STA && tcpip_if != TCPIP_ADAPTER_IF_SPI_ETH) || tcpip_if >= TCPIP_ADAPTER_IF_MAX) {
+         ESP_LOGD(TAG, "dhcp client invalid if=%d", tcpip_if);
+         return ESP_ERR_TCPIP_ADAPTER_INVALID_PARAMS;
+     }
+@@ -971,6 +1009,8 @@ esp_interface_t tcpip_adapter_get_esp_if(void *dev)
          return ESP_IF_WIFI_AP;
      } else if (p_netif == esp_netif[TCPIP_ADAPTER_IF_ETH]) {
          return ESP_IF_ETH;
@@ -277,4 +364,3 @@ index b1bb85b..fca5d78 100644
      }
  
      return ESP_IF_MAX;
-     

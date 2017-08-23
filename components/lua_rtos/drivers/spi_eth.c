@@ -84,6 +84,7 @@ driver_error_t *spi_eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t 
 		ip_info.netmask.addr = mask;
 		ip_info.gw.addr = gw;
 
+		tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_SPI_ETH);
 		tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_SPI_ETH, &ip_info);
 
 		// If present, set dns1, else set to 8.8.8.8

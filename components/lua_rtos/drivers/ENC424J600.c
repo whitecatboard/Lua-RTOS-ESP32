@@ -385,11 +385,11 @@ static void link_status_change() {
 		write_reg(MACON2, w);
 
 		evt.event_id = SYSTEM_EVENT_SPI_ETH_CONNECTED;
-		esp_event_send(&evt);
 	} else {
 		evt.event_id = SYSTEM_EVENT_SPI_ETH_DISCONNECTED;
-		esp_event_send(&evt);
 	}
+
+	esp_event_send(&evt);
 }
 
 /*
