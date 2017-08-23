@@ -38,7 +38,7 @@ configure-idf-lua-rtos:
 	@patch -f $(IDF_PATH)/components/spi_flash/flash_ops.c $(PROJECT_PATH)/main/patches/spi_flash.1.patch
 	@patch -f $(IDF_PATH)/components/spi_flash/include/esp_spi_flash.h $(PROJECT_PATH)/main/patches/spi_flash.2.patch
 	@patch -f $(IDF_PATH)/components/newlib/include/sys/syslimits.h $(PROJECT_PATH)/main/patches/syslimits.patch
-	@cd $(IDF_PATH) && patch -p1 -f < $(PROJECT_PATH)/main/patches/spi_ethernet.patch
+	#@cd $(IDF_PATH) && patch -p1 -f < $(PROJECT_PATH)/main/patches/spi_ethernet.patch
 	@patch -f $(IDF_PATH)/components/mdns/component.mk $(PROJECT_PATH)/main/patches/mdns.patch
 	
 restore-idf:

@@ -42,12 +42,18 @@
 #include <drivers/can.h>
 #include <drivers/gpio.h>
 
+static uint8_t setup = 0;
+
 // CAN configuration
 CAN_device_t CAN_cfg;
 
 // Driver message errors
 DRIVER_REGISTER_ERROR(CAN, can, NotEnoughtMemory, "not enough memory", CAN_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_ERROR(CAN, can, InvalidFrameLength, "invalid frame length", CAN_ERR_INVALID_FRAME_LENGTH);
+DRIVER_REGISTER_ERROR(CAN, can, InvalidUnit, "invalid unit", CAN_ERR_INVALID_UNIT);
+DRIVER_REGISTER_ERROR(CAN, can, NoMoreFiltersAllowed, "no more filters allowed", CAN_ERR_NO_MORE_FILTERS_ALLOWED);
+DRIVER_REGISTER_ERROR(CAN, can, InvalidFilter, "invalid filter", CAN_ERR_INVALID_FILTER);
+DRIVER_REGISTER_ERROR(CAN, can, NotSetup, "is not setup", CAN_ERR_IS_NOT_SETUP);
 
 /*
  * Helper functions
@@ -57,48 +63,70 @@ DRIVER_REGISTER_ERROR(CAN, can, InvalidFrameLength, "invalid frame length", CAN_
  * Operation functions
  */
 
-driver_error_t *can_setup(uint32_t unit, uint16_t speed) {
+driver_error_t *can_setup(int32_t unit, uint16_t speed) {
 	driver_unit_lock_error_t *lock_error = NULL;
 
-    // Lock TX pin
-    if ((lock_error = driver_lock(CAN_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_CAN_TX, DRIVER_ALL_FLAGS, "TX"))) {
-    	// Revoked lock on pin
-    	return driver_lock_error(CAN_DRIVER, lock_error);
-    }
+	// Sanity checks
+	if ((unit < CPU_FIRST_CAN) || (unit > CPU_LAST_CAN)) {
+		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_UNIT, NULL);
+	}
 
-    // Lock RX pin
-    if ((lock_error = driver_lock(CAN_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_CAN_RX, DRIVER_ALL_FLAGS, "RX"))) {
-    	// Revoked lock on pin
-    	return driver_lock_error(CAN_DRIVER, lock_error);
-    }
+	if (!setup) {
+	    // Lock TX pin
+	    if ((lock_error = driver_lock(CAN_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_CAN_TX, DRIVER_ALL_FLAGS, "TX"))) {
+	    	// Revoked lock on pin
+	    	return driver_lock_error(CAN_DRIVER, lock_error);
+	    }
+
+	    // Lock RX pin
+	    if ((lock_error = driver_lock(CAN_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_CAN_RX, DRIVER_ALL_FLAGS, "RX"))) {
+	    	// Revoked lock on pin
+	    	return driver_lock_error(CAN_DRIVER, lock_error);
+	    }
+	}
 
 	// Set CAN configuration
 	CAN_cfg.speed = speed;
 	CAN_cfg.tx_pin_id = CONFIG_LUA_RTOS_CAN_TX;
 	CAN_cfg.rx_pin_id = CONFIG_LUA_RTOS_CAN_RX;
-	CAN_cfg.rx_queue = xQueueCreate(10,sizeof(CAN_frame_t));;
 
-	if (!CAN_cfg.rx_queue) {
-		return driver_error(CAN_DRIVER, CAN_ERR_NOT_ENOUGH_MEMORY, NULL);
+	if (!setup) {
+		CAN_cfg.rx_queue = xQueueCreate(50,sizeof(CAN_frame_t));;
+
+		if (!CAN_cfg.rx_queue) {
+			return driver_error(CAN_DRIVER, CAN_ERR_NOT_ENOUGH_MEMORY, NULL);
+		}
 	}
 
 	// Start CAN module
 	CAN_init();
 
-	syslog(LOG_INFO, "can%d at pins tx=%s%d, rx=%s%d", 0,
-		gpio_portname(CONFIG_LUA_RTOS_CAN_TX), gpio_name(CONFIG_LUA_RTOS_CAN_TX),
-		gpio_portname(CONFIG_LUA_RTOS_CAN_RX), gpio_name(CONFIG_LUA_RTOS_CAN_RX)
-	);
+	if (!setup) {
+		syslog(LOG_INFO, "can%d at pins tx=%s%d, rx=%s%d", 0,
+			gpio_portname(CONFIG_LUA_RTOS_CAN_TX), gpio_name(CONFIG_LUA_RTOS_CAN_TX),
+			gpio_portname(CONFIG_LUA_RTOS_CAN_RX), gpio_name(CONFIG_LUA_RTOS_CAN_RX)
+		);
+	}
+
+	setup = 1;
 
 	return NULL;
 }
 
-driver_error_t *can_tx(uint32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t *data, uint8_t len) {
+driver_error_t *can_tx(int32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t *data, uint8_t len) {
 	CAN_frame_t frame;
 
 	// Sanity checks
+	if ((unit < CPU_FIRST_CAN) || (unit > CPU_LAST_CAN)) {
+		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_UNIT, NULL);
+	}
+
 	if (len > 8) {
 		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_FRAME_LENGTH, NULL);
+	}
+
+	if (!setup) {
+		return driver_error(CAN_DRIVER, CAN_ERR_IS_NOT_SETUP, NULL);
 	}
 
 	// Populate frame
@@ -112,8 +140,17 @@ driver_error_t *can_tx(uint32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t
 	return NULL;
 }
 
-driver_error_t *can_rx(uint32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_t *data, uint8_t *len) {
+driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_t *data, uint8_t *len) {
 	CAN_frame_t frame;
+
+	// Sanity checks
+	if ((unit < CPU_FIRST_CAN) || (unit > CPU_LAST_CAN)) {
+		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_UNIT, NULL);
+	}
+
+	if (!setup) {
+		return driver_error(CAN_DRIVER, CAN_ERR_IS_NOT_SETUP, NULL);
+	}
 
 	// Read next frame
 	xQueueReceive(CAN_cfg.rx_queue, &frame, portMAX_DELAY);
@@ -122,6 +159,56 @@ driver_error_t *can_rx(uint32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8
 	*msg_type = 0;
 	*len = frame.DLC;
 	memcpy(data, &frame.data, frame.DLC);
+
+	return NULL;
+}
+
+driver_error_t *can_add_filter(int32_t unit, int32_t fromId, int32_t toId) {
+	// Sanity checks
+	if ((unit < CPU_FIRST_CAN) || (unit > CPU_LAST_CAN)) {
+		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((fromId < 0) || (toId < 0)) {
+		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_FILTER, "must be >= 0");
+	}
+
+	if ((fromId > toId)) {
+		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_FILTER, "from filter must be >= to filter");
+	}
+
+	if (!setup) {
+		return driver_error(CAN_DRIVER, CAN_ERR_IS_NOT_SETUP, NULL);
+	}
+
+	if (CAN_add_filter(fromId, toId)) {
+		return driver_error(CAN_DRIVER, CAN_ERR_NO_MORE_FILTERS_ALLOWED, NULL);
+	}
+
+	return NULL;
+}
+
+driver_error_t *can_remove_filter(int32_t unit, int32_t fromId, int32_t toId) {
+	// Sanity checks
+	if ((unit < CPU_FIRST_CAN) || (unit > CPU_LAST_CAN)) {
+		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((fromId < 0) || (toId < 0)) {
+		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_FILTER, "must be >= 0");
+	}
+
+	if ((fromId > toId)) {
+		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_FILTER, "from filter must be >= to filter");
+	}
+
+	if (!setup) {
+		return driver_error(CAN_DRIVER, CAN_ERR_IS_NOT_SETUP, NULL);
+	}
+
+	if (CAN_remove_filter(fromId, toId)) {
+		return driver_error(CAN_DRIVER, CAN_ERR_NO_MORE_FILTERS_ALLOWED, NULL);
+	}
 
 	return NULL;
 }

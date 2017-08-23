@@ -33,6 +33,9 @@
 #include <sys/types.h>
 
 unsigned sleep(unsigned int secs);
+
+#if 0
 int usleep(useconds_t usec);
+#endif
 
 #endif /* !_SYS_SLEEP_H_ */

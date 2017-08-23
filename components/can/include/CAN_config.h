@@ -33,6 +33,8 @@
 #include "freertos/queue.h"
 #include "driver/gpio.h"
 
+/** \brief Number of can filters (max) */
+#define CAN_NUM_FILTERS 10
 
 /** \brief CAN Node Bus speed */
 typedef enum  {

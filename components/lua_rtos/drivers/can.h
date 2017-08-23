@@ -65,9 +65,15 @@
 // CAN errors
 #define CAN_ERR_NOT_ENOUGH_MEMORY           (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  0)
 #define CAN_ERR_INVALID_FRAME_LENGTH		(DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  1)
+#define CAN_ERR_INVALID_UNIT				(DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  2)
+#define CAN_ERR_NO_MORE_FILTERS_ALLOWED		(DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  3)
+#define CAN_ERR_INVALID_FILTER			    (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  4)
+#define CAN_ERR_IS_NOT_SETUP		   	    (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  5)
 
-driver_error_t *can_setup(uint32_t unit, uint16_t speed);
-driver_error_t *can_tx(uint32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t *data, uint8_t len);
-driver_error_t *can_rx(uint32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_t *data, uint8_t *len);
+driver_error_t *can_setup(int32_t unit, uint16_t speed);
+driver_error_t *can_tx(int32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t *data, uint8_t len);
+driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_t *data, uint8_t *len);
+driver_error_t *can_add_filter(int32_t unit, int32_t fromId, int32_t toId);
+driver_error_t *can_remove_filter(int32_t unit, int32_t fromId, int32_t toId);
 
 #endif	/* CAN_H */

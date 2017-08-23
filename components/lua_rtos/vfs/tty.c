@@ -73,7 +73,7 @@ static ssize_t IRAM_ATTR vfs_tty_write(int fd, const void *data, size_t size) {
     uart_ll_lock(unit);
 
     for (size_t i = 0; i < size; i++) {
-#if CONFIG_NEWLIB_STDOUT_ADDCR
+#if CONFIG_NEWLIB_STDOUT_LINE_ENDING_LF
         if (data_c[i]=='\n') {
         	uart_write(unit, '\r');
         }

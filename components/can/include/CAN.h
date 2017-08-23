@@ -42,6 +42,11 @@ typedef struct {
     } data;
 }CAN_frame_t;
 
+/** \brief CAN Filter structure */
+typedef struct {
+	int32_t fromID; /**< \brief From Message ID */
+	int32_t toID;   /**< \brief To Message ID */
+} CAN_filter_t;
 
 /**
  * \brief Initialize the CAN Module
@@ -64,5 +69,8 @@ int CAN_write_frame(const CAN_frame_t* p_frame);
  * \return 0 CAN Module was stopped
  */
 int CAN_stop(void);
+
+int CAN_add_filter(int32_t fromId, int32_t toId);
+int CAN_remove_filter(int32_t fromId, int32_t toId);
 
 #endif

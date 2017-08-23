@@ -36,8 +36,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
+#include "esp_attr.h"
 #include "esp_intr.h"
 #include "soc/dport_reg.h"
+
+#include <string.h>
 #include <math.h>
 
 #include "driver/gpio.h"
@@ -48,8 +51,11 @@
 static void CAN_read_frame();
 static void CAN_isr(void *arg_p);
 
+// CAN filters
+static uint8_t filters = 0;
+static CAN_filter_t can_filter[CAN_NUM_FILTERS];
 
-static void CAN_isr(void *arg_p){
+static void IRAM_ATTR CAN_isr(void *arg_p){
 
     uint8_t interrupt;
 
@@ -82,7 +88,9 @@ static void CAN_isr(void *arg_p){
 }
 
 
-static void CAN_read_frame(){
+static void IRAM_ATTR CAN_read_frame(){
+	//filter iterator
+	uint8_t i;
 
 	//byte iterator
 	uint8_t __byte_i;
@@ -110,8 +118,22 @@ static void CAN_read_frame(){
     // Let the hardware know the frame has been read.
     MODULE_CAN->CMR.B.RRB=1;
 
-    //send frame to input queue
-    xQueueSendFromISR(CAN_cfg.rx_queue,&__frame,0);
+    // Check filter
+    uint8_t pass = 0;
+    if (filters > 0) {
+        for(i=0;((i < CAN_NUM_FILTERS) && (!pass));i++) {
+        	if ((can_filter[i].fromID >= 0) && (can_filter[i].toID >= 0)) {
+        		pass = ((__frame.MsgID >= can_filter[i].fromID) && (__frame.MsgID <= can_filter[i].toID));
+        	}
+        }
+    } else {
+    	pass = 1;
+    }
+
+    if (pass) {
+        //send frame to input queue
+        xQueueSendFromISR(CAN_cfg.rx_queue,&__frame,0);
+    }
 }
 
 
@@ -140,6 +162,14 @@ int CAN_write_frame(const CAN_frame_t* p_frame){
 
 
 int CAN_init(){
+	// Init filters
+	uint8_t i;
+	for(i=0;i < CAN_NUM_FILTERS;i++) {
+		can_filter[i].fromID = -1;
+		can_filter[i].toID = -1;
+	}
+
+	filters = 0;
 
 	//Time quantum
 	double __tq = 0;
@@ -228,10 +258,63 @@ int CAN_init(){
 }
 
 int CAN_stop(){
-
 	MODULE_CAN->MOD.B.RM = 1;
 
 	return 0;
+}
+
+int CAN_add_filter(int32_t fromId, int32_t toId) {
+	uint8_t i;
+
+	portDISABLE_INTERRUPTS();
+
+	// Check if there is some filter that match with the
+	// desired filter
+	for(i=0;i < CAN_NUM_FILTERS;i++) {
+		if ((fromId >= can_filter[i].fromID) && (toId <= can_filter[i].toID)) {
+			portENABLE_INTERRUPTS();
+			return 0;
+		}
+	}
+
+	// Add filter
+	for(i=0;i < CAN_NUM_FILTERS;i++) {
+		if ((can_filter[i].fromID  == -1) && (can_filter[i].toID == -1)) {
+			can_filter[i].fromID = fromId;
+			can_filter[i].toID = toId;
+			filters++;
+			break;
+		} else {
+
+		}
+	}
+
+	// Reset rx queue
+	xQueueReset(CAN_cfg.rx_queue);
+
+	portENABLE_INTERRUPTS();
+
+	return !(i < CAN_NUM_FILTERS);
+}
+
+int CAN_remove_filter(int32_t fromId, int32_t toId) {
+	portDISABLE_INTERRUPTS();
+
+	uint8_t i;
+	for(i=0;i < CAN_NUM_FILTERS;i++) {
+		if ((can_filter[i].fromID  > -1) && (can_filter[i].toID > -1)) {
+			if ((can_filter[i].fromID  == fromId) && (can_filter[i].toID == toId)) {
+				can_filter[i].fromID = -1;
+				can_filter[i].toID = -1;
+				filters--;
+				break;
+			}
+		}
+	}
+
+	portENABLE_INTERRUPTS();
+
+	return !(i < CAN_NUM_FILTERS);
 }
 
 #endif
