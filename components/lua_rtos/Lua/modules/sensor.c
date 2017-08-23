@@ -159,10 +159,10 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 
 		case UART_INTERFACE:
 				setup->uart.id = luaL_checkinteger(L, 2);
-				setup->uart.speed = luaL_checkinteger(L, 3);
-				setup->uart.data_bits = luaL_checkinteger(L, 4);
-				setup->uart.parity = luaL_checkinteger(L, 5);
-				setup->uart.stop_bits = luaL_checkinteger(L, 6);
+				setup->uart.speed = luaL_optinteger(L, 3, 0);
+				setup->uart.data_bits = luaL_optinteger(L, 4, 0);
+				setup->uart.parity = luaL_optinteger(L, 5, 0);
+				setup->uart.stop_bits = luaL_optinteger(L, 6, 0);
 			break;
 
 		default:

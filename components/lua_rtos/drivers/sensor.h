@@ -62,6 +62,7 @@ typedef driver_error_t *(*sensor_get_f_t)(struct sensor_instance *, const char *
 #define SENSOR_FLAG_ON_H            (1 << 1)
 #define SENSOR_FLAG_ON_L            (1 << 2)
 #define SENSOR_FLAG_DEBOUNCING      (1 << 3)
+#define SENSOR_FLAG_AUTO_ACQ        (1 << 4)
 
 // Sensor interface
 typedef enum {

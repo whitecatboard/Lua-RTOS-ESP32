@@ -462,7 +462,7 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 	// Allocate space for sensor data
 	// This is done only if sensor is not interrupt driven, because in
 	// interrupt driven sensors the sensor value is set in the ISR
-	if (!(unit->sensor->flags & SENSOR_FLAG_ON_OFF)) {
+	if (!(unit->sensor->flags & (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_AUTO_ACQ))) {
 		if (!(value = calloc(1, sizeof(sensor_value_t) * SENSOR_MAX_DATA))) {
 			return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
@@ -476,7 +476,7 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 		}
 	}
 
-	if (!(unit->sensor->flags & SENSOR_FLAG_ON_OFF)) {
+	if (!(unit->sensor->flags & (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_AUTO_ACQ))) {
 		// Copy sensor values into instance
 		// Note that we only copy raw values as value types are set in sensor_setup from sensor
 		// definition
