@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if CONFIG_WIFI_ENABLED && CONFIG_LUA_RTOS_LUA_USE_NET
+#if CONFIG_LUA_RTOS_LUA_USE_NET
 
 #include <string.h>
 #include <stdio.h>

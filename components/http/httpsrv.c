@@ -505,7 +505,6 @@ static void http_net_callback(system_event_t *event){
 	syslog(LOG_DEBUG, "event: %d\r\n", event->event_id);
 
 	switch (event->event_id) {
-#if CONFIG_WIFI_ENABLED
 		case SYSTEM_EVENT_STA_START:                /**< ESP32 station start */
 			if (wifi_mode != WIFI_MODE_STA) {
 				wifi_mode = WIFI_MODE_STA;
@@ -538,7 +537,6 @@ static void http_net_callback(system_event_t *event){
 				}
 			}
 			break;
-#endif
 
 		default :
 			break;

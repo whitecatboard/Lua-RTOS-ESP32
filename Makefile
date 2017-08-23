@@ -23,11 +23,11 @@ configure-idf-lua-rtos:
 	@cd $(IDF_PATH)/components/vfs/include/sys && git checkout dirent.h
 	@cd $(IDF_PATH)/components/spi_flash && git checkout flash_ops.c
 	@cd $(IDF_PATH)/components/spi_flash/include && git checkout esp_spi_flash.h
-	@cd $(IDF_PATH)/components/esp32 && git checkout event_default_handlers.c
-	@cd $(IDF_PATH)/components/esp32/include && git checkout esp_event.h
-	@cd $(IDF_PATH)/components/esp32/include && git checkout esp_interface.h
-	@cd $(IDF_PATH)/components/tcpip_adapter/include && git checkout tcpip_adapter.h
-	@cd $(IDF_PATH)/components/tcpip_adapter && git checkout tcpip_adapter_lwip.c
+	#@cd $(IDF_PATH)/components/esp32 && git checkout event_default_handlers.c
+	#@cd $(IDF_PATH)/components/esp32/include && git checkout esp_event.h
+	#@cd $(IDF_PATH)/components/esp32/include && git checkout esp_interface.h
+	#@cd $(IDF_PATH)/components/tcpip_adapter/include && git checkout tcpip_adapter.h
+	#@cd $(IDF_PATH)/components/tcpip_adapter && git checkout tcpip_adapter_lwip.c
 	@cd $(IDF_PATH)/components/newlib/include/sys && git checkout syslimits.h
 	@cd $(IDF_PATH)/components/mdns && git checkout component.mk
 	@echo "Configure esp-idf for Lua RTOS ..."
@@ -47,11 +47,11 @@ restore-idf:
 	@cd $(IDF_PATH)/components/vfs/include/sys && git checkout dirent.h
 	@cd $(IDF_PATH)/components/spi_flash && git checkout flash_ops.c
 	@cd $(IDF_PATH)/components/spi_flash/include && git checkout esp_spi_flash.h
-	@cd $(IDF_PATH)/components/esp32 && git checkout event_default_handlers.c
-	@cd $(IDF_PATH)/components/esp32/include && git checkout esp_event.h
-	@cd $(IDF_PATH)/components/esp32/include && git checkout esp_interface.h
-	@cd $(IDF_PATH)/components/tcpip_adapter/include && git checkout tcpip_adapter.h
-	@cd $(IDF_PATH)/components/tcpip_adapter && git checkout tcpip_adapter_lwip.c
+	#@cd $(IDF_PATH)/components/esp32 && git checkout event_default_handlers.c
+	#@cd $(IDF_PATH)/components/esp32/include && git checkout esp_event.h
+	#@cd $(IDF_PATH)/components/esp32/include && git checkout esp_interface.h
+	#@cd $(IDF_PATH)/components/tcpip_adapter/include && git checkout tcpip_adapter.h
+	#@cd $(IDF_PATH)/components/tcpip_adapter && git checkout tcpip_adapter_lwip.c
 	@cd $(IDF_PATH)/components/newlib/include/sys && git checkout syslimits.h
 	@cd $(IDF_PATH)/components/mdns && git checkout component.mk
 	

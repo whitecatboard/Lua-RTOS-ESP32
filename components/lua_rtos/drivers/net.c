@@ -30,10 +30,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 
-#if CONFIG_WIFI_ENABLED
 #include "esp_wifi.h"
-#endif
-
 #include "esp_system.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
@@ -70,8 +67,6 @@ static net_event_register_callback_t callback[MAX_NET_EVENT_CALLBACKS] = {0};
  */
 static esp_err_t event_handler(void *ctx, system_event_t *event) {
 	switch (event->event_id) {
-
-#if CONFIG_WIFI_ENABLED
 		case SYSTEM_EVENT_WIFI_READY: 	            /**< ESP32 WiFi ready */
 			break;
 
@@ -148,9 +143,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 		case SYSTEM_EVENT_AP_STA_GOT_IP6:           /**< ESP32 station or ap interface v6IP addr is preferred */
  			xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
 			break;
-#endif
 
-#if CONFIG_ETHERNET
 		case SYSTEM_EVENT_ETH_START:                /**< ESP32 ethernet start */
 			break;
 
@@ -165,9 +158,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
 		case SYSTEM_EVENT_ETH_GOT_IP:               /**< ESP32 ethernet got IP from connected AP */
 			break;
-#endif
 
-#if CONFIG_SPI_ETHERNET
 		case SYSTEM_EVENT_SPI_ETH_START:            /**< ESP32 spi ethernet start */
 			break;
 
@@ -185,7 +176,6 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 		case SYSTEM_EVENT_SPI_ETH_GOT_IP:           /**< ESP32 spi ethernet got IP from connected AP */
  			xEventGroupSetBits(netEvent, evSPI_ETH_CONNECTED);
 			break;
-#endif
 
 		default :
 			break;

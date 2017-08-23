@@ -190,7 +190,7 @@ static int lnet_stat(lua_State* L) {
 
 	// This should be done in a more elegant way in future versions ...
 
-#if CONFIG_WIFI_ENABLED && CONFIG_LUA_RTOS_LUA_USE_NET
+#if CONFIG_LUA_RTOS_LUA_USE_NET
 	// Call wf.stat
 	lua_getglobal(L, "net");
 	lua_getfield(L, -1, "wf");
@@ -266,9 +266,7 @@ static const LUA_REG_TYPE net_map[] = {
 	{ LSTRKEY( "ssh" ), LROVAL ( ssh_map ) },
 #endif
 
-#if CONFIG_WIFI_ENABLED && CONFIG_LUA_RTOS_LUA_USE_NET
 	{ LSTRKEY( "wf" ), LROVAL ( wifi_map ) },
-#endif
 
 	#if CONFIG_SPI_ETHERNET && CONFIG_LUA_RTOS_LUA_USE_NET
 	{ LSTRKEY( "en" ), LROVAL ( spi_eth_map ) },

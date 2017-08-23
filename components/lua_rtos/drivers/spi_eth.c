@@ -67,6 +67,8 @@ driver_error_t *spi_eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t 
 	ip_addr_t dns;
 	ip_addr_t *dns_p = &dns;
 
+	esp_event_set_default_spi_eth_handlers();
+
 	// Init network, if needed
 	if (!status_get(STATUS_SPI_ETH_SETUP)) {
 		if ((error = net_init())) {

@@ -30,7 +30,8 @@
  * Lua modules to build
  *
  */
-#define USE_NET CONFIG_WIFI_ENABLED || CONFIG_ETHERNET
+#define USE_NET 1
+#define CONFIG_LUA_RTOS_LUA_USE_NET USE_NET
 
 #define USE_NET_VFS USE_NET
 
