@@ -101,7 +101,30 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    ```lua
    $ wcc -p /dev/cu.SLAB_USBtoUART -f
    ```
+   
+   If you are flashing the Lua RTOS firmware for first time you will get an error:
+   
+   ```lua
+   Unknown board model.
+   Maybe your firmware is corrupted, or you haven't a valid Lua RTOS firmware installed.
 
+   Do you want to install a valid firmware now [y/n])?
+   ```
+   
+   Enter "y" if you want to install a valid firmware:
+   
+   ```lua
+   Please, enter your board type:
+     1: WHITECAT N1
+     2: ESP32 CORE BOARD
+     3: ESP32 THING
+     4: GENERIC
+
+   Type: 
+   ```
+   
+   Finally enter your board type and your board will be flashed.
+   
    For windows use wcc.exe instead of wcc.
 
 ## Method 2: build by yourself
