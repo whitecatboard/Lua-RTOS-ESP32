@@ -73,25 +73,25 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 
    Open a terminal with your board unplugged.
    
-   ```lua
+   ```lua
    $ wcc -ports
    Available serial ports on your computer:
    
    /dev/cu.Bluetooth-Incoming-Port
    /dev/cu.Bluetooth-Modem
-   ```
+   ```
 
    Now plug your board.
-   
-   ```lua
+
+   ```lua
    $ wcc -ports
    Available serial ports on your computer:
 
    /dev/cu.Bluetooth-Incoming-Port
    /dev/cu.Bluetooth-Modem
    /dev/cu.SLAB_USBtoUART
-   ```   
-   
+   ```
+
 ## Method 2: build by yourself
 
 1. Install ESP32 toolchain for your desktop platform. Please, follow the instructions provided by ESPRESSIF:
