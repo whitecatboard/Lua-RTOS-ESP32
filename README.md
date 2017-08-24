@@ -48,6 +48,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    * Copy The Whitecat Console binary to a folder accessed by the system path.
      - Ubuntu: sudo cp wcc /usr/bin
      - Mac OS: sudo cp wcc /usr/bib
+     - Windows: runas /noprofile /user:Administrator "copy wcc.exe c:\windows\system32"
    
    * Test that The Whitecat Console binary works well.
    
