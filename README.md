@@ -92,7 +92,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    /dev/cu.SLAB_USBtoUART
    ```
    
-   Board is using /dev/cu.SLAB\_USBtoUART serial device. This device will be used in the following steps as parameter value -p.
+   In the above example, board is using /dev/cu.SLAB\_USBtoUART serial device. This device will be used in the following steps as parameter value -p.
 
    For windows use wcc.exe instead of wcc.
    
