@@ -46,7 +46,7 @@ typedef struct {
 	int callback;
 } encoder_userdata;
 
-static void callback_func(int callback, uint32_t value, uint8_t button) {
+static void callback_func(int callback, int8_t dir, uint32_t counter, uint8_t button) {
 	lua_State *TL;
 	lua_State *L;
 	int tref;
@@ -59,9 +59,10 @@ static void callback_func(int callback, uint32_t value, uint8_t button) {
 
 	    lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
 	    lua_xmove(L, TL, 1);
-        lua_pushinteger(TL, value);
+        lua_pushinteger(TL, dir);
+        lua_pushinteger(TL, counter);
         lua_pushinteger(TL, button);
-	    lua_pcall(TL, 2, 0, 0);
+	    lua_pcall(TL, 3, 0, 0);
         luaL_unref(TL, LUA_REGISTRYINDEX, tref);
 	}
 }

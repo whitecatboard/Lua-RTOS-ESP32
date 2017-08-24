@@ -172,7 +172,7 @@ static void encoder_task(void *arg) {
         xQueueReceive(queue, &data, portMAX_DELAY);
 
         if (data.h->callback) {
-        	data.h->callback(data.h->callback_id, data.counter, data.button);
+        	data.h->callback(data.h->callback_id, data.dir, data.counter, data.button);
         }
     }
 }
@@ -181,8 +181,10 @@ static void IRAM_ATTR encoder_isr(void* arg) {
 	encoder_h_t *encoder = (encoder_h_t *)arg;
 	encoder_deferred_data_t data;
 	uint8_t result, has_data;
+	int8_t dir;
 
 	has_data = 0;
+	dir = 0;
 
 	// Get A, B & SW pin values
 	uint32_t port = GPIO.in;
@@ -208,9 +210,11 @@ static void IRAM_ATTR encoder_isr(void* arg) {
 	if (result == DIR_CW) {
 		encoder->counter++;
 		has_data = 1;
+		dir = 1;
 	} else if (result == DIR_CCW) {
 		encoder->counter--;
 		has_data = 1;
+		dir = -1;
 	}
 
 	has_data |= (SW != encoder->sw_latch);
@@ -222,10 +226,11 @@ static void IRAM_ATTR encoder_isr(void* arg) {
 			data.h = encoder;
 			data.counter = encoder->counter;
 			data.button = encoder->sw_latch;
+			data.dir = dir;
 
 			xQueueSendFromISR(queue, &data, NULL);
 		} else {
-			encoder->callback(encoder->callback_id, encoder->counter, encoder->sw_latch);
+			encoder->callback(encoder->callback_id, dir, encoder->counter, encoder->sw_latch);
 		}
 	}
 }

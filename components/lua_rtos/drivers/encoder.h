@@ -34,7 +34,7 @@
 
 #include <sys/driver.h>
 
-typedef void (*encoder_callback_t)(int, uint32_t, uint8_t);
+typedef void (*encoder_callback_t)(int, int8_t, uint32_t, uint8_t);
 
 typedef struct {
 	int8_t A;            		 ///< A pin
@@ -50,6 +50,7 @@ typedef struct {
 
 typedef struct {
 	encoder_h_t *h;
+	int8_t dir;
 	uint32_t counter;
 	uint32_t button;
 } encoder_deferred_data_t;
