@@ -214,8 +214,8 @@ You can connect to the Lua RTOS console using your favorite terminal emulator pr
    ```
    
    ```lua
-      /\       /\
-     /  \_____/  \
+     /\       /\
+    /  \_____/  \
    /_____________\
    W H I T E C A T
 
