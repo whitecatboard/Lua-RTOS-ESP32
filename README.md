@@ -38,47 +38,34 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 
 ## Method 1: get a precompiled firmware
 
-1. Install esptool (the ESP32 flasher utility), following  [this instructions](https://github.com/espressif/esptool).
+1. Install The Whitecat Console. The Whitecat Console is a command line tool that allows the programmer to flash a Lua RTOS compatible board with the last available firmware.
 
-1. Get the precompiled binaries for your board:
-
-   | Board              |
-   |--------------------|
-   | [WHITECAT ESP32 N1](http://whitecatboard.org/firmware.php?board=WHITECAT-ESP32-N1)  | 
-   | [ESP32 CORE](http://whitecatboard.org/firmware.php?board=ESP32-CORE-BOARD)  | 
-   | [ESP32 THING](http://whitecatboard.org/firmware.php?board=ESP32-THING)  | 
-   | [GENERIC](http://whitecatboard.org/firmware.php?board=GENERIC)  | 
-
-1. Uncompress to your favorite folder:
-
-   ```lua
-   unzip LuaRTOS.10.WHITECAT-ESP32-N1.1488209955.zip
-   ```
-
-1. Go to the uncompressed folder, and flash:
-
-   ```lua
-   cd LuaRTOS.10.WHITECAT-ESP32-N1.1488209955
-   ```
-
-   For flash the firmware:
+   Step 1. Download The Whitecat Console binary for your platform:
    
-   ```lua
-   python <esp-idf path>/components/esptool_py/esptool/esptool.py --chip esp32 --port "<usb path>" --baud 921600
-   --before "default_reset" --after "hard_reset" write_flash -z --flash_mode "dio" --flash_freq "40m"
-   --flash_size detect 0x1000 bootloader.WHITECAT-ESP32-N1.bin 0x10000
-   lua_rtos.WHITECAT-ESP32-N1.bin 0x8000 partitions_singleapp.WHITECAT-ESP32-N1.bin
-   ```
-
-   For flash the filesystem:
-
-   ```lua
-   python <esp-idf path>/components/esptool_py/esptool/esptool.py --chip esp32 --port "<usb path>" --baud 921600
-   --before "default_reset" --after "hard_reset" write_flash -z --flash_mode "dio" --flash_freq "40m"
-   --flash_size detect 0x180000 spiffs_image.WHITECAT-ESP32-N1.bin
-   ```
+   * [Ubuntu](http://downloads.whitecatboard.org/console/linux/wcc)
+   * [Mac OS](http://downloads.whitecatboard.org/console/osx/wcc)
+   * [Windows](http://downloads.whitecatboard.org/console/windows/wcc.exe)
    
-   Change "esp-idf path" and "usb path" according to your needs.
+   Step 2. Copy The Whitecat Console binary to a folder accessed by the system path:
+   
+   * Ubuntu: sudo cp wcc /usr/bin
+   * Mac OS: sudo cp wcc /usr/bib
+   
+   Step 3. Test that The Whitecat Console binary works well:
+   
+   For Ubuntu / Mac OS open a terminal and type:
+   ```lua
+   iMac-de-JAUME:~ jolive$ wcc
+usage: wcc -p port | -ports [-ls path | -down source destination | -up source destination | -f | -d]
+
+-ports:		 list all available serial ports on your computer
+-p port:	 serial port device, for example /dev/tty.SLAB_USBtoUART
+-ls path:	 list files present in path
+-down src dst:	 transfer the source file (board) to destination file (computer)
+-up src dst:	 transfer the source file (computer) to destination file (board)
+-f:		 flash board with last firmware
+-d:		 show debug messages
+   ```
 
 ## Method 2: build by yourself
 
