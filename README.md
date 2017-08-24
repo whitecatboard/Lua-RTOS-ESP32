@@ -40,33 +40,31 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 
 1. Install The Whitecat Console. The Whitecat Console is a command line tool that allows the programmer to flash a Lua RTOS compatible board with the last available firmware.
 
-   1.2. Download The Whitecat Console binary for your platform:
+   * Download The Whitecat Console binary for your platform:
+    * [Ubuntu](http://downloads.whitecatboard.org/console/linux/wcc)
+    * [Mac OS](http://downloads.whitecatboard.org/console/osx/wcc)
+    * [Windows](http://downloads.whitecatboard.org/console/windows/wcc.exe)
    
-        * [Ubuntu](http://downloads.whitecatboard.org/console/linux/wcc)
-        * [Mac OS](http://downloads.whitecatboard.org/console/osx/wcc)
-        * [Windows](http://downloads.whitecatboard.org/console/windows/wcc.exe)
+   * Copy The Whitecat Console binary to a folder accessed by the system path:
+    * Ubuntu: sudo cp wcc /usr/bin
+    * Mac OS: sudo cp wcc /usr/bib
    
-   1.3. Copy The Whitecat Console binary to a folder accessed by the system path:
+   * Test that The Whitecat Console binary works well:
    
-        * Ubuntu: sudo cp wcc /usr/bin
-        * Mac OS: sudo cp wcc /usr/bib
+     For Ubuntu / Mac OS open a terminal and type:
    
-   1.4. Test that The Whitecat Console binary works well:
-   
-        For Ubuntu / Mac OS open a terminal and type:
-   
-        ```lua
-        iMac-de-JAUME:~ jolive$ wcc
-        usage: wcc -p port | -ports [-ls path | -down source destination | -up source destination | -f | -d]
+     ```lua
+     iMac-de-JAUME:~ jolive$ wcc
+     usage: wcc -p port | -ports [-ls path | -down source destination | -up source destination | -f | -d]
       
-        -ports:         list all available serial ports on your computer
-        -p port:        serial port device, for example /dev/tty.SLAB_USBtoUART
-        -ls path:       list files present in path
-        -down src dst:	 transfer the source file (board) to destination file (computer)
-        -up src dst:	 transfer the source file (computer) to destination file (board)
-        -f:             flash board with last firmware
-        -d:             show debug messages
-        ```
+     -ports:         list all available serial ports on your computer
+     -p port:        serial port device, for example /dev/tty.SLAB_USBtoUART
+     -ls path:       list files present in path
+     -down src dst:	 transfer the source file (board) to destination file (computer)
+     -up src dst:	 transfer the source file (computer) to destination file (board)
+     -f:             flash board with last firmware
+     -d:             show debug messages
+     ```
 
 ## Method 2: build by yourself
 
