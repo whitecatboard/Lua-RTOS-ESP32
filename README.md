@@ -24,7 +24,7 @@ The Whitecat IDE is available at: [https://ide.whitecatboard.org](https://ide.wh
 
 In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have more information about this.
 
-# How to get Lua RTOS firmware?
+# How to get the Lua RTOS firmware?
 
 ## Prerequisites
 
@@ -69,7 +69,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 
      For Windows open a "command" window and type wcc.exe 
 
-2. Find which serial port is used by your board.
+2. Find which serial device is used by your board.
 
    Open a terminal with your board unplugged.
    
@@ -91,6 +91,8 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    /dev/cu.Bluetooth-Modem
    /dev/cu.SLAB_USBtoUART
    ```
+   
+   Board is using /dev/cu.SLAB\_USBtoUART serial device. This device will be used in the following steps as parameter value -p.
 
    For windows use wcc.exe instead of wcc.
    
