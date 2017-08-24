@@ -54,17 +54,18 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    Step 3. Test that The Whitecat Console binary works well:
    
    For Ubuntu / Mac OS open a terminal and type:
+   
    ```lua
    iMac-de-JAUME:~ jolive$ wcc
-usage: wcc -p port | -ports [-ls path | -down source destination | -up source destination | -f | -d]
-
--ports:		 list all available serial ports on your computer
--p port:	 serial port device, for example /dev/tty.SLAB_USBtoUART
--ls path:	 list files present in path
--down src dst:	 transfer the source file (board) to destination file (computer)
--up src dst:	 transfer the source file (computer) to destination file (board)
--f:		 flash board with last firmware
--d:		 show debug messages
+   usage: wcc -p port | -ports [-ls path | -down source destination | -up source destination | -f | -d]
+   
+   -ports:		 list all available serial ports on your computer
+   -p port:	 serial port device, for example /dev/tty.SLAB_USBtoUART
+   -ls path:	 list files present in path
+   -down src dst:	 transfer the source file (board) to destination file (computer)
+   -up src dst:	 transfer the source file (computer) to destination file (board)
+   -f:		 flash board with last firmware
+   -d:		 show debug messages
    ```
 
 ## Method 2: build by yourself
