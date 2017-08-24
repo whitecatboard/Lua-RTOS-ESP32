@@ -28,7 +28,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 
 ## Prerequisites
 
-1. Please note you need probably to download and **install drivers for your board's USB-TO-SERIAL adapter** for Windows and Mac OSX versions. The GNU/Linux version usually doesn't need any drivers. This drivers are required for connect to your board through a serial port connection.
+1. Please note you need probably to download and install drivers for your board's USB-TO-SERIAL adapter for Windows and Mac OSX versions. The GNU/Linux version usually doesn't need any drivers. This drivers are required for connect to your board through a serial port connection.
 
    | Board              |
    |--------------------|
@@ -54,7 +54,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
      For Ubuntu / Mac OS open a terminal and type:
    
      ```lua
-     iMac-de-JAUME:~ jolive$ wcc
+     $ wcc
      usage: wcc -p port | -ports [-ls path | -down source destination | -up source destination |
      -f | -d]
       
@@ -69,6 +69,29 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 
      For Windows open a "command" window and type wcc.exe 
 
+2. Find which serial port is used by your board:
+
+   Open a terminal with your board unplugged.
+   
+   ```lua
+   $ wcc -ports
+   Available serial ports on your computer:
+   
+   /dev/cu.Bluetooth-Incoming-Port
+   /dev/cu.Bluetooth-Modem
+   ```
+
+   Now plug your board.
+   
+   ```lua
+   $ wcc -ports
+   Available serial ports on your computer:
+
+   /dev/cu.Bluetooth-Incoming-Port
+   /dev/cu.Bluetooth-Modem
+   /dev/cu.SLAB_USBtoUART
+   ```   
+   
 ## Method 2: build by yourself
 
 1. Install ESP32 toolchain for your desktop platform. Please, follow the instructions provided by ESPRESSIF:
