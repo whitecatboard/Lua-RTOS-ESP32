@@ -34,11 +34,6 @@
 
 #include <sys/driver.h>
 
-typedef enum {
-	EncoderMove,
-	EncoderSwitch
-} encoder_deferred_data_type_t;
-
 typedef void (*encoder_callback_t)(int, uint32_t, uint8_t);
 
 typedef struct {
@@ -47,7 +42,7 @@ typedef struct {
 	int8_t SW;            		 ///< SW pin
 	uint8_t state;      		 ///< Current state's machine state
 	int32_t counter;    		 ///< Current counter value
-	uint8_t sw_value;			 ///< Current switch value
+	uint8_t sw_latch;			 ///< Current switch value
 	encoder_callback_t callback; ///< Callback function
 	int callback_id;             ///< Callback id
 	uint8_t deferred;            ///< Deferred callback?
@@ -55,8 +50,8 @@ typedef struct {
 
 typedef struct {
 	encoder_h_t *h;
-	uint32_t value;
-	encoder_deferred_data_type_t type;
+	uint32_t counter;
+	uint32_t button;
 } encoder_deferred_data_t;
 
 // Encoder errors

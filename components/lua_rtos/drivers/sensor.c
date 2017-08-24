@@ -85,7 +85,7 @@ static void sensor_task(void *arg) {
     }
 }
 
-static void IRAM_ATTR debouncing(void *arg, uint8_t val) {
+static void IRAM_ATTR debouncing(void *arg, uint8_t val, uint64_t all) {
 	// Get sensor instance
 	sensor_instance_t *unit = (sensor_instance_t *)arg;
 

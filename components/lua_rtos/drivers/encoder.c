@@ -172,14 +172,17 @@ static void encoder_task(void *arg) {
         xQueueReceive(queue, &data, portMAX_DELAY);
 
         if (data.h->callback) {
-        	data.h->callback(data.h->callback_id, data.value, data.type);
+        	data.h->callback(data.h->callback_id, data.counter, data.button);
         }
     }
 }
 
 static void IRAM_ATTR encoder_isr(void* arg) {
 	encoder_h_t *encoder = (encoder_h_t *)arg;
-	uint8_t result;
+	encoder_deferred_data_t data;
+	uint8_t result, has_data;
+
+	has_data = 0;
 
 	// Get A, B & SW pin values
 	uint32_t port = GPIO.in;
@@ -193,6 +196,8 @@ static void IRAM_ATTR encoder_isr(void* arg) {
 		SW = 1;
 	}
 
+	SW = (SW==0?1:0);
+
 	// Grab state of input pins.
 	uint8_t pinstate = (A << 1) | B;
 
@@ -202,43 +207,27 @@ static void IRAM_ATTR encoder_isr(void* arg) {
 
 	if (result == DIR_CW) {
 		encoder->counter++;
+		has_data = 1;
 	} else if (result == DIR_CCW) {
 		encoder->counter--;
+		has_data = 1;
 	}
 
-	if ((result == DIR_CW) || (result == DIR_CCW)) {
-		if (encoder->callback) {
-			if (encoder->deferred) {
-				encoder_deferred_data_t data;
+	has_data |= (SW != encoder->sw_latch);
 
-				data.h = encoder;
-				data.value = encoder->counter;
-				data.type = EncoderMove;
+	encoder->sw_latch = SW;
 
-				xQueueSendFromISR(queue, &data, NULL);
-			} else {
-				encoder->callback(encoder->callback_id, encoder->counter, 0);
-			}
+	if (has_data && encoder->callback) {
+		if (encoder->deferred) {
+			data.h = encoder;
+			data.counter = encoder->counter;
+			data.button = encoder->sw_latch;
+
+			xQueueSendFromISR(queue, &data, NULL);
+		} else {
+			encoder->callback(encoder->callback_id, encoder->counter, encoder->sw_latch);
 		}
 	}
-
-	if (SW == 0) {
-		if (encoder->callback) {
-			if (encoder->deferred) {
-				encoder_deferred_data_t data;
-
-				data.h = encoder;
-				data.value = encoder->counter;
-				data.type = EncoderSwitch;
-
-				xQueueSendFromISR(queue, &data, NULL);
-			} else {
-				encoder->callback(encoder->callback_id, encoder->counter, 1);
-			}
-		}
-	}
-
-	encoder->sw_value = SW==0?1:0;
 }
 
 /*
@@ -372,7 +361,7 @@ driver_error_t *encoder_unsetup(encoder_h_t *h) {
 driver_error_t *encoder_read(encoder_h_t *h, int32_t *val, uint8_t *sw) {
 	portDISABLE_INTERRUPTS();
 	*val = h->counter;
-	*sw = h->sw_value;
+	*sw = h->sw_latch;
 	portENABLE_INTERRUPTS();
 
 	return NULL;

@@ -110,6 +110,6 @@ driver_error_t *sds011_setup(sensor_instance_t *unit) {
 
 
 /*
-  s = sensor.attach("SDS011", uart.UART1, 9600, 8, uart.PARNONE, uart.STOP1)
+  s = sensor.attach("SDS011", uart.UART1)
 
  */
