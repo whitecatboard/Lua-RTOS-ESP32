@@ -53,10 +53,10 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    
    Step 3. Test that The Whitecat Console binary works well:
    
-   For Ubuntu / Mac OS open a terminal and type:
+      For Ubuntu / Mac OS open a terminal and type:
    
-   ```lua
-   git clone --recursive https://github.com/whitecatboard/Lua-RTOS-ESP32
+      ```lua
+      ```
 
 ## Method 2: build by yourself
 
