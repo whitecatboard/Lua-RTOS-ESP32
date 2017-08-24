@@ -40,16 +40,16 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 
 1. Install The Whitecat Console. The Whitecat Console is a command line tool that allows the programmer to flash a Lua RTOS compatible board with the last available firmware.
 
-   * Download The Whitecat Console binary for your platform:
+   * Download The Whitecat Console binary for your platform.
      - [Ubuntu](http://downloads.whitecatboard.org/console/linux/wcc)
      - [Mac OS](http://downloads.whitecatboard.org/console/osx/wcc)
      - [Windows](http://downloads.whitecatboard.org/console/windows/wcc.exe)
    
-   * Copy The Whitecat Console binary to a folder accessed by the system path:
+   * Copy The Whitecat Console binary to a folder accessed by the system path.
      - Ubuntu: sudo cp wcc /usr/bin
      - Mac OS: sudo cp wcc /usr/bib
    
-   * Test that The Whitecat Console binary works well:
+   * Test that The Whitecat Console binary works well.
    
      For Ubuntu / Mac OS open a terminal and type:
    
@@ -69,7 +69,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 
      For Windows open a "command" window and type wcc.exe 
 
-2. Find which serial port is used by your board:
+2. Find which serial port is used by your board.
 
    Open a terminal with your board unplugged.
    
@@ -91,6 +91,18 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    /dev/cu.Bluetooth-Modem
    /dev/cu.SLAB_USBtoUART
    ```
+
+   For windows use wcc.exe instead of wcc.
+   
+3. Flash your board.
+
+   Open a terminal with your board plugged.
+
+   ```lua
+   $ wcc -p /dev/cu.SLAB_USBtoUART -f
+   ```
+
+   For windows use wcc.exe instead of wcc.
 
 ## Method 2: build by yourself
 
