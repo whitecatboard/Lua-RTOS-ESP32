@@ -41,13 +41,13 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 1. Install The Whitecat Console. The Whitecat Console is a command line tool that allows the programmer to flash a Lua RTOS compatible board with the last available firmware.
 
    * Download The Whitecat Console binary for your platform:
-    * [Ubuntu](http://downloads.whitecatboard.org/console/linux/wcc)
-    * [Mac OS](http://downloads.whitecatboard.org/console/osx/wcc)
-    * [Windows](http://downloads.whitecatboard.org/console/windows/wcc.exe)
+     - [Ubuntu](http://downloads.whitecatboard.org/console/linux/wcc)
+     - [Mac OS](http://downloads.whitecatboard.org/console/osx/wcc)
+     - [Windows](http://downloads.whitecatboard.org/console/windows/wcc.exe)
    
    * Copy The Whitecat Console binary to a folder accessed by the system path:
-    * Ubuntu: sudo cp wcc /usr/bin
-    * Mac OS: sudo cp wcc /usr/bib
+     - Ubuntu: sudo cp wcc /usr/bin
+     - Mac OS: sudo cp wcc /usr/bib
    
    * Test that The Whitecat Console binary works well:
    
