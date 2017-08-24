@@ -28,7 +28,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 
 ## Prerequisites
 
-1. Please note you need probably to download and install drivers for your board's USB-TO-SERIAL adapter for Windows and Mac OSX versions. The GNU/Linux version usually doesn't need any drivers. This drivers are required for connect to your board through a serial port connection.
+1. Please note you need probably to download and **install drivers for your board's USB-TO-SERIAL adapter** for Windows and Mac OSX versions. The GNU/Linux version usually doesn't need any drivers. This drivers are required for connect to your board through a serial port connection.
 
    | Board              |
    |--------------------|
@@ -55,16 +55,19 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    
      ```lua
      iMac-de-JAUME:~ jolive$ wcc
-     usage: wcc -p port | -ports [-ls path | -down source destination | -up source destination | -f | -d]
+     usage: wcc -p port | -ports [-ls path | -down source destination | -up source destination |
+     -f | -d]
       
-     -ports:         list all available serial ports on your computer
-     -p port:        serial port device, for example /dev/tty.SLAB_USBtoUART
-     -ls path:       list files present in path
-     -down src dst:	 transfer the source file (board) to destination file (computer)
-     -up src dst:	 transfer the source file (computer) to destination file (board)
-     -f:             flash board with last firmware
-     -d:             show debug messages
+     -ports:        list all available serial ports on your computer
+     -p port:       serial port device, for example /dev/tty.SLAB_USBtoUART
+     -ls path:      list files present in path
+     -down src dst: transfer the source file (board) to destination file (computer)
+     -up src dst:   transfer the source file (computer) to destination file (board)
+     -f:            flash board with last firmware
+     -d:            show debug messages
      ```
+
+     For Windows open a "command" window and type wcc.exe 
 
 ## Method 2: build by yourself
 
