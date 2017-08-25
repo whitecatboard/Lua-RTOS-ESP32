@@ -716,7 +716,6 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
     	}
     } else {
     	if(!ram_history_init) {
-	    	syslog(LOG_DEBUG, "ram history not yet initialized\n");
     		return;
     	}
   		char *buf = 0;
@@ -814,7 +813,6 @@ void linenoiseHistoryClear() {
     const char *fname;
     
     if (status_get(STATUS_LUA_HISTORY)) return;
-  	syslog(LOG_DEBUG, "clearing linenoise history\n");
 
     if (mount_is_mounted("fat")) {
     	if (mount_is_mounted("spiffs")) {
