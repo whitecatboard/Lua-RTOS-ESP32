@@ -37,7 +37,9 @@
 #include <time.h>
 #include <sys/time.h>
 
+#include <sys/mutex.h>
 #include <sys/driver.h>
+
 #include <drivers/adc.h>
 #include <drivers/gpio.h>
 #include <drivers/gpio_debouncing.h>
@@ -50,6 +52,7 @@ struct sensor_value;
 
 // Sensor specific function types
 typedef driver_error_t *(*sensor_setup_f_t)(struct sensor_instance *);
+typedef driver_error_t *(*sensor_unsetup_f_t)(struct sensor_instance *);
 typedef driver_error_t *(*sensor_acquire_f_t)(struct sensor_instance *, struct sensor_value *);
 typedef driver_error_t *(*sensor_set_f_t)(struct sensor_instance *, const char *, struct sensor_value *);
 typedef driver_error_t *(*sensor_get_f_t)(struct sensor_instance *, const char *, struct sensor_value *);
@@ -112,6 +115,7 @@ typedef struct {
 	const sensor_data_t properties[SENSOR_MAX_PROPERTIES];
 	const sensor_setup_f_t setup;
 	const sensor_setup_f_t presetup;
+	const sensor_unsetup_f_t unsetup;
 	const sensor_acquire_f_t acquire;
 	const sensor_set_f_t set;
 	const sensor_get_f_t get;
@@ -187,12 +191,14 @@ typedef struct {
 struct sensor_instance;
 
 // Sensor callback
-typedef void (*sensor_callback_t)(int, struct sensor_instance *, sensor_value_t *);
+typedef void (*sensor_callback_t)(int, struct sensor_instance *, sensor_value_t *, sensor_value_t *);
 
 // Sensor instance
 typedef struct sensor_instance {
 	int unit;
+	struct mtx mtx;
 	sensor_value_t data[SENSOR_MAX_DATA];
+	sensor_value_t latch[SENSOR_MAX_DATA];
 	sensor_value_t properties[SENSOR_MAX_PROPERTIES];
 	struct timeval next;
 
@@ -209,6 +215,7 @@ typedef struct {
 	sensor_instance_t *instance;
 	sensor_callback_t callback;
 	sensor_value_t data[SENSOR_MAX_DATA];
+	sensor_value_t latch[SENSOR_MAX_DATA];
 	int callback_id;
 } sensor_deferred_data_t;
 
@@ -221,7 +228,7 @@ driver_error_t *sensor_read(sensor_instance_t *unit, const char *id, sensor_valu
 driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value_t *value);
 driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value_t **value);
 driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callback_t callback, int id, uint8_t deferred);
-void sensor_quue_callbacks(sensor_instance_t *unit);
+void sensor_queue_callbacks(sensor_instance_t *unit);
 
 // SENSOR errors
 #define SENSOR_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  0)

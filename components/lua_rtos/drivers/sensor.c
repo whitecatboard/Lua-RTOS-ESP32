@@ -81,7 +81,7 @@ static void sensor_task(void *arg) {
 
     for(;;) {
         xQueueReceive(queue, &data, portMAX_DELAY);
-        data.callback(data.callback_id, data.instance, data.data);
+        data.callback(data.callback_id, data.instance, data.data, data.latch);
     }
 }
 
@@ -89,16 +89,24 @@ static void IRAM_ATTR debouncing(void *arg, uint8_t val) {
 	// Get sensor instance
 	sensor_instance_t *unit = (sensor_instance_t *)arg;
 
+	mtx_lock(&unit->mtx);
+
+	// Latch current data
+	memcpy(unit->latch, unit->data, sizeof(unit->data));
+
 	// Store sensor data
 	if (unit->sensor->flags & SENSOR_FLAG_ON_H) {
 		unit->data[0].integerd.value = val;
 	} else if (unit->sensor->flags & SENSOR_FLAG_ON_L) {
 		unit->data[0].integerd.value = !val;
 	} else {
+		mtx_unlock(&unit->mtx);
 		return;
 	}
 
-	sensor_quue_callbacks(unit);
+	sensor_queue_callbacks(unit);
+
+	mtx_unlock(&unit->mtx);
 };
 
 static void IRAM_ATTR isr(void* arg) {
@@ -108,31 +116,24 @@ static void IRAM_ATTR isr(void* arg) {
 	// Get pin value
 	uint8_t val = gpio_ll_pin_get(unit->setup[0].gpio.gpio);
 
+	mtx_lock(&unit->mtx);
+
+	// Latch current data
+	memcpy(unit->latch, unit->data, sizeof(unit->data));
+
 	// Store sensor data
 	if (unit->sensor->flags & SENSOR_FLAG_ON_H) {
 		unit->data[0].integerd.value = val;
 	} else if (unit->sensor->flags & SENSOR_FLAG_ON_L) {
 		unit->data[0].integerd.value = !val;
 	} else {
+		mtx_unlock(&unit->mtx);
 		return;
 	}
 
-	// Queue callbacks
-	sensor_deferred_data_t data;
-	int i;
+	sensor_queue_callbacks(unit);
 
-	for(i=0;i < SENSOR_MAX_CALLBACKS;i++) {
-		if (unit->callbacks[i].callback) {
-			data.instance = unit;
-			data.callback = unit->callbacks[i].callback;
-			data.callback_id = unit->callbacks[i].callback_id;
-			memcpy(data.data, unit->data, sizeof(unit->data));
-
-			xQueueSendFromISR(queue, &data, NULL);
-
-			break;
-		}
-	}
+	mtx_unlock(&unit->mtx);
 }
 
 static driver_error_t *sensor_adc_setup(uint8_t interface, sensor_instance_t *unit) {
@@ -338,6 +339,9 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
+	// Create mutex
+	mtx_init(&instance->mtx, NULL, NULL, 0);
+
 	// Store reference to sensor into instance
 	instance->sensor = sensor;
 
@@ -349,6 +353,8 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 		instance->data[i].type = sensor->data[i].type;
 	}
 
+	memcpy(instance->latch, instance->data, sizeof(instance->data));
+
 	// Initialize sensor properties from sensor definition into instance
 	for(i=0;i<SENSOR_MAX_PROPERTIES;i++) {
 		instance->properties[i].type = sensor->properties[i].type;
@@ -357,6 +363,7 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 	// Call to specific pre setup function, if any
 	if (instance->sensor->presetup) {
 		if ((error = instance->sensor->presetup(instance))) {
+			mtx_destroy(&instance->mtx);
 			free(instance);
 			return error;
 		}
@@ -385,6 +392,7 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 	}
 
 	if (error) {
+		mtx_destroy(&instance->mtx);
 		free(instance);
 		return error;
 	}
@@ -392,6 +400,7 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 	// Call to specific setup function
 	if (instance->sensor->setup) {
 		if ((error = instance->sensor->setup(instance))) {
+			mtx_destroy(&instance->mtx);
 			free(instance);
 			return error;
 		}
@@ -405,13 +414,24 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 }
 
 driver_error_t *sensor_unsetup(sensor_instance_t *unit) {
+	driver_error_t *error;
 	int i;
 
 	portDISABLE_INTERRUPTS();
 
 	if (attached == 0) {
+		// No sensors attached, nothing to do
 		portENABLE_INTERRUPTS();
 		return NULL;
+	}
+
+	// Call the the custom unsetup function, if any
+	if (unit->sensor->unsetup) {
+		error = unit->sensor->unsetup(unit);
+		if (error) {
+			portENABLE_INTERRUPTS();
+			return error;
+		}
 	}
 
 	// Remove interrupts
@@ -426,15 +446,18 @@ driver_error_t *sensor_unsetup(sensor_instance_t *unit) {
 	if (attached == 1) {
 		if (task) {
 			vTaskDelete(task);
+			task = NULL;
 		}
 
 		if (queue) {
 			vQueueDelete(queue);
+			queue = NULL;
 		}
 	}
 
 	attached--;
 
+	mtx_destroy(&unit->mtx);
 	free(unit);
 
 	portENABLE_INTERRUPTS();
@@ -480,12 +503,18 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 	}
 
 	if (!(unit->sensor->flags & (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_AUTO_ACQ))) {
+		mtx_lock(&unit->mtx);
+
+		memcpy(unit->latch, unit->data, sizeof(unit->data));
+
 		// Copy sensor values into instance
 		// Note that we only copy raw values as value types are set in sensor_setup from sensor
 		// definition
 		for(i=0;i < SENSOR_MAX_DATA;i++) {
 			unit->data[i].raw = value[i].raw;
 		}
+
+		mtx_unlock(&unit->mtx);
 
 		free(value);
 	}
@@ -496,15 +525,21 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 driver_error_t *sensor_read(sensor_instance_t *unit, const char *id, sensor_value_t **value) {
 	int idx = 0;
 
+	mtx_lock(&unit->mtx);
+
 	*value = NULL;
 	for(idx=0;idx <  SENSOR_MAX_DATA;idx++) {
 		if (unit->sensor->data[idx].id) {
 			if (strcmp(unit->sensor->data[idx].id,id) == 0) {
 				*value = &unit->data[idx];
+
+				mtx_unlock(&unit->mtx);
 				return NULL;
 			}
 		}
 	}
+
+	mtx_unlock(&unit->mtx);
 
 	return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL);
 }
@@ -517,14 +552,20 @@ driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value
 		return driver_error(SENSOR_DRIVER, SENSOR_ERR_SET_UNDEFINED, NULL);
 	}
 
+	mtx_lock(&unit->mtx);
+
 	for(idx=0;idx < SENSOR_MAX_PROPERTIES;idx++) {
 		if (unit->sensor->properties[idx].id) {
 			if (strcmp(unit->sensor->properties[idx].id,id) == 0) {
 				unit->sensor->set(unit, id, value);
+
+				mtx_unlock(&unit->mtx);
 				return NULL;
 			}
 		}
 	}
+
+	mtx_unlock(&unit->mtx);
 
 	return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL);
 }
@@ -539,6 +580,8 @@ driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value
 		return driver_error(SENSOR_DRIVER, SENSOR_ERR_SET_UNDEFINED, NULL);
 	}
 
+	mtx_lock(&unit->mtx);
+
 	for(idx=0;idx < SENSOR_MAX_PROPERTIES;idx++) {
 		if (unit->sensor->properties[idx].id) {
 			if (strcmp(unit->sensor->properties[idx].id,id) == 0) {
@@ -546,10 +589,13 @@ driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value
 
 				*value = &unit->properties[idx];
 
+				mtx_unlock(&unit->mtx);
 				return NULL;
 			}
 		}
 	}
+
+	mtx_unlock(&unit->mtx);
 
 	return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_FOUND, NULL);
 }
@@ -598,7 +644,7 @@ driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callbac
 	return NULL;
 }
 
-void IRAM_ATTR sensor_quue_callbacks(sensor_instance_t *unit) {
+void IRAM_ATTR sensor_queue_callbacks(sensor_instance_t *unit) {
 	// Queue callbacks
 	sensor_deferred_data_t data;
 	int i;
@@ -609,6 +655,7 @@ void IRAM_ATTR sensor_quue_callbacks(sensor_instance_t *unit) {
 			data.callback = unit->callbacks[i].callback;
 			data.callback_id = unit->callbacks[i].callback_id;
 			memcpy(data.data, unit->data, sizeof(unit->data));
+			memcpy(data.latch, unit->latch, sizeof(unit->latch));
 
 			xQueueSendFromISR(queue, &data, NULL);
 

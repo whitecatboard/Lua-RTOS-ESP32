@@ -903,11 +903,7 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
     }
     case LUA_TUSERDATA: {
       uvalue(obj)->metatable = mt;
-#if !LUA_USE_ROTABLE
       if (mt) {
-#else
-      if (mt && !isrometa) {
-#endif
         luaC_objbarrier(L, uvalue(obj), mt);
         luaC_checkfinalizer(L, gcvalue(obj), mt);
       }

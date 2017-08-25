@@ -347,10 +347,12 @@ driver_error_t *encoder_unsetup(encoder_h_t *h) {
 	if (attached == 1) {
 		if (task) {
 			vTaskDelete(task);
+			task = NULL;
 		}
 
 		if (queue) {
 			vQueueDelete(queue);
+			queue = NULL;
 		}
 	}
 

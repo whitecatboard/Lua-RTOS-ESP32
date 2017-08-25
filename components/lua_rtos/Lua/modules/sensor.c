@@ -54,7 +54,7 @@ extern TM_One_Wire_Devices_t ow_devices[MAX_ONEWIRE_PINS];
 extern LUA_REG_TYPE sensor_error_map[];
 extern const sensor_t sensors[];
 
-static void callback_func(int callback, sensor_instance_t *instance, sensor_value_t *data) {
+static void callback_func(int callback, sensor_instance_t *instance, sensor_value_t *data, sensor_value_t *latch) {
 	lua_State *TL;
 	lua_State *L;
 	int tref;
@@ -85,13 +85,17 @@ static void callback_func(int callback, sensor_instance_t *instance, sensor_valu
 			if (csensor->data[idx].id) {
 			    lua_pushstring(TL, (char *)csensor->data[idx].id);
 
-				switch (csensor->data[idx].type) {
-					case SENSOR_NO_DATA:     lua_pushnil(TL); break;
-					case SENSOR_DATA_INT:    lua_pushinteger(TL, data[idx].integerd.value); break;
-					case SENSOR_DATA_FLOAT:  lua_pushnumber (TL, data[idx].floatd.value); break;
-					case SENSOR_DATA_DOUBLE: lua_pushnumber (TL, data[idx].doubled.value); break;
-					case SENSOR_DATA_STRING: lua_pushstring (TL, data[idx].stringd.value); break;
-				}
+			    if (data[idx].raw.value == latch[idx].raw.value) {
+			    	lua_pushnil(TL);
+			    } else {
+					switch (csensor->data[idx].type) {
+						case SENSOR_NO_DATA:     lua_pushnil(TL); break;
+						case SENSOR_DATA_INT:    lua_pushinteger(TL, data[idx].integerd.value); break;
+						case SENSOR_DATA_FLOAT:  lua_pushnumber (TL, data[idx].floatd.value); break;
+						case SENSOR_DATA_DOUBLE: lua_pushnumber (TL, data[idx].doubled.value); break;
+						case SENSOR_DATA_STRING: lua_pushstring (TL, data[idx].stringd.value); break;
+					}
+			    }
 
 				lua_settable(TL, -3);
 			}
@@ -213,6 +217,26 @@ static int lsensor_attach( lua_State* L ) {
     lua_setmetatable(L, -2);
 
     return 1;
+}
+
+static int lsensor_dettach( lua_State* L ) {
+	sensor_userdata *udata =  (sensor_userdata *)luaL_checkudata(L, 1, "sensor.ins");;
+	driver_error_t *error;
+
+	// Destroy callbacks
+	int i;
+	for(i=0; i < SENSOR_MAX_CALLBACKS; i++) {
+		if (udata->instance->callbacks[i].callback_id) {
+			luaL_unref(L, LUA_REGISTRYINDEX, udata->instance->callbacks[i].callback_id);
+		}
+	}
+
+	// Destroy sensor
+    if ((error = sensor_unsetup(udata->instance))) {
+    	return luaL_driver_error(L, error);
+    }
+
+	return 0;
 }
 
 static int lsensor_set( lua_State* L ) {
@@ -684,21 +708,7 @@ static int lsensor_callback(lua_State* L) {
 
 // Destructor
 static int lsensor_ins_gc (lua_State *L) {
-	sensor_userdata *udata =  (sensor_userdata *)luaL_checkudata(L, 1, "sensor.ins");;
-	driver_error_t *error;
-
-	// Destroy callbacks
-	int i;
-	for(i=0; i < SENSOR_MAX_CALLBACKS; i++) {
-		if (udata->instance->callbacks[i].callback_id) {
-			luaL_unref(L, LUA_REGISTRYINDEX, udata->instance->callbacks[i].callback_id);
-		}
-	}
-
-	// Destroy sensor
-    if ((error = sensor_unsetup(udata->instance))) {
-    	return luaL_driver_error(L, error);
-    }
+	lsensor_dettach(L);
 
 	return 0;
 }
@@ -713,6 +723,7 @@ static const LUA_REG_TYPE lsensor_map[] = {
 };
 
 static const LUA_REG_TYPE lsensor_ins_map[] = {
+	{ LSTRKEY( "detach"      ),	LFUNCVAL( lsensor_dettach    ) },
 	{ LSTRKEY( "acquire"     ),	LFUNCVAL( lsensor_acquire   ) },
   	{ LSTRKEY( "read"        ),	LFUNCVAL( lsensor_read 	    ) },
   	{ LSTRKEY( "set"         ),	LFUNCVAL( lsensor_set 	    ) },
@@ -720,7 +731,7 @@ static const LUA_REG_TYPE lsensor_ins_map[] = {
   	{ LSTRKEY( "callback"    ),	LFUNCVAL( lsensor_callback  ) },
     { LSTRKEY( "__metatable" ),	LROVAL  ( lsensor_ins_map   ) },
 	{ LSTRKEY( "__index"     ), LROVAL  ( lsensor_ins_map   ) },
-	{ LSTRKEY( "__gc"        ), LROVAL  ( lsensor_ins_gc    ) },
+	{ LSTRKEY( "__gc"        ), LFUNCVAL( lsensor_ins_gc    ) },
     { LNILKEY, LNILVAL }
 };
 

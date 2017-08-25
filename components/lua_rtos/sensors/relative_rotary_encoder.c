@@ -34,10 +34,15 @@
 
 #include "esp_attr.h"
 
+#include <string.h>
+
+#include <sys/mutex.h>
+
 #include <drivers/sensor.h>
 #include <drivers/encoder.h>
 
 driver_error_t *relative_rotary_encoder_setup(sensor_instance_t *unit);
+driver_error_t *relative_rotary_encoder_unsetup(sensor_instance_t *unit);
 
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) relative_rotary_encoder_sensor = {
@@ -51,22 +56,36 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) relative_
 	.data = {
 		{.id = "dir", .type = SENSOR_DATA_INT},
 		{.id = "val", .type = SENSOR_DATA_INT},
-		{.id = "sw", .type = SENSOR_DATA_INT},
+		{.id = "sw",  .type = SENSOR_DATA_INT},
 	},
-	.setup = relative_rotary_encoder_setup
+	.setup = relative_rotary_encoder_setup,
+	.unsetup = relative_rotary_encoder_unsetup,
 };
 
 /*
  * Helper functions
  */
 static void IRAM_ATTR callback_func(int callback, int8_t dir, uint32_t counter, uint8_t button) {
-	sensor_instance_t *unit = (int)callback;
+	sensor_instance_t *unit = (sensor_instance_t *)callback;
 
+	mtx_lock(&unit->mtx);
+
+	// Latch values
+	memcpy(unit->latch, unit->data, sizeof(unit->data));
+
+	// Store current data
 	unit->data[0].integerd.value = dir;
 	unit->data[1].integerd.value = counter;
 	unit->data[2].integerd.value = button;
 
-	sensor_quue_callbacks(unit);
+	if (counter != unit->latch[1].integerd.value) {
+		// Encoder is moving
+		unit->latch[0].integerd.value = 0;
+	}
+
+	sensor_queue_callbacks(unit);
+
+	mtx_unlock(&unit->mtx);
 }
 
 /*
@@ -95,5 +114,15 @@ driver_error_t *relative_rotary_encoder_setup(sensor_instance_t *unit) {
 	return NULL;
 }
 
+driver_error_t *relative_rotary_encoder_unsetup(sensor_instance_t *unit) {
+	driver_error_t *error;
+
+	error = encoder_unsetup((sensor_instance_t *)unit->unit);
+	if (error){
+		return NULL;
+	}
+
+	return NULL;
+}
 #endif
 #endif
