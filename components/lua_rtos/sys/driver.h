@@ -70,6 +70,7 @@
 #define TIMER_DRIVER_ID    28
 #define ENCODER_DRIVER_ID  29
 #define MDNS_DRIVER_ID     30
+#define CPU_DRIVER_ID      31
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -96,6 +97,7 @@
 #define TIMER_DRIVER driver_get_by_name("TIMER")
 #define ENCODER_DRIVER driver_get_by_name("ENCODER")
 #define MDNS_DRIVER driver_get_by_name("mdns")
+#define CPU_DRIVER driver_get_by_name("cpu")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 
@@ -229,3 +231,4 @@ char *driver_target_name(const driver_t *target_driver, int target_unit, const c
 	extern const driver_message_t DRIVER_CONCAT(lname,_errors)[]; \
 	const __attribute__((used,unused,section(DRIVER_TOSTRING(DRIVER_CONCAT(.lname,_errors))))) driver_message_t DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_errors)) = {exception, msg}; \
 	const __attribute__((used,unused,section(DRIVER_TOSTRING(DRIVER_CONCAT(.lname,_error_map))))) LUA_REG_TYPE DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_error_map)) = {LSTRKEY(DRIVER_TOSTRING(key)), LINTVAL(exception)};
+
