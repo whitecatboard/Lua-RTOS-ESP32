@@ -54,19 +54,27 @@ typedef driver_error_t *(*sensor_acquire_f_t)(struct sensor_instance *, struct s
 typedef driver_error_t *(*sensor_set_f_t)(struct sensor_instance *, const char *, struct sensor_value *);
 typedef driver_error_t *(*sensor_get_f_t)(struct sensor_instance *, const char *, struct sensor_value *);
 
+#define SENSOR_MAX_INTERFACES 4
 #define SENSOR_MAX_DATA       6
 #define SENSOR_MAX_PROPERTIES 4
 #define SENSOR_MAX_CALLBACKS  4
 
-#define SENSOR_FLAG_ON_OFF          (1 << 0)
-#define SENSOR_FLAG_ON_H            (1 << 1)
-#define SENSOR_FLAG_ON_L            (1 << 2)
-#define SENSOR_FLAG_DEBOUNCING      (1 << 3)
-#define SENSOR_FLAG_AUTO_ACQ        (1 << 4)
+// Sensor initializes it's interfaces by it self. Don't use default initialization
+#define SENSOR_FLAG_CUSTOM_INTERFACE_INIT (1 << 0)
+
+// Sensor acquires data automatically. This type of sensors acquire data when an
+// interrupt is raised, when a time interval expires, or when sensor sends a new
+// data
+#define SENSOR_FLAG_AUTO_ACQ (1 << 1)
+
+#define SENSOR_FLAG_ON_OFF          (1 << 2)
+#define SENSOR_FLAG_ON_H            (1 << 3)
+#define SENSOR_FLAG_ON_L            (1 << 4)
+#define SENSOR_FLAG_DEBOUNCING      (1 << 5)
 
 // Sensor interface
 typedef enum {
-	ADC_INTERFACE,
+	ADC_INTERFACE = 1,
 	SPI_INTERFACE,
 	I2C_INTERFACE,
 	OWIRE_INTERFACE,
@@ -98,7 +106,7 @@ typedef struct {
 // Sensor structure
 typedef struct {
 	const char *id;
-	const sensor_interface_t interface;
+	const sensor_interface_t interface[SENSOR_MAX_INTERFACES];
 	const uint32_t flags;
 	const sensor_data_t data[SENSOR_MAX_DATA];
 	const sensor_data_t properties[SENSOR_MAX_PROPERTIES];
@@ -194,8 +202,7 @@ typedef struct sensor_instance {
 	} callbacks[SENSOR_MAX_CALLBACKS];
 
 	const sensor_t *sensor;
-	sensor_setup_t setup;
-	sensor_setup_t presetup;
+	sensor_setup_t setup[SENSOR_MAX_INTERFACES];
 } sensor_instance_t;
 
 typedef struct {
@@ -214,6 +221,7 @@ driver_error_t *sensor_read(sensor_instance_t *unit, const char *id, sensor_valu
 driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value_t *value);
 driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value_t **value);
 driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callback_t callback, int id, uint8_t deferred);
+void sensor_quue_callbacks(sensor_instance_t *unit);
 
 // SENSOR errors
 #define SENSOR_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  0)

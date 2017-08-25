@@ -85,7 +85,7 @@ static void sensor_task(void *arg) {
     }
 }
 
-static void IRAM_ATTR debouncing(void *arg, uint8_t val, uint64_t all) {
+static void IRAM_ATTR debouncing(void *arg, uint8_t val) {
 	// Get sensor instance
 	sensor_instance_t *unit = (sensor_instance_t *)arg;
 
@@ -98,22 +98,7 @@ static void IRAM_ATTR debouncing(void *arg, uint8_t val, uint64_t all) {
 		return;
 	}
 
-	// Queue callbacks
-	sensor_deferred_data_t data;
-	int i;
-
-	for(i=0;i < SENSOR_MAX_CALLBACKS;i++) {
-		if (unit->callbacks[i].callback) {
-			data.instance = unit;
-			data.callback = unit->callbacks[i].callback;
-			data.callback_id = unit->callbacks[i].callback_id;
-			memcpy(data.data, unit->data, sizeof(unit->data));
-
-			xQueueSendFromISR(queue, &data, NULL);
-
-			break;
-		}
-	}
+	sensor_quue_callbacks(unit);
 };
 
 static void IRAM_ATTR isr(void* arg) {
@@ -121,7 +106,7 @@ static void IRAM_ATTR isr(void* arg) {
 	sensor_instance_t *unit = (sensor_instance_t *)arg;
 
 	// Get pin value
-	uint8_t val = gpio_ll_pin_get(unit->setup.gpio.gpio);
+	uint8_t val = gpio_ll_pin_get(unit->setup[0].gpio.gpio);
 
 	// Store sensor data
 	if (unit->sensor->flags & SENSOR_FLAG_ON_H) {
@@ -150,28 +135,35 @@ static void IRAM_ATTR isr(void* arg) {
 	}
 }
 
-static driver_error_t *sensor_adc_setup(sensor_instance_t *unit) {
+static driver_error_t *sensor_adc_setup(uint8_t interface, sensor_instance_t *unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
 	driver_error_t *error;
 
 	// Lock ADC channel
-    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, ADC_DRIVER, unit->setup.adc.channel, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, ADC_DRIVER, unit->setup[interface].adc.channel, DRIVER_ALL_FLAGS, unit->sensor->id))) {
     	// Revoked lock on ADC channel
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
 
-	if ((error = adc_setup(unit->setup.adc.unit, unit->setup.adc.channel,  unit->setup.adc.devid, unit->setup.adc.vrefp, unit->setup.adc.vrefn, unit->setup.adc.resolution, &unit->setup.adc.h))) {
+	if (
+			(error = adc_setup(
+					unit->setup[interface].adc.unit, unit->setup[interface].adc.channel,
+					unit->setup[interface].adc.devid, unit->setup[interface].adc.vrefp,
+					unit->setup[interface].adc.vrefn, unit->setup[interface].adc.resolution,
+					&unit->setup[interface].adc.h
+			))
+		) {
 		return error;
 	}
 
 	return NULL;
 }
 
-static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
+static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
 
 	// Lock gpio
-    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup.gpio.gpio, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup[interface].gpio.gpio, DRIVER_ALL_FLAGS, unit->sensor->id))) {
     	// Revoked lock on gpio
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
@@ -181,7 +173,7 @@ static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
     		driver_error_t *error;
     		uint16_t threshold = (unit->sensor->flags & 0xffff0000) >> 16;
 
-    		if ((error = gpio_debouncing_register(1 << unit->setup.gpio.gpio, threshold, debouncing, (void *)unit))) {
+    		if ((error = gpio_debouncing_register(1 << unit->setup[interface].gpio.gpio, threshold, debouncing, (void *)unit))) {
     			return error;
     		}
     	} else {
@@ -192,7 +184,7 @@ static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
 
             io_conf.intr_type = GPIO_INTR_ANYEDGE;
             io_conf.mode = GPIO_MODE_INPUT;
-            io_conf.pin_bit_mask = (1ULL << unit->setup.gpio.gpio);
+            io_conf.pin_bit_mask = (1ULL << unit->setup[interface].gpio.gpio);
             io_conf.pull_down_en = 0;
             io_conf.pull_up_en = 1;
 
@@ -205,19 +197,19 @@ static driver_error_t *sensor_gpio_setup(sensor_instance_t *unit) {
             	status_set(STATUS_ISR_SERVICE_INSTALLED);
             }
 
-            gpio_isr_handler_add(unit->setup.gpio.gpio, isr, (void *)unit);
+            gpio_isr_handler_add(unit->setup[interface].gpio.gpio, isr, (void *)unit);
 
             portENABLE_INTERRUPTS();
     	}
     } else {
-        gpio_pin_output(unit->setup.gpio.gpio);
-    	gpio_pin_set(unit->setup.gpio.gpio);
+        gpio_pin_output(unit->setup[interface].gpio.gpio);
+    	gpio_pin_set(unit->setup[interface].gpio.gpio);
     }
 
 	return NULL;
 }
 
-static driver_error_t *sensor_owire_setup(sensor_instance_t *unit) {
+static driver_error_t *sensor_owire_setup(uint8_t interface, sensor_instance_t *unit) {
 	driver_error_t *error;
 
 	// By default we always can get sensor data
@@ -228,78 +220,72 @@ static driver_error_t *sensor_owire_setup(sensor_instance_t *unit) {
 	#endif
 
 	// Check if owire interface is setup on the given gpio
-	int dev = owire_checkpin(unit->setup.owire.gpio);
+	int dev = owire_checkpin(unit->setup[interface].owire.gpio);
 	if (dev < 0) {
 		// setup new owire interface on given pin
-		if ((error = owire_setup_pin(unit->setup.owire.gpio))) {
+		if ((error = owire_setup_pin(unit->setup[interface].owire.gpio))) {
 		  	return error;
 		}
-		int dev = owire_checkpin(unit->setup.owire.gpio);
+		int dev = owire_checkpin(unit->setup[interface].owire.gpio);
 		if (dev < 0) {
 			return driver_error(SENSOR_DRIVER, SENSOR_ERR_CANT_INIT, NULL);
 		}
 		vTaskDelay(10 / portTICK_RATE_MS);
 		owdevice_input(dev);
 		ow_devices_init(dev);
-		unit->setup.owire.owdevice = dev;
+		unit->setup[interface].owire.owdevice = dev;
 
 		// Search for devices on owire bus
 		TM_OneWire_Dosearch(dev);
 	}
 	else {
-		unit->setup.owire.owdevice = dev;
+		unit->setup[interface].owire.owdevice = dev;
 		TM_OneWire_Dosearch(dev);
 	}
 
 	// check if owire bus is setup
-	if (ow_devices[unit->setup.owire.owdevice].device.pin == 0) {
+	if (ow_devices[unit->setup[interface].owire.owdevice].device.pin == 0) {
 		return driver_error(SENSOR_DRIVER, SENSOR_ERR_CANT_INIT, NULL);
 	}
 
 	return NULL;
 }
 
-static driver_error_t *sensor_i2c_setup(sensor_instance_t *unit) {
+static driver_error_t *sensor_i2c_setup(uint8_t interface, sensor_instance_t *unit) {
 	driver_error_t *error;
 
     driver_unit_lock_error_t *lock_error = NULL;
-	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, I2C_DRIVER, unit->setup.i2c.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, I2C_DRIVER, unit->setup[interface].i2c.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
 		return driver_lock_error(SENSOR_DRIVER, lock_error);
-	}
-
-	if ((unit->setup.i2c.sda >= 0) || (unit->setup.i2c.scl >= 0)) {
-	    if ((error = i2c_pin_map(unit->setup.i2c.id, unit->setup.i2c.sda, unit->setup.i2c.scl))) {
-	    	return error;
-	    }
 	}
 
 	#if CONFIG_LUA_RTOS_USE_POWER_BUS
 	pwbus_on();
 	#endif
 
-    if ((error = i2c_setup(unit->setup.i2c.id, I2C_MASTER, unit->setup.i2c.speed, 0, 0))) {
+    if ((error = i2c_setup(unit->setup[interface].i2c.id, I2C_MASTER, unit->setup[interface].i2c.speed, 0, 0))) {
     	return error;
     }
 
 	return NULL;
 }
 
-static driver_error_t *sensor_uart_setup(sensor_instance_t *unit) {
+static driver_error_t *sensor_uart_setup(uint8_t interface, sensor_instance_t *unit) {
 	driver_error_t *error;
 
     driver_unit_lock_error_t *lock_error = NULL;
-	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, UART_DRIVER,unit->setup.uart.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, UART_DRIVER,unit->setup[interface].uart.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
 		return driver_lock_error(SENSOR_DRIVER, lock_error);
 	}
 
 	if ((error = uart_init(
-    		unit->setup.uart.id, unit->setup.uart.speed, unit->setup.uart.data_bits,
-			unit->setup.uart.parity, unit->setup.uart.stop_bits, DRIVER_ALL_FLAGS, 1024
+    		unit->setup[interface].uart.id, unit->setup[interface].uart.speed, unit->setup[interface].uart.data_bits,
+			unit->setup[interface].uart.parity, unit->setup[interface].uart.stop_bits, DRIVER_ALL_FLAGS, 1024
 	))) {
     	return error;
     }
 
-    if ((error = uart_setup_interrupts(unit->setup.uart.id))) {
+    if ((error = uart_setup_interrupts(unit->setup[interface].uart.id))) {
         return error;
     }
 
@@ -356,7 +342,7 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 	instance->sensor = sensor;
 
 	// Copy sensor setup configuration into instance
-	memcpy(&instance->setup, setup, sizeof(sensor_setup_t));
+	memcpy(&instance->setup, setup, SENSOR_MAX_INTERFACES * sizeof(sensor_setup_t));
 
 	// Initialize sensor data from sensor definition into instance
 	for(i=0;i<SENSOR_MAX_DATA;i++) {
@@ -376,16 +362,26 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 		}
 	}
 
-	// Setup sensor interface
-	switch (sensor->interface) {
-		case ADC_INTERFACE: error = sensor_adc_setup(instance);break;
-		case GPIO_INTERFACE: error = sensor_gpio_setup(instance);break;
-		case OWIRE_INTERFACE: error = sensor_owire_setup(instance);break;
-		case I2C_INTERFACE: error = sensor_i2c_setup(instance);break;
-		case UART_INTERFACE: error = sensor_uart_setup(instance);break;
-		default:
-			return driver_error(SENSOR_DRIVER, SENSOR_ERR_INTERFACE_NOT_SUPPORTED, NULL);
-			break;
+	// Setup sensor interfaces
+	if (!(sensor->flags & SENSOR_FLAG_CUSTOM_INTERFACE_INIT)) {
+		for(i=0;i<SENSOR_MAX_INTERFACES;i++) {
+			if (sensor->interface[i]) {
+				switch (sensor->interface[i]) {
+					case ADC_INTERFACE: error = sensor_adc_setup(i, instance);break;
+					case GPIO_INTERFACE: error = sensor_gpio_setup(i, instance);break;
+					case OWIRE_INTERFACE: error = sensor_owire_setup(i, instance);break;
+					case I2C_INTERFACE: error = sensor_i2c_setup(i, instance);break;
+					case UART_INTERFACE: error = sensor_uart_setup(i, instance);break;
+					default:
+						return driver_error(SENSOR_DRIVER, SENSOR_ERR_INTERFACE_NOT_SUPPORTED, NULL);
+						break;
+				}
+
+				if (error) {
+					break;
+				}
+			}
+		}
 	}
 
 	if (error) {
@@ -393,10 +389,11 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 		return error;
 	}
 
-	// Call to specific setup function, if any
+	// Call to specific setup function
 	if (instance->sensor->setup) {
 		if ((error = instance->sensor->setup(instance))) {
-			free(instance);			return error;
+			free(instance);
+			return error;
 		}
 	}
 
@@ -408,6 +405,8 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 }
 
 driver_error_t *sensor_unsetup(sensor_instance_t *unit) {
+	int i;
+
 	portDISABLE_INTERRUPTS();
 
 	if (attached == 0) {
@@ -417,7 +416,11 @@ driver_error_t *sensor_unsetup(sensor_instance_t *unit) {
 
 	// Remove interrupts
 	if (unit->sensor->flags & SENSOR_FLAG_ON_OFF) {
-		gpio_isr_handler_remove(unit->setup.gpio.gpio);
+		for(i=0; i < SENSOR_MAX_INTERFACES; i++) {
+			if (unit->setup[i].gpio.gpio) {
+				gpio_isr_handler_remove(unit->setup[i].gpio.gpio);
+			}
+		}
 	}
 
 	if (attached == 1) {
@@ -593,6 +596,25 @@ driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callbac
 	portENABLE_INTERRUPTS();
 
 	return NULL;
+}
+
+void IRAM_ATTR sensor_quue_callbacks(sensor_instance_t *unit) {
+	// Queue callbacks
+	sensor_deferred_data_t data;
+	int i;
+
+	for(i=0;i < SENSOR_MAX_CALLBACKS;i++) {
+		if (unit->callbacks[i].callback) {
+			data.instance = unit;
+			data.callback = unit->callbacks[i].callback;
+			data.callback_id = unit->callbacks[i].callback_id;
+			memcpy(data.data, unit->data, sizeof(unit->data));
+
+			xQueueSendFromISR(queue, &data, NULL);
+
+			break;
+		}
+	}
 }
 
 DRIVER_REGISTER(SENSOR,sensor,NULL,NULL,NULL);

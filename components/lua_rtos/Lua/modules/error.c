@@ -44,9 +44,7 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     
     if (err.type == LOCK) {
         ret_val = luaL_error(L,
-            "%s%d, %s%d is used by %s%d",
-			err.lock_error->owner_driver->name,
-			err.lock_error->owner_unit,
+            "%s%d is used by %s%d",
 			err.lock_error->target_driver->name,
 			err.lock_error->target_unit,
 			err.lock_error->lock->owner->name,

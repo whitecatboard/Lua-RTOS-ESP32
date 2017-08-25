@@ -55,7 +55,9 @@ driver_error_t *thermistor_acquire(sensor_instance_t *unit, sensor_value_t *valu
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) thermistor_sensor = {
 	.id = "THERMISTOR",
-	.interface = ADC_INTERFACE,
+	.interface = {
+		ADC_INTERFACE,
+	},
 	.data = {
 		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
 	},
@@ -75,7 +77,7 @@ driver_error_t *thermistor_acquire(sensor_instance_t *unit, sensor_value_t *valu
 	driver_error_t *error;
 
 	// Get ADC channel from handle
-	if ((error = adc_get_channel(&unit->setup.adc.h, &adc))) {
+	if ((error = adc_get_channel(&unit->setup[0].adc.h, &adc))) {
 		return error;
 	}
 
@@ -86,7 +88,7 @@ driver_error_t *thermistor_acquire(sensor_instance_t *unit, sensor_value_t *valu
 
 	for(i=1; i <= THERMISTORSAMPLES;i++) {
 		// Read value
-		if ((error = adc_read(&unit->setup.adc.h, &raw, NULL))) {
+		if ((error = adc_read(&unit->setup[0].adc.h, &raw, NULL))) {
 			return error;
 		}
 

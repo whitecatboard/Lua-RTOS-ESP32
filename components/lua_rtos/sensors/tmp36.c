@@ -32,7 +32,6 @@
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 #if CONFIG_LUA_RTOS_USE_SENSOR_TMP36
 
-#include "tmp36.h"
 
 #include <math.h>
 
@@ -41,10 +40,15 @@
 #include <drivers/sensor.h>
 #include <drivers/adc.h>
 
+driver_error_t *tmp36_setup(sensor_instance_t *unit);
+driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values);
+
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) tmp36_sensor = {
 	.id = "TMP36",
-	.interface = ADC_INTERFACE,
+	.interface = {
+		ADC_INTERFACE,
+	},
 	.data = {
 		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
 	},
@@ -65,7 +69,7 @@ driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	double mvolts = 0;
 
 	// Read value
-	if ((error = adc_read(&unit->setup.adc.h, &raw, &mvolts))) {
+	if ((error = adc_read(&unit->setup[0].adc.h, &raw, &mvolts))) {
 		return error;
 	}
 

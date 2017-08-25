@@ -45,7 +45,9 @@
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) gps_sensor = {
 	.id = "GPS",
-	.interface = UART_INTERFACE,
+	.interface = {
+		UART_INTERFACE,
+	},
 	.data = {
 		{.id = "lon", .type = SENSOR_DATA_DOUBLE},
 		{.id = "lat" , .type = SENSOR_DATA_DOUBLE},
@@ -70,7 +72,7 @@ static void gps(void *args) {
  * Operation functions
  */
 driver_error_t *gps_setup(sensor_instance_t *unit) {
-	xTaskCreatePinnedToCore(gps, "gps", configMINIMAL_STACK_SIZE, (void *)((int)unit->setup.uart.id), 21, NULL, 0);
+	xTaskCreatePinnedToCore(gps, "gps", configMINIMAL_STACK_SIZE, (void *)((int)unit->setup[0].uart.id), 21, NULL, 0);
 
 	return NULL;
 }

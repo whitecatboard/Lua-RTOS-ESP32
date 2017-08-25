@@ -32,7 +32,6 @@
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 #if CONFIG_LUA_RTOS_USE_SENSOR_PING28015
 
-#include "ping28015.h"
 #include "freertos/FreeRTOS.h"
 
 #include <math.h>
@@ -44,10 +43,16 @@
 #include <drivers/sensor.h>
 #include <drivers/gpio.h>
 
+driver_error_t *ping28015_setup(sensor_instance_t *unit);
+driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *values);
+driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting);
+
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) ping28015_sensor = {
 	.id = "PING28015",
-	.interface = GPIO_INTERFACE,
+	.interface = {
+		GPIO_INTERFACE,
+	},
 	.data = {
 		{.id = "distance",    .type = SENSOR_DATA_FLOAT},
 	},
@@ -71,7 +76,7 @@ driver_error_t *ping28015_setup(sensor_instance_t *unit) {
 	unit->properties[0].floatd.value = 20;
 
 	// Ignore first measure
-	gpio_pin_clr(unit->setup.gpio.gpio);
+	gpio_pin_clr(unit->setup[0].gpio.gpio);
 	delay(20);
 
 	return NULL;
@@ -86,7 +91,7 @@ driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_va
 }
 
 driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *values) {
-	int gpio = unit->setup.gpio.gpio;
+	int gpio = unit->setup[0].gpio.gpio;
 	unsigned start, end;
 	double time;
 	uint8_t val;

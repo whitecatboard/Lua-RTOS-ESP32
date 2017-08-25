@@ -93,7 +93,9 @@ driver_error_t *a49e_acquire(sensor_instance_t *unit, sensor_value_t *values);
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) a49e_sensor = {
 	.id = "A49E",
-	.interface = ADC_INTERFACE,
+	.interface = {
+		ADC_INTERFACE,
+	},
 	.data = {
 		{.id = "magnetic field", .type = SENSOR_DATA_FLOAT},
 	},
@@ -114,7 +116,7 @@ driver_error_t *a49e_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 
 	for(i=1; i <= A49E_SAMPLES;i++) {
 		// Read value
-		if ((error = adc_read(&unit->setup.adc.h, &raw, &mvolts))) {
+		if ((error = adc_read(&unit->setup[0].adc.h, &raw, &mvolts))) {
 			return error;
 		}
 
@@ -126,7 +128,7 @@ driver_error_t *a49e_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	// Get channel info
 	adc_channel_t *chan;
 
-	adc_get_channel(&unit->setup.adc.h, &chan);
+	adc_get_channel(&unit->setup[0].adc.h, &chan);
 
 	values->floatd.value = ((mvolts - A49E_VOUT_B0(chan->pvref)) / A49E_M);
 

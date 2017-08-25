@@ -679,9 +679,9 @@ menu "Lua RTOS"
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "Push switch"
 					default y						
-				config LUA_RTOS_USE_SENSOR_ROTARY_ENCODER
+				config LUA_RTOS_USE_SENSOR_RELATIVE_ROTARY_ENCODER
 					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "Rotary encoder"
+					bool "Relative rotary encoder"
 					default y	
 				config LUA_RTOS_USE_SENSOR_SDS011
 					depends on LUA_RTOS_LUA_USE_SENSOR

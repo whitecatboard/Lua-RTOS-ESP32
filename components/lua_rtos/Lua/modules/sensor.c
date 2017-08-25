@@ -102,71 +102,45 @@ static void callback_func(int callback, sensor_instance_t *instance, sensor_valu
 	}
 }
 
-static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_setup_t *setup, uint8_t attach ) {
-	switch (sensor->interface) {
-		case ADC_INTERFACE:
-			setup->adc.unit = luaL_checkinteger(L, 2);
-			setup->adc.channel = luaL_checkinteger(L, 3);
-			setup->adc.resolution = luaL_optinteger(L, 4, 0);
-			setup->adc.vrefp = luaL_optinteger( L, 5, 0 );
-			setup->adc.vrefn = luaL_optinteger( L, 6, 0 );
-			setup->adc.devid = 0;
-			break;
+static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_setup_t *setup) {
+	int i, top;
 
-		case GPIO_INTERFACE:
-			setup->gpio.gpio = luaL_checkinteger(L, 2);
-			break;
+	// Init setup structure
+	memset(setup, 0, SENSOR_MAX_INTERFACES * sizeof(sensor_setup_t));
 
-		case I2C_INTERFACE:
-			if (attach) {
-				setup->i2c.id = luaL_checkinteger(L, 2);
+	// Get the setup argument and put in in the setup structure
+	top = 2;
 
-				if (lua_gettop(L) >= 3) {
-					setup->i2c.speed = luaL_checkinteger(L, 3);
-				} else {
-					// Default speed
-					setup->i2c.speed = 0;
-				}
+	for(i = 0; i < SENSOR_MAX_INTERFACES;i++) {
+		if (sensor->interface[i]) {
+			switch (sensor->interface[i]) {
+				case ADC_INTERFACE:
+					setup[i].adc.unit = luaL_checkinteger(L, top++);
+					setup[i].adc.channel = luaL_checkinteger(L, top++);
+					break;
 
-				setup->i2c.sda = -1;
-				setup->i2c.scl = -1;
+				case GPIO_INTERFACE:
+					setup[i].gpio.gpio = luaL_checkinteger(L, top++);
+					break;
 
-				if (lua_gettop(L) >= 4) {
-					setup->i2c.devid = luaL_checkinteger(L, 4);
-				} else {
-					// Default address
-					setup->i2c.devid = 0;
-				}
-			} else {
-				setup->i2c.id = luaL_checkinteger(L, 2);
-				setup->i2c.speed = luaL_checkinteger(L, 3);
-				setup->i2c.sda = luaL_checkinteger(L, 4);
-				setup->i2c.scl = luaL_checkinteger(L, 5);
-				setup->i2c.devid = luaL_checkinteger(L, 6);
+				case I2C_INTERFACE:
+					setup[i].i2c.id = luaL_checkinteger(L, top++);
+					setup[i].i2c.devid = luaL_checkinteger(L, top++);
+					break;
+
+				case OWIRE_INTERFACE:
+					setup[i].owire.gpio = luaL_checkinteger(L, top++);
+					setup[i].owire.owsensor = luaL_checkinteger(L, top++);
+					break;
+
+				case UART_INTERFACE:
+						setup[i].uart.id = luaL_checkinteger(L, top++);
+					break;
+
+				default:
+					break;
 			}
-			break;
-
-		case OWIRE_INTERFACE:
-			setup->owire.gpio = luaL_checkinteger(L, 2);
-
-			if (lua_gettop(L) == 4) {
-				setup->owire.owsensor = ((unsigned long long)luaL_checkinteger(L, 3) << 32) || luaL_checkinteger(L, 4);
-			} else {
-				setup->owire.owsensor = luaL_checkinteger(L, 3);
-			}
-
-			break;
-
-		case UART_INTERFACE:
-				setup->uart.id = luaL_checkinteger(L, 2);
-				setup->uart.speed = luaL_optinteger(L, 3, 0);
-				setup->uart.data_bits = luaL_optinteger(L, 4, 0);
-				setup->uart.parity = luaL_optinteger(L, 5, 0);
-				setup->uart.stop_bits = luaL_optinteger(L, 6, 0);
-			break;
-
-		default:
-			break;
+		}
 	}
 }
 
@@ -204,50 +178,11 @@ static int lsensor_set_prepare( lua_State* L, const sensor_t *sensor, const char
 	return 0;
 }
 
-static int lsensor_setup( lua_State* L ) {
-	driver_error_t *error;
-	const sensor_t *sensor;
-	sensor_instance_t *instance = NULL;
-	sensor_setup_t setup;
-
-	luaL_deprecated(L, "sensor.setup", "sensor.attach");
-
-    const char *id = luaL_checkstring( L, 1 );
-
-	// Get sensor definition
-	sensor = get_sensor(id);
-	if (!sensor) {
-    	return luaL_exception(L, SENSOR_ERR_NOT_FOUND);
-	}
-
-	// Prepare setup
-	lsensor_setup_prepare(L, sensor, &setup, 0);
-
-	// Setup sensor
-	if ((error = sensor_setup(sensor, &setup, &instance))) {
-    	return luaL_driver_error(L, error);
-    }
-
-	// Create user data
-    sensor_userdata *data = (sensor_userdata *)lua_newuserdata(L, sizeof(sensor_userdata));
-    if (!data) {
-    	return luaL_exception(L, SENSOR_ERR_NOT_ENOUGH_MEMORY);
-    }
-
-    data->instance = instance;
-    data->adquired = 0;
-
-    luaL_getmetatable(L, "sensor.ins");
-    lua_setmetatable(L, -2);
-
-    return 1;
-}
-
 static int lsensor_attach( lua_State* L ) {
 	driver_error_t *error;
 	const sensor_t *sensor;
 	sensor_instance_t *instance = NULL;
-	sensor_setup_t setup;
+	sensor_setup_t setup[SENSOR_MAX_INTERFACES];
 
     const char *id = luaL_checkstring( L, 1 );
 
@@ -258,10 +193,10 @@ static int lsensor_attach( lua_State* L ) {
 	}
 
 	// Prepare setup
-	lsensor_setup_prepare(L, sensor, &setup, 1);
+	lsensor_setup_prepare(L, sensor, setup);
 
 	// Setup sensor
-	if ((error = sensor_setup(sensor, &setup, &instance))) {
+	if ((error = sensor_setup(sensor, setup, &instance))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -445,10 +380,12 @@ static int lsensor_read( lua_State* L ) {
 static int lsensor_list( lua_State* L ) {
 	const sensor_t *csensor = sensors;
 
-	uint16_t count = 0, i = 0, idx, len;
-	uint8_t table = 0;
+	uint16_t count = 0, i = 0, j, idx, len;
+	uint8_t table = 0, exit;
 	char interface[7];
 	char type[7];
+	char buff[31];
+	char interfaces[31];
 
 	// Check if user wants result as a table, or wants result
 	// on the console
@@ -460,43 +397,73 @@ static int lsensor_list( lua_State* L ) {
 	}
 
 	if (!table) {
-		printf("SENSOR      INTERFACE   PROVIDES                    PROPERTIES                 \r\n");
-		printf("-------------------------------------------------------------------------------\r\n");
+		printf("SENSOR               INTERFACE                      PROVIDES                            PROPERTIES                 \r\n");
+		printf("-------------------------------------------------------------------------------------------------------------------\r\n");
 	} else {
 		lua_createtable(L, count, 0);
 	}
 
 	while (csensor->id) {
-		switch (csensor->interface) {
-			case ADC_INTERFACE:   strcpy(interface, "ADC"); break;
-			case SPI_INTERFACE:   strcpy(interface, "SPI"); break;
-			case I2C_INTERFACE:   strcpy(interface, "I2C"); break;
-			case OWIRE_INTERFACE: strcpy(interface, "1-WIRE"); break;
-			case GPIO_INTERFACE:  strcpy(interface, "GPIO"); break;
-			case UART_INTERFACE:   strcpy(interface, "UART"); break;
-			default:
+		buff[0] = 0x00;
+		exit = 0;
+		for(j = 0; j < SENSOR_MAX_INTERFACES;j++) {
+			if (csensor->interface[j]) {
+				switch (csensor->interface[j]) {
+					case ADC_INTERFACE:   strcpy(interface, "ADC"); break;
+					case SPI_INTERFACE:   strcpy(interface, "SPI"); break;
+					case I2C_INTERFACE:   strcpy(interface, "I2C"); break;
+					case OWIRE_INTERFACE: strcpy(interface, "1-WIRE"); break;
+					case GPIO_INTERFACE:  strcpy(interface, "GPIO"); break;
+					case UART_INTERFACE:  strcpy(interface, "UART"); break;
+					default:
+						break;
+				}
+
+				if (strlen(buff) > 0) {
+					if (strlen(buff) + 1 <= 30) {
+						strcat(buff, ",");
+					} else {
+						exit = 1;
+						break;
+					}
+				}
+
+				if (strlen(buff) + strlen(interface) <= 30) {
+					strcat(buff, interface);
+				} else {
+					exit = 1;
+					break;
+				}
+			}
+
+			if (exit) {
 				break;
+			}
 		}
 
+		strcpy(interfaces, buff);
+
 		if (!table) {
-			printf("%-10s  %-9s   ",csensor->id, interface);
+			printf("%-20s %-30s ",csensor->id, buff);
 
 			len = 0;
 			for(idx=0; idx < SENSOR_MAX_DATA; idx++) {
 				if (csensor->data[idx].id) {
-					if (len > 0) {
-						printf(",");
-						len += 1;
-					}
+					if (len <= 35) {
+						if (len > 0) {
+							printf(",");
+							len += 1;
+						}
 
-					printf("%s", csensor->data[idx].id);
-					len += strlen(csensor->data[idx].id);
+						printf("%s", csensor->data[idx].id);
+						len += strlen(csensor->data[idx].id);
+					}
 				}
 			}
 
-			for(;len < 25;len++) printf(" ");
+			for(;len < 35;len++) printf(" ");
 
-			printf("   ");
+			printf(" ");
 
 			len = 0;
 			for(idx=0; idx < SENSOR_MAX_PROPERTIES; idx++) {
@@ -520,7 +487,7 @@ static int lsensor_list( lua_State* L ) {
 	        lua_pushstring(L, (char *)csensor->id);
 	        lua_setfield (L, -2, "id");
 
-	        lua_pushstring(L, (char *)interface);
+	        lua_pushstring(L, (char *)interfaces);
 	        lua_setfield (L, -2, "interface");
 
 	        lua_createtable(L, 0, 0);
@@ -606,7 +573,7 @@ static int lsensor_enumerate_owire( lua_State* L, uint8_t table, int pin) {
 
 	// Search for 1-WIRE sensors in build
 	while (csensor->id) {
-		if (csensor->interface == OWIRE_INTERFACE) {
+		if (csensor->interface[0] == OWIRE_INTERFACE) {
 			// Get sensor definition
 			sensor = get_sensor(csensor->id);
 			if (sensor) {
@@ -618,7 +585,7 @@ static int lsensor_enumerate_owire( lua_State* L, uint8_t table, int pin) {
 					sensor_value_t *type;
 					char rombuf[17];
 
-					uint8_t owdev = instance->setup.owire.owdevice;
+					uint8_t owdev = instance->setup[0].owire.owdevice;
 					sensor_get(instance, "type", &type);
 					if (!type) {
 						continue;
@@ -737,8 +704,7 @@ static int lsensor_ins_gc (lua_State *L) {
 }
 
 static const LUA_REG_TYPE lsensor_map[] = {
-    { LSTRKEY( "attach"  	 ),	LFUNCVAL( lsensor_attach     ) },
-    { LSTRKEY( "setup"  	 ),	LFUNCVAL( lsensor_setup  	  ) },
+    { LSTRKEY( "attach"  	 ),	LFUNCVAL( lsensor_attach      ) },
 	{ LSTRKEY( "list"   	 ),	LFUNCVAL( lsensor_list   	  ) },
 	{ LSTRKEY( "enumerate"   ),	LFUNCVAL( lsensor_enumerate   ) },
 	{ LSTRKEY( "error"       ), LROVAL  ( sensor_error_map    ) },

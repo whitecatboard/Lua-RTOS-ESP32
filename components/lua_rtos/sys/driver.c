@@ -134,8 +134,6 @@ driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error
         error->lock_error = lock_error;
     }
 
-    free(lock_error);
-
     return error;
 }
 

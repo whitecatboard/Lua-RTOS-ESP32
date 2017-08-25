@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, 2Y0A21 sensor (proximity)
+ * Lua RTOS, Relative rotary encoder sensor
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
@@ -27,92 +27,70 @@
  * this software.
  */
 
-/*
- * Extracted from:
- *
- * https://github.com/jeroendoggen/Arduino-GP2Y0A21YK-library/blob/master/DistanceGP2Y0A21YK/DistanceGP2Y0A21YK.cpp
- *
- */
-
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
-#if CONFIG_LUA_RTOS_USE_SENSOR_2Y0A21
+#if CONFIG_LUA_RTOS_USE_SENSOR_RELATIVE_ROTARY_ENCODER
 
-#include <math.h>
-
-#include <sys/driver.h>
+#include "esp_attr.h"
 
 #include <drivers/sensor.h>
-#include <drivers/adc.h>
+#include <drivers/encoder.h>
 
-driver_error_t *s2y0a21_setup(sensor_instance_t *unit);
-driver_error_t *s2y0a21_acquire(sensor_instance_t *unit, sensor_value_t *values);
+driver_error_t *relative_rotary_encoder_setup(sensor_instance_t *unit);
 
 // Sensor specification and registration
-static const sensor_t __attribute__((used,unused,section(".sensors"))) s2y0a21_sensor = {
-	.id = "2Y0A21",
+static const sensor_t __attribute__((used,unused,section(".sensors"))) relative_rotary_encoder_sensor = {
+	.id = "REL_ROT_ENCODER",
 	.interface = {
-		ADC_INTERFACE,
+		GPIO_INTERFACE,
+		GPIO_INTERFACE,
+		GPIO_INTERFACE,
 	},
+	.flags = (SENSOR_FLAG_CUSTOM_INTERFACE_INIT | SENSOR_FLAG_AUTO_ACQ),
 	.data = {
-		{.id = "distance", .type = SENSOR_DATA_FLOAT},
+		{.id = "dir", .type = SENSOR_DATA_INT},
+		{.id = "val", .type = SENSOR_DATA_INT},
+		{.id = "sw", .type = SENSOR_DATA_INT},
 	},
-	.setup = s2y0a21_setup,
-	.acquire = s2y0a21_acquire
+	.setup = relative_rotary_encoder_setup
 };
 
 /*
  * Helper functions
  */
+static void IRAM_ATTR callback_func(int callback, int8_t dir, uint32_t counter, uint8_t button) {
+	sensor_instance_t *unit = (int)callback;
 
-driver_error_t  *distance(sensor_instance_t *unit, sensor_value_t *values, int *d) {
-	driver_error_t *error;
-	int p = 0;
-	int sum = 0;
-	int foo = 0;
-	int previous = 0;
-	int raw = 0;
-	double mvolts = 0;
+	unit->data[0].integerd.value = dir;
+	unit->data[1].integerd.value = counter;
+	unit->data[2].integerd.value = button;
 
-	for (int i = 0; i < 25; i++) {
-		// Read value
-		if ((error = adc_read(&unit->setup[0].adc.h, &raw, &mvolts))) {
-			return error;
-		}
-
-		foo = 27.728 * pow(mvolts / 1000.0, -1.2045);
-
-		if (foo >= (93 * previous)) {
-			previous = foo;
-			sum = sum + foo;
-			p++;
-
-		}
-	}
-
-	*d = sum / p;
-
-	return NULL;
-
+	sensor_quue_callbacks(unit);
 }
 
 /*
  * Operation functions
  */
-driver_error_t *s2y0a21_setup(sensor_instance_t *unit) {
-	return NULL;
-}
-
-driver_error_t *s2y0a21_acquire(sensor_instance_t *unit, sensor_value_t *values) {
+driver_error_t *relative_rotary_encoder_setup(sensor_instance_t *unit) {
 	driver_error_t *error;
-	int d;
+	encoder_h_t *h;
 
-	if ((error = distance(unit, values, &d))) {
+	// Setup encoder
+	error = encoder_setup(unit->setup[0].gpio.gpio, unit->setup[1].gpio.gpio, unit->setup[2].gpio.gpio, &h);
+	if (error) {
 		return error;
 	}
 
-	values->floatd.value = (float)d;
+	// Store encoder handler
+	unit->unit = (int)h;
+
+	// Install callback, not deferred
+	error = encoder_register_callback(h, callback_func, (int)unit, 0);
+	if (error) {
+		encoder_unsetup(h);
+		return error;
+	}
 
 	return NULL;
 }

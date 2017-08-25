@@ -32,7 +32,6 @@
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 #if CONFIG_LUA_RTOS_USE_SENSOR_DHT22
 
-#include "dht22.h"
 
 #include "freertos/FreeRTOS.h"
 #include "esp_attr.h"
@@ -46,10 +45,15 @@
 #include <drivers/gpio.h>
 #include <drivers/sensor.h>
 
+driver_error_t *dht22_setup(sensor_instance_t *unit);
+driver_error_t *dht22_acquire(sensor_instance_t *unit, sensor_value_t *values);
+
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) dht22_sensor = {
 	.id = "DHT22",
-	.interface = GPIO_INTERFACE,
+	.interface = {
+		GPIO_INTERFACE,
+	},
 	.data = {
 		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
 		{.id = "humidity"   , .type = SENSOR_DATA_FLOAT},
@@ -94,7 +98,7 @@ static int dht22_bus_monitor(uint8_t pin, uint8_t level, int16_t timeout) {
  */
 driver_error_t *dht22_setup(sensor_instance_t *unit) {
 	// Get pin from instance
-	uint8_t pin = unit->setup.gpio.gpio;
+	uint8_t pin = unit->setup[0].gpio.gpio;
 
 	// Configure pin as input(pull-up enable)
 	gpio_pin_input(pin);
@@ -111,7 +115,7 @@ driver_error_t *dht22_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	int elapsed;                   // Elapsed time in usecs between level transitions 0->1 / 1 ->0
 
 	// Get pin from instance
-	uint8_t pin = unit->setup.gpio.gpio;
+	uint8_t pin = unit->setup[0].gpio.gpio;
 
 	portDISABLE_INTERRUPTS();
 

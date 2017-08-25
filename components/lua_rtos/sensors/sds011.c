@@ -41,7 +41,9 @@ driver_error_t *sds011_setup(sensor_instance_t *unit);
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) gps_sensor = {
 	.id = "SDS011",
-	.interface = UART_INTERFACE,
+	.interface = {
+		UART_INTERFACE,
+	},
 	.flags = SENSOR_FLAG_AUTO_ACQ,
 	.data = {
 		{.id = "PM2.5", .type = SENSOR_DATA_DOUBLE},
@@ -61,7 +63,7 @@ static void sds011_task(void *args) {
 	// AA CO XX XX XX XX XX XX XX AB
 	i = 0;
 	for(;;) {
-		uart_read(unit->setup.uart.id, (char *)&c, portMAX_DELAY);
+		uart_read(unit->setup[0].uart.id, (char *)&c, portMAX_DELAY);
 		if (i == 10) {
 			for(j=1;j < 10;j++) {
 				buff[j-1] = buff[j];
@@ -91,10 +93,10 @@ static void sds011_task(void *args) {
  * Operation functions
  */
 driver_error_t *sds011_presetup(sensor_instance_t *unit) {
-	unit->setup.uart.speed = 9688;
-	unit->setup.uart.data_bits = 8;
-	unit->setup.uart.parity = 0;
-	unit->setup.uart.stop_bits = 1;
+	unit->setup[0].uart.speed = 9688;
+	unit->setup[0].uart.data_bits = 8;
+	unit->setup[0].uart.parity = 0;
+	unit->setup[0].uart.stop_bits = 1;
 
 	return NULL;
 }
