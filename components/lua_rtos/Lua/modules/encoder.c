@@ -174,7 +174,7 @@ static const LUA_REG_TYPE encoder_inst_map[] = {
 	{ LSTRKEY( "write" ),			LFUNCVAL( lencoder_write   ) },
     { LSTRKEY( "__metatable" ),	    LROVAL  ( encoder_inst_map ) },
 	{ LSTRKEY( "__index"     ),     LROVAL  ( encoder_inst_map ) },
-    { LSTRKEY( "__gc" ),	 	    LROVAL  ( lencoder_gc 	   ) },
+    { LSTRKEY( "__gc" ),	 	    LFUNCVAL( lencoder_gc 	   ) },
     { LNILKEY, LNILVAL }
 };
 

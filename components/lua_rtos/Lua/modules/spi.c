@@ -308,7 +308,7 @@ static const LUA_REG_TYPE lspi_ins_map[] = {
 	{ LSTRKEY( "readwrite"   ),	 LFUNCVAL( lspi_readwrite ) },
     { LSTRKEY( "__metatable" ),	 LROVAL  ( lspi_ins_map   ) },
 	{ LSTRKEY( "__index"     ),  LROVAL  ( lspi_ins_map   ) },
-	{ LSTRKEY( "__gc"        ),  LROVAL  ( lspi_ins_gc    ) },
+	{ LSTRKEY( "__gc"        ),  LFUNCVAL( lspi_ins_gc    ) },
     { LNILKEY, LNILVAL }
 };
 

@@ -415,8 +415,8 @@ static const LUA_REG_TYPE lmqtt_client_map[] = {
   { LSTRKEY( "subscribe"   ),   LFUNCVAL( lmqtt_subscribe  ) },
   { LSTRKEY( "publish"     ),   LFUNCVAL( lmqtt_publish    ) },
   { LSTRKEY( "__metatable" ),   LROVAL  ( lmqtt_client_map ) },
-  { LSTRKEY( "__index"     ),    LROVAL  ( lmqtt_client_map ) },
-  { LSTRKEY( "__gc"        ),    LROVAL  ( lmqtt_client_gc  ) },
+  { LSTRKEY( "__index"     ),   LROVAL  ( lmqtt_client_map ) },
+  { LSTRKEY( "__gc"        ),   LFUNCVAL( lmqtt_client_gc  ) },
   { LNILKEY, LNILVAL }
 };
 

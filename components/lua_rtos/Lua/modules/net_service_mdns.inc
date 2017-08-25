@@ -333,7 +333,7 @@ static const LUA_REG_TYPE lmdns_service_map[] = {
   { LSTRKEY( "removeservice" ), LFUNCVAL( lmdns_remove_service   ) },
   { LSTRKEY( "__metatable" ),   LROVAL  ( lmdns_service_map      ) },
   { LSTRKEY( "__index"     ),   LROVAL  ( lmdns_service_map      ) },
-  { LSTRKEY( "__gc"        ),   LROVAL  ( lmdns_service_gc       ) },
+  { LSTRKEY( "__gc"        ),   LFUNCVAL( lmdns_service_gc       ) },
   { LNILKEY, LNILVAL }
 };
 

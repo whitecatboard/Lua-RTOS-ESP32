@@ -325,7 +325,7 @@ static const LUA_REG_TYPE levent_ins_map[] = {
   	{ LSTRKEY( "broadcast"   ),		LFUNCVAL( levent_broadcast   ) },
 	{ LSTRKEY( "__metatable" ),    	LROVAL  ( levent_ins_map     ) },
 	{ LSTRKEY( "__index"     ),   	LROVAL  ( levent_ins_map     ) },
-	{ LSTRKEY( "__gc"        ),   	LROVAL  ( levent_ins_gc      ) },
+	{ LSTRKEY( "__gc"        ),   	LFUNCVAL( levent_ins_gc      ) },
     { LNILKEY, LNILVAL }
 };
 

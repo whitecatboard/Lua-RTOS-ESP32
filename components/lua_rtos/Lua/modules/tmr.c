@@ -288,7 +288,7 @@ static const LUA_REG_TYPE tmr_timer_map[] = {
 	{ LSTRKEY( "detach" ),			LFUNCVAL( ltmr_detach 	) },
     { LSTRKEY( "__metatable" ),	    LROVAL  ( tmr_timer_map ) },
 	{ LSTRKEY( "__index"     ),     LROVAL  ( tmr_timer_map ) },
-    { LSTRKEY( "__gc" ),	 	    LROVAL  ( ltmr_gc 		) },
+    { LSTRKEY( "__gc" ),	 	    LFUNCVAL( ltmr_gc 		) },
     { LNILKEY, LNILVAL }
 };
 

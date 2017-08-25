@@ -104,7 +104,7 @@ static const LUA_REG_TYPE lservo_ins_map[] = {
     { LSTRKEY( "write"        ),	LFUNCVAL( lservo_write   ) },
 	{ LSTRKEY( "__metatable"  ),    LROVAL  ( lservo_ins_map ) },
 	{ LSTRKEY( "__index"      ),   	LROVAL  ( lservo_ins_map ) },
-	{ LSTRKEY( "__gc"         ),   	LROVAL  ( lservo_ins_gc ) },
+	{ LSTRKEY( "__gc"         ),   	LFUNCVAL( lservo_ins_gc ) },
     { LNILKEY, LNILVAL }
 };
 

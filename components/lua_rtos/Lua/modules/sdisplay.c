@@ -198,7 +198,7 @@ static const LUA_REG_TYPE lsdisplay_ins_map[] = {
     { LSTRKEY( "clear"        ),	LFUNCVAL( lsdisplay_clear   	   ) },
 	{ LSTRKEY( "__metatable"  ),    LROVAL  ( lsdisplay_ins_map 	   ) },
 	{ LSTRKEY( "__index"      ),   	LROVAL  ( lsdisplay_ins_map 	   ) },
-	{ LSTRKEY( "__gc"         ),   	LROVAL  ( lsdisplay_ins_gc 		   ) },
+	{ LSTRKEY( "__gc"         ),   	LFUNCVAL( lsdisplay_ins_gc 		   ) },
     { LNILKEY, LNILVAL }
 };
 
