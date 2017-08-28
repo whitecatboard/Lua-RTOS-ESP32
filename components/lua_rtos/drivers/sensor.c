@@ -67,6 +67,7 @@ DRIVER_REGISTER_ERROR(SENSOR, sensor, NotSetup, "sensor is not setup", SENSOR_ER
 DRIVER_REGISTER_ERROR(SENSOR, sensor, InvalidAddress, "invalid address", SENSOR_ERR_INVALID_ADDRESS);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, NoMoreCallbacks, "no more callbacks available", SENSOR_ERR_NO_MORE_CALLBACKS);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, InvalidData, "invalid data", SENSOR_ERR_INVALID_DATA);
+DRIVER_REGISTER_ERROR(SENSOR, sensor, NoCallbacksAlowed, "callbacks not allowed for this sensor", SENSOR_ERR_CALLBACKS_NOT_ALLOWED);
 
 static xQueueHandle queue = NULL;
 static TaskHandle_t task = NULL;
@@ -603,6 +604,11 @@ driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value
 driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callback_t callback, int id, uint8_t deferred) {
 	int i;
 
+	// Sanity checks
+	if (!(unit->sensor->flags & (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_AUTO_ACQ))) {
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_CALLBACKS_NOT_ALLOWED, NULL);
+	}
+
 	portDISABLE_INTERRUPTS();
 
 	// Find for a free callback
@@ -658,8 +664,6 @@ void IRAM_ATTR sensor_queue_callbacks(sensor_instance_t *unit) {
 			memcpy(data.latch, unit->latch, sizeof(unit->latch));
 
 			xQueueSendFromISR(queue, &data, NULL);
-
-			break;
 		}
 	}
 }

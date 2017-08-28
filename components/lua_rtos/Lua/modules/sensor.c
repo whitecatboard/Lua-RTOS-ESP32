@@ -410,6 +410,7 @@ static int lsensor_list( lua_State* L ) {
 	char type[7];
 	char buff[31];
 	char interfaces[31];
+	char names[31];
 
 	// Check if user wants result as a table, or wants result
 	// on the console
@@ -467,8 +468,36 @@ static int lsensor_list( lua_State* L ) {
 
 		strcpy(interfaces, buff);
 
+		buff[0] = 0x00;
+		exit = 0;
+		for(j = 0; j < SENSOR_MAX_INTERFACES;j++) {
+			if (csensor->interface_name[j]) {
+				if (strlen(buff) > 0) {
+					if (strlen(buff) + 1 <= 30) {
+						strcat(buff, ",");
+					} else {
+						exit = 1;
+						break;
+					}
+				}
+
+				if (strlen(buff) + strlen(csensor->interface_name[j]) <= 30) {
+					strcat(buff, csensor->interface_name[j]);
+				} else {
+					exit = 1;
+					break;
+				}
+			}
+
+			if (exit) {
+				break;
+			}
+		}
+
+		strcpy(names, buff);
+
 		if (!table) {
-			printf("%-20s %-30s ",csensor->id, buff);
+			printf("%-20s %-30s ",csensor->id, interfaces);
 
 			len = 0;
 			for(idx=0; idx < SENSOR_MAX_DATA; idx++) {
@@ -506,13 +535,19 @@ static int lsensor_list( lua_State* L ) {
 		} else {
 			lua_pushinteger(L, i);
 
-			lua_createtable(L, 0, 3);
+			lua_createtable(L, 0, 5);
 
 	        lua_pushstring(L, (char *)csensor->id);
 	        lua_setfield (L, -2, "id");
 
+	        lua_pushboolean(L, (csensor->flags & (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_AUTO_ACQ)) != 0);
+	        lua_setfield (L, -2, "callback");
+
 	        lua_pushstring(L, (char *)interfaces);
 	        lua_setfield (L, -2, "interface");
+
+	        lua_pushstring(L, (char *)names);
+	        lua_setfield (L, -2, "interface_name");
 
 	        lua_createtable(L, 0, 0);
 	        for(idx=0; idx < SENSOR_MAX_DATA; idx++) {

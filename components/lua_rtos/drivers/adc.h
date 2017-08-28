@@ -95,6 +95,30 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
  */
 driver_error_t *adc_read(adc_channel_h_t *h, int *raw, double *mvols);
 
+/**
+ * @brief Read from an adc channel taking some samples and doing the average.
+ *
+ * @param h A pointer to a channel handler.
+ * @param samples Number of samples.
+ * @param raw A pointer to a double variable that holds the average raw value from the ADC.
+ * @param mvolts A pointer to a double variable that holds the average raw value from the ADC converted to mVolts.
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs. Error can be an operation error or a lock error.
+ */
+driver_error_t *adc_read_avg(adc_channel_h_t *h, int samples, double *avgr, double *avgm);
+
+/**
+ * @brief Get the ADC channel from a channel handler.
+ *
+ * @param h A pointer to a channel handler.
+ * @param chan A pointer to the channel.
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs. Error can be an operation error or a lock error.
+ */
 driver_error_t *adc_get_channel(adc_channel_h_t *h, adc_channel_t **chan);
 
 #endif	/* ADC_H */

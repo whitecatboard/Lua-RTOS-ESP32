@@ -387,4 +387,29 @@ driver_error_t *adc_get_channel(adc_channel_h_t *h, adc_channel_t **chan) {
 	return NULL;
 }
 
+driver_error_t *adc_read_avg(adc_channel_h_t *h, int samples, double *avgr, double *avgm) {
+	driver_error_t *error;
+
+	int raw;
+	double mvolts = 0;
+	int i;
+
+	for(i=1; i <= samples;i++) {
+		// Read value
+		if ((error = adc_read(h, &raw, &mvolts))) {
+			return error;
+		}
+
+		if (avgr) {
+			*avgr = ((i - 1) * *avgr + raw) / i;
+		}
+
+		if (avgm) {
+			*avgm = ((i - 1) * *avgm + mvolts) / i;
+		}
+	}
+
+	return NULL;
+}
+
 DRIVER_REGISTER(ADC,adc,NULL,_adc_init,NULL);

@@ -1,8 +1,8 @@
 /*
- * Lua RTOS, TMP36 sensor (temperature)
+ * Lua RTOS, GUVA-S12SD sensor (ultraviolet radiation)
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -27,12 +27,16 @@
  * this software.
  */
 
-#include "luartos.h"
+/*
+ * Extracted from https://www.mysensors.org/build/uv
+ */
+
+#include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
-#if CONFIG_LUA_RTOS_USE_SENSOR_TMP36
+#if CONFIG_LUA_RTOS_USE_SENSOR_GUVA_S12SD
 
-#define TMP36_SAMPLES 10
+#define GUVA_S12SD_SAMPLES 10
 
 #include <math.h>
 
@@ -41,41 +45,67 @@
 #include <drivers/sensor.h>
 #include <drivers/adc.h>
 
-driver_error_t *tmp36_setup(sensor_instance_t *unit);
-driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values);
+static uint16_t uvIndexValue [12] = { 50, 227, 318, 408, 503, 606, 696, 795, 881, 976, 1079, 1170};
+
+driver_error_t *guva_s12sd_presetup(sensor_instance_t *unit);
+driver_error_t *guva_s12sd_acquire(sensor_instance_t *unit, sensor_value_t *values);
 
 // Sensor specification and registration
-static const sensor_t __attribute__((used,unused,section(".sensors"))) tmp36_sensor = {
-	.id = "TMP36",
+static const sensor_t __attribute__((used,unused,section(".sensors"))) guva_s12sd_sensor = {
+	.id = "GUVA-S12SD",
 	.interface = {
 		ADC_INTERFACE,
 	},
 	.data = {
-		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
+		{.id = "UV Index", .type = SENSOR_DATA_FLOAT},
 	},
-	.setup = tmp36_setup,
-	.acquire = tmp36_acquire
+	.presetup = guva_s12sd_presetup,
+	.acquire = guva_s12sd_acquire
 };
 
 /*
  * Operation functions
  */
-driver_error_t *tmp36_setup(sensor_instance_t *unit) {
+
+driver_error_t *guva_s12sd_presetup(sensor_instance_t *unit) {
+	// Sensor vout is <= 1100 mVols
+
+	unit->setup[0].adc.vrefp = 1100;
+	unit->setup[0].adc.vrefn = 0;
+
 	return NULL;
 }
 
-driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values) {
+driver_error_t *guva_s12sd_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	driver_error_t *error;
-	double mvolts = 0;
+	double mvolts;
+	int i;
 
 	// Read average for some samples
-	if ((error = adc_read_avg(&unit->setup[0].adc.h, TMP36_SAMPLES, NULL, &mvolts))) {
+	if ((error = adc_read_avg(&unit->setup[0].adc.h, GUVA_S12SD_SAMPLES, NULL, &mvolts))) {
 		return error;
 	}
 
-	// Calculate temperature
+	// Calculate uv index
+	float uvIndex;
+
+	// Find index into uv index table
+	for (i = 0; i < 12; i++) {
+		if (mvolts <= uvIndexValue[i]) {
+			uvIndex = i;
+			break;
+		}
+	}
+
+	// Calculate decimal, if possible
+	if (i > 0) {
+		float vRange = uvIndexValue[i] - uvIndexValue[i-1];
+		float vCalc = mvolts - uvIndexValue[i-1];
+		uvIndex += (1.0/vRange) * vCalc - 1.0;
+	}
+
 	// Round to 1 decimal place
-	values->floatd.value = floor((float)10.0 * (((float)mvolts - (float)500) / (float)10.0)) / (float)10.0;
+	values[0].floatd.value = roundf(10 * uvIndex) / 10;
 
 	return NULL;
 }

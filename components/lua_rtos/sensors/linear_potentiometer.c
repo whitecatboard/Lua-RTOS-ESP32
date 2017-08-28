@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, A49E Linear Hall Effect Sensor
+ * Lua RTOS, Potentiometer sensor
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
@@ -30,87 +30,40 @@
 #include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
-#if CONFIG_LUA_RTOS_USE_SENSOR_A49E
+#if CONFIG_LUA_RTOS_USE_SENSOR_POT
+
+#define POTENTIOMETER_SAMPLES 10
+
+#include <math.h>
 
 #include <sys/driver.h>
 
 #include <drivers/sensor.h>
 #include <drivers/adc.h>
 
-// Number of samples
-#define A49E_SAMPLES 10
-
-// Vout at B = 0 for a given Vcc
-//
-// This equation is extracted for the following experimental meassures using
-// https://mycurvefit.com
-//
-// VCC  VOUT
-// ---- ----
-// 3000	1573
-// 3100	1624
-// 3200	1672
-// 3300	1726
-// 3400	1775
-// 3500	1826
-// 3600	1877
-// 3700	1926
-// 3800	1977
-// 3900	2026
-// 4000	2081
-// 4100	2130
-// 4200	2184
-// 4300	2236
-// 4400	2285
-// 4500	2337
-// 4600	2385
-// 4700	2436
-// 4800	2487
-// 4900	2535
-// 5000	2585
-// 5100	2633
-// 5200	2682
-// 5300	2732
-// 5400	2780
-// 5500	2829
-// 5600	2876
-// 5700	2928
-// 5800	2975
-// 5900	3025
-// 6000	3075
-#define A49E_VOUT_B0(vcc) ((double)0.5083158 * (double)vcc + (double)47.05263)
-
-// From datasheet we can deduce the gradient of the transfer function
-#define A49E_M ((double)5 / (double)3)
-
-// Using A49E_VOUT_B0(vcc), the current Vout and A49E_M we can find the magnetic field
-// with this equation
-//
-// B = (Vout - A49E_VOUT_B0) / A49E_M
-
-driver_error_t *a49e_acquire(sensor_instance_t *unit, sensor_value_t *values);
+driver_error_t *potentiometer_acquire(sensor_instance_t *unit, sensor_value_t *values);
 
 // Sensor specification and registration
-static const sensor_t __attribute__((used,unused,section(".sensors"))) a49e_sensor = {
-	.id = "A49E",
+static const sensor_t __attribute__((used,unused,section(".sensors"))) potentiometer_sensor = {
+	.id = "LINEAR_POT",
 	.interface = {
 		ADC_INTERFACE,
 	},
 	.data = {
-		{.id = "magnetic field", .type = SENSOR_DATA_FLOAT},
+		{.id = "val", .type = SENSOR_DATA_FLOAT},
 	},
-	.acquire = a49e_acquire
+	.acquire = potentiometer_acquire
 };
 
 /*
  * Operation functions
  */
-driver_error_t *a49e_acquire(sensor_instance_t *unit, sensor_value_t *values) {
+driver_error_t *potentiometer_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	driver_error_t *error;
 	double mvolts = 0;
 
 	// Read average for some samples
-	if ((error = adc_read_avg(&unit->setup[0].adc.h, A49E_SAMPLES, NULL, &mvolts))) {
+	if ((error = adc_read_avg(&unit->setup[0].adc.h, POTENTIOMETER_SAMPLES, NULL, &mvolts))) {
 		return error;
 	}
 
@@ -119,7 +72,8 @@ driver_error_t *a49e_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 
 	adc_get_channel(&unit->setup[0].adc.h, &chan);
 
-	values->floatd.value = ((mvolts - A49E_VOUT_B0(chan->pvref)) / A49E_M);
+	// Estimate POT value (2 decimals)
+	values[0].floatd.value = roundf(100 * (mvolts / chan->pvref)) / 100;
 
 	return NULL;
 }

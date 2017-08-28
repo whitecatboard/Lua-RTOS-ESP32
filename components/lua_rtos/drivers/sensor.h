@@ -110,6 +110,7 @@ typedef struct {
 typedef struct {
 	const char *id;
 	const sensor_interface_t interface[SENSOR_MAX_INTERFACES];
+	const char* interface_name[SENSOR_MAX_INTERFACES];
 	const uint32_t flags;
 	const sensor_data_t data[SENSOR_MAX_DATA];
 	const sensor_data_t properties[SENSOR_MAX_PROPERTIES];
@@ -243,6 +244,7 @@ void sensor_queue_callbacks(sensor_instance_t *unit);
 #define SENSOR_ERR_INVALID_ADDRESS			(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  9)
 #define SENSOR_ERR_NO_MORE_CALLBACKS		(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) | 10)
 #define SENSOR_ERR_INVALID_DATA				(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) | 11)
+#define SENSOR_ERR_CALLBACKS_NOT_ALLOWED	(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) | 12)
 
 #endif
 

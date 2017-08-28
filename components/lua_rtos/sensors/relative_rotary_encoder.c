@@ -52,6 +52,11 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) relative_
 		GPIO_INTERFACE,
 		GPIO_INTERFACE,
 	},
+	.interface_name = {
+		"A",
+		"B",
+		"SW"
+	},
 	.flags = (SENSOR_FLAG_CUSTOM_INTERFACE_INIT | SENSOR_FLAG_AUTO_ACQ),
 	.data = {
 		{.id = "dir", .type = SENSOR_DATA_INT},
@@ -117,7 +122,7 @@ driver_error_t *relative_rotary_encoder_setup(sensor_instance_t *unit) {
 driver_error_t *relative_rotary_encoder_unsetup(sensor_instance_t *unit) {
 	driver_error_t *error;
 
-	error = encoder_unsetup((sensor_instance_t *)unit->unit);
+	error = encoder_unsetup((encoder_h_t *)unit->unit);
 	if (error){
 		return NULL;
 	}
