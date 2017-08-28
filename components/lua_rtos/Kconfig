@@ -671,6 +671,10 @@ menu "Lua RTOS"
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "Hall effect switch"
 					default y		
+				config LUA_RTOS_USE_SENSOR_LDR
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "LDR"
+					default y		
 				config LUA_RTOS_USE_SENSOR_PING28015
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "PING28015"
