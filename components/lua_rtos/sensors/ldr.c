@@ -140,11 +140,9 @@ driver_error_t *ldr_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 driver_error_t *ldr_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting) {
 	if (strcmp(id,"R1") == 0) {
 		unit->properties[0].integerd.value = setting->integerd.value;
-		unit->properties[1].integerd.value = 0;
 	}
 
 	if (strcmp(id,"R2") == 0) {
-		unit->properties[0].integerd.value = 0;
 		unit->properties[1].integerd.value = setting->integerd.value;
 	}
 
