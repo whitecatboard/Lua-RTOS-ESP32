@@ -101,10 +101,10 @@ static void IRAM_ATTR debouncing(void *arg, uint8_t val) {
 
 	// Latch & store sensor data
 	if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_H) {
-		unit->latch[property].integerd.value = unit->data[property].integerd.value;
+		unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
 		unit->data[property].integerd.value = val;
 	} else if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_L) {
-		unit->latch[property].integerd.value = unit->data[property].integerd.value;
+		unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
 		unit->data[property].integerd.value = !val;
 	} else {
 		mtx_unlock(&unit->mtx);
@@ -113,7 +113,7 @@ static void IRAM_ATTR debouncing(void *arg, uint8_t val) {
 
 	sensor_queue_callbacks(unit);
 
-	unit->latch[property].integerd.value = unit->data[property].integerd.value;
+	unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
 
 	mtx_unlock(&unit->mtx);
 };
@@ -133,13 +133,12 @@ static void IRAM_ATTR isr(void* arg) {
 
 	mtx_lock(&unit->mtx);
 
-	// Latch current data
-	memcpy(unit->latch, unit->data, sizeof(unit->data));
-
 	// Store sensor data
 	if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_H) {
+		unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
 		unit->data[property].integerd.value = val;
 	} else if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_L) {
+		unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
 		unit->data[property].integerd.value = !val;
 	} else {
 		mtx_unlock(&unit->mtx);
@@ -376,7 +375,11 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 	struct timeval now;
 	gettimeofday(&now, NULL);
 
-	memcpy(instance->latch, instance->data, sizeof(instance->data));
+	for(i = 0;i < SENSOR_MAX_PROPERTIES;i++) {
+		instance->latch[i].timeout = 0;
+		instance->latch[i].t = now;
+		instance->latch[i].value.raw.value = instance->data[i].raw.value;
+	}
 
 	// Initialize sensor properties from sensor definition into instance
 	for(i=0;i<SENSOR_MAX_PROPERTIES;i++) {
@@ -519,8 +522,6 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 
 	mtx_lock(&unit->mtx);
 
-	memcpy(unit->latch, unit->data, sizeof(unit->data));
-
 	// Copy sensor values into instance
 	// Note that we only copy raw values as value types are set in sensor_setup from sensor
 	// definition
@@ -538,6 +539,9 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 		}
 
 		if (!is_auto) {
+			unit->latch[i].timeout = 0;
+			unit->latch[i].t = now;
+			unit->latch[i].value.raw.value = unit->data[i].raw.value;
 			unit->data[i].raw = value[i].raw;
 		}
 	}
@@ -692,8 +696,8 @@ void IRAM_ATTR sensor_queue_callbacks(sensor_instance_t *unit) {
 			data.callback = unit->callbacks[i].callback;
 			data.callback_id = unit->callbacks[i].callback_id;
 
-			memcpy(data.data, unit->data, sizeof(unit->data));
-			memcpy(data.latch, unit->latch, sizeof(unit->latch));
+			memcpy(data.data, unit->data, sizeof(sensor_value_t) * SENSOR_MAX_PROPERTIES);
+			memcpy(data.latch, unit->latch, sizeof(sensor_latch_t) * SENSOR_MAX_PROPERTIES);
 
 			xQueueSendFromISR(queue, &data, NULL);
 		}

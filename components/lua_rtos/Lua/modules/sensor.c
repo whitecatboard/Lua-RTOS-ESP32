@@ -55,7 +55,7 @@ extern TM_One_Wire_Devices_t ow_devices[MAX_ONEWIRE_PINS];
 extern LUA_REG_TYPE sensor_error_map[];
 extern const sensor_t sensors[];
 
-static void callback_func(int callback, sensor_instance_t *instance, sensor_value_t *data, sensor_value_t *latch) {
+static void callback_func(int callback, sensor_instance_t *instance, sensor_value_t *data, sensor_latch_t *latch) {
 	lua_State *TL;
 	lua_State *L;
 	int tref;
@@ -91,13 +91,13 @@ static void callback_func(int callback, sensor_instance_t *instance, sensor_valu
 			    changed = 0;
 			    switch (csensor->data[idx].type) {
 			    	case SENSOR_NO_DATA: break;
-					case SENSOR_DATA_INT:    changed = (data[idx].integerd.value != latch[idx].integerd.value); break;
-					case SENSOR_DATA_FLOAT:  changed = (data[idx].floatd.value != latch[idx].floatd.value); break;
-					case SENSOR_DATA_DOUBLE: changed = (data[idx].doubled.value != latch[idx].doubled.value); break;
-					case SENSOR_DATA_STRING: changed = (data[idx].stringd.value != latch[idx].stringd.value); break;
+					case SENSOR_DATA_INT:    changed = (data[idx].integerd.value != latch[idx].value.integerd.value); break;
+					case SENSOR_DATA_FLOAT:  changed = (data[idx].floatd.value != latch[idx].value.floatd.value); break;
+					case SENSOR_DATA_DOUBLE: changed = (data[idx].doubled.value != latch[idx].value.doubled.value); break;
+					case SENSOR_DATA_STRING: changed = (data[idx].stringd.value != latch[idx].value.stringd.value); break;
 				}
 
-			    if (changed) {
+			    if (changed || latch[idx].timeout) {
 					switch (csensor->data[idx].type) {
 						case SENSOR_NO_DATA: break;
 						case SENSOR_DATA_INT:    lua_pushinteger(TL, data[idx].integerd.value); break;

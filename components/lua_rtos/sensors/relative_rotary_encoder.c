@@ -78,11 +78,11 @@ static void IRAM_ATTR callback_func(int callback, int8_t dir, uint32_t counter, 
 	unit->data[1].integerd.value = counter;
 	unit->data[2].integerd.value = button;
 
-	if (counter != unit->latch[1].integerd.value) {
+	if (counter != unit->latch[1].value.integerd.value) {
 		// Encoder is moving
 		// dir is -1 or 1, we must clear latch for ensure that callback on dir
 		// property willbe called
-		unit->latch[0].integerd.value = 0;
+		unit->latch[0].value.integerd.value = 0;
 	}
 
 	sensor_queue_callbacks(unit);

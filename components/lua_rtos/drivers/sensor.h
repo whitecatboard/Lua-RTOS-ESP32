@@ -153,6 +153,12 @@ typedef struct sensor_value {
 	};
 } sensor_value_t;
 
+typedef struct {
+	uint8_t timeout;
+	struct timeval t;
+	sensor_value_t value;
+} sensor_latch_t;
+
 // Sensor setup structure
 typedef struct {
 	uint8_t interface;
@@ -200,14 +206,14 @@ typedef struct {
 struct sensor_instance;
 
 // Sensor callback
-typedef void (*sensor_callback_t)(int, struct sensor_instance *, sensor_value_t *, sensor_value_t *);
+typedef void (*sensor_callback_t)(int, struct sensor_instance *, sensor_value_t *, sensor_latch_t *);
 
 // Sensor instance
 typedef struct sensor_instance {
 	int unit;
 	struct mtx mtx;
 	sensor_value_t data[SENSOR_MAX_PROPERTIES];
-	sensor_value_t latch[SENSOR_MAX_PROPERTIES];
+	sensor_latch_t latch[SENSOR_MAX_PROPERTIES];
 	sensor_value_t properties[SENSOR_MAX_PROPERTIES];
 	struct timeval next;
 
@@ -224,7 +230,7 @@ typedef struct {
 	sensor_instance_t *instance;
 	sensor_callback_t callback;
 	sensor_value_t data[SENSOR_MAX_PROPERTIES];
-	sensor_value_t latch[SENSOR_MAX_PROPERTIES];
+	sensor_latch_t latch[SENSOR_MAX_PROPERTIES];
 	int callback_id;
 } sensor_deferred_data_t;
 
