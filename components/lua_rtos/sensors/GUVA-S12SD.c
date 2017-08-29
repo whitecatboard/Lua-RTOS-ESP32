@@ -54,7 +54,7 @@ driver_error_t *guva_s12sd_acquire(sensor_instance_t *unit, sensor_value_t *valu
 static const sensor_t __attribute__((used,unused,section(".sensors"))) guva_s12sd_sensor = {
 	.id = "GUVA-S12SD",
 	.interface = {
-		ADC_INTERFACE,
+		{.type = ADC_INTERFACE},
 	},
 	.data = {
 		{.id = "UV Index", .type = SENSOR_DATA_FLOAT},

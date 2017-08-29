@@ -46,7 +46,7 @@
 static const sensor_t __attribute__((used,unused,section(".sensors"))) gps_sensor = {
 	.id = "GPS",
 	.interface = {
-		UART_INTERFACE,
+		{.type = UART_INTERFACE},
 	},
 	.data = {
 		{.id = "lon", .type = SENSOR_DATA_DOUBLE},

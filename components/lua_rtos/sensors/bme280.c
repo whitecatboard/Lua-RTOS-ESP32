@@ -70,7 +70,7 @@
 const sensor_t __attribute__((used,unused,section(".sensors"))) bme280_sensor = {
 	.id = "BME280",
 	.interface = {
-		I2C_INTERFACE,
+		{.type = I2C_INTERFACE},
 	},
 	.data = {
 		{.id = "temperature", .type = SENSOR_DATA_DOUBLE},

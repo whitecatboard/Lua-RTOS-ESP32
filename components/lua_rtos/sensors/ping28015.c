@@ -51,10 +51,10 @@ driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_va
 static const sensor_t __attribute__((used,unused,section(".sensors"))) ping28015_sensor = {
 	.id = "PING28015",
 	.interface = {
-		GPIO_INTERFACE,
+		{.type = GPIO_INTERFACE},
 	},
 	.data = {
-		{.id = "distance",    .type = SENSOR_DATA_FLOAT},
+		{.id = "distance", .type = SENSOR_DATA_FLOAT},
 	},
 	.properties = {
 		{.id = "temperature", .type = SENSOR_DATA_FLOAT},

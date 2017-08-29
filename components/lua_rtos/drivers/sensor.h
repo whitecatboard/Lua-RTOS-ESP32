@@ -58,7 +58,6 @@ typedef driver_error_t *(*sensor_set_f_t)(struct sensor_instance *, const char *
 typedef driver_error_t *(*sensor_get_f_t)(struct sensor_instance *, const char *, struct sensor_value *);
 
 #define SENSOR_MAX_INTERFACES 4
-#define SENSOR_MAX_DATA       6
 #define SENSOR_MAX_PROPERTIES 4
 #define SENSOR_MAX_CALLBACKS  4
 
@@ -75,7 +74,7 @@ typedef driver_error_t *(*sensor_get_f_t)(struct sensor_instance *, const char *
 #define SENSOR_FLAG_ON_L            (1 << 4)
 #define SENSOR_FLAG_DEBOUNCING      (1 << 5)
 
-// Sensor interface
+// Sensor interface types
 typedef enum {
 	ADC_INTERFACE = 1,
 	SPI_INTERFACE,
@@ -83,6 +82,12 @@ typedef enum {
 	OWIRE_INTERFACE,
 	GPIO_INTERFACE,
 	UART_INTERFACE
+} sensor_interface_type_t;
+
+
+typedef struct {
+	sensor_interface_type_t type;
+	uint32_t flags;
 } sensor_interface_t;
 
 // Sensor data type
@@ -98,6 +103,7 @@ typedef enum {
 typedef struct {
 	const char *id;
 	const sensor_data_type_t type;
+	uint32_t flags;
 } sensor_data_t;
 
 // Sensor property
@@ -111,8 +117,7 @@ typedef struct {
 	const char *id;
 	const sensor_interface_t interface[SENSOR_MAX_INTERFACES];
 	const char* interface_name[SENSOR_MAX_INTERFACES];
-	const uint32_t flags;
-	const sensor_data_t data[SENSOR_MAX_DATA];
+	const sensor_data_t data[SENSOR_MAX_PROPERTIES];
 	const sensor_data_t properties[SENSOR_MAX_PROPERTIES];
 	const sensor_setup_f_t setup;
 	const sensor_setup_f_t presetup;
@@ -150,6 +155,9 @@ typedef struct sensor_value {
 
 // Sensor setup structure
 typedef struct {
+	uint8_t interface;
+	void *instance;
+
 	union {
 		struct {
 			int8_t gpio;
@@ -198,8 +206,8 @@ typedef void (*sensor_callback_t)(int, struct sensor_instance *, sensor_value_t 
 typedef struct sensor_instance {
 	int unit;
 	struct mtx mtx;
-	sensor_value_t data[SENSOR_MAX_DATA];
-	sensor_value_t latch[SENSOR_MAX_DATA];
+	sensor_value_t data[SENSOR_MAX_PROPERTIES];
+	sensor_value_t latch[SENSOR_MAX_PROPERTIES];
 	sensor_value_t properties[SENSOR_MAX_PROPERTIES];
 	struct timeval next;
 
@@ -215,8 +223,8 @@ typedef struct sensor_instance {
 typedef struct {
 	sensor_instance_t *instance;
 	sensor_callback_t callback;
-	sensor_value_t data[SENSOR_MAX_DATA];
-	sensor_value_t latch[SENSOR_MAX_DATA];
+	sensor_value_t data[SENSOR_MAX_PROPERTIES];
+	sensor_value_t latch[SENSOR_MAX_PROPERTIES];
 	int callback_id;
 } sensor_deferred_data_t;
 
@@ -230,6 +238,7 @@ driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value
 driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value_t **value);
 driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callback_t callback, int id, uint8_t deferred);
 void sensor_queue_callbacks(sensor_instance_t *unit);
+void IRAM_ATTR sensor_set_latch(sensor_instance_t *unit, uint8_t property, uint64_t expires);
 
 // SENSOR errors
 #define SENSOR_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  0)

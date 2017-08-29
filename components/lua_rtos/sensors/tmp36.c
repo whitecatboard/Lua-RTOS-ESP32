@@ -48,7 +48,7 @@ driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values);
 static const sensor_t __attribute__((used,unused,section(".sensors"))) tmp36_sensor = {
 	.id = "TMP36",
 	.interface = {
-		ADC_INTERFACE,
+		{.type = ADC_INTERFACE},
 	},
 	.data = {
 		{.id = "temperature", .type = SENSOR_DATA_FLOAT},

@@ -80,7 +80,7 @@ driver_error_t *ldr_set(sensor_instance_t *unit, const char *id, sensor_value_t 
 static const sensor_t __attribute__((used,unused,section(".sensors"))) ldr_sensor = {
 	.id = "LDR",
 	.interface = {
-		ADC_INTERFACE,
+		{.type = ADC_INTERFACE},
 	},
 	.data = {
 		{.id = "illuminance", .type = SENSOR_DATA_FLOAT},

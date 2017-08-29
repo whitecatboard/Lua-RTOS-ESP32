@@ -642,7 +642,11 @@ menu "Lua RTOS"
 				config LUA_RTOS_USE_SENSOR_A49E
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "A49E"
-					default y							
+					default y	
+				config LUA_RTOS_USE_SENSOR_ANALOG_JOYSTICK
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Analog Joystick"
+					default y	
 				config LUA_RTOS_USE_SENSOR_BME280
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "BME280"

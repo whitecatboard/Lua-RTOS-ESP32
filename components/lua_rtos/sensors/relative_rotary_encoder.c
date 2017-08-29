@@ -48,16 +48,11 @@ driver_error_t *relative_rotary_encoder_unsetup(sensor_instance_t *unit);
 static const sensor_t __attribute__((used,unused,section(".sensors"))) relative_rotary_encoder_sensor = {
 	.id = "REL_ROT_ENCODER",
 	.interface = {
-		GPIO_INTERFACE,
-		GPIO_INTERFACE,
-		GPIO_INTERFACE,
+		{.type = GPIO_INTERFACE, .flags = (SENSOR_FLAG_CUSTOM_INTERFACE_INIT | SENSOR_FLAG_AUTO_ACQ)},
+		{.type = GPIO_INTERFACE, .flags = (SENSOR_FLAG_CUSTOM_INTERFACE_INIT | SENSOR_FLAG_AUTO_ACQ)},
+		{.type = GPIO_INTERFACE, .flags = (SENSOR_FLAG_CUSTOM_INTERFACE_INIT | SENSOR_FLAG_AUTO_ACQ)},
 	},
-	.interface_name = {
-		"A",
-		"B",
-		"SW"
-	},
-	.flags = (SENSOR_FLAG_CUSTOM_INTERFACE_INIT | SENSOR_FLAG_AUTO_ACQ),
+	.interface_name = {"A", "B", "SW"},
 	.data = {
 		{.id = "dir", .type = SENSOR_DATA_INT},
 		{.id = "val", .type = SENSOR_DATA_INT},
@@ -85,6 +80,8 @@ static void IRAM_ATTR callback_func(int callback, int8_t dir, uint32_t counter, 
 
 	if (counter != unit->latch[1].integerd.value) {
 		// Encoder is moving
+		// dir is -1 or 1, we must clear latch for ensure that callback on dir
+		// property willbe called
 		unit->latch[0].integerd.value = 0;
 	}
 

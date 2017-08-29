@@ -42,9 +42,8 @@ driver_error_t *sds011_setup(sensor_instance_t *unit);
 static const sensor_t __attribute__((used,unused,section(".sensors"))) gps_sensor = {
 	.id = "SDS011",
 	.interface = {
-		UART_INTERFACE,
+		{.type = UART_INTERFACE, .flags = SENSOR_FLAG_AUTO_ACQ},
 	},
-	.flags = SENSOR_FLAG_AUTO_ACQ,
 	.data = {
 		{.id = "PM2.5", .type = SENSOR_DATA_DOUBLE},
 		{.id = "PM10" , .type = SENSOR_DATA_DOUBLE},

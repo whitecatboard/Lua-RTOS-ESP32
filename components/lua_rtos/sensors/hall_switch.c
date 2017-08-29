@@ -38,9 +38,8 @@
 static const sensor_t __attribute__((used,unused,section(".sensors"))) hall_switch_sensor = {
 	.id = "HALL_SWITCH",
 	.interface = {
-		GPIO_INTERFACE,
+		{.type = GPIO_INTERFACE, .flags = SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_L},
 	},
-	.flags = (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_L),
 	.data = {
 		{.id = "on", .type = SENSOR_DATA_INT},
 	}

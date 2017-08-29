@@ -51,7 +51,7 @@ driver_error_t *dht11_acquire(sensor_instance_t *unit, sensor_value_t *values);
 static const sensor_t __attribute__((used,unused,section(".sensors"))) dht11_sensor = {
 	.id = "DHT11",
 	.interface = {
-		GPIO_INTERFACE,
+		{.type = GPIO_INTERFACE},
 	},
 	.data = {
 		{.id = "temperature", .type = SENSOR_DATA_FLOAT},

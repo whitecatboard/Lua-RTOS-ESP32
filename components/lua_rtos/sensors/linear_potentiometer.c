@@ -47,7 +47,7 @@ driver_error_t *potentiometer_acquire(sensor_instance_t *unit, sensor_value_t *v
 static const sensor_t __attribute__((used,unused,section(".sensors"))) potentiometer_sensor = {
 	.id = "LINEAR_POT",
 	.interface = {
-		ADC_INTERFACE,
+		{.type = ADC_INTERFACE},
 	},
 	.data = {
 		{.id = "val", .type = SENSOR_DATA_FLOAT},

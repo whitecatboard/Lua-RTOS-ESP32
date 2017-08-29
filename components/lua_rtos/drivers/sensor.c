@@ -35,6 +35,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 
+#include <time.h>
 #include <string.h>
 
 #include <sys/status.h>
@@ -88,18 +89,23 @@ static void sensor_task(void *arg) {
 
 static void IRAM_ATTR debouncing(void *arg, uint8_t val) {
 	// Get sensor instance
-	sensor_instance_t *unit = (sensor_instance_t *)arg;
+	sensor_instance_t *unit = ((sensor_setup_t *)arg)->instance;
+
+	// Get interface
+	uint8_t interface = ((sensor_setup_t *)arg)->interface;
+
+	// Get property
+	uint8_t property = (unit->sensor->interface[interface].flags & 0xff00) >> 8;
 
 	mtx_lock(&unit->mtx);
 
-	// Latch current data
-	memcpy(unit->latch, unit->data, sizeof(unit->data));
-
-	// Store sensor data
-	if (unit->sensor->flags & SENSOR_FLAG_ON_H) {
-		unit->data[0].integerd.value = val;
-	} else if (unit->sensor->flags & SENSOR_FLAG_ON_L) {
-		unit->data[0].integerd.value = !val;
+	// Latch & store sensor data
+	if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_H) {
+		unit->latch[property].integerd.value = unit->data[property].integerd.value;
+		unit->data[property].integerd.value = val;
+	} else if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_L) {
+		unit->latch[property].integerd.value = unit->data[property].integerd.value;
+		unit->data[property].integerd.value = !val;
 	} else {
 		mtx_unlock(&unit->mtx);
 		return;
@@ -107,15 +113,23 @@ static void IRAM_ATTR debouncing(void *arg, uint8_t val) {
 
 	sensor_queue_callbacks(unit);
 
+	unit->latch[property].integerd.value = unit->data[property].integerd.value;
+
 	mtx_unlock(&unit->mtx);
 };
 
 static void IRAM_ATTR isr(void* arg) {
 	// Get sensor instance
-	sensor_instance_t *unit = (sensor_instance_t *)arg;
+	sensor_instance_t *unit = ((sensor_setup_t *)arg)->instance;
+
+	// Get interface
+	uint8_t interface = ((sensor_setup_t *)arg)->interface;
+
+	// Get property
+	uint8_t property = (unit->sensor->interface[interface].flags & 0xff00) >> 8;
 
 	// Get pin value
-	uint8_t val = gpio_ll_pin_get(unit->setup[0].gpio.gpio);
+	uint8_t val = gpio_ll_pin_get(unit->setup[interface].gpio.gpio);
 
 	mtx_lock(&unit->mtx);
 
@@ -123,10 +137,10 @@ static void IRAM_ATTR isr(void* arg) {
 	memcpy(unit->latch, unit->data, sizeof(unit->data));
 
 	// Store sensor data
-	if (unit->sensor->flags & SENSOR_FLAG_ON_H) {
-		unit->data[0].integerd.value = val;
-	} else if (unit->sensor->flags & SENSOR_FLAG_ON_L) {
-		unit->data[0].integerd.value = !val;
+	if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_H) {
+		unit->data[property].integerd.value = val;
+	} else if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_L) {
+		unit->data[property].integerd.value = !val;
 	} else {
 		mtx_unlock(&unit->mtx);
 		return;
@@ -170,12 +184,12 @@ static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *u
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
 
-    if (unit->sensor->flags & SENSOR_FLAG_ON_OFF) {
-    	if (unit->sensor->flags & SENSOR_FLAG_DEBOUNCING) {
+    if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_OFF) {
+    	if (unit->sensor->interface[interface].flags & SENSOR_FLAG_DEBOUNCING) {
     		driver_error_t *error;
-    		uint16_t threshold = (unit->sensor->flags & 0xffff0000) >> 16;
+    		uint16_t threshold = (unit->sensor->interface[interface].flags & 0xffff0000) >> 16;
 
-    		if ((error = gpio_debouncing_register(1 << unit->setup[interface].gpio.gpio, threshold, debouncing, (void *)unit))) {
+    		if ((error = gpio_debouncing_register(1 << unit->setup[interface].gpio.gpio, threshold, debouncing, (void *)(&unit->setup[interface])))) {
     			return error;
     		}
     	} else {
@@ -199,7 +213,7 @@ static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *u
             	status_set(STATUS_ISR_SERVICE_INSTALLED);
             }
 
-            gpio_isr_handler_add(unit->setup[interface].gpio.gpio, isr, (void *)unit);
+            gpio_isr_handler_add(unit->setup[interface].gpio.gpio, isr, (void *)(&unit->setup[interface]));
 
             portENABLE_INTERRUPTS();
     	}
@@ -349,10 +363,18 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 	// Copy sensor setup configuration into instance
 	memcpy(&instance->setup, setup, SENSOR_MAX_INTERFACES * sizeof(sensor_setup_t));
 
+	for(i=0;i<SENSOR_MAX_INTERFACES;i++) {
+		instance->setup[i].interface = i;
+		instance->setup[i].instance = instance;
+	}
+
 	// Initialize sensor data from sensor definition into instance
-	for(i=0;i<SENSOR_MAX_DATA;i++) {
+	for(i=0;i<SENSOR_MAX_PROPERTIES;i++) {
 		instance->data[i].type = sensor->data[i].type;
 	}
+
+	struct timeval now;
+	gettimeofday(&now, NULL);
 
 	memcpy(instance->latch, instance->data, sizeof(instance->data));
 
@@ -371,23 +393,21 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 	}
 
 	// Setup sensor interfaces
-	if (!(sensor->flags & SENSOR_FLAG_CUSTOM_INTERFACE_INIT)) {
-		for(i=0;i<SENSOR_MAX_INTERFACES;i++) {
-			if (sensor->interface[i]) {
-				switch (sensor->interface[i]) {
-					case ADC_INTERFACE: error = sensor_adc_setup(i, instance);break;
-					case GPIO_INTERFACE: error = sensor_gpio_setup(i, instance);break;
-					case OWIRE_INTERFACE: error = sensor_owire_setup(i, instance);break;
-					case I2C_INTERFACE: error = sensor_i2c_setup(i, instance);break;
-					case UART_INTERFACE: error = sensor_uart_setup(i, instance);break;
-					default:
-						return driver_error(SENSOR_DRIVER, SENSOR_ERR_INTERFACE_NOT_SUPPORTED, NULL);
-						break;
-				}
-
-				if (error) {
+	for(i=0;i<SENSOR_MAX_INTERFACES;i++) {
+		if (!(sensor->interface[i].flags & SENSOR_FLAG_CUSTOM_INTERFACE_INIT) && sensor->interface[i].type) {
+			switch (sensor->interface[i].type) {
+				case ADC_INTERFACE: error = sensor_adc_setup(i, instance);break;
+				case GPIO_INTERFACE: error = sensor_gpio_setup(i, instance);break;
+				case OWIRE_INTERFACE: error = sensor_owire_setup(i, instance);break;
+				case I2C_INTERFACE: error = sensor_i2c_setup(i, instance);break;
+				case UART_INTERFACE: error = sensor_uart_setup(i, instance);break;
+				default:
+					return driver_error(SENSOR_DRIVER, SENSOR_ERR_INTERFACE_NOT_SUPPORTED, NULL);
 					break;
-				}
+			}
+
+			if (error) {
+				break;
 			}
 		}
 	}
@@ -436,11 +456,9 @@ driver_error_t *sensor_unsetup(sensor_instance_t *unit) {
 	}
 
 	// Remove interrupts
-	if (unit->sensor->flags & SENSOR_FLAG_ON_OFF) {
-		for(i=0; i < SENSOR_MAX_INTERFACES; i++) {
-			if (unit->setup[i].gpio.gpio) {
-				gpio_isr_handler_remove(unit->setup[i].gpio.gpio);
-			}
+	for(i=0; i < SENSOR_MAX_INTERFACES; i++) {
+		if ((unit->sensor->interface[i].flags & SENSOR_FLAG_ON_OFF) | unit->setup[i].gpio.gpio) {
+			gpio_isr_handler_remove(unit->setup[i].gpio.gpio);
 		}
 	}
 
@@ -469,7 +487,7 @@ driver_error_t *sensor_unsetup(sensor_instance_t *unit) {
 driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 	driver_error_t *error = NULL;
 	sensor_value_t *value = NULL;
-	int i = 0;
+	int i = 0, j = 0;
 
 	// Check if we can get data
 	uint64_t next_available_data = unit->next.tv_sec * 1000000 +unit->next.tv_usec;
@@ -487,12 +505,8 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 	#endif
 
 	// Allocate space for sensor data
-	// This is done only if sensor is not interrupt driven, because in
-	// interrupt driven sensors the sensor value is set in the ISR
-	if (!(unit->sensor->flags & (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_AUTO_ACQ))) {
-		if (!(value = calloc(1, sizeof(sensor_value_t) * SENSOR_MAX_DATA))) {
-			return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
-		}
+	if (!(value = calloc(1, sizeof(sensor_value_t) * SENSOR_MAX_PROPERTIES))) {
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	// Call to specific acquire function, if any
@@ -503,22 +517,34 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 		}
 	}
 
-	if (!(unit->sensor->flags & (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_AUTO_ACQ))) {
-		mtx_lock(&unit->mtx);
+	mtx_lock(&unit->mtx);
 
-		memcpy(unit->latch, unit->data, sizeof(unit->data));
+	memcpy(unit->latch, unit->data, sizeof(unit->data));
 
-		// Copy sensor values into instance
-		// Note that we only copy raw values as value types are set in sensor_setup from sensor
-		// definition
-		for(i=0;i < SENSOR_MAX_DATA;i++) {
-			unit->data[i].raw = value[i].raw;
+	// Copy sensor values into instance
+	// Note that we only copy raw values as value types are set in sensor_setup from sensor
+	// definition
+	uint8_t is_auto;
+	for(i=0;i < SENSOR_MAX_PROPERTIES;i++) {
+		is_auto = 0;
+
+		for (j=0;j < SENSOR_MAX_INTERFACES;j++) {
+			is_auto = (
+				(unit->sensor->interface[j].flags & (SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF)) &&
+				(((unit->sensor->interface[j].flags & 0xff00) >> 8) == i)
+			);
+
+			if (is_auto) break;
 		}
 
-		mtx_unlock(&unit->mtx);
-
-		free(value);
+		if (!is_auto) {
+			unit->data[i].raw = value[i].raw;
+		}
 	}
+
+	mtx_unlock(&unit->mtx);
+
+	free(value);
 
 	return NULL;
 }
@@ -529,7 +555,7 @@ driver_error_t *sensor_read(sensor_instance_t *unit, const char *id, sensor_valu
 	mtx_lock(&unit->mtx);
 
 	*value = NULL;
-	for(idx=0;idx <  SENSOR_MAX_DATA;idx++) {
+	for(idx=0;idx <  SENSOR_MAX_PROPERTIES;idx++) {
 		if (unit->sensor->data[idx].id) {
 			if (strcmp(unit->sensor->data[idx].id,id) == 0) {
 				*value = &unit->data[idx];
@@ -602,10 +628,15 @@ driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value
 }
 
 driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callback_t callback, int id, uint8_t deferred) {
+	uint8_t allowed = 0;
 	int i;
 
 	// Sanity checks
-	if (!(unit->sensor->flags & (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_AUTO_ACQ))) {
+	for (i=0;i < SENSOR_MAX_INTERFACES;i++) {
+		allowed |= unit->sensor->interface[i].flags & (SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF);
+	}
+
+	if (!allowed) {
 		return driver_error(SENSOR_DRIVER, SENSOR_ERR_CALLBACKS_NOT_ALLOWED, NULL);
 	}
 
@@ -660,6 +691,7 @@ void IRAM_ATTR sensor_queue_callbacks(sensor_instance_t *unit) {
 			data.instance = unit;
 			data.callback = unit->callbacks[i].callback;
 			data.callback_id = unit->callbacks[i].callback_id;
+
 			memcpy(data.data, unit->data, sizeof(unit->data));
 			memcpy(data.latch, unit->latch, sizeof(unit->latch));
 

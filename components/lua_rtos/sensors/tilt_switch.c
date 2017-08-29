@@ -38,9 +38,13 @@
 static const sensor_t __attribute__((used,unused,section(".sensors"))) tilt_switch_sensor = {
 	.id = "TILT_SWITCH",
 	.interface = {
-		GPIO_INTERFACE,
+		{
+			.type = GPIO_INTERFACE,
+
+			// 1000: debouncing threshold period
+			.flags = (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_L | SENSOR_FLAG_DEBOUNCING) | (10000 << 16)
+		},
 	},
-	.flags = (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_L | SENSOR_FLAG_DEBOUNCING) | (10000 << 16),
 	.data = {
 		{.id = "on", .type = SENSOR_DATA_INT},
 	}

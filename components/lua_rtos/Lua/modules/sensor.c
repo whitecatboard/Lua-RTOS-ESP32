@@ -42,6 +42,7 @@
 #include "sensor.h"
 #include "modules.h"
 
+#include <time.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -59,6 +60,7 @@ static void callback_func(int callback, sensor_instance_t *instance, sensor_valu
 	lua_State *L;
 	int tref;
 	int idx;
+	int changed;
 	const sensor_t *csensor = instance->sensor;
 
 	if (callback != LUA_NOREF) {
@@ -85,16 +87,26 @@ static void callback_func(int callback, sensor_instance_t *instance, sensor_valu
 			if (csensor->data[idx].id) {
 			    lua_pushstring(TL, (char *)csensor->data[idx].id);
 
-			    if (data[idx].raw.value == latch[idx].raw.value) {
-			    	lua_pushnil(TL);
-			    } else {
+			    // Test if property has changed
+			    changed = 0;
+			    switch (csensor->data[idx].type) {
+			    	case SENSOR_NO_DATA: break;
+					case SENSOR_DATA_INT:    changed = (data[idx].integerd.value != latch[idx].integerd.value); break;
+					case SENSOR_DATA_FLOAT:  changed = (data[idx].floatd.value != latch[idx].floatd.value); break;
+					case SENSOR_DATA_DOUBLE: changed = (data[idx].doubled.value != latch[idx].doubled.value); break;
+					case SENSOR_DATA_STRING: changed = (data[idx].stringd.value != latch[idx].stringd.value); break;
+				}
+
+			    if (changed) {
 					switch (csensor->data[idx].type) {
-						case SENSOR_NO_DATA:     lua_pushnil(TL); break;
+						case SENSOR_NO_DATA: break;
 						case SENSOR_DATA_INT:    lua_pushinteger(TL, data[idx].integerd.value); break;
 						case SENSOR_DATA_FLOAT:  lua_pushnumber (TL, data[idx].floatd.value); break;
 						case SENSOR_DATA_DOUBLE: lua_pushnumber (TL, data[idx].doubled.value); break;
 						case SENSOR_DATA_STRING: lua_pushstring (TL, data[idx].stringd.value); break;
 					}
+			    } else {
+			    	lua_pushnil(TL);
 			    }
 
 				lua_settable(TL, -3);
@@ -116,8 +128,8 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 	top = 2;
 
 	for(i = 0; i < SENSOR_MAX_INTERFACES;i++) {
-		if (sensor->interface[i]) {
-			switch (sensor->interface[i]) {
+		if (sensor->interface[i].type) {
+			switch (sensor->interface[i].type) {
 				case ADC_INTERFACE:
 					setup[i].adc.unit = luaL_checkinteger(L, top++);
 					setup[i].adc.channel = luaL_checkinteger(L, top++);
@@ -368,7 +380,7 @@ static int lsensor_read( lua_State* L ) {
     else {
     	// Read all sensor data
     	int idx, numread=0;
-    	for(idx=0;idx <  SENSOR_MAX_DATA;idx++) {
+    	for(idx=0;idx <  SENSOR_MAX_PROPERTIES;idx++) {
     		if (udata->instance->sensor->data[idx].id) {
 				*&value = &udata->instance->data[idx];
 				switch (value->type) {
@@ -432,8 +444,8 @@ static int lsensor_list( lua_State* L ) {
 		buff[0] = 0x00;
 		exit = 0;
 		for(j = 0; j < SENSOR_MAX_INTERFACES;j++) {
-			if (csensor->interface[j]) {
-				switch (csensor->interface[j]) {
+			if (csensor->interface[j].type) {
+				switch (csensor->interface[j].type) {
 					case ADC_INTERFACE:   strcpy(interface, "ADC"); break;
 					case SPI_INTERFACE:   strcpy(interface, "SPI"); break;
 					case I2C_INTERFACE:   strcpy(interface, "I2C"); break;
@@ -500,7 +512,7 @@ static int lsensor_list( lua_State* L ) {
 			printf("%-20s %-30s ",csensor->id, interfaces);
 
 			len = 0;
-			for(idx=0; idx < SENSOR_MAX_DATA; idx++) {
+			for(idx=0; idx < SENSOR_MAX_PROPERTIES; idx++) {
 				if (csensor->data[idx].id) {
 					if (len <= 35) {
 						if (len > 0) {
@@ -540,7 +552,15 @@ static int lsensor_list( lua_State* L ) {
 	        lua_pushstring(L, (char *)csensor->id);
 	        lua_setfield (L, -2, "id");
 
-	        lua_pushboolean(L, (csensor->flags & (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_AUTO_ACQ)) != 0);
+	        int k;
+			uint8_t allowed = 0;
+
+			// Sanity checks
+			for (k=0;k < SENSOR_MAX_INTERFACES;k++) {
+				allowed |= csensor->interface[k].flags & (SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF);
+			}
+
+	        lua_pushboolean(L, allowed != 0);
 	        lua_setfield (L, -2, "callback");
 
 	        lua_pushstring(L, (char *)interfaces);
@@ -550,7 +570,7 @@ static int lsensor_list( lua_State* L ) {
 	        lua_setfield (L, -2, "interface_name");
 
 	        lua_createtable(L, 0, 0);
-	        for(idx=0; idx < SENSOR_MAX_DATA; idx++) {
+	        for(idx=0; idx < SENSOR_MAX_PROPERTIES; idx++) {
 				if (csensor->data[idx].id) {
 					lua_pushinteger(L, idx);
 					lua_createtable(L, 0, 2);
@@ -632,7 +652,7 @@ static int lsensor_enumerate_owire( lua_State* L, uint8_t table, int pin) {
 
 	// Search for 1-WIRE sensors in build
 	while (csensor->id) {
-		if (csensor->interface[0] == OWIRE_INTERFACE) {
+		if (csensor->interface[0].type == OWIRE_INTERFACE) {
 			// Get sensor definition
 			sensor = get_sensor(csensor->id);
 			if (sensor) {

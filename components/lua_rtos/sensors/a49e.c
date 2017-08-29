@@ -94,7 +94,7 @@ driver_error_t *a49e_acquire(sensor_instance_t *unit, sensor_value_t *values);
 static const sensor_t __attribute__((used,unused,section(".sensors"))) a49e_sensor = {
 	.id = "A49E",
 	.interface = {
-		ADC_INTERFACE,
+		{.type = ADC_INTERFACE},
 	},
 	.data = {
 		{.id = "magnetic field", .type = SENSOR_DATA_FLOAT},

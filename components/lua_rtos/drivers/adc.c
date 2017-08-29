@@ -317,9 +317,12 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 	return NULL;
 }
 
-driver_error_t *adc_read(adc_channel_h_t *h, int *raw, double *mvols) {
+driver_error_t *adc_read(adc_channel_h_t *h, int *araw, double *amvolts) {
 	driver_error_t *error = NULL;
 	adc_channel_t *chan;
+
+	int raw;
+	double mvolts;
 
     // Get channel
 	if (list_get(&channels, (int)*h, (void **)&chan)) {
@@ -328,24 +331,24 @@ driver_error_t *adc_read(adc_channel_h_t *h, int *raw, double *mvols) {
 
 	switch (chan->unit) {
 		case 1:
-			error = adc_internal_read(chan, raw);
+			error = adc_internal_read(chan, &raw);
 			break;
 
 		case CPU_LAST_ADC + 1:
 #if CONFIG_ADC_MCP3008
-			error = adc_mcp3008_read(chan, raw);
+			error = adc_mcp3008_read(chan, &raw);
 #endif
 			break;
 
 		case CPU_LAST_ADC + 2:
 #if CONFIG_ADC_MCP3208
-			error = adc_mcp3208_read(chan, raw);
+			error = adc_mcp3208_read(chan, &raw);
 #endif
 			break;
 
 		case CPU_LAST_ADC + 3:
 #if CONFIG_ADC_ADS1115
-			error = adc_ads1115_read(chan, raw);
+			error = adc_ads1115_read(chan, &raw);
 #endif
 			break;
 	}
@@ -359,16 +362,22 @@ driver_error_t *adc_read(adc_channel_h_t *h, int *raw, double *mvols) {
 	int max_val = chan->max_val;
 
 	if (resolution != chan->max_resolution) {
-		if (*raw & (1 << (chan->max_resolution - resolution - 1))) {
-			*raw = ((*raw >> (chan->max_resolution - resolution)) + 1) & max_val;
+		if (raw & (1 << (chan->max_resolution - resolution - 1))) {
+			raw = ((raw >> (chan->max_resolution - resolution)) + 1) & max_val;
 		} else {
-			*raw = *raw >> (chan->max_resolution - resolution);
+			raw = raw >> (chan->max_resolution - resolution);
 		}
 	}
 
 	// Convert raw value to mVolts
-	if (mvols) {
-		*mvols = (double)chan->rnvref +  (double)((*raw) * (chan->rpvref - chan->rnvref)) / (double)max_val;
+	mvolts = (double)chan->rnvref +  (double)((raw) * (chan->rpvref - chan->rnvref)) / (double)max_val;
+
+	if (araw) {
+		*araw = raw;
+	}
+
+	if (amvolts) {
+		*amvolts = mvolts;
 	}
 
 	return NULL;
