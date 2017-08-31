@@ -76,7 +76,7 @@ CFLAGS += -DMAXNAMLEN=64
 # Lua configuration
 #
 CFLAGS += -DDEBUG_FREE_MEM=0           # Enable LUA free mem debug utility (only for debug purposes)
-CFLAGS += -DLUA_USE_LUA_LOCK=0		   # Enable if Lua must use real lua_lock / lua_unlock implementation
+CFLAGS += -DLUA_USE_LUA_LOCK=1		   # Enable if Lua must use real lua_lock / lua_unlock implementation
 # CFLAGS += -DSTRCACHE_N=1
 # CFLAGS += -DSTRCACHE_M=1
 # CFLAGS += -DMINSTRTABSIZE=32

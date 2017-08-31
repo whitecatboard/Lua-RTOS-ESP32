@@ -44,6 +44,8 @@ static int dofile (lua_State *L, const char *name);
 extern int threadInited;
 
 #if LUA_USE_LUA_LOCK
+#include <pthread/pthread.h>
+
 pthread_mutex_t lua_mutex;
 
 inline void LuaLockInit(lua_State *L) {
