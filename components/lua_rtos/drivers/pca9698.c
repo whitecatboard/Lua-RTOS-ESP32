@@ -1,12 +1,12 @@
 /*
- * Lua RTOS, Read Only tables cache
+ * Lua RTOS, PCA9698 driver
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
- *
+ * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- *
- * All rights reserved.
+ * 
+ * All rights reserved.  
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -29,40 +29,61 @@
 
 #include "sdkconfig.h"
 
-#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+#include <stdint.h>
 
-#include "lrotable.h"
+#include <sys/driver.h>
+#include <sys/syslog.h>
 
-#ifndef ROTABLE_CACHE_H
-#define ROTABLE_CACHE_H
+#include <drivers/i2c.h>
+#include <drivers/pca9698.h>
 
-#define ROTABLE_CACHE_LENGTH 8
+// Driver message errors
+DRIVER_REGISTER_ERROR(PCA9698, pca9698, InvalidUnit, "invalid unit", PCA9698_ERR_INVALID_UNIT);
 
-#include <sys/mutex.h>
+uint8_t setup = 0;
 
-struct rotable_cache_entry {
-	struct rotable_cache_entry *previous; // Previous entry
-	struct rotable_cache_entry *next;     // Next entry
+/*
+ * Helper functions
+ */
 
-	luaR_entry *rotable; // cached rotable
-	luaR_entry *entry;   // cached entry
-	uint32_t used;
-};
 
-typedef struct {
-	uint32_t miss;  // Number of cache misses
-	uint32_t hit;   // Number of cache hits
-	struct mtx mtx; // Mutex for protect cache entries
+/*
+ * Operation functions
+ */
 
-	struct rotable_cache_entry *first; // First entry
-	struct rotable_cache_entry *last;  // Last entry
-} rotable_cache_t;
+driver_error_t *pca9698_setup() {
+	driver_error_t *error;
 
-void rotable_cache_dump();
-int rotable_cache_init();
-const TValue *rotable_cache_get(const luaR_entry *rotable, const char *strkey);
-void rotable_cache_put(const luaR_entry *rotable, const luaR_entry *entry);
+	if ((error = i2c_setup(CONFIG_PCA9698_I2C, I2C_MASTER, CONFIG_PCA9698_I2C_SPEED, 0, 0))) {
+		return error;
+	}
 
-#endif
+	if (!setup) {
+		syslog(
+				LOG_INFO,
+				"GPIO PCA9698 i2c%d, address %x",
+				CONFIG_PCA9698_I2C, CONFIG_PCA9698_I2C_ADDRESS
+		);
+	}
 
-#endif
+	setup = 1;
+
+	return NULL;
+}
+
+void pca_9698_pin_output(uint8_t pin) {
+}
+
+void pca_9698_pin_input(uint8_t pin) {
+}
+
+void pca_9698_pin_set(uint8_t pin) {
+}
+
+void pca_9698_pin_clr(uint8_t pin) {
+}
+
+void pca_9698_pin_inv(uint8_t pin) {
+}
+
+DRIVER_REGISTER(PCA9698,pca9698,NULL,NULL,NULL);

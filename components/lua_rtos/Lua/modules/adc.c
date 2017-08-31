@@ -47,30 +47,6 @@
 
 extern LUA_REG_TYPE adc_error_map[];
 
-static int ladc_setup( lua_State* L ) {
-    int id, res, channel, pvref, nvref;
-	driver_error_t *error;
-
-	luaL_deprecated(L, "adc.setup", "adc.attach");
-
-    id = luaL_checkinteger( L, 1 );
-    channel = luaL_checkinteger( L, 2 );
-    res = luaL_optinteger( L, 3, 0 );
-    pvref = luaL_optinteger( L, 4, 0 );
-    nvref = luaL_optinteger( L, 5, 0 );
-
-    adc_userdata *adc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
-
-    if ((error = adc_setup(id, channel, 0, pvref, nvref, res, &adc->h))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    luaL_getmetatable(L, "adc.chan");
-    lua_setmetatable(L, -2);
-
-    return 1;
-}
-
 static int ladc_attach( lua_State* L ) {
     int id, res, channel, pvref, nvref;
 	driver_error_t *error;
@@ -112,7 +88,6 @@ static int ladc_read( lua_State* L ) {
 }
 
 static const LUA_REG_TYPE ladc_map[] = {
-    { LSTRKEY( "setup" ),		  LFUNCVAL( ladc_setup   ) },
     { LSTRKEY( "attach"),		  LFUNCVAL( ladc_attach  ) },
 	ADC_ADC0
 	ADC_ADC1

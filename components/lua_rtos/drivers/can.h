@@ -36,6 +36,13 @@
 
 #include <sys/driver.h>
 
+#define CAN_NUM_FILTERS 10
+
+typedef struct {
+	int32_t fromID;
+	int32_t toID;
+} CAN_filter_t;
+
 // Get the TX GPIO from Kconfig
 #if CONFIG_LUA_RTOS_CAN_TX_GPIO5
 #define CONFIG_LUA_RTOS_CAN_TX 5

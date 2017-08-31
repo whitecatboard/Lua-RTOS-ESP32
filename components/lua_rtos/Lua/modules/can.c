@@ -48,21 +48,6 @@ extern LUA_REG_TYPE can_error_map[];
 
 static int dump_stop = 0;
 
-static int lcan_setup(lua_State* L) {
-	driver_error_t *error;
-
-	luaL_deprecated(L, "can.setup", "can.attach");
-
-	int id = luaL_checkinteger(L, 1);
-	uint32_t speed = luaL_checkinteger(L, 2);
-
-    if ((error = can_setup(id, speed))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    return 0;
-}
-
 static int lcan_attach(lua_State* L) {
 	driver_error_t *error;
 
@@ -200,7 +185,6 @@ static int lcan_stats(lua_State* L) {
 #endif
 
 static const LUA_REG_TYPE lcan_map[] = {
-    { LSTRKEY( "setup"        ),		  LFUNCVAL( lcan_setup         ) },
     { LSTRKEY( "attach"       ),		  LFUNCVAL( lcan_attach        ) },
     { LSTRKEY( "addfilter"    ),		  LFUNCVAL( lcan_add_filter    ) },
     { LSTRKEY( "removefilter" ),		  LFUNCVAL( lcan_remove_filter ) },

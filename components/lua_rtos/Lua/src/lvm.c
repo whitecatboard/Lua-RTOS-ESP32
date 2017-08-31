@@ -948,11 +948,11 @@ void luaV_execute (lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         settableProtected(L, upval, rb, rc);
-		#if LUA_USE_ROTABLE
-        if (ttisnil(rc)) {
-        	luaC_fullgc(L, 0);
-        }
-		#endif
+		//#if LUA_USE_ROTABLE
+        //if (ttisnil(rc)) {
+        //	luaC_fullgc(L, 0);
+        //}
+		//#endif
         vmbreak;
       }
       vmcase(OP_SETUPVAL) {

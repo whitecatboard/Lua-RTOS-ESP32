@@ -126,39 +126,6 @@ static int li2c_setpins(lua_State* L) {
 	return 0;
 }
 
-static int li2c_setup( lua_State* L ) {
-	driver_error_t *error;
-
-	luaL_deprecated(L, "i2c.setup", "i2c.attach");
-
-    int id = luaL_checkinteger(L, 1);
-    int mode = luaL_checkinteger(L, 2);
-    int speed = luaL_checkinteger(L, 3);
-    int sda = luaL_checkinteger(L, 4);
-    int scl = luaL_checkinteger(L, 5);
-
-    if ((error = i2c_pin_map(id, sda, scl))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    if ((error = i2c_setup(id, mode, speed, 0, 0))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    // Allocate userdata
-    i2c_user_data_t *user_data = (i2c_user_data_t *)lua_newuserdata(L, sizeof(i2c_user_data_t));
-    if (!user_data) {
-       	return luaL_exception(L, I2C_ERR_NOT_ENOUGH_MEMORY);
-    }
-
-    user_data->unit = id;
-    user_data->transaction = I2C_TRANSACTION_INITIALIZER;
-
-    luaL_getmetatable(L, "i2c.trans");
-    lua_setmetatable(L, -2);
-
-    return 1;
-}
 
 static int li2c_attach( lua_State* L ) {
 	int speed = -1;
@@ -328,7 +295,6 @@ static int li2c_trans_gc (lua_State *L) {
 }
 
 static const LUA_REG_TYPE li2c_map[] = {
-    { LSTRKEY( "setup"   ),			LFUNCVAL( li2c_setup   ) },
     { LSTRKEY( "attach"  ),			LFUNCVAL( li2c_attach  ) },
 	{ LSTRKEY( "pins"    ),	 		LFUNCVAL( li2c_pins     ) },
 	{ LSTRKEY( "setpins" ),	 		LFUNCVAL( li2c_setpins  ) },

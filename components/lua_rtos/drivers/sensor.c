@@ -460,7 +460,7 @@ driver_error_t *sensor_unsetup(sensor_instance_t *unit) {
 
 	// Remove interrupts
 	for(i=0; i < SENSOR_MAX_INTERFACES; i++) {
-		if ((unit->sensor->interface[i].flags & SENSOR_FLAG_ON_OFF) | unit->setup[i].gpio.gpio) {
+		if ((unit->sensor->interface[i].flags & SENSOR_FLAG_ON_OFF) && unit->setup[i].gpio.gpio) {
 			gpio_isr_handler_remove(unit->setup[i].gpio.gpio);
 		}
 	}

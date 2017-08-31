@@ -397,7 +397,7 @@ static int os_stats(lua_State *L) {
 
 	// Do a garbage collection
 	lua_lock(L);
-	luaC_fullgc(L, 1);
+	luaC_fullgc(L, 0);
 	lua_unlock(L);
 	
     if (stat && strcmp(stat,"mem") == 0) {

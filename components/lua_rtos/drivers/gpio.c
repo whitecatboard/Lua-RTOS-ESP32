@@ -27,6 +27,8 @@
  * this software.
  */
 
+#include "sdkconfig.h"
+
 #include "esp_err.h"
 #include "esp_attr.h"
 
@@ -34,6 +36,7 @@
 
 #include <sys/driver.h>
 #include <drivers/gpio.h>
+#include <drivers/pca9698.h>
 #include <drivers/cpu.h>
 #include <drivers/timer.h>
 
@@ -95,76 +98,113 @@ uint8_t IRAM_ATTR gpio_ll_pin_get(int8_t pin) {
  *
  */
 driver_error_t *gpio_pin_output(uint8_t pin) {
-	gpio_config_t io_conf;
+	if (pin <= 39) {
+		gpio_config_t io_conf;
 
-	// Sanity checks
-	if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		// Sanity checks
+		if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
+
+		io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+		io_conf.mode = GPIO_MODE_OUTPUT;
+		io_conf.pin_bit_mask = (GPIO_BIT_MASK << pin);
+		io_conf.pull_down_en = 0;
+		io_conf.pull_up_en = 0;
+
+		gpio_config(&io_conf);
+	} else {
+		if ((pin >= 80) || (!CONFIG_GPIO_PCA9698)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+
+		pca_9698_pin_output(pin - 40);
 	}
-
-    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
-    io_conf.mode = GPIO_MODE_OUTPUT;
-    io_conf.pin_bit_mask = (GPIO_BIT_MASK << pin);
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 0;
-
-    gpio_config(&io_conf);
-
     return NULL;
 }
 
 driver_error_t *gpio_pin_input(uint8_t pin) {
-	gpio_config_t io_conf;
+	if (pin <= 39) {
+		gpio_config_t io_conf;
 
-	// Sanity checks
-	if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		// Sanity checks
+		if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
+
+		io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+		io_conf.mode = GPIO_MODE_INPUT;
+		io_conf.pin_bit_mask = (GPIO_BIT_MASK << pin);
+		io_conf.pull_down_en = 0;
+		io_conf.pull_up_en = 0;
+
+		gpio_config(&io_conf);
+	} else {
+		if ((pin >= 80) || (!CONFIG_GPIO_PCA9698)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+
+		pca_9698_pin_input(pin - 40);
 	}
-
-	io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pin_bit_mask = (GPIO_BIT_MASK << pin);
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 0;
-
-    gpio_config(&io_conf);
 
     return NULL;
 }
 
 driver_error_t *gpio_pin_set(uint8_t pin) {
-	// Sanity checks
-	if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
-	}
+	if (pin <= 39) {
+		// Sanity checks
+		if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
 
-	gpio_ll_pin_set(pin);
+		gpio_ll_pin_set(pin);
+	} else {
+		if ((pin >= 80) || (!CONFIG_GPIO_PCA9698)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+
+		pca_9698_pin_set(pin - 40);
+	}
 
 	return NULL;
 }
 
 driver_error_t *gpio_pin_clr(uint8_t pin) {
-	// Sanity checks
-	if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
-	}
+	if (pin <= 39) {
+		// Sanity checks
+		if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
 
-	gpio_ll_pin_clr(pin);
+		gpio_ll_pin_clr(pin);
+	} else {
+		if ((pin >= 80) || (!CONFIG_GPIO_PCA9698)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+
+		pca_9698_pin_clr(pin - 40);
+	}
 
 	return NULL;
 }
 
 driver_error_t *gpio_pin_inv(uint8_t pin) {
-	driver_error_t *error = NULL;
+	if (pin <= 39) {
+		// Sanity checks
+		if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
 
-	// Sanity checks
-	if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		gpio_ll_pin_inv(pin);
+	} else {
+		if ((pin >= 80) || (!CONFIG_GPIO_PCA9698)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+
+		pca_9698_pin_inv(pin - 40);
 	}
 
-	gpio_ll_pin_inv(pin);
-
-	return error;
+	return NULL;
 }
 
 driver_error_t *gpio_pin_get(uint8_t pin, uint8_t *val) {

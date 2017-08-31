@@ -1,12 +1,12 @@
 /*
- * Lua RTOS, Read Only tables cache
+ * Lua RTOS, PCA9698 driver
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
- *
+ * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- *
- * All rights reserved.
+ * 
+ * All rights reserved.  
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -27,42 +27,20 @@
  * this software.
  */
 
-#include "sdkconfig.h"
+#ifndef PCA9698_H
+#define	PCA9698_H
 
-#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+#include <stdint.h>
 
-#include "lrotable.h"
+#include <sys/driver.h>
 
-#ifndef ROTABLE_CACHE_H
-#define ROTABLE_CACHE_H
+// PCA9698 errors
+#define PCA9698_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(PCA9698_DRIVER_ID) |  0)
 
-#define ROTABLE_CACHE_LENGTH 8
+void pca_9698_pin_output(uint8_t pin);
+void pca_9698_pin_input(uint8_t pin);
+void pca_9698_pin_set(uint8_t pin);
+void pca_9698_pin_clr(uint8_t pin);
+void pca_9698_pin_inv(uint8_t pin);
 
-#include <sys/mutex.h>
-
-struct rotable_cache_entry {
-	struct rotable_cache_entry *previous; // Previous entry
-	struct rotable_cache_entry *next;     // Next entry
-
-	luaR_entry *rotable; // cached rotable
-	luaR_entry *entry;   // cached entry
-	uint32_t used;
-};
-
-typedef struct {
-	uint32_t miss;  // Number of cache misses
-	uint32_t hit;   // Number of cache hits
-	struct mtx mtx; // Mutex for protect cache entries
-
-	struct rotable_cache_entry *first; // First entry
-	struct rotable_cache_entry *last;  // Last entry
-} rotable_cache_t;
-
-void rotable_cache_dump();
-int rotable_cache_init();
-const TValue *rotable_cache_get(const luaR_entry *rotable, const char *strkey);
-void rotable_cache_put(const luaR_entry *rotable, const luaR_entry *entry);
-
-#endif
-
-#endif
+#endif	/* PCA9698 */

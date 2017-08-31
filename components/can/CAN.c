@@ -27,20 +27,13 @@
  *
  */
 
-#include "sdkconfig.h"
-
-#if CONFIG_LUA_RTOS_LUA_USE_CAN
-
 #include "CAN.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
-#include "esp_attr.h"
 #include "esp_intr.h"
 #include "soc/dport_reg.h"
-
-#include <string.h>
 #include <math.h>
 
 #include "driver/gpio.h"
@@ -48,32 +41,27 @@
 #include "can_regdef.h"
 #include "CAN_config.h"
 
+
 static void CAN_read_frame();
 static void CAN_isr(void *arg_p);
 
-// CAN filters
-static uint8_t filters = 0;
-static CAN_filter_t can_filter[CAN_NUM_FILTERS];
 
-static void IRAM_ATTR CAN_isr(void *arg_p){
+static void CAN_isr(void *arg_p){
 
-    uint8_t interrupt;
+	//Interrupt flag buffer
+	__CAN_IRQ_t interrupt;
 
-    // Read interrupt status and clears flags
+    // Read interrupt status and clear flags
     interrupt = MODULE_CAN->IR.U;
 
     // Handle TX complete interrupt
     if ((interrupt & __CAN_IRQ_TX) != 0) {
-
+    	/*handler*/
     }
 
     // Handle RX frame available interrupt
-    if ((interrupt & __CAN_IRQ_RX) != 0) {
-        if (CAN_cfg.rx_queue == NULL)
-            return;
-
+    if ((interrupt & __CAN_IRQ_RX) != 0)
     	CAN_read_frame();
-    }
 
     // Handle error interrupts.
     if ((interrupt & (__CAN_IRQ_ERR						//0x4
@@ -83,14 +71,11 @@ static void IRAM_ATTR CAN_isr(void *arg_p){
                       | __CAN_IRQ_ARB_LOST				//0x40
                       | __CAN_IRQ_BUS_ERR				//0x80
 	)) != 0) {
-
+    	/*handler*/
     }
 }
 
-
-static void IRAM_ATTR CAN_read_frame(){
-	//filter iterator
-	uint8_t i;
+static void CAN_read_frame(){
 
 	//byte iterator
 	uint8_t __byte_i;
@@ -98,60 +83,77 @@ static void IRAM_ATTR CAN_read_frame(){
 	//frame read buffer
 	CAN_frame_t __frame;
 
-    //only handle standard frames, for extended format frames, FF is 0.
-    if(MODULE_CAN->MBX_CTRL.FCTRL.FIR.B.FF==1){
+    //check if we have a queue. If not, operation is aborted.
+    if (CAN_cfg.rx_queue == NULL){
         // Let the hardware know the frame has been read.
         MODULE_CAN->CMR.B.RRB=1;
-    	return;
+        return;
     }
 
-    //Get Message ID
-    __frame.MsgID = (((uint32_t)MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.STD.ID[0] << 3) | (MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.STD.ID[1]>>5));
+	//get FIR
+	__frame.FIR.U=MODULE_CAN->MBX_CTRL.FCTRL.FIR.U;
 
-    //get DLC
-    __frame.DLC = MODULE_CAN->MBX_CTRL.FCTRL.FIR.B.DLC;
+    //check if this is a standard or extended CAN frame
+    //standard frame
+    if(__frame.FIR.B.FF==CAN_frame_std){
 
-    //deep copy data bytes
-    for(__byte_i=0;__byte_i<__frame.DLC;__byte_i++)
-    	__frame.data.u8[__byte_i]=MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.STD.data[__byte_i];
+        //Get Message ID
+        __frame.MsgID = _CAN_GET_STD_ID;
 
-    // Let the hardware know the frame has been read.
+        //deep copy data bytes
+        for(__byte_i=0;__byte_i<__frame.FIR.B.DLC;__byte_i++)
+        	__frame.data.u8[__byte_i]=MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.STD.data[__byte_i];
+
+    }
+    //extended frame
+    else{
+
+        //Get Message ID
+        __frame.MsgID = _CAN_GET_EXT_ID;
+
+        //deep copy data bytes
+        for(__byte_i=0;__byte_i<__frame.FIR.B.DLC;__byte_i++)
+        	__frame.data.u8[__byte_i]=MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.EXT.data[__byte_i];
+
+    }
+
+    //send frame to input queue
+    xQueueSendFromISR(CAN_cfg.rx_queue,&__frame,0);
+
+    //Let the hardware know the frame has been read.
     MODULE_CAN->CMR.B.RRB=1;
-
-    // Check filter
-    uint8_t pass = 0;
-    if (filters > 0) {
-        for(i=0;((i < CAN_NUM_FILTERS) && (!pass));i++) {
-        	if ((can_filter[i].fromID >= 0) && (can_filter[i].toID >= 0)) {
-        		pass = ((__frame.MsgID >= can_filter[i].fromID) && (__frame.MsgID <= can_filter[i].toID));
-        	}
-        }
-    } else {
-    	pass = 1;
-    }
-
-    if (pass) {
-        //send frame to input queue
-        xQueueSendFromISR(CAN_cfg.rx_queue,&__frame,0);
-    }
 }
-
 
 int CAN_write_frame(const CAN_frame_t* p_frame){
 
 	//byte iterator
 	uint8_t __byte_i;
 
-	//set frame format to standard and no RTR (needs to be done in a single write)
-	MODULE_CAN->MBX_CTRL.FCTRL.FIR.U=p_frame->DLC;
+	//copy frame information record
+	MODULE_CAN->MBX_CTRL.FCTRL.FIR.U=p_frame->FIR.U;
 
-	//Write message ID
-	MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.STD.ID[0] = ((p_frame->MsgID) >> 3);
-	MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.STD.ID[1] = ((p_frame->MsgID) << 5);
+	//standard frame
+	if(p_frame->FIR.B.FF==CAN_frame_std){
 
-    // Copy the frame data to the hardware
-    for(__byte_i=0;__byte_i<p_frame->DLC;__byte_i++)
-    	MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.STD.data[__byte_i]=p_frame->data.u8[__byte_i];
+		//Write message ID
+		_CAN_SET_STD_ID(p_frame->MsgID);
+
+	    // Copy the frame data to the hardware
+	    for(__byte_i=0;__byte_i<p_frame->FIR.B.DLC;__byte_i++)
+	    	MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.STD.data[__byte_i]=p_frame->data.u8[__byte_i];
+
+	}
+	//extended frame
+	else{
+
+		//Write message ID
+		_CAN_SET_EXT_ID(p_frame->MsgID);
+
+	    // Copy the frame data to the hardware
+	    for(__byte_i=0;__byte_i<p_frame->FIR.B.DLC;__byte_i++)
+	    	MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.EXT.data[__byte_i]=p_frame->data.u8[__byte_i];
+
+	}
 
     // Transmit frame
     MODULE_CAN->CMR.B.TR=1;
@@ -159,23 +161,10 @@ int CAN_write_frame(const CAN_frame_t* p_frame){
     return 0;
 }
 
-
-
 int CAN_init(){
-	// Init filters
-	uint8_t i;
-	for(i=0;i < CAN_NUM_FILTERS;i++) {
-		can_filter[i].fromID = -1;
-		can_filter[i].toID = -1;
-	}
-
-	filters = 0;
 
 	//Time quantum
-	double __tq = 0;
-
-	//Bit timing
-	float __bt = 1000/CAN_cfg.speed;
+	double __tq;
 
     //enable module
     DPORT_SET_PERI_REG_MASK(DPORT_PERIP_CLK_EN_REG, DPORT_CAN_CLK_EN);
@@ -213,7 +202,7 @@ int CAN_init(){
 			break;
 		default:
 			MODULE_CAN->BTR1.B.TSEG1	=0xc;
-			__tq = __bt / 16;
+			__tq = ((float)1000/CAN_cfg.speed) / 16;
 	}
 
 	//set baud rate prescaler
@@ -258,63 +247,17 @@ int CAN_init(){
 }
 
 int CAN_stop(){
+
+	//enter reset mode
 	MODULE_CAN->MOD.B.RM = 1;
 
 	return 0;
 }
 
-int CAN_add_filter(int32_t fromId, int32_t toId) {
-	uint8_t i;
+int CAN_start(){
 
-	portDISABLE_INTERRUPTS();
+	//exit reset mode
+	MODULE_CAN->MOD.B.RM = 0;
 
-	// Check if there is some filter that match with the
-	// desired filter
-	for(i=0;i < CAN_NUM_FILTERS;i++) {
-		if ((fromId >= can_filter[i].fromID) && (toId <= can_filter[i].toID)) {
-			portENABLE_INTERRUPTS();
-			return 0;
-		}
-	}
-
-	// Add filter
-	for(i=0;i < CAN_NUM_FILTERS;i++) {
-		if ((can_filter[i].fromID  == -1) && (can_filter[i].toID == -1)) {
-			can_filter[i].fromID = fromId;
-			can_filter[i].toID = toId;
-			filters++;
-			break;
-		} else {
-
-		}
-	}
-
-	// Reset rx queue
-	xQueueReset(CAN_cfg.rx_queue);
-
-	portENABLE_INTERRUPTS();
-
-	return !(i < CAN_NUM_FILTERS);
+	return 0;
 }
-
-int CAN_remove_filter(int32_t fromId, int32_t toId) {
-	portDISABLE_INTERRUPTS();
-
-	uint8_t i;
-	for(i=0;i < CAN_NUM_FILTERS;i++) {
-		if ((can_filter[i].fromID  > -1) && (can_filter[i].toID > -1)) {
-			if ((can_filter[i].fromID  == fromId) && (can_filter[i].toID == toId)) {
-				can_filter[i].fromID = -1;
-				can_filter[i].toID = -1;
-				filters--;
-				break;
-			}
-		}
-	}
-
-	portENABLE_INTERRUPTS();
-
-	return !(i < CAN_NUM_FILTERS);
-}
-
-#endif

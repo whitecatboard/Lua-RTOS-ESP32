@@ -29,6 +29,14 @@ SECTIONS {
 	/* exception names exported to Lua modules */
 	/* TO DO */
 	/*   Generate this entries automatically */
+    pca9698_errors = ABSOLUTE(.);
+    KEEP(*(.pca9698_errors))
+    LONG(0) LONG(0)
+
+    pca9698_error_map = ABSOLUTE(.);
+    KEEP(*(.pca9698_error_map))
+    LONG(0) LONG(0)
+
     encoder_errors = ABSOLUTE(.);
     KEEP(*(.encoder_errors))
     LONG(0) LONG(0)

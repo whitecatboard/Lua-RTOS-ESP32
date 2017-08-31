@@ -300,6 +300,38 @@ menu "Lua RTOS"
 				help
 					Negative voltage reference in mVolts.	
 		endmenu
+
+		menu "External GPIO"
+			config GPIO_PCA9698
+				bool "Use I2C GPIO PCA9698"
+				default y
+				help
+					PCA9698 is an 40-GPIO I2C extender.
+
+			config PCA9698_I2C
+				depends on GPIO_PCA9698
+					int "PCA9698 I2C port"
+					range 0 1
+					default 0
+					help
+						I2C port where PCA9698 is attached
+
+			config PCA9698_I2C_SPEED
+				depends on GPIO_PCA9698
+					int "PCA9698 I2C port speed"
+					range 100000 1000000
+					default 1000000
+					help
+						I2C port speed in hertz
+
+			config PCA9698_I2C_ADDRESS
+				depends on GPIO_PCA9698
+					int "PCA9698 I2C port address"
+					range 0 255
+					default 132
+					help
+						I2C port speed in hertz		
+		endmenu
 		
 		menu "External ADC"
 			config ADC_EXTERNAL_VREF_P
