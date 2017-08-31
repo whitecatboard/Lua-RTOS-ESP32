@@ -210,10 +210,6 @@ static int lnet_stat(lua_State* L) {
 	} else {
 		lua_settop(L, 0);
 	}
-
-	if (table) {
-		lua_pushinteger(L, 1);
-	}
 #endif
 
 #if CONFIG_SPI_ETHERNET && CONFIG_LUA_RTOS_LUA_USE_NET
