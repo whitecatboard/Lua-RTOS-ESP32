@@ -27,17 +27,19 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #ifndef I2C_H
 #define I2C_H
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 #include "driver/i2c.h"
 
 #include <stdint.h>
 
 #include <sys/driver.h>
-#include <sys/mutex.h>
 
 #include <drivers/cpu.h>
 
@@ -49,7 +51,7 @@ typedef struct i2c {
 	uint8_t setup;
 	int8_t sda;
 	int8_t scl;
-	struct mtx mtx;
+	SemaphoreHandle_t mtx;
 } i2c_t;
 
 #define I2C_SLAVE	0 /*!< I2C slave mode */

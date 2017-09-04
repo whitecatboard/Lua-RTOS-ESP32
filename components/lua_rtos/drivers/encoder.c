@@ -186,14 +186,12 @@ static void IRAM_ATTR encoder_isr(void* arg) {
 	has_data = 0;
 	dir = 0;
 
-	// Get A, B & SW pin values
-	uint32_t port = GPIO.in;
-	uint8_t A = (port >> encoder->A) & 0x1;
-	uint8_t B = (port >> encoder->B) & 0x1;
+	uint8_t A = gpio_ll_pin_get(encoder->A);
+	uint8_t B = gpio_ll_pin_get(encoder->B);
 	uint8_t SW;
 
 	if (encoder->SW >= 0) {
-		SW = (port >> encoder->SW) & 0x1;
+		SW = gpio_ll_pin_get(encoder->SW);
 	} else {
 		SW = 1;
 	}
@@ -246,32 +244,32 @@ driver_error_t *encoder_setup(int8_t a, int8_t b, int8_t sw, encoder_h_t **h) {
 		return driver_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "a and b pins are required");
 	}
 
-	if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << a))) {
+	if (!GPIO_CHECK_INPUT(a)) {
 		return driver_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "A, must be an input PIN");
 	}
 
-	if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << b))) {
+	if (!GPIO_CHECK_INPUT(b)) {
 		return driver_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "B, must be an input PIN");
 	}
 
-	if ((sw > 0) && (!(GPIO_ALL_IN & (GPIO_BIT_MASK << sw)))) {
+	if ((sw > 0) && !GPIO_CHECK_INPUT(sw)) {
 		return driver_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "SW, must be an input PIN");
 	}
 
 	// Lock resources
     if ((lock_error = driver_lock(ENCODER_DRIVER, 0, GPIO_DRIVER, a, 0, "A"))) {
     	// Revoked lock on pin
-    	return driver_lock_error(SPI_DRIVER, lock_error);
+    	return driver_lock_error(ENCODER_DRIVER, lock_error);
     }
 
     if ((lock_error = driver_lock(ENCODER_DRIVER, 0, GPIO_DRIVER, b, 0, "B"))) {
     	// Revoked lock on pin
-    	return driver_lock_error(SPI_DRIVER, lock_error);
+    	return driver_lock_error(ENCODER_DRIVER, lock_error);
     }
 
     if ((lock_error = driver_lock(ENCODER_DRIVER, 0, GPIO_DRIVER, sw, 0, "SW"))) {
     	// Revoked lock on pin
-    	return driver_lock_error(SPI_DRIVER, lock_error);
+    	return driver_lock_error(ENCODER_DRIVER, lock_error);
     }
 
     // Allocate space for the encoder
@@ -285,40 +283,15 @@ driver_error_t *encoder_setup(int8_t a, int8_t b, int8_t sw, encoder_h_t **h) {
     encoder->SW = sw;
     encoder->state = R_START;
 
-    // Configure pins as input
-    gpio_config_t io_conf;
+    gpio_pin_input(a);
+    gpio_pin_input(b);
 
-    // A
-    io_conf.intr_type = GPIO_INTR_ANYEDGE;
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pin_bit_mask = (1ULL << a);
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 1;
-
-    gpio_config(&io_conf);
-
-    // B
-    io_conf.pin_bit_mask = (1ULL << b);
-    gpio_config(&io_conf);
-
-    // SW
-    if (sw >= 0) {
-    	io_conf.pin_bit_mask = (1ULL << sw);
-    	gpio_config(&io_conf);
-    }
-
-	// Configure interrupts
-    if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
-    	gpio_install_isr_service(0);
-
-    	status_set(STATUS_ISR_SERVICE_INSTALLED);
-    }
-
-    gpio_isr_handler_add(a, encoder_isr, (void *)encoder);
-    gpio_isr_handler_add(b, encoder_isr, (void *)encoder);
+    gpio_isr_attach(a, encoder_isr, GPIO_INTR_ANYEDGE, (void *)encoder);
+    gpio_isr_attach(b, encoder_isr, GPIO_INTR_ANYEDGE, (void *)encoder);
 
     if (sw >= 0) {
-    	gpio_isr_handler_add(sw, encoder_isr, (void *)encoder);
+        gpio_pin_input(sw);
+        gpio_isr_attach(sw, encoder_isr, GPIO_INTR_ANYEDGE, (void *)encoder);
     }
 
     *h = encoder;
@@ -337,11 +310,11 @@ driver_error_t *encoder_unsetup(encoder_h_t *h) {
 	}
 
 	// Remove interrupts
-	gpio_isr_handler_remove(h->A);
-	gpio_isr_handler_remove(h->B);
+	gpio_isr_detach(h->A);
+	gpio_isr_detach(h->B);
 
 	if (h->SW >= 0) {
-		gpio_isr_handler_remove(h->SW);
+		gpio_isr_detach(h->SW);
 	}
 
 	if (attached == 1) {

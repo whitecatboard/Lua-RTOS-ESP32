@@ -39,8 +39,7 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
 	driver_error_t err;
     int ret_val;
     
-    bcopy(error, &err, sizeof(driver_error_t));
-    free(error);
+    memcpy(&err, error, sizeof(driver_error_t));
     
     if (err.type == LOCK) {
         ret_val = luaL_error(L,
@@ -52,6 +51,7 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
 		);
         
         free(err.lock_error);
+        free(error);
 
         return ret_val;
     } else if (err.type == OPERATION) {
@@ -71,6 +71,8 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     	}
     }
     
+    free(error);
+
     return luaL_error(L, driver_get_err_msg(error));
 }
 

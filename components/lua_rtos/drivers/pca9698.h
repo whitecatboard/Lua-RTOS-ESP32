@@ -30,17 +30,55 @@
 #ifndef PCA9698_H
 #define	PCA9698_H
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+#include "freertos/semphr.h"
+#include "esp_attr.h"
+
+#include <driver/gpio.h>
+
 #include <stdint.h>
 
 #include <sys/driver.h>
 
-// PCA9698 errors
-#define PCA9698_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(PCA9698_DRIVER_ID) |  0)
+// Number of banks
+#define PCA9698_BANKS 5
 
+// Number of pins
+#define PCA9698_PINS 40
+
+// Convert a GPIO number to it's bank number
+#define PCA9698_GPIO_BANK_NUM(gpio) (gpio >> 3)
+
+// Convert a GPIO number to it's position into it's bank
+#define PCA9698_GPIO_BANK_POS(gpio) (gpio % 7)
+
+typedef struct {
+	uint8_t direction[PCA9698_BANKS];
+	uint8_t latch[PCA9698_BANKS];
+	gpio_isr_t isr_func[PCA9698_PINS];
+	uint8_t isr_type[PCA9698_PINS];
+	void *isr_args[PCA9698_PINS];
+	xQueueHandle queue;
+	TaskHandle_t task;
+	SemaphoreHandle_t mtx;
+} pca_9698_t;
+
+driver_error_t *pca9698_setup();
 void pca_9698_pin_output(uint8_t pin);
 void pca_9698_pin_input(uint8_t pin);
 void pca_9698_pin_set(uint8_t pin);
 void pca_9698_pin_clr(uint8_t pin);
 void pca_9698_pin_inv(uint8_t pin);
+uint8_t pca_9698_pin_get(uint8_t pin);
+void pca_9698_pin_input_mask(uint8_t port, uint8_t pinmask);
+void pca_9698_pin_output_mask(uint8_t port, uint8_t pinmask);
+void pca_9698_pin_set_mask(uint8_t port, uint8_t pinmask);
+void pca_9698_pin_clr_mask(uint8_t port, uint8_t pinmask);
+void pca_9698_pin_inv_mask(uint8_t port, uint8_t pinmask);
+void pca_9698_pin_get_mask(uint8_t port, uint8_t pinmask, uint8_t *value);
+void pca_9698_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type, void *args);
+void pca_9698_isr_detach(uint8_t pin);
 
 #endif	/* PCA9698 */

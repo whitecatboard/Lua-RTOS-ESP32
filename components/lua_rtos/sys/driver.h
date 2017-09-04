@@ -70,7 +70,6 @@
 #define TIMER_DRIVER_ID    28
 #define ENCODER_DRIVER_ID  29
 #define MDNS_DRIVER_ID     30
-#define PCA9698_DRIVER_ID  31
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -92,12 +91,11 @@
 #define SPI_SD_DRIVER driver_get_by_name("spi_sd")
 #define PCD8544_DRIVER driver_get_by_name("pcd8544")
 #define GDISPLAY_DRIVER driver_get_by_name("gdisplay")
-#define ST7735_DRIVER driver_get_by_name("ST7735")
-#define ILI9341_DRIVER driver_get_by_name("ILI9341")
-#define TIMER_DRIVER driver_get_by_name("TIMER")
-#define ENCODER_DRIVER driver_get_by_name("ENCODER")
+#define ST7735_DRIVER driver_get_by_name("st7735")
+#define ILI9341_DRIVER driver_get_by_name("ili9341")
+#define TIMER_DRIVER driver_get_by_name("timer")
+#define ENCODER_DRIVER driver_get_by_name("encoder")
 #define MDNS_DRIVER driver_get_by_name("mdns")
-#define PCA9698_DRIVER driver_get_by_name("PCA9698")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 
@@ -107,7 +105,7 @@ struct driver_unit_lock;
 struct driver_unit_lock_error;
 
 typedef struct {
-	int exception;
+	uint32_t exception;
 	const char *message;
 } driver_message_t;
 
@@ -121,7 +119,7 @@ typedef struct {
     driver_error_type       type;      // Type of error
     const struct driver    *driver;    // Driver that caused error
     int                     unit;      // Driver unit that caused error
-    int                     exception; // Exception code
+    uint32_t                exception; // Exception code
     const char 			   *msg;       // Error message
 
     struct driver_unit_lock_error *lock_error;
@@ -134,7 +132,7 @@ typedef struct {
  */
 typedef struct driver {
 	const char *name;           		  /*!< Driver name */
-	const int  exception_base;  	      /*!< The exception base number for this driver. When a exception is raised the exception number is exception_base + exception number */
+	const uint32_t  exception_base;  	  /*!< The exception base number for this driver. When a exception is raised the exception number is exception_base + exception number */
 	const driver_message_t *error;        /*!< Array of exception error messages */
 	const struct driver_unit_lock *lock;  /*!< Array locks */
 	const int locks;					  /*!< Number of locks */
@@ -201,10 +199,10 @@ const driver_t *driver_get_by_name(const char *name);
  * @return NULL if driver not found, or a pointer to a driver_t structure
  *         if driver is found.
  */
-const driver_t *driver_get_by_exception_base(const int exception_base);
+const driver_t *driver_get_by_exception_base(const uint32_t exception_base);
 
 const char *driver_get_err_msg(driver_error_t *error);
-const char *driver_get_err_msg_by_exception(int exception);
+const char *driver_get_err_msg_by_exception(uint32_t exception);
 const char *driver_get_name(driver_error_t *error);
 
 driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error_t *lock_error);

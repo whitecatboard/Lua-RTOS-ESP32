@@ -35,8 +35,6 @@
 #include <sys/mutex.h>
 #include <sys/panic.h>
 
-extern unsigned port_interruptNesting[portNUM_PROCESSORS];
-
 #if !MTX_USE_EVENTS
 
 void _mtx_init() {
@@ -46,7 +44,7 @@ void mtx_init(struct mtx *mutex, const char *name, const char *type, int opts) {
     mutex->sem = xSemaphoreCreateBinary();
 
     if (mutex->sem) {
-        if (port_interruptNesting[xPortGetCoreID()] != 0) {
+        if (xPortInIsrContext()) {
             BaseType_t xHigherPriorityTaskWoken = pdFALSE;
             xSemaphoreGiveFromISR( mutex->sem, &xHigherPriorityTaskWoken); 
             portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
@@ -57,7 +55,7 @@ void mtx_init(struct mtx *mutex, const char *name, const char *type, int opts) {
 }
 
 void IRAM_ATTR mtx_lock(struct mtx *mutex) {
-    if (port_interruptNesting[xPortGetCoreID()] != 0) {
+	if (xPortInIsrContext()) {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;        
         xSemaphoreTakeFromISR( mutex->sem, &xHigherPriorityTaskWoken );
         portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
@@ -75,7 +73,7 @@ int mtx_trylock(struct	mtx *mutex) {
 }
 
 void IRAM_ATTR mtx_unlock(struct mtx *mutex) {
-    if (port_interruptNesting[xPortGetCoreID()] != 0) {
+	if (xPortInIsrContext()) {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;  
         xSemaphoreGiveFromISR( mutex->sem, &xHigherPriorityTaskWoken );  
         portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
@@ -85,7 +83,7 @@ void IRAM_ATTR mtx_unlock(struct mtx *mutex) {
 }
 
 void mtx_destroy(struct	mtx *mutex) {
-    if (port_interruptNesting[xPortGetCoreID()] != 0) {
+	if (xPortInIsrContext()) {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;  
         xSemaphoreGiveFromISR( mutex->sem, &xHigherPriorityTaskWoken );  
         portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
