@@ -55,11 +55,19 @@ void _cpu_init() {
 }
 
 unsigned int cpu_port_number(unsigned int pin) {
-	return 1;
+	if ((pin <= 39) || (!CONFIG_GPIO_PCA9698)) {
+		return 1;
+	} else {
+		return 2 + ((pin - 40) >> 3);
+	}
 }
 
 uint8_t cpu_gpio_number(uint8_t pin) {
-	return pin;
+	if ((pin <= 39) || (!CONFIG_GPIO_PCA9698)) {
+		return pin;
+	} else {
+		return ((pin - 40) % 7);
+	}
 }
 
 unsigned int cpu_pin_number(unsigned int pin) {
@@ -67,15 +75,31 @@ unsigned int cpu_pin_number(unsigned int pin) {
 }
 
 gpio_pin_mask_t cpu_port_io_pin_mask(unsigned int port) {
-	return GPIO_ALL;
+	if ((port == 1) || (!CONFIG_GPIO_PCA9698)) {
+		return GPIO_ALL;
+	} else {
+		return 0xff;
+	}
 }
 
 unsigned int cpu_has_gpio(unsigned int port, unsigned int bit) {
-	return (cpu_port_io_pin_mask(port) & (1 << bit));
+	if (port == 1) {
+		return (cpu_port_io_pin_mask(port) & (1 << bit));
+	} else {
+		if (bit < 8) {
+			return 1;
+		}
+
+		return 0;
+	}
 }
 
 unsigned int cpu_has_port(unsigned int port) {
-	return (port == 1);
+	if (!CONFIG_GPIO_PCA9698) {
+		return (port == 1);
+	} else {
+		return (port <= GPIO_PORTS);
+	}
 }
 
 void cpu_model(char *buffer) {

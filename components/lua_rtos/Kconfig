@@ -314,6 +314,14 @@ menu "Lua RTOS"
 					help
 						I2C port where PCA9698 is attached
 
+			config PCA9698_INT
+				depends on GPIO_PCA9698
+					int "PCA9698 INT pint"
+					range -1 39
+					default 26
+					help
+						GPIO where PCA9698 INT pin is attached. Select -1 for if INT is not used.
+
 			config PCA9698_I2C_SPEED
 				depends on GPIO_PCA9698
 					int "PCA9698 I2C port speed"
@@ -326,7 +334,7 @@ menu "Lua RTOS"
 				depends on GPIO_PCA9698
 					int "PCA9698 I2C port address"
 					range 0 255
-					default 132
+					default 32
 					help
 						I2C port speed in hertz		
 		endmenu

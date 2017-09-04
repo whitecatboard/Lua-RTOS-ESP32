@@ -51,7 +51,9 @@ static void IRAM_ATTR pio_intr_handler(void* arg) {
 	pio_intr_t *args = (pio_intr_t *)arg;
 	pio_intr_data_t data;
 
-	gpio_intr_disable(args->pin);
+	if (args->pin < 40) {
+		gpio_intr_disable(args->pin);
+	}
 
 	// Get pin value
 	switch (args->type) {
@@ -77,7 +79,9 @@ static void pioTask(void *taskArgs) {
 	        lua_call(args->L, 1, 0);
 	    }
 
-    	gpio_intr_enable(args->pin);
+	    if (args->pin < 40) {
+	    	gpio_intr_enable(args->pin);
+	    }
 	}
 }
 
@@ -192,7 +196,7 @@ static int pioh_set_pins(lua_State* L, int stackidx, int op) {
     if (!cpu_has_gpio(port, pin)) {
       return luaL_error(L, "invalid pin");
     }
-    
+
     pio_masks[port - 1] |= GPIO_BIT_MASK << pin;
   }
   
@@ -395,8 +399,7 @@ static int pio_pin_interrupt(lua_State *L) {
 
     args = (pio_intr_t *)calloc(1,sizeof(pio_intr_t));
     if (!args) {
-    	// TO DO: exception
-    	return 0;
+		return luaL_exception(L, GPIO_ERR_NOT_ENOUGH_MEMORY);
 
     }
     args->callbak = callback;
@@ -406,31 +409,13 @@ static int pio_pin_interrupt(lua_State *L) {
     args->q = xQueueCreate(qsize, sizeof(pio_intr_data_t));
     if (!args->q) {
     	free(args);
-
-    	// TO DO: exception
-    	return 0;
+		return luaL_exception(L, GPIO_ERR_NOT_ENOUGH_MEMORY);
     }
 
     // ISR related task must run on the same core that ISR handler is added
     xTaskCreatePinnedToCore(pioTask, "lpio", stack, args, priority, NULL, xPortGetCoreID());
 
-    gpio_config_t io_conf;
-
-    io_conf.intr_type = type;
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pin_bit_mask = (1ULL << pin);
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 1;
-
-    gpio_config(&io_conf);
-
-    if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
-    	gpio_install_isr_service(0);
-
-    	status_set(STATUS_ISR_SERVICE_INSTALLED);
-    }
-
-    gpio_isr_handler_add(pin, pio_intr_handler, (void*) args);
+    gpio_isr_attach(pin, pio_intr_handler, type, args);
 
 	return 0;
 }

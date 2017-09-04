@@ -68,7 +68,7 @@ const driver_t *driver_get_by_name(const char *name) {
 	return NULL;
 }
 
-const driver_t *driver_get_by_exception_base(const int exception_base) {
+const driver_t *driver_get_by_exception_base(const uint32_t exception_base) {
 	const driver_t *cdriver;
 
 	cdriver = drivers;
@@ -87,6 +87,8 @@ const driver_t *driver_get_by_exception_base(const int exception_base) {
 const char *driver_get_err_msg(driver_error_t *error) {
 	driver_message_t *msg = (driver_message_t *)error->driver->error;
 
+	printf("exception %d\r\n", error->exception);
+
 	while (msg->message) {
 		if (msg->exception == error->exception) {
 			return msg->message;
@@ -98,7 +100,7 @@ const char *driver_get_err_msg(driver_error_t *error) {
 	return NULL;
 }
 
-const char *driver_get_err_msg_by_exception(int exception) {
+const char *driver_get_err_msg_by_exception(uint32_t exception) {
 	const driver_t *driver;
 	const driver_message_t *msg;
 
@@ -138,7 +140,7 @@ driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error
 }
 
 // Create a driver error of type operation
-driver_error_t *driver_error(const driver_t *driver, unsigned int exception, const char *msg) {
+driver_error_t *driver_error(const driver_t *driver, uint32_t exception, const char *msg) {
 	driver_error_t *error;
 
 	error = (driver_error_t *)malloc(sizeof(driver_error_t));
