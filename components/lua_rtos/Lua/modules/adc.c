@@ -44,6 +44,7 @@
 
 #include <drivers/adc.h>
 #include <drivers/adc_internal.h>
+#include <drivers/cpu.h>
 
 extern LUA_REG_TYPE adc_error_map[];
 
@@ -54,8 +55,13 @@ static int ladc_attach( lua_State* L ) {
     id = luaL_checkinteger( L, 1 );
     channel = luaL_checkinteger( L, 2 );
     res = luaL_optinteger( L, 3, 0 );
-    pvref = luaL_optinteger( L, 4, 0 );
-    nvref = luaL_optinteger( L, 5, 0 );
+
+	if ((lua_gettop(L) > 3) && (id <= CPU_LAST_ADC)) {
+		return luaL_exception(L, ADC_ERR_VREF_SET_NOT_ALLOWED);
+	} else {
+		pvref = luaL_optinteger( L, 4, 0 );
+		nvref = luaL_optinteger( L, 5, 0 );
+	}
 
     adc_userdata *adc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
 

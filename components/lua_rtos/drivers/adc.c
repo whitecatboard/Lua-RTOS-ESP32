@@ -54,6 +54,7 @@ DRIVER_REGISTER_ERROR(ADC, adc, InvalidResolution, "invalid resolution", ADC_ERR
 DRIVER_REGISTER_ERROR(ADC, adc, NotEnoughtMemory, "not enough memory", ADC_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_ERROR(ADC, adc, InvalidPin, "invalid pin", ADC_ERR_INVALID_PIN);
 DRIVER_REGISTER_ERROR(ADC, adc, InvalidVref, "invalid vref", ADC_ERR_INVALID_VREF);
+DRIVER_REGISTER_ERROR(ADC, adc, VrefSetupNotAllowed, "vref setup not allowed for this ADC", ADC_ERR_VREF_SET_NOT_ALLOWED);
 
 /*
  * Helper functions
