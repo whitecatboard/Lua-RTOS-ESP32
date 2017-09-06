@@ -29,6 +29,7 @@
 
 #include "sdkconfig.h"
 
+#include "esp_adc_cal.h"
 #include "driver/adc.h"
 
 #include <stdint.h>
@@ -39,6 +40,8 @@
 #include <drivers/gpio.h>
 #include <drivers/adc.h>
 #include <drivers/adc_internal.h>
+
+esp_adc_cal_characteristics_t characteristics;
 
 /*
  * Helper functions
@@ -127,6 +130,9 @@ driver_error_t *adc_internal_setup(adc_channel_t *chan) {
 	// Configure all channels with a 12-bit resolution
 	adc1_config_width(ADC_WIDTH_12Bit);
 
+	// Get characteristics
+	esp_adc_cal_get_characteristics(1100, atten, ADC_WIDTH_12Bit, &characteristics);
+
 	if (!chan->setup) {
 		syslog(
 				LOG_INFO,
@@ -138,10 +144,11 @@ driver_error_t *adc_internal_setup(adc_channel_t *chan) {
 	return NULL;
 }
 
-driver_error_t *adc_internal_read(adc_channel_t *chan, int *raw) {
+driver_error_t *adc_internal_read(adc_channel_t *chan, int *raw, double *mvolts) {
 	uint8_t channel = chan->channel;
 
-	*raw = adc1_get_voltage(channel);
+	*raw = adc1_get_raw(channel);
+	*mvolts = esp_adc_cal_raw_to_voltage(*raw, &characteristics);
 
 	return NULL;
 }

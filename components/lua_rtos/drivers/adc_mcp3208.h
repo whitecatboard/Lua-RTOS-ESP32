@@ -33,6 +33,6 @@
 #include <sys/driver.h>
 
 driver_error_t *adc_mcp3208_setup(adc_channel_t *chan);
-driver_error_t *adc_mcp3208_read(adc_channel_t *chan, int *raw);
+driver_error_t *adc_mcp3208_read(adc_channel_t *chan, int *raw, double *mvolts);
 
 #endif /* _ADC_MCP3208_H */

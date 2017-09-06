@@ -63,7 +63,7 @@ driver_error_t *adc_mcp3008_setup(adc_channel_t *chan) {
     return NULL;
 }
 
-driver_error_t *adc_mcp3008_read(adc_channel_t *chan, int *raw) {
+driver_error_t *adc_mcp3008_read(adc_channel_t *chan, int *raw, double *mvolts) {
 	uint8_t buff[3];
 
 	int channel = chan->channel;

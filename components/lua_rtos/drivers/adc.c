@@ -194,7 +194,7 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 			} else if (pvref <= 2200) {
 				chan->rpvref = 2200;
 			} else {
-				chan->rpvref = CONFIG_ADC_INTERNAL_VREF_P;
+				chan->rpvref = 3900;
 			}
 
 			chan->max_resolution = 12;
@@ -331,24 +331,24 @@ driver_error_t *adc_read(adc_channel_h_t *h, int *araw, double *amvolts) {
 
 	switch (chan->unit) {
 		case 1:
-			error = adc_internal_read(chan, &raw);
+			error = adc_internal_read(chan, &raw, &mvolts);
 			break;
 
 		case CPU_LAST_ADC + 1:
 #if CONFIG_ADC_MCP3008
-			error = adc_mcp3008_read(chan, &raw);
+			error = adc_mcp3008_read(chan, &raw, &mvolts);
 #endif
 			break;
 
 		case CPU_LAST_ADC + 2:
 #if CONFIG_ADC_MCP3208
-			error = adc_mcp3208_read(chan, &raw);
+			error = adc_mcp3208_read(chan, &raw, &mvolts);
 #endif
 			break;
 
 		case CPU_LAST_ADC + 3:
 #if CONFIG_ADC_ADS1115
-			error = adc_ads1115_read(chan, &raw);
+			error = adc_ads1115_read(chan, &raw, &mvolts);
 #endif
 			break;
 	}
@@ -369,8 +369,10 @@ driver_error_t *adc_read(adc_channel_h_t *h, int *araw, double *amvolts) {
 		}
 	}
 
-	// Convert raw value to mVolts
-	mvolts = (double)chan->rnvref +  (double)((raw) * (chan->rpvref - chan->rnvref)) / (double)max_val;
+	if (chan->unit != 1) {
+		// Convert raw value to mVolts
+		mvolts = (double)chan->rnvref +  (double)((raw) * (chan->rpvref - chan->rnvref)) / (double)max_val;
+	}
 
 	if (araw) {
 		*araw = raw;

@@ -114,7 +114,7 @@ driver_error_t *adc_ads1115_setup(adc_channel_t *chan) {
 	return NULL;
 }
 
-driver_error_t *adc_ads1115_read(adc_channel_t *chan, int *raw) {
+driver_error_t *adc_ads1115_read(adc_channel_t *chan, int *raw, double *mvolts) {
 	driver_error_t *error;
 
 	int8_t channel = chan->channel;
