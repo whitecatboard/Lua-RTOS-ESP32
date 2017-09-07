@@ -76,7 +76,7 @@
 #define lua_saveline(L,idx)     { (void)L; (void)idx; }
 #define lua_freeline(L,b)       { (void)L; (void)b; }
 
-// Adds in standard Lua modukes
+// Adds in standard Lua modules
 
 #define LBASELIB_REG_ADDS \
     {"dumpstack", stackDump}, \

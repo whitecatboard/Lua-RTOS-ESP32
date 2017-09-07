@@ -162,7 +162,7 @@ no need to implement esp_wake_deep_sleep stub / cannot be used with lua anyway
 
 
 static const LUA_REG_TYPE lcpu_map[] = {
-  { LSTRKEY( "cpu" ),                    LFUNCVAL( lcpu_model ) },
+  { LSTRKEY( "model" ),                  LFUNCVAL( lcpu_model ) },
   { LSTRKEY( "board" ),                  LFUNCVAL( lcpu_board ) },
   { LSTRKEY( "sleep" ),                  LFUNCVAL( lcpu_sleep ) },
   { LSTRKEY( "resetreason" ),            LFUNCVAL( lcpu_reset_reason ) },
@@ -198,7 +198,12 @@ static const LUA_REG_TYPE lcpu_map[] = {
 };
 
 LUALIB_API int luaopen_cpu( lua_State *L ) {
-    return 0;
+#if !LUA_USE_ROTABLE
+  luaL_newlib(L, cpu);
+  return 1;
+#else
+	return 0;
+#endif
 }
 
 MODULE_REGISTER_MAPPED(CPU, cpu, lcpu_map, luaopen_cpu);

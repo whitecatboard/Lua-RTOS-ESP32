@@ -339,8 +339,14 @@ static const LUA_REG_TYPE lmdns_service_map[] = {
 
 //called from luaopen_net
 LUALIB_API int luaopen_mdns( lua_State *L ) {
-    luaL_newmetarotable(L,"mdns.cli", (void *)lmdns_service_map);
-    return 0;
+  luaL_newmetarotable(L,"mdns.cli", (void *)lmdns_service_map);
+
+#if !LUA_USE_ROTABLE
+  luaL_newlib(L, mdns);
+  return 1;
+#else
+	return 0;
+#endif
 }
 
 DRIVER_REGISTER(MDNS,mdns,NULL,NULL,NULL);

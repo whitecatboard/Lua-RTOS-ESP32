@@ -421,8 +421,14 @@ static const LUA_REG_TYPE lmqtt_client_map[] = {
 };
 
 LUALIB_API int luaopen_mqtt( lua_State *L ) {
-    luaL_newmetarotable(L,"mqtt.cli", (void *)lmqtt_client_map);
-    return 0;
+  luaL_newmetarotable(L,"mqtt.cli", (void *)lmqtt_client_map);
+
+#if !LUA_USE_ROTABLE
+  luaL_newlib(L, mqtt);
+  return 1;
+#else
+	return 0;
+#endif
 }
 
 MODULE_REGISTER_MAPPED(MQTT, mqtt, lmqtt_map, luaopen_mqtt);
