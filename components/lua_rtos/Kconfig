@@ -1,4 +1,17 @@
 menu "Lua RTOS"
+	config LUA_RTOS_VDD
+		int "CPU power voltage (VDDA)"
+		range 2300 3600
+		default 3332
+		help
+			This sets the CPU power voltage (VDDA). The ideal value of this voltage is generally 3300 mVolts,
+			but due to the manufacturing processes and components used that may not always be the same this
+			value may be different from the ideal one.
+			
+			For a correct operation of the ADC and some sensors it is necessary that you indicate the exact
+			value for your board. Please measure this value with a suitable equipment. A good and cheap
+			choice is using an external ADC as an ADS1115.
+			
 	choice LUA_RTOS_BOARD_TYPE
 		prompt "Board Type"
 		default LUA_RTOS_BOARD_WHITECAT_N1ESP32
@@ -289,7 +302,7 @@ menu "Lua RTOS"
 			config ADC_INTERNAL_VREF
 				int "vref"
 				range 1000 1200
-				default 1100
+				default 1108
 				help
 					Voltage reference in mVolts.						
 		endmenu

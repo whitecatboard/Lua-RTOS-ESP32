@@ -41,12 +41,59 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #include <drivers/adc.h>
 #include <drivers/adc_internal.h>
 #include <drivers/cpu.h>
 
 extern LUA_REG_TYPE adc_error_map[];
+
+static int ladc_calib(lua_State* L) {
+	driver_error_t *error;
+	adc_channel_h_t ch;
+
+    int id1 = luaL_checkinteger( L, 1 );
+    int ch1 = luaL_checkinteger( L, 2 );
+    int id2 = luaL_checkinteger( L, 3 );
+    int ch2 = luaL_checkinteger( L, 4 );
+
+    if (id1 != 1) {
+    	return luaL_exception_extended(L, ADC_ERR_CANNOT_CALIBRATE, "only ADC1 can be calibrated");
+    }
+
+    if (id2 == 1) {
+    	return luaL_exception_extended(L, ADC_ERR_CANNOT_CALIBRATE, "ADC1 cannot be used for calibrate");
+    }
+
+    // Route v_ref
+    esp_err_t status = adc2_vref_to_gpio(ch1);
+	if (status != ESP_OK){
+		return luaL_exception_extended(L, ADC_ERR_CALIBRATION, "GPIO can be either 25, 26, 27");
+	}
+
+	// Set ADC for measuring v_ref
+	if (id2 == CPU_LAST_ADC + 3) {
+	    if ((error = adc_setup(id2, ch2, 0, 0, 1200, 0, &ch))) {
+	    	return luaL_driver_error(L, error);
+	    }
+	} else {
+	    if ((error = adc_setup(id2, ch2, 0, 0, 0, 0, &ch))) {
+	    	return luaL_driver_error(L, error);
+	    }
+	}
+
+	// Read v_ref
+	double v_ref;
+
+	if ((error = adc_read_avg(&ch, 1000, NULL, &v_ref))) {
+		return luaL_driver_error(L, error);
+	}
+
+	lua_pushinteger(L, roundf((10 * v_ref) / 10));
+
+	return 1;
+}
 
 static int ladc_attach( lua_State* L ) {
     int id, res, channel, vref, max;
@@ -89,6 +136,7 @@ static int ladc_read( lua_State* L ) {
 }
 
 static const LUA_REG_TYPE ladc_map[] = {
+	{ LSTRKEY( "calibrate"),	  LFUNCVAL( ladc_calib  ) },
     { LSTRKEY( "attach"),		  LFUNCVAL( ladc_attach  ) },
 	ADC_ADC0
 	ADC_ADC1

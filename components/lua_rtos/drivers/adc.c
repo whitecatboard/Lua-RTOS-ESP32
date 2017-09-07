@@ -77,6 +77,8 @@ DRIVER_REGISTER_ERROR(ADC, adc, InvalidPin, "invalid pin", ADC_ERR_INVALID_PIN);
 DRIVER_REGISTER_ERROR(ADC, adc, MaxSetupNotAllowed, "max value setup not allowed for this ADC", ADC_ERR_MAX_SET_NOT_ALLOWED);
 DRIVER_REGISTER_ERROR(ADC, adc, VrefSetupNotAllowed, "vref value setup not allowed for this ADC", ADC_ERR_VREF_SET_NOT_ALLOWED);
 DRIVER_REGISTER_ERROR(ADC, adc, InvalidMax, "invalid max value", ADC_ERR_INVALID_MAX);
+DRIVER_REGISTER_ERROR(ADC, adc, CannotCalibrate, "calibration is not allowed for this ADC", ADC_ERR_CANNOT_CALIBRATE);
+DRIVER_REGISTER_ERROR(ADC, adc, CalibrationError, "calibration error", ADC_ERR_CALIBRATION);
 
 /*
  * Helper functions
