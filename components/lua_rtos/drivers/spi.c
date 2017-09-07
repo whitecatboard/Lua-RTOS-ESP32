@@ -520,6 +520,10 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
  *
  */
 int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid) {
+	// TO DO: see https://github.com/espressif/esp-idf/issues/963
+	// DMA transfer not work from esp-idf commit 4776f73c
+	flags |= SPI_FLAG_NO_DMA;
+
 	// Check if there's some device un bus with the same cs
 	// If there's one, we want to reconfigure device
 	int device = spi_get_device_by_cs(unit, cs);
