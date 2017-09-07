@@ -73,7 +73,11 @@ driver_error_t *potentiometer_acquire(sensor_instance_t *unit, sensor_value_t *v
 	adc_get_channel(&unit->setup[0].adc.h, &chan);
 
 	// Estimate POT value (2 decimals)
-	values[0].floatd.value = roundf(100 * (mvolts / chan->pvref)) / 100;
+	values[0].floatd.value = roundf(100 * (mvolts / CONFIG_LUA_RTOS_VDD)) / 100;
+
+	if (values[0].floatd.value > 1.0) {
+		values[0].floatd.value = 1.0;
+	}
 
 	return NULL;
 }

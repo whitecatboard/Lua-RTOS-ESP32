@@ -1,3 +1,5 @@
+CFLAGS += -DCONFIG_LUA_RTOS_VDD=3332
+
 ifneq (foo$(TEST_LUA), foo)
 CFLAGS += -DRUN_LUA_TESTS
 endif

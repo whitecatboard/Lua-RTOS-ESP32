@@ -520,6 +520,8 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
  *
  */
 int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid) {
+	flags |= SPI_FLAG_NO_DMA;
+
 	// Check if there's some device un bus with the same cs
 	// If there's one, we want to reconfigure device
 	int device = spi_get_device_by_cs(unit, cs);

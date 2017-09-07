@@ -49,7 +49,6 @@
 #include <drivers/gpio_debouncing.h>
 
 driver_error_t *analog_joystick_setup(sensor_instance_t *unit);
-driver_error_t *analog_joystick_acquire(sensor_instance_t *unit, sensor_value_t *values);
 
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) analog_joystick_sensor = {
@@ -71,8 +70,7 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) analog_jo
 		{.id = "y",  .type = SENSOR_DATA_INT},
 		{.id = "sw", .type = SENSOR_DATA_INT},
 	},
-	.setup = analog_joystick_setup,
-	.acquire = analog_joystick_acquire,
+	.setup = analog_joystick_setup
 };
 
 /*
@@ -102,8 +100,8 @@ static void sensor_task(void *arg) {
     	// y signal is ADC from 0 to VRef+. The mid point is approximately Vref+ / 2
     	//
     	// we treat x / y signal as a potentiometer value from -1.0 (-100 %) to 1.0 (100 %)
-    	double cx = roundf(100 * (mvoltsx - ((double)chanx->pvref / (double)2.0)) / ((double)chanx->pvref / (double)2.0)) / (double)100;
-    	double cy = roundf(100 * (mvoltsy - ((double)chany->pvref / (double)2.0)) / ((double)chany->pvref / (double)2.0)) / (double)100;
+    	double cx = roundf(100 * (mvoltsx - ((double)CONFIG_LUA_RTOS_VDD / (double)2.0)) / ((double)CONFIG_LUA_RTOS_VDD / (double)2.0)) / (double)100;
+    	double cy = roundf(100 * (mvoltsy - ((double)CONFIG_LUA_RTOS_VDD / (double)2.0)) / ((double)CONFIG_LUA_RTOS_VDD / (double)2.0)) / (double)100;
 
     	int8_t x = 0;
     	int8_t y = 0;
@@ -196,36 +194,5 @@ driver_error_t *analog_joystick_setup(sensor_instance_t *unit) {
 	return NULL;
 }
 
-driver_error_t *analog_joystick_acquire(sensor_instance_t *unit, sensor_value_t *values) {
-	return NULL;
-
-	driver_error_t *error;
-	double mvolts = 0;
-
-	if ((error = adc_read(&unit->setup[0].adc.h, NULL, &mvolts))) {
-		return error;
-	}
-
-	// Get channel info
-	adc_channel_t *chan;
-
-	adc_get_channel(&unit->setup[0].adc.h, &chan);
-
-	// Read LDR resistance
-	float ldr;
-
-	if (unit->properties[0].integerd.value != 0) {
-		// pull-up configuration
-		ldr = (mvolts * unit->properties[0].integerd.value) / (chan->pvref - mvolts);
-	} else {
-		// pull-down configuration
-		ldr = (unit->properties[1].integerd.value * (chan->pvref - mvolts)) / mvolts;
-	}
-
-	// Estimate illuminance (2 decimals)
-	values[0].floatd.value = roundf(100 * (((double)12500000.0)*pow(ldr, -1.406))) / 100;
-
-	return NULL;
-}
 #endif
 #endif

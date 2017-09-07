@@ -70,8 +70,7 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) guva_s12s
 driver_error_t *guva_s12sd_presetup(sensor_instance_t *unit) {
 	// Sensor vout is <= 1100 mVols
 
-	unit->setup[0].adc.vrefp = 1100;
-	unit->setup[0].adc.vrefn = 0;
+	unit->setup[0].adc.max = 1100;
 
 	return NULL;
 }

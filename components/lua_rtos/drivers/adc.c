@@ -45,6 +45,27 @@
 #include "adc_mcp3208.h"
 #include "adc_ads1115.h"
 
+// Valid ADC devices
+static const adc_dev_t adc_devs[] = {
+	{"INTERNAL", adc_internal_setup, adc_internal_read},
+#if CONFIG_ADC_MCP3008
+	{"MCP3008", adc_mcp3008_setup, adc_mcp3008_read},
+#else
+	{NULL, NULL},
+#endif
+#if CONFIG_ADC_MCP3208
+	{"MCP3208", adc_mcp3208_setup, adc_mcp3208_read},
+#else
+	{NULL, NULL},
+#endif
+#if CONFIG_ADC_ADS1115
+	{"ADS1115", adc_ads1115_setup, adc_ads1115_read},
+#else
+	{NULL, NULL},
+#endif
+};
+
+// List of channels
 static struct list channels;
 
 // Driver message errors
@@ -53,8 +74,9 @@ DRIVER_REGISTER_ERROR(ADC, adc, InvalidChannel, "invalid channel", ADC_ERR_INVAL
 DRIVER_REGISTER_ERROR(ADC, adc, InvalidResolution, "invalid resolution", ADC_ERR_INVALID_RESOLUTION);
 DRIVER_REGISTER_ERROR(ADC, adc, NotEnoughtMemory, "not enough memory", ADC_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_ERROR(ADC, adc, InvalidPin, "invalid pin", ADC_ERR_INVALID_PIN);
-DRIVER_REGISTER_ERROR(ADC, adc, InvalidVref, "invalid vref", ADC_ERR_INVALID_VREF);
-DRIVER_REGISTER_ERROR(ADC, adc, VrefSetupNotAllowed, "vref setup not allowed for this ADC", ADC_ERR_VREF_SET_NOT_ALLOWED);
+DRIVER_REGISTER_ERROR(ADC, adc, MaxSetupNotAllowed, "max value setup not allowed for this ADC", ADC_ERR_MAX_SET_NOT_ALLOWED);
+DRIVER_REGISTER_ERROR(ADC, adc, VrefSetupNotAllowed, "vref value setup not allowed for this ADC", ADC_ERR_VREF_SET_NOT_ALLOWED);
+DRIVER_REGISTER_ERROR(ADC, adc, InvalidMax, "invalid max value", ADC_ERR_INVALID_MAX);
 
 /*
  * Helper functions
@@ -87,7 +109,7 @@ static adc_channel_t *get_channel(int8_t unit, int8_t channel) {
  */
 
 // Setup ADC channel
-driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pvref, int16_t nvref, uint8_t resolution, adc_channel_h_t *h) {
+driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t vref, int16_t max, uint8_t resolution, adc_channel_h_t *h) {
 	driver_error_t *error;
 
 	// Sanity checks
@@ -110,43 +132,12 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 			}
 		}
 	} else {
-		switch (unit) {
-			case CPU_LAST_ADC + 1:
-				#if !CONFIG_ADC_MCP3008
-					return driver_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, "MCP3008 not enabled");
-				#endif
-				break;
-
-			case CPU_LAST_ADC + 2:
-				#if !CONFIG_ADC_MCP3208
-					return driver_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, "MCP3208 not enabled");
-				#endif
-				break;
-
-			case CPU_LAST_ADC + 3:
-				#if !CONFIG_ADC_ADS1115
-					return driver_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, "ADS1115 not enabled");
-				#endif
-				break;
-		}
-	}
-
-	// Apply default vref+ / vref- if needed
-	if (unit <= 1) {
-		if (pvref == 0) {
-			pvref = CONFIG_ADC_INTERNAL_VREF_P;
+		if ((unit < CPU_FIRST_ADC) || (unit > CPU_LAST_ADC + 3)) {
+			return driver_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, NULL);
 		}
 
-		if (nvref == 0) {
-			nvref = CONFIG_ADC_INTERNAL_VREF_N;
-		}
-	} else {
-		if (pvref == 0) {
-			pvref = CONFIG_ADC_EXTERNAL_VREF_P;
-		}
-
-		if (nvref == 0) {
-			nvref = CONFIG_ADC_EXTERNAL_VREF_N;
+		if (!adc_devs[unit - CPU_FIRST_ADC].name) {
+			return driver_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, adc_devs[unit].name);
 		}
 	}
 
@@ -170,139 +161,16 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 	chan->channel = channel;
 	chan->devid = devid;
 	chan->resolution = resolution;
-	chan->pvref = pvref;
-	chan->nvref = nvref;
-	chan->rpvref = pvref;
-	chan->rnvref = nvref;
+	chan->vref = vref;
+	chan->max = max;
 
-	switch (unit) {
-		case 1:
-			// Sanity check on vref+ / vref-
-			if (pvref > CONFIG_ADC_INTERNAL_VREF_P) {
-				return driver_error(ADC_DRIVER, ADC_ERR_INVALID_VREF, "vref+");
-			}
-
-			if (nvref != 0) {
-				return driver_error(ADC_DRIVER, ADC_ERR_INVALID_VREF, "vref-");
-			}
-
-			chan->nvref = nvref;
-
-			if (pvref <= 1100) {
-				chan->rpvref = 1100;
-			} else if (pvref <= 1500) {
-				chan->rpvref = 1500;
-			} else if (pvref <= 2200) {
-				chan->rpvref = 2200;
-			} else {
-				chan->rpvref = 3900;
-			}
-
-			chan->max_resolution = 12;
-
-			break;
-
-		case CPU_LAST_ADC + 1:
-#if CONFIG_ADC_MCP3008
-			chan->max_resolution = 10;
-
-			if (devid == 0) {
-				chan->devid = CONFIG_ADC_MCP3008_CS;
-			}
-#endif
-			break;
-
-		case CPU_LAST_ADC + 2:
-#if CONFIG_ADC_MCP3208
-			chan->max_resolution = 12;
-
-			if (devid == 0) {
-				chan->devid = CONFIG_ADC_MCP3208_CS;
-			}
-#endif
-			break;
-		case CPU_LAST_ADC + 3:
-#if CONFIG_ADC_ADS1115
-			if (pvref <= 256) {
-				chan->rpvref = 256;
-			} else if (pvref <= 512) {
-				chan->rpvref = 512;
-			} else if (pvref <= 1024) {
-				chan->rpvref = 1024;
-			} else if (pvref <= 2048) {
-				chan->rpvref = 2048;
-			} else if (pvref <= 4096) {
-				chan->rpvref = 4096;
-			} else {
-				chan->rpvref = 6144;
-			}
-
-			if (nvref != 0) {
-				return driver_error(ADC_DRIVER, ADC_ERR_INVALID_VREF, "vref-");
-			}
-
-			// Apply default adress
-			if (devid == 0) {
-				chan->devid = ADS1115_ADDR1;
-			}
-
-			chan->max_resolution = 15;
-#endif
-			break;
+	// Setup channel
+	if ((error = adc_devs[unit - CPU_FIRST_ADC].setup(chan))) {
+		free(chan);
+		return error;
 	}
 
-	// Apply default resolution if needed
-	if (chan->resolution == 0) {
-		chan->resolution = chan->max_resolution;
-	}
-
-	// Sanity checks on resolution
-	if ((chan->resolution < 6) || (chan->resolution > chan->max_resolution)) {
-		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_RESOLUTION, NULL);
-	}
-
-    switch (chan->resolution) {
-        case 6:  chan->max_val = 63;  break;
-        case 7:  chan->max_val = 127; break;
-        case 8:  chan->max_val = 255; break;
-        case 9:  chan->max_val = 511; break;
-        case 10: chan->max_val = 1023;break;
-        case 11: chan->max_val = 2047;break;
-        case 12: chan->max_val = 4095;break;
-        case 13: chan->max_val = 8193;break;
-        case 14: chan->max_val = 16383;break;
-        case 15: chan->max_val = 32767;break;
-        case 16: chan->max_val = 65535;break;
-    }
-
-    // Setup the channel
-	switch (unit) {
-		case 1:
-			 error = adc_internal_setup(chan);
-			break;
-
-		case 2:
-#if CONFIG_ADC_MCP3008
-			error = adc_mcp3008_setup(chan);
-#endif
-			break;
-
-		case 3:
-#if CONFIG_ADC_MCP3208
-			error = adc_mcp3208_setup(chan);
-#endif
-			break;
-		case 4:
-#if CONFIG_ADC_ADS1115
-			error = adc_ads1115_setup(chan);
-#endif
- 			break;
-	 }
-
-	 if (error) {
-		 free(chan);
-		 return error;
-	 }
+	chan->max_val = ~(0xffff << chan->resolution);
 
 	// At this point the channel is configured without errors
 	// Store channel in channel list
@@ -318,69 +186,17 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 	return NULL;
 }
 
-driver_error_t *adc_read(adc_channel_h_t *h, int *araw, double *amvolts) {
+driver_error_t *adc_read(adc_channel_h_t *h, int *raw, double *mvolts) {
 	driver_error_t *error = NULL;
 	adc_channel_t *chan;
-
-	int raw;
-	double mvolts;
 
     // Get channel
 	if (list_get(&channels, (int)*h, (void **)&chan)) {
 		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
 	}
 
-	switch (chan->unit) {
-		case 1:
-			error = adc_internal_read(chan, &raw, &mvolts);
-			break;
-
-		case CPU_LAST_ADC + 1:
-#if CONFIG_ADC_MCP3008
-			error = adc_mcp3008_read(chan, &raw, &mvolts);
-#endif
-			break;
-
-		case CPU_LAST_ADC + 2:
-#if CONFIG_ADC_MCP3208
-			error = adc_mcp3208_read(chan, &raw, &mvolts);
-#endif
-			break;
-
-		case CPU_LAST_ADC + 3:
-#if CONFIG_ADC_ADS1115
-			error = adc_ads1115_read(chan, &raw, &mvolts);
-#endif
-			break;
-	}
-
-	if (error) {
+	if ((error = adc_devs[chan->unit - CPU_FIRST_ADC].read(chan, raw, mvolts))) {
 		return error;
-	}
-
-	// Normalize raw value to device resolution
-	int resolution = chan->resolution;
-	int max_val = chan->max_val;
-
-	if (resolution != chan->max_resolution) {
-		if (raw & (1 << (chan->max_resolution - resolution - 1))) {
-			raw = ((raw >> (chan->max_resolution - resolution)) + 1) & max_val;
-		} else {
-			raw = raw >> (chan->max_resolution - resolution);
-		}
-	}
-
-	if (chan->unit != 1) {
-		// Convert raw value to mVolts
-		mvolts = (double)chan->rnvref +  (double)((raw) * (chan->rpvref - chan->rnvref)) / (double)max_val;
-	}
-
-	if (araw) {
-		*araw = raw;
-	}
-
-	if (amvolts) {
-		*amvolts = mvolts;
 	}
 
 	return NULL;

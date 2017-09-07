@@ -174,8 +174,7 @@ typedef struct {
 			uint8_t channel;
 			int16_t devid;
 			uint8_t resolution;
-			int16_t vrefp;
-			int16_t vrefn;
+			int16_t max;
 			adc_channel_h_t h;
 		} adc;
 

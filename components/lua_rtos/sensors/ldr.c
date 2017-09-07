@@ -125,10 +125,10 @@ driver_error_t *ldr_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 
 	if (unit->properties[0].integerd.value != 0) {
 		// pull-up configuration
-		ldr = (mvolts * unit->properties[0].integerd.value) / (chan->pvref - mvolts);
+		ldr = (mvolts * unit->properties[0].integerd.value) / (CONFIG_LUA_RTOS_VDD - mvolts);
 	} else {
 		// pull-down configuration
-		ldr = (unit->properties[1].integerd.value * (chan->pvref - mvolts)) / mvolts;
+		ldr = (unit->properties[1].integerd.value * (CONFIG_LUA_RTOS_VDD - mvolts)) / mvolts;
 	}
 
 	// Estimate illuminance (2 decimals)

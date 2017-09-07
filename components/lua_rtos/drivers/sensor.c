@@ -163,8 +163,8 @@ static driver_error_t *sensor_adc_setup(uint8_t interface, sensor_instance_t *un
 	if (
 			(error = adc_setup(
 					unit->setup[interface].adc.unit, unit->setup[interface].adc.channel,
-					unit->setup[interface].adc.devid, unit->setup[interface].adc.vrefp,
-					unit->setup[interface].adc.vrefn, unit->setup[interface].adc.resolution,
+					unit->setup[interface].adc.devid, 0,
+					unit->setup[interface].adc.max, unit->setup[interface].adc.resolution,
 					&unit->setup[interface].adc.h
 			))
 		) {

@@ -286,19 +286,12 @@ menu "Lua RTOS"
 		endmenu
 		
 		menu "Internal ADC"
-			config ADC_INTERNAL_VREF_P
-				int "vref+"
-				range 0 3900
-				default 3300
+			config ADC_INTERNAL_VREF
+				int "vref"
+				range 1000 1200
+				default 1100
 				help
-					Positive voltage reference in mVolts.	
-					
-			config ADC_INTERNAL_VREF_N
-				int "vref-"
-				range 0 3300
-				default 0
-				help
-					Negative voltage reference in mVolts.	
+					Voltage reference in mVolts.						
 		endmenu
 
 		menu "External GPIO"
@@ -334,20 +327,6 @@ menu "Lua RTOS"
 		endmenu
 		
 		menu "External ADC"
-			config ADC_EXTERNAL_VREF_P
-				int "vref+"
-				range 0 6000
-				default 3300
-				help
-					Positive voltage reference in mVolts.	
-					
-			config ADC_EXTERNAL_VREF_N
-				int "vref-"
-				range 0 3300
-				default 0
-				help
-					Negative voltage reference in mVolts.	
-
 			config ADC_ADS1115
 				bool "Use I2C ADC ADS1115"
 				default y

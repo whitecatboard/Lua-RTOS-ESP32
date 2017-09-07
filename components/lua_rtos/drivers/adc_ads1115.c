@@ -31,6 +31,8 @@
 
 #if CONFIG_ADC_ADS1115
 
+#include <string.h>
+
 #include <sys/syslog.h>
 
 #include <drivers/gpio.h>
@@ -99,15 +101,66 @@ driver_error_t *adc_ads1115_setup(adc_channel_t *chan) {
 	int8_t channel = chan->channel;
 	uint8_t address = chan->devid;
 
+	// Apply default max value
+	if (chan->max == 0) {
+		chan->max = 6144;
+	}
+
+	// Apply default address
+	if (chan->devid == 0) {
+		chan->devid = ADS1115_ADDR1;
+	}
+
+	// Apply default resolution if needed
+	if (chan->resolution == 0) {
+		chan->resolution = 15;
+	}
+
+	// Sanity checks
+	if ((chan->max < 256) || (chan->max > 6144)) {
+		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_MAX, NULL);
+	}
+
+	if (chan->resolution != 15) {
+		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_RESOLUTION, NULL);
+	}
+
+	// Setup
 	if ((error = i2c_setup(i2c, I2C_MASTER, CONFIG_ADC_ADS1115_I2C_SPEED, 0, 0))) {
 		return error;
 	}
 
+	if (chan->vref != 0) {
+		return driver_error(ADC_DRIVER, ADC_ERR_VREF_SET_NOT_ALLOWED, NULL);
+	}
+
 	if (!chan->setup) {
+		char pgas[16];
+
+		if (chan->max <= 256) {
+			chan->max = 256;
+			strcpy(pgas,"+/- 256 mvolts");
+		} else if (chan->max <= 512) {
+			chan->max = 512;
+			strcpy(pgas,"+/- 512 mvolts");
+		} else if (chan->max <= 1024) {
+			chan->max = 1024;
+			strcpy(pgas,"+/- 1024 mvolts");
+		} else if (chan->max <= 2048) {
+			chan->max = 2048;
+			strcpy(pgas,"+/- 2048 mvolts");
+		} else if (chan->max <= 4096) {
+			chan->max = 4096;
+			strcpy(pgas,"+/- 4096 mvolts");
+		} else {
+			chan->max = 6144;
+			strcpy(pgas,"+/- 6144 mvolts");
+		}
+
 		syslog(
 				LOG_INFO,
-				"adc ADS1115 channel %d at i2c%d, address %x, vref+ %d, vref- %d, %d bits of resolution",
-				channel, i2c, address, chan->pvref, chan->nvref, chan->resolution
+				"adc ADS1115 channel %d at i2c%d, PGA %s, address %x, %d bits of resolution",
+				channel, i2c, pgas, address, chan->resolution
 		);
 	}
 
@@ -127,15 +180,15 @@ driver_error_t *adc_ads1115_read(adc_channel_t *chan, int *raw, double *mvolts) 
 
 	// Get PGA
 	uint8_t pga = 0;
-	if (chan->pvref <= 256) {
+	if (chan->max <= 256) {
 		pga = ADS1115_CONF_PGA_0256;
-	} else if (chan->pvref <= 512) {
+	} else if (chan->max <= 512) {
 		pga = ADS1115_CONF_PGA_0512;
-	} else if (chan->pvref <= 1024) {
+	} else if (chan->max <= 1024) {
 		pga = ADS1115_CONF_PGA_1024;
-	} else if (chan->pvref <= 2048) {
+	} else if (chan->max <= 2048) {
 		pga = ADS1115_CONF_PGA_2048;
-	} else if (chan->pvref <= 4096) {
+	} else if (chan->max <= 4096) {
 		pga = ADS1115_CONF_PGA_4096;
 	} else {
 		pga = ADS1115_CONF_PGA_6144;
@@ -161,7 +214,16 @@ driver_error_t *adc_ads1115_read(adc_channel_t *chan, int *raw, double *mvolts) 
 	// Read
 	error = adc_ads1115_read_reg(ADS1115_AP_CONV, &reg, address);if (error) return error;
 
-	*raw = reg.word.val;
+	int traw = reg.word.val;
+	double tmvolts = (double)(double)((traw) * (chan->max)) / (double)chan->max_val;
+
+	if (raw) {
+		*raw = traw;
+	}
+
+	if (mvolts) {
+		*mvolts = tmvolts;
+	}
 
 	return NULL;
 }

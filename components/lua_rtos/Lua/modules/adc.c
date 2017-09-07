@@ -49,23 +49,18 @@
 extern LUA_REG_TYPE adc_error_map[];
 
 static int ladc_attach( lua_State* L ) {
-    int id, res, channel, pvref, nvref;
+    int id, res, channel, vref, max;
 	driver_error_t *error;
 
     id = luaL_checkinteger( L, 1 );
     channel = luaL_checkinteger( L, 2 );
     res = luaL_optinteger( L, 3, 0 );
-
-	if ((lua_gettop(L) > 3) && (id <= CPU_LAST_ADC)) {
-		return luaL_exception(L, ADC_ERR_VREF_SET_NOT_ALLOWED);
-	} else {
-		pvref = luaL_optinteger( L, 4, 0 );
-		nvref = luaL_optinteger( L, 5, 0 );
-	}
+    vref = luaL_optinteger( L, 4, 0 );
+    max = luaL_optinteger( L, 5, 0 );
 
     adc_userdata *adc = (adc_userdata *)lua_newuserdata(L, sizeof(adc_userdata));
 
-    if ((error = adc_setup(id, channel, 0, pvref, nvref, res, &adc->h))) {
+    if ((error = adc_setup(id, channel, 0, vref, max, res, &adc->h))) {
     	return luaL_driver_error(L, error);
     }
 

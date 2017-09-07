@@ -119,7 +119,7 @@ driver_error_t *a49e_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 
 	adc_get_channel(&unit->setup[0].adc.h, &chan);
 
-	values->floatd.value = ((mvolts - A49E_VOUT_B0(chan->pvref)) / A49E_M);
+	values->floatd.value = ((mvolts - A49E_VOUT_B0(CONFIG_LUA_RTOS_VDD)) / A49E_M);
 
 	return NULL;
 }

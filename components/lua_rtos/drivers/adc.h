@@ -46,14 +46,18 @@ typedef struct {
 	uint8_t channel;         ///< Channel number
 	int devid;	             ///< Device id
 	uint8_t setup;           ///< Channel is setup?
-	uint8_t max_resolution;  ///< Max resolution supported for channel
 	uint8_t resolution;      ///< Current resolution
 	uint16_t max_val;        ///< Max value, depends on resolution
-	int16_t pvref;           ///< Positive voltage reference in mvolts
-	int16_t nvref;           ///< Negative voltage reference in mvolts
-	int16_t rpvref;          ///< Positive voltage reference in mvolts (valid range)
-	int16_t rnvref;          ///< Negative voltage reference in mvolts (valid range)
+	int16_t vref;             ///< VREF voltage attached in mvolts
+	int16_t max;             ///< Max voltage attached in mvolts
 } adc_channel_t;
+
+// Adc devices
+typedef struct {
+	const char *name;
+	driver_error_t *(*setup)(adc_channel_t *);
+	driver_error_t *(*read)(adc_channel_t *, int *, double *);
+} adc_dev_t;
 
 // ADC errors
 #define ADC_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  0)
@@ -61,8 +65,9 @@ typedef struct {
 #define ADC_ERR_INVALID_RESOLUTION       (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  2)
 #define ADC_ERR_NOT_ENOUGH_MEMORY	 	 (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  3)
 #define ADC_ERR_INVALID_PIN				 (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  4)
-#define ADC_ERR_INVALID_VREF		     (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  5)
-#define ADC_ERR_VREF_SET_NOT_ALLOWED	 (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  6)
+#define ADC_ERR_MAX_SET_NOT_ALLOWED		 (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  5)
+#define ADC_ERR_VREF_SET_NOT_ALLOWED     (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  6)
+#define ADC_ERR_INVALID_MAX				 (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  7)
 
 /**
  * @brief Setup an adc channel.
@@ -72,8 +77,8 @@ typedef struct {
  * @param devid Device id. This is used for SIP & I2C external ADC devices for identify the device in
  *              the bus. For example in SPI devid contains the CS GPIO, and in I2C contains the device
  *              address.
- * @param pvref Positive voltage reference in mVolts.
- * @param nvref Negative voltage reference in mVolts.
+ * @param vref Voltage reference in mVolts. 0 = default.
+ * @param max Max voltage attached to ADC channel in mVolts. 0 = default.
  * @param resolution Bits of resolution.
  * @param h A pointer to the channel handler. This handler is used later for refer to the channel.
  *
@@ -81,7 +86,7 @@ typedef struct {
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs. Error can be an operation error or a lock error.
  */
-driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pvref, int16_t nvref, uint8_t resolution, adc_channel_h_t *h);
+driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t vref, int16_t max, uint8_t resolution, adc_channel_h_t *h);
 
 /**
  * @brief Read from an adc channel.
