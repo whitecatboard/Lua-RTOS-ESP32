@@ -38,7 +38,6 @@
 #include "freertos/queue.h"
 
 #include "esp_attr.h"
-#include "esp_deep_sleep.h"
 
 #include "lora.h"
 
