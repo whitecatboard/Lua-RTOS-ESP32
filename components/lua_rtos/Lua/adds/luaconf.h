@@ -84,7 +84,17 @@
         
 #define LBASELIB_OPEN_ADDS 
 
-#define LINIT_REG_CPU {AUXLIB_CPU, luaopen_cpu},
+#if CONFIG_LUA_RTOS_LUA_USE_CPU
+    #define LINIT_REG_CPU {AUXLIB_CPU, luaopen_cpu},
+#else
+    #define LINIT_REG_CPU
+#endif
+
+#if CONFIG_LUA_RTOS_LUA_USE_ULP
+    #define LINIT_REG_ULP {AUXLIB_ULP, luaopen_ulp},
+#else
+    #define LINIT_REG_ULP
+#endif
 
 #if CONFIG_LUA_RTOS_LUA_USE_TMR
     #define LINIT_REG_TMR {AUXLIB_TMR, luaopen_tmr},
@@ -179,6 +189,7 @@
   LINIT_REG_SPI \
   LINIT_REG_MQTT \
   LINIT_REG_CPU \
+  LINIT_REG_ULP \
   LINIT_REG_THREAD \
   LINIT_REG_SCREEN \
   LINIT_REG_UART \

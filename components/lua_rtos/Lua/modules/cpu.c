@@ -153,13 +153,8 @@ static int lcpu_deepsleep(lua_State *L) {
 	return 0;
 }
 
-/* THOR: TODO
-esp_deep_sleep_get_ext1_wakeup_status
-esp_deep_sleep_pd_config (use it for ulp)
-no need to implement esp_deep_sleep(uint64_t time_in_us) <= already done in cpu_sleep
-no need to implement esp_wake_deep_sleep stub / cannot be used with lua anyway
+/* TODO: esp_deep_sleep_get_ext1_wakeup_status
 */
-
 
 static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "model" ),                  LFUNCVAL( lcpu_model ) },

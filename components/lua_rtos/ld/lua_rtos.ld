@@ -165,6 +165,14 @@ SECTIONS {
     KEEP(*(.cpu_error_map))
     LONG(0) LONG(0)
 
+    ulp_errors = ABSOLUTE(.);
+    KEEP(*(.ulp_errors))
+    LONG(0) LONG(0)
+
+    ulp_error_map = ABSOLUTE(.);
+    KEEP(*(.ulp_error_map))
+    LONG(0) LONG(0)
+
     adc_errors = ABSOLUTE(.);
     KEEP(*(.adc_errors))
     LONG(0) LONG(0)
