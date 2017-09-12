@@ -1,0 +1,50 @@
+diff --git a/components/newlib/include/sys/features.h b/components/newlib/include/sys/features.h
+index 87f3314..c43ffc1 100644
+--- a/components/newlib/include/sys/features.h
++++ b/components/newlib/include/sys/features.h
+@@ -212,9 +212,11 @@ extern "C" {
+ 
+ /* ESP-IDF-specific: enable pthreads support */
+ #ifdef __XTENSA__
++#if CONFIG_ESP32_PTHREAD
+ #define _POSIX_THREADS                          1
+ #define _UNIX98_THREAD_MUTEX_ATTRIBUTES         1
+ #endif
++#endif
+ 
+ /* Per the permission given in POSIX.1-2008 section 2.2.1, define
+  * _POSIX_C_SOURCE if _XOPEN_SOURCE is defined and _POSIX_C_SOURCE is not.
+diff --git a/components/newlib/include/sys/types.h b/components/newlib/include/sys/types.h
+index ed33e0a..c6e3fd1 100644
+--- a/components/newlib/include/sys/types.h
++++ b/components/newlib/include/sys/types.h
+@@ -295,7 +295,6 @@ typedef long suseconds_t;
+  * <cygwin/types.h>
+  */
+ #if defined(_POSIX_THREADS) && !defined(__CYGWIN__)
+-
+ #include <sys/sched.h>
+ 
+ /*
+index cd69bb3..58c41ca 100644
+--- a/components/pthread/component.mk
++++ b/components/pthread/component.mk
+@@ -1,9 +1,17 @@
+ #
+ # Component Makefile
+ #
++ifdef CONFIG_ESP32_PTHREAD
+ 
+ COMPONENT_SRCDIRS := .
+ 
+ #COMPONENT_ADD_INCLUDEDIRS := include
+ 
+ COMPONENT_ADD_LDFLAGS := -lpthread
++
++else
++
++COMPONENT_SRCDIRS :=
++COMPONENT_ADD_LDFLAGS :=
++
++endif
+\ No newline at end of file

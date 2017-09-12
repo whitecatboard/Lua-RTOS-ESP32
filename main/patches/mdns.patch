@@ -1,5 +1,7 @@
---- component.mk.orig	2017-08-03 22:33:00.262095000 +0200
-+++ component.mk	2017-08-03 22:29:42.494095000 +0200
+diff --git a/components/mdns/component.mk b/components/mdns/component.mk
+index e69de29..f609913 100644
+--- a/components/mdns/component.mk
++++ b/components/mdns/component.mk
 @@ -0,0 +1,7 @@
 +#
 +# Component Makefile

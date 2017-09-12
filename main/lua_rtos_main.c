@@ -27,6 +27,8 @@
  * this software.
  */
 
+#include <sys/features.h>
+
 #include "luartos.h"
 
 #include "freertos/FreeRTOS.h"

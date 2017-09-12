@@ -33,10 +33,6 @@
 
 extern struct mtx cond_mtx;
 
-#if MTX_USE_EVENTS
-extern eventg_t eventg[MTX_EVENT_GROUPS];
-#endif
-
 int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) {
 	// Atrr values in this implementation are not allowed
 	if (attr) {
@@ -50,7 +46,6 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) {
 		return EBUSY;
 	}
 
-	#if !MTX_USE_EVENTS
     if (!cond->mutex.sem) {
         mtx_init(&cond->mutex, NULL, NULL, 0);
         if (!cond->mutex.sem) {
@@ -61,18 +56,6 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) {
     	mtx_unlock(&cond_mtx);
     	return EBUSY;
     }
-	#else
-    if (cond->mutex.mtxid < 0) {
-        mtx_init(&cond->mutex, NULL, NULL, 0);
-        if (cond->mutex.mtxid < 0) {
-        	mtx_unlock(&cond_mtx);
-        	return ENOMEM;
-        }
-    } else {
-    	mtx_unlock(&cond_mtx);
-    	return EBUSY;
-    }
-	#endif
     
     cond->referenced = 0;
 
@@ -89,21 +72,12 @@ int pthread_cond_destroy(pthread_cond_t *cond) {
 		return EBUSY;
 	}
 
-	#if !MTX_USE_EVENTS
     if (cond->mutex.sem) {
         mtx_destroy(&cond->mutex);
     } else {
     	mtx_unlock(&cond_mtx);
     	return EINVAL;
     }
-	#else
-    if (cond->mutex.mtxid >= 0) {
-        mtx_destroy(&cond->mutex);
-    } else {
-    	mtx_unlock(&cond_mtx);
-    	return EINVAL;
-    }
-	#endif
 
     mtx_unlock(&cond_mtx);
 	
@@ -111,15 +85,9 @@ int pthread_cond_destroy(pthread_cond_t *cond) {
 }
 
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
-	#if !MTX_USE_EVENTS
 	if (!cond->mutex.sem) {
 		return EINVAL;
 	}
-	#else
-	if (cond->mutex.mtxid < 0) {
-		return EINVAL;
-	}
-	#endif
 
 	// At this point cond is protected by mutex, so is not necessary to use
 	// cond_mtx
@@ -143,15 +111,9 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
 int pthread_cond_timedwait(pthread_cond_t *cond, 
     pthread_mutex_t *mutex, const struct timespec *abstime) { 
     
-	#if !MTX_USE_EVENTS
 	if (!cond->mutex.sem) {
 		return EINVAL;
 	}
-	#else
-	if (cond->mutex.mtxid < 0) {
-		return EINVAL;
-	}
-	#endif
 
 	// At this point cond is protected by mutex, so is not necessary to use
 	// cond_mtx
@@ -164,16 +126,9 @@ int pthread_cond_timedwait(pthread_cond_t *cond,
     }
 
     // Wait for condition
-	#if !MTX_USE_EVENTS
     if (xSemaphoreTake(cond->mutex.sem, (1000 * abstime->tv_sec) / portTICK_PERIOD_MS ) != pdTRUE) {
         return ETIMEDOUT;
     }
-	#else
-  	EventBits_t uxBits = xEventGroupWaitBits(MTX_EVENTG(cond->mutex.mtxid).eg, MTX_EVENTG_BIT(cond->mutex.mtxid), pdTRUE, pdTRUE, (1000 * abstime->tv_sec) / portTICK_PERIOD_MS );
-  	if (!(uxBits & MTX_EVENTG_BIT(cond->mutex.mtxid))) {
-        return ETIMEDOUT;
-  	}
-	#endif
     
     pthread_mutex_unlock(mutex);
     
@@ -181,15 +136,9 @@ int pthread_cond_timedwait(pthread_cond_t *cond,
 }
 
 int pthread_cond_signal(pthread_cond_t *cond) {
-	#if !MTX_USE_EVENTS
 	if (!cond->mutex.sem) {
 		return EINVAL;
 	}
-	#else
-	if (cond->mutex.mtxid < 0) {
-		return EINVAL;
-	}
-	#endif
 
 	// At this point cond is protected by mutex, prior to calling pthread_cond_wait or
 	// pthread_cond_timedwait. pthread_cond_init / pthread_cond_destroy fails due to
