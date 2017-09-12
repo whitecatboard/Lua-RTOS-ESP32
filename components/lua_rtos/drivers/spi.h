@@ -548,4 +548,6 @@ driver_error_t *spi_bulk_read32(int deviceid, uint32_t nelements, uint32_t *data
  */
 driver_error_t *spi_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data);
 
+driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags);
+
 #endif

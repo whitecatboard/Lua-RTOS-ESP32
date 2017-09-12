@@ -62,26 +62,49 @@ int chdir(const char *path) {
     }
 
     // Check for path existence
-    if ((fd = open(ppath, O_RDONLY)) == -1) {
-    	errno = ENOTDIR;
-    	free(ppath);
-        return -1;
-    }
-
-    // Check that path is a directory
-    if (fstat(fd, &statb) || !S_ISDIR(statb.st_mode)) {
-    		free(ppath);
-            errno = ENOTDIR;
-            close(fd);
+    if (strncmp(ppath, "/fat/", 5)) {
+        if ((fd = open(ppath, O_RDONLY)) == -1) {
+        	errno = ENOTDIR;
+        	free(ppath);
             return -1;
-    }
+        }
 
-    lpath = mount_resolve_to_logical(ppath);
-    if (!lpath) {
-    	errno = ENOTDIR;
-    	free(lpath);
-    	free(ppath);
-    	return -1;
+        lpath = mount_resolve_to_logical(ppath);
+        if (!lpath) {
+        	errno = ENOTDIR;
+        	free(lpath);
+        	free(ppath);
+        	return -1;
+        }
+
+        if (fstat(fd, &statb) || !S_ISDIR(statb.st_mode)) {
+        	free(lpath);
+        	free(ppath);
+			errno = ENOTDIR;
+			close(fd);
+			return -1;
+        }
+    } else {
+    	if (!strcmp(ppath, "/fat/")) {
+    		strncpy(currdir, "/sd", PATH_MAX);
+    		free(ppath);
+    		return 0;
+    	}
+
+        lpath = mount_resolve_to_logical(ppath);
+        if (!lpath) {
+        	errno = ENOTDIR;
+        	free(lpath);
+        	free(ppath);
+        	return -1;
+        }
+
+        if (stat(lpath, &statb) || !S_ISDIR(statb.st_mode)) {
+        	free(lpath);
+        	free(ppath);
+			errno = ENOTDIR;
+			return -1;
+        }
     }
 
     strncpy(currdir, lpath, PATH_MAX);

@@ -405,34 +405,6 @@ static void IRAM_ATTR spi_ll_restore_registers(int unit) {
  * End of extracted code from arduino-esp32
  */
 
-static driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
-    driver_unit_lock_error_t *lock_error = NULL;
-
-    // Lock pins
-    if ((flags & SPI_FLAG_READ) && (spi_bus[unit].miso >= 0)) {
-        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].miso, flags, "MISO"))) {
-        	// Revoked lock on pin
-        	return driver_lock_error(SPI_DRIVER, lock_error);
-        }
-    }
-
-    if ((flags & SPI_FLAG_WRITE)  && (spi_bus[unit].mosi >= 0)) {
-        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].mosi, flags, "MOSI"))) {
-        	// Revoked lock on pin
-        	return driver_lock_error(SPI_DRIVER, lock_error);
-        }
-    }
-
-    if (spi_bus[unit].clk >= 0){
-        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].clk, flags, "CLK"))) {
-        	// Revoked lock on pin
-        	return driver_lock_error(SPI_DRIVER, lock_error);
-        }
-    }
-
-    return NULL;
-}
-
 static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 	if (flags & SPI_FLAG_NO_DMA) {
 		// Enable SPI unit
@@ -1287,6 +1259,34 @@ driver_error_t *spi_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data) 
 	}
 
 	return NULL;
+}
+
+driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
+    driver_unit_lock_error_t *lock_error = NULL;
+
+    // Lock pins
+    if ((flags & SPI_FLAG_READ) && (spi_bus[unit].miso >= 0)) {
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].miso, flags, "MISO"))) {
+        	// Revoked lock on pin
+        	return driver_lock_error(SPI_DRIVER, lock_error);
+        }
+    }
+
+    if ((flags & SPI_FLAG_WRITE)  && (spi_bus[unit].mosi >= 0)) {
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].mosi, flags, "MOSI"))) {
+        	// Revoked lock on pin
+        	return driver_lock_error(SPI_DRIVER, lock_error);
+        }
+    }
+
+    if (spi_bus[unit].clk >= 0){
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].clk, flags, "CLK"))) {
+        	// Revoked lock on pin
+        	return driver_lock_error(SPI_DRIVER, lock_error);
+        }
+    }
+
+    return NULL;
 }
 
 DRIVER_REGISTER(SPI,spi,spi_locks,_spi_init,NULL);

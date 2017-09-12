@@ -1,15 +1,12 @@
 /*
- * SD flash card disk driver.
+ * Lua RTOS, SYSTEM driver
  *
- * Copyright (C) 2014 Serge Vakulenko, <serge@vak.ru>
- *
- * -------------------------------------------------------------
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Lua RTOS integration
- *
+ * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- * -------------------------------------------------------------
+ * 
+ * All rights reserved.  
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -30,24 +27,11 @@
  * this software.
  */
 
-#ifndef SD_H
-#define SD_H
+#ifndef _SYSTEM_H
+#define	_SYSTEM_H
 
 #include <sys/driver.h>
 
-#define NSD             1
-#define NPARTITIONS     4
-#define SECTSIZE        512
+#define SYSTEM_ERR_LOCK             (DRIVER_EXCEPTION_BASE(SYSTEM_DRIVER_ID) |  0)
 
-// SD SPI errors
-#define SPI_SD_ERR_CANT_INIT             (DRIVER_EXCEPTION_BASE(SPI_SD_DRIVER_ID) |  0)
-
-driver_error_t *sd_init(int unit);
-
-int sd_size(int unit);
-int sd_write(int unit, unsigned offset, char *data, unsigned bcount);
-int sd_read(int unit, unsigned int offset, char *data, unsigned int bcount);
-int sd_has_partition(int unit, int type);
-int sd_has_partitions(int unit);
-
-#endif
+#endif	/* _SYSTEM_H */

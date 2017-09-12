@@ -85,12 +85,12 @@ SECTIONS {
     KEEP(*(.pcd8544_error_map))
     LONG(0) LONG(0)
 
-    spi_sd_errors = ABSOLUTE(.);
-    KEEP(*(.spi_sd_errors))
+    system_errors = ABSOLUTE(.);
+    KEEP(*(.system_errors))
     LONG(0) LONG(0)
 
-    spi_sd_error_map = ABSOLUTE(.);
-    KEEP(*(.spi_sd_error_map))
+    system_error_map = ABSOLUTE(.);
+    KEEP(*(.system_error_map))
     LONG(0) LONG(0)
 
     can_errors = ABSOLUTE(.);

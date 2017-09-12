@@ -62,7 +62,7 @@
 #define EVENT_DRIVER_ID    20
 #define SPI_ETH_DRIVER_ID  21
 #define CAN_DRIVER_ID      22
-#define SPI_SD_DRIVER_ID   23
+#define SYSTEM_DRIVER_ID   23
 #define PCD8544_DRIVER_ID  24
 #define GDISPLAY_DRIVER_ID 25
 #define ST7735_DRIVER_ID   26
@@ -89,7 +89,7 @@
 #define SPI_ETH_DRIVER driver_get_by_name("spi_eth")
 #define CAN_DRIVER driver_get_by_name("can")
 #define PWBUS_DRIVER driver_get_by_name("pwbus")
-#define SPI_SD_DRIVER driver_get_by_name("spi_sd")
+#define SYSTEM_DRIVER driver_get_by_name("system")
 #define PCD8544_DRIVER driver_get_by_name("pcd8544")
 #define GDISPLAY_DRIVER driver_get_by_name("gdisplay")
 #define ST7735_DRIVER driver_get_by_name("ST7735")

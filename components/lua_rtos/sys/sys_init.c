@@ -2,7 +2,7 @@
  * Lua RTOS, system init
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -220,7 +220,7 @@ void _sys_init() {
         	syslog(LOG_ERR, "can't redirect console messages to file system, an SDCARD is needed");
         }   
     #endif
-        
+
     // Continue init ...
     printf("\n");
 }

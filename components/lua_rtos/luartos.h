@@ -26,6 +26,9 @@
 #define LUA_RTOS_BOARD "GENERIC"
 #endif
 
+/* Fat file system */
+#define CONFIG_LUA_RTOS_USE_FAT CONFIG_LUA_RTOS_USE_SPI_SD
+
 /*
  * Lua RTOS
  */
