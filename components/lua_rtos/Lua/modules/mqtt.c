@@ -230,8 +230,8 @@ static int lmqtt_client( lua_State* L ){
       return luaL_exception(L, LUA_MQTT_ERR_CANT_SET_CALLBACKS);
     }
 
-   luaL_getmetatable(L, "mqtt.cli");
-   lua_setmetatable(L, -2);
+    luaL_getmetatable(L, "mqtt.cli");
+    lua_setmetatable(L, -2);
 
     return 1;
 }

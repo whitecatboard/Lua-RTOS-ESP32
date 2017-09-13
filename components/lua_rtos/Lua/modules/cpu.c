@@ -3,9 +3,9 @@
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * 
+ *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- * 
+ *
  * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software
@@ -60,10 +60,10 @@ DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnULP,   "can't wake on ULP",   LUA_CP
 
 static int lcpu_model(lua_State *L) {
 	int revision;
-	
+
 	char model[18];
 	char cpuInfo[26];
-	
+
 	cpu_model(model);
 	revision = cpu_revision();
 	if (revision) {
@@ -71,9 +71,9 @@ static int lcpu_model(lua_State *L) {
 	} else {
 		sprintf(cpuInfo, "%s", model);
 	}
-	
+
 	lua_pushstring(L, cpuInfo);
-	
+
 	return 1;
 }
 
@@ -188,7 +188,7 @@ static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "WAKEUP_ULP" ),             LINTVAL( ESP_DEEP_SLEEP_WAKEUP_ULP       ) },
 
 	{LSTRKEY("error"), 			               LROVAL( cpu_error_map    )},
-	
+
 	{ LNILKEY, LNILVAL }
 };
 
