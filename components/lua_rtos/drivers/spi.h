@@ -56,6 +56,9 @@
 #define SPI_ERR_DEVICE_IS_NOT_SELECTED 	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  8)
 #define SPI_ERR_CANNOT_CHANGE_PINMAP 	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  9)
 
+extern const int spi_errors;
+extern const int spi_error_map;
+
 // Flags
 #define SPI_FLAG_WRITE  (1 << 0)
 #define SPI_FLAG_READ   (1 << 1)

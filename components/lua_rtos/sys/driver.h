@@ -215,6 +215,10 @@ char *driver_target_name(const driver_t *target_driver, int target_unit, const c
 
 #define DRIVER_SECTION(s) __attribute__((used,unused,section(s)))
 
+#define DRIVER_PASTER_WITH_SEP(x,y,z) x##y##z
+#define DRIVER_EVALUATOR_WITH_SEP(x,y,z) DRIVER_PASTER_WITH_SEP(x,y,z)
+#define DRIVER_CONCAT_WITH_SEP(x,y,z) DRIVER_EVALUATOR_WITH_SEP(x,y,z)
+
 #define DRIVER_PASTER(x,y) x##y
 #define DRIVER_EVALUATOR(x,y) DRIVER_PASTER(x,y)
 #define DRIVER_CONCAT(x,y) DRIVER_EVALUATOR(x,y)
@@ -223,11 +227,21 @@ char *driver_target_name(const driver_t *target_driver, int target_unit, const c
 #define DRIVER_TOSTRING_EVALUATOR(x) DRIVER_TOSTRING_PASTER(x)
 #define DRIVER_TOSTRING(x) DRIVER_TOSTRING_EVALUATOR(x)
 
-#define DRIVER_REGISTER(name,lname,locka,initf,lockf) \
-	const DRIVER_SECTION(DRIVER_TOSTRING(.drivers)) driver_t DRIVER_CONCAT(driver_,lname) = {DRIVER_TOSTRING(lname),  DRIVER_EXCEPTION_BASE(DRIVER_CONCAT(name,_DRIVER_ID)),  (void *)DRIVER_CONCAT(lname,_errors), locka, ((locka!=NULL)?(sizeof(locka)/sizeof(driver_unit_lock_t)):0), initf, lockf};
+#define DRIVER_REGISTER_BEGIN(name,lname,locka,initf,lockf) \
+const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error)) int DRIVER_CONCAT_WITH_SEP(lname,_,errors_end) = 0; \
+const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error_map)) int DRIVER_CONCAT_WITH_SEP(lname,_,error_map_end) = 0;
+
+#define DRIVER_REGISTER_END(name,lname,locka,initf,lockf) \
+const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error)) int DRIVER_CONCAT_WITH_SEP(lname,_,errors) = 0; \
+const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error_map)) int DRIVER_CONCAT_WITH_SEP(lname,_,error_map) = 0; \
+const DRIVER_SECTION(DRIVER_TOSTRING(.drivers)) driver_t DRIVER_CONCAT(driver_,lname) = {DRIVER_TOSTRING(lname),  DRIVER_EXCEPTION_BASE(DRIVER_CONCAT(name,_DRIVER_ID)),  (void *)((&(DRIVER_CONCAT(lname,_errors)))+1), locka, ((locka!=NULL)?(sizeof(locka)/sizeof(driver_unit_lock_t)):0), initf, lockf};
+
 #endif
 
 #define DRIVER_REGISTER_ERROR(name, lname, key, msg, exception) \
-	extern const driver_message_t DRIVER_CONCAT(lname,_errors)[]; \
-	const __attribute__((used,unused,section(DRIVER_TOSTRING(DRIVER_CONCAT(.lname,_errors))))) driver_message_t DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_errors)) = {exception, msg}; \
-	const __attribute__((used,unused,section(DRIVER_TOSTRING(DRIVER_CONCAT(.lname,_error_map))))) LUA_REG_TYPE DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_error_map)) = {LSTRKEY(DRIVER_TOSTRING(key)), LINTVAL(exception)};
+	const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error)) driver_message_t DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_errors)) = {exception, msg}; \
+	const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error_map)) LUA_REG_TYPE DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_error_map)) = {LSTRKEY(DRIVER_TOSTRING(key)), LINTVAL(exception)};
+
+#define DRIVER_REGISTER_LUA_ERRORS(lname) \
+	{LSTRKEY("error"), LROVAL( ((LUA_REG_TYPE *)((&DRIVER_CONCAT_WITH_SEP(lname,_,error_map)) + 1)) )},
+

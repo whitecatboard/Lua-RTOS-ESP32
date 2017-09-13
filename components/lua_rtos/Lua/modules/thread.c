@@ -62,14 +62,17 @@
 #define LUA_THREAD_ERR_INVALID_CPU_AFFINITY (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  6)
 #define LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  7)
 
-DRIVER_REGISTER_ERROR(THREAD, thread, NotEnoughtMemory, "not enough memory", LUA_THREAD_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(THREAD, thread, NotAllowed, "not allowed", LUA_THREAD_ERR_NOT_ALLOWED);
-DRIVER_REGISTER_ERROR(THREAD, thread, NonExistentThread, "non-existent thread", LUA_THREAD_ERR_NON_EXISTENT);
-DRIVER_REGISTER_ERROR(THREAD, thread, CannotStart, "cannot start thread", LUA_THREAD_ERR_CANNOT_START);
-DRIVER_REGISTER_ERROR(THREAD, thread, InvalidStackSize, "invalid stack size", LUA_THREAD_ERR_INVALID_STACK_SIZE);
-DRIVER_REGISTER_ERROR(THREAD, thread, InvalidPriority, "invalid priority", LUA_THREAD_ERR_INVALID_PRIORITY);
-DRIVER_REGISTER_ERROR(THREAD, thread, InvalidCPUAffinity, "invalid CPU affinity", LUA_THREAD_ERR_INVALID_CPU_AFFINITY);
-DRIVER_REGISTER_ERROR(THREAD, thread, CannotMonitorAsTable, "you can't monitor thread as table", LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE);
+// Register driver and messages
+DRIVER_REGISTER_BEGIN(THREAD,thread,NULL,NULL,NULL);
+	DRIVER_REGISTER_ERROR(THREAD, thread, NotEnoughtMemory, "not enough memory", LUA_THREAD_ERR_NOT_ENOUGH_MEMORY);
+	DRIVER_REGISTER_ERROR(THREAD, thread, NotAllowed, "not allowed", LUA_THREAD_ERR_NOT_ALLOWED);
+	DRIVER_REGISTER_ERROR(THREAD, thread, NonExistentThread, "non-existent thread", LUA_THREAD_ERR_NON_EXISTENT);
+	DRIVER_REGISTER_ERROR(THREAD, thread, CannotStart, "cannot start thread", LUA_THREAD_ERR_CANNOT_START);
+	DRIVER_REGISTER_ERROR(THREAD, thread, InvalidStackSize, "invalid stack size", LUA_THREAD_ERR_INVALID_STACK_SIZE);
+	DRIVER_REGISTER_ERROR(THREAD, thread, InvalidPriority, "invalid priority", LUA_THREAD_ERR_INVALID_PRIORITY);
+	DRIVER_REGISTER_ERROR(THREAD, thread, InvalidCPUAffinity, "invalid CPU affinity", LUA_THREAD_ERR_INVALID_CPU_AFFINITY);
+	DRIVER_REGISTER_ERROR(THREAD, thread, CannotMonitorAsTable, "you can't monitor thread as table", LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE);
+DRIVER_REGISTER_END(THREAD,thread,NULL,NULL,NULL);
 
 #define thread_status_RUNNING   1
 #define thread_status_SUSPENDED 2
@@ -604,8 +607,6 @@ static int lthread_status(lua_State* L) {
 
 #include "modules.h"
 
-extern LUA_REG_TYPE thread_error_map[];
-
 static const LUA_REG_TYPE thread[] = {
     { LSTRKEY( "status"  ),			LFUNCVAL( lthread_status  ) },
     { LSTRKEY( "create"  ),			LFUNCVAL( lthread_create  ) },
@@ -618,10 +619,7 @@ static const LUA_REG_TYPE thread[] = {
     { LSTRKEY( "sleepms" ),			LFUNCVAL( lthread_sleepms ) },
     { LSTRKEY( "sleepus" ),			LFUNCVAL( lthread_sleepus ) },
     { LSTRKEY( "usleep"  ),			LFUNCVAL( lthread_sleepus ) },
-
-	// Error definitions
-	{LSTRKEY("error"),  			LROVAL( thread_error_map )},
-
+	DRIVER_REGISTER_LUA_ERRORS(thread)
 	{ LNILKEY, LNILVAL }
 };
 
@@ -637,6 +635,5 @@ int luaopen_thread(lua_State* L) {
 } 
  
 MODULE_REGISTER_MAPPED(THREAD, thread, thread, luaopen_thread);
-DRIVER_REGISTER(THREAD,thread,NULL,NULL,NULL);
 
 #endif

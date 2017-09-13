@@ -67,6 +67,9 @@ typedef struct i2c {
 #define I2C_ERR_PIN_NOT_ALLOWED		     (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  8)
 #define I2C_ERR_CANNOT_CHANGE_PINMAP     (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  10)
 
+extern const int i2c_errors;
+extern const int i2c_error_map;
+
 /**
  * @brief Change the I2C pin map. Pin map is hard coded in Kconfig, but it can be
  *        change in development environments. This function is thread safe.

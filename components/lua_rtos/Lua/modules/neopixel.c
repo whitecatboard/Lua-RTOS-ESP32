@@ -44,8 +44,6 @@
 
 #include <drivers/neopixel.h>
 
-extern LUA_REG_TYPE neopixel_error_map[];
-
 static int lneopixel_setup( lua_State* L ) {
     int type, gpio, pixels;
 	driver_error_t *error;
@@ -140,7 +138,7 @@ static int lneopixel_update( lua_State* L ) {
 static const LUA_REG_TYPE lneopixel_map[] = {
     { LSTRKEY( "setup"   ),	     LFUNCVAL ( lneopixel_setup    ) },
     { LSTRKEY( "attach"  ),	     LFUNCVAL ( lneopixel_attach   ) },
-	{ LSTRKEY( "error"   ),      LROVAL   ( neopixel_error_map ) },
+	DRIVER_REGISTER_LUA_ERRORS(neopixel)
 	{ LSTRKEY( "WS2812B" ),      LINTVAL  ( NeopixelWS2812B    ) },
 	{ LNILKEY, LNILVAL }
 };

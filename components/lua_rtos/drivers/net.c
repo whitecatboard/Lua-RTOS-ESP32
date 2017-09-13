@@ -51,11 +51,15 @@
 // This macro gets a reference for this driver into drivers array
 #define NET_DRIVER driver_get_by_name("net")
 
+DRIVER_REGISTER_BEGIN(NET,net,NULL,NULL,NULL);
+
 // Driver message errors
 DRIVER_REGISTER_ERROR(NET, net, NotAvailable, "network is not available", NET_ERR_NOT_AVAILABLE);
 DRIVER_REGISTER_ERROR(NET, net, InvalidIpAddr, "invalid IP adddress", NET_ERR_INVALID_IP);
 DRIVER_REGISTER_ERROR(NET, net, NoMoreCallbacksAvailable, "no more callbacks available", NET_ERR_NO_MORE_CALLBACKS);
 DRIVER_REGISTER_ERROR(NET, net, CallbackNotFound, "callback not found", NET_ERR_NO_CALLBACK_NOT_FOUND);
+
+DRIVER_REGISTER_END(NET,net,NULL,NULL,NULL);
 
 // FreeRTOS events used by driver
 EventGroupHandle_t netEvent;
@@ -284,7 +288,5 @@ driver_error_t *net_event_unregister_callback(net_event_register_callback_t func
 
 	return driver_error(NET_DRIVER, NET_ERR_NO_MORE_CALLBACKS,NULL);
 }
-
-DRIVER_REGISTER(NET,net,NULL,NULL,NULL);
 
 #endif

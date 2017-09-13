@@ -55,6 +55,8 @@
 // This variable is defined at linker time
 extern const sensor_t sensors[];
 
+DRIVER_REGISTER_BEGIN(SENSOR,sensor,NULL,NULL,NULL);
+
 // Driver message errors
 DRIVER_REGISTER_ERROR(SENSOR, sensor, CannotSetup, "can't setup", SENSOR_ERR_CANT_INIT);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, Timeout, "timeout", SENSOR_ERR_TIMEOUT);
@@ -69,6 +71,8 @@ DRIVER_REGISTER_ERROR(SENSOR, sensor, InvalidAddress, "invalid address", SENSOR_
 DRIVER_REGISTER_ERROR(SENSOR, sensor, NoMoreCallbacks, "no more callbacks available", SENSOR_ERR_NO_MORE_CALLBACKS);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, InvalidData, "invalid data", SENSOR_ERR_INVALID_DATA);
 DRIVER_REGISTER_ERROR(SENSOR, sensor, NoCallbacksAlowed, "callbacks not allowed for this sensor", SENSOR_ERR_CALLBACKS_NOT_ALLOWED);
+
+DRIVER_REGISTER_END(SENSOR,sensor,NULL,NULL,NULL);
 
 static xQueueHandle queue = NULL;
 static TaskHandle_t task = NULL;
@@ -703,7 +707,5 @@ void IRAM_ATTR sensor_queue_callbacks(sensor_instance_t *unit) {
 		}
 	}
 }
-
-DRIVER_REGISTER(SENSOR,sensor,NULL,NULL,NULL);
 
 #endif

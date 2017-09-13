@@ -44,8 +44,6 @@
 #include <drivers/can.h>
 #include <drivers/cpu.h>
 
-extern LUA_REG_TYPE can_error_map[];
-
 static int dump_stop = 0;
 
 static int lcan_attach(lua_State* L) {
@@ -193,8 +191,7 @@ static const LUA_REG_TYPE lcan_map[] = {
     { LSTRKEY( "dump"         ),		  LFUNCVAL( lcan_dump          ) },
 	CAN_CAN0
 	CAN_CAN1
-	{LSTRKEY("error"), 			  LROVAL( can_error_map    )},
-
+	DRIVER_REGISTER_LUA_ERRORS(can)
 	{LSTRKEY("STD"), LINTVAL(0)},
 	{LSTRKEY("EXT"), LINTVAL(1)},
 

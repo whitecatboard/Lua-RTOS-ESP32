@@ -40,8 +40,12 @@
 #include <drivers/cpu.h>
 #include <drivers/timer.h>
 
+DRIVER_REGISTER_BEGIN(GPIO,gpio,gpio_locks,NULL,NULL);
+
 // Driver locks
 static driver_unit_lock_t gpio_locks[CPU_LAST_GPIO + 1];
+
+DRIVER_REGISTER_END(GPIO,gpio,gpio_locks,NULL,NULL);
 
 // Driver errors
 DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPinDirection, "invalid pin direction", GPIO_ERR_INVALID_PIN_DIRECTION);
@@ -504,6 +508,3 @@ const char *gpio_portname(uint8_t pin) {
 uint8_t gpio_name(uint8_t pin) {
 	return pin;
 }
-
-DRIVER_REGISTER(GPIO,gpio,gpio_locks,NULL,NULL);
-

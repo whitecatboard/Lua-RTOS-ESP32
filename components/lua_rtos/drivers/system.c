@@ -33,7 +33,7 @@
 
 #include <drivers/system.h>
 
-// Driver message errors
-DRIVER_REGISTER_ERROR(SYSTEM, system, LockError, "lock error", SYSTEM_ERR_LOCK);
-
-DRIVER_REGISTER(SYSTEM,system,NULL,NULL,NULL);
+// Register driver and errors
+DRIVER_REGISTER_BEGIN(SYSTEM,system,NULL,NULL,NULL);
+	DRIVER_REGISTER_ERROR(SYSTEM, system, LockError, "lock error", SYSTEM_ERR_LOCK);
+DRIVER_REGISTER_END(SYSTEM,system,NULL,NULL,NULL);

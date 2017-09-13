@@ -59,12 +59,16 @@
 #define LUA_MDNS_ERR_CANT_ADD_SERVICE    (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  4)
 #define LUA_MDNS_ERR_CANT_REMOVE_SERVICE (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  5)
 
+DRIVER_REGISTER_BEGIN(MDNS,mdns,NULL,NULL,NULL);
+
 DRIVER_REGISTER_ERROR(MDNS, mdns, CannotCreateService, "can't create service", LUA_MDNS_ERR_CANT_CREATE_SERVICE);
 DRIVER_REGISTER_ERROR(MDNS, mdns, CannotStop, "can't stop", LUA_MDNS_ERR_CANT_STOP);
 DRIVER_REGISTER_ERROR(MDNS, mdns, CannotResolveHost, "can't resolve host", LUA_MDNS_ERR_CANT_RESOLVE_HOST);
 DRIVER_REGISTER_ERROR(MDNS, mdns, CannotFindService, "can't find service", LUA_MDNS_ERR_CANT_FIND_SERVICE);
 DRIVER_REGISTER_ERROR(MDNS, mdns, CannotAddService, "can't add service", LUA_MDNS_ERR_CANT_ADD_SERVICE);
 DRIVER_REGISTER_ERROR(MDNS, mdns, CannotRemoveService, "can't remove service", LUA_MDNS_ERR_CANT_REMOVE_SERVICE);
+
+DRIVER_REGISTER_END(MDNS,mdns,NULL,NULL,NULL);
 
 typedef struct {
     lua_State *L;
@@ -342,7 +346,5 @@ LUALIB_API int luaopen_mdns( lua_State *L ) {
     luaL_newmetarotable(L,"mdns.cli", (void *)lmdns_service_map);
     return 0;
 }
-
-DRIVER_REGISTER(MDNS,mdns,NULL,NULL,NULL);
 
 #endif

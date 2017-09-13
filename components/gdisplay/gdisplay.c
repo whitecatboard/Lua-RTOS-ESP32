@@ -87,22 +87,24 @@ static dispWin_t dispWin = {
   .y2 = 0,
 };
 
-// Driver message errors
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, InvalidChipset, "invalid chipset", GDISPLAY_ERR_INVALID_CHIPSET);
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, InvalidColor, "invalid color", GDISPLAY_ERR_INVALID_COLOR);
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, NotSetup, "is not setup", GDISPLAY_ERR_IS_NOT_SETUP);
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, ColorRequired, "color required", GDISPLAY_ERR_COLOR_REQUIRED);
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, PointRequired, "point required", GDISPLAY_ERR_POINT_REQUIRED);
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, NotEnoughtMemory, "not enough memory", GDISPLAY_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, InvalidRadius, "radius must be > 0", GDISPLAY_ERR_INVALID_RADIUS);
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, InvalidFont, "invalid font", GDISPLAY_ERR_INVALID_FONT);
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, ImageError, "image error", GDISPLAY_ERR_IMAGE);
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, OutOfScreen, "out of screen", GDISPLAY_ERR_OUT_OFF_SCREEN);
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, InvalidOrientation, "invalid orientation", GDISPLAY_ERR_INVALID_ORIENTATION);
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, MissingFileName, "missing file name", GDISPLAY_ERR_MISSING_FILE_NAME);
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, ProcessingError, "image processing error", GDISPLAY_ERR_IMG_PROCESSING_ERROR);
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, BooleanRequired, "boolean required", GDISPLAY_ERR_BOOLEAN_REQUIRED);
-DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, TouchNotSupported, "touch pad not supported in this display", GDISPLAY_ERR_TOUCH_NOT_SUPPORTED);
+// Register driver and messages
+DRIVER_REGISTER_BEGIN(GDISPLAY,gdisplay,NULL,NULL,NULL);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, InvalidChipset, "invalid chipset", GDISPLAY_ERR_INVALID_CHIPSET);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, InvalidColor, "invalid color", GDISPLAY_ERR_INVALID_COLOR);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, NotSetup, "is not setup", GDISPLAY_ERR_IS_NOT_SETUP);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, ColorRequired, "color required", GDISPLAY_ERR_COLOR_REQUIRED);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, PointRequired, "point required", GDISPLAY_ERR_POINT_REQUIRED);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, NotEnoughtMemory, "not enough memory", GDISPLAY_ERR_NOT_ENOUGH_MEMORY);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, InvalidRadius, "radius must be > 0", GDISPLAY_ERR_INVALID_RADIUS);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, InvalidFont, "invalid font", GDISPLAY_ERR_INVALID_FONT);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, ImageError, "image error", GDISPLAY_ERR_IMAGE);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, OutOfScreen, "out of screen", GDISPLAY_ERR_OUT_OFF_SCREEN);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, InvalidOrientation, "invalid orientation", GDISPLAY_ERR_INVALID_ORIENTATION);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, MissingFileName, "missing file name", GDISPLAY_ERR_MISSING_FILE_NAME);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, ProcessingError, "image processing error", GDISPLAY_ERR_IMG_PROCESSING_ERROR);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, BooleanRequired, "boolean required", GDISPLAY_ERR_BOOLEAN_REQUIRED);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, TouchNotSupported, "touch pad not supported in this display", GDISPLAY_ERR_TOUCH_NOT_SUPPORTED);
+DRIVER_REGISTER_END(GDISPLAY,gdisplay,NULL,NULL,NULL);
 
 /*
  * Helper functions
@@ -803,7 +805,5 @@ driver_error_t *gdisplay_touch_set_cal(int x, int y) {
 
 	return NULL;
 }
-
-DRIVER_REGISTER(GDISPLAY,gdisplay,NULL,NULL,NULL);
 
 #endif

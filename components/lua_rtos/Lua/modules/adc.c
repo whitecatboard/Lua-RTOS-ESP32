@@ -47,8 +47,6 @@
 #include <drivers/adc_internal.h>
 #include <drivers/cpu.h>
 
-extern LUA_REG_TYPE adc_error_map[];
-
 static int ladc_calib(lua_State* L) {
 	driver_error_t *error;
 	adc_channel_h_t ch;
@@ -154,7 +152,7 @@ static const LUA_REG_TYPE ladc_map[] = {
 	ADC_ADC_CH5
 	ADC_ADC_CH6
 	ADC_ADC_CH7
-	{LSTRKEY("error"), 			  LROVAL( adc_error_map    )},
+	DRIVER_REGISTER_LUA_ERRORS(adc)
 	{ LNILKEY, LNILVAL }
 };
 

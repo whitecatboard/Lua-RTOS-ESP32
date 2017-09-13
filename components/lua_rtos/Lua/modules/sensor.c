@@ -52,7 +52,6 @@
 extern TM_One_Wire_Devices_t ow_devices[MAX_ONEWIRE_PINS];
 
 // This variables are defined at linker time
-extern LUA_REG_TYPE sensor_error_map[];
 extern const sensor_t sensors[];
 
 static void callback_func(int callback, sensor_instance_t *instance, sensor_value_t *data, sensor_latch_t *latch) {
@@ -772,7 +771,7 @@ static const LUA_REG_TYPE lsensor_map[] = {
     { LSTRKEY( "attach"  	 ),	LFUNCVAL( lsensor_attach      ) },
 	{ LSTRKEY( "list"   	 ),	LFUNCVAL( lsensor_list   	  ) },
 	{ LSTRKEY( "enumerate"   ),	LFUNCVAL( lsensor_enumerate   ) },
-	{ LSTRKEY( "error"       ), LROVAL  ( sensor_error_map    ) },
+	DRIVER_REGISTER_LUA_ERRORS(sensor)
 	{ LSTRKEY( "OWire"       ), LINTVAL ( OWIRE_INTERFACE     ) },
     { LNILKEY, LNILVAL }
 };

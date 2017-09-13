@@ -57,6 +57,9 @@ typedef driver_error_t *(*sensor_acquire_f_t)(struct sensor_instance *, struct s
 typedef driver_error_t *(*sensor_set_f_t)(struct sensor_instance *, const char *, struct sensor_value *);
 typedef driver_error_t *(*sensor_get_f_t)(struct sensor_instance *, const char *, struct sensor_value *);
 
+extern const int sensor_errors;
+extern const int sensor_error_map;
+
 #define SENSOR_MAX_INTERFACES 4
 #define SENSOR_MAX_PROPERTIES 4
 #define SENSOR_MAX_CALLBACKS  4

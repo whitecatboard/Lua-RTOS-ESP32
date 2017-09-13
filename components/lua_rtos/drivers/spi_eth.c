@@ -51,10 +51,14 @@
 
 #include <drivers/spi_eth.h>
 
+DRIVER_REGISTER_BEGIN(SPI_ETH,spi_eth,NULL,NULL,NULL);
+
 DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, CannotSetup, "can't setup", SPI_ETH_ERR_CANT_INIT);
 DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, NotSetup, "ethernet is not setup", SPI_ETH_ERR_NOT_INIT);
 DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, NotStarted, "ethernet is not started", SPI_ETH_ERR_NOT_START);
 DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, CannotConnect, "can't connect, check cable", SPI_ETH_ERR_CANT_CONNECT);
+
+DRIVER_REGISTER_END(SPI_ETH,spi_eth,NULL,NULL,NULL);
 
 extern EventGroupHandle_t netEvent;
 
@@ -161,7 +165,5 @@ driver_error_t *spi_eth_stat(ifconfig_t *info) {
 
 	return NULL;
 }
-
-DRIVER_REGISTER(SPI_ETH,spi_eth,NULL,NULL,NULL);
 
 #endif

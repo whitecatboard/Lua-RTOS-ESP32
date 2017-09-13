@@ -58,6 +58,8 @@
 // This macro gets a reference for this driver into drivers array
 #define WIFI_DRIVER driver_get_by_name("wifi")
 
+DRIVER_REGISTER_BEGIN(WIFI,wifi,NULL,NULL,NULL);
+
 // Driver message errors
 DRIVER_REGISTER_ERROR(WIFI, wifi, CannotSetup, "can't setup", WIFI_ERR_CANT_INIT);
 DRIVER_REGISTER_ERROR(WIFI, wifi, CannotConnect, "can't connect, review your SSID / password", WIFI_ERR_CANT_CONNECT);
@@ -78,6 +80,8 @@ DRIVER_REGISTER_ERROR(WIFI, wifi, RFClosed, "is in sleep state(RF closed) / wake
 DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidArg, "invalid argument", WIFI_ERR_INVALID_ARGUMENT);
 DRIVER_REGISTER_ERROR(WIFI, wifi, NotSupport, "wifi API is not supported yet", WIFI_ERR_NOT_SUPPORT);
 DRIVER_REGISTER_ERROR(WIFI, wifi, NotStopped, "driver was not stopped", WIFI_ERR_NOT_STOPPED);
+
+DRIVER_REGISTER_END(WIFI,wifi,NULL,NULL,NULL);
 
 extern EventGroupHandle_t netEvent;
 
@@ -386,7 +390,5 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 
 	return NULL;
 }
-
-DRIVER_REGISTER(WIFI,wifi,NULL,NULL,NULL);
 
 #endif

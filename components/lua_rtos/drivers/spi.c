@@ -89,17 +89,21 @@ extern void spi_flash_enable_interrupts_caches_and_other_cpu();
 // Driver locks
 static driver_unit_lock_t spi_locks[(CPU_LAST_SPI + 1) * SPI_BUS_DEVICES];
 
-// Driver message errors
-DRIVER_REGISTER_ERROR(SPI, spi, InvalidMode, "invalid mode", SPI_ERR_INVALID_MODE);
-DRIVER_REGISTER_ERROR(SPI, spi, InvalidUnit, "invalid unit", SPI_ERR_INVALID_UNIT);
-DRIVER_REGISTER_ERROR(SPI, spi, SlaveNotAllowed, "slave mode not allowed", SPI_ERR_SLAVE_NOT_ALLOWED);
-DRIVER_REGISTER_ERROR(SPI, spi, NotEnoughtMemory, "not enough memory", SPI_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(SPI, spi, PinNowAllowed, "pin not allowed", SPI_ERR_PIN_NOT_ALLOWED);
-DRIVER_REGISTER_ERROR(SPI, spi, NoMoreDevicesAllowed, "no more devices allowed", SPI_ERR_NO_MORE_DEVICES_ALLOWED);
-DRIVER_REGISTER_ERROR(SPI, spi, InvalidDevice, "invalid device", SPI_ERR_INVALID_DEVICE);
-DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSetup, "invalid device", SPI_ERR_DEVICE_NOT_SETUP);
-DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSelected, "device is not selected", SPI_ERR_DEVICE_IS_NOT_SELECTED);
-DRIVER_REGISTER_ERROR(SPI, spi, CannotChangePinMap, "cannot change pin map once the SPI unit has an attached device", SPI_ERR_CANNOT_CHANGE_PINMAP);
+// Register driver and messages
+static void _spi_init();
+
+DRIVER_REGISTER_BEGIN(SPI,spi,spi_locks,_spi_init,NULL);
+	DRIVER_REGISTER_ERROR(SPI, spi, InvalidMode, "invalid mode", SPI_ERR_INVALID_MODE);
+	DRIVER_REGISTER_ERROR(SPI, spi, InvalidUnit, "invalid unit", SPI_ERR_INVALID_UNIT);
+	DRIVER_REGISTER_ERROR(SPI, spi, SlaveNotAllowed, "slave mode not allowed", SPI_ERR_SLAVE_NOT_ALLOWED);
+	DRIVER_REGISTER_ERROR(SPI, spi, NotEnoughtMemory, "not enough memory", SPI_ERR_NOT_ENOUGH_MEMORY);
+	DRIVER_REGISTER_ERROR(SPI, spi, PinNowAllowed, "pin not allowed", SPI_ERR_PIN_NOT_ALLOWED);
+	DRIVER_REGISTER_ERROR(SPI, spi, NoMoreDevicesAllowed, "no more devices allowed", SPI_ERR_NO_MORE_DEVICES_ALLOWED);
+	DRIVER_REGISTER_ERROR(SPI, spi, InvalidDevice, "invalid device", SPI_ERR_INVALID_DEVICE);
+	DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSetup, "invalid device", SPI_ERR_DEVICE_NOT_SETUP);
+	DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSelected, "device is not selected", SPI_ERR_DEVICE_IS_NOT_SELECTED);
+	DRIVER_REGISTER_ERROR(SPI, spi, CannotChangePinMap, "cannot change pin map once the SPI unit has an attached device", SPI_ERR_CANNOT_CHANGE_PINMAP);
+DRIVER_REGISTER_END(SPI,spi,spi_locks,_spi_init,NULL);
 
 spi_bus_t spi_bus[CPU_LAST_SPI + 1];
 
@@ -1288,5 +1292,3 @@ driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
 
     return NULL;
 }
-
-DRIVER_REGISTER(SPI,spi,spi_locks,_spi_init,NULL);

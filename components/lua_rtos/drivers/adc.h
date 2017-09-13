@@ -71,6 +71,9 @@ typedef struct {
 #define ADC_ERR_CANNOT_CALIBRATE	     (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  8)
 #define ADC_ERR_CALIBRATION	             (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  9)
 
+extern const int adc_errors;
+extern const int adc_error_map;
+
 /**
  * @brief Setup an adc channel.
  *

@@ -42,8 +42,6 @@
 #include <drivers/cpu.h>
 #include <drivers/gpio.h>
 
-extern LUA_REG_TYPE i2c_error_map[];
-extern driver_message_t i2c_errors[];
 extern i2c_t i2c[CPU_LAST_I2C + 1];
 
 typedef struct {
@@ -302,9 +300,7 @@ static const LUA_REG_TYPE li2c_map[] = {
 	{ LSTRKEY( "SLAVE"   ),			LINTVAL ( I2C_SLAVE    ) },
 	I2C_I2C0
 	I2C_I2C1
-
-	// Error definitions
-	{LSTRKEY("error"     ),         LROVAL( i2c_error_map )},
+	DRIVER_REGISTER_LUA_ERRORS(i2c)
     { LNILKEY, LNILVAL }
 };
 

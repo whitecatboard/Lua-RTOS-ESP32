@@ -87,6 +87,8 @@
 // Driver locks
 static driver_unit_lock_t uart_locks[NUART];
 
+DRIVER_REGISTER_BEGIN(UART,uart,uart_locks,NULL,uart_lock_resources);
+
 DRIVER_REGISTER_ERROR(UART, uart, CannotSetup, "can't setup", UART_ERR_CANT_INIT);
 DRIVER_REGISTER_ERROR(UART, uart, InvalidUnit, "invalid unit", UART_ERR_INVALID_UNIT);
 DRIVER_REGISTER_ERROR(UART, uart, InvalidDataBits, "invalid data bits", UART_ERR_INVALID_DATA_BITS);
@@ -96,6 +98,8 @@ DRIVER_REGISTER_ERROR(UART, uart, NotEnoughtMemory, "not enough memory", UART_ER
 DRIVER_REGISTER_ERROR(UART, uart, NotSetup, "is not setup", UART_ERR_IS_NOT_SETUP);
 DRIVER_REGISTER_ERROR(UART, uart, PinNowAllowed, "pin not allowed", UART_ERR_PIN_NOT_ALLOWED);
 DRIVER_REGISTER_ERROR(UART, uart, CannotChangePinMap, "cannot change pin map once the UART unit has an attached device", UART_ERR_CANNOT_CHANGE_PINMAP);
+
+DRIVER_REGISTER_END(UART,uart,uart_locks,NULL,uart_lock_resources);
 
 // Flags for determine some UART states
 #define UART_FLAG_INIT		(1 << 1)
@@ -797,5 +801,3 @@ void uart_stop(int unit) {
 		}
 	}
 }
-
-DRIVER_REGISTER(UART,uart,uart_locks,NULL,uart_lock_resources);

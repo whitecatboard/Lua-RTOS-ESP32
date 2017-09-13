@@ -36,8 +36,6 @@
 
 #include <drivers/spi_eth.h>
 
-extern LUA_REG_TYPE spi_eth_error_map[];
-
 static int lspi_eth_setup(lua_State* L) {
 	driver_error_t *error;
 
@@ -154,7 +152,7 @@ static const LUA_REG_TYPE spi_eth_map[] = {
     { LSTRKEY( "start" ),	 LFUNCVAL( lspi_eth_start   ) },
     { LSTRKEY( "stop"  ),	 LFUNCVAL( lspi_eth_stop    ) },
     { LSTRKEY( "stat"  ),	 LFUNCVAL( lspi_eth_stat    ) },
-    { LSTRKEY( "error" ),	 LROVAL  ( spi_eth_error_map ) },
+	DRIVER_REGISTER_LUA_ERRORS(spi_eth)
 	{ LNILKEY, LNILVAL }
 };
 

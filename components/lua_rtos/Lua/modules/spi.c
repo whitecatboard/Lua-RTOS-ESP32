@@ -43,9 +43,6 @@
 #include <drivers/cpu.h>
 #include <drivers/spi.h>
 
-// This variables are defined at linker time
-extern LUA_REG_TYPE spi_error_map[];
-
 extern spi_bus_t spi_bus[CPU_LAST_SPI + 1];
 
 static int lspi_pins(lua_State* L) {
@@ -258,7 +255,7 @@ static const LUA_REG_TYPE lspi_map[] = {
 	{ LSTRKEY( "attach"     ),	 LFUNCVAL( lspi_attach   ) },
 	{ LSTRKEY( "pins"       ),	 LFUNCVAL( lspi_pins     ) },
 	{ LSTRKEY( "setpins"    ),	 LFUNCVAL( lspi_setpins  ) },
-	{ LSTRKEY( "error"      ),   LROVAL  ( spi_error_map ) },
+	DRIVER_REGISTER_LUA_ERRORS(spi)
 	{ LSTRKEY( "WRITE"      ),	 LINTVAL ( SPI_FLAG_WRITE) },
 	{ LSTRKEY( "READ"       ),	 LINTVAL ( SPI_FLAG_READ ) },
 	{ LSTRKEY( "MASTER"     ),	 LINTVAL ( 1 ) },

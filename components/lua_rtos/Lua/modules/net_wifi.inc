@@ -34,8 +34,6 @@
 #include <string.h>
 #include <stdio.h>
 
-extern LUA_REG_TYPE wifi_error_map[];
-
 static int lwifi_setup(lua_State* L) {
 	driver_error_t *error;
 
@@ -263,7 +261,7 @@ static const LUA_REG_TYPE wifi_map[] = {
 	{ LSTRKEY( "auth"      ),	 LROVAL  ( wifi_auth_map      ) },
 	{ LSTRKEY( "mode"      ),	 LROVAL  ( wifi_mode_map      ) },
 	{ LSTRKEY( "powersave" ),	 LROVAL  ( wifi_powersave_map ) },
-	{ LSTRKEY( "error"     ),	 LROVAL  ( wifi_error_map     ) },
+	DRIVER_REGISTER_LUA_ERRORS(wifi)
 	{ LNILKEY, LNILVAL }
 };
 

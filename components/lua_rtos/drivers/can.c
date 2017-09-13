@@ -54,6 +54,8 @@ CAN_device_t CAN_cfg;
 static uint8_t filters = 0;
 static CAN_filter_t can_filter[CAN_NUM_FILTERS];
 
+DRIVER_REGISTER_BEGIN(CAN,can,NULL,NULL,NULL);
+
 // Driver message errors
 DRIVER_REGISTER_ERROR(CAN, can, NotEnoughtMemory, "not enough memory", CAN_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_ERROR(CAN, can, InvalidFrameLength, "invalid frame length", CAN_ERR_INVALID_FRAME_LENGTH);
@@ -61,6 +63,8 @@ DRIVER_REGISTER_ERROR(CAN, can, InvalidUnit, "invalid unit", CAN_ERR_INVALID_UNI
 DRIVER_REGISTER_ERROR(CAN, can, NoMoreFiltersAllowed, "no more filters allowed", CAN_ERR_NO_MORE_FILTERS_ALLOWED);
 DRIVER_REGISTER_ERROR(CAN, can, InvalidFilter, "invalid filter", CAN_ERR_INVALID_FILTER);
 DRIVER_REGISTER_ERROR(CAN, can, NotSetup, "is not setup", CAN_ERR_IS_NOT_SETUP);
+
+DRIVER_REGISTER_END(CAN,can,NULL,NULL,NULL);
 
 /*
  * Helper functions
@@ -297,7 +301,5 @@ driver_error_t *can_remove_filter(int32_t unit, int32_t fromId, int32_t toId) {
 
 	return NULL;
 }
-
-DRIVER_REGISTER(CAN,can,NULL,NULL,NULL);
 
 #endif

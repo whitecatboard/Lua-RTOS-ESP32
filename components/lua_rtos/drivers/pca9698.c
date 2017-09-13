@@ -37,8 +37,12 @@
 #include <drivers/i2c.h>
 #include <drivers/pca9698.h>
 
+DRIVER_REGISTER_BEGIN(PCA9698,pca9698,NULL,NULL,NULL);
+
 // Driver message errors
 DRIVER_REGISTER_ERROR(PCA9698, pca9698, InvalidUnit, "invalid unit", PCA9698_ERR_INVALID_UNIT);
+
+DRIVER_REGISTER_END(PCA9698,pca9698,NULL,NULL,NULL);
 
 uint8_t setup = 0;
 
@@ -85,5 +89,3 @@ void pca_9698_pin_clr(uint8_t pin) {
 
 void pca_9698_pin_inv(uint8_t pin) {
 }
-
-DRIVER_REGISTER(PCA9698,pca9698,NULL,NULL,NULL);

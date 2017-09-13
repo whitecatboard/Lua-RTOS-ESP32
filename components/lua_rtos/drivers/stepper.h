@@ -105,6 +105,9 @@ typedef struct {
 #define STEPPER_ERR_INVALID_PIN              (DRIVER_EXCEPTION_BASE(STEPPER_DRIVER_ID) |  4)
 #define STEPPER_ERR_INVALID_DIRECTION        (DRIVER_EXCEPTION_BASE(STEPPER_DRIVER_ID) |  5)
 
+extern const int stepper_errors;
+extern const int stepper_error_map;
+
 driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, uint8_t *unit);
 driver_error_t *stepper_move(uint8_t unit, uint8_t dir, uint32_t steps, uint32_t ramp, double ifreq, double efreq);
 void stepper_start(int mask);

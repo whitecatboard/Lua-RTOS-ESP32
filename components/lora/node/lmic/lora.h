@@ -52,6 +52,9 @@
 #define LORA_ERR_INVALID_DR							(DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) | 10)
 #define LORA_ERR_INVALID_BAND						(DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) | 11)
 
+extern const int lora_errors;
+extern const int lora_error_map;
+
 // Lora Mac set commands
 #define LORA_MAC_SET_DEVADDR		0
 #define LORA_MAC_SET_DEVEUI			1

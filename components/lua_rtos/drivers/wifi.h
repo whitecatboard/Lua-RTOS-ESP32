@@ -66,6 +66,9 @@
 #define WIFI_ERR_NOT_SUPPORT			(DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  17)
 #define WIFI_ERR_NOT_STOPPED			(DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  18)
 
+extern const int wifi_errors;
+extern const int wifi_error_map;
+
 driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list);
 driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int powersave, int channel, int hidden);
 driver_error_t *wifi_start();

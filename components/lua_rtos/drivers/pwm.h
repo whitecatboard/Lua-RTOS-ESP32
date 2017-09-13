@@ -47,6 +47,9 @@ typedef struct {
 #define PWM_ERR_INVALID_DUTY             (DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID) |  3)
 #define PWM_ERR_INVALID_FREQUENCY		 (DRIVER_EXCEPTION_BASE(PWM_DRIVER_ID) |  4)
 
+extern const int pwm_errors;
+extern const int pwm_error_map;
+
 driver_error_t *pwm_setup(int8_t unit, int8_t channel, int8_t pin, int32_t freq, double duty, int8_t *achannel);
 driver_error_t *pwm_start(int8_t unit, int8_t channel);
 driver_error_t *pwm_stop(int8_t unit, int8_t channel);

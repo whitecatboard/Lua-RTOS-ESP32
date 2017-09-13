@@ -38,9 +38,13 @@
 
 #include <drivers/gpio.h>
 
-// Driver errors
-DRIVER_REGISTER_ERROR(NZR, nzr, NotEnoughtMemory, "not enough memory", NZR_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(NZR, nzr, InvalidUnit, "invalid unit", NRZ_ERR_INVALID_UNIT);
+// Register driver and messages
+void nzr_init();
+
+DRIVER_REGISTER_BEGIN(NZR,nzr,NULL,nzr_init,NULL);
+	DRIVER_REGISTER_ERROR(NZR, nzr, NotEnoughtMemory, "not enough memory", NZR_ERR_NOT_ENOUGH_MEMORY);
+	DRIVER_REGISTER_ERROR(NZR, nzr, InvalidUnit, "invalid unit", NRZ_ERR_INVALID_UNIT);
+DRIVER_REGISTER_END(NZR,nzr,NULL,nzr_init,NULL);
 
 // List of units
 struct list nzr_list;
@@ -134,5 +138,3 @@ driver_error_t *nzr_send(uint32_t unit, uint8_t *data, uint32_t bits) {
 
 	return NULL;
 }
-
-DRIVER_REGISTER(NZR,nzr,NULL,nzr_init,NULL);

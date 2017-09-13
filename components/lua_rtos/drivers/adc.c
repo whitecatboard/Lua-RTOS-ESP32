@@ -51,34 +51,38 @@ static const adc_dev_t adc_devs[] = {
 #if CONFIG_ADC_MCP3008
 	{"MCP3008", adc_mcp3008_setup, adc_mcp3008_read},
 #else
-	{NULL, NULL},
+	{NULL, NULL, NULL},
 #endif
 #if CONFIG_ADC_MCP3208
 	{"MCP3208", adc_mcp3208_setup, adc_mcp3208_read},
 #else
-	{NULL, NULL},
+	{NULL, NULL, NULL},
 #endif
 #if CONFIG_ADC_ADS1115
 	{"ADS1115", adc_ads1115_setup, adc_ads1115_read},
 #else
-	{NULL, NULL},
+	{NULL, NULL, NULL},
 #endif
 };
 
 // List of channels
 static struct list channels;
 
-// Driver message errors
-DRIVER_REGISTER_ERROR(ADC, adc, InvalidUnit, "invalid unit", ADC_ERR_INVALID_UNIT);
-DRIVER_REGISTER_ERROR(ADC, adc, InvalidChannel, "invalid channel", ADC_ERR_INVALID_CHANNEL);
-DRIVER_REGISTER_ERROR(ADC, adc, InvalidResolution, "invalid resolution", ADC_ERR_INVALID_RESOLUTION);
-DRIVER_REGISTER_ERROR(ADC, adc, NotEnoughtMemory, "not enough memory", ADC_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(ADC, adc, InvalidPin, "invalid pin", ADC_ERR_INVALID_PIN);
-DRIVER_REGISTER_ERROR(ADC, adc, MaxSetupNotAllowed, "max value setup not allowed for this ADC", ADC_ERR_MAX_SET_NOT_ALLOWED);
-DRIVER_REGISTER_ERROR(ADC, adc, VrefSetupNotAllowed, "vref value setup not allowed for this ADC", ADC_ERR_VREF_SET_NOT_ALLOWED);
-DRIVER_REGISTER_ERROR(ADC, adc, InvalidMax, "invalid max value", ADC_ERR_INVALID_MAX);
-DRIVER_REGISTER_ERROR(ADC, adc, CannotCalibrate, "calibration is not allowed for this ADC", ADC_ERR_CANNOT_CALIBRATE);
-DRIVER_REGISTER_ERROR(ADC, adc, CalibrationError, "calibration error", ADC_ERR_CALIBRATION);
+// Register driver and messages
+static void _adc_init();
+
+DRIVER_REGISTER_BEGIN(ADC,adc,NULL,_adc_init,NULL);
+	DRIVER_REGISTER_ERROR(ADC, adc, InvalidUnit, "invalid unit", ADC_ERR_INVALID_UNIT);
+	DRIVER_REGISTER_ERROR(ADC, adc, InvalidChannel, "invalid channel", ADC_ERR_INVALID_CHANNEL);
+	DRIVER_REGISTER_ERROR(ADC, adc, InvalidResolution, "invalid resolution", ADC_ERR_INVALID_RESOLUTION);
+	DRIVER_REGISTER_ERROR(ADC, adc, NotEnoughtMemory, "not enough memory", ADC_ERR_NOT_ENOUGH_MEMORY);
+	DRIVER_REGISTER_ERROR(ADC, adc, InvalidPin, "invalid pin", ADC_ERR_INVALID_PIN);
+	DRIVER_REGISTER_ERROR(ADC, adc, MaxSetupNotAllowed, "max value setup not allowed for this ADC", ADC_ERR_MAX_SET_NOT_ALLOWED);
+	DRIVER_REGISTER_ERROR(ADC, adc, VrefSetupNotAllowed, "vref value setup not allowed for this ADC", ADC_ERR_VREF_SET_NOT_ALLOWED);
+	DRIVER_REGISTER_ERROR(ADC, adc, InvalidMax, "invalid max value", ADC_ERR_INVALID_MAX);
+	DRIVER_REGISTER_ERROR(ADC, adc, CannotCalibrate, "calibration is not allowed for this ADC", ADC_ERR_CANNOT_CALIBRATE);
+	DRIVER_REGISTER_ERROR(ADC, adc, CalibrationError, "calibration error", ADC_ERR_CALIBRATION);
+DRIVER_REGISTER_END(ADC,adc,NULL,_adc_init,NULL);
 
 /*
  * Helper functions
@@ -241,5 +245,3 @@ driver_error_t *adc_read_avg(adc_channel_h_t *h, int samples, double *avgr, doub
 
 	return NULL;
 }
-
-DRIVER_REGISTER(ADC,adc,NULL,_adc_init,NULL);

@@ -57,9 +57,13 @@ void ow_devices_init(uint8_t dev) {
 // Driver locks
 driver_unit_lock_t owire_locks[CPU_LAST_GPIO];
 
-// Driver message errors
-DRIVER_REGISTER_ERROR(OWIRE, owire, CannotSetup, "can't setup", OWIRE_ERR_CANT_INIT);
-DRIVER_REGISTER_ERROR(OWIRE, owire, InvalidChannel, "invalid channel", OWIRE_ERR_INVALID_CHANNEL);
+// Register driver and messages
+void owire_init();
+
+DRIVER_REGISTER_BEGIN(OWIRE,owire,owire_locks,owire_init,NULL);
+	DRIVER_REGISTER_ERROR(OWIRE, owire, CannotSetup, "can't setup", OWIRE_ERR_CANT_INIT);
+	DRIVER_REGISTER_ERROR(OWIRE, owire, InvalidChannel, "invalid channel", OWIRE_ERR_INVALID_CHANNEL);
+DRIVER_REGISTER_END(OWIRE,owire,owire_locks,owire_init,NULL);
 
 // Get the pins used by an ONE WIRE channel
 void owire_pins(int8_t owpin, uint8_t *pin) {
@@ -123,8 +127,6 @@ driver_error_t *owire_setup_pin(int8_t pin) {
 void owire_init() {
 	memset(ow_devices, 0, sizeof(TM_One_Wire_Devices_t) * MAX_ONEWIRE_PINS);
 }
-
-DRIVER_REGISTER(OWIRE,owire,owire_locks,owire_init,NULL);
 
 //******************
 // ONEWIRE FUNCTIONS

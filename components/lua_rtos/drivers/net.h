@@ -69,6 +69,9 @@ typedef struct {
 #define NET_ERR_NO_MORE_CALLBACKS          (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  2)
 #define NET_ERR_NO_CALLBACK_NOT_FOUND      (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  3)
 
+extern const int net_errors;
+extern const int net_error_map;
+
 typedef void (*net_event_register_callback_t)(system_event_t *event);
 
 /**
