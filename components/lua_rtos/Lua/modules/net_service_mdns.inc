@@ -75,14 +75,8 @@ typedef struct {
 static int lmdns_start( lua_State* L ){
   int rc = 0;
   int interface = luaL_checkinteger( L, 1 );
-  const char *hostname = 0;
-  const char *instance = 0;
-	if (lua_gettop(L) > 1) {
-    hostname = luaL_checkstring( L, 2 );
-		if (lua_gettop(L) > 2) {
-		  instance = luaL_checkstring( L, 3 );
-		}
-	}
+  const char *hostname = luaL_optstring( L, 2, NULL );
+  const char *instance = luaL_optstring( L, 3, NULL );
 
   mdns_userdata *mdns = (mdns_userdata *)lua_newuserdata(L, sizeof(mdns_userdata));
   mdns->L = L;
@@ -189,11 +183,8 @@ static int lmdns_resolve_host( lua_State* L ) {
   int rc;
   mdns_userdata *mdns = (mdns_userdata *)luaL_checkudata(L, 1, "mdns.cli");
   const char *hostname = luaL_checkstring( L, 2 );
-  int seconds = DEFAULT_TIMEOUT_SECONDS;
-	if (lua_gettop(L) > 2) {
-  	seconds = luaL_checkinteger( L, 3 );
-		if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
-	}
+  int seconds = luaL_optinteger(L, 3, DEFAULT_TIMEOUT_SECONDS);
+	if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
 
   luaL_argcheck(L, mdns, 1, "mdns expected");
 
@@ -210,11 +201,8 @@ static int lmdns_find_service( lua_State* L ) {
   mdns_userdata *mdns = (mdns_userdata *)luaL_checkudata(L, 1, "mdns.cli");
   const char *service = luaL_checkstring( L, 2 );
   const char *protocol = luaL_checkstring( L, 3 );
-  int seconds = DEFAULT_TIMEOUT_SECONDS;
-	if (lua_gettop(L) > 3) {
-  	seconds = luaL_checkinteger( L, 4 );
-		if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
-	}
+  int seconds = luaL_optinteger(L, 4, DEFAULT_TIMEOUT_SECONDS);
+	if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
 	
   luaL_argcheck(L, mdns, 1, "mdns expected");
 
