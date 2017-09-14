@@ -47,6 +47,9 @@
 #define GPIO_ERR_PULL_DOWN_NOT_ALLOWED		  (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  5)
 #define GPIO_ERR_INT_NOT_ALLOWED			  (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  6)
 
+extern const int gpio_errors;
+extern const int gpio_error_map;
+
 void gpio_ll_pin_set(uint8_t pin);
 void gpio_ll_pin_clr(uint8_t pin);
 void gpio_ll_pin_inv(int8_t pin);

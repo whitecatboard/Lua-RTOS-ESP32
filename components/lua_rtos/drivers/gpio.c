@@ -50,16 +50,11 @@ static driver_unit_lock_t gpio_locks[CPU_LAST_GPIO + 1];
 
 // Register drivers and errors
 DRIVER_REGISTER_BEGIN(GPIO,gpio,gpio_locks,NULL,NULL);
+	DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPinDirection, "invalid pin direction", GPIO_ERR_INVALID_PIN_DIRECTION);
+	DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPin, "invalid pin", GPIO_ERR_INVALID_PIN);
+	DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPort, "invalid port", GPIO_ERR_INVALID_PORT);
+	DRIVER_REGISTER_ERROR(GPIO, gpio, NotEnoughtMemory, "not enough memory", GPIO_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_END(GPIO,gpio,gpio_locks,NULL,NULL);
-
-// Driver errors
-DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPinDirection, "invalid pin direction", GPIO_ERR_INVALID_PIN_DIRECTION);
-DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPin, "invalid pin", GPIO_ERR_INVALID_PIN);
-DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPort, "invalid port", GPIO_ERR_INVALID_PORT);
-DRIVER_REGISTER_ERROR(GPIO, gpio, NotEnoughtMemory, "not enough memory", GPIO_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(GPIO, gpio, PullUpNotAllowed, "pull-up not allowed", GPIO_ERR_PULL_UP_NOT_ALLOWED);
-DRIVER_REGISTER_ERROR(GPIO, gpio, PullDownNotAllowed, "pull-up not allowed", GPIO_ERR_PULL_DOWN_NOT_ALLOWED);
-DRIVER_REGISTER_ERROR(GPIO, gpio, InterruptNotAllowed, "interrupt not allowed for this pin", GPIO_ERR_INT_NOT_ALLOWED);
 
 /*
  * Low level gpio operations
