@@ -44,6 +44,9 @@
 #define GPIO_ERR_INVALID_PORT                 (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  2)
 #define GPIO_ERR_NOT_ENOUGH_MEMORY			  (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  3)
 
+extern const int gpio_errors;
+extern const int gpio_error_map;
+
 void gpio_ll_pin_set(uint8_t pin);
 void gpio_ll_pin_clr(uint8_t pin);
 void gpio_ll_pin_inv(int8_t pin);
