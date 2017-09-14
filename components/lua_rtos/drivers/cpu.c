@@ -55,18 +55,18 @@ void _cpu_init() {
 }
 
 unsigned int cpu_port_number(unsigned int pin) {
-	if ((pin <= 39) || (!CONFIG_GPIO_PCA9698)) {
+	if ((pin <= 39) || (!EXTERNAL_GPIO)) {
 		return 1;
 	} else {
-		return 2 + ((pin - 40) >> 3);
+		return 2 + ((pin - EXTERNAL_GPIO_PINS) >> 3);
 	}
 }
 
 uint8_t cpu_gpio_number(uint8_t pin) {
-	if ((pin <= 39) || (!CONFIG_GPIO_PCA9698)) {
+	if ((pin <= 39) || (!EXTERNAL_GPIO)) {
 		return pin;
 	} else {
-		return ((pin - 40) % 7);
+		return ((pin - EXTERNAL_GPIO_PINS) % 7);
 	}
 }
 
@@ -75,7 +75,7 @@ unsigned int cpu_pin_number(unsigned int pin) {
 }
 
 gpio_pin_mask_t cpu_port_io_pin_mask(unsigned int port) {
-	if ((port == 1) || (!CONFIG_GPIO_PCA9698)) {
+	if ((port == 1) || (!EXTERNAL_GPIO)) {
 		return GPIO_ALL;
 	} else {
 		return 0xff;
@@ -95,7 +95,7 @@ unsigned int cpu_has_gpio(unsigned int port, unsigned int bit) {
 }
 
 unsigned int cpu_has_port(unsigned int port) {
-	if (!CONFIG_GPIO_PCA9698) {
+	if (!EXTERNAL_GPIO) {
 		return (port == 1);
 	} else {
 		return (port <= GPIO_PORTS);

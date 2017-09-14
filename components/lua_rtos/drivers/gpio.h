@@ -83,7 +83,7 @@ uint8_t gpio_name(uint8_t pin);
 #define GPIO_CHECK_INPUT(gpio) \
 	(gpio < 40 \
 		?(GPIO_ALL_IN & (GPIO_BIT_MASK << gpio)) \
-		:(CONFIG_GPIO_PCA9698 \
+		:(EXTERNAL_GPIO \
 			?(gpio < 80) \
 			:0 \
 		) \
@@ -92,7 +92,7 @@ uint8_t gpio_name(uint8_t pin);
 #define GPIO_CHECK_OUTPUT(gpio) \
 	(gpio < 40 \
 		?(GPIO_ALL_OUT & (GPIO_BIT_MASK << gpio)) \
-		:(CONFIG_GPIO_PCA9698 \
+		:(EXTERNAL_GPIO \
 			?(gpio < 80) \
 			:0 \
 		) \

@@ -42,11 +42,13 @@
 
 #include <sys/driver.h>
 
-// Number of banks
-#define PCA9xxx_BANKS 5
+#if CONFIG_GPIO_PCA9698 ||  CONFIG_GPIO_PCA9505
+	// Number of banks
+	#define PCA9xxx_BANKS 5
 
-// Number of pins
-#define PCA9xxx_PINS 40
+	// Number of pins
+	#define PCA9xxx_PINS 40
+#endif
 
 // Convert a GPIO number to it's bank number
 #define PCA9xxx_GPIO_BANK_NUM(gpio) (gpio >> 3)
