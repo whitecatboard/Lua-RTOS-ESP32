@@ -246,12 +246,10 @@ static const uint8_t Rcmd2green160x80[] = {              // Init for 7735R, part
     0x00, 0x00,             //     XSTART = 0
     0x00, 0x9F };           //     XEND = 159
 
+// Register drivers and errors
 DRIVER_REGISTER_BEGIN(ST7735,st7735,NULL,NULL,NULL);
-
-// Driver message errors
-DRIVER_REGISTER_ERROR(ST7735, st7735, CannotSetup, "cannot setup", ST7735_CANNOT_SETUP);
-DRIVER_REGISTER_ERROR(ST7735, st7735, NotEnoughtMemory, "not enough memory", ST7735_ERR_NOT_ENOUGH_MEMORY);
-
+	DRIVER_REGISTER_ERROR(ST7735, st7735, CannotSetup, "cannot setup", ST7735_CANNOT_SETUP);
+	DRIVER_REGISTER_ERROR(ST7735, st7735, NotEnoughtMemory, "not enough memory", ST7735_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_END(ST7735,st7735,NULL,NULL,NULL);
 
 /*

@@ -64,12 +64,10 @@ static int tp_caly = 0;
 // Current chipset
 static uint8_t chipset;
 
+// Register drivers and errors
 DRIVER_REGISTER_BEGIN(ILI9341,ili9341,NULL,NULL,NULL);
-
-// Driver message errors
-DRIVER_REGISTER_ERROR(ILI9341, ili9341, CannotSetup, "cannot setup", ILI9341_CANNOT_SETUP);
-DRIVER_REGISTER_ERROR(ILI9341, ili9341, NotEnoughtMemory, "not enough memory", ILI9341_ERR_NOT_ENOUGH_MEMORY);
-
+	DRIVER_REGISTER_ERROR(ILI9341, ili9341, CannotSetup, "cannot setup", ILI9341_CANNOT_SETUP);
+	DRIVER_REGISTER_ERROR(ILI9341, ili9341, NotEnoughtMemory, "not enough memory", ILI9341_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_END(ILI9341,ili9341,NULL,NULL,NULL);
 
 static const uint8_t ILI9341_init[] = {

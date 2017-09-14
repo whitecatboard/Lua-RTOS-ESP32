@@ -41,12 +41,10 @@
 #include <drivers/servo.h>
 #include <drivers/pwm.h>
 
+// Register drivers and errors
 DRIVER_REGISTER_BEGIN(SERVO,servo,NULL,NULL,NULL);
-
-// Driver message errors
-DRIVER_REGISTER_ERROR(SERVO, servo, CannotSetup, "can't setup", SERVO_ERR_CANT_INIT);
-DRIVER_REGISTER_ERROR(SERVO, servo, NotEnoughtMemory, "not enough memory", SERVO_ERR_NOT_ENOUGH_MEMORY);
-
+	DRIVER_REGISTER_ERROR(SERVO, servo, CannotSetup, "can't setup", SERVO_ERR_CANT_INIT);
+	DRIVER_REGISTER_ERROR(SERVO, servo, NotEnoughtMemory, "not enough memory", SERVO_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_END(SERVO,servo,NULL,NULL,NULL);
 
 /*

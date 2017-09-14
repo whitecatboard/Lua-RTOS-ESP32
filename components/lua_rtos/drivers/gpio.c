@@ -40,11 +40,11 @@
 #include <drivers/cpu.h>
 #include <drivers/timer.h>
 
-DRIVER_REGISTER_BEGIN(GPIO,gpio,gpio_locks,NULL,NULL);
-
 // Driver locks
 static driver_unit_lock_t gpio_locks[CPU_LAST_GPIO + 1];
 
+// Register drivers and errors
+DRIVER_REGISTER_BEGIN(GPIO,gpio,gpio_locks,NULL,NULL);
 DRIVER_REGISTER_END(GPIO,gpio,gpio_locks,NULL,NULL);
 
 // Driver errors

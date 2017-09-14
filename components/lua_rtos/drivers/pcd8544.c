@@ -47,12 +47,10 @@
 
 #include <drivers/gdisplay.h>
 
+// Register drivers and errors
 DRIVER_REGISTER_BEGIN(PCD8544,pcd8544,NULL,NULL,NULL);
-
-// Driver message errors
-DRIVER_REGISTER_ERROR(PCD8544, pcd8544, CannotSetup, "cannot setup", PCD8544_CANNOT_SETUP);
-DRIVER_REGISTER_ERROR(PCD8544, pcd8544, NotEnoughtMemory, "not enough memory", PCD8544_NOT_ENOUGH_MEMORY);
-
+	DRIVER_REGISTER_ERROR(PCD8544, pcd8544, CannotSetup, "cannot setup", PCD8544_CANNOT_SETUP);
+	DRIVER_REGISTER_ERROR(PCD8544, pcd8544, NotEnoughtMemory, "not enough memory", PCD8544_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_END(PCD8544,pcd8544,NULL,NULL,NULL);
 
 /*

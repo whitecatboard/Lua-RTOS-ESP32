@@ -56,6 +56,8 @@
 #include "common.h"
 
 // Register driver and messages
+void _lora_init();
+
 DRIVER_REGISTER_BEGIN(LORA,lora, NULL,_lora_init,NULL);
 	DRIVER_REGISTER_ERROR(LORA, lora, KeysNotConfigured, "keys are not configured", LORA_ERR_KEYS_NOT_CONFIGURED);
 	DRIVER_REGISTER_ERROR(LORA, lora, JoinDenied, "join denied", LORA_ERR_JOIN_DENIED);
