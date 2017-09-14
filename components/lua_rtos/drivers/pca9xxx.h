@@ -43,48 +43,48 @@
 #include <sys/driver.h>
 
 // Number of banks
-#define PCA9698_BANKS 5
+#define PCA9xxx_BANKS 5
 
 // Number of pins
-#define PCA9698_PINS 40
+#define PCA9xxx_PINS 40
 
 // Convert a GPIO number to it's bank number
-#define PCA9698_GPIO_BANK_NUM(gpio) (gpio >> 3)
+#define PCA9xxx_GPIO_BANK_NUM(gpio) (gpio >> 3)
 
 // Convert a GPIO number to it's position into it's bank
-#define PCA9698_GPIO_BANK_POS(gpio) (gpio % 7)
+#define PCA9xxx_GPIO_BANK_POS(gpio) (gpio % 7)
 
 typedef struct {
-	uint8_t direction[PCA9698_BANKS];
-	uint8_t latch[PCA9698_BANKS];
-	gpio_isr_t isr_func[PCA9698_PINS];
-	uint8_t isr_type[PCA9698_PINS];
-	void *isr_args[PCA9698_PINS];
+	uint8_t direction[PCA9xxx_BANKS];
+	uint8_t latch[PCA9xxx_BANKS];
+	gpio_isr_t isr_func[PCA9xxx_PINS];
+	uint8_t isr_type[PCA9xxx_PINS];
+	void *isr_args[PCA9xxx_PINS];
 	xQueueHandle queue;
 	TaskHandle_t task;
 	SemaphoreHandle_t mtx;
-} pca_9698_t;
+} pca_9xxx_t;
 
 // PCA9698 errors
-#define PCA9698_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(PCA9698_DRIVER_ID) |  0)
+#define PCA9xxx_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(PCA9xxx_DRIVER_ID) |  0)
 
-extern const int pca9698_erros;
-extern const int pca9698_error_map;
+extern const int pca9xxx_erros;
+extern const int pca9xxx_error_map;
 
-driver_error_t *pca9698_setup();
-void pca_9698_pin_output(uint8_t pin);
-void pca_9698_pin_input(uint8_t pin);
-void pca_9698_pin_set(uint8_t pin);
-void pca_9698_pin_clr(uint8_t pin);
-void pca_9698_pin_inv(uint8_t pin);
-uint8_t pca_9698_pin_get(uint8_t pin);
-void pca_9698_pin_input_mask(uint8_t port, uint8_t pinmask);
-void pca_9698_pin_output_mask(uint8_t port, uint8_t pinmask);
-void pca_9698_pin_set_mask(uint8_t port, uint8_t pinmask);
-void pca_9698_pin_clr_mask(uint8_t port, uint8_t pinmask);
-void pca_9698_pin_inv_mask(uint8_t port, uint8_t pinmask);
-void pca_9698_pin_get_mask(uint8_t port, uint8_t pinmask, uint8_t *value);
-void pca_9698_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type, void *args);
-void pca_9698_isr_detach(uint8_t pin);
+driver_error_t *pca_9xxx_setup();
+void pca_9xxx_pin_output(uint8_t pin);
+void pca_9xxx_pin_input(uint8_t pin);
+void pca_9xxx_pin_set(uint8_t pin);
+void pca_9xxx_pin_clr(uint8_t pin);
+void pca_9xxx_pin_inv(uint8_t pin);
+uint8_t pca_9xxx_pin_get(uint8_t pin);
+void pca_9xxx_pin_input_mask(uint8_t port, uint8_t pinmask);
+void pca_9xxx_pin_output_mask(uint8_t port, uint8_t pinmask);
+void pca_9xxx_pin_set_mask(uint8_t port, uint8_t pinmask);
+void pca_9xxx_pin_clr_mask(uint8_t port, uint8_t pinmask);
+void pca_9xxx_pin_inv_mask(uint8_t port, uint8_t pinmask);
+void pca_9xxx_pin_get_mask(uint8_t port, uint8_t pinmask, uint8_t *value);
+void pca_9xxx_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type, void *args);
+void pca_9xxx_isr_detach(uint8_t pin);
 
 #endif	/* PCA9698 */
