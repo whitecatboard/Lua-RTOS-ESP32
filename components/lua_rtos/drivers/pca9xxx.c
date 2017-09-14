@@ -43,11 +43,6 @@
 #include <drivers/i2c.h>
 #include <drivers/pca9xxx.h>
 
-// Register drivers and errors
-DRIVER_REGISTER_BEGIN(PCA9xxx,pca9xxx,NULL,NULL,NULL);
-	DRIVER_REGISTER_ERROR(PCA9xxx, pca9xxx, InvalidUnit, "invalid unit", PCA9xxx_ERR_INVALID_UNIT);
-DRIVER_REGISTER_END(PCA9xxx,pca9xxx,NULL,NULL,NULL);
-
 static pca_9xxx_t *pca_9xxx = NULL;
 
 static driver_error_t * pca9xxx_read_all_register(uint8_t reg, uint8_t *val);
@@ -220,7 +215,7 @@ driver_error_t *pca9xxx_setup() {
 			pca_9xxx_unlock();
 
 			// Revoked lock on pin
-			return driver_lock_error(SPI_DRIVER, lock_error);
+			return driver_lock_error(GPIO_DRIVER, lock_error);
 		}
 
 		// We use deferred interrupts, so we need to create a queue and a task
