@@ -28,6 +28,6 @@ components/mkspiffs/src/mkspiffs
 sdkconfig
 sdkconfig.old
 
-.cproject
-.settings
+.cproject/
+.settings/
 .project
