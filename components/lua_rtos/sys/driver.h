@@ -70,6 +70,7 @@
 #define TIMER_DRIVER_ID    28
 #define ENCODER_DRIVER_ID  29
 #define MDNS_DRIVER_ID     30
+#define PCA9698_DRIVER_ID  31
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -96,6 +97,7 @@
 #define TIMER_DRIVER driver_get_by_name("timer")
 #define ENCODER_DRIVER driver_get_by_name("encoder")
 #define MDNS_DRIVER driver_get_by_name("mdns")
+#define  PCA9698_DRIVER driver_get_by_name("pca9698")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 

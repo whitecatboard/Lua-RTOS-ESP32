@@ -293,7 +293,6 @@ void pca_9698_pin_input(uint8_t pin) {
 	pca_9698_unlock();
 
 	pca9698_write_register(0x18 + port, pca_9698->direction[port]);
-<<<<<<< HEAD
 }
 
 void IRAM_ATTR pca_9698_pin_set(uint8_t pin) {
@@ -396,110 +395,6 @@ void pca_9698_pin_clr_mask(uint8_t port, uint8_t pinmask) {
 	pca9698_write_register(0x08 + port, pca_9698->latch[port]);
 }
 
-=======
-}
-
-void IRAM_ATTR pca_9698_pin_set(uint8_t pin) {
-	uint8_t port = PCA9698_GPIO_BANK_NUM(pin);
-	uint8_t pinmask = (1 << PCA9698_GPIO_BANK_POS(pin));
-
-	if (!pca_9698) pca9698_setup();
-
-	// Update latch.
-	pca_9698_lock();
-	pca_9698->latch[port] |= pinmask;
-	pca_9698_unlock();
-
-	pca9698_write_register(0x08 + port, pca_9698->latch[port]);
-}
-
-void IRAM_ATTR pca_9698_pin_clr(uint8_t pin) {
-	uint8_t port = PCA9698_GPIO_BANK_NUM(pin);
-	uint8_t pinmask = (1 << PCA9698_GPIO_BANK_POS(pin));
-
-	if (!pca_9698) pca9698_setup();
-
-	// Update latch.
-	pca_9698_lock();
-	pca_9698->latch[port] &= ~pinmask;
-	pca_9698_unlock();
-
-	pca9698_write_register(0x08 + port, pca_9698->latch[port]);
-}
-
-void IRAM_ATTR pca_9698_pin_inv(uint8_t pin) {
-	uint8_t port = PCA9698_GPIO_BANK_NUM(pin);
-	uint8_t pinmask = (1 << PCA9698_GPIO_BANK_POS(pin));
-
-	if (!pca_9698) pca9698_setup();
-
-	// Update latch.
-	pca_9698_lock();
-	pca_9698->latch[port] = (pca_9698->latch[port] & ~pinmask) | (((!(pca_9698->latch[port] & pinmask)) & pinmask));
-	pca_9698_unlock();
-
-	pca9698_write_register(0x08 + port, pca_9698->latch[port]);
-}
-
-uint8_t IRAM_ATTR pca_9698_pin_get(uint8_t pin) {
-	uint8_t port = PCA9698_GPIO_BANK_NUM(pin);
-	uint8_t pinmask = (1 << PCA9698_GPIO_BANK_POS(pin));
-	uint8_t val;
-
-	if (!pca_9698) pca9698_setup();
-
-	pca_9698_lock();
-	val = ((pca_9698->latch[port] & pinmask) != 0);
-	pca_9698_unlock();
-
-	return val;
-}
-
-void pca_9698_pin_input_mask(uint8_t port, uint8_t pinmask) {
-	if (!pca_9698) pca9698_setup();
-
-	// Update direction. For input set bit to 1.
-	pca_9698_lock();
-	pca_9698->direction[port] |= pinmask;
-	pca_9698_unlock();
-
-	pca9698_write_register(0x18 + port, pca_9698->direction[port]);
-}
-
-void pca_9698_pin_output_mask(uint8_t port, uint8_t pinmask) {
-	if (!pca_9698) pca9698_setup();
-
-	// Update direction. For output set bit to 0.
-	pca_9698_lock();
-	pca_9698->direction[port] &= ~pinmask;
-	pca_9698_unlock();
-
-	pca9698_write_register(0x18 + port, pca_9698->direction[port]);
-}
-
-void pca_9698_pin_set_mask(uint8_t port, uint8_t pinmask) {
-	if (!pca_9698) pca9698_setup();
-
-	// Update latch.
-	pca_9698_lock();
-	pca_9698->latch[port] |= pinmask;
-	pca_9698_unlock();
-
-	pca9698_write_register(0x08 + port, pca_9698->latch[port]);
-}
-
-void pca_9698_pin_clr_mask(uint8_t port, uint8_t pinmask) {
-	if (!pca_9698) pca9698_setup();
-
-	// Update latch.
-	pca_9698_lock();
-	pca_9698->latch[port] &= ~pinmask;
-	pca_9698_unlock();
-
-	pca9698_write_register(0x08 + port, pca_9698->latch[port]);
-}
-
->>>>>>> c9312e48008f9d5b6309facfa595c39e49251902
 void pca_9698_pin_inv_mask(uint8_t port, uint8_t pinmask) {
 	if (!pca_9698) pca9698_setup();
 
@@ -539,8 +434,6 @@ void pca_9698_isr_detach(uint8_t pin) {
 	pca_9698->isr_args[pin] = NULL;
 	pca_9698_unlock();
 }
-<<<<<<< HEAD
-=======
 
 /*
 
@@ -578,7 +471,3 @@ pio.pin.setlow(41)
 pio.pin.setlow(42)
 
  */
-<<<<<<< HEAD
->>>>>>> PCA9698 driver, initial commit
-=======
->>>>>>> c9312e48008f9d5b6309facfa595c39e49251902

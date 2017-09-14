@@ -65,6 +65,12 @@ typedef struct {
 	SemaphoreHandle_t mtx;
 } pca_9698_t;
 
+// PCA9698 errors
+#define PCA9698_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(PCA9698_DRIVER_ID) |  0)
+
+extern const int pca9698_erros;
+extern const int pca9698_error_map;
+
 driver_error_t *pca9698_setup();
 void pca_9698_pin_output(uint8_t pin);
 void pca_9698_pin_input(uint8_t pin);
