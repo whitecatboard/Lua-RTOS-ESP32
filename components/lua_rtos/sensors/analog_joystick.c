@@ -61,7 +61,7 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) analog_jo
 		{
 			.type = GPIO_INTERFACE, // Switch
 
-			.flags = SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_L | SENSOR_FLAG_DEBOUNCING | (1000 << 16) | (2 << 8)
+			.flags = SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_L | SENSOR_FLAG_DEBOUNCING | (10000 << 16) | (2 << 8)
 		}
 	},
 	.interface_name = {"X", "Y", "SW"},

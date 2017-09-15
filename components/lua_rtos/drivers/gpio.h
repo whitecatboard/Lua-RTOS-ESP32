@@ -79,6 +79,8 @@ driver_error_t *gpio_pin_nopull(uint8_t pin);
 driver_error_t *gpio_pin_inv_mask(uint8_t port, gpio_pin_mask_t pinmask);
 driver_error_t *gpio_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type, void *args);
 driver_error_t *gpio_isr_detach(uint8_t pin);
+uint8_t gpio_is_input(uint8_t pin);
+uint8_t gpio_is_output(uint8_t pin);
 
 const char *gpio_portname(uint8_t pin);
 uint8_t gpio_name(uint8_t pin);

@@ -42,7 +42,7 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) push_swit
 			.type = GPIO_INTERFACE,
 
 			// 1000: debouncing threshold period
-			.flags = (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_L | SENSOR_FLAG_DEBOUNCING) | (1000 << 16)
+			.flags = (SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_L | SENSOR_FLAG_DEBOUNCING) | (10000 << 16)
 		},
 	},
 	.data = {

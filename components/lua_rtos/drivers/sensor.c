@@ -190,7 +190,7 @@ static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *u
     		driver_error_t *error;
     		uint16_t threshold = (unit->sensor->interface[interface].flags & 0xffff0000) >> 16;
 
-    		if ((error = gpio_debouncing_register(1 << unit->setup[interface].gpio.gpio, threshold, debouncing, (void *)(&unit->setup[interface])))) {
+    		if ((error = gpio_debouncing_register(unit->setup[interface].gpio.gpio, threshold, debouncing, (void *)(&unit->setup[interface])))) {
     			return error;
     		}
     	} else {

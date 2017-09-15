@@ -74,19 +74,20 @@ extern const int pca9xxx_erros;
 extern const int pca9xxx_error_map;
 
 driver_error_t *pca_9xxx_setup();
-void pca_9xxx_pin_output(uint8_t pin);
-void pca_9xxx_pin_input(uint8_t pin);
-void pca_9xxx_pin_set(uint8_t pin);
-void pca_9xxx_pin_clr(uint8_t pin);
-void pca_9xxx_pin_inv(uint8_t pin);
+driver_error_t *pca_9xxx_pin_output(uint8_t pin);
+driver_error_t *pca_9xxx_pin_input(uint8_t pin);
+driver_error_t *pca_9xxx_pin_set(uint8_t pin);
+driver_error_t *pca_9xxx_pin_clr(uint8_t pin);
+driver_error_t *pca_9xxx_pin_inv(uint8_t pin);
 uint8_t pca_9xxx_pin_get(uint8_t pin);
-void pca_9xxx_pin_input_mask(uint8_t port, uint8_t pinmask);
-void pca_9xxx_pin_output_mask(uint8_t port, uint8_t pinmask);
-void pca_9xxx_pin_set_mask(uint8_t port, uint8_t pinmask);
-void pca_9xxx_pin_clr_mask(uint8_t port, uint8_t pinmask);
-void pca_9xxx_pin_inv_mask(uint8_t port, uint8_t pinmask);
+driver_error_t *pca_9xxx_pin_input_mask(uint8_t port, uint8_t pinmask);
+driver_error_t *pca_9xxx_pin_output_mask(uint8_t port, uint8_t pinmask);
+driver_error_t *pca_9xxx_pin_set_mask(uint8_t port, uint8_t pinmask);
+driver_error_t *pca_9xxx_pin_clr_mask(uint8_t port, uint8_t pinmask);
+driver_error_t *pca_9xxx_pin_inv_mask(uint8_t port, uint8_t pinmask);
 void pca_9xxx_pin_get_mask(uint8_t port, uint8_t pinmask, uint8_t *value);
 void pca_9xxx_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type, void *args);
 void pca_9xxx_isr_detach(uint8_t pin);
+uint64_t pca_9xxx_pin_get_all();
 
 #endif	/* PCA9698 */

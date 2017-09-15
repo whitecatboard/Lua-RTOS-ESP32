@@ -112,8 +112,8 @@
 #define GPIO38_NAME	"GPIO38"
 #define GPIO39_NAME	"GPIO39"
 
-#if CONFIG_GPIO_PCA9698
-#define GPIO_PORTS 6
+#if EXTERNAL_GPIO
+#define GPIO_PORTS (EXTERNAL_GPIO_PORTS + 1)
 #else
 #define GPIO_PORTS 1
 #endif
@@ -136,10 +136,10 @@ typedef uint64_t gpio_pin_mask_t;
 
 #define CPU_FIRST_GPIO GPIO0
 
-#if !CONFIG_GPIO_PCA9698
+#if !EXTERNAL_GPIO
 #define CPU_LAST_GPIO  GPIO39
 #else
-#define CPU_LAST_GPIO  79
+#define CPU_LAST_GPIO  (GPIO39 + EXTERNAL_GPIO_PINS)
 #endif
 
  /*

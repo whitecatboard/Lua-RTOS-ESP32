@@ -63,7 +63,7 @@ static void pca_9xxx_unlock() {
 // and read all pins for release the PCA968 INT.
 static void pca_9xxx_task(void *arg) {
 	uint8_t dummy;
-	uint8_t i, j, pin, latch[PCA9xxx_BANKS];
+	uint8_t i, j, pin, latch[PCA9xxx_BANKS], current[PCA9xxx_BANKS];
 
     for(;;) {
         xQueueReceive(pca_9xxx->queue, &dummy, portMAX_DELAY);
@@ -76,7 +76,11 @@ static void pca_9xxx_task(void *arg) {
         // Read all pins and latch
         pca9xxx_read_all_register(0, pca_9xxx->latch);
 
-		// Process interrupts
+        memcpy(current, pca_9xxx->latch, sizeof(pca_9xxx->latch));
+
+		pca_9xxx_unlock();
+
+        // Process interrupts
 		for(i = 0; i < PCA9xxx_BANKS; i++) {
 			pin = (i << 3);
 			for(j = 0; j < 8;j++, pin++) {
@@ -87,20 +91,20 @@ static void pca_9xxx_task(void *arg) {
 
 						case GPIO_INTR_POSEDGE:
 						case GPIO_INTR_HIGH_LEVEL:
-							if ((pca_9xxx->latch[i] & (1 << j)) && !(latch[i] & (1 << j))) {
+							if ((current[i] & (1 << j)) && !(latch[i] & (1 << j))) {
 								pca_9xxx->isr_func[pin](pca_9xxx->isr_args[pin]);
 							}
 							break;
 
 						case GPIO_INTR_NEGEDGE:
 						case GPIO_INTR_LOW_LEVEL:
-							if (!(pca_9xxx->latch[i] & (1 << j)) && (latch[i] & (1 << j))) {
+							if (!(current[i] & (1 << j)) && (latch[i] & (1 << j))) {
 								pca_9xxx->isr_func[pin](pca_9xxx->isr_args[pin]);
 							}
 							break;
 
 						case GPIO_INTR_ANYEDGE:
-							if (((pca_9xxx->latch[i] & (1 << j))) != (latch[i] & (1 << j))) {
+							if (((current[i] & (1 << j))) != (latch[i] & (1 << j))) {
 								pca_9xxx->isr_func[pin](pca_9xxx->isr_args[pin]);
 							}
 							break;
@@ -108,8 +112,6 @@ static void pca_9xxx_task(void *arg) {
 				}
 			}
 		}
-
-		pca_9xxx_unlock();
     }
 }
 
@@ -188,8 +190,8 @@ driver_error_t *pca9xxx_setup() {
 
 		syslog(
 				LOG_INFO,
-				"GPIO EXTENDER pca9xxx at i2c%d, address %x",
-				CONFIG_PCA9xxx_I2C, CONFIG_PCA9xxx_I2C_ADDRESS
+				"GPIO EXTENDER %s at i2c%d, address %x",
+				EXTERNAL_GPIO_NAME, CONFIG_PCA9xxx_I2C, CONFIG_PCA9xxx_I2C_ADDRESS
 		);
 
 		pca_9xxx_lock();
@@ -251,7 +253,8 @@ driver_error_t *pca9xxx_setup() {
 
 		syslog(
 				LOG_INFO,
-				"GPIO EXTENDER pca9xxx i2c%d, interrupts enabled on %s%d",
+				"GPIO EXTENDER %s i2c%d, interrupts enabled on %s%d",
+				EXTERNAL_GPIO_NAME,
 				CONFIG_PCA9xxx_I2C,
 				gpio_portname(CONFIG_PCA9xxx_INT),
 				gpio_name(CONFIG_PCA9xxx_INT)
@@ -261,7 +264,7 @@ driver_error_t *pca9xxx_setup() {
 	return NULL;
 }
 
-void pca_9xxx_pin_output(uint8_t pin) {
+driver_error_t *pca_9xxx_pin_output(uint8_t pin) {
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 
@@ -272,10 +275,14 @@ void pca_9xxx_pin_output(uint8_t pin) {
 	pca_9xxx->direction[port] &= ~pinmask;
 	pca_9xxx_unlock();
 
-	pca9xxx_write_register(0x18 + port, pca_9xxx->direction[port]);
+	driver_error_t *error;
+
+	error = pca9xxx_write_register(0x18 + port, pca_9xxx->direction[port]);
+
+	return error;
 }
 
-void pca_9xxx_pin_input(uint8_t pin) {
+driver_error_t *pca_9xxx_pin_input(uint8_t pin) {
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 
@@ -286,10 +293,14 @@ void pca_9xxx_pin_input(uint8_t pin) {
 	pca_9xxx->direction[port] |= pinmask;
 	pca_9xxx_unlock();
 
-	pca9xxx_write_register(0x18 + port, pca_9xxx->direction[port]);
+	driver_error_t *error;
+
+	error = pca9xxx_write_register(0x18 + port, pca_9xxx->direction[port]);
+
+	return error;
 }
 
-void IRAM_ATTR pca_9xxx_pin_set(uint8_t pin) {
+driver_error_t *IRAM_ATTR pca_9xxx_pin_set(uint8_t pin) {
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 
@@ -300,10 +311,14 @@ void IRAM_ATTR pca_9xxx_pin_set(uint8_t pin) {
 	pca_9xxx->latch[port] |= pinmask;
 	pca_9xxx_unlock();
 
-	pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
+	driver_error_t *error;
+
+	error = pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
+
+	return error;
 }
 
-void IRAM_ATTR pca_9xxx_pin_clr(uint8_t pin) {
+driver_error_t *IRAM_ATTR pca_9xxx_pin_clr(uint8_t pin) {
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 
@@ -314,10 +329,14 @@ void IRAM_ATTR pca_9xxx_pin_clr(uint8_t pin) {
 	pca_9xxx->latch[port] &= ~pinmask;
 	pca_9xxx_unlock();
 
-	pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
+	driver_error_t *error;
+
+	error = pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
+
+	return error;
 }
 
-void IRAM_ATTR pca_9xxx_pin_inv(uint8_t pin) {
+driver_error_t *IRAM_ATTR pca_9xxx_pin_inv(uint8_t pin) {
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 
@@ -328,7 +347,11 @@ void IRAM_ATTR pca_9xxx_pin_inv(uint8_t pin) {
 	pca_9xxx->latch[port] = (pca_9xxx->latch[port] & ~pinmask) | (((!(pca_9xxx->latch[port] & pinmask)) & pinmask));
 	pca_9xxx_unlock();
 
-	pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
+	driver_error_t *error;
+
+	error = pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
+
+	return error;
 }
 
 uint8_t IRAM_ATTR pca_9xxx_pin_get(uint8_t pin) {
@@ -345,7 +368,7 @@ uint8_t IRAM_ATTR pca_9xxx_pin_get(uint8_t pin) {
 	return val;
 }
 
-void pca_9xxx_pin_input_mask(uint8_t port, uint8_t pinmask) {
+driver_error_t *pca_9xxx_pin_input_mask(uint8_t port, uint8_t pinmask) {
 	if (!pca_9xxx) pca9xxx_setup();
 
 	// Update direction. For input set bit to 1.
@@ -353,10 +376,14 @@ void pca_9xxx_pin_input_mask(uint8_t port, uint8_t pinmask) {
 	pca_9xxx->direction[port] |= pinmask;
 	pca_9xxx_unlock();
 
-	pca9xxx_write_register(0x18 + port, pca_9xxx->direction[port]);
+	driver_error_t *error;
+
+	error = pca9xxx_write_register(0x18 + port, pca_9xxx->direction[port]);
+
+	return error;
 }
 
-void pca_9xxx_pin_output_mask(uint8_t port, uint8_t pinmask) {
+driver_error_t *pca_9xxx_pin_output_mask(uint8_t port, uint8_t pinmask) {
 	if (!pca_9xxx) pca9xxx_setup();
 
 	// Update direction. For output set bit to 0.
@@ -364,10 +391,14 @@ void pca_9xxx_pin_output_mask(uint8_t port, uint8_t pinmask) {
 	pca_9xxx->direction[port] &= ~pinmask;
 	pca_9xxx_unlock();
 
-	pca9xxx_write_register(0x18 + port, pca_9xxx->direction[port]);
+	driver_error_t *error;
+
+	error = pca9xxx_write_register(0x18 + port, pca_9xxx->direction[port]);
+
+	return error;
 }
 
-void pca_9xxx_pin_set_mask(uint8_t port, uint8_t pinmask) {
+driver_error_t * pca_9xxx_pin_set_mask(uint8_t port, uint8_t pinmask) {
 	if (!pca_9xxx) pca9xxx_setup();
 
 	// Update latch.
@@ -375,10 +406,14 @@ void pca_9xxx_pin_set_mask(uint8_t port, uint8_t pinmask) {
 	pca_9xxx->latch[port] |= pinmask;
 	pca_9xxx_unlock();
 
-	pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
+	driver_error_t *error;
+
+	error = pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
+
+	return error;
 }
 
-void pca_9xxx_pin_clr_mask(uint8_t port, uint8_t pinmask) {
+driver_error_t *pca_9xxx_pin_clr_mask(uint8_t port, uint8_t pinmask) {
 	if (!pca_9xxx) pca9xxx_setup();
 
 	// Update latch.
@@ -386,10 +421,14 @@ void pca_9xxx_pin_clr_mask(uint8_t port, uint8_t pinmask) {
 	pca_9xxx->latch[port] &= ~pinmask;
 	pca_9xxx_unlock();
 
-	pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
+	driver_error_t *error;
+
+	error = pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
+
+	return error;
 }
 
-void pca_9xxx_pin_inv_mask(uint8_t port, uint8_t pinmask) {
+driver_error_t *pca_9xxx_pin_inv_mask(uint8_t port, uint8_t pinmask) {
 	if (!pca_9xxx) pca9xxx_setup();
 
 	// Update latch.
@@ -397,7 +436,11 @@ void pca_9xxx_pin_inv_mask(uint8_t port, uint8_t pinmask) {
 	pca_9xxx->latch[port] = (pca_9xxx->latch[port] & ~pinmask) | (((!(pca_9xxx->latch[port] & pinmask)) & pinmask));
 	pca_9xxx_unlock();
 
-	pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
+	driver_error_t *error;
+
+	error = pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
+
+	return error;
 }
 
 void pca_9xxx_pin_get_mask(uint8_t port, uint8_t pinmask, uint8_t *value) {
@@ -408,7 +451,21 @@ void pca_9xxx_pin_get_mask(uint8_t port, uint8_t pinmask, uint8_t *value) {
 	pca_9xxx_unlock();
 }
 
+uint64_t IRAM_ATTR pca_9xxx_pin_get_all() {
+	if (pca_9xxx) {
+		return ((uint64_t)pca_9xxx->latch[4] << 32) |
+			   ((uint64_t)pca_9xxx->latch[3] << 24) |
+			   ((uint64_t)pca_9xxx->latch[2] << 16) |
+			   ((uint64_t)pca_9xxx->latch[1] <<  8) |
+			   (uint64_t)pca_9xxx->latch[0];
+	} else {
+		return 0;
+	}
+}
+
 void pca_9xxx_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type, void *args) {
+	if (!pca_9xxx) pca9xxx_setup();
+
 	pca_9xxx_lock();
 	if (type == GPIO_INTR_DISABLE) {
 		pca_9xxx->isr_func[pin] = NULL;
@@ -423,6 +480,8 @@ void pca_9xxx_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type,
 }
 
 void pca_9xxx_isr_detach(uint8_t pin) {
+	if (!pca_9xxx) pca9xxx_setup();
+
 	pca_9xxx_lock();
 	pca_9xxx->isr_func[pin] = NULL;
 	pca_9xxx->isr_args[pin] = NULL;
@@ -430,6 +489,13 @@ void pca_9xxx_isr_detach(uint8_t pin) {
 }
 
 /*
+
+ pio.pin.interrupt(40, function(value)
+ 	 print("value: "..value)
+ end, pio.pin.IntrNegEdge)
+
+
+---
 
 pio.pin.setdir(pio.OUTPUT, 40)
 

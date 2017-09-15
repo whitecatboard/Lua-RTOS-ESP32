@@ -87,8 +87,6 @@ const driver_t *driver_get_by_exception_base(const uint32_t exception_base) {
 const char *driver_get_err_msg(driver_error_t *error) {
 	driver_message_t *msg = (driver_message_t *)error->driver->error;
 
-	printf("exception %d\r\n", error->exception);
-
 	while (msg->message) {
 		if (msg->exception == error->exception) {
 			return msg->message;
