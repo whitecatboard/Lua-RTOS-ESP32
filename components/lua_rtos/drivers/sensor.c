@@ -179,6 +179,22 @@ static driver_error_t *sensor_adc_setup(uint8_t interface, sensor_instance_t *un
 static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
 
+	// Sanity checks
+	if (unit->setup[interface].gpio.gpio < 40) {
+		// Pin ok
+	}
+	#if EXTERNAL_GPIO
+	else {
+		if (unit->setup[interface].gpio.gpio > CPU_LAST_GPIO) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+	}
+	#else
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	}
+	#endif
+
 	// Lock gpio
     if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup[interface].gpio.gpio, DRIVER_ALL_FLAGS, unit->sensor->id))) {
     	// Revoked lock on gpio

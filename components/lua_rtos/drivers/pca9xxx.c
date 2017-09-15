@@ -27,7 +27,9 @@
  * this software.
  */
 
-#include "sdkconfig.h"
+#include "luartos.h"
+
+#if EXTERNAL_GPIO
 
 #include "esp_attr.h"
 
@@ -487,6 +489,8 @@ void pca_9xxx_isr_detach(uint8_t pin) {
 	pca_9xxx->isr_args[pin] = NULL;
 	pca_9xxx_unlock();
 }
+
+#endif
 
 /*
 

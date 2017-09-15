@@ -30,6 +30,10 @@
 #ifndef PCA9698_H
 #define	PCA9698_H
 
+#include "luartos.h"
+
+#if EXTERNAL_GPIO
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -91,3 +95,5 @@ void pca_9xxx_isr_detach(uint8_t pin);
 uint64_t pca_9xxx_pin_get_all();
 
 #endif	/* PCA9698 */
+
+#endif
