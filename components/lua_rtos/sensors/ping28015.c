@@ -43,6 +43,14 @@
 #include <drivers/sensor.h>
 #include <drivers/gpio.h>
 
+typedef struct {
+	xQueueHandle queue;
+} ping28015_args_t;
+
+typedef struct {
+	unsigned time;
+} ping28015_data_t;
+
 driver_error_t *ping28015_setup(sensor_instance_t *unit);
 driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *values);
 driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting);
@@ -67,12 +75,23 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) ping28015
 /*
  * Helper functions
  */
+static void IRAM_ATTR isr(void* arg) {
+    portBASE_TYPE high_priority_task_awoken = 0;
+	ping28015_args_t *args = (ping28015_args_t *)arg;
+	ping28015_data_t data;
+
+	data.time = xthal_get_ccount();
+	xQueueSendFromISR(args->queue, &data, &high_priority_task_awoken);
+    if (high_priority_task_awoken == pdTRUE) {
+        portYIELD_FROM_ISR();
+    }
+}
 
 /*
  * Operation functions
  */
 driver_error_t *ping28015_setup(sensor_instance_t *unit) {
-	// Set temperature to 20 ºC if any temperature is provided
+ 	// Set temperature to 20 ºC if any temperature is provided
 	unit->properties[0].floatd.value = 20;
 
 	// Ignore first measure
@@ -91,61 +110,55 @@ driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_va
 }
 
 driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *values) {
-	int gpio = unit->setup[0].gpio.gpio;
-	unsigned start, end;
-	double time;
-	uint8_t val;
+	driver_error_t *error;
+	ping28015_args_t args;
+	ping28015_data_t data1, data2;
 
-	// Trigger pulse
+	int gpio = unit->setup[0].gpio.gpio;
+
+	args.queue = xQueueCreate(2, sizeof(ping28015_data_t));
+	if (!args.queue) {
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
+	}
+
+	// Configure pin as output and trigger pulse
 	gpio_pin_output(gpio);
 	gpio_pin_set(gpio);
 	udelay(5);
 	gpio_pin_clr(gpio);
 
-	// Wait for echo
-	// We have to measure time of echo pulse
-	portDISABLE_INTERRUPTS();
+	// Configure pin as input
 	gpio_pin_input(gpio);
 
-	// Echo Holdoff
-	time = 0.0;
-	start = xthal_get_ccount();
-	end = start;
-
-	gpio_pin_get(gpio, &val);
-	while (!val && (time <= 750)) {
-		end = xthal_get_ccount();
-		time = (((double)((double)end - (double)start) / (double)(CPU_HZ / (1000000.0 * (CPU_HZ / CORE_TIMER_HZ))))) / (double)2.0;
-		gpio_pin_get(gpio, &val);
+	error = gpio_isr_attach(gpio, isr, GPIO_INTR_ANYEDGE, (void *)&args);
+	if (error) {
+		vQueueDelete(args.queue);
+		return error;
 	}
 
-	if (time > 800) {
+	if (xQueueReceive(args.queue, &data1, 185 / portTICK_PERIOD_MS) == pdFALSE) {
+		gpio_isr_detach(gpio);
+		vQueueDelete(args.queue);
 		return driver_error(SENSOR_DRIVER, SENSOR_ERR_TIMEOUT, NULL);
 	}
 
-	// Echo Return Pulse
-	time = 0.0;
-	start = xthal_get_ccount();
-	gpio_pin_get(gpio, &val);
-	while (val && (time <= 185000)) {
-		end = xthal_get_ccount();
-		time = (((double)((double)end - (double)start) / (double)(CPU_HZ / (1000000.0 * (CPU_HZ / CORE_TIMER_HZ))))) / (double)2.0;
-		gpio_pin_get(gpio, &val);
+	if (xQueueReceive(args.queue, &data2, 185 / portTICK_PERIOD_MS) == pdFALSE) {
+		gpio_isr_detach(gpio);
+		vQueueDelete(args.queue);
+		return driver_error(SENSOR_DRIVER, SENSOR_ERR_TIMEOUT, NULL);
 	}
 
-	portENABLE_INTERRUPTS();
+	gpio_isr_detach(gpio);
+	vQueueDelete(args.queue);
+
+	unsigned start = data1.time;
+	unsigned end = data2.time;
+
+	int time = round((((double)((double)end - (double)start) / (double)(CPU_HZ / (1000000.0 * (CPU_HZ / CORE_TIMER_HZ))))) / (double)2.0);
 
 	if (time > 185000) {
 		return driver_error(SENSOR_DRIVER, SENSOR_ERR_TIMEOUT, NULL);
 	}
-
-	/*
-	 * Calculate time in microseconds
-	 *
-	 * The sound comes out of the sensor, is reflected in an object, and returns to the sensor,
-	 * so time from sensor to object is time / 2
-	 */
-	time = (((double)((double)end - (double)start) / (double)(CPU_HZ / (1000000.0 * (CPU_HZ / CORE_TIMER_HZ))))) / (double)2.0;
 
 	/*
 	 * Calculate distance

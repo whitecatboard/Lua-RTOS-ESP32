@@ -74,7 +74,8 @@ DRIVER_REGISTER_END(SENSOR,sensor,NULL,NULL,NULL);
 
 static xQueueHandle queue = NULL;
 static TaskHandle_t task = NULL;
-uint8_t attached = 0;
+static uint8_t attached = 0;
+static uint8_t counter = 0;
 
 /*
  * Helper functions
@@ -179,6 +180,22 @@ static driver_error_t *sensor_adc_setup(uint8_t interface, sensor_instance_t *un
 static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
 
+	// Sanity checks
+	if (unit->setup[interface].gpio.gpio < 40) {
+		// Pin ok
+	}
+	#if EXTERNAL_GPIO
+	else {
+		if (unit->setup[interface].gpio.gpio > CPU_LAST_GPIO) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+	}
+	#else
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	}
+	#endif
+
 	// Lock gpio
     if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup[interface].gpio.gpio, DRIVER_ALL_FLAGS, unit->sensor->id))) {
     	// Revoked lock on gpio
@@ -190,33 +207,11 @@ static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *u
     		driver_error_t *error;
     		uint16_t threshold = (unit->sensor->interface[interface].flags & 0xffff0000) >> 16;
 
-    		if ((error = gpio_debouncing_register(1 << unit->setup[interface].gpio.gpio, threshold, debouncing, (void *)(&unit->setup[interface])))) {
+    		if ((error = gpio_debouncing_register(unit->setup[interface].gpio.gpio, threshold, debouncing, (void *)(&unit->setup[interface])))) {
     			return error;
     		}
     	} else {
-        	portDISABLE_INTERRUPTS();
-
-            // Configure pins as input
-            gpio_config_t io_conf;
-
-            io_conf.intr_type = GPIO_INTR_ANYEDGE;
-            io_conf.mode = GPIO_MODE_INPUT;
-            io_conf.pin_bit_mask = (1ULL << unit->setup[interface].gpio.gpio);
-            io_conf.pull_down_en = 0;
-            io_conf.pull_up_en = 1;
-
-            gpio_config(&io_conf);
-
-        	// Configure interrupts
-            if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
-            	gpio_install_isr_service(0);
-
-            	status_set(STATUS_ISR_SERVICE_INSTALLED);
-            }
-
-            gpio_isr_handler_add(unit->setup[interface].gpio.gpio, isr, (void *)(&unit->setup[interface]));
-
-            portENABLE_INTERRUPTS();
+        	gpio_isr_attach(unit->setup[interface].gpio.gpio, isr, GPIO_INTR_ANYEDGE, (void *)(&unit->setup[interface]));
     	}
     } else {
         gpio_pin_output(unit->setup[interface].gpio.gpio);
@@ -397,6 +392,8 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 		}
 	}
 
+	instance->unit = counter++;
+
 	// Setup sensor interfaces
 	for(i=0;i<SENSOR_MAX_INTERFACES;i++) {
 		if (!(sensor->interface[i].flags & SENSOR_FLAG_CUSTOM_INTERFACE_INIT) && sensor->interface[i].type) {
@@ -462,9 +459,13 @@ driver_error_t *sensor_unsetup(sensor_instance_t *unit) {
 
 	// Remove interrupts
 	for(i=0; i < SENSOR_MAX_INTERFACES; i++) {
-		if ((unit->sensor->interface[i].flags & SENSOR_FLAG_ON_OFF) && unit->setup[i].gpio.gpio) {
-			gpio_isr_handler_remove(unit->setup[i].gpio.gpio);
-		}
+	    if (unit->sensor->interface[i].flags & SENSOR_FLAG_ON_OFF) {
+	    	if (unit->sensor->interface[i].flags & SENSOR_FLAG_DEBOUNCING) {
+	    		gpio_debouncing_unregister(unit->setup[i].gpio.gpio);
+	    	} else {
+	    		gpio_isr_detach(unit->setup[i].gpio.gpio);
+	    	}
+	    }
 	}
 
 	if (attached == 1) {

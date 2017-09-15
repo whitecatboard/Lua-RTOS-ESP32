@@ -135,7 +135,7 @@ static int luaB_try (lua_State *L) {
     		status = lua_pcall(L, 4, 0, 0);
     	    if ((status != LUA_OK) && (status != LUA_YIELD)) {
     	    	// Catch function has failed, raise an error
-				luaL_error(L, msg);
+				return luaL_error(L, msg);
     	    }
     	}
     }
@@ -144,7 +144,7 @@ static int luaB_try (lua_State *L) {
     	status = lua_pcall(L, 0, 0, 0);
     	if ((status != LUA_OK) && (status != LUA_YIELD)) {
 	    	// Finally function has failed, raise an error
-			luaL_error(L, lua_tostring(L, -1));
+			return luaL_error(L, lua_tostring(L, -1));
     	}
     }
 

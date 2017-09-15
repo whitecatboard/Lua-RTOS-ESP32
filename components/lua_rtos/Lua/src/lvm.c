@@ -861,6 +861,7 @@ void luaV_finishOp (lua_State *L) {
 }
 
 #define vmdispatch(o)	switch(o)
+//#define vmcase(l)	case l: {printf("%s\r\n", #l);}
 #define vmcase(l)	case l:
 #define vmbreak		break
 
@@ -947,13 +948,16 @@ void luaV_execute (lua_State *L) {
         TValue *upval = cl->upvals[GETARG_A(i)]->v;
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
+
         settableProtected(L, upval, rb, rc);
-		//#if LUA_USE_ROTABLE
-        //if (ttisnil(rc)) {
-        //	luaC_fullgc(L, 0);
-        //}
-		//#endif
-        vmbreak;
+
+		#if LUA_USE_ROTABLE
+		if ((ttype(rc) == LUA_TNIL)) {
+			luaC_fullgc(L, 0);
+		}
+		#endif
+
+		vmbreak;
       }
       vmcase(OP_SETUPVAL) {
         UpVal *uv = cl->upvals[GETARG_B(i)];

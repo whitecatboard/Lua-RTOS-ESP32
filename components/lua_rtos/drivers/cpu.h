@@ -112,8 +112,11 @@
 #define GPIO38_NAME	"GPIO38"
 #define GPIO39_NAME	"GPIO39"
 
-// ESP32 has only 1 GPIO port
+#if EXTERNAL_GPIO
+#define GPIO_PORTS (EXTERNAL_GPIO_PORTS + 1)
+#else
 #define GPIO_PORTS 1
+#endif
 
 // ESP32 has 40 GPIO per port
 #define GPIO_PER_PORT 40
@@ -132,7 +135,12 @@ typedef uint64_t gpio_pin_mask_t;
 #define GPIO_BIT_MASK 1ULL
 
 #define CPU_FIRST_GPIO GPIO0
+
+#if !EXTERNAL_GPIO
 #define CPU_LAST_GPIO  GPIO39
+#else
+#define CPU_LAST_GPIO  (GPIO39 + EXTERNAL_GPIO_PINS)
+#endif
 
  /*
   * ----------------------------------------------------------------

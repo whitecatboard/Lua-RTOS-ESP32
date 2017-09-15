@@ -300,35 +300,51 @@ menu "Lua RTOS"
 		endmenu
 
 		menu "External GPIO"
-			config GPIO_PCA9698
-				bool "Use I2C GPIO PCA9698"
-				default y
-				help
-					PCA9698 is an 40-GPIO I2C extender.
+			choice EXTERNAL_GPIO_TYPE
+				prompt "External GPIO chip"
+				default EXTERNAL_GPIO_NONE
 
-			config PCA9698_I2C
-				depends on GPIO_PCA9698
-					int "PCA9698 I2C port"
+				config EXTERNAL_GPIO_NONE
+					bool "None"
+			
+				config GPIO_PCA9698
+					bool "PCA9698, 40 IO, no pull-up"
+				
+				config GPIO_PCA9505
+					bool "PCA9505, 40 IO, pull-up"
+			endchoice
+		
+			config PCA9xxx_I2C
+				depends on (GPIO_PCA9698 || GPIO_PCA9505)
+					int "PCA9xxx I2C port"
 					range 0 1
 					default 0
 					help
-						I2C port where PCA9698 is attached
+						I2C port where PCA9xxx is attached
 
-			config PCA9698_I2C_SPEED
-				depends on GPIO_PCA9698
-					int "PCA9698 I2C port speed"
+			config PCA9xxx_INT
+				depends on (GPIO_PCA9698 || GPIO_PCA9505)
+					int "PCA9xxx INT pint"
+					range 0 39
+					default 26
+					help
+						GPIO where PCA9xxx INT pin is attached.
+
+			config PCA9xxx_I2C_SPEED
+				depends on (GPIO_PCA9698 || GPIO_PCA9505)
+					int "PCA9xxx I2C port speed"
 					range 100000 1000000
 					default 1000000
 					help
-						I2C port speed in hertz
+						I2C PCA9xxx port speed in hertz
 
-			config PCA9698_I2C_ADDRESS
-				depends on GPIO_PCA9698
-					int "PCA9698 I2C port address"
+			config PCA9xxx_I2C_ADDRESS
+				depends on (GPIO_PCA9698 || GPIO_PCA9505)
+					int "PCA9xxx I2C port address"
 					range 0 255
-					default 132
+					default 32
 					help
-						I2C port speed in hertz		
+						I2C PCA9xxx port speed in hertz		
 		endmenu
 		
 		menu "External ADC"
