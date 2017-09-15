@@ -26,5 +26,6 @@ typedef struct {
 #define GPIO_DEBOUNCING_PERIOD 20
 
 driver_error_t *gpio_debouncing_register(uint8_t pin, uint16_t threshold, gpio_debouncing_callback_t callback, void *args);
+driver_error_t *gpio_debouncing_unregister(uint8_t pin);
 
 #endif /* _GPIO_DEBOUNCING_H_ */

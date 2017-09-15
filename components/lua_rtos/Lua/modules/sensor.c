@@ -777,7 +777,7 @@ static const LUA_REG_TYPE lsensor_map[] = {
 };
 
 static const LUA_REG_TYPE lsensor_ins_map[] = {
-	{ LSTRKEY( "detach"      ),	LFUNCVAL( lsensor_dettach    ) },
+	{ LSTRKEY( "detach"      ),	LFUNCVAL( lsensor_dettach   ) },
 	{ LSTRKEY( "acquire"     ),	LFUNCVAL( lsensor_acquire   ) },
   	{ LSTRKEY( "read"        ),	LFUNCVAL( lsensor_read 	    ) },
   	{ LSTRKEY( "set"         ),	LFUNCVAL( lsensor_set 	    ) },

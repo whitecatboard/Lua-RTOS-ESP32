@@ -74,7 +74,8 @@ DRIVER_REGISTER_END(SENSOR,sensor,NULL,NULL,NULL);
 
 static xQueueHandle queue = NULL;
 static TaskHandle_t task = NULL;
-uint8_t attached = 0;
+static uint8_t attached = 0;
+static uint8_t counter = 0;
 
 /*
  * Helper functions
@@ -210,29 +211,7 @@ static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *u
     			return error;
     		}
     	} else {
-        	portDISABLE_INTERRUPTS();
-
-            // Configure pins as input
-            gpio_config_t io_conf;
-
-            io_conf.intr_type = GPIO_INTR_ANYEDGE;
-            io_conf.mode = GPIO_MODE_INPUT;
-            io_conf.pin_bit_mask = (1ULL << unit->setup[interface].gpio.gpio);
-            io_conf.pull_down_en = 0;
-            io_conf.pull_up_en = 1;
-
-            gpio_config(&io_conf);
-
-        	// Configure interrupts
-            if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
-            	gpio_install_isr_service(0);
-
-            	status_set(STATUS_ISR_SERVICE_INSTALLED);
-            }
-
-            gpio_isr_handler_add(unit->setup[interface].gpio.gpio, isr, (void *)(&unit->setup[interface]));
-
-            portENABLE_INTERRUPTS();
+        	gpio_isr_attach(unit->setup[interface].gpio.gpio, isr, GPIO_INTR_ANYEDGE, (void *)(&unit->setup[interface]));
     	}
     } else {
         gpio_pin_output(unit->setup[interface].gpio.gpio);
@@ -413,6 +392,8 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 		}
 	}
 
+	instance->unit = counter++;
+
 	// Setup sensor interfaces
 	for(i=0;i<SENSOR_MAX_INTERFACES;i++) {
 		if (!(sensor->interface[i].flags & SENSOR_FLAG_CUSTOM_INTERFACE_INIT) && sensor->interface[i].type) {
@@ -478,9 +459,13 @@ driver_error_t *sensor_unsetup(sensor_instance_t *unit) {
 
 	// Remove interrupts
 	for(i=0; i < SENSOR_MAX_INTERFACES; i++) {
-		if ((unit->sensor->interface[i].flags & SENSOR_FLAG_ON_OFF) && unit->setup[i].gpio.gpio) {
-			gpio_isr_handler_remove(unit->setup[i].gpio.gpio);
-		}
+	    if (unit->sensor->interface[i].flags & SENSOR_FLAG_ON_OFF) {
+	    	if (unit->sensor->interface[i].flags & SENSOR_FLAG_DEBOUNCING) {
+	    		gpio_debouncing_unregister(unit->setup[i].gpio.gpio);
+	    	} else {
+	    		gpio_isr_detach(unit->setup[i].gpio.gpio);
+	    	}
+	    }
 	}
 
 	if (attached == 1) {

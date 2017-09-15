@@ -234,3 +234,16 @@ driver_error_t *gpio_debouncing_register(uint8_t pin, uint16_t threshold, gpio_d
 
 	return NULL;
 }
+
+driver_error_t *gpio_debouncing_unregister(uint8_t pin) {
+	if (debouncing) {
+		portDISABLE_INTERRUPTS();
+		debouncing->arg[pin] = NULL;
+		debouncing->callback[pin] = NULL;
+		debouncing->threshold[pin] = 0;
+		debouncing->time[pin] = 0;
+		portENABLE_INTERRUPTS();
+	}
+
+	return NULL;
+}
