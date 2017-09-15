@@ -31,3 +31,4 @@ sdkconfig.old
 .cproject/
 .settings/
 .project
+.cproject
