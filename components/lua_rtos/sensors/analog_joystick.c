@@ -70,6 +70,11 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) analog_jo
 		{.id = "y",  .type = SENSOR_DATA_INT},
 		{.id = "sw", .type = SENSOR_DATA_INT},
 	},
+	.properties = {
+		{.id = "repeat",       .type = SENSOR_DATA_INT},
+		{.id = "repeat delay", .type = SENSOR_DATA_INT},
+		{.id = "repeat rate",  .type = SENSOR_DATA_INT},
+	},
 	.setup = analog_joystick_setup
 };
 
@@ -80,9 +85,12 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) analog_jo
 static void sensor_task(void *arg) {
 	sensor_instance_t *unit = (sensor_instance_t *)arg;
 	double mvoltsx, mvoltsy;
-	uint8_t first = 1;
-	struct timeval now;
-	uint64_t t0, t1, t;
+	sensor_value_t *data;
+
+    data = calloc(1,sizeof(sensor_deferred_data_t) * SENSOR_MAX_PROPERTIES);
+    assert(data);
+
+	sensor_init_data(unit);
 
 	// Get channel info
 	adc_channel_t *chanx;
@@ -120,67 +128,20 @@ static void sensor_task(void *arg) {
     		y = -1;
     	}
 
-    	if (first) {
-    		// First data, simply store
-    		gettimeofday(&now, NULL);
+    	// Compute sensor data (x / y movement)
+    	data[0].integerd.value = x;
+    	data[1].integerd.value = y;
 
-    		unit->data[0].integerd.value = x;
-    		unit->data[1].integerd.value = y;
+    	// Update data
+    	// Ignore center position for repeat
+		sensor_update_data(
+    		unit, 0, 1, data,
+			unit->properties[0].integerd.value?unit->properties[1].integerd.value * 1000:0,
+			unit->properties[0].integerd.value?unit->properties[2].integerd.value * 1000:0,
+			1, 0
+    	);
 
-    		unit->latch[0].timeout = 0;
-    		unit->latch[0].t = now;
-
-    		unit->latch[1].timeout = 0;
-    		unit->latch[1].t = now;
-
-    		unit->latch[0].value.integerd.value = x;
-    		unit->latch[1].value.integerd.value = y;
-
-        	first = 0;
-    	} else {
-    		// Get current time in usecs
-    		gettimeofday(&now, NULL);
-    		t = now.tv_sec * 1000000 + now.tv_usec;
-
-    		// Latch / store data
-    		unit->latch[0].value.integerd.value = unit->data[0].integerd.value;
-			unit->data[0].integerd.value = x;
-
-    		unit->latch[1].value.integerd.value = unit->data[1].integerd.value;
-			unit->data[1].integerd.value = y;
-
-			// If x changed update latch times
-			if ((unit->latch[0].value.integerd.value !=  unit->data[0].integerd.value)) {
-				unit->latch[0].timeout = 0;
-				unit->latch[0].t = now;
-			}
-
-			// If y changed update latch times
-			if ((unit->latch[1].value.integerd.value !=  unit->data[1].integerd.value)) {
-				unit->latch[1].timeout = 0;
-				unit->latch[1].t = now;
-			}
-
-			// Get last latch time in usecs
-			t0 = unit->latch[0].t.tv_sec * 1000000 + unit->latch[0].t.tv_usec;
-			t1 = unit->latch[1].t.tv_sec * 1000000 + unit->latch[1].t.tv_usec;
-
-			// Test if x latch is timeout
-			if ((t - t0 >= 1000 * ANALOG_JOYSTICK_REPEAT) && (unit->data[0].integerd.value != 0)) {
-				unit->latch[0].timeout = 1;
-				unit->latch[0].t = now;
-			}
-
-			// Test if y latch is timeout
-			if ((t - t1 >= 1000 * ANALOG_JOYSTICK_REPEAT) && (unit->data[1].integerd.value != 0)) {
-				unit->latch[1].timeout = 1;
-				unit->latch[1].t = now;
-			}
-
-			sensor_queue_callbacks(unit);
-    	}
-
-    	usleep(1000);
+    	usleep(10000);
     }
 }
 
@@ -189,6 +150,13 @@ static void sensor_task(void *arg) {
  */
 
 driver_error_t *analog_joystick_setup(sensor_instance_t *unit) {
+	// Set repeat feature by default
+	// Set repeat delay to 1500 msecs
+	// Set repeat rate to 500 msecs
+	unit->properties[0].integerd.value = 1;
+	unit->properties[1].integerd.value = 1500;
+	unit->properties[2].integerd.value = 500;
+
 	xTaskCreatePinnedToCore(sensor_task, "joystick", 1024, (void *)(unit), 21, NULL, 0);
 
 	return NULL;

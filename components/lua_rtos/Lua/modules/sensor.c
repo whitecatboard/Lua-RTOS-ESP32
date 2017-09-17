@@ -96,7 +96,7 @@ static void callback_func(int callback, sensor_instance_t *instance, sensor_valu
 					case SENSOR_DATA_STRING: changed = (data[idx].stringd.value != latch[idx].value.stringd.value); break;
 				}
 
-			    if (changed || latch[idx].timeout) {
+			    if (changed || latch[idx].timeout || latch[idx].repeat) {
 					switch (csensor->data[idx].type) {
 						case SENSOR_NO_DATA: break;
 						case SENSOR_DATA_INT:    lua_pushinteger(TL, data[idx].integerd.value); break;

@@ -60,7 +60,7 @@ DRIVER_REGISTER_END(GPIO,gpio,gpio_locks,NULL,NULL);
  * Low level gpio operations
  */
 
-void IRAM_ATTR gpio_ll_pin_set(uint8_t pin) {
+driver_error_t * IRAM_ATTR gpio_ll_pin_set(uint8_t pin) {
 	if (pin < 32) {
 		GPIO.out_w1ts = (1 << pin);
 	} else if (pin < 40) {
@@ -68,12 +68,14 @@ void IRAM_ATTR gpio_ll_pin_set(uint8_t pin) {
 	}
 #if EXTERNAL_GPIO
 	else {
-		pca_9xxx_pin_set(pin - 40);
+		return pca_9xxx_pin_set(pin - 40);
 	}
 #endif
+
+	return NULL;
 }
 
-void IRAM_ATTR gpio_ll_pin_clr(uint8_t pin) {
+driver_error_t *  IRAM_ATTR gpio_ll_pin_clr(uint8_t pin) {
 	if (pin < 32) {
 		GPIO.out_w1tc = (1 << pin);
 	} else if (pin < 40) {
@@ -81,45 +83,45 @@ void IRAM_ATTR gpio_ll_pin_clr(uint8_t pin) {
 	}
 #if EXTERNAL_GPIO
 	else {
-		pca_9xxx_pin_clr(pin - 40);
+		return pca_9xxx_pin_clr(pin - 40);
 	}
 #endif
+
+	return NULL;
 }
 
-void IRAM_ATTR gpio_ll_pin_inv(int8_t pin) {
+driver_error_t *  IRAM_ATTR gpio_ll_pin_inv(int8_t pin) {
 	if (pin < 32) {
 		if (GPIO.out & (1 << pin)) {
-			gpio_ll_pin_clr(pin);
+			return gpio_ll_pin_clr(pin);
 		} else {
-			gpio_ll_pin_set(pin);
+			return gpio_ll_pin_set(pin);
 		}
 	} else if (pin < 40) {
 		if (GPIO.out1.val & (1 << pin)) {
-			gpio_ll_pin_clr(pin);
+			return gpio_ll_pin_clr(pin);
 		} else {
-			gpio_ll_pin_set(pin);
+			return gpio_ll_pin_set(pin);
 		}
 	}
 #if EXTERNAL_GPIO
 	else {
-		pca_9xxx_pin_inv(pin - 40);
+		return pca_9xxx_pin_inv(pin - 40);
 	}
 #endif
+
+	return NULL;
 }
 
 uint8_t IRAM_ATTR gpio_ll_pin_get(int8_t pin) {
     if (pin < 32) {
         return ((GPIO.in & (1ULL << pin)) != 0);
-    } else if (pin < EXTERNAL_GPIO_PINS) {
+    } else if (pin < 40) {
         return ((GPIO.in1.data & (1ULL << (pin - 32))) != 0);
     }
 #if EXTERNAL_GPIO
     else {
-    	uint8_t val;
-
     	return pca_9xxx_pin_get(pin - 40);
-
-    	return val;
     }
 #endif
 
@@ -211,7 +213,7 @@ driver_error_t *gpio_pin_set(uint8_t pin) {
 			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 		}
 
-		gpio_ll_pin_set(pin);
+		return gpio_ll_pin_set(pin);
 	}
 #if EXTERNAL_GPIO
 	else {
@@ -240,7 +242,7 @@ driver_error_t *gpio_pin_clr(uint8_t pin) {
 			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 		}
 
-		gpio_ll_pin_clr(pin);
+		return gpio_ll_pin_clr(pin);
 	}
 #if EXTERNAL_GPIO
 	else {
@@ -269,7 +271,7 @@ driver_error_t *gpio_pin_inv(uint8_t pin) {
 			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 		}
 
-		gpio_ll_pin_inv(pin);
+		return gpio_ll_pin_inv(pin);
 	}
 #if EXTERNAL_GPIO
 	else {

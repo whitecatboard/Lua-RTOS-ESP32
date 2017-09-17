@@ -82,11 +82,14 @@ static uint8_t counter = 0;
  */
 
 static void sensor_task(void *arg) {
-	sensor_deferred_data_t data;
+	sensor_deferred_data_t *data;
+
+	data = calloc(1,sizeof(sensor_deferred_data_t));
+	assert(data);
 
     for(;;) {
-        xQueueReceive(queue, &data, portMAX_DELAY);
-        data.callback(data.callback_id, data.instance, data.data, data.latch);
+        xQueueReceive(queue, data, portMAX_DELAY);
+        data->callback(data->callback_id, data->instance, data->data, data->latch);
     }
 }
 
@@ -100,8 +103,6 @@ static void IRAM_ATTR debouncing(void *arg, uint8_t val) {
 	// Get property
 	uint8_t property = (unit->sensor->interface[interface].flags & 0xff00) >> 8;
 
-	mtx_lock(&unit->mtx);
-
 	// Latch & store sensor data
 	if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_H) {
 		unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
@@ -110,15 +111,12 @@ static void IRAM_ATTR debouncing(void *arg, uint8_t val) {
 		unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
 		unit->data[property].integerd.value = !val;
 	} else {
-		mtx_unlock(&unit->mtx);
 		return;
 	}
 
-	sensor_queue_callbacks(unit);
+	sensor_queue_callbacks(unit, property, property);
 
 	unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
-
-	mtx_unlock(&unit->mtx);
 };
 
 static void IRAM_ATTR isr(void* arg) {
@@ -134,8 +132,6 @@ static void IRAM_ATTR isr(void* arg) {
 	// Get pin value
 	uint8_t val = gpio_ll_pin_get(unit->setup[interface].gpio.gpio);
 
-	mtx_lock(&unit->mtx);
-
 	// Store sensor data
 	if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_H) {
 		unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
@@ -144,13 +140,10 @@ static void IRAM_ATTR isr(void* arg) {
 		unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
 		unit->data[property].integerd.value = !val;
 	} else {
-		mtx_unlock(&unit->mtx);
 		return;
 	}
 
-	sensor_queue_callbacks(unit);
-
-	mtx_unlock(&unit->mtx);
+	sensor_queue_callbacks(unit, property, property);
 }
 
 static driver_error_t *sensor_adc_setup(uint8_t interface, sensor_instance_t *unit) {
@@ -688,23 +681,122 @@ driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callbac
 	return NULL;
 }
 
-void IRAM_ATTR sensor_queue_callbacks(sensor_instance_t *unit) {
-	// Queue callbacks
-	sensor_deferred_data_t data;
-	int i;
+void IRAM_ATTR sensor_queue_callbacks(sensor_instance_t *unit, uint8_t from, uint8_t to) {
+    portBASE_TYPE high_priority_task_awoken = 0;
+	sensor_deferred_data_t *data;
+    portBASE_TYPE yield = 0;
+
+    int i, j;
+
+    data = calloc(1,sizeof(sensor_deferred_data_t));
+    assert(data);
 
 	for(i=0;i < SENSOR_MAX_CALLBACKS;i++) {
 		if (unit->callbacks[i].callback) {
-			data.instance = unit;
-			data.callback = unit->callbacks[i].callback;
-			data.callback_id = unit->callbacks[i].callback_id;
+			data->instance = unit;
+			data->callback = unit->callbacks[i].callback;
+			data->callback_id = unit->callbacks[i].callback_id;
 
-			memcpy(data.data, unit->data, sizeof(sensor_value_t) * SENSOR_MAX_PROPERTIES);
-			memcpy(data.latch, unit->latch, sizeof(sensor_latch_t) * SENSOR_MAX_PROPERTIES);
+			memcpy(data->data, unit->data, sizeof(sensor_value_t) * SENSOR_MAX_PROPERTIES);
+			memcpy(data->latch, unit->latch, sizeof(sensor_latch_t) * SENSOR_MAX_PROPERTIES);
 
-			xQueueSendFromISR(queue, &data, NULL);
+			for(j=0; j < SENSOR_MAX_PROPERTIES;j++) {
+				if (data->latch[j].timeout || data->latch[j].repeat || (data->data[j].raw.value != data->latch[j].value.raw.value))  {
+					if (xPortInIsrContext()) {
+						xQueueSendFromISR(queue, data, &high_priority_task_awoken);
+						yield |= high_priority_task_awoken;
+					} else {
+						xQueueSend(queue, data, 0);
+					}
+
+					free(data);
+
+				    if (yield == pdTRUE) {
+				        portYIELD_FROM_ISR();
+				    }
+
+					return;
+				}
+			}
 		}
 	}
+
+	free(data);
+
+    if (yield == pdTRUE) {
+        portYIELD_FROM_ISR();
+    }
+}
+
+void IRAM_ATTR sensor_init_data(sensor_instance_t *unit) {
+	struct timeval now;
+	int i;
+
+	// Get current time
+	gettimeofday(&now, NULL);
+
+	for(i=0; i < SENSOR_MAX_PROPERTIES;i++) {
+		unit->data[i].raw.value = 0;
+		unit->latch[i].timeout = 0;
+		unit->latch[i].repeat = 0;
+		unit->latch[i].t = now;
+	}
+}
+
+void IRAM_ATTR sensor_update_data(sensor_instance_t *unit, uint8_t from, uint8_t to, sensor_value_t *new_data, uint64_t delay, uint64_t rate, uint8_t ignore, uint64_t ignore_val) {
+	struct timeval now;
+	uint64_t t0, t1;
+	int i;
+
+	mtx_lock(&unit->mtx);
+
+	if (delay || rate) {
+		// Get current time
+		gettimeofday(&now, NULL);
+
+		// Convert current time to usecs
+		t1 = now.tv_sec * 1000000 + now.tv_usec;
+	}
+
+	for(i = from; i <= to;i++) {
+		// Latch data
+		unit->latch[i].value.raw.value = unit->data[i].raw.value;
+
+		// Update data
+		unit->data[i].raw.value = new_data[i].raw.value;
+
+		if (delay || rate) {
+			// If changed update latch time
+			if ((unit->latch[i].value.raw.value != unit->data[i].raw.value)) {
+				unit->latch[i].timeout = 0;
+				unit->latch[i].repeat = 0;
+				unit->latch[i].t = now;
+			} else {
+				if (!ignore || (ignore && (unit->data[i].raw.value != ignore_val))) {
+					// Get last latch time in usecs
+					t0 = unit->latch[i].t.tv_sec * 1000000 + unit->latch[i].t.tv_usec;
+
+					unit->latch[i].timeout = ((t1 - t0) >= delay);
+					unit->latch[i].repeat = ((t1 - t0) >= rate);
+				} else if (ignore) {
+					unit->latch[i].timeout = 0;
+					unit->latch[i].repeat = 0;
+					unit->latch[i].t = now;
+				}
+			}
+		} else {
+			unit->latch[i].timeout = 0;
+			unit->latch[i].repeat = 0;
+		}
+	}
+
+	sensor_queue_callbacks(unit, from, to);
+
+	if (unit->latch[i].timeout || unit->latch[i].repeat) {
+		unit->latch[i].t = now;
+	}
+
+	mtx_unlock(&unit->mtx);
 }
 
 #endif

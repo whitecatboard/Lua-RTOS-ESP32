@@ -60,9 +60,9 @@ typedef driver_error_t *(*sensor_get_f_t)(struct sensor_instance *, const char *
 extern const int sensor_errors;
 extern const int sensor_error_map;
 
-#define SENSOR_MAX_INTERFACES 4
-#define SENSOR_MAX_PROPERTIES 4
-#define SENSOR_MAX_CALLBACKS  4
+#define SENSOR_MAX_INTERFACES 8
+#define SENSOR_MAX_PROPERTIES 16
+#define SENSOR_MAX_CALLBACKS  8
 
 // Sensor initializes it's interfaces by it self. Don't use default initialization
 #define SENSOR_FLAG_CUSTOM_INTERFACE_INIT (1 << 0)
@@ -158,6 +158,7 @@ typedef struct sensor_value {
 
 typedef struct {
 	uint8_t timeout;
+	uint8_t repeat;
 	struct timeval t;
 	sensor_value_t value;
 } sensor_latch_t;
@@ -245,8 +246,9 @@ driver_error_t *sensor_read(sensor_instance_t *unit, const char *id, sensor_valu
 driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value_t *value);
 driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value_t **value);
 driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callback_t callback, int id, uint8_t deferred);
-void sensor_queue_callbacks(sensor_instance_t *unit);
-void IRAM_ATTR sensor_set_latch(sensor_instance_t *unit, uint8_t property, uint64_t expires);
+void sensor_queue_callbacks(sensor_instance_t *unit, uint8_t from, uint8_t to);
+void sensor_init_data(sensor_instance_t *unit);
+void sensor_update_data(sensor_instance_t *unit, uint8_t from, uint8_t to, sensor_value_t *new_data, uint64_t delay, uint64_t rate, uint8_t ignore, uint64_t ignore_val);
 
 // SENSOR errors
 #define SENSOR_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  0)

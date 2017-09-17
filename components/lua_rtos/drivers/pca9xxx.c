@@ -61,14 +61,13 @@ static void pca_9xxx_unlock() {
 	xSemaphoreGiveRecursive(pca_9xxx->mtx);
 }
 
-// PCA968 task. This task waits for a message in the pca968 queue
-// and read all pins for release the PCA968 INT.
+// PCA968 task. This task waits for a direct task notification and read all pins
+// for release the PCA968 INT.
 static void pca_9xxx_task(void *arg) {
-	uint8_t dummy;
 	uint8_t i, j, pin, latch[PCA9xxx_BANKS], current[PCA9xxx_BANKS];
 
     for(;;) {
-        xQueueReceive(pca_9xxx->queue, &dummy, portMAX_DELAY);
+    	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
         pca_9xxx_lock();
 
@@ -122,12 +121,12 @@ static void pca_9xxx_task(void *arg) {
 // When some pin changes in PCA968 an interrupt is generated and it is not
 // released until all pins are read.
 //
-// We process the interrupt as a deferred interrupt. We simply enqueue into the
-// pca968 queue, and the interrupt will be processed later in a task.
+// We process the interrupt as a deferred interrupt. We simply done a direct
+// task notification, and the interrupt will be processed later in a task.
 static void IRAM_ATTR pca9xxx_isr(void* arg) {
-	uint8_t dummy = 0;
     portBASE_TYPE high_priority_task_awoken = 0;
-	xQueueSendFromISR(pca_9xxx->queue, &dummy, &high_priority_task_awoken);
+
+    vTaskNotifyGiveFromISR(pca_9xxx->task, &high_priority_task_awoken);
     if (high_priority_task_awoken == pdTRUE) {
         portYIELD_FROM_ISR();
     }
@@ -222,14 +221,6 @@ driver_error_t *pca9xxx_setup() {
 			return driver_lock_error(GPIO_DRIVER, lock_error);
 		}
 
-		// We use deferred interrupts, so we need to create a queue and a task
-		pca_9xxx->queue = xQueueCreate(10, 1);
-		if (!pca_9xxx->queue) {
-			pca_9xxx_unlock();
-
-			return driver_error(GPIO_DRIVER, GPIO_ERR_NOT_ENOUGH_MEMORY, NULL);
-		}
-
 		BaseType_t xReturn = xTaskCreatePinnedToCore(pca_9xxx_task, "pca9xxx", CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE, NULL, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY, &pca_9xxx->task, xPortGetCoreID());
 		if (xReturn != pdPASS) {
 			pca_9xxx_unlock();
@@ -250,8 +241,7 @@ driver_error_t *pca9xxx_setup() {
 		pca_9xxx_unlock();
 
 		// Read all inputs and latch it
-		uint8_t dummy = 0;
-		xQueueSendFromISR(pca_9xxx->queue, &dummy, NULL);
+		xTaskNotifyGive(pca_9xxx->task);
 
 		syslog(
 				LOG_INFO,
@@ -302,7 +292,7 @@ driver_error_t *pca_9xxx_pin_input(uint8_t pin) {
 	return error;
 }
 
-driver_error_t *IRAM_ATTR pca_9xxx_pin_set(uint8_t pin) {
+driver_error_t *pca_9xxx_pin_set(uint8_t pin) {
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 
@@ -320,7 +310,7 @@ driver_error_t *IRAM_ATTR pca_9xxx_pin_set(uint8_t pin) {
 	return error;
 }
 
-driver_error_t *IRAM_ATTR pca_9xxx_pin_clr(uint8_t pin) {
+driver_error_t *pca_9xxx_pin_clr(uint8_t pin) {
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 
@@ -338,7 +328,7 @@ driver_error_t *IRAM_ATTR pca_9xxx_pin_clr(uint8_t pin) {
 	return error;
 }
 
-driver_error_t *IRAM_ATTR pca_9xxx_pin_inv(uint8_t pin) {
+driver_error_t *pca_9xxx_pin_inv(uint8_t pin) {
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 
@@ -356,7 +346,7 @@ driver_error_t *IRAM_ATTR pca_9xxx_pin_inv(uint8_t pin) {
 	return error;
 }
 
-uint8_t IRAM_ATTR pca_9xxx_pin_get(uint8_t pin) {
+uint8_t pca_9xxx_pin_get(uint8_t pin) {
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 	uint8_t val;

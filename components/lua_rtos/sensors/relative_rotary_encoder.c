@@ -71,7 +71,9 @@ static void IRAM_ATTR callback_func(int callback, int8_t dir, uint32_t counter, 
 	mtx_lock(&unit->mtx);
 
 	// Latch values
-	memcpy(unit->latch, unit->data, sizeof(unit->data));
+	unit->latch[0].value.raw.value = unit->data[0].raw.value;
+	unit->latch[1].value.raw.value = unit->data[1].raw.value;
+	unit->latch[2].value.raw.value = unit->data[2].raw.value;
 
 	// Store current data
 	unit->data[0].integerd.value = dir;
@@ -85,7 +87,7 @@ static void IRAM_ATTR callback_func(int callback, int8_t dir, uint32_t counter, 
 		unit->latch[0].value.integerd.value = 0;
 	}
 
-	sensor_queue_callbacks(unit);
+	sensor_queue_callbacks(unit, 0, 2);
 
 	mtx_unlock(&unit->mtx);
 }

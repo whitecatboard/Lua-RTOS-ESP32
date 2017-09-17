@@ -58,7 +58,7 @@
 #define PCA9xxx_GPIO_BANK_NUM(gpio) (gpio >> 3)
 
 // Convert a GPIO number to it's position into it's bank
-#define PCA9xxx_GPIO_BANK_POS(gpio) (gpio % 7)
+#define PCA9xxx_GPIO_BANK_POS(gpio) (gpio % 8)
 
 typedef struct {
 	uint8_t direction[PCA9xxx_BANKS];
@@ -66,7 +66,6 @@ typedef struct {
 	gpio_isr_t isr_func[PCA9xxx_PINS];
 	uint8_t isr_type[PCA9xxx_PINS];
 	void *isr_args[PCA9xxx_PINS];
-	xQueueHandle queue;
 	TaskHandle_t task;
 	SemaphoreHandle_t mtx;
 } pca_9xxx_t;

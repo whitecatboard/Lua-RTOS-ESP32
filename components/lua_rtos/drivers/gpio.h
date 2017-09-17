@@ -50,9 +50,9 @@
 extern const int gpio_errors;
 extern const int gpio_error_map;
 
-void gpio_ll_pin_set(uint8_t pin);
-void gpio_ll_pin_clr(uint8_t pin);
-void gpio_ll_pin_inv(int8_t pin);
+driver_error_t *gpio_ll_pin_set(uint8_t pin);
+driver_error_t *gpio_ll_pin_clr(uint8_t pin);
+driver_error_t *gpio_ll_pin_inv(int8_t pin);
 uint8_t IRAM_ATTR gpio_ll_pin_get(int8_t pin);
 
 driver_error_t *gpio_pin_output(uint8_t pin);
