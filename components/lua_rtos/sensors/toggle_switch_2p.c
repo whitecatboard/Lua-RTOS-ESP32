@@ -32,7 +32,7 @@
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 
 #include <drivers/sensor.h>
-//#if CONFIG_LUA_RTOS_USE_SENSOR_PUSH_SWITCH
+#if CONFIG_LUA_RTOS_USE_SENSOR_2P_TOGGLE_SWITCH
 
 driver_error_t *_2_pos_switch_setup(sensor_instance_t *unit);
 
@@ -65,5 +65,5 @@ driver_error_t *_2_pos_switch_setup(sensor_instance_t *unit) {
 	return NULL;
 }
 
-//#endif
+#endif
 #endif

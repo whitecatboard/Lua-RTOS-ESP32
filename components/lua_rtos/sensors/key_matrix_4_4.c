@@ -30,7 +30,7 @@
 #include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
-//#if CONFIG_LUA_RTOS_USE_SENSOR_key_matrix_4_4
+#if CONFIG_LUA_RTOS_USE_SENSOR_KEY_MATRIX_4_4
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -187,5 +187,5 @@ driver_error_t *key_matrix_4_4_setup(sensor_instance_t *unit) {
 	return NULL;
 }
 
-//#endif
+#endif
 #endif

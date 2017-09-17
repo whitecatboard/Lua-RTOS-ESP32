@@ -671,6 +671,10 @@ menu "Lua RTOS"
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "2Y0A21"
 					default y		
+				config LUA_RTOS_USE_SENSOR_KEY_MATRIX_4_4
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "4 x 4 key matrix"
+					default y		
 				config LUA_RTOS_USE_SENSOR_A49E
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "A49E"
@@ -690,6 +694,10 @@ menu "Lua RTOS"
 				config LUA_RTOS_USE_SENSOR_DHT22
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "DHT22"
+					default y		
+				config LUA_RTOS_USE_SENSOR_DHT23
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "DHT23"
 					default y		
 				config LUA_RTOS_USE_SENSOR_DS1820
 					depends on LUA_RTOS_LUA_USE_SENSOR
@@ -742,7 +750,15 @@ menu "Lua RTOS"
 				config LUA_RTOS_USE_SENSOR_TILT_SWITCH
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "Tilt Switch"
-					default y		
+					default y	
+				config LUA_RTOS_USE_SENSOR_2P_TOGGLE_SWITCH	
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Toggle switch (2 positions)"
+					default y						
+				config LUA_RTOS_USE_SENSOR_3P_TOGGLE_SWITCH	
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Toggle switch (3 positions)"
+					default y						
 				config LUA_RTOS_USE_SENSOR_TMP36
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "TMP36"
