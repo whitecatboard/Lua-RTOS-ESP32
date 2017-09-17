@@ -27,5 +27,6 @@ typedef struct {
 
 driver_error_t *gpio_debouncing_register(uint8_t pin, uint16_t threshold, gpio_debouncing_callback_t callback, void *args);
 driver_error_t *gpio_debouncing_unregister(uint8_t pin);
+void gpio_debouncing_force_isr(void *args);
 
 #endif /* _GPIO_DEBOUNCING_H_ */

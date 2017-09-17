@@ -64,18 +64,51 @@ extern const int sensor_error_map;
 #define SENSOR_MAX_PROPERTIES 16
 #define SENSOR_MAX_CALLBACKS  8
 
-// Sensor initializes it's interfaces by it self. Don't use default initialization
+/*
+ * Sensor flags. Each sensor has a definition flag that stores information about
+ * how sensor acquires it's information.
+ */
+
+// bit 0
+// Sensor initializes it's interfaces by it self. Don't use default initialization.
 #define SENSOR_FLAG_CUSTOM_INTERFACE_INIT (1 << 0)
 
+// bit 1
 // Sensor acquires data automatically. This type of sensors acquire data when an
 // interrupt is raised, when a time interval expires, or when sensor sends a new
-// data
+// data.
 #define SENSOR_FLAG_AUTO_ACQ (1 << 1)
 
-#define SENSOR_FLAG_ON_OFF          (1 << 2)
-#define SENSOR_FLAG_ON_H            (1 << 3)
-#define SENSOR_FLAG_ON_L            (1 << 4)
-#define SENSOR_FLAG_DEBOUNCING      (1 << 5)
+// bit 2
+// Sensor acquires data from a GPIO interrupt.
+#define SENSOR_FLAG_ON_OFF (1 << 2)
+
+// bits 3, 4, 5
+// If SENSOR_FLAG_ON_OFF is enabled, this flag hold the property value when GPIO is
+// in the high state.
+#define SENSOR_FLAG_ON_H(value) (value << 3)
+#define SENSOR_FLAG_GET_ON_H(interface) ((interface.flags & 0x38) >> 3)
+
+// bits 6, 7, 8
+// If SENSOR_FLAG_ON_OFF is enabled, this flag hold the property value when GPIO is
+// in the low state.
+#define SENSOR_FLAG_ON_L(value) (value << 6)
+#define SENSOR_FLAG_GET_ON_L(interface) ((interface.flags & 0x1c0) >> 6)
+
+// bit 9
+// If SENSOR_FLAG_ON_OFF is enabled this flag controls if software debouncing techniques
+// must be applied.
+#define SENSOR_FLAG_DEBOUNCING (1 << 9)
+
+// bits 10, 11, 12, 13, 14
+// If SENSOR_FLAG_AUTO_ACQ this flag controls in which property the sensor must store it's
+// data.
+#define SENSOR_FLAG_PROPERTY(prop) (prop << 10)
+#define SENSOR_FLAG_GET_PROPERTY(interface) ((interface.flags & 0X7C00) >> 10)
+
+// bit 15
+#define SENSOR_FLAG_DEBOUNCING_THRESHOLD(value) (value << 15)
+#define SENSOR_FLAG_GET_DEBOUNCING_THRESHOLD(interface) ((interface.flags & 0x1ffff8000) >> 15)
 
 // Sensor interface types
 typedef enum {

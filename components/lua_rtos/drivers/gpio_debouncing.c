@@ -247,3 +247,7 @@ driver_error_t *gpio_debouncing_unregister(uint8_t pin) {
 
 	return NULL;
 }
+
+void gpio_debouncing_force_isr(void *args) {
+	gpio_isr(args);
+}

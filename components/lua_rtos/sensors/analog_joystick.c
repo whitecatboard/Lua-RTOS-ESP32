@@ -60,8 +60,10 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) analog_jo
 		// 1000 usecs debouncing threshold period, update sw property (#2)
 		{
 			.type = GPIO_INTERFACE, // Switch
-
-			.flags = SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_L | SENSOR_FLAG_DEBOUNCING | (10000 << 16) | (2 << 8)
+			.flags = SENSOR_FLAG_ON_OFF |
+					 SENSOR_FLAG_ON_H(0) | SENSOR_FLAG_ON_L(1) |
+					 SENSOR_FLAG_DEBOUNCING | SENSOR_FLAG_DEBOUNCING_THRESHOLD(10000) |
+					 SENSOR_FLAG_PROPERTY(2)
 		}
 	},
 	.interface_name = {"X", "Y", "SW"},

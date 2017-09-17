@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, Tilt switch sensor (example SW-520D)
+ * Lua RTOS, Push switch sensor
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
@@ -30,26 +30,40 @@
 #include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
-#if CONFIG_LUA_RTOS_USE_SENSOR_TILT_SWITCH
 
 #include <drivers/sensor.h>
+//#if CONFIG_LUA_RTOS_USE_SENSOR_PUSH_SWITCH
+
+driver_error_t *_2_pos_switch_setup(sensor_instance_t *unit);
 
 // Sensor specification and registration
-static const sensor_t __attribute__((used,unused,section(".sensors"))) tilt_switch_sensor = {
-	.id = "TILT_SWITCH",
+static const sensor_t __attribute__((used,unused,section(".sensors"))) _2_pos_switch_sensor = {
+	.id = "2P_TOGGLE_SWITCH",
 	.interface = {
 		{
 			.type = GPIO_INTERFACE,
 
-			// 1000: debouncing threshold period
-			.flags = SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_H(0) | SENSOR_FLAG_ON_L(1) |
-					 SENSOR_FLAG_DEBOUNCING | SENSOR_FLAG_DEBOUNCING_THRESHOLD(100000)
+			.flags = SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_H(0) | SENSOR_FLAG_ON_L(1) |
+					 SENSOR_FLAG_DEBOUNCING | SENSOR_FLAG_DEBOUNCING_THRESHOLD(10000)
 		},
 	},
 	.data = {
-		{.id = "on", .type = SENSOR_DATA_INT},
-	}
+		{.id = "pos", .type = SENSOR_DATA_INT},
+	},
+	.interface_name = {"P1"},
+	.setup = _2_pos_switch_setup
 };
 
-#endif
+driver_error_t *_2_pos_switch_setup(sensor_instance_t *unit) {
+	// Get initial state
+	if (gpio_ll_pin_get(unit->setup[0].gpio.gpio) == 0) {
+		unit->data[0].integerd.value = SENSOR_FLAG_GET_ON_L(unit->sensor->interface[0]);
+	}
+
+	unit->latch[0].value.integerd.value = unit->data[0].integerd.value;
+
+	return NULL;
+}
+
+//#endif
 #endif

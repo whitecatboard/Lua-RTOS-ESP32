@@ -101,15 +101,14 @@ static void IRAM_ATTR debouncing(void *arg, uint8_t val) {
 	uint8_t interface = ((sensor_setup_t *)arg)->interface;
 
 	// Get property
-	uint8_t property = (unit->sensor->interface[interface].flags & 0xff00) >> 8;
+	uint8_t property = SENSOR_FLAG_GET_PROPERTY(unit->sensor->interface[interface]);
 
 	// Latch & store sensor data
-	if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_H) {
-		unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
-		unit->data[property].integerd.value = val;
-	} else if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_L) {
-		unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
-		unit->data[property].integerd.value = !val;
+	unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
+	if (val == 1) {
+		unit->data[property].integerd.value = SENSOR_FLAG_GET_ON_H(unit->sensor->interface[interface]);
+	} else if (val == 0) {
+		unit->data[property].integerd.value = SENSOR_FLAG_GET_ON_L(unit->sensor->interface[interface]);
 	} else {
 		return;
 	}
@@ -133,12 +132,11 @@ static void IRAM_ATTR isr(void* arg) {
 	uint8_t val = gpio_ll_pin_get(unit->setup[interface].gpio.gpio);
 
 	// Store sensor data
-	if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_H) {
-		unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
-		unit->data[property].integerd.value = val;
-	} else if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_L) {
-		unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
-		unit->data[property].integerd.value = !val;
+	unit->latch[property].value.integerd.value = unit->data[property].integerd.value;
+	if (val == 1) {
+		unit->data[property].integerd.value = SENSOR_FLAG_GET_ON_H(unit->sensor->interface[interface]);
+	} else if (val == 0) {
+		unit->data[property].integerd.value = SENSOR_FLAG_GET_ON_L(unit->sensor->interface[interface]);
 	} else {
 		return;
 	}
@@ -198,8 +196,7 @@ static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *u
     if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_OFF) {
     	if (unit->sensor->interface[interface].flags & SENSOR_FLAG_DEBOUNCING) {
     		driver_error_t *error;
-    		uint16_t threshold = (unit->sensor->interface[interface].flags & 0xffff0000) >> 16;
-
+    		uint16_t threshold = SENSOR_FLAG_GET_DEBOUNCING_THRESHOLD(unit->sensor->interface[interface]);
     		if ((error = gpio_debouncing_register(unit->setup[interface].gpio.gpio, threshold, debouncing, (void *)(&unit->setup[interface])))) {
     			return error;
     		}
@@ -528,7 +525,7 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 		for (j=0;j < SENSOR_MAX_INTERFACES;j++) {
 			is_auto = (
 				(unit->sensor->interface[j].flags & (SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF)) &&
-				(((unit->sensor->interface[j].flags & 0xff00) >> 8) == i)
+				(SENSOR_FLAG_GET_PROPERTY(unit->sensor->interface[j]) == i)
 			);
 
 			if (is_auto) break;
