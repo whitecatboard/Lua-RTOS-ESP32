@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, PING))) #28015 sensor (Distance Sensor)
+ * Lua RTOS, US-015 (Distance Sensor)
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
@@ -30,7 +30,7 @@
 #include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
-#if CONFIG_LUA_RTOS_USE_SENSOR_PING28015
+#if CONFIG_LUA_RTOS_USE_SENSOR_US015
 
 #include "freertos/FreeRTOS.h"
 
@@ -43,52 +43,62 @@
 #include <drivers/sensor.h>
 #include <drivers/gpio.h>
 
-driver_error_t *ping28015_setup(sensor_instance_t *unit);
-driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *values);
-driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting);
+driver_error_t *us015_setup(sensor_instance_t *unit);
+driver_error_t *us015_acquire(sensor_instance_t *unit, sensor_value_t *values);
+driver_error_t *us015_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting);
 
 // Sensor specification and registration
-static const sensor_t __attribute__((used,unused,section(".sensors"))) ping28015_sensor = {
-	.id = "PING28015",
+static const sensor_t __attribute__((used,unused,section(".sensors"))) us015_sensor = {
+	.id = "US015",
 	.interface = {
+		{.type = GPIO_INTERFACE},
 		{.type = GPIO_INTERFACE},
 	},
 	.data = {
 		{.id = "distance", .type = SENSOR_DATA_DOUBLE},
 	},
-	.interface_name = {"SIG"},
+	.interface_name = {"TRIG", "ECHO"},
 	.properties = {
 		{.id = "calibration", .type = SENSOR_DATA_DOUBLE},
 		{.id = "temperature", .type = SENSOR_DATA_DOUBLE},
 	},
-	.setup = ping28015_setup,
-	.acquire = ping28015_acquire,
-	.set = ping28015_set
+	.setup = us015_setup,
+	.acquire = us015_acquire,
+	.set = us015_set
 };
 
 /*
  * Operation functions
  */
-driver_error_t *ping28015_setup(sensor_instance_t *unit) {
+driver_error_t *us015_setup(sensor_instance_t *unit) {
 	// Set default calibration value
 	unit->properties[0].doubled.value = 0;
 
 	// Set temperature to 20 ºC if no current temperature is provided
 	unit->properties[1].doubled.value = 20;
 
+	// Configure TRIG pin as output
+	gpio_pin_output(unit->setup[0].gpio.gpio);
+
+	gpio_pin_clr(unit->setup[0].gpio.gpio);
+	udelay(200);
+
+	// Configure ECHO pin as input
+	gpio_pin_input(unit->setup[1].gpio.gpio);
+
 	// Ignore some measures
 	sensor_value_t tmp[2];
 	int i;
 
-	for(i = 0;i < 2;i++) {
-		ping28015_acquire(unit, tmp);
+	for(i = 0;i < 4;i++) {
+		us015_acquire(unit, tmp);
 		udelay(200);
 	}
 
 	return NULL;
 }
 
-driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting) {
+driver_error_t *us015_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting) {
 	if (strcmp(id,"calibration") == 0) {
 		memcpy(&unit->properties[0], setting, sizeof(sensor_value_t));
 	} else if (strcmp(id,"temperature") == 0) {
@@ -98,20 +108,14 @@ driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_va
 	return NULL;
 }
 
-driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *values) {
-	// Configure pin as output
-	gpio_pin_output(unit->setup[0].gpio.gpio);
-
+driver_error_t *us015_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	// Trigger pulse
 	gpio_pin_set(unit->setup[0].gpio.gpio);
-	udelay(5);
+	udelay(10);
 	gpio_pin_clr(unit->setup[0].gpio.gpio);
 
-	// Configure pin as input
-	gpio_pin_input(unit->setup[0].gpio.gpio);
-
 	// Get echo pulse width in usecs
-	double time = gpio_get_pulse_time(unit->setup[0].gpio.gpio, 1, 18500);
+	double time = gpio_get_pulse_time(unit->setup[1].gpio.gpio, 1, 18500);
 	if (time < 0.0) {
 		return driver_error(SENSOR_DRIVER, SENSOR_ERR_TIMEOUT, NULL);
 	}

@@ -360,3 +360,4 @@ void cpu_sleep(int seconds);
 int cpu_reset_reason();
 uint8_t cpu_gpio_number(uint8_t pin);
 void cpu_show_flash_info();
+uint32_t cpu_speed();

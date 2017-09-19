@@ -751,6 +751,10 @@ menu "Lua RTOS"
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "Tilt Switch"
 					default y	
+				config LUA_RTOS_USE_SENSOR_US015
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "US-015"
+					default y	
 				config LUA_RTOS_USE_SENSOR_2P_TOGGLE_SWITCH	
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "Toggle switch (2 positions)"

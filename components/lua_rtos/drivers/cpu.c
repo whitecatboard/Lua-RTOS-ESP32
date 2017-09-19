@@ -36,6 +36,7 @@
 #include "rom/rtc.h"
 #include <soc/dport_reg.h>
 #include <soc/efuse_reg.h>
+#include "soc/rtc.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -106,8 +107,8 @@ void cpu_model(char *buffer) {
 	sprintf(buffer, "ESP32 rev %d", cpu_revission());
 }
 
-int cpu_speed() {
-	return CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ;
+uint32_t cpu_speed() {
+	return rtc_clk_cpu_freq_value(rtc_clk_cpu_freq_get());
 }
 
 int cpu_revission() {
@@ -121,7 +122,7 @@ void cpu_show_info() {
 	if (!*buffer) {
         syslog(LOG_ERR, "cpu unknown CPU");
 	} else {
-        syslog(LOG_INFO, "cpu %s at %d Mhz", buffer, cpu_speed());        		
+        syslog(LOG_INFO, "cpu %s at %d Mhz", buffer, cpu_speed() / 1000000);
 	}
 }
 

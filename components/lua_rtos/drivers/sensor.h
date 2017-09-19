@@ -260,6 +260,7 @@ typedef struct sensor_instance {
 
 	const sensor_t *sensor;
 	sensor_setup_t setup[SENSOR_MAX_INTERFACES];
+	void *args;
 } sensor_instance_t;
 
 typedef struct {
