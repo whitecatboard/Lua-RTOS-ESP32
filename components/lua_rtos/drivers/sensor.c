@@ -70,6 +70,7 @@ DRIVER_REGISTER_BEGIN(SENSOR,sensor,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(SENSOR, sensor, NoMoreCallbacks, "no more callbacks available", SENSOR_ERR_NO_MORE_CALLBACKS);
 	DRIVER_REGISTER_ERROR(SENSOR, sensor, InvalidData, "invalid data", SENSOR_ERR_INVALID_DATA);
 	DRIVER_REGISTER_ERROR(SENSOR, sensor, NoCallbacksAlowed, "callbacks not allowed for this sensor", SENSOR_ERR_CALLBACKS_NOT_ALLOWED);
+	DRIVER_REGISTER_ERROR(SENSOR, sensor, InvalidValue, "invalid value", SENSOR_ERR_INVALID_VALUE);
 DRIVER_REGISTER_END(SENSOR,sensor,NULL,NULL,NULL);
 
 static xQueueHandle queue = NULL;
