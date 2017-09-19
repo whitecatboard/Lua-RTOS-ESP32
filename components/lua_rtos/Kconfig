@@ -683,6 +683,10 @@ menu "Lua RTOS"
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "Analog Joystick"
 					default y	
+				config LUA_RTOS_USE_SENSOR_BH1620FVC
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "BH1620FVC"
+					default y		
 				config LUA_RTOS_USE_SENSOR_BME280
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "BME280"
