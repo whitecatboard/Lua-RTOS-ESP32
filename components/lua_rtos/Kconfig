@@ -691,6 +691,10 @@ menu "Lua RTOS"
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "BH1721FVC"
 					default y							
+				config LUA_RTOS_USE_SENSOR_BDE0600G
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "BDE0600G"
+					default y		
 				config LUA_RTOS_USE_SENSOR_BME280
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "BME280"
@@ -726,14 +730,6 @@ menu "Lua RTOS"
 				config LUA_RTOS_USE_SENSOR_LDR
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "LDR"
-					default y		
-				config LUA_RTOS_USE_SENSOR_ML8511
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "ML8511"
-					default y	
-				config LUA_RTOS_USE_SENSOR_PING28015
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "PING28015"
 					default y		
 				config LUA_RTOS_USE_SENSOR_PIR_AM412
 					depends on LUA_RTOS_LUA_USE_SENSOR
