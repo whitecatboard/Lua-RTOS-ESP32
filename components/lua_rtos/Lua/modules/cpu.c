@@ -41,7 +41,7 @@
 
 #include <drivers/cpu.h>
 #include "rom/rtc.h"
-#include "esp_deep_sleep.h"
+#include "esp_sleep.h"
 
 extern LUA_REG_TYPE cpu_error_map[];
 
@@ -103,16 +103,16 @@ static int lcpu_wakeup_on(lua_State *L) {
 	unsigned int type = luaL_checkinteger(L, 1);
 
 	switch(type) {
-		case ESP_DEEP_SLEEP_WAKEUP_EXT0:
+		case ESP_SLEEP_WAKEUP_EXT0:
 				{
 					unsigned int gpio = luaL_checkinteger(L, 2);
 					unsigned int level = luaL_checkinteger(L, 3);
-					if ((error = esp_deep_sleep_enable_ext0_wakeup(gpio, level))) {
+					if ((error = esp_sleep_enable_ext0_wakeup(gpio, level))) {
 						return luaL_exception(L, LUA_CPU_ERR_CANT_WAKEON_EXT0);
 					}
 				}
 				break;
-		case ESP_DEEP_SLEEP_WAKEUP_EXT1:
+		case ESP_SLEEP_WAKEUP_EXT1:
 				{
 					uint64_t mask = luaL_checkinteger(L, 2);
 					unsigned int wakeup_mode = luaL_checkinteger(L, 3);
@@ -120,26 +120,26 @@ static int lcpu_wakeup_on(lua_State *L) {
 							ESP_EXT1_WAKEUP_ALL_LOW = 0,    //!< Wake the chip when all selected GPIOs go low
 							ESP_EXT1_WAKEUP_ANY_HIGH = 1    //!< Wake the chip when any of the selected GPIOs go high
 					*/
-					if ((error = esp_deep_sleep_enable_ext1_wakeup(mask, wakeup_mode))) {
+					if ((error = esp_sleep_enable_ext1_wakeup(mask, wakeup_mode))) {
 						return luaL_exception(L, LUA_CPU_ERR_CANT_WAKEON_EXT1);
 					}
 				}
 				break;
-		case ESP_DEEP_SLEEP_WAKEUP_TIMER:
+		case ESP_SLEEP_WAKEUP_TIMER:
 				{
 					unsigned long time_in_us = luaL_checkinteger(L, 2);
-					if ((error = esp_deep_sleep_enable_timer_wakeup(time_in_us))) {
+					if ((error = esp_sleep_enable_timer_wakeup(time_in_us))) {
 						return luaL_exception(L, LUA_CPU_ERR_CANT_WAKEON_TIMER);
 					}
 				}
 				break;
-		case ESP_DEEP_SLEEP_WAKEUP_TOUCHPAD:
-				if ((error = esp_deep_sleep_enable_touchpad_wakeup())) {
+		case ESP_SLEEP_WAKEUP_TOUCHPAD:
+				if ((error = esp_sleep_enable_touchpad_wakeup())) {
 					return luaL_exception(L, LUA_CPU_ERR_CANT_WAKEON_TOUCH);
 				}
 				break;
-		case ESP_DEEP_SLEEP_WAKEUP_ULP:
-				if ((error = esp_deep_sleep_enable_ulp_wakeup())) {
+		case ESP_SLEEP_WAKEUP_ULP:
+				if ((error = esp_sleep_enable_ulp_wakeup())) {
 					return luaL_exception(L, LUA_CPU_ERR_CANT_WAKEON_ULP);
 				}
 				break;
@@ -154,14 +154,14 @@ static int lcpu_deepsleep(lua_State *L) {
 }
 
 static int lcpu_wakeup_ext1_mask(lua_State *L) {
-	uint64_t wakeup_pin_mask = esp_deep_sleep_get_ext1_wakeup_status();
+	uint64_t wakeup_pin_mask = esp_sleep_get_ext1_wakeup_status();
 	lua_pushinteger(L, wakeup_pin_mask);
 	return 1;
 }
 
 static int lcpu_wakeup_ext1_pin(lua_State *L) {
-	if (ESP_DEEP_SLEEP_WAKEUP_EXT1 == cpu_wakeup_reason()) {
-		uint64_t wakeup_pin_mask = esp_deep_sleep_get_ext1_wakeup_status();
+	if (ESP_SLEEP_WAKEUP_EXT1 == cpu_wakeup_reason()) {
+		uint64_t wakeup_pin_mask = esp_sleep_get_ext1_wakeup_status();
 
 		if (wakeup_pin_mask != 0) {
 				int pin = __builtin_ffsll(wakeup_pin_mask) - 1;
@@ -203,15 +203,16 @@ static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "RESET_RTCWDT_BROWN_OUT" ), LINTVAL( RTCWDT_BROWN_OUT_RESET ) },
   { LSTRKEY( "RESET_RTCWDT_RTC" ),       LINTVAL( RTCWDT_RTC_RESET       ) },
 
-  { LSTRKEY( "WAKEUP_NONE" ),            LINTVAL( ESP_DEEP_SLEEP_WAKEUP_UNDEFINED ) },
-  { LSTRKEY( "WAKEUP_EXT0" ),            LINTVAL( ESP_DEEP_SLEEP_WAKEUP_EXT0      ) },
-  { LSTRKEY( "WAKEUP_EXT1" ),            LINTVAL( ESP_DEEP_SLEEP_WAKEUP_EXT1      ) },
-  { LSTRKEY( "WAKEUP_TIMER" ),           LINTVAL( ESP_DEEP_SLEEP_WAKEUP_TIMER     ) },
-  { LSTRKEY( "WAKEUP_TOUCHPAD" ),        LINTVAL( ESP_DEEP_SLEEP_WAKEUP_TOUCHPAD  ) },
-  { LSTRKEY( "WAKEUP_ULP" ),             LINTVAL( ESP_DEEP_SLEEP_WAKEUP_ULP       ) },
+  { LSTRKEY( "WAKEUP_NONE" ),            LINTVAL( ESP_SLEEP_WAKEUP_UNDEFINED ) },
+  { LSTRKEY( "WAKEUP_EXT0" ),            LINTVAL( ESP_SLEEP_WAKEUP_EXT0      ) },
+  { LSTRKEY( "WAKEUP_EXT1" ),            LINTVAL( ESP_SLEEP_WAKEUP_EXT1      ) },
+  { LSTRKEY( "WAKEUP_TIMER" ),           LINTVAL( ESP_SLEEP_WAKEUP_TIMER     ) },
+  { LSTRKEY( "WAKEUP_TOUCHPAD" ),        LINTVAL( ESP_SLEEP_WAKEUP_TOUCHPAD  ) },
+  { LSTRKEY( "WAKEUP_ULP" ),             LINTVAL( ESP_SLEEP_WAKEUP_ULP       ) },
 
 	{LSTRKEY("error"), 			               LROVAL( cpu_error_map    )},
 
+	DRIVER_REGISTER_LUA_ERRORS(cpu)
 	{ LNILKEY, LNILVAL }
 };
 
@@ -225,5 +226,4 @@ LUALIB_API int luaopen_cpu( lua_State *L ) {
 }
 
 MODULE_REGISTER_MAPPED(CPU, cpu, lcpu_map, luaopen_cpu);
-DRIVER_REGISTER(CPU,cpu,NULL,NULL,NULL);
 

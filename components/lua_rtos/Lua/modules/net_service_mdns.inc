@@ -311,8 +311,12 @@ static const LUA_REG_TYPE mdns_map[] = {
   { LSTRKEY( "WIFI_STA" ),     LINTVAL( TCPIP_ADAPTER_IF_STA     ) },
   { LSTRKEY( "WIFI_AP"  ),     LINTVAL( TCPIP_ADAPTER_IF_AP      ) },
   { LSTRKEY( "ETH"      ),     LINTVAL( TCPIP_ADAPTER_IF_ETH     ) },
+#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_SPI_ETHERNET
   { LSTRKEY( "SPI_ETH"  ),     LINTVAL( TCPIP_ADAPTER_IF_SPI_ETH ) },
+#endif
 
+  // Error definitions
+  DRIVER_REGISTER_LUA_ERRORS(mdns)
   { LNILKEY, LNILVAL }
 };
 

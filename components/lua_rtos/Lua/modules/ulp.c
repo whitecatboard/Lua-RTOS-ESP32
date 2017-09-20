@@ -44,9 +44,11 @@
 #include <drivers/adc.h>
 #include <drivers/cpu.h>
 #include <rom/rtc.h>
-#include <esp_deep_sleep.h>
+#include <esp_sleep.h>
 #include <esp32/ulp.h>
 #include <soc/rtc_cntl_reg.h>
+
+extern LUA_REG_TYPE ulp_error_map[];
 
 // Module errors
 #define LUA_ULP_ERR_CANT_LOAD_BINARY       (DRIVER_EXCEPTION_BASE(ULP_DRIVER_ID) |  0)
@@ -249,6 +251,7 @@ static const LUA_REG_TYPE lulp_map[] = {
   { LSTRKEY( "valueat" ),                LFUNCVAL( lulp_valueat ) },
   { LSTRKEY( "assign" ),                 LFUNCVAL( lulp_assign  ) },
 
+  DRIVER_REGISTER_LUA_ERRORS(ulp)
 	{ LNILKEY, LNILVAL }
 };
 
@@ -272,5 +275,4 @@ LUALIB_API int luaopen_ulp( lua_State *L ) {
 }
 
 MODULE_REGISTER_MAPPED(ULP, ulp, lulp_map, luaopen_ulp);
-DRIVER_REGISTER(ULP,ulp,NULL,NULL,NULL);
 
