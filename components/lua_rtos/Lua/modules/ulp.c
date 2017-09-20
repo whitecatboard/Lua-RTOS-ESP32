@@ -160,8 +160,8 @@ static int lulp_address( lua_State* L ) {
 	ulp_userdata *ulpvar = (ulp_userdata *)luaL_checkudata(L, 1, "ulp.var");
 	luaL_argcheck(L, ulpvar, 1, "ulp var expected");
 
-	if (lua_gettop(L) > 0) {
-	  unsigned long addr = luaL_checkinteger(L, 1);
+	if (lua_gettop(L) > 1) {
+	  unsigned long addr = luaL_checkinteger(L, 2);
   	ulpvar->addr = addr;
 	  return 0;
 	}
@@ -176,8 +176,8 @@ static int lulp_value( lua_State* L ) {
 	ulp_userdata *ulpvar = (ulp_userdata *)luaL_checkudata(L, 1, "ulp.var");
 	luaL_argcheck(L, ulpvar, 1, "ulp var expected");
 
-	if (lua_gettop(L) > 0) {
-	  uint32_t ulp_value = luaL_checkinteger(L, 1);
+	if (lua_gettop(L) > 1) {
+	  uint32_t ulp_value = luaL_checkinteger(L, 2);
 	  uint32_t *pValue = (uint32_t *)ulpvar->addr;
   	*pValue = (ulp_value & UINT16_MAX);
 	  return 0;
