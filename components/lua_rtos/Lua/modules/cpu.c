@@ -213,8 +213,6 @@ static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "WAKEUP_TOUCHPAD" ),        LINTVAL( ESP_SLEEP_WAKEUP_TOUCHPAD  ) },
   { LSTRKEY( "WAKEUP_ULP" ),             LINTVAL( ESP_SLEEP_WAKEUP_ULP       ) },
 
-	{LSTRKEY("error"), 			               LROVAL( cpu_error_map    )},
-
 	DRIVER_REGISTER_LUA_ERRORS(cpu)
 	{ LNILKEY, LNILVAL }
 };
