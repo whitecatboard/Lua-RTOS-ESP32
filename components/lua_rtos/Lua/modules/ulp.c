@@ -41,6 +41,7 @@
 #include <sys/stat.h>
 #include <sys/status.h>
 
+#include <drivers/adc.h>
 #include <drivers/cpu.h>
 #include <rom/rtc.h>
 #include <esp_deep_sleep.h>
@@ -220,13 +221,22 @@ static int lulp_value( lua_State* L ) {
 }
 
 static int lulp_setadc( lua_State* L ) {
-	/* XXX
-  adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_11db);
-  adc1_config_width(ADC_WIDTH_12Bit);
-  adc1_ulp_enable();
-  */
-  printf("initializing the ADC for use with the ULP is not yet supported.\n");
 
+	int channel, res, pvref, nvref;
+	driver_error_t *error;
+	adc_channel_h_t hdl;
+
+	channel = luaL_checkinteger( L, 1 );
+	res = luaL_optinteger( L, 2, 0 );
+	pvref = luaL_optinteger( L, 3, 0 );
+	nvref = luaL_optinteger( L, 4, 0 );
+
+	// adc_setup() internally calls adc1_config_channel_atten and adc1_config_width
+	if ((error = adc_setup(CPU_ADC1, channel, 0, pvref, nvref, res, &hdl))) {
+		return luaL_driver_error(L, error);
+	}
+	
+  adc1_ulp_enable();
   return 0;
 }
 

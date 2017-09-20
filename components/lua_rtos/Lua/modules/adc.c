@@ -55,8 +55,8 @@ static int ladc_setup( lua_State* L ) {
 }
 
 static int ladc_attach( lua_State* L ) {
-    int id, res, channel, pvref, nvref;
-	driver_error_t *error;
+    int id, channel, res, pvref, nvref;
+    driver_error_t *error;
 
     id = luaL_checkinteger( L, 1 );
     channel = luaL_checkinteger( L, 2 );
@@ -79,7 +79,7 @@ static int ladc_attach( lua_State* L ) {
 static int ladc_read( lua_State* L ) {
     int raw;
     double mvlots;
-	driver_error_t *error;
+    driver_error_t *error;
     adc_userdata *adc = NULL;
 
     adc = (adc_userdata *)luaL_checkudata(L, 1, "adc.chan");
