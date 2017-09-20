@@ -48,8 +48,6 @@
 #include <esp32/ulp.h>
 #include <soc/rtc_cntl_reg.h>
 
-extern LUA_REG_TYPE ulp_error_map[];
-
 // Module errors
 #define LUA_ULP_ERR_CANT_LOAD_BINARY       (DRIVER_EXCEPTION_BASE(ULP_DRIVER_ID) |  0)
 #define LUA_ULP_ERR_CANT_LOAD_BINARY_SIZE  (DRIVER_EXCEPTION_BASE(ULP_DRIVER_ID) |  1)
@@ -61,15 +59,18 @@ extern LUA_REG_TYPE ulp_error_map[];
 #define LUA_ULP_ERR_CANT_SET_TIMER_3       (DRIVER_EXCEPTION_BASE(ULP_DRIVER_ID) |  7)
 #define LUA_ULP_ERR_CANT_SET_TIMER_4       (DRIVER_EXCEPTION_BASE(ULP_DRIVER_ID) |  8)
 
-DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinary,       "can't load ulp binary",  LUA_ULP_ERR_CANT_LOAD_BINARY);
-DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinarySize,   "can't load ulp binary: invalid size",  LUA_ULP_ERR_CANT_LOAD_BINARY_SIZE);
-DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinaryArg,    "can't load ulp binary: invalid load addr",  LUA_ULP_ERR_CANT_LOAD_BINARY_ARG);
-DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinaryMagic,  "can't load ulp binary: invalid binary",  LUA_ULP_ERR_CANT_LOAD_BINARY_MAGIC);
-DRIVER_REGISTER_ERROR(ULP, ulp, CannotRunBinary,        "can't run ulp binary",   LUA_ULP_ERR_CANT_RUN_BINARY);
-DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer1,        "can't set timer 1",      LUA_ULP_ERR_CANT_SET_TIMER_1);
-DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer2,        "can't set timer 2",      LUA_ULP_ERR_CANT_SET_TIMER_2);
-DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer3,        "can't set timer 3",      LUA_ULP_ERR_CANT_SET_TIMER_3);
-DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer4,        "can't set timer 4",      LUA_ULP_ERR_CANT_SET_TIMER_4);
+// Register drivers and errors
+DRIVER_REGISTER_BEGIN(ULP,ulp,NULL,NULL,NULL);
+	DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinary,       "can't load ulp binary",  LUA_ULP_ERR_CANT_LOAD_BINARY);
+	DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinarySize,   "can't load ulp binary: invalid size",  LUA_ULP_ERR_CANT_LOAD_BINARY_SIZE);
+	DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinaryArg,    "can't load ulp binary: invalid load addr",  LUA_ULP_ERR_CANT_LOAD_BINARY_ARG);
+	DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinaryMagic,  "can't load ulp binary: invalid binary",  LUA_ULP_ERR_CANT_LOAD_BINARY_MAGIC);
+	DRIVER_REGISTER_ERROR(ULP, ulp, CannotRunBinary,        "can't run ulp binary",   LUA_ULP_ERR_CANT_RUN_BINARY);
+	DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer1,        "can't set timer 1",      LUA_ULP_ERR_CANT_SET_TIMER_1);
+	DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer2,        "can't set timer 2",      LUA_ULP_ERR_CANT_SET_TIMER_2);
+	DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer3,        "can't set timer 3",      LUA_ULP_ERR_CANT_SET_TIMER_3);
+	DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer4,        "can't set timer 4",      LUA_ULP_ERR_CANT_SET_TIMER_4);
+DRIVER_REGISTER_END(ULP,ulp,NULL,NULL,NULL);
 
 typedef struct {
     lua_State *L;
@@ -251,7 +252,7 @@ static const LUA_REG_TYPE lulp_map[] = {
   { LSTRKEY( "valueat" ),                LFUNCVAL( lulp_valueat ) },
   { LSTRKEY( "assign" ),                 LFUNCVAL( lulp_assign  ) },
 
-  //DRIVER_REGISTER_LUA_ERRORS(ulp)
+  DRIVER_REGISTER_LUA_ERRORS(ulp)
 	{ LNILKEY, LNILVAL }
 };
 

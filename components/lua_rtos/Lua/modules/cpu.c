@@ -43,7 +43,7 @@
 #include "rom/rtc.h"
 #include "esp_sleep.h"
 
-extern LUA_REG_TYPE cpu_error_map[];
+extern const int cpu_error_map;
 
 // Module errors
 #define LUA_CPU_ERR_CANT_WAKEON_EXT0   (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  0)
@@ -52,11 +52,14 @@ extern LUA_REG_TYPE cpu_error_map[];
 #define LUA_CPU_ERR_CANT_WAKEON_TOUCH  (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  3)
 #define LUA_CPU_ERR_CANT_WAKEON_ULP    (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  4)
 
-DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnExt0,  "can't wake on EXT0",  LUA_CPU_ERR_CANT_WAKEON_EXT0);
-DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnExt1,  "can't wake on EXT1",  LUA_CPU_ERR_CANT_WAKEON_EXT1);
-DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnTimer, "can't wake on timer", LUA_CPU_ERR_CANT_WAKEON_TIMER);
-DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnTouch, "can't wake on touch", LUA_CPU_ERR_CANT_WAKEON_TOUCH);
-DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnULP,   "can't wake on ULP",   LUA_CPU_ERR_CANT_WAKEON_ULP);
+// Register drivers and errors
+DRIVER_REGISTER_BEGIN(CPU,cpu,NULL,NULL,NULL);
+	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnExt0,  "can't wake on EXT0",  LUA_CPU_ERR_CANT_WAKEON_EXT0);
+	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnExt1,  "can't wake on EXT1",  LUA_CPU_ERR_CANT_WAKEON_EXT1);
+	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnTimer, "can't wake on timer", LUA_CPU_ERR_CANT_WAKEON_TIMER);
+	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnTouch, "can't wake on touch", LUA_CPU_ERR_CANT_WAKEON_TOUCH);
+	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnULP,   "can't wake on ULP",   LUA_CPU_ERR_CANT_WAKEON_ULP);
+DRIVER_REGISTER_END(CPU,cpu,NULL,NULL,NULL);
 
 static int lcpu_model(lua_State *L) {
 	int revision;
@@ -212,7 +215,7 @@ static const LUA_REG_TYPE lcpu_map[] = {
 
 	{LSTRKEY("error"), 			               LROVAL( cpu_error_map    )},
 
-	//DRIVER_REGISTER_LUA_ERRORS(cpu)
+	DRIVER_REGISTER_LUA_ERRORS(cpu)
 	{ LNILKEY, LNILVAL }
 };
 
