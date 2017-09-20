@@ -114,7 +114,7 @@ static int lcpu_wakeup_on(lua_State *L) {
 				break;
 		case ESP_DEEP_SLEEP_WAKEUP_EXT1:
 				{
-					unsigned long mask = luaL_checkinteger(L, 2);
+					uint64_t mask = luaL_checkinteger(L, 2);
 					unsigned int wakeup_mode = luaL_checkinteger(L, 3);
 					/*
 							ESP_EXT1_WAKEUP_ALL_LOW = 0,    //!< Wake the chip when all selected GPIOs go low
@@ -153,8 +153,29 @@ static int lcpu_deepsleep(lua_State *L) {
 	return 0;
 }
 
-/* TODO: esp_deep_sleep_get_ext1_wakeup_status
-*/
+static int lcpu_wakeup_ext1_mask(lua_State *L) {
+	uint64_t wakeup_pin_mask = esp_deep_sleep_get_ext1_wakeup_status();
+	lua_pushinteger(L, wakeup_pin_mask);
+	return 1;
+}
+
+static int lcpu_wakeup_ext1_pin(lua_State *L) {
+	if (ESP_DEEP_SLEEP_WAKEUP_EXT1 == cpu_wakeup_reason()) {
+		uint64_t wakeup_pin_mask = esp_deep_sleep_get_ext1_wakeup_status();
+
+		if (wakeup_pin_mask != 0) {
+				int pin = __builtin_ffsll(wakeup_pin_mask) - 1;
+				printf("Woke up from GPIO %d\n", pin);
+				lua_pushinteger(L, pin);
+				return 1;
+		} else {
+				printf("Woke up from unknown GPIO\n");
+				return 0;
+		}
+		
+	}
+	return 0;
+}
 
 static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "model" ),                  LFUNCVAL( lcpu_model ) },
@@ -164,6 +185,8 @@ static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "wakeupreason" ),           LFUNCVAL( lcpu_wakeup_reason ) },
   { LSTRKEY( "wakeupon" ),               LFUNCVAL( lcpu_wakeup_on ) },
   { LSTRKEY( "deepsleep" ),              LFUNCVAL( lcpu_deepsleep ) },
+  { LSTRKEY( "wakeupext1pin" ),          LFUNCVAL( lcpu_wakeup_ext1_pin ) },
+  { LSTRKEY( "wakeupext1mask" ),         LFUNCVAL( lcpu_wakeup_ext1_mask ) },
 
   { LSTRKEY( "RESET_POWERON" ),          LINTVAL( POWERON_RESET          ) },
   { LSTRKEY( "RESET_SW" ),               LINTVAL( SW_RESET               ) },
