@@ -123,7 +123,7 @@ void cpu_show_info() {
 	if (!*buffer) {
 		syslog(LOG_ERR, "cpu unknown CPU");
 	} else {
-		syslog(LOG_INFO, "cpu %s at %d Mhz", buffer, cpu_speed());
+		syslog(LOG_INFO, "cpu %s at %d Mhz", buffer, cpu_speed() / 1000000);
 	}
 }
 
@@ -155,7 +155,7 @@ void cpu_sleep(int seconds) {
 
 	// Put ESP32 in deep sleep mode
 	if (status_get(STATUS_NEED_RTC_SLOW_MEM)) {
-		esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+		esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
 	}
 
 	esp_deep_sleep(seconds * 1000000LL);
