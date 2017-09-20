@@ -32,7 +32,7 @@
 
 #include "esp_system.h"
 #include "esp_attr.h"
-#include "esp_deep_sleep.h"
+#include "esp_sleep.h"
 #include "rom/rtc.h"
 #include <soc/dport_reg.h>
 #include <soc/efuse_reg.h>
@@ -175,7 +175,7 @@ void cpu_deepsleep() {
 
 	// Put ESP32 in deep sleep mode
 	if (status_get(STATUS_NEED_RTC_SLOW_MEM)) {
-		esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+		esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
 	}
 
 /*
@@ -202,6 +202,6 @@ int cpu_reset_reason() {
 }
 
 int cpu_wakeup_reason() {
-	return esp_deep_sleep_get_wakeup_cause();
+	return esp_sleep_get_wakeup_cause();
 }
 

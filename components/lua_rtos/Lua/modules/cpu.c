@@ -212,7 +212,7 @@ static const LUA_REG_TYPE lcpu_map[] = {
 
 	{LSTRKEY("error"), 			               LROVAL( cpu_error_map    )},
 
-	DRIVER_REGISTER_LUA_ERRORS(cpu)
+	//DRIVER_REGISTER_LUA_ERRORS(cpu)
 	{ LNILKEY, LNILVAL }
 };
 

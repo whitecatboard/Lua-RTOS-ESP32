@@ -251,7 +251,7 @@ static const LUA_REG_TYPE lulp_map[] = {
   { LSTRKEY( "valueat" ),                LFUNCVAL( lulp_valueat ) },
   { LSTRKEY( "assign" ),                 LFUNCVAL( lulp_assign  ) },
 
-  DRIVER_REGISTER_LUA_ERRORS(ulp)
+  //DRIVER_REGISTER_LUA_ERRORS(ulp)
 	{ LNILKEY, LNILVAL }
 };
 
