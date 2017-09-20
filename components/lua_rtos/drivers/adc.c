@@ -63,7 +63,7 @@ static void _adc_init() {
     list_init(&channels, 1);
 }
 
-static adc_channel_t *get_channel(int8_t unit, int8_t channel) {
+static adc_channel_t *get_channel(int8_t unit, int8_t channel, int *item_index) {
 	adc_channel_t *chan;
 	int index;
 
@@ -72,6 +72,7 @@ static adc_channel_t *get_channel(int8_t unit, int8_t channel) {
         list_get(&channels, index, (void **)&chan);
 
         if ((chan->unit == unit) && (chan->channel == channel)) {
+        	*item_index = index;
         	return chan;
         }
 
@@ -150,20 +151,19 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 	}
 
 	// Test if channel is setup
-	adc_channel_t *chan;
-
-	chan = get_channel(unit, channel);
+	int index = 0;
+	adc_channel_t *chan = get_channel(unit, channel, &index);
 	if (chan) {
-		// Channel is setup, nothing to do
-		return NULL;
+		// Channel is setup, reuse the handle and reconfigure the adc
 	}
-
-	// Create space for the channel
-	chan = calloc(1, sizeof(adc_channel_t));
-	if (!chan) {
-		return driver_error(ADC_DRIVER, ADC_ERR_NOT_ENOUGH_MEMORY, NULL);
+	else {
+		// Create space for the channel
+		chan = calloc(1, sizeof(adc_channel_t));
+		if (!chan) {
+			return driver_error(ADC_DRIVER, ADC_ERR_NOT_ENOUGH_MEMORY, NULL);
+		}
 	}
-
+	
 	// Store channel configuration
 	chan->unit = unit;
 	chan->channel = channel;
@@ -304,15 +304,16 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t pv
 	 }
 
 	// At this point the channel is configured without errors
-	// Store channel in channel list
-	int index;
-
-    if (list_add(&channels, chan, &index)) {
-    	free(chan);
-		return driver_error(ADC_DRIVER, ADC_ERR_NOT_ENOUGH_MEMORY, NULL);
-    }
-
-    *h = (adc_channel_h_t)index;
+	
+	if (!index) {
+		// Store channel in channel list
+		if (list_add(&channels, chan, &index)) {
+			free(chan);
+			return driver_error(ADC_DRIVER, ADC_ERR_NOT_ENOUGH_MEMORY, NULL);
+		}
+	}
+	
+	*h = (adc_channel_h_t)index;
 
 	return NULL;
 }
@@ -321,7 +322,7 @@ driver_error_t *adc_read(adc_channel_h_t *h, int *raw, double *mvols) {
 	driver_error_t *error = NULL;
 	adc_channel_t *chan;
 
-    // Get channel
+	// Get channel
 	if (list_get(&channels, (int)*h, (void **)&chan)) {
 		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
 	}
