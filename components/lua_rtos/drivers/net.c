@@ -164,7 +164,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
 		case SYSTEM_EVENT_ETH_GOT_IP:               /**< ESP32 ethernet got IP from connected AP */
 			break;
-
+#if CONFIG_CONFIG_SPI_ETHERNET
 		case SYSTEM_EVENT_SPI_ETH_START:            /**< ESP32 spi ethernet start */
 			break;
 
@@ -182,7 +182,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 		case SYSTEM_EVENT_SPI_ETH_GOT_IP:           /**< ESP32 spi ethernet got IP from connected AP */
  			xEventGroupSetBits(netEvent, evSPI_ETH_CONNECTED);
 			break;
-
+#endif
 		default :
 			break;
 	}

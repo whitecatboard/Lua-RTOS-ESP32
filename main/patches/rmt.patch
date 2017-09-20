@@ -35,13 +35,13 @@ index 7386aa2..a6a0fa6 100644
 +
 +    for(i=0;i < RMT_CHANNEL_MAX;i++) {
 +        if(p_rmt_obj[i] == NULL) {
-+        	channel = i;
-+        	break;
++           channel = i;
++           break;
 +        }
 +    }
 +
 +    if (i == RMT_CHANNEL_MAX) {
-+    	return ESP_ERR_NOT_FOUND;
++        return ESP_ERR_NOT_FOUND;
 +    }
 +
 +    *chan = channel;
