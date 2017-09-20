@@ -125,7 +125,7 @@ driver_error_t *BH1721FVC_acquire(sensor_instance_t *unit, sensor_value_t *value
 	// Read
 	error = i2c_start(i2c, &transaction);if (error) return error;
 	error = i2c_write_address(i2c, &transaction, address, 1);if (error) return error;
-	error = i2c_read(CONFIG_PCA9xxx_I2C, &transaction, (char *)buff, 2);if (error) return error;
+	error = i2c_read(i2c, &transaction, (char *)buff, 2);if (error) return error;
 	error = i2c_stop(i2c, &transaction);if (error) return error;
 
 	// Power down
