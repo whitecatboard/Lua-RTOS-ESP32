@@ -165,11 +165,11 @@ static int lcpu_wakeup_ext1_pin(lua_State *L) {
 
 		if (wakeup_pin_mask != 0) {
 				int pin = __builtin_ffsll(wakeup_pin_mask) - 1;
-				printf("Woke up from GPIO %d\n", pin);
+				//printf("Woke up from GPIO %d\n", pin);
 				lua_pushinteger(L, pin);
 				return 1;
 		} else {
-				printf("Woke up from unknown GPIO\n");
+				//printf("Woke up from unknown GPIO\n");
 				return 0;
 		}
 		
