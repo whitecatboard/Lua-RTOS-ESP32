@@ -39,11 +39,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/status.h>
 
 #include <drivers/cpu.h>
-#include "rom/rtc.h"
-#include "esp_deep_sleep.h"
-#include "esp32/ulp.h"
+#include <rom/rtc.h>
+#include <esp_deep_sleep.h>
+#include <esp32/ulp.h>
+#include <soc/rtc_cntl_reg.h>
 
 // Module errors
 #define LUA_ULP_ERR_CANT_LOAD_BINARY       (DRIVER_EXCEPTION_BASE(ULP_DRIVER_ID) |  0)
@@ -51,12 +53,20 @@
 #define LUA_ULP_ERR_CANT_LOAD_BINARY_ARG   (DRIVER_EXCEPTION_BASE(ULP_DRIVER_ID) |  2)
 #define LUA_ULP_ERR_CANT_LOAD_BINARY_MAGIC (DRIVER_EXCEPTION_BASE(ULP_DRIVER_ID) |  3)
 #define LUA_ULP_ERR_CANT_RUN_BINARY        (DRIVER_EXCEPTION_BASE(ULP_DRIVER_ID) |  4)
+#define LUA_ULP_ERR_CANT_SET_TIMER_1       (DRIVER_EXCEPTION_BASE(ULP_DRIVER_ID) |  5)
+#define LUA_ULP_ERR_CANT_SET_TIMER_2       (DRIVER_EXCEPTION_BASE(ULP_DRIVER_ID) |  6)
+#define LUA_ULP_ERR_CANT_SET_TIMER_3       (DRIVER_EXCEPTION_BASE(ULP_DRIVER_ID) |  7)
+#define LUA_ULP_ERR_CANT_SET_TIMER_4       (DRIVER_EXCEPTION_BASE(ULP_DRIVER_ID) |  8)
 
 DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinary,       "can't load ulp binary",  LUA_ULP_ERR_CANT_LOAD_BINARY);
 DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinarySize,   "can't load ulp binary: invalid size",  LUA_ULP_ERR_CANT_LOAD_BINARY_SIZE);
 DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinaryArg,    "can't load ulp binary: invalid load addr",  LUA_ULP_ERR_CANT_LOAD_BINARY_ARG);
 DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinaryMagic,  "can't load ulp binary: invalid binary",  LUA_ULP_ERR_CANT_LOAD_BINARY_MAGIC);
 DRIVER_REGISTER_ERROR(ULP, ulp, CannotRunBinary,        "can't run ulp binary",   LUA_ULP_ERR_CANT_RUN_BINARY);
+DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer1,        "can't set timer 1",      LUA_ULP_ERR_CANT_SET_TIMER_1);
+DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer2,        "can't set timer 2",      LUA_ULP_ERR_CANT_SET_TIMER_2);
+DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer3,        "can't set timer 3",      LUA_ULP_ERR_CANT_SET_TIMER_3);
+DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer4,        "can't set timer 4",      LUA_ULP_ERR_CANT_SET_TIMER_4);
 
 typedef struct {
     lua_State *L;
@@ -101,27 +111,46 @@ static int lulp_load(lua_State *L) {
 	return 0;
 }
 
+static int lulp_timer(lua_State *L) {
+	uint32_t tmr1us = luaL_optinteger(L, 1, 0);
+	uint32_t tmr2us = luaL_optinteger(L, 2, 0);
+	uint32_t tmr3us = luaL_optinteger(L, 3, 0);
+	uint32_t tmr4us = luaL_optinteger(L, 4, 0);
+	
+	esp_err_t error;
+	if ((error = ulp_set_wakeup_period((size_t)0, tmr1us)))
+		return luaL_exception(L, LUA_ULP_ERR_CANT_SET_TIMER_1);
+	if ((error = ulp_set_wakeup_period((size_t)1, tmr2us)))
+		return luaL_exception(L, LUA_ULP_ERR_CANT_SET_TIMER_2);
+	if ((error = ulp_set_wakeup_period((size_t)2, tmr3us)))
+		return luaL_exception(L, LUA_ULP_ERR_CANT_SET_TIMER_3);
+	if ((error = ulp_set_wakeup_period((size_t)3, tmr4us)))
+		return luaL_exception(L, LUA_ULP_ERR_CANT_SET_TIMER_4);
+
+	return 0;
+}
+
 static int lulp_run(lua_State *L) {
 	uint32_t entry_point = 0;
 	if (lua_gettop(L) > 0) {
 		entry_point = luaL_checkinteger(L, 1);
 	}
 
+	status_set(STATUS_NEED_RTC_SLOW_MEM); //used for ulp variables
+
 	esp_err_t error;
 	if ((error = ulp_run(entry_point))) {
 		return luaL_exception(L, LUA_ULP_ERR_CANT_RUN_BINARY);
 	}
 
-	//XXX status_set(STATUS_NEED_RTC_SLOW_MEM); //XXX should depend on assignment of variables
-	//XXX esp_err_t ulp_set_wakeup_period(size_t period_index, uint32_t period_us);
+	return 0;
+}
 
-	/* XXX
-  adc1_ulp_enable();
-
-  //Set low and high thresholds, approx. 1.35V - 1.75V
-  ulp_low_thr = 1500;
-  ulp_high_thr = 2000;
-  */
+static int lulp_stop(lua_State *L) {
+  // disable ULP timer
+  CLEAR_PERI_REG_MASK(RTC_CNTL_STATE0_REG, RTC_CNTL_ULP_CP_SLP_TIMER_EN);
+  // wait for at least 1 RTC_SLOW_CLK cycle
+	ets_delay_us(10);
 
 	return 0;
 }
@@ -190,9 +219,23 @@ static int lulp_value( lua_State* L ) {
 	}
 }
 
+static int lulp_setadc( lua_State* L ) {
+	/* XXX
+  adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_11db);
+  adc1_config_width(ADC_WIDTH_12Bit);
+  adc1_ulp_enable();
+  */
+  printf("initializing the ADC for use with the ULP is not yet supported.\n");
+
+  return 0;
+}
+
 static const LUA_REG_TYPE lulp_map[] = {
   { LSTRKEY( "load" ),                   LFUNCVAL( lulp_load    ) },
+  { LSTRKEY( "settimer" ),               LFUNCVAL( lulp_timer   ) },
   { LSTRKEY( "run" ),                    LFUNCVAL( lulp_run     ) },
+  { LSTRKEY( "stop" ),                   LFUNCVAL( lulp_stop    ) },
+  { LSTRKEY( "enableadc" ),              LFUNCVAL( lulp_setadc  ) },
   { LSTRKEY( "valueat" ),                LFUNCVAL( lulp_valueat ) },
   { LSTRKEY( "assign" ),                 LFUNCVAL( lulp_assign  ) },
 
