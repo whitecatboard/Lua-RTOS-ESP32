@@ -34,8 +34,6 @@
 #include <string.h>
 #include <stdio.h>
 
-extern LUA_REG_TYPE wifi_error_map[];
-
 static int lwifi_setup(lua_State* L) {
 	driver_error_t *error;
 
@@ -203,7 +201,7 @@ static int lwifi_stat(lua_State* L) {
 		printf("   ip address %s netmask %s\r\n", ipa, maska);
 		printf("   gw address %s\r\n\r\n", gwa);
 	} else {
-		char tmp[17];
+		char tmp[18];
 
 		lua_createtable(L, 0, 4);
 
@@ -221,6 +219,15 @@ static int lwifi_stat(lua_State* L) {
 		sprintf(tmp, IPSTR, ip4_addr1_16(&info.netmask),ip4_addr2_16(&info.netmask),ip4_addr3_16(&info.netmask),ip4_addr4_16(&info.netmask));
 		lua_pushstring(L, tmp);
 		lua_setfield (L, -2, "netmask");
+
+		sprintf(tmp, "%02x:%02x:%02x:%02x:%02x:%02x",
+			info.mac[0],info.mac[1],
+			info.mac[2],info.mac[3],
+			info.mac[4],info.mac[5]
+		);
+		lua_pushstring(L, tmp);
+		lua_setfield (L, -2, "mac");
+
 	}
 
 	return table;
@@ -254,7 +261,7 @@ static const LUA_REG_TYPE wifi_map[] = {
 	{ LSTRKEY( "auth"      ),	 LROVAL  ( wifi_auth_map      ) },
 	{ LSTRKEY( "mode"      ),	 LROVAL  ( wifi_mode_map      ) },
 	{ LSTRKEY( "powersave" ),	 LROVAL  ( wifi_powersave_map ) },
-	{ LSTRKEY( "error"     ),	 LROVAL  ( wifi_error_map     ) },
+	DRIVER_REGISTER_LUA_ERRORS(wifi)
 	{ LNILKEY, LNILVAL }
 };
 

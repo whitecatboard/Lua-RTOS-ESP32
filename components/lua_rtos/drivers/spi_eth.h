@@ -47,6 +47,9 @@
 #define SPI_ETH_ERR_NOT_START              (DRIVER_EXCEPTION_BASE(SPI_ETH_DRIVER_ID) |  2)
 #define SPI_ETH_ERR_CANT_CONNECT           (DRIVER_EXCEPTION_BASE(SPI_ETH_DRIVER_ID) |  3)
 
+extern const int spi_eth_errors;
+extern const int spi_eth_error_map;
+
 driver_error_t *spi_eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1, uint32_t dns2);
 driver_error_t *spi_eth_start();
 driver_error_t *spi_eth_stop();

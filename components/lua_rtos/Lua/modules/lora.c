@@ -44,8 +44,6 @@
 
 #include <drivers/uart.h>
 
-extern const LUA_REG_TYPE lora_error_map[];
-
 #if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
 
 static int rx_callback = 0;
@@ -450,8 +448,7 @@ static const LUA_REG_TYPE lora_map[] = {
 	{ LSTRKEY( "start" ),        LFUNCVAL( llora_gw_start ) },
 #endif
 
-	// Error definitions
-	{LSTRKEY("error"), 			 LROVAL( lora_error_map )},
+	DRIVER_REGISTER_LUA_ERRORS(lora)
 
 	{LNILKEY, LNILVAL}
 };

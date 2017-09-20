@@ -79,13 +79,8 @@
 // Initializers
 #define PTHREAD_MUTEX_INITIALIZER     0
 
-#if !MTX_USE_EVENTS
 #define PTHREAD_ONCE_INIT             {NULL}
 #define PTHREAD_COND_INITIALIZER      {.mutex.sem = NULL, .referenced = 0}
-#else
-#define PTHREAD_ONCE_INIT             {NULL}
-#define PTHREAD_COND_INITIALIZER      {.mutex.mtxid = -1, .referenced = 0}
-#endif
 
 // Required structures and types
 struct pthread_mutex_attr {

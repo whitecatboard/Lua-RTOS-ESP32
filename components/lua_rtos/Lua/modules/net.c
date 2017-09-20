@@ -59,8 +59,6 @@
 #include <sys/driver.h>
 #include <drivers/net.h>
 
-extern LUA_REG_TYPE net_error_map[];
-
 typedef union {
 	uint32_t ipaddr;
 	uint8_t ipbytes[4];
@@ -210,10 +208,6 @@ static int lnet_stat(lua_State* L) {
 	} else {
 		lua_settop(L, 0);
 	}
-
-	if (table) {
-		lua_pushinteger(L, 1);
-	}
 #endif
 
 #if CONFIG_SPI_ETHERNET && CONFIG_LUA_RTOS_LUA_USE_NET
@@ -279,7 +273,7 @@ static const LUA_REG_TYPE net_map[] = {
 #endif
 
 	{ LSTRKEY( "service" ), LROVAL ( service_map ) },
-	{ LSTRKEY( "error" ), LROVAL ( net_error_map ) },
+	DRIVER_REGISTER_LUA_ERRORS(net)
 	{ LNILKEY, LNILVAL }
 };
 

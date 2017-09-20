@@ -44,12 +44,16 @@ static nzr_timing_t chipset[1] = {
 	{NEO_CYCLES(350), NEO_CYCLES(900), NEO_CYCLES(900), NEO_CYCLES(350), NEO_CYCLES(50000)}, // WS2812B
 };
 
-// Driver errors
-DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, NotEnoughtMemory, "not enough memory", NEOPIXEL_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidUnit, "invalid unit", NEOPIXEL_ERR_INVALID_UNIT);
-DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidPixel, "invalid pixel", NEOPIXEL_ERR_INVALID_PIXEL);
-DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidController, "invalid controller", NEOPIXEL_ERR_INVALID_CONTROLLER);
-DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidRGBComponent, "invalid RGB component", NEOPIXEL_ERR_INVALID_RGB_COMPONENT);
+// Register driver and messages
+void neopixel_init();
+
+DRIVER_REGISTER_BEGIN(NEOPIXEL,neopixel,NULL,neopixel_init,NULL);
+	DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, NotEnoughtMemory, "not enough memory", NEOPIXEL_ERR_NOT_ENOUGH_MEMORY);
+	DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidUnit, "invalid unit", NEOPIXEL_ERR_INVALID_UNIT);
+	DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidPixel, "invalid pixel", NEOPIXEL_ERR_INVALID_PIXEL);
+	DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidController, "invalid controller", NEOPIXEL_ERR_INVALID_CONTROLLER);
+	DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidRGBComponent, "invalid RGB component", NEOPIXEL_ERR_INVALID_RGB_COMPONENT);
+DRIVER_REGISTER_END(NEOPIXEL,neopixel,NULL,neopixel_init,NULL);
 
 // List of units
 struct list neopixel_list;
@@ -136,5 +140,3 @@ driver_error_t *neopixel_update(uint32_t unit) {
 
 	return NULL;
 }
-
-DRIVER_REGISTER(NEOPIXEL,neopixel,NULL,neopixel_init,NULL);

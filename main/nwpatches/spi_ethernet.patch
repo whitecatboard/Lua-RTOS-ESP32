@@ -302,10 +302,9 @@ index b1bb85b..fefee23 100644
              evt.event_info.got_ip.ip_changed = false;
  
              if (memcmp(ip_info, ip_info_old, sizeof(tcpip_adapter_ip_info_t))) {
-@@ -850,30 +884,33 @@ esp_err_t tcpip_adapter_dhcpc_start(tcpip_adapter_if_t tcpip_if)
+@@ -850,29 +884,32 @@ esp_err_t tcpip_adapter_dhcpc_start(tcpip_adapter_if_t tcpip_if)
      TCPIP_ADAPTER_IPC_CALL(tcpip_if, 0, 0, 0, tcpip_adapter_dhcpc_start_api);
  
-     /* only support sta now, need to support ethernet */
 -    if ((tcpip_if != TCPIP_ADAPTER_IF_STA && tcpip_if != TCPIP_ADAPTER_IF_ETH)  || tcpip_if >= TCPIP_ADAPTER_IF_MAX) {
 +    if ((tcpip_if != TCPIP_ADAPTER_IF_STA && tcpip_if != TCPIP_ADAPTER_IF_ETH && tcpip_if != TCPIP_ADAPTER_IF_SPI_ETH)  || tcpip_if >= TCPIP_ADAPTER_IF_MAX) {
          ESP_LOGD(TAG, "dhcp client invalid if=%d", tcpip_if);
@@ -346,12 +345,11 @@ index b1bb85b..fefee23 100644
              ESP_LOGD(TAG, "dhcp client re init");
              dhcpc_status[tcpip_if] = TCPIP_ADAPTER_DHCP_INIT;
              return ESP_OK;
-@@ -904,7 +942,7 @@ esp_err_t tcpip_adapter_dhcpc_stop(tcpip_adapter_if_t tcpip_if)
+@@ -904,6 +942,6 @@ esp_err_t tcpip_adapter_dhcpc_stop(tcpip_adapter_if_t tcpip_if)
      TCPIP_ADAPTER_IPC_CALL(tcpip_if, 0, 0, 0, tcpip_adapter_dhcpc_stop_api);
  
-     /* only support sta now, need to support ethernet */
--    if (tcpip_if != TCPIP_ADAPTER_IF_STA || tcpip_if >= TCPIP_ADAPTER_IF_MAX) {
-+    if ((tcpip_if != TCPIP_ADAPTER_IF_STA && tcpip_if != TCPIP_ADAPTER_IF_SPI_ETH) || tcpip_if >= TCPIP_ADAPTER_IF_MAX) {
+-    if ((tcpip_if != TCPIP_ADAPTER_IF_STA && tcpip_if != TCPIP_ADAPTER_IF_ETH)  || tcpip_if >= TCPIP_ADAPTER_IF_MAX) {
++    if ((tcpip_if != TCPIP_ADAPTER_IF_STA && tcpip_if != TCPIP_ADAPTER_IF_ETH && tcpip_if != TCPIP_ADAPTER_IF_SPI_ETH)  || tcpip_if >= TCPIP_ADAPTER_IF_MAX) {
          ESP_LOGD(TAG, "dhcp client invalid if=%d", tcpip_if);
          return ESP_ERR_TCPIP_ADAPTER_INVALID_PARAMS;
      }

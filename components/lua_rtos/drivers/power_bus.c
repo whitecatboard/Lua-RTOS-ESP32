@@ -39,7 +39,12 @@
 
 static int power = 0;
 
-DRIVER_REGISTER_ERROR(PWBUS, pwbus, InvalidPin, "invalid pin", PWBUS_ERR_INVALID_PIN);
+// Register driver and errors
+static void _pwbus_init();
+
+DRIVER_REGISTER_BEGIN(PWBUS,pwbus,NULL,_pwbus_init,NULL);
+	DRIVER_REGISTER_ERROR(PWBUS, pwbus, InvalidPin, "invalid pin", PWBUS_ERR_INVALID_PIN);
+DRIVER_REGISTER_END(PWBUS,pwbus,NULL,_pwbus_init,NULL);
 
 /*
  * Helper functions
@@ -75,7 +80,5 @@ driver_error_t *pwbus_off() {
 
 	return NULL;
 }
-
-DRIVER_REGISTER(PWBUS,pwbus,NULL,_pwbus_init,NULL);
 
 #endif

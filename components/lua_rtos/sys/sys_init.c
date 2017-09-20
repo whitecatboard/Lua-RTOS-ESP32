@@ -2,7 +2,7 @@
  * Lua RTOS, system init
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -32,7 +32,7 @@
 #include "lua.h"
 #include "esp_log.h"
 #include "esp_vfs.h"
-#include "esp_deep_sleep.h"
+#include "esp_sleep.h"
 #include "driver/periph_ctrl.h"
 
 #include <esp_spi_flash.h>
@@ -89,21 +89,21 @@ void *_sys_tests(void *arg) {
 void _sys_init() {
 	// Set default power down mode for all RTC power domains in deep sleep
 	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
 	#else
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
 	#endif
 
 	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_SLOW_MEM
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
 	#else
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
 	#endif
 
 	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_FAST_MEM
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
 	#else
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
 	#endif
 
 	// Increment bootcount
@@ -220,7 +220,7 @@ void _sys_init() {
         	syslog(LOG_ERR, "can't redirect console messages to file system, an SDCARD is needed");
         }
     #endif
-        
+
     // Continue init ...
     printf("\n");
 }

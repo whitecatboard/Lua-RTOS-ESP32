@@ -30,6 +30,10 @@
 #ifndef __GPIO_H__
 #define __GPIO_H__
 
+#include "driver/rmt.h"
+#include "driver/periph_ctrl.h"
+#include "soc/rmt_reg.h"
+
 #include <sys/driver.h>
 
 #include <driver/gpio.h>
@@ -43,10 +47,16 @@
 #define GPIO_ERR_INVALID_PIN                  (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  1)
 #define GPIO_ERR_INVALID_PORT                 (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  2)
 #define GPIO_ERR_NOT_ENOUGH_MEMORY			  (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  3)
+#define GPIO_ERR_PULL_UP_NOT_ALLOWED		  (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  4)
+#define GPIO_ERR_PULL_DOWN_NOT_ALLOWED		  (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  5)
+#define GPIO_ERR_INT_NOT_ALLOWED			  (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  6)
 
-void gpio_ll_pin_set(uint8_t pin);
-void gpio_ll_pin_clr(uint8_t pin);
-void gpio_ll_pin_inv(int8_t pin);
+extern const int gpio_errors;
+extern const int gpio_error_map;
+
+driver_error_t *gpio_ll_pin_set(uint8_t pin);
+driver_error_t *gpio_ll_pin_clr(uint8_t pin);
+driver_error_t *gpio_ll_pin_inv(int8_t pin);
 uint8_t IRAM_ATTR gpio_ll_pin_get(int8_t pin);
 
 driver_error_t *gpio_pin_output(uint8_t pin);
@@ -71,8 +81,31 @@ driver_error_t *gpio_pin_pullup(uint8_t pin);
 driver_error_t *gpio_pin_pulldwn(uint8_t pin);
 driver_error_t *gpio_pin_nopull(uint8_t pin);
 driver_error_t *gpio_pin_inv_mask(uint8_t port, gpio_pin_mask_t pinmask);
+driver_error_t *gpio_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type, void *args);
+driver_error_t *gpio_isr_detach(uint8_t pin);
+uint8_t gpio_is_input(uint8_t pin);
+uint8_t gpio_is_output(uint8_t pin);
+int gpio_get_pulse_time(uint8_t pin, uint8_t level, uint32_t timeout);
 
 const char *gpio_portname(uint8_t pin);
 uint8_t gpio_name(uint8_t pin);
+
+#define GPIO_CHECK_INPUT(gpio) \
+	(gpio < 40 \
+		?(GPIO_ALL_IN & (GPIO_BIT_MASK << gpio)) \
+		:(EXTERNAL_GPIO \
+			?(gpio < 80) \
+			:0 \
+		) \
+	)
+
+#define GPIO_CHECK_OUTPUT(gpio) \
+	(gpio < 40 \
+		?(GPIO_ALL_OUT & (GPIO_BIT_MASK << gpio)) \
+		:(EXTERNAL_GPIO \
+			?(gpio < 80) \
+			:0 \
+		) \
+	)
 
 #endif

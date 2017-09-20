@@ -56,7 +56,7 @@ driver_error_t *thermistor_acquire(sensor_instance_t *unit, sensor_value_t *valu
 static const sensor_t __attribute__((used,unused,section(".sensors"))) thermistor_sensor = {
 	.id = "THERMISTOR",
 	.interface = {
-		ADC_INTERFACE,
+		{.type = ADC_INTERFACE},
 	},
 	.data = {
 		{.id = "temperature", .type = SENSOR_DATA_FLOAT},

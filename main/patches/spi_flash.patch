@@ -1,6 +1,8 @@
---- /Users/jaumeolivepetrus/esp-idf-uniqueid/components/spi_flash/flash_ops.c	2017-03-01 13:24:17.000000000 +0100
-+++ flash_ops.c	2017-03-01 11:58:26.000000000 +0100
-@@ -479,6 +479,156 @@
+diff --git a/components/spi_flash/flash_ops.c b/components/spi_flash/flash_ops.c
+index afb8f40..ff2f79b 100644
+--- a/components/spi_flash/flash_ops.c
++++ b/components/spi_flash/flash_ops.c
+@@ -485,6 +485,156 @@ static esp_err_t IRAM_ATTR spi_flash_translate_rc(esp_rom_spiflash_result_t rc)
      }
  }
  
@@ -156,4 +158,17 @@
 +
  #if CONFIG_SPI_FLASH_ENABLE_COUNTERS
  
- static inline void dump_counter(spi_flash_counter_t* counter, const char* name)
+ static inline void dump_counter(spi_flash_counter_t *counter, const char *name)
+diff --git a/components/spi_flash/include/esp_spi_flash.h b/components/spi_flash/include/esp_spi_flash.h
+index fc48fd2..65b5948 100644
+--- a/components/spi_flash/include/esp_spi_flash.h
++++ b/components/spi_flash/include/esp_spi_flash.h
+@@ -370,6 +370,8 @@ const spi_flash_counters_t* spi_flash_get_counters();
+ 
+ #endif //CONFIG_SPI_FLASH_ENABLE_COUNTERS
+ 
++void spi_flash_send_cmd(uint32_t len, uint8_t *cmd, uint8_t *res);
++
+ #ifdef __cplusplus
+ }
+ #endif

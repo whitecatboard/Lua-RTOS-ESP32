@@ -146,6 +146,6 @@ typedef union {
 } adc_ads1115_reg_t;
 
 driver_error_t *adc_ads1115_setup(adc_channel_t *chan);
-driver_error_t *adc_ads1115_read(adc_channel_t *chan, int *raw);
+driver_error_t *adc_ads1115_read(adc_channel_t *chan, int *raw, double *mvolts);
 
 #endif /* _ADC_ADS1115_H */

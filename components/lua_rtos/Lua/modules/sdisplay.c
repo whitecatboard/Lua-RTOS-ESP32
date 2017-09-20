@@ -44,9 +44,6 @@
 
 #include <drivers/tm1637.h>
 
-// This variables are defined at linker time
-extern LUA_REG_TYPE tm1637_error_map[];
-
 static int lsdisplay_setup( lua_State* L ) {
 	driver_error_t *error;
 
@@ -187,7 +184,7 @@ static int lsdisplay_ins_gc (lua_State *L) {
 static const LUA_REG_TYPE lsdisplay_map[] = {
     { LSTRKEY( "attach"  ),			LFUNCVAL( lsdisplay_attach ) },
     { LSTRKEY( "setup"   ),			LFUNCVAL( lsdisplay_setup  ) },
-	{ LSTRKEY( "error"   ), 		LROVAL  ( tm1637_error_map ) },
+	DRIVER_REGISTER_LUA_ERRORS(tm1637)
     { LNILKEY, LNILVAL }
 };
 
@@ -198,7 +195,7 @@ static const LUA_REG_TYPE lsdisplay_ins_map[] = {
     { LSTRKEY( "clear"        ),	LFUNCVAL( lsdisplay_clear   	   ) },
 	{ LSTRKEY( "__metatable"  ),    LROVAL  ( lsdisplay_ins_map 	   ) },
 	{ LSTRKEY( "__index"      ),   	LROVAL  ( lsdisplay_ins_map 	   ) },
-	{ LSTRKEY( "__gc"         ),   	LROVAL  ( lsdisplay_ins_gc 		   ) },
+	{ LSTRKEY( "__gc"         ),   	LFUNCVAL( lsdisplay_ins_gc 		   ) },
     { LNILKEY, LNILVAL }
 };
 

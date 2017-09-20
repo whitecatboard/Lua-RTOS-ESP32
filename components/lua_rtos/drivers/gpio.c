@@ -2,7 +2,7 @@
  * Lua RTOS, gpio driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -27,67 +27,111 @@
  * this software.
  */
 
+#include "sdkconfig.h"
+
+#include "freertos/FreeRTOS.h"
+
+#include "esp_log.h"
 #include "esp_err.h"
 #include "esp_attr.h"
+#include "driver/rmt.h"
+#include "driver/periph_ctrl.h"
+#include "soc/rmt_reg.h"
+
+#include "driver/gpio.h"
 
 #include <string.h>
+#include <math.h>
 
 #include <sys/driver.h>
+#include <sys/status.h>
+
 #include <drivers/gpio.h>
+#include <drivers/pca9xxx.h>
 #include <drivers/cpu.h>
 #include <drivers/timer.h>
 
 // Driver locks
 static driver_unit_lock_t gpio_locks[CPU_LAST_GPIO + 1];
 
-// Driver errors
-DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPinDirection, "invalid pin direction", GPIO_ERR_INVALID_PIN_DIRECTION);
-DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPin, "invalid pin", GPIO_ERR_INVALID_PIN);
-DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPort, "invalid port", GPIO_ERR_INVALID_PORT);
-DRIVER_REGISTER_ERROR(GPIO, gpio, NotEnoughtMemory, "not enough memory", GPIO_ERR_NOT_ENOUGH_MEMORY);
+// Register drivers and errors
+DRIVER_REGISTER_BEGIN(GPIO,gpio,gpio_locks,NULL,NULL);
+	DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPinDirection, "invalid pin direction", GPIO_ERR_INVALID_PIN_DIRECTION);
+	DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPin, "invalid pin", GPIO_ERR_INVALID_PIN);
+	DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPort, "invalid port", GPIO_ERR_INVALID_PORT);
+	DRIVER_REGISTER_ERROR(GPIO, gpio, NotEnoughtMemory, "not enough memory", GPIO_ERR_NOT_ENOUGH_MEMORY);
+DRIVER_REGISTER_END(GPIO,gpio,gpio_locks,NULL,NULL);
 
 /*
  * Low level gpio operations
  */
 
-void IRAM_ATTR gpio_ll_pin_set(uint8_t pin) {
+driver_error_t * IRAM_ATTR gpio_ll_pin_set(uint8_t pin) {
 	if (pin < 32) {
 		GPIO.out_w1ts = (1 << pin);
-	} else {
+	} else if (pin < 40) {
 		GPIO.out1_w1ts.data = (1 << (pin - 32));
 	}
+#if EXTERNAL_GPIO
+	else {
+		return pca_9xxx_pin_set(pin - 40);
+	}
+#endif
+
+	return NULL;
 }
 
-void IRAM_ATTR gpio_ll_pin_clr(uint8_t pin) {
+driver_error_t *  IRAM_ATTR gpio_ll_pin_clr(uint8_t pin) {
 	if (pin < 32) {
 		GPIO.out_w1tc = (1 << pin);
-	} else {
+	} else if (pin < 40) {
 		GPIO.out1_w1tc.data = (1 << (pin - 32));
 	}
+#if EXTERNAL_GPIO
+	else {
+		return pca_9xxx_pin_clr(pin - 40);
+	}
+#endif
+
+	return NULL;
 }
 
-void IRAM_ATTR gpio_ll_pin_inv(int8_t pin) {
+driver_error_t *  IRAM_ATTR gpio_ll_pin_inv(int8_t pin) {
 	if (pin < 32) {
 		if (GPIO.out & (1 << pin)) {
-			gpio_ll_pin_clr(pin);
+			return gpio_ll_pin_clr(pin);
 		} else {
-			gpio_ll_pin_set(pin);
+			return gpio_ll_pin_set(pin);
 		}
-	} else {
+	} else if (pin < 40) {
 		if (GPIO.out1.val & (1 << pin)) {
-			gpio_ll_pin_clr(pin);
+			return gpio_ll_pin_clr(pin);
 		} else {
-			gpio_ll_pin_set(pin);
+			return gpio_ll_pin_set(pin);
 		}
 	}
+#if EXTERNAL_GPIO
+	else {
+		return pca_9xxx_pin_inv(pin - 40);
+	}
+#endif
+
+	return NULL;
 }
 
 uint8_t IRAM_ATTR gpio_ll_pin_get(int8_t pin) {
     if (pin < 32) {
-        return (GPIO.in >> pin) & 0x1;
-    } else {
-        return (GPIO.in1.data >> (pin - 32)) & 0x1;
+        return ((GPIO.in & (1ULL << pin)) != 0);
+    } else if (pin < 40) {
+        return ((GPIO.in1.data & (1ULL << (pin - 32))) != 0);
     }
+#if EXTERNAL_GPIO
+    else {
+    	return pca_9xxx_pin_get(pin - 40);
+    }
+#endif
+
+    return 0;
 }
 
 /*
@@ -95,83 +139,182 @@ uint8_t IRAM_ATTR gpio_ll_pin_get(int8_t pin) {
  *
  */
 driver_error_t *gpio_pin_output(uint8_t pin) {
-	gpio_config_t io_conf;
+	if (pin < 40) {
+		gpio_config_t io_conf;
 
-	// Sanity checks
-	if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		// Sanity checks
+		if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
+
+		io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+		io_conf.mode = GPIO_MODE_OUTPUT;
+		io_conf.pin_bit_mask = (GPIO_BIT_MASK << pin);
+		io_conf.pull_down_en = 0;
+		io_conf.pull_up_en = 0;
+
+		gpio_config(&io_conf);
 	}
+#if EXTERNAL_GPIO
+	else {
+		if (pin >= 40 + EXTERNAL_GPIO_PINS) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
 
-    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
-    io_conf.mode = GPIO_MODE_OUTPUT;
-    io_conf.pin_bit_mask = (GPIO_BIT_MASK << pin);
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 0;
+		driver_error_t *error;
 
-    gpio_config(&io_conf);
+		error = pca_9xxx_pin_output(pin - 40);
+		if (error) {
+			return error;
+		}
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+#endif
 
-    return NULL;
+	return NULL;
 }
 
 driver_error_t *gpio_pin_input(uint8_t pin) {
-	gpio_config_t io_conf;
+	if (pin < 40) {
+		gpio_config_t io_conf;
 
-	// Sanity checks
-	if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		// Sanity checks
+		if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
+
+		io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+		io_conf.mode = GPIO_MODE_INPUT;
+		io_conf.pin_bit_mask = (GPIO_BIT_MASK << pin);
+		io_conf.pull_down_en = 0;
+		io_conf.pull_up_en = 0;
+
+		gpio_config(&io_conf);
 	}
+#if EXTERNAL_GPIO
+	else {
+		if (pin >= 40 + EXTERNAL_GPIO_PINS) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
 
-	io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pin_bit_mask = (GPIO_BIT_MASK << pin);
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 0;
+		driver_error_t *error;
 
-    gpio_config(&io_conf);
+		error = pca_9xxx_pin_input(pin - 40);
+		if (error) {
+			return error;
+		}
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+#endif
 
     return NULL;
 }
 
 driver_error_t *gpio_pin_set(uint8_t pin) {
-	// Sanity checks
-	if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
-	}
+	if (pin < 40) {
+		// Sanity checks
+		if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
 
-	gpio_ll_pin_set(pin);
+		return gpio_ll_pin_set(pin);
+	}
+#if EXTERNAL_GPIO
+	else {
+		if (pin >= 40 + EXTERNAL_GPIO_PINS) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+
+		driver_error_t *error;
+
+		error = pca_9xxx_pin_set(pin - 40);
+		if (error) {
+			return error;
+		}
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+#endif
 
 	return NULL;
 }
 
 driver_error_t *gpio_pin_clr(uint8_t pin) {
-	// Sanity checks
-	if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
-	}
+	if (pin < 40) {
+		// Sanity checks
+		if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
 
-	gpio_ll_pin_clr(pin);
+		return gpio_ll_pin_clr(pin);
+	}
+#if EXTERNAL_GPIO
+	else {
+		if (pin >= 40 + EXTERNAL_GPIO_PINS) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+
+		driver_error_t *error;
+
+		error = pca_9xxx_pin_clr(pin - 40);
+		if (error) {
+			return error;
+		}
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+#endif
 
 	return NULL;
 }
 
 driver_error_t *gpio_pin_inv(uint8_t pin) {
-	driver_error_t *error = NULL;
+	if (pin < 40) {
+		// Sanity checks
+		if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
 
-	// Sanity checks
-	if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		return gpio_ll_pin_inv(pin);
 	}
+#if EXTERNAL_GPIO
+	else {
+		if (pin >= 40 + EXTERNAL_GPIO_PINS) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
 
-	gpio_ll_pin_inv(pin);
+		driver_error_t *error;
 
-	return error;
+		error = pca_9xxx_pin_inv(pin - 40);
+		if (error) {
+			return error;
+		}
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+#endif
+
+	return NULL;
 }
 
 driver_error_t *gpio_pin_get(uint8_t pin, uint8_t *val) {
 	// Sanity checks
-	if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+	if (pin < 40) {
+		if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
 	}
+#if EXTERNAL_GPIO
+	else {
+		if (pin >= 40 + EXTERNAL_GPIO_PINS) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+#endif
 
 	*val = gpio_ll_pin_get(pin);
 
@@ -180,33 +323,70 @@ driver_error_t *gpio_pin_get(uint8_t pin, uint8_t *val) {
 
 driver_error_t *gpio_pin_pullup(uint8_t pin) {
 	// Sanity checks
-	if (!(GPIO_ALL & (GPIO_BIT_MASK << pin))) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
-	}
+	if (pin < 40) {
+		if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
 
-	gpio_set_pull_mode(pin, GPIO_PULLUP_ONLY);
+		gpio_set_pull_mode(pin, GPIO_PULLUP_ONLY);
+	}
+#if EXTERNAL_GPIO
+	else {
+		if (pin >= 40 + EXTERNAL_GPIO_PINS) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+
+		return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_UP_NOT_ALLOWED, NULL);
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+#endif
 
 	return NULL;
 }
 
 driver_error_t *gpio_pin_pulldwn(uint8_t pin) {
 	// Sanity checks
-	if (!(GPIO_ALL & (GPIO_BIT_MASK << pin))) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
-	}
+	if (pin < 40) {
+		if (!(GPIO_ALL & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
 
-	gpio_set_pull_mode(pin, GPIO_PULLDOWN_ONLY);
+		gpio_set_pull_mode(pin, GPIO_PULLDOWN_ONLY);
+	}
+#if EXTERNAL_GPIO
+	else {
+		if (pin >= 40 + EXTERNAL_GPIO_PINS) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+
+		return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_DOWN_NOT_ALLOWED, NULL);
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+#endif
 
 	return NULL;
 }
 
 driver_error_t *gpio_pin_nopull(uint8_t pin) {
 	// Sanity checks
-	if (!(GPIO_ALL & (GPIO_BIT_MASK << pin))) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
-	}
+	if (pin < 40) {
+		if (!(GPIO_ALL & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
 
-	gpio_set_pull_mode(pin, GPIO_FLOATING);
+		gpio_set_pull_mode(pin, GPIO_FLOATING);
+	}
+#if EXTERNAL_GPIO
+	else {
+		if (pin >= 40 + EXTERNAL_GPIO_PINS) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+#endif
 
 	return NULL;
 }
@@ -219,24 +399,46 @@ driver_error_t *gpio_pin_nopull(uint8_t pin) {
 // Configure gpio as input using a mask
 // If bit n on mask is set to 1 the gpio is configured
 driver_error_t *gpio_pin_input_mask(uint8_t port, gpio_pin_mask_t pinmask) {
-	gpio_config_t io_conf;
+	if (port == 1) {
+		gpio_config_t io_conf;
 
-	// Sanity checks
-	if (!(GPIO_PORT_ALL & port)) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+		// Sanity checks
+		if (0xffffff0000000000 & pinmask) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+
+		if (!(GPIO_ALL_IN & pinmask)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
+
+		if (!(GPIO_PORT_ALL & port)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+		}
+
+		if (!(GPIO_ALL_IN & pinmask)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
+
+	    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+	    io_conf.mode = GPIO_MODE_INPUT;
+	    io_conf.pin_bit_mask = pinmask;
+	    io_conf.pull_down_en = 0;
+	    io_conf.pull_up_en = 0;
+
+	    gpio_config(&io_conf);
 	}
+#if EXTERNAL_GPIO
+	else {
+		driver_error_t *error;
 
-	if (!(GPIO_ALL_IN & pinmask)) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		error = pca_9xxx_pin_input_mask(port - 2, (uint8_t)pinmask);
+		if (error) {
+			return error;
+		}
 	}
-
-    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pin_bit_mask = pinmask;
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 0;
-
-    gpio_config(&io_conf);
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+#endif
 
     return NULL;
 }
@@ -244,20 +446,38 @@ driver_error_t *gpio_pin_input_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 // Configure gpio as output using a mask
 // If bit n on mask is set to 1 the gpio is configured
 driver_error_t *gpio_pin_output_mask(uint8_t port, gpio_pin_mask_t pinmask) {
-	gpio_config_t io_conf;
+	if (port == 1) {
+		gpio_config_t io_conf;
 
-	// Sanity checks
-	if (!(GPIO_ALL_OUT & pinmask)) {
-		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		// Sanity checks
+		if (0xffffff0000000000 & pinmask) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+
+		if (!(GPIO_ALL_OUT & pinmask)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
+
+	    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+	    io_conf.mode = GPIO_MODE_OUTPUT;
+	    io_conf.pin_bit_mask = pinmask;
+	    io_conf.pull_down_en = 0;
+	    io_conf.pull_up_en = 0;
+
+	    gpio_config(&io_conf);
 	}
+#if EXTERNAL_GPIO
+	else {
+		driver_error_t *error;
 
-    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
-    io_conf.mode = GPIO_MODE_OUTPUT;
-    io_conf.pin_bit_mask = pinmask;
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 0;
-
-    gpio_config(&io_conf);
+		error = pca_9xxx_pin_output_mask(port - 2, (uint8_t)pinmask);
+		if (error) {
+			return error;
+		}
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+#endif
 
     return NULL;
 }
@@ -266,19 +486,38 @@ driver_error_t *gpio_pin_output_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 // If bit n on mask is set to 1 the gpio is set pull-up
 driver_error_t *gpio_pin_pullup_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 	driver_error_t *error = NULL;
-	gpio_pin_mask_t mask = GPIO_BIT_MASK;
-	int i;
-	
-	for(i=0; i < GPIO_PER_PORT; i++) {
-		if (pinmask & mask) {
-			if ((error = gpio_pin_pullup(i))) {
-				return error;
-			}
-		}
-		
-		mask = (mask << 1);
-	}	
 
+	if (port == 1) {
+		// Sanity checks
+		if (0xffffff0000000000 & pinmask) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+
+		if (!(GPIO_ALL_IN & pinmask)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
+
+		gpio_pin_mask_t mask = GPIO_BIT_MASK;
+		int i;
+
+		for(i=0; i < GPIO_PER_PORT; i++) {
+			if (pinmask & mask) {
+				if ((error = gpio_pin_pullup(i))) {
+					return error;
+				}
+			}
+
+			mask = (mask << 1);
+		}
+	}
+#if EXTERNAL_GPIO
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_UP_NOT_ALLOWED, NULL);
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+#endif
+	
 	return NULL;
 }
 
@@ -286,18 +525,37 @@ driver_error_t *gpio_pin_pullup_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 // If bit n on mask is set to 1 the gpio is set pull-up
 driver_error_t *gpio_pin_pulldwn_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 	driver_error_t *error = NULL;
-	gpio_pin_mask_t mask = GPIO_BIT_MASK;
-	int i;
 	
-	for(i=0; i < GPIO_PER_PORT; i++) {
-		if (pinmask & mask) {
-			if ((error = gpio_pin_pulldwn(i))) {
-				return error;
-			}
+	if (port == 1) {
+		// Sanity checks
+		if (0xffffff0000000000 & pinmask) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
 		}
-		
-		mask = (mask << 1);
-	}	
+
+		if (!(GPIO_ALL_IN & pinmask)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
+
+		gpio_pin_mask_t mask = GPIO_BIT_MASK;
+		int i;
+
+		for(i=0; i < GPIO_PER_PORT; i++) {
+			if (pinmask & mask) {
+				if ((error = gpio_pin_pulldwn(i))) {
+					return error;
+				}
+			}
+
+			mask = (mask << 1);
+		}
+	}
+#if EXTERNAL_GPIO
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_DOWN_NOT_ALLOWED, NULL);
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+#endif
 
 	return NULL;
 }
@@ -306,18 +564,37 @@ driver_error_t *gpio_pin_pulldwn_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 // If bit n on mask is set to 1 the gpio with no pull-up and no pull-down
 driver_error_t *gpio_pin_nopull_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 	driver_error_t *error = NULL;
-	gpio_pin_mask_t mask = GPIO_BIT_MASK;
-	int i;
 	
-	for(i=0; i < GPIO_PER_PORT; i++) {
-		if (pinmask & mask) {
-			if ((error = gpio_pin_nopull(i))) {
-				return error;
-			}
+	if (port == 1) {
+		// Sanity checks
+		if (0xffffff0000000000 & pinmask) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
 		}
-		
-		mask = (mask << 1);
-	}	
+
+		if (!(GPIO_ALL_IN & pinmask)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
+
+		gpio_pin_mask_t mask = GPIO_BIT_MASK;
+		int i;
+
+		for(i=0; i < GPIO_PER_PORT; i++) {
+			if (pinmask & mask) {
+				if ((error = gpio_pin_nopull(i))) {
+					return error;
+				}
+			}
+
+			mask = (mask << 1);
+		}
+	}
+#if EXTERNAL_GPIO
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_DOWN_NOT_ALLOWED, NULL);
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+#endif
 
 	return NULL;
 }
@@ -326,18 +603,42 @@ driver_error_t *gpio_pin_nopull_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 // If bit n on mask is set to 1 the gpio is put on the high state
 driver_error_t *gpio_pin_set_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 	driver_error_t *error = NULL;
-	gpio_pin_mask_t mask = GPIO_BIT_MASK;
-	int i;
 
-	for(i=0; i < GPIO_PER_PORT; i++) {
-		if (pinmask & mask) {
-			if ((error = gpio_pin_set(i))) {
-				return error;
-			}
+	if (port == 1) {
+		// Sanity checks
+		if (0xffffff0000000000 & pinmask) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
 		}
 
-		mask = (mask << 1);
+		if (!(GPIO_ALL_OUT & pinmask)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
+
+		gpio_pin_mask_t mask = GPIO_BIT_MASK;
+		int i;
+
+		for(i=0; i < GPIO_PER_PORT; i++) {
+			if (pinmask & mask) {
+				if ((error = gpio_pin_set(i))) {
+					return error;
+				}
+			}
+
+			mask = (mask << 1);
+		}
 	}
+#if EXTERNAL_GPIO
+	else {
+		driver_error_t *error;
+
+		error = pca_9xxx_pin_set_mask(port - 2, (uint8_t)pinmask);
+		if (error) {
+			return error;
+		}
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+#endif
 
 	return NULL;
 }
@@ -346,18 +647,42 @@ driver_error_t *gpio_pin_set_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 // If bit n on mask is set to 1 the gpio is put on the high state
 driver_error_t *gpio_port_set(uint8_t port, gpio_pin_mask_t pinmask) {
 	driver_error_t *error = NULL;
-	gpio_pin_mask_t mask = GPIO_BIT_MASK;
-	int i;
 
-	for(i=0; i < GPIO_PER_PORT; i++) {
-		if (pinmask & mask) {
-			if ((error = gpio_pin_set(i))) {
-				return error;
-			}
+	if (port == 1) {
+		// Sanity checks
+		if (0xffffff0000000000 & pinmask) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
 		}
 
-		mask = (mask << 1);
+		if (!(GPIO_ALL_OUT & pinmask)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
+
+		gpio_pin_mask_t mask = GPIO_BIT_MASK;
+		int i;
+
+		for(i=0; i < GPIO_PER_PORT; i++) {
+			if (pinmask & mask) {
+				if ((error = gpio_pin_set(i))) {
+					return error;
+				}
+			}
+
+			mask = (mask << 1);
+		}
 	}
+#if EXTERNAL_GPIO
+	else {
+		driver_error_t *error;
+
+		error = pca_9xxx_pin_set_mask(port - 2, (uint8_t)pinmask);
+		if (error) {
+			return error;
+		}
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+#endif
 
 	return error;
 }
@@ -365,19 +690,42 @@ driver_error_t *gpio_port_set(uint8_t port, gpio_pin_mask_t pinmask) {
 // Put gpio on the low state using a mask
 // If bit n on mask is set to 1 the gpio is put on the low state
 driver_error_t *gpio_pin_clr_mask(uint8_t port, gpio_pin_mask_t pinmask) {
-	driver_error_t *error = NULL;
-	gpio_pin_mask_t mask = GPIO_BIT_MASK;
-	int i;
-
-	for(i=0; i < GPIO_PER_PORT; i++) {
-		if (pinmask & mask) {
-			if ((error = gpio_pin_clr(i))) {
-				return error;
-			}
+	if (port == 1) {
+		// Sanity checks
+		if (0xffffff0000000000 & pinmask) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
 		}
 
-		mask = (mask << 1);
+		if (!(GPIO_ALL_OUT & pinmask)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
+
+		driver_error_t *error = NULL;
+		gpio_pin_mask_t mask = GPIO_BIT_MASK;
+		int i;
+
+		for(i=0; i < GPIO_PER_PORT; i++) {
+			if (pinmask & mask) {
+				if ((error = gpio_pin_clr(i))) {
+					return error;
+				}
+			}
+
+			mask = (mask << 1);
+		}
 	}
+#if EXTERNAL_GPIO
+	else {
+		driver_error_t *error;
+
+		error = pca_9xxx_pin_clr_mask(port - 2, (uint8_t)pinmask);
+		if (error) {
+			return error;
+		}
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+#endif
 
 	return NULL;
 }
@@ -386,44 +734,85 @@ driver_error_t *gpio_pin_clr_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 // Invert gpio using a mask
 // If bit n on mask is set to 1 the gpio is inverted
 driver_error_t *gpio_pin_inv_mask(uint8_t port, gpio_pin_mask_t pinmask) {
-	driver_error_t *error = NULL;
-	gpio_pin_mask_t mask = GPIO_BIT_MASK;
-	int i;
-
-	for(i=0; i < GPIO_PER_PORT; i++) {
-		if (pinmask & mask) {
-			if ((error = gpio_pin_inv(i))) {
-				return error;
-			}
+	if (port == 1) {
+		// Sanity checks
+		if (0xffffff0000000000 & pinmask) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
 		}
 
-		mask = (mask << 1);
+		if (!(GPIO_ALL_OUT & pinmask)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
+
+		driver_error_t *error = NULL;
+		gpio_pin_mask_t mask = GPIO_BIT_MASK;
+		int i;
+
+		for(i=0; i < GPIO_PER_PORT; i++) {
+			if (pinmask & mask) {
+				if ((error = gpio_pin_inv(i))) {
+					return error;
+				}
+			}
+
+			mask = (mask << 1);
+		}
 	}
+#if EXTERNAL_GPIO
+	else {
+		driver_error_t *error;
+
+		error = pca_9xxx_pin_inv_mask(port - 2, (uint8_t)pinmask);
+		if (error) {
+			return error;
+		}
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+#endif
 
 	return NULL;
 }
 
 // Get gpio values using a mask
 driver_error_t *gpio_pin_get_mask(uint8_t port, gpio_pin_mask_t pinmask, gpio_pin_mask_t *value) {
-	driver_error_t *error = NULL;
-	gpio_pin_mask_t mask = GPIO_BIT_MASK;
-	gpio_pin_mask_t get_mask = 0;
-	uint8_t val;
-	int i;
-
-	for(i=0; i < GPIO_PER_PORT; i++) {
-		if (pinmask & mask) {
-			if ((error = gpio_pin_get(i, &val))) {
-				return error;
-			};
-
-			get_mask |= ((gpio_pin_mask_t)val << i);
+	if (port == 1) {
+		// Sanity checks
+		if (0xffffff0000000000 & pinmask) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
 		}
 
-		mask = (mask << 1);
-	}
+		if (!(GPIO_ALL_IN & pinmask)) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
+		}
 
-	*value = get_mask;
+		driver_error_t *error = NULL;
+		gpio_pin_mask_t mask = GPIO_BIT_MASK;
+		gpio_pin_mask_t get_mask = 0;
+		uint8_t val;
+		int i;
+
+		for(i=0; i < GPIO_PER_PORT; i++) {
+			if (pinmask & mask) {
+				if ((error = gpio_pin_get(i, &val))) {
+					return error;
+				};
+
+				get_mask |= ((gpio_pin_mask_t)val << i);
+			}
+
+			mask = (mask << 1);
+		}
+
+		*value = get_mask;
+	}
+#if EXTERNAL_GPIO
+	else {
+		pca_9xxx_pin_get_mask(port - 2, (uint8_t)pinmask, (uint8_t *)value);
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+#endif
 
 	return NULL;
 }
@@ -435,22 +824,279 @@ driver_error_t *gpio_pin_get_mask(uint8_t port, gpio_pin_mask_t pinmask, gpio_pi
 
 // Configure all gpio's port as input
 driver_error_t *gpio_port_input(uint8_t port) {
-	return gpio_pin_input_mask(port, GPIO_ALL_IN);
+	if (port == 1) {
+		return gpio_pin_input_mask(port, GPIO_ALL_IN);
+	}
+#if EXTERNAL_GPIO
+	else {
+		driver_error_t *error;
+
+		error = pca_9xxx_pin_input_mask(port - 2, 0xff);
+		if (error) {
+			return error;
+		}
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+#endif
+
+	return NULL;
 }
 
 // Configure all gpio's port as output
 driver_error_t *gpio_port_output(uint8_t port) {
-	return gpio_pin_output_mask(port, GPIO_ALL_OUT);
+	if (port == 1) {
+		return gpio_pin_output_mask(port, GPIO_ALL_OUT);
+	}
+#if EXTERNAL_GPIO
+	else {
+		driver_error_t *error;
+
+		error = pca_9xxx_pin_output_mask(port - 2, 0xff);
+		if (error) {
+			return error;
+		}
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+#endif
+
+	return NULL;
 }
 
 // Get port gpio values
 driver_error_t *gpio_port_get(uint8_t port, gpio_pin_mask_t *value) {
-	return gpio_pin_get_mask(port, GPIO_ALL_IN, value);
+	if (port == 1) {
+		return gpio_pin_get_mask(port, GPIO_ALL_IN, value);
+	}
+#if EXTERNAL_GPIO
+	else {
+		pca_9xxx_pin_get_mask(port - 2, 0xff, (uint8_t *)value);
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+#endif
+
+	return NULL;
 }
 
 // Get all port gpio values
 driver_error_t *gpio_port_get_mask(uint8_t port, gpio_pin_mask_t *value) {
-	return gpio_pin_get_mask(port, GPIO_ALL_IN, value);
+	if (port == 1) {
+		return gpio_pin_get_mask(port, GPIO_ALL_IN, value);
+	}
+#if EXTERNAL_GPIO
+	else {
+		pca_9xxx_pin_get_mask(port - 2, 0xff,  (uint8_t *)value);
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+#endif
+
+	return NULL;
+}
+
+driver_error_t *gpio_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type, void *args) {
+	if (pin < 40) {
+		// Sanity checks
+		if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INT_NOT_ALLOWED, "must be an input pin");
+		}
+
+		// Configure interrupts
+	    if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
+	    	gpio_install_isr_service(0);
+
+	    	status_set(STATUS_ISR_SERVICE_INSTALLED);
+	    }
+
+	    gpio_set_intr_type(pin, type);
+	    gpio_isr_handler_add(pin, gpio_isr, args);
+	}
+#if EXTERNAL_GPIO
+	else {
+		// Sanity checks
+		if (pin >= 40 + EXTERNAL_GPIO_PINS) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+
+		pca_9xxx_isr_attach(pin - 40, gpio_isr, type, args);
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+#endif
+
+	return NULL;
+}
+
+driver_error_t *gpio_isr_detach(uint8_t pin) {
+	if (pin < 40) {
+		// Sanity checks
+		if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INT_NOT_ALLOWED, "must be an input pin");
+		}
+
+		gpio_isr_handler_remove(pin);
+	}
+#if EXTERNAL_GPIO
+	else {
+		// Sanity checks
+		if (pin >= 40 + EXTERNAL_GPIO_PINS) {
+			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+		}
+
+		pca_9xxx_isr_detach(pin - 40);
+	}
+#else
+	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+#endif
+
+	return NULL;
+}
+
+uint8_t gpio_is_input(uint8_t pin) {
+	if (pin < 40) {
+		return (((GPIO_BIT_MASK << pin) & GPIO_ALL_IN) != 0);
+	}
+#if EXTERNAL_GPIO
+	else {
+		return 1;
+	}
+#endif
+
+	return 0;
+}
+
+uint8_t gpio_is_output(uint8_t pin) {
+	if (pin < 40) {
+		return (((GPIO_BIT_MASK << pin) & GPIO_ALL_OUT) != 0);
+	}
+#if EXTERNAL_GPIO
+	else {
+		return 1;
+	}
+#endif
+
+	return 0;
+}
+
+int IRAM_ATTR gpio_get_pulse_time(uint8_t pin, uint8_t level, uint32_t timeout) {
+	esp_err_t error;
+	uint32_t elapsed;
+
+	esp_log_level_set("rmt", ESP_LOG_NONE);
+
+	// If no timeout is provided set a 10 second timeout
+	if (timeout == 0) {
+		timeout = 10000000;
+	}
+
+	// Configure RMT RX for read the echo pulse
+	//
+	// RMT is configure for have a click time of 1 usec, so
+	// 1 tick = 1 usec
+	//
+
+	// Convert timeout to xthal_get_ccount units (ticks)
+	timeout = timeout * (APB_CLK_FREQ / 1000000.0);
+
+    rmt_config_t rmt_rx;
+    uint8_t channel;
+
+    rmt_rx.gpio_num = pin;
+    rmt_rx.clk_div = APB_CLK_FREQ / 1000000;
+    rmt_rx.mem_block_num = 1;
+    rmt_rx.rmt_mode = RMT_MODE_RX;
+    rmt_rx.rx_config.filter_en = 0;
+    rmt_rx.rx_config.filter_ticks_thresh = 0;
+    rmt_rx.rx_config.idle_threshold = timeout;
+
+    // This function is a Lua RTOS patch of the esp-idf RMT driver.
+    // In this function RMT channel is provided by the driver.
+    error = rmt_config_one(&rmt_rx, &channel);
+
+	esp_log_level_set("rmt", ESP_LOG_ERROR);
+
+    if (error == ESP_ERR_NOT_FOUND) {
+    	uint32_t start, end;
+
+    	// Any RMT channel is available. Detect pulse by software
+    	// Convert timeout to xthal_get_ccount units (ticks)
+    	timeout = timeout * (cpu_speed() / 500000.0);
+
+    	portDISABLE_INTERRUPTS();
+
+    	start = xthal_get_ccount();
+
+    	while (gpio_ll_pin_get(pin) != !level) {
+    		end = xthal_get_ccount();
+    		if ((end - start) >= timeout) {
+    			portENABLE_INTERRUPTS();
+    			return -1;
+    		}
+    	}
+
+    	while (gpio_ll_pin_get(pin) != level) {
+    		end = xthal_get_ccount();
+    		if ((end - start) >= timeout) {
+    			portENABLE_INTERRUPTS();
+    			return -1;
+    		}
+    	}
+
+    	start = xthal_get_ccount();
+
+    	while (gpio_ll_pin_get(pin) != !level) {
+    		end = xthal_get_ccount();
+    		if ((end - start) >= timeout) {
+    			portENABLE_INTERRUPTS();
+    			return -1;
+    		}
+    	}
+
+    	end = xthal_get_ccount();
+
+    	portENABLE_INTERRUPTS();
+
+    	elapsed = ((double)end - (double)start) / (double)((cpu_speed() / 500000.0));
+    } else {
+    	// RMT channel is available
+    	size_t rx_size = 0;
+        RingbufHandle_t rb = NULL;
+
+    	// Install driver
+        error = rmt_driver_install(channel, 32, 0);
+        assert(error == ESP_OK);
+
+        error = rmt_get_ringbuf_handle(channel, &rb);
+        assert(error == ESP_OK);
+
+        // Start
+        error = rmt_rx_start(channel, 1);
+        assert(error == ESP_OK);
+
+        // Read item
+    	rmt_item32_t* item = (rmt_item32_t*) xRingbufferReceive(rb, &rx_size, 1000);
+    	if (item) {
+    		// Get elapsed time (in usecs)
+    		elapsed = (item->duration0 & 0x7fff);
+
+    		vRingbufferReturnItem(rb, (void*) item);
+    	} else {
+        	// Uninstall driver
+        	rmt_driver_uninstall(channel);
+        	esp_log_level_set("rmt", ESP_LOG_ERROR);
+
+        	return -1;
+    	}
+
+    	// Uninstall driver
+    	rmt_driver_uninstall(channel);
+
+    	esp_log_level_set("rmt", ESP_LOG_ERROR);
+    }
+
+	return elapsed;
 }
 
 /*
@@ -464,6 +1110,3 @@ const char *gpio_portname(uint8_t pin) {
 uint8_t gpio_name(uint8_t pin) {
 	return pin;
 }
-
-DRIVER_REGISTER(GPIO,gpio,gpio_locks,NULL,NULL);
-

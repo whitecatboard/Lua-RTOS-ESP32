@@ -34,39 +34,62 @@
 
 #include "esp_attr.h"
 
+#include <string.h>
+
+#include <sys/mutex.h>
+
 #include <drivers/sensor.h>
 #include <drivers/encoder.h>
 
 driver_error_t *relative_rotary_encoder_setup(sensor_instance_t *unit);
+driver_error_t *relative_rotary_encoder_unsetup(sensor_instance_t *unit);
 
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) relative_rotary_encoder_sensor = {
 	.id = "REL_ROT_ENCODER",
 	.interface = {
-		GPIO_INTERFACE,
-		GPIO_INTERFACE,
-		GPIO_INTERFACE,
+		{.type = GPIO_INTERFACE, .flags = (SENSOR_FLAG_CUSTOM_INTERFACE_INIT | SENSOR_FLAG_AUTO_ACQ)},
+		{.type = GPIO_INTERFACE, .flags = (SENSOR_FLAG_CUSTOM_INTERFACE_INIT | SENSOR_FLAG_AUTO_ACQ)},
+		{.type = GPIO_INTERFACE, .flags = (SENSOR_FLAG_CUSTOM_INTERFACE_INIT | SENSOR_FLAG_AUTO_ACQ)},
 	},
-	.flags = (SENSOR_FLAG_CUSTOM_INTERFACE_INIT | SENSOR_FLAG_AUTO_ACQ),
+	.interface_name = {"A", "B", "SW"},
 	.data = {
 		{.id = "dir", .type = SENSOR_DATA_INT},
 		{.id = "val", .type = SENSOR_DATA_INT},
-		{.id = "sw", .type = SENSOR_DATA_INT},
+		{.id = "sw",  .type = SENSOR_DATA_INT},
 	},
-	.setup = relative_rotary_encoder_setup
+	.setup = relative_rotary_encoder_setup,
+	.unsetup = relative_rotary_encoder_unsetup,
 };
 
 /*
  * Helper functions
  */
 static void IRAM_ATTR callback_func(int callback, int8_t dir, uint32_t counter, uint8_t button) {
-	sensor_instance_t *unit = (int)callback;
+	sensor_instance_t *unit = (sensor_instance_t *)callback;
 
+	mtx_lock(&unit->mtx);
+
+	// Latch values
+	unit->latch[0].value.raw.value = unit->data[0].raw.value;
+	unit->latch[1].value.raw.value = unit->data[1].raw.value;
+	unit->latch[2].value.raw.value = unit->data[2].raw.value;
+
+	// Store current data
 	unit->data[0].integerd.value = dir;
 	unit->data[1].integerd.value = counter;
 	unit->data[2].integerd.value = button;
 
-	sensor_quue_callbacks(unit);
+	if (counter != unit->latch[1].value.integerd.value) {
+		// Encoder is moving
+		// dir is -1 or 1, we must clear latch for ensure that callback on dir
+		// property willbe called
+		unit->latch[0].value.integerd.value = 0;
+	}
+
+	sensor_queue_callbacks(unit, 0, 2);
+
+	mtx_unlock(&unit->mtx);
 }
 
 /*
@@ -95,5 +118,15 @@ driver_error_t *relative_rotary_encoder_setup(sensor_instance_t *unit) {
 	return NULL;
 }
 
+driver_error_t *relative_rotary_encoder_unsetup(sensor_instance_t *unit) {
+	driver_error_t *error;
+
+	error = encoder_unsetup((encoder_h_t *)unit->unit);
+	if (error){
+		return NULL;
+	}
+
+	return NULL;
+}
 #endif
 #endif

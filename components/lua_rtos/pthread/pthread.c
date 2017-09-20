@@ -29,6 +29,7 @@
 
 #include "luartos.h"
 
+#include "esp_err.h"
 #include "esp_attr.h"
 
 #include "lua.h"
@@ -514,4 +515,8 @@ void pthreadTask(void *taskArgs) {
 
 int pthread_cancel(pthread_t thread) {
 	return 0;
+}
+
+esp_err_t esp_pthread_init(void) {
+    return ESP_OK;
 }

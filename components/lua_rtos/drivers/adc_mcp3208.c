@@ -43,6 +43,30 @@ static int spi_device = -1;
 driver_error_t *adc_mcp3208_setup(adc_channel_t *chan) {
 	driver_error_t *error;
 
+	// Apply default resolution if needed
+	if (chan->resolution == 0) {
+		chan->resolution = 12;
+	}
+
+	if (chan->devid == 0) {
+		chan->devid = CONFIG_ADC_MCP3208_CS;
+	}
+
+	if (chan->vref == 0) {
+		chan->vref = CONFIG_LUA_RTOS_VDD;
+	}
+
+	// Sanity checks
+	if (chan->max != 0) {
+		return driver_error(ADC_DRIVER, ADC_ERR_MAX_SET_NOT_ALLOWED, NULL);
+	}
+
+	if (chan->resolution != 12) {
+		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_RESOLUTION, NULL);
+	}
+
+	chan->max = chan->vref;
+
     // Init SPI bus
 	if (spi_device == -1) {
 		if ((error = spi_setup(CONFIG_ADC_MCP3208_SPI, 1, chan->devid, 0, CONFIG_ADC_MCP3208_SPEED, SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
@@ -53,17 +77,17 @@ driver_error_t *adc_mcp3208_setup(adc_channel_t *chan) {
 	if (!chan->setup) {
 		syslog(
 				LOG_INFO,
-				"adc MCP3208 channel %d at spi%d, cs=%s%d, vref+ %d, vref- %d, %d bits of resolution",
+				"adc MCP3208 channel %d at spi%d, cs=%s%d, %d bits of resolution",
 				chan->channel, CONFIG_ADC_MCP3208_SPI, gpio_portname(CONFIG_ADC_MCP3208_CS),
 				gpio_name(CONFIG_ADC_MCP3208_CS),
-				chan->pvref, chan->nvref, chan->resolution
+				chan->resolution
 		);
 	}
 
 	return NULL;
 }
 
-driver_error_t *adc_mcp3208_read(adc_channel_t *chan, int *raw) {
+driver_error_t *adc_mcp3208_read(adc_channel_t *chan, int *raw, double *mvolts) {
 	uint8_t buff[3];
 
 	int channel = chan->channel;
@@ -73,10 +97,18 @@ driver_error_t *adc_mcp3208_read(adc_channel_t *chan, int *raw) {
 
     spi_ll_select(spi_device);
     spi_ll_bulk_rw(spi_device, 3, buff);
-
     spi_ll_deselect(spi_device);
 
-    *raw = (buff[1] & 0b1111) << 8 | buff[2];
+	int traw = (buff[1] & 0b1111) << 8 | buff[2];
+	double tmvolts = (double)((traw) * (chan->max)) / (double)chan->max_val;
+
+	if (raw) {
+		*raw = traw;
+	}
+
+	if (mvolts) {
+		*mvolts = tmvolts;
+	}
 
     return NULL;
 }

@@ -35,15 +35,11 @@ extern struct mtx once_mtx;
 int pthread_once(pthread_once_t *once_control, void (*init_routine)(void)) {
     // Init once_control, if not
     mtx_lock(&once_mtx);
-#if !MTX_USE_EVENTS
+
     if (once_control->mutex.sem == NULL) {
         mtx_init(&once_control->mutex, NULL, NULL, 0);
     }
-#else
-    if (once_control->mutex.mtxid == 0) {
-        mtx_init(&once_control->mutex, NULL, NULL, 0);
-    }
-#endif    
+
     // Excec init_routine, if needed
     if (mtx_trylock(&once_control->mutex)) {
         init_routine();

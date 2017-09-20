@@ -1,6 +1,8 @@
---- /Users/jaumeolivepetrus/esp-idf/components/vfs/include/sys/dirent.h	2017-01-09 22:18:29.000000000 +0100
-+++ dirent.h	2017-01-09 22:18:23.000000000 +0100
-@@ -43,6 +43,7 @@
+diff --git a/components/vfs/include/sys/dirent.h b/components/vfs/include/sys/dirent.h
+index 57b5be5..ffc764c 100644
+--- a/components/vfs/include/sys/dirent.h
++++ b/components/vfs/include/sys/dirent.h
+@@ -43,6 +43,7 @@ struct dirent {
  #define DT_REG      1
  #define DT_DIR      2
      char d_name[256];   /*!< zero-terminated file name */

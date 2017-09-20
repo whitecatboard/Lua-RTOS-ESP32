@@ -38,22 +38,31 @@
 
 #include <sys/driver.h>
 #include <sys/syslog.h>
+#include <sys/mutex.h>
 
 #include <drivers/can.h>
 #include <drivers/gpio.h>
 
 static uint8_t setup = 0;
 
+struct mtx mtx;
+
 // CAN configuration
 CAN_device_t CAN_cfg;
 
-// Driver message errors
-DRIVER_REGISTER_ERROR(CAN, can, NotEnoughtMemory, "not enough memory", CAN_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(CAN, can, InvalidFrameLength, "invalid frame length", CAN_ERR_INVALID_FRAME_LENGTH);
-DRIVER_REGISTER_ERROR(CAN, can, InvalidUnit, "invalid unit", CAN_ERR_INVALID_UNIT);
-DRIVER_REGISTER_ERROR(CAN, can, NoMoreFiltersAllowed, "no more filters allowed", CAN_ERR_NO_MORE_FILTERS_ALLOWED);
-DRIVER_REGISTER_ERROR(CAN, can, InvalidFilter, "invalid filter", CAN_ERR_INVALID_FILTER);
-DRIVER_REGISTER_ERROR(CAN, can, NotSetup, "is not setup", CAN_ERR_IS_NOT_SETUP);
+// CAN filters
+static uint8_t filters = 0;
+static CAN_filter_t can_filter[CAN_NUM_FILTERS];
+
+// Register driver and errors
+DRIVER_REGISTER_BEGIN(CAN,can,NULL,NULL,NULL);
+	DRIVER_REGISTER_ERROR(CAN, can, NotEnoughtMemory, "not enough memory", CAN_ERR_NOT_ENOUGH_MEMORY);
+	DRIVER_REGISTER_ERROR(CAN, can, InvalidFrameLength, "invalid frame length", CAN_ERR_INVALID_FRAME_LENGTH);
+	DRIVER_REGISTER_ERROR(CAN, can, InvalidUnit, "invalid unit", CAN_ERR_INVALID_UNIT);
+	DRIVER_REGISTER_ERROR(CAN, can, NoMoreFiltersAllowed, "no more filters allowed", CAN_ERR_NO_MORE_FILTERS_ALLOWED);
+	DRIVER_REGISTER_ERROR(CAN, can, InvalidFilter, "invalid filter", CAN_ERR_INVALID_FILTER);
+	DRIVER_REGISTER_ERROR(CAN, can, NotSetup, "is not setup", CAN_ERR_IS_NOT_SETUP);
+DRIVER_REGISTER_END(CAN,can,NULL,NULL,NULL);
 
 /*
  * Helper functions
@@ -93,6 +102,15 @@ driver_error_t *can_setup(int32_t unit, uint16_t speed) {
 	if (!setup) {
 		CAN_cfg.rx_queue = xQueueCreate(50,sizeof(CAN_frame_t));;
 
+		// Init filters
+		uint8_t i;
+		for(i=0;i < CAN_NUM_FILTERS;i++) {
+			can_filter[i].fromID = -1;
+			can_filter[i].toID = -1;
+		}
+
+		filters = 0;
+
 		if (!CAN_cfg.rx_queue) {
 			return driver_error(CAN_DRIVER, CAN_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
@@ -102,6 +120,8 @@ driver_error_t *can_setup(int32_t unit, uint16_t speed) {
 	CAN_init();
 
 	if (!setup) {
+	    mtx_init(&mtx, NULL, NULL, 0);
+
 		syslog(LOG_INFO, "can%d at pins tx=%s%d, rx=%s%d", 0,
 			gpio_portname(CONFIG_LUA_RTOS_CAN_TX), gpio_name(CONFIG_LUA_RTOS_CAN_TX),
 			gpio_portname(CONFIG_LUA_RTOS_CAN_RX), gpio_name(CONFIG_LUA_RTOS_CAN_RX)
@@ -131,11 +151,13 @@ driver_error_t *can_tx(int32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t 
 
 	// Populate frame
 	frame.MsgID = msg_id;
-	frame.DLC = len;
+	frame.FIR.B.DLC = len;
 	memcpy(&frame.data, data, len);
 
 	// TX
+	mtx_lock(&mtx);
 	CAN_write_frame(&frame);
+	mtx_unlock(&mtx);
 
 	return NULL;
 }
@@ -153,12 +175,27 @@ driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_
 	}
 
 	// Read next frame
-	xQueueReceive(CAN_cfg.rx_queue, &frame, portMAX_DELAY);
+    // Check filter
+	uint8_t i;
+    uint8_t pass = 0;
+
+    while (!pass) {
+    	xQueueReceive(CAN_cfg.rx_queue, &frame, portMAX_DELAY);
+        if (filters > 0) {
+            for(i=0;((i < CAN_NUM_FILTERS) && (!pass));i++) {
+            	if ((can_filter[i].fromID >= 0) && (can_filter[i].toID >= 0) && (frame.FIR.B.DLC > 0) && (frame.FIR.B.DLC < 9)) {
+            		pass = ((frame.MsgID >= can_filter[i].fromID) && (frame.MsgID <= can_filter[i].toID));
+            	}
+            }
+        } else {
+        	pass = 1;
+        }
+    }
 
 	*msg_id = frame.MsgID;
 	*msg_type = 0;
-	*len = frame.DLC;
-	memcpy(data, &frame.data, frame.DLC);
+	*len = frame.FIR.B.DLC;
+	memcpy(data, &frame.data, *len);
 
 	return NULL;
 }
@@ -181,9 +218,42 @@ driver_error_t *can_add_filter(int32_t unit, int32_t fromId, int32_t toId) {
 		return driver_error(CAN_DRIVER, CAN_ERR_IS_NOT_SETUP, NULL);
 	}
 
-	if (CAN_add_filter(fromId, toId)) {
+	// Check if there is some filter that match with the
+	// desired filter
+	uint8_t i;
+
+	mtx_lock(&mtx);
+
+	for(i=0;i < CAN_NUM_FILTERS;i++) {
+		if ((fromId >= can_filter[i].fromID) && (toId <= can_filter[i].toID)) {
+			mtx_unlock(&mtx);
+
+			return NULL;
+		}
+	}
+
+	// Add filter
+	for(i=0;i < CAN_NUM_FILTERS;i++) {
+		if ((can_filter[i].fromID  == -1) && (can_filter[i].toID == -1)) {
+			can_filter[i].fromID = fromId;
+			can_filter[i].toID = toId;
+			filters++;
+			break;
+		}
+	}
+
+	if (i == CAN_NUM_FILTERS) {
+		mtx_unlock(&mtx);
+
 		return driver_error(CAN_DRIVER, CAN_ERR_NO_MORE_FILTERS_ALLOWED, NULL);
 	}
+
+	// Reset rx queue
+	portDISABLE_INTERRUPTS();
+	xQueueReset(CAN_cfg.rx_queue);
+	portENABLE_INTERRUPTS();
+
+	mtx_unlock(&mtx);
 
 	return NULL;
 }
@@ -206,13 +276,28 @@ driver_error_t *can_remove_filter(int32_t unit, int32_t fromId, int32_t toId) {
 		return driver_error(CAN_DRIVER, CAN_ERR_IS_NOT_SETUP, NULL);
 	}
 
-	if (CAN_remove_filter(fromId, toId)) {
-		return driver_error(CAN_DRIVER, CAN_ERR_NO_MORE_FILTERS_ALLOWED, NULL);
+	mtx_lock(&mtx);
+
+	uint8_t i;
+	for(i=0;i < CAN_NUM_FILTERS;i++) {
+		if ((can_filter[i].fromID  > -1) && (can_filter[i].toID > -1)) {
+			if ((can_filter[i].fromID  == fromId) && (can_filter[i].toID == toId)) {
+				can_filter[i].fromID = -1;
+				can_filter[i].toID = -1;
+				filters--;
+				break;
+			}
+		}
 	}
+
+	// Reset rx queue
+	portDISABLE_INTERRUPTS();
+	xQueueReset(CAN_cfg.rx_queue);
+	portENABLE_INTERRUPTS();
+
+	mtx_unlock(&mtx);
 
 	return NULL;
 }
-
-DRIVER_REGISTER(CAN,can,NULL,NULL,NULL);
 
 #endif

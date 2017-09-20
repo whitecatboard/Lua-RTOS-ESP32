@@ -124,8 +124,10 @@ const uint8_t map[] = {
 		0b01110001     // F
 };
 
-// Driver message errors
-DRIVER_REGISTER_ERROR(TM1637, tm1637, TimeOut, "timeout", TM1637_ERR_TIMEOUT);
+// Register drivers and errors
+DRIVER_REGISTER_BEGIN(TM1637,tm1637,NULL,NULL,NULL);
+	DRIVER_REGISTER_ERROR(TM1637, tm1637, TimeOut, "timeout", TM1637_ERR_TIMEOUT);
+DRIVER_REGISTER_END(TM1637,tm1637,NULL,NULL,NULL);
 
 /*
  * Helper functions
@@ -325,7 +327,5 @@ driver_error_t *tm1637_write(int deviceid, const char *data, uint8_t brightness)
 
 	return NULL;
 }
-
-DRIVER_REGISTER(TM1637,tm1637,NULL,NULL,NULL);
 
 #endif

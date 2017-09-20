@@ -37,7 +37,9 @@
 #include <time.h>
 #include <sys/time.h>
 
+#include <sys/mutex.h>
 #include <sys/driver.h>
+
 #include <drivers/adc.h>
 #include <drivers/gpio.h>
 #include <drivers/gpio_debouncing.h>
@@ -50,29 +52,65 @@ struct sensor_value;
 
 // Sensor specific function types
 typedef driver_error_t *(*sensor_setup_f_t)(struct sensor_instance *);
+typedef driver_error_t *(*sensor_unsetup_f_t)(struct sensor_instance *);
 typedef driver_error_t *(*sensor_acquire_f_t)(struct sensor_instance *, struct sensor_value *);
 typedef driver_error_t *(*sensor_set_f_t)(struct sensor_instance *, const char *, struct sensor_value *);
 typedef driver_error_t *(*sensor_get_f_t)(struct sensor_instance *, const char *, struct sensor_value *);
 
-#define SENSOR_MAX_INTERFACES 4
-#define SENSOR_MAX_DATA       6
-#define SENSOR_MAX_PROPERTIES 4
-#define SENSOR_MAX_CALLBACKS  4
+extern const int sensor_errors;
+extern const int sensor_error_map;
 
-// Sensor initializes it's interfaces by it self. Don't use default initialization
+#define SENSOR_MAX_INTERFACES 8
+#define SENSOR_MAX_PROPERTIES 16
+#define SENSOR_MAX_CALLBACKS  8
+
+/*
+ * Sensor flags. Each sensor has a definition flag that stores information about
+ * how sensor acquires it's information.
+ */
+
+// bit 0
+// Sensor initializes it's interfaces by it self. Don't use default initialization.
 #define SENSOR_FLAG_CUSTOM_INTERFACE_INIT (1 << 0)
 
+// bit 1
 // Sensor acquires data automatically. This type of sensors acquire data when an
 // interrupt is raised, when a time interval expires, or when sensor sends a new
-// data
+// data.
 #define SENSOR_FLAG_AUTO_ACQ (1 << 1)
 
-#define SENSOR_FLAG_ON_OFF          (1 << 2)
-#define SENSOR_FLAG_ON_H            (1 << 3)
-#define SENSOR_FLAG_ON_L            (1 << 4)
-#define SENSOR_FLAG_DEBOUNCING      (1 << 5)
+// bit 2
+// Sensor acquires data from a GPIO interrupt.
+#define SENSOR_FLAG_ON_OFF (1 << 2)
 
-// Sensor interface
+// bits 3, 4, 5
+// If SENSOR_FLAG_ON_OFF is enabled, this flag hold the property value when GPIO is
+// in the high state.
+#define SENSOR_FLAG_ON_H(value) (value << 3)
+#define SENSOR_FLAG_GET_ON_H(interface) ((interface.flags & 0x38) >> 3)
+
+// bits 6, 7, 8
+// If SENSOR_FLAG_ON_OFF is enabled, this flag hold the property value when GPIO is
+// in the low state.
+#define SENSOR_FLAG_ON_L(value) (value << 6)
+#define SENSOR_FLAG_GET_ON_L(interface) ((interface.flags & 0x1c0) >> 6)
+
+// bit 9
+// If SENSOR_FLAG_ON_OFF is enabled this flag controls if software debouncing techniques
+// must be applied.
+#define SENSOR_FLAG_DEBOUNCING (1 << 9)
+
+// bits 10, 11, 12, 13, 14
+// If SENSOR_FLAG_AUTO_ACQ this flag controls in which property the sensor must store it's
+// data.
+#define SENSOR_FLAG_PROPERTY(prop) (prop << 10)
+#define SENSOR_FLAG_GET_PROPERTY(interface) ((interface.flags & 0X7C00) >> 10)
+
+// bit 15
+#define SENSOR_FLAG_DEBOUNCING_THRESHOLD(value) (value << 15)
+#define SENSOR_FLAG_GET_DEBOUNCING_THRESHOLD(interface) ((interface.flags & 0x1ffff8000) >> 15)
+
+// Sensor interface types
 typedef enum {
 	ADC_INTERFACE = 1,
 	SPI_INTERFACE,
@@ -80,6 +118,12 @@ typedef enum {
 	OWIRE_INTERFACE,
 	GPIO_INTERFACE,
 	UART_INTERFACE
+} sensor_interface_type_t;
+
+
+typedef struct {
+	sensor_interface_type_t type;
+	uint32_t flags;
 } sensor_interface_t;
 
 // Sensor data type
@@ -95,6 +139,7 @@ typedef enum {
 typedef struct {
 	const char *id;
 	const sensor_data_type_t type;
+	uint32_t flags;
 } sensor_data_t;
 
 // Sensor property
@@ -107,11 +152,12 @@ typedef struct {
 typedef struct {
 	const char *id;
 	const sensor_interface_t interface[SENSOR_MAX_INTERFACES];
-	const uint32_t flags;
-	const sensor_data_t data[SENSOR_MAX_DATA];
+	const char* interface_name[SENSOR_MAX_INTERFACES];
+	const sensor_data_t data[SENSOR_MAX_PROPERTIES];
 	const sensor_data_t properties[SENSOR_MAX_PROPERTIES];
 	const sensor_setup_f_t setup;
 	const sensor_setup_f_t presetup;
+	const sensor_unsetup_f_t unsetup;
 	const sensor_acquire_f_t acquire;
 	const sensor_set_f_t set;
 	const sensor_get_f_t get;
@@ -143,8 +189,18 @@ typedef struct sensor_value {
 	};
 } sensor_value_t;
 
+typedef struct {
+	uint8_t timeout;
+	uint8_t repeat;
+	struct timeval t;
+	sensor_value_t value;
+} sensor_latch_t;
+
 // Sensor setup structure
 typedef struct {
+	uint8_t interface;
+	void *instance;
+
 	union {
 		struct {
 			int8_t gpio;
@@ -155,8 +211,7 @@ typedef struct {
 			uint8_t channel;
 			int16_t devid;
 			uint8_t resolution;
-			int16_t vrefp;
-			int16_t vrefn;
+			int16_t max;
 			adc_channel_h_t h;
 		} adc;
 
@@ -187,12 +242,14 @@ typedef struct {
 struct sensor_instance;
 
 // Sensor callback
-typedef void (*sensor_callback_t)(int, struct sensor_instance *, sensor_value_t *);
+typedef void (*sensor_callback_t)(int, struct sensor_instance *, sensor_value_t *, sensor_latch_t *);
 
 // Sensor instance
 typedef struct sensor_instance {
 	int unit;
-	sensor_value_t data[SENSOR_MAX_DATA];
+	struct mtx mtx;
+	sensor_value_t data[SENSOR_MAX_PROPERTIES];
+	sensor_latch_t latch[SENSOR_MAX_PROPERTIES];
 	sensor_value_t properties[SENSOR_MAX_PROPERTIES];
 	struct timeval next;
 
@@ -203,12 +260,14 @@ typedef struct sensor_instance {
 
 	const sensor_t *sensor;
 	sensor_setup_t setup[SENSOR_MAX_INTERFACES];
+	void *args;
 } sensor_instance_t;
 
 typedef struct {
 	sensor_instance_t *instance;
 	sensor_callback_t callback;
-	sensor_value_t data[SENSOR_MAX_DATA];
+	sensor_value_t data[SENSOR_MAX_PROPERTIES];
+	sensor_latch_t latch[SENSOR_MAX_PROPERTIES];
 	int callback_id;
 } sensor_deferred_data_t;
 
@@ -221,7 +280,9 @@ driver_error_t *sensor_read(sensor_instance_t *unit, const char *id, sensor_valu
 driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value_t *value);
 driver_error_t *sensor_get(sensor_instance_t *unit, const char *id, sensor_value_t **value);
 driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callback_t callback, int id, uint8_t deferred);
-void sensor_quue_callbacks(sensor_instance_t *unit);
+void sensor_queue_callbacks(sensor_instance_t *unit, uint8_t from, uint8_t to);
+void sensor_init_data(sensor_instance_t *unit);
+void sensor_update_data(sensor_instance_t *unit, uint8_t from, uint8_t to, sensor_value_t *new_data, uint64_t delay, uint64_t rate, uint8_t ignore, uint64_t ignore_val);
 
 // SENSOR errors
 #define SENSOR_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  0)
@@ -236,7 +297,8 @@ void sensor_quue_callbacks(sensor_instance_t *unit);
 #define SENSOR_ERR_INVALID_ADDRESS			(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  9)
 #define SENSOR_ERR_NO_MORE_CALLBACKS		(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) | 10)
 #define SENSOR_ERR_INVALID_DATA				(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) | 11)
-
+#define SENSOR_ERR_CALLBACKS_NOT_ALLOWED	(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) | 12)
+#define SENSOR_ERR_INVALID_VALUE			(DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) | 13)
 #endif
 
 #endif /* _SENSORS_H_ */

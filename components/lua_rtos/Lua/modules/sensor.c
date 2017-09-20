@@ -42,6 +42,7 @@
 #include "sensor.h"
 #include "modules.h"
 
+#include <time.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -51,14 +52,14 @@
 extern TM_One_Wire_Devices_t ow_devices[MAX_ONEWIRE_PINS];
 
 // This variables are defined at linker time
-extern LUA_REG_TYPE sensor_error_map[];
 extern const sensor_t sensors[];
 
-static void callback_func(int callback, sensor_instance_t *instance, sensor_value_t *data) {
+static void callback_func(int callback, sensor_instance_t *instance, sensor_value_t *data, sensor_latch_t *latch) {
 	lua_State *TL;
 	lua_State *L;
 	int tref;
 	int idx;
+	int changed;
 	const sensor_t *csensor = instance->sensor;
 
 	if (callback != LUA_NOREF) {
@@ -85,13 +86,27 @@ static void callback_func(int callback, sensor_instance_t *instance, sensor_valu
 			if (csensor->data[idx].id) {
 			    lua_pushstring(TL, (char *)csensor->data[idx].id);
 
-				switch (csensor->data[idx].type) {
-					case SENSOR_NO_DATA:     lua_pushnil(TL); break;
-					case SENSOR_DATA_INT:    lua_pushinteger(TL, data[idx].integerd.value); break;
-					case SENSOR_DATA_FLOAT:  lua_pushnumber (TL, data[idx].floatd.value); break;
-					case SENSOR_DATA_DOUBLE: lua_pushnumber (TL, data[idx].doubled.value); break;
-					case SENSOR_DATA_STRING: lua_pushstring (TL, data[idx].stringd.value); break;
+			    // Test if property has changed
+			    changed = 0;
+			    switch (csensor->data[idx].type) {
+			    	case SENSOR_NO_DATA: break;
+					case SENSOR_DATA_INT:    changed = (data[idx].integerd.value != latch[idx].value.integerd.value); break;
+					case SENSOR_DATA_FLOAT:  changed = (data[idx].floatd.value != latch[idx].value.floatd.value); break;
+					case SENSOR_DATA_DOUBLE: changed = (data[idx].doubled.value != latch[idx].value.doubled.value); break;
+					case SENSOR_DATA_STRING: changed = (data[idx].stringd.value != latch[idx].value.stringd.value); break;
 				}
+
+			    if (changed || latch[idx].timeout || latch[idx].repeat) {
+					switch (csensor->data[idx].type) {
+						case SENSOR_NO_DATA: break;
+						case SENSOR_DATA_INT:    lua_pushinteger(TL, data[idx].integerd.value); break;
+						case SENSOR_DATA_FLOAT:  lua_pushnumber (TL, data[idx].floatd.value); break;
+						case SENSOR_DATA_DOUBLE: lua_pushnumber (TL, data[idx].doubled.value); break;
+						case SENSOR_DATA_STRING: lua_pushstring (TL, data[idx].stringd.value); break;
+					}
+			    } else {
+			    	lua_pushnil(TL);
+			    }
 
 				lua_settable(TL, -3);
 			}
@@ -112,8 +127,8 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 	top = 2;
 
 	for(i = 0; i < SENSOR_MAX_INTERFACES;i++) {
-		if (sensor->interface[i]) {
-			switch (sensor->interface[i]) {
+		if (sensor->interface[i].type) {
+			switch (sensor->interface[i].type) {
 				case ADC_INTERFACE:
 					setup[i].adc.unit = luaL_checkinteger(L, top++);
 					setup[i].adc.channel = luaL_checkinteger(L, top++);
@@ -213,6 +228,26 @@ static int lsensor_attach( lua_State* L ) {
     lua_setmetatable(L, -2);
 
     return 1;
+}
+
+static int lsensor_dettach( lua_State* L ) {
+	sensor_userdata *udata =  (sensor_userdata *)luaL_checkudata(L, 1, "sensor.ins");;
+	driver_error_t *error;
+
+	// Destroy callbacks
+	int i;
+	for(i=0; i < SENSOR_MAX_CALLBACKS; i++) {
+		if (udata->instance->callbacks[i].callback_id) {
+			luaL_unref(L, LUA_REGISTRYINDEX, udata->instance->callbacks[i].callback_id);
+		}
+	}
+
+	// Destroy sensor
+    if ((error = sensor_unsetup(udata->instance))) {
+    	return luaL_driver_error(L, error);
+    }
+
+	return 0;
 }
 
 static int lsensor_set( lua_State* L ) {
@@ -344,7 +379,7 @@ static int lsensor_read( lua_State* L ) {
     else {
     	// Read all sensor data
     	int idx, numread=0;
-    	for(idx=0;idx <  SENSOR_MAX_DATA;idx++) {
+    	for(idx=0;idx <  SENSOR_MAX_PROPERTIES;idx++) {
     		if (udata->instance->sensor->data[idx].id) {
 				*&value = &udata->instance->data[idx];
 				switch (value->type) {
@@ -386,6 +421,7 @@ static int lsensor_list( lua_State* L ) {
 	char type[7];
 	char buff[31];
 	char interfaces[31];
+	char names[31];
 
 	// Check if user wants result as a table, or wants result
 	// on the console
@@ -407,8 +443,8 @@ static int lsensor_list( lua_State* L ) {
 		buff[0] = 0x00;
 		exit = 0;
 		for(j = 0; j < SENSOR_MAX_INTERFACES;j++) {
-			if (csensor->interface[j]) {
-				switch (csensor->interface[j]) {
+			if (csensor->interface[j].type) {
+				switch (csensor->interface[j].type) {
 					case ADC_INTERFACE:   strcpy(interface, "ADC"); break;
 					case SPI_INTERFACE:   strcpy(interface, "SPI"); break;
 					case I2C_INTERFACE:   strcpy(interface, "I2C"); break;
@@ -443,11 +479,39 @@ static int lsensor_list( lua_State* L ) {
 
 		strcpy(interfaces, buff);
 
+		buff[0] = 0x00;
+		exit = 0;
+		for(j = 0; j < SENSOR_MAX_INTERFACES;j++) {
+			if (csensor->interface_name[j]) {
+				if (strlen(buff) > 0) {
+					if (strlen(buff) + 1 <= 30) {
+						strcat(buff, ",");
+					} else {
+						exit = 1;
+						break;
+					}
+				}
+
+				if (strlen(buff) + strlen(csensor->interface_name[j]) <= 30) {
+					strcat(buff, csensor->interface_name[j]);
+				} else {
+					exit = 1;
+					break;
+				}
+			}
+
+			if (exit) {
+				break;
+			}
+		}
+
+		strcpy(names, buff);
+
 		if (!table) {
-			printf("%-20s %-30s ",csensor->id, buff);
+			printf("%-20s %-30s ",csensor->id, interfaces);
 
 			len = 0;
-			for(idx=0; idx < SENSOR_MAX_DATA; idx++) {
+			for(idx=0; idx < SENSOR_MAX_PROPERTIES; idx++) {
 				if (csensor->data[idx].id) {
 					if (len <= 35) {
 						if (len > 0) {
@@ -482,16 +546,30 @@ static int lsensor_list( lua_State* L ) {
 		} else {
 			lua_pushinteger(L, i);
 
-			lua_createtable(L, 0, 3);
+			lua_createtable(L, 0, 5);
 
 	        lua_pushstring(L, (char *)csensor->id);
 	        lua_setfield (L, -2, "id");
 
+	        int k;
+			uint8_t allowed = 0;
+
+			// Sanity checks
+			for (k=0;k < SENSOR_MAX_INTERFACES;k++) {
+				allowed |= csensor->interface[k].flags & (SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF);
+			}
+
+	        lua_pushboolean(L, allowed != 0);
+	        lua_setfield (L, -2, "callback");
+
 	        lua_pushstring(L, (char *)interfaces);
 	        lua_setfield (L, -2, "interface");
 
+	        lua_pushstring(L, (char *)names);
+	        lua_setfield (L, -2, "interface_name");
+
 	        lua_createtable(L, 0, 0);
-	        for(idx=0; idx < SENSOR_MAX_DATA; idx++) {
+	        for(idx=0; idx < SENSOR_MAX_PROPERTIES; idx++) {
 				if (csensor->data[idx].id) {
 					lua_pushinteger(L, idx);
 					lua_createtable(L, 0, 2);
@@ -573,7 +651,7 @@ static int lsensor_enumerate_owire( lua_State* L, uint8_t table, int pin) {
 
 	// Search for 1-WIRE sensors in build
 	while (csensor->id) {
-		if (csensor->interface[0] == OWIRE_INTERFACE) {
+		if (csensor->interface[0].type == OWIRE_INTERFACE) {
 			// Get sensor definition
 			sensor = get_sensor(csensor->id);
 			if (sensor) {
@@ -684,21 +762,7 @@ static int lsensor_callback(lua_State* L) {
 
 // Destructor
 static int lsensor_ins_gc (lua_State *L) {
-	sensor_userdata *udata =  (sensor_userdata *)luaL_checkudata(L, 1, "sensor.ins");;
-	driver_error_t *error;
-
-	// Destroy callbacks
-	int i;
-	for(i=0; i < SENSOR_MAX_CALLBACKS; i++) {
-		if (udata->instance->callbacks[i].callback_id) {
-			luaL_unref(L, LUA_REGISTRYINDEX, udata->instance->callbacks[i].callback_id);
-		}
-	}
-
-	// Destroy sensor
-    if ((error = sensor_unsetup(udata->instance))) {
-    	return luaL_driver_error(L, error);
-    }
+	lsensor_dettach(L);
 
 	return 0;
 }
@@ -707,12 +771,13 @@ static const LUA_REG_TYPE lsensor_map[] = {
     { LSTRKEY( "attach"  	 ),	LFUNCVAL( lsensor_attach      ) },
 	{ LSTRKEY( "list"   	 ),	LFUNCVAL( lsensor_list   	  ) },
 	{ LSTRKEY( "enumerate"   ),	LFUNCVAL( lsensor_enumerate   ) },
-	{ LSTRKEY( "error"       ), LROVAL  ( sensor_error_map    ) },
+	DRIVER_REGISTER_LUA_ERRORS(sensor)
 	{ LSTRKEY( "OWire"       ), LINTVAL ( OWIRE_INTERFACE     ) },
     { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE lsensor_ins_map[] = {
+	{ LSTRKEY( "detach"      ),	LFUNCVAL( lsensor_dettach   ) },
 	{ LSTRKEY( "acquire"     ),	LFUNCVAL( lsensor_acquire   ) },
   	{ LSTRKEY( "read"        ),	LFUNCVAL( lsensor_read 	    ) },
   	{ LSTRKEY( "set"         ),	LFUNCVAL( lsensor_set 	    ) },
@@ -720,7 +785,7 @@ static const LUA_REG_TYPE lsensor_ins_map[] = {
   	{ LSTRKEY( "callback"    ),	LFUNCVAL( lsensor_callback  ) },
     { LSTRKEY( "__metatable" ),	LROVAL  ( lsensor_ins_map   ) },
 	{ LSTRKEY( "__index"     ), LROVAL  ( lsensor_ins_map   ) },
-	{ LSTRKEY( "__gc"        ), LROVAL  ( lsensor_ins_gc    ) },
+	{ LSTRKEY( "__gc"        ), LFUNCVAL( lsensor_ins_gc    ) },
     { LNILKEY, LNILVAL }
 };
 

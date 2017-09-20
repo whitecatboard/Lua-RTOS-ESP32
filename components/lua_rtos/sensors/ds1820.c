@@ -29,7 +29,7 @@ static unsigned char ow_alarm_device [MAX_ONEWIRE_SENSORS][8];
 const sensor_t __attribute__((used,unused,section(".sensors"))) ds1820_sensor = {
 	.id = "DS1820",
 	.interface = {
-		OWIRE_INTERFACE,
+		{.type = OWIRE_INTERFACE},
 	},
 	.data = {
 		{.id = "temperature", .type = SENSOR_DATA_FLOAT},

@@ -1,4 +1,17 @@
 menu "Lua RTOS"
+	config LUA_RTOS_VDD
+		int "CPU power voltage (VDDA)"
+		range 2300 3600
+		default 3332
+		help
+			This sets the CPU power voltage (VDDA). The ideal value of this voltage is generally 3300 mVolts,
+			but due to the manufacturing processes and components used that may not always be the same this
+			value may be different from the ideal one.
+			
+			For a correct operation of the ADC and some sensors it is necessary that you indicate the exact
+			value for your board. Please measure this value with a suitable equipment. A good and cheap
+			choice is using an external ADC as an ADS1115.
+			
 	choice LUA_RTOS_BOARD_TYPE
 		prompt "Board Type"
 		default LUA_RTOS_BOARD_WHITECAT_N1ESP32
@@ -158,14 +171,6 @@ menu "Lua RTOS"
 						range 4096 65536
 						default 4096
 			endmenu
-			menu "FAT"
-					config LUA_RTOS_USE_FAT
-						bool "Use FAT"
-						default n
-						help
-							Select for enable FAT file system support. Enabling this implies that you have an SD Card
-							appropriately connected to your ESP32 board.		
-			endmenu
 		endmenu
 
 		menu "Hardware"
@@ -286,36 +291,63 @@ menu "Lua RTOS"
 		endmenu
 		
 		menu "Internal ADC"
-			config ADC_INTERNAL_VREF_P
-				int "vref+"
-				range 0 3900
-				default 3300
+			config ADC_INTERNAL_VREF
+				int "vref"
+				range 1000 1200
+				default 1108
 				help
-					Positive voltage reference in mVolts.	
-					
-			config ADC_INTERNAL_VREF_N
-				int "vref-"
-				range 0 3300
-				default 0
-				help
-					Negative voltage reference in mVolts.	
+					Voltage reference in mVolts.						
+		endmenu
+
+		menu "External GPIO"
+			choice EXTERNAL_GPIO_TYPE
+				prompt "External GPIO chip"
+				default EXTERNAL_GPIO_NONE
+
+				config EXTERNAL_GPIO_NONE
+					bool "None"
+			
+				config GPIO_PCA9698
+					bool "PCA9698, 40 IO, no pull-up"
+				
+				config GPIO_PCA9505
+					bool "PCA9505, 40 IO, pull-up"
+			endchoice
+		
+			config PCA9xxx_I2C
+				depends on (GPIO_PCA9698 || GPIO_PCA9505)
+					int "PCA9xxx I2C port"
+					range 0 1
+					default 0
+					help
+						I2C port where PCA9xxx is attached
+
+			config PCA9xxx_INT
+				depends on (GPIO_PCA9698 || GPIO_PCA9505)
+					int "PCA9xxx INT pint"
+					range 0 39
+					default 26
+					help
+						GPIO where PCA9xxx INT pin is attached.
+
+			config PCA9xxx_I2C_SPEED
+				depends on (GPIO_PCA9698 || GPIO_PCA9505)
+					int "PCA9xxx I2C port speed"
+					range 100000 1000000
+					default 1000000
+					help
+						I2C PCA9xxx port speed in hertz
+
+			config PCA9xxx_I2C_ADDRESS
+				depends on (GPIO_PCA9698 || GPIO_PCA9505)
+					int "PCA9xxx I2C port address"
+					range 0 255
+					default 32
+					help
+						I2C PCA9xxx port speed in hertz		
 		endmenu
 		
 		menu "External ADC"
-			config ADC_EXTERNAL_VREF_P
-				int "vref+"
-				range 0 6000
-				default 3300
-				help
-					Positive voltage reference in mVolts.	
-					
-			config ADC_EXTERNAL_VREF_N
-				int "vref-"
-				range 0 3300
-				default 0
-				help
-					Negative voltage reference in mVolts.	
-
 			config ADC_ADS1115
 				bool "Use I2C ADC ADS1115"
 				default y
@@ -575,7 +607,7 @@ menu "Lua RTOS"
 					range 1 3
 					default 3
 				help
-					Select the SPI port number where SD Card is attached
+					Select the SPI port number where SD Card is attached.
 		
 			config LUA_RTOS_SD_CS
 				depends on LUA_RTOS_USE_SPI_SD
@@ -639,10 +671,30 @@ menu "Lua RTOS"
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "2Y0A21"
 					default y		
+				config LUA_RTOS_USE_SENSOR_KEY_MATRIX_4_4
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "4 x 4 key matrix"
+					default y		
 				config LUA_RTOS_USE_SENSOR_A49E
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "A49E"
+					default y	
+				config LUA_RTOS_USE_SENSOR_ANALOG_JOYSTICK
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Analog Joystick"
+					default y	
+				config LUA_RTOS_USE_SENSOR_BH1620FVC
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "BH1620FVC"
+					default y		
+				config LUA_RTOS_USE_SENSOR_BH1721FVC
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "BH1721FVC"
 					default y							
+				config LUA_RTOS_USE_SENSOR_BDE0600G
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "BDE0600G"
+					default y		
 				config LUA_RTOS_USE_SENSOR_BME280
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "BME280"
@@ -655,6 +707,10 @@ menu "Lua RTOS"
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "DHT22"
 					default y		
+				config LUA_RTOS_USE_SENSOR_DHT23
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "DHT23"
+					default y		
 				config LUA_RTOS_USE_SENSOR_DS1820
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "DS1820"
@@ -663,18 +719,26 @@ menu "Lua RTOS"
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "GPS"
 					default y		
+				config LUA_RTOS_USE_SENSOR_GUVA_S12SD
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "GUVA-S12SD"
+					default y							
 				config LUA_RTOS_USE_SENSOR_HALL_SWITCH
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "Hall effect switch"
 					default y		
-				config LUA_RTOS_USE_SENSOR_PING28015
+				config LUA_RTOS_USE_SENSOR_LDR
 					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "PING28015"
+					bool "LDR"
 					default y		
 				config LUA_RTOS_USE_SENSOR_PIR_AM412
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "AM412 based PIR sensor"
 					default y		
+				config LUA_RTOS_USE_SENSOR_POT
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Potentiometer"
+					default y							
 				config LUA_RTOS_USE_SENSOR_PUSH_SWITCH
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "Push switch"
@@ -694,7 +758,19 @@ menu "Lua RTOS"
 				config LUA_RTOS_USE_SENSOR_TILT_SWITCH
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "Tilt Switch"
-					default y		
+					default y	
+				config LUA_RTOS_USE_SENSOR_US015
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "US-015"
+					default y	
+				config LUA_RTOS_USE_SENSOR_2P_TOGGLE_SWITCH	
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Toggle switch (2 positions)"
+					default y						
+				config LUA_RTOS_USE_SENSOR_3P_TOGGLE_SWITCH	
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Toggle switch (3 positions)"
+					default y						
 				config LUA_RTOS_USE_SENSOR_TMP36
 					depends on LUA_RTOS_LUA_USE_SENSOR
 					bool "TMP36"

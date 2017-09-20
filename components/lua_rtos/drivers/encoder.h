@@ -59,6 +59,9 @@ typedef struct {
 #define ENCODER_ERR_NOT_ENOUGH_MEMORY           (DRIVER_EXCEPTION_BASE(ENCODER_DRIVER_ID) |  0)
 #define ENCODER_ERR_INVALID_PIN                 (DRIVER_EXCEPTION_BASE(ENCODER_DRIVER_ID) |  1)
 
+extern const int encoder_errors;
+extern const int encoder_error_map;
+
 driver_error_t *encoder_setup(int8_t a, int8_t b, int8_t sw, encoder_h_t **h);
 driver_error_t *encoder_unsetup(encoder_h_t *h);
 driver_error_t *encoder_register_callback(encoder_h_t *h, encoder_callback_t callback, int id, uint8_t deferred);

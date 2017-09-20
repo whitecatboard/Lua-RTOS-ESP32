@@ -27,7 +27,7 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 #if CONFIG_LUA_RTOS_USE_SENSOR_DHT22
@@ -52,7 +52,7 @@ driver_error_t *dht22_acquire(sensor_instance_t *unit, sensor_value_t *values);
 static const sensor_t __attribute__((used,unused,section(".sensors"))) dht22_sensor = {
 	.id = "DHT22",
 	.interface = {
-		GPIO_INTERFACE,
+		{.type = GPIO_INTERFACE},
 	},
 	.data = {
 		{.id = "temperature", .type = SENSOR_DATA_FLOAT},

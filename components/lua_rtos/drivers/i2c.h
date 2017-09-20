@@ -27,17 +27,19 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #ifndef I2C_H
 #define I2C_H
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 #include "driver/i2c.h"
 
 #include <stdint.h>
 
 #include <sys/driver.h>
-#include <sys/mutex.h>
 
 #include <drivers/cpu.h>
 
@@ -49,7 +51,7 @@ typedef struct i2c {
 	uint8_t setup;
 	int8_t sda;
 	int8_t scl;
-	struct mtx mtx;
+	SemaphoreHandle_t mtx;
 } i2c_t;
 
 #define I2C_SLAVE	0 /*!< I2C slave mode */
@@ -66,6 +68,9 @@ typedef struct i2c {
 #define I2C_ERR_TIMEOUT					 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  7)
 #define I2C_ERR_PIN_NOT_ALLOWED		     (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  8)
 #define I2C_ERR_CANNOT_CHANGE_PINMAP     (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  10)
+
+extern const int i2c_errors;
+extern const int i2c_error_map;
 
 /**
  * @brief Change the I2C pin map. Pin map is hard coded in Kconfig, but it can be

@@ -29,9 +29,11 @@
 
 #include "sdkconfig.h"
 
+#include "esp_adc_cal.h"
 #include "driver/adc.h"
 
 #include <stdint.h>
+#include <string.h>
 
 #include <sys/driver.h>
 #include <sys/syslog.h>
@@ -39,6 +41,8 @@
 #include <drivers/gpio.h>
 #include <drivers/adc.h>
 #include <drivers/adc_internal.h>
+
+esp_adc_cal_characteristics_t characteristics;
 
 /*
  * Helper functions
@@ -102,9 +106,35 @@ driver_error_t *adc_internal_setup(adc_channel_t *chan) {
 	driver_error_t *error;
 	adc_resources_t resources = {0};
 	adc_atten_t atten;
+	char attens[6];
 
 	uint8_t unit = chan->unit;
 	uint8_t channel = chan->channel;
+
+	// Apply default max value
+	if (chan->max == 0) {
+		chan->max = 3900;
+	}
+
+	// Apply default resolution if needed
+	if (chan->resolution == 0) {
+		chan->resolution = 12;
+	}
+
+	// Sanity checks
+	if ((chan->max < 0) || (chan->max > 3900)) {
+		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_MAX, NULL);
+	}
+
+	if ((chan->resolution != 9) && (chan->resolution != 10) && (chan->resolution != 11) && (chan->resolution != 12)) {
+		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_RESOLUTION, NULL);
+	}
+
+	if (chan->vref != 0) {
+		return driver_error(ADC_DRIVER, ADC_ERR_VREF_SET_NOT_ALLOWED, NULL);
+	}
+
+	// Setup
 
 	// Lock the resources needed
 	if ((error = adc_lock_resources(channel, &resources))) {
@@ -112,36 +142,52 @@ driver_error_t *adc_internal_setup(adc_channel_t *chan) {
 	}
 
 	// Computes the required attenuation
-	if (chan->rpvref <= 1100) {
+	if (chan->max <= 1100) {
 		atten = ADC_ATTEN_0db;
-	} else if (chan->rpvref <= 1500) {
+		strcpy(attens, "0db");
+	} else if (chan->max <= 1500) {
 		atten = ADC_ATTEN_2_5db;
-	} else if (chan->rpvref <= 2200) {
+		strcpy(attens, "2.5db");
+	} else if (chan->max <= 2200) {
 		atten = ADC_ATTEN_6db;
+		strcpy(attens, "6db");
 	} else {
 		atten = ADC_ATTEN_11db;
+		strcpy(attens, "11db");
 	}
 
 	adc1_config_channel_atten(channel, atten);
 
-	// Configure all channels with a 12-bit resolution
-	adc1_config_width(ADC_WIDTH_12Bit);
+	// Configure all channels with the given resolution
+	adc1_config_width(chan->resolution - 9);
+
+	// Get characteristics
+	esp_adc_cal_get_characteristics(CONFIG_ADC_INTERNAL_VREF, atten, chan->resolution - 9, &characteristics);
 
 	if (!chan->setup) {
 		syslog(
 				LOG_INFO,
-				"adc%d: at pin %s%d, vref+ %d, vref- %d, %d bits of resolution", unit, gpio_portname(resources.pin),
-				gpio_name(resources.pin), chan->pvref, chan->nvref, chan->resolution
+				"adc%d: at pin %s%d, attenuation %s, %d bits of resolution", unit, gpio_portname(resources.pin),
+				gpio_name(resources.pin), attens, chan->resolution
 		);
 	}
 
 	return NULL;
 }
 
-driver_error_t *adc_internal_read(adc_channel_t *chan, int *raw) {
+driver_error_t *adc_internal_read(adc_channel_t *chan, int *raw, double *mvolts) {
 	uint8_t channel = chan->channel;
 
-	*raw = adc1_get_voltage(channel);
+	int traw = adc1_get_raw(channel);
+	double tmvolts = esp_adc_cal_raw_to_voltage(traw, &characteristics);
+
+	if (raw) {
+		*raw = traw;
+	}
+
+	if (mvolts) {
+		*mvolts = tmvolts;
+	}
 
 	return NULL;
 }

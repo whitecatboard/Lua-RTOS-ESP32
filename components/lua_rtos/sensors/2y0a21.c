@@ -53,7 +53,7 @@ driver_error_t *s2y0a21_acquire(sensor_instance_t *unit, sensor_value_t *values)
 static const sensor_t __attribute__((used,unused,section(".sensors"))) s2y0a21_sensor = {
 	.id = "2Y0A21",
 	.interface = {
-		ADC_INTERFACE,
+		{.type = ADC_INTERFACE},
 	},
 	.data = {
 		{.id = "distance", .type = SENSOR_DATA_FLOAT},
