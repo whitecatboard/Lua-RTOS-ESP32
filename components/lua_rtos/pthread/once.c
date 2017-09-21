@@ -2,7 +2,7 @@
  * Lua RTOS, pthread implementation over FreeRTOS
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -27,8 +27,9 @@
  * this software.
  */
 
+#include "_pthread.h"
+
 #include <errno.h>
-#include <pthread/pthread.h>
 
 extern struct mtx once_mtx;
 
@@ -36,16 +37,16 @@ int pthread_once(pthread_once_t *once_control, void (*init_routine)(void)) {
     // Init once_control, if not
     mtx_lock(&once_mtx);
 
-    if (once_control->mutex.sem == NULL) {
-        mtx_init(&once_control->mutex, NULL, NULL, 0);
+    if (((struct pthread_once *)once_control)->mutex.sem == NULL) {
+        mtx_init(&((struct pthread_once *)once_control)->mutex, NULL, NULL, 0);
     }
 
     // Excec init_routine, if needed
-    if (mtx_trylock(&once_control->mutex)) {
+    if (mtx_trylock(&((struct pthread_once *)once_control)->mutex)) {
         init_routine();
     }
 
     mtx_unlock(&once_mtx);  
-    
+
     return 0;
 }

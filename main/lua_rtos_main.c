@@ -46,7 +46,7 @@
 
 #include <drivers/gpio.h>
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 void luaos_main();
 void _sys_init();

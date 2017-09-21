@@ -42,7 +42,7 @@
 #include <sys/delay.h>
 
 #include "esp_wifi_types.h"
-#include <pthread/pthread.h>
+#include <pthread.h>
 #include <esp_wifi.h>
 
 #include <time.h>
@@ -553,7 +553,7 @@ static void *http_thread(void *arg) {
 		LWIP_ASSERT("httpd_init: socket failed", server >= 0);
 		if(0 > server) {
 			syslog(LOG_ERR, "couldn't create server socket\n");
-			pthread_exit(NULL);
+			return NULL;
 		}
 
 		u8_t one = 1;
@@ -567,14 +567,14 @@ static void *http_thread(void *arg) {
 		LWIP_ASSERT("httpd_init: bind failed", rc == 0);
 		if(0 != rc) {
 			syslog(LOG_ERR, "couldn't bind to port %d\n", CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
-			pthread_exit(NULL);
+			return NULL;
 		}
 
 		listen(server, 5);
 		LWIP_ASSERT("httpd_init: listen failed", server >= 0);
 		if(0 > server) {
 			syslog(LOG_ERR, "couldn't listen on port %d\n", CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
-			pthread_exit(NULL);
+			return NULL;
 		}
 
 		// Set the timeout for accept
@@ -634,7 +634,7 @@ static void *http_thread(void *arg) {
 	*/
 
 	http_refcount--;
-	pthread_exit(NULL);
+	return NULL;
 }
 
 int http_start(lua_State* L) {

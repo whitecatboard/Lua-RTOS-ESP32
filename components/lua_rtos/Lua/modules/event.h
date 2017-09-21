@@ -42,7 +42,7 @@
 #include <sys/mutex.h>
 #include <sys/list.h>
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 typedef struct {
 	pthread_t thread;   // Thread id

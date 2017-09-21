@@ -35,7 +35,7 @@
 
 #include <gdisplay/gdisplay.h>
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 static uint8_t init = 0;
 

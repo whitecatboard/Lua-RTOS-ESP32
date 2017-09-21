@@ -2,7 +2,7 @@
  * Lua RTOS, pthread implementation over FreeRTOS
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -27,11 +27,12 @@
  * this software.
  */
 
+#include "_pthread.h"
+
 #include "esp_attr.h"
 
 #include <errno.h>
 #include <stdlib.h>
-#include <pthread/pthread.h>
 
 extern struct list mutex_list;
 
@@ -50,16 +51,17 @@ int pthread_mutex_init(pthread_mutex_t *mut, const pthread_mutexattr_t *attr) {
     struct pthread_mutex *mutex;
     int res;
 
-    if (!attr) {
-        errno = EINVAL;
+    if (!mut) {
         return EINVAL;
     }
-    
+
     // Check attr
-    res = _check_attr(attr);
-    if (res) {
-        errno = res;
-        return res;
+    if (attr) {
+        res = _check_attr(attr);
+        if (res) {
+            errno = res;
+            return res;
+        }
     }
 
     // Test if it's init yet
@@ -76,8 +78,11 @@ int pthread_mutex_init(pthread_mutex_t *mut, const pthread_mutexattr_t *attr) {
         return EINVAL;
     }
 
-    mutex->type = attr->type;
-
+    if (attr) {
+    	mutex->type = attr->type;
+    } else {
+    	mutex->type = PTHREAD_MUTEX_NORMAL;
+    }
     // Create semaphore
     if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
         mutex->sem = xSemaphoreCreateRecursiveMutex();    
@@ -110,6 +115,14 @@ int IRAM_ATTR pthread_mutex_lock(pthread_mutex_t *mut) {
     struct pthread_mutex *mutex;
     int res;
 
+    if (!mut) {
+        return EINVAL;
+    }
+
+    if ((intptr_t) *mut == PTHREAD_MUTEX_INITIALIZER) {
+    	pthread_mutex_init(mut, NULL);
+    }
+
     // Get mutex
     res = list_get(&mutex_list, *mut, (void **)&mutex);
     if (res) {
@@ -139,6 +152,9 @@ int IRAM_ATTR pthread_mutex_unlock(pthread_mutex_t *mut) {
     struct pthread_mutex *mutex;
     int res;
 
+    if (!mut) {
+        return EINVAL;
+    }
     // Get mutex
     res = list_get(&mutex_list, *mut, (void **)&mutex);
     if (res) {
@@ -152,14 +168,22 @@ int IRAM_ATTR pthread_mutex_unlock(pthread_mutex_t *mut) {
     } else {
         xSemaphoreGive(mutex->sem);        
     }
-    
+
     return 0;
 }
 
 int pthread_mutex_trylock(pthread_mutex_t *mut) {
     struct pthread_mutex *mutex;
     int res;
-    
+
+    if (!mut) {
+        return EINVAL;
+    }
+
+    if ((intptr_t) *mut == PTHREAD_MUTEX_INITIALIZER) {
+    	pthread_mutex_init(mut, NULL);
+    }
+
     // Get mutex
     res = list_get(&mutex_list, *mut, (void **)&mutex);
     if (res) {
@@ -186,7 +210,11 @@ int pthread_mutex_trylock(pthread_mutex_t *mut) {
 int pthread_mutex_destroy(pthread_mutex_t *mut) {
     struct pthread_mutex *mutex;
     int res;
-    
+
+    if (!mut) {
+        return EINVAL;
+    }
+
     // Get mutex
     res = list_get(&mutex_list, *mut, (void **)&mutex);
     if (res) {
@@ -229,15 +257,20 @@ int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type) {
 }
 
 int pthread_mutexattr_init(pthread_mutexattr_t *attr) {
+    if (!attr) {
+        return EINVAL;
+    }
+
     attr->type = PTHREAD_MUTEX_NORMAL;
-    
+    attr->is_initialized = 1;
+
     return 0;
 }
 
 void _pthread_mutex_free() {
     struct pthread_mutex *mutex;
     int index;
-    
+
     index = list_first(&mutex_list);
     while (index >= 0) {
         list_get(&mutex_list, index, (void **)&mutex);

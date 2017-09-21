@@ -46,7 +46,7 @@
 
 #include <sys/driver.h>
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 #define EVENT_ERR_NOT_ENOUGH_MEMORY (DRIVER_EXCEPTION_BASE(EVENT_DRIVER_ID) |  0)
 

@@ -2,7 +2,7 @@
  * Lua RTOS, pthread implementation over FreeRTOS
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -27,12 +27,12 @@
  * this software.
  */
 
+#include "_pthread.h"
+
 #include <errno.h>
-#include <pthread/pthread.h>
 
 int pthread_join(pthread_t thread, void **value_ptr) {
     int res;
-    
     res = _pthread_join(thread);
     if (res) {
         errno = res;
@@ -40,4 +40,25 @@ int pthread_join(pthread_t thread, void **value_ptr) {
     }
     
     return 0;
+}
+
+
+int pthread_detach(pthread_t thread) {
+	return 0;
+}
+
+int sched_yield( void ) {
+	return 0;
+}
+
+int pthread_equal(pthread_t t1, pthread_t t2) {
+	return 0;
+}
+
+int pthread_mutexattr_gettype(const pthread_mutexattr_t *attr, int *type) {
+    return ENOSYS;
+}
+
+int pthread_mutexattr_destroy(pthread_mutexattr_t *attr) {
+	return 0;
 }
