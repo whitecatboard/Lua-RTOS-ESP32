@@ -16,11 +16,13 @@ void ssd1306_triangle(int x1, int y1, int x2, int y2, int x3, int y3, int c);
 void ssd1306_triangleFill(int x1, int y1, int x2, int y2, int x3, int y3, int c);
 
 void ssd1306_txtSize(float sz);
-void ssd1306_txtColor(int clr);
+void ssd1306_txtColor(int clr, int bg);
 void ssd1306_txtCursor(int x, int y);
+void ssd1306_txtFont(int n, bool b, bool i, int sz);
 void ssd1306_print(char* s);
 void ssd1306_println(char* s);
 void ssd1306_chr(uint8_t chr);
+void ssd1306_chrPos(int x, int y, uint8_t chr, int clr, int bg, int size);
 
 void ssd1306_bitmap(int x, int y, int w, int h, const unsigned char* bmp, int clr);
 

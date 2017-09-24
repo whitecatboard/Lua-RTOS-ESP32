@@ -213,7 +213,21 @@ static int lssd1306_textSize( lua_State* L){
 }
 static int lssd1306_textColor( lua_State* L){
 	int n = lua_gettop(L);
-	if(n>0) ssd1306_txtColor(luaL_checkinteger(L,1));
+	if(n>0) ssd1306_txtColor(
+						luaL_checkinteger(L,1),
+						n>1 ? luaL_checkinteger(L,2) : 0
+						);
+	return 0;
+}
+static int lssd1306_textFont( lua_State* L){
+	int n = lua_gettop(L);
+	//ssd1306_txtFont(int n, bool b, bool i, int sz)
+	ssd1306_txtFont(
+			n>0 ? luaL_checkinteger(L,1) : 0,
+			n>1 ? luaL_checkinteger(L,2) : 0,
+			n>2 ? luaL_checkinteger(L,3) : 0,
+			n>3 ? luaL_checkinteger(L,4) : 9
+			);
 	return 0;
 }
 static int lssd1306_cursor( lua_State* L){
@@ -236,7 +250,19 @@ static int lssd1306_print( lua_State* L){
 }
 static int lssd1306_chr( lua_State* L){
 	int n = lua_gettop(L);
-	ssd1306_chr( n>0 ? luaL_checkinteger(L,1) : 0 );
+	if(n < 2)
+		ssd1306_chr( n>0 ? luaL_checkinteger(L,1) : 32 );
+	else{
+		uint8_t chr = luaL_checkinteger(L,1);
+		ssd1306_chrPos(
+			n>1 ? lua_tonumber(L,2) : 0, //x,
+			n>2 ? lua_tonumber(L,3) : 0, //y, 
+			chr, 
+			n>3 ? lua_tonumber(L,4) : 1, //clr, 
+			n>4 ? lua_tonumber(L,5) : 0, //bg, 
+			n>5 ? lua_tonumber(L,6) : 1  //size
+			);
+	}
 	if(autoshow) ssd1306_show();
 	return 0;
 }
@@ -278,6 +304,7 @@ static const LUA_REG_TYPE lssd1306_map[] = {
     
     { LSTRKEY( "textColor" ),			LFUNCVAL( lssd1306_textColor ) },
     { LSTRKEY( "textSize" ),			LFUNCVAL( lssd1306_textSize ) },
+    { LSTRKEY( "textFont" ),			LFUNCVAL( lssd1306_textFont ) },
     { LSTRKEY( "textPos" ),			LFUNCVAL( lssd1306_cursor ) },
     { LSTRKEY( "print" ),			LFUNCVAL( lssd1306_print ) },
     { LSTRKEY( "chr" ),			LFUNCVAL( lssd1306_chr ) },
