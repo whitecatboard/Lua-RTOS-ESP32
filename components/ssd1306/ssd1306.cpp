@@ -215,6 +215,7 @@ void testscrolltext(void) {
 void ssd1306_clear(){ display.clearDisplay(); }
 void ssd1306_show(){ display.display(); }
 void ssd1306_invert(bool b){ display.invertDisplay(b); }
+void ssd1306_rotation(int r){ display.setRotation(r); }
 
 void ssd1306_pixel(int x, int y, int c){ display.drawPixel(x, y, c ? WHITE : BLACK); }
 void ssd1306_line(int xb, int yb, int xe, int ye, int c){ 
@@ -263,6 +264,14 @@ void ssd1306_txtFont(int n, bool b, bool i, int sz){
 	display.setFont( tfonts[ (sz <= 0 ? n : tn) ] ); 
 }
 void ssd1306_txtCursor(int x, int y){ display.setCursor(x,y); }
+void ssd1306_txtGetBnd(char* pstr, int x, int y, int* px1, int* py1, int* pw, int* ph){ 
+	display.getTextBounds(
+					pstr, 
+					x,y, 
+					(int16_t*)px1,(int16_t*)py1, 
+					(uint16_t*)pw,(uint16_t*)ph
+					); 
+}
 
 void ssd1306_print(char* s){ display.print(s); }
 void ssd1306_println(char* s){ display.println(s); }

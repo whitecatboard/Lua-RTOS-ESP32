@@ -46,6 +46,14 @@ static int lssd1306_invert( lua_State* L){
 	if(autoshow) ssd1306_show();
 	return 0;
 }
+static int lssd1306_rotation( lua_State* L){
+	int n = lua_gettop(L);
+	int r = (n > 0) ? luaL_checkinteger(L,1) : 0;
+	if(r<0 || r>3) r = 0;
+	ssd1306_rotation(r);
+	if(autoshow) ssd1306_show();
+	return 0;
+}
 
 static int lssd1306_point( lua_State* L){
 	int n = lua_gettop(L);
@@ -230,6 +238,25 @@ static int lssd1306_textFont( lua_State* L){
 			);
 	return 0;
 }
+//void ssd1306_txtGetBnd(char* pstr, int x, int y, int* x1, int* y1, int* w, int* h)
+static int lssd1306_textGetBnd( lua_State* L){
+	int16_t  x1, y1;
+	uint16_t w, h;
+	int n = lua_gettop(L);
+	if(n < 1) return 0;
+	ssd1306_txtGetBnd(
+			luaL_checkstring(L,1),
+			n>1 ? luaL_checkinteger(L,2) : 0,
+			n>2 ? luaL_checkinteger(L,3) : 0,
+			&x1, &y1,
+			&w, &h
+			);
+	lua_pushinteger(L, x1);
+	lua_pushinteger(L, y1);
+	lua_pushinteger(L, w);
+	lua_pushinteger(L, h);
+	return 4;
+}
 static int lssd1306_cursor( lua_State* L){
 	int n = lua_gettop(L);
 	ssd1306_txtCursor(
@@ -288,6 +315,7 @@ static const LUA_REG_TYPE lssd1306_map[] = {
     { LSTRKEY( "show" ),			LFUNCVAL( lssd1306_show ) },
     { LSTRKEY( "autoshow" ),			LFUNCVAL( lssd1306_autoshow ) },
     { LSTRKEY( "invert" ),			LFUNCVAL( lssd1306_invert ) },    
+    { LSTRKEY( "rotation" ),			LFUNCVAL( lssd1306_rotation ) },    
     
     { LSTRKEY( "point" ),			LFUNCVAL( lssd1306_point ) },
     { LSTRKEY( "line" ),			LFUNCVAL( lssd1306_line ) },
@@ -306,6 +334,7 @@ static const LUA_REG_TYPE lssd1306_map[] = {
     { LSTRKEY( "textSize" ),			LFUNCVAL( lssd1306_textSize ) },
     { LSTRKEY( "textFont" ),			LFUNCVAL( lssd1306_textFont ) },
     { LSTRKEY( "textPos" ),			LFUNCVAL( lssd1306_cursor ) },
+    { LSTRKEY( "textGetBounds" ),			LFUNCVAL( lssd1306_textGetBnd ) },
     { LSTRKEY( "print" ),			LFUNCVAL( lssd1306_print ) },
     { LSTRKEY( "chr" ),			LFUNCVAL( lssd1306_chr ) },
     { LNILKEY, LNILVAL }

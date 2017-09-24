@@ -3,6 +3,7 @@
 void ssd1306_clear();
 void ssd1306_show();
 void ssd1306_invert(bool b);
+void ssd1306_rotation(int r);
 
 void ssd1306_pixel(int x, int y, int c);
 void ssd1306_line(int xb, int yb, int xe, int ye, int c);
@@ -19,6 +20,7 @@ void ssd1306_txtSize(float sz);
 void ssd1306_txtColor(int clr, int bg);
 void ssd1306_txtCursor(int x, int y);
 void ssd1306_txtFont(int n, bool b, bool i, int sz);
+void ssd1306_txtGetBnd(char* pstr, int x, int y, int* px1, int* py1, int* pw, int* ph);
 void ssd1306_print(char* s);
 void ssd1306_println(char* s);
 void ssd1306_chr(uint8_t chr);
