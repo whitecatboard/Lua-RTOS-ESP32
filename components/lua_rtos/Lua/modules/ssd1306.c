@@ -15,45 +15,40 @@
 
 
 int autoshow = 1;
+int inv = 0;
 
+/*
 static int lssd1306_init( lua_State* L ) {
     ssd1306_init();
     return 0;
 }
-
+*/
 static int lssd1306_cls( lua_State* L){
     ssd1306_clear();
 	if(autoshow) ssd1306_show();
     return 0;
 }
-
 static int lssd1306_show( lua_State* L){
     ssd1306_show();
     return 0;
 }
 static int lssd1306_autoshow( lua_State* L){
-    autoshow =
-		lua_gettop(L) == 0 ? 1 : luaL_checkinteger(L, 1);
+    autoshow = lua_gettop(L) == 0 ? 1 : luaL_checkinteger(L, 1);
     return 0;
 }
-
-static int lssd1306_print( lua_State* L){
+static int lssd1306_invert( lua_State* L){
 	int n = lua_gettop(L);
-	int i;
-	
-	for(i = 1; i < n; i++){
-		ssd1306_print(lua_tostring(L,i) );
-	}
-	if(n > 0) ssd1306_println( lua_tostring(L,n) );
-
+	if(n > 0) 
+		inv = lua_toboolean(L, 1);
+	else
+		inv = inv == 0 ? 1 : 0;
+	ssd1306_invert(inv);
 	if(autoshow) ssd1306_show();
-    return 0;
+	return 0;
 }
-
 
 static int lssd1306_point( lua_State* L){
 	int n = lua_gettop(L);
-	
 	ssd1306_pixel(
 		n>0 ? lua_tonumber(L,1) : 0, 
 		n>1 ? lua_tonumber(L,2) : 0, 
@@ -63,25 +58,186 @@ static int lssd1306_point( lua_State* L){
 	return 0;
 }
 
+static int lssd1306_line( lua_State* L){
+	int n = lua_gettop(L);
+	ssd1306_line(
+		n>0 ? lua_tonumber(L,1) : 0, 
+		n>1 ? lua_tonumber(L,2) : 0, 
+		n>2 ? lua_tonumber(L,3) : 0, 
+		n>3 ? lua_tonumber(L,4) : 0, 
+		n>4 ? luaL_checkinteger(L,5) : 1
+		);
+	if(autoshow) ssd1306_show();
+	return 0;
+}
+
+static int lssd1306_rect( lua_State* L){
+	int n = lua_gettop(L);
+	ssd1306_rect(
+		n>0 ? lua_tonumber(L,1) : 0, 
+		n>1 ? lua_tonumber(L,2) : 0, 
+		n>2 ? lua_tonumber(L,3) : 0, 
+		n>3 ? lua_tonumber(L,4) : 0, 
+		n>4 ? luaL_checkinteger(L,5) : 1
+		);
+	if(autoshow) ssd1306_show();
+	return 0;
+}
+static int lssd1306_fillRect( lua_State* L){
+	int n = lua_gettop(L);
+	ssd1306_rectFill(
+		n>0 ? lua_tonumber(L,1) : 0, 
+		n>1 ? lua_tonumber(L,2) : 0, 
+		n>2 ? lua_tonumber(L,3) : 0, 
+		n>3 ? lua_tonumber(L,4) : 0, 
+		n>4 ? luaL_checkinteger(L,5) : 1
+		);
+	if(autoshow) ssd1306_show();
+	return 0;
+}
+
+static int lssd1306_roundRect( lua_State* L){
+	int n = lua_gettop(L);
+	ssd1306_roundRect(
+		n>0 ? lua_tonumber(L,1) : 0, 
+		n>1 ? lua_tonumber(L,2) : 0, 
+		n>2 ? lua_tonumber(L,3) : 0, 
+		n>3 ? lua_tonumber(L,4) : 0, 
+		n>4 ? lua_tonumber(L,5) : 4, 
+		n>5 ? luaL_checkinteger(L,6) : 1
+		);
+	if(autoshow) ssd1306_show();
+	return 0;
+}
+static int lssd1306_fillRoundRect( lua_State* L){
+	int n = lua_gettop(L);
+	ssd1306_roundRectFill(
+		n>0 ? lua_tonumber(L,1) : 0, 
+		n>1 ? lua_tonumber(L,2) : 0, 
+		n>2 ? lua_tonumber(L,3) : 0, 
+		n>3 ? lua_tonumber(L,4) : 0, 
+		n>4 ? lua_tonumber(L,5) : 4, 
+		n>5 ? luaL_checkinteger(L,6) : 1
+		);
+	if(autoshow) ssd1306_show();
+	return 0;
+}
+
+static int lssd1306_circle( lua_State* L){
+	int n = lua_gettop(L);
+	ssd1306_circle(
+		n>0 ? lua_tonumber(L,1) : 0, 
+		n>1 ? lua_tonumber(L,2) : 0, 
+		n>2 ? lua_tonumber(L,3) : 1, 
+		n>3 ? luaL_checkinteger(L,4) : 1
+		);
+	if(autoshow) ssd1306_show();
+	return 0;
+}
+static int lssd1306_fillCircle( lua_State* L){
+	int n = lua_gettop(L);
+	ssd1306_circleFill(
+		n>0 ? lua_tonumber(L,1) : 0, 
+		n>1 ? lua_tonumber(L,2) : 0, 
+		n>2 ? lua_tonumber(L,3) : 1, 
+		n>3 ? luaL_checkinteger(L,4) : 1
+		);
+	if(autoshow) ssd1306_show();
+	return 0;
+}
+
+static int lssd1306_triangle( lua_State* L){
+	int n = lua_gettop(L);
+	ssd1306_triangle(
+		n>0 ? lua_tonumber(L,1) : 0, 
+		n>1 ? lua_tonumber(L,2) : 0, 
+		n>2 ? lua_tonumber(L,3) : 0, 
+		n>3 ? lua_tonumber(L,4) : 0, 
+		n>4 ? lua_tonumber(L,5) : 0, 
+		n>5 ? lua_tonumber(L,6) : 0, 
+		n>6 ? luaL_checkinteger(L,7) : 1
+		);
+	if(autoshow) ssd1306_show();
+	return 0;
+}
+static int lssd1306_fillTriangle( lua_State* L){
+	int n = lua_gettop(L);
+	ssd1306_triangleFill(
+		n>0 ? lua_tonumber(L,1) : 0, 
+		n>1 ? lua_tonumber(L,2) : 0, 
+		n>2 ? lua_tonumber(L,3) : 0, 
+		n>3 ? lua_tonumber(L,4) : 0, 
+		n>4 ? lua_tonumber(L,5) : 0, 
+		n>5 ? lua_tonumber(L,6) : 0, 
+		n>6 ? luaL_checkinteger(L,7) : 1
+		);
+	if(autoshow) ssd1306_show();
+	return 0;
+}
+
+static int lssd1306_bitmap( lua_State* L){
+	int n = lua_gettop(L);
+	if(n < 5) return 0;
+	if(!lua_istable(L, 5)) return 0;
+	
+	int w = lua_tonumber(L,3);
+	int h = lua_tonumber(L,4);
+	int sz = w*h/8;
+	
+	if(sz <= 0) return 0;
+	
+	unsigned char* bmp = (unsigned char*)malloc(sz);
+	int i;
+	for(i = 0; i < sz; i++){
+		lua_rawgeti(L, 5, i+1);
+		bmp[i] = (unsigned char)luaL_checkinteger(L, -1);
+		lua_pop(L, 1);
+	}
+	ssd1306_bitmap(
+		lua_tonumber(L,1), //x
+		lua_tonumber(L,2), //y
+		w, //w
+		h, //h
+		bmp, //*bmp
+		n>5 ? luaL_checkinteger(L,6) : 1
+		);
+	free(bmp);
+	if(autoshow) ssd1306_show();
+	return 0;
+}
+
 static int lssd1306_textSize( lua_State* L){
 	int n = lua_gettop(L);
-	
 	if(n>0) ssd1306_txtSize(lua_tonumber(L,1));
 	return 0;
 }
 static int lssd1306_textColor( lua_State* L){
 	int n = lua_gettop(L);
-	
 	if(n>0) ssd1306_txtColor(luaL_checkinteger(L,1));
 	return 0;
 }
 static int lssd1306_cursor( lua_State* L){
 	int n = lua_gettop(L);
-	
 	ssd1306_txtCursor(
 		n>0 ? lua_tonumber(L,1) : 0, 
 		n>1 ? lua_tonumber(L,2) : 0
 		);
+	return 0;
+}
+static int lssd1306_print( lua_State* L){
+	int n = lua_gettop(L);
+	int i;
+	for(i = 1; i < n; i++){
+		ssd1306_print(lua_tostring(L,i) );
+	}
+	if(n > 0) ssd1306_println( lua_tostring(L,n) );
+	if(autoshow) ssd1306_show();
+    return 0;
+}
+static int lssd1306_chr( lua_State* L){
+	int n = lua_gettop(L);
+	ssd1306_chr( n>0 ? luaL_checkinteger(L,1) : 0 );
+	if(autoshow) ssd1306_show();
 	return 0;
 }
 
@@ -101,14 +257,30 @@ static int lssd1306_cls( lua_State* L){
 
 
 static const LUA_REG_TYPE lssd1306_map[] = {
-    { LSTRKEY( "init"  ),			LFUNCVAL( lssd1306_init ) },
+//    { LSTRKEY( "init"  ),			LFUNCVAL( lssd1306_init ) },
     { LSTRKEY( "cls" ),				LFUNCVAL( lssd1306_cls ) },
     { LSTRKEY( "show" ),			LFUNCVAL( lssd1306_show ) },
-    { LSTRKEY( "print" ),			LFUNCVAL( lssd1306_print ) },
+    { LSTRKEY( "autoshow" ),			LFUNCVAL( lssd1306_autoshow ) },
+    { LSTRKEY( "invert" ),			LFUNCVAL( lssd1306_invert ) },    
+    
     { LSTRKEY( "point" ),			LFUNCVAL( lssd1306_point ) },
+    { LSTRKEY( "line" ),			LFUNCVAL( lssd1306_line ) },
+    { LSTRKEY( "rect" ),			LFUNCVAL( lssd1306_rect ) },
+    { LSTRKEY( "rectFill" ),			LFUNCVAL( lssd1306_fillRect ) },
+    { LSTRKEY( "rectRound" ),			LFUNCVAL( lssd1306_roundRect ) },
+    { LSTRKEY( "rectRoundFill" ),			LFUNCVAL( lssd1306_fillRoundRect ) },
+    { LSTRKEY( "circle" ),			LFUNCVAL( lssd1306_circle ) },
+    { LSTRKEY( "circleFill" ),			LFUNCVAL( lssd1306_fillCircle ) },
+    { LSTRKEY( "triangle" ),			LFUNCVAL( lssd1306_triangle ) },
+    { LSTRKEY( "triangleFill" ),			LFUNCVAL( lssd1306_fillTriangle ) },
+    
+    { LSTRKEY( "bitmap" ),			LFUNCVAL( lssd1306_bitmap ) },
+    
     { LSTRKEY( "textColor" ),			LFUNCVAL( lssd1306_textColor ) },
     { LSTRKEY( "textSize" ),			LFUNCVAL( lssd1306_textSize ) },
     { LSTRKEY( "textPos" ),			LFUNCVAL( lssd1306_cursor ) },
+    { LSTRKEY( "print" ),			LFUNCVAL( lssd1306_print ) },
+    { LSTRKEY( "chr" ),			LFUNCVAL( lssd1306_chr ) },
     { LNILKEY, LNILVAL }
 };
 

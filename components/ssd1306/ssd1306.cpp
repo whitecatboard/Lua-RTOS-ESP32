@@ -27,11 +27,6 @@ All text above, and the splash screen must be included in any redistribution
 #define OLED_RESET 2
 Adafruit_SSD1306 display(OLED_RESET);
 
-#define NUMFLAKES 10
-#define XPOS 0
-#define YPOS 1
-#define DELTAY 2
-
 
 #define LOGO16_GLCD_HEIGHT 16 
 #define LOGO16_GLCD_WIDTH  16 
@@ -62,184 +57,6 @@ extern "C" {
 #include "ssd1306.h"
 
 
-void testdrawbitmap(const uint8_t *bitmap, uint8_t w, uint8_t h) {
-  uint8_t icons[NUMFLAKES][3];
- 
-  // initialize
-  for (uint8_t f=0; f< NUMFLAKES; f++) {
-    icons[f][XPOS] = random(display.width());
-    icons[f][YPOS] = 0;
-    icons[f][DELTAY] = random(5) + 1;
-    
-    Serial.print("x: ");
-    Serial.print(icons[f][XPOS], DEC);
-    Serial.print(" y: ");
-    Serial.print(icons[f][YPOS], DEC);
-    Serial.print(" dy: ");
-    Serial.println(icons[f][DELTAY], DEC);
-  }
-
-//  while (1) {
-    // draw each icon
-    for (uint8_t f=0; f< NUMFLAKES; f++) {
-      display.drawBitmap(icons[f][XPOS], icons[f][YPOS], bitmap, w, h, WHITE);
-    }
-    display.display();
-    delay(200);
-    
-    // then erase it + move it
-    for (uint8_t f=0; f< NUMFLAKES; f++) {
-      display.drawBitmap(icons[f][XPOS], icons[f][YPOS], bitmap, w, h, BLACK);
-      // move it
-      icons[f][YPOS] += icons[f][DELTAY];
-      // if its gone, reinit
-      if (icons[f][YPOS] > display.height()) {
-        icons[f][XPOS] = random(display.width());
-        icons[f][YPOS] = 0;
-        icons[f][DELTAY] = random(5) + 1;
-      }
-    }
-//   }
-}
-
-
-void testdrawchar(void) {
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(0,0);
-
-  for (uint8_t i=0; i < 168; i++) {
-    if (i == '\n') continue;
-    display.write(i);
-    if ((i > 0) && (i % 21 == 0))
-      display.println();
-  }    
-  display.display();
-  delay(1);
-}
-
-void testdrawcircle(void) {
-  for (int16_t i=0; i<display.height(); i+=2) {
-    display.drawCircle(display.width()/2, display.height()/2, i, WHITE);
-    display.display();
-    delay(1);
-  }
-}
-
-void testfillrect(void) {
-  uint8_t color = 1;
-  for (int16_t i=0; i<display.height()/2; i+=3) {
-    // alternate colors
-    display.fillRect(i, i, display.width()-i*2, display.height()-i*2, color%2);
-    display.display();
-    delay(1);
-    color++;
-  }
-}
-
-void testdrawtriangle(void) {
-  for (int16_t i=0; i<min(display.width(),display.height())/2; i+=5) {
-    display.drawTriangle(display.width()/2, display.height()/2-i,
-                     display.width()/2-i, display.height()/2+i,
-                     display.width()/2+i, display.height()/2+i, WHITE);
-    display.display();
-    delay(1);
-  }
-}
-
-void testfilltriangle(void) {
-  uint8_t color = WHITE;
-  for (int16_t i=min(display.width(),display.height())/2; i>0; i-=5) {
-    display.fillTriangle(display.width()/2, display.height()/2-i,
-                     display.width()/2-i, display.height()/2+i,
-                     display.width()/2+i, display.height()/2+i, WHITE);
-    if (color == WHITE) color = BLACK;
-    else color = WHITE;
-    display.display();
-    delay(1);
-  }
-}
-
-void testdrawroundrect(void) {
-  for (int16_t i=0; i<display.height()/2-2; i+=2) {
-    display.drawRoundRect(i, i, display.width()-2*i, display.height()-2*i, display.height()/4, WHITE);
-    display.display();
-    delay(1);
-  }
-}
-
-void testfillroundrect(void) {
-  uint8_t color = WHITE;
-  for (int16_t i=0; i<display.height()/2-2; i+=2) {
-    display.fillRoundRect(i, i, display.width()-2*i, display.height()-2*i, display.height()/4, color);
-    if (color == WHITE) color = BLACK;
-    else color = WHITE;
-    display.display();
-    delay(1);
-  }
-}
-   
-void testdrawrect(void) {
-  for (int16_t i=0; i<display.height()/2; i+=2) {
-    display.drawRect(i, i, display.width()-2*i, display.height()-2*i, WHITE);
-    display.display();
-    delay(1);
-  }
-}
-
-void testdrawline() {  
-  for (int16_t i=0; i<display.width(); i+=4) {
-    display.drawLine(0, 0, i, display.height()-1, WHITE);
-    display.display();
-    delay(1);
-  }
-  for (int16_t i=0; i<display.height(); i+=4) {
-    display.drawLine(0, 0, display.width()-1, i, WHITE);
-    display.display();
-    delay(1);
-  }
-  delay(250);
-  
-  display.clearDisplay();
-  for (int16_t i=0; i<display.width(); i+=4) {
-    display.drawLine(0, display.height()-1, i, 0, WHITE);
-    display.display();
-    delay(1);
-  }
-  for (int16_t i=display.height()-1; i>=0; i-=4) {
-    display.drawLine(0, display.height()-1, display.width()-1, i, WHITE);
-    display.display();
-    delay(1);
-  }
-  delay(250);
-  
-  display.clearDisplay();
-  for (int16_t i=display.width()-1; i>=0; i-=4) {
-    display.drawLine(display.width()-1, display.height()-1, i, 0, WHITE);
-    display.display();
-    delay(1);
-  }
-  for (int16_t i=display.height()-1; i>=0; i-=4) {
-    display.drawLine(display.width()-1, display.height()-1, 0, i, WHITE);
-    display.display();
-    delay(1);
-  }
-  delay(250);
-
-  display.clearDisplay();
-  for (int16_t i=0; i<display.height(); i+=4) {
-    display.drawLine(display.width()-1, 0, 0, i, WHITE);
-    display.display();
-    delay(1);
-  }
-  for (int16_t i=0; i<display.width(); i+=4) {
-    display.drawLine(display.width()-1, 0, i, display.height()-1, WHITE); 
-    display.display();
-    delay(1);
-  }
-  delay(250);
-}
-
 void testscrolltext(void) {
   display.setTextSize(2);
   display.setTextColor(WHITE);
@@ -267,18 +84,51 @@ void testscrolltext(void) {
 
 
 void ssd1306_clear(){ display.clearDisplay(); }
-
 void ssd1306_show(){ display.display(); }
-
-void ssd1306_print(char* s){ display.print(s); }
-
-void ssd1306_println(char* s){ display.println(s); }
+void ssd1306_invert(bool b){ display.invertDisplay(b); }
 
 void ssd1306_pixel(int x, int y, int c){ display.drawPixel(x, y, c ? WHITE : BLACK); }
+void ssd1306_line(int xb, int yb, int xe, int ye, int c){ 
+	display.drawLine(xb, yb, xe, ye, c==0 ? BLACK : WHITE); 
+}
+void ssd1306_rect(int xb, int yb, int xe, int ye, int c){ 
+	display.drawRect(xb, yb, xe, ye, c==0 ? BLACK : WHITE); 
+}
+void ssd1306_rectFill(int xb, int yb, int xe, int ye, int c){ 
+	display.fillRect(xb, yb, xe, ye, c==0 ? BLACK : WHITE); 
+}
+void ssd1306_roundRect(int xb, int yb, int xe, int ye, int r, int c){ 
+	display.drawRoundRect(xb, yb, xe, ye, r, c==0 ? BLACK : WHITE); 
+}
+void ssd1306_roundRectFill(int xb, int yb, int xe, int ye, int r, int c){ 
+	display.fillRoundRect(xb, yb, xe, ye, r, c==0 ? BLACK : WHITE); 
+}
+void ssd1306_circle(int x, int y, int r, int c){ 
+	display.drawCircle(x, y, r, c==0 ? BLACK : WHITE); 
+}
+void ssd1306_circleFill(int x, int y, int r, int c){ 
+	display.fillCircle(x, y, r, c==0 ? BLACK : WHITE); 
+}
+void ssd1306_triangle(int x1, int y1, int x2, int y2, int x3, int y3, int c){ 
+	display.drawTriangle(x1, y1, x2, y2, x3, y3, c==0 ? BLACK : WHITE); 
+}
+void ssd1306_triangleFill(int x1, int y1, int x2, int y2, int x3, int y3, int c){ 
+	display.fillTriangle(x1, y1, x2, y2, x3, y3, c==0 ? BLACK : WHITE); 
+}
 
 void ssd1306_txtSize(float sz){ display.setTextSize(sz); }
 void ssd1306_txtColor(int clr){ display.setTextColor(clr ? WHITE : BLACK); }
 void ssd1306_txtCursor(int x, int y){ display.setCursor(x,y); }
+
+void ssd1306_print(char* s){ display.print(s); }
+void ssd1306_println(char* s){ display.println(s); }
+
+void ssd1306_chr(uint8_t chr){ display.write(chr); }
+
+void ssd1306_bitmap(int x, int y, int w, int h, const unsigned char* bmp, int clr){ 
+	display.drawBitmap(x, y, bmp, w, h, clr); 
+}
+
 
 void ssd1306_init()   {
   // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
@@ -290,107 +140,13 @@ void ssd1306_init()   {
   // Since the buffer is intialized with an Adafruit splashscreen
   // internally, this will display the splashscreen.
   display.display();
-  delay(2000);
+//  delay(2000);
 
   // Clear the buffer.
   display.clearDisplay();
-}
-
-void ssd1306_aux(){
-  // draw a single pixel
-  display.drawPixel(10, 10, WHITE);
-  // Show the display buffer on the hardware.
-  // NOTE: You _must_ call display after making any drawing commands
-  // to make them visible on the display hardware!
-  display.display();
-  delay(2000);
-  display.clearDisplay();
-
-  // draw many lines
-  testdrawline();
-  display.display();
-  delay(2000);
-  display.clearDisplay();
-
-  // draw rectangles
-  testdrawrect();
-  display.display();
-  delay(2000);
-  display.clearDisplay();
-
-  // draw multiple rectangles
-  testfillrect();
-  display.display();
-  delay(2000);
-  display.clearDisplay();
-
-  // draw mulitple circles
-  testdrawcircle();
-  display.display();
-  delay(2000);
-  display.clearDisplay();
-
-  // draw a white circle, 10 pixel radius
-  display.fillCircle(display.width()/2, display.height()/2, 10, WHITE);
-  display.display();
-  delay(2000);
-  display.clearDisplay();
-
-  testdrawroundrect();
-  delay(2000);
-  display.clearDisplay();
-
-  testfillroundrect();
-  delay(2000);
-  display.clearDisplay();
-
-  testdrawtriangle();
-  delay(2000);
-  display.clearDisplay();
-   
-  testfilltriangle();
-  delay(2000);
-  display.clearDisplay();
-
-  // draw the first ~12 characters in the font
-  testdrawchar();
-  display.display();
-  delay(2000);
-  display.clearDisplay();
-
-  // draw scrolling text
-  testscrolltext();
-  delay(2000);
-  display.clearDisplay();
-
-  // text display tests
+  
+  display.setTextColor(WHITE);
   display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(0,0);
-  display.println("Hello, world!");
-  display.setTextColor(BLACK, WHITE); // 'inverted' text
-  display.println(3.141592);
-  display.setTextSize(2);
-  display.setTextColor(WHITE);
-  display.print("0x"); display.println(0xDEADBEEF, HEX);
-  display.display();
-  delay(2000);
-  display.clearDisplay();
-
-  // miniature bitmap display
-  display.drawBitmap(30, 16,  logo16_glcd_bmp, 16, 16, 1);
-  display.display();
-  delay(1);
-
-  // invert the display
-  display.invertDisplay(true);
-  delay(1000); 
-  display.invertDisplay(false);
-  delay(1000); 
-  display.clearDisplay();
-
-  // draw a bitmap icon and 'animate' movement
-  testdrawbitmap(logo16_glcd_bmp, LOGO16_GLCD_HEIGHT, LOGO16_GLCD_WIDTH);
 }
 
 } //extern "C"
