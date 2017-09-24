@@ -46,6 +46,7 @@
 
 #include <signal.h>
 
+
 // Each thread maintains a signal handler copy. Typically there are around 32 defined
 // signals, but not signals are required for applications. For example, in Lua only
 // SIGINT is used.

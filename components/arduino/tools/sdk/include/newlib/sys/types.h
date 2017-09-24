@@ -66,6 +66,7 @@ typedef	quad_t *	qaddr_t;
 #endif
 #endif
 
+
 # include <stddef.h>
 # include <machine/types.h>
 
@@ -295,6 +296,8 @@ typedef long suseconds_t;
  * <cygwin/types.h>
  */
 #if defined(_POSIX_THREADS) && !defined(__CYGWIN__)
+
+typedef int cpu_set_t;
 
 #include <sys/sched.h>
 
