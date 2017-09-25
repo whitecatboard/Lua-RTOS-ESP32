@@ -542,8 +542,10 @@ static int lthread_create_mutex(lua_State* L) {
 	// Init mutex
     pthread_mutexattr_t attr;
 
+    int type = luaL_optinteger(L, 2, PTHREAD_MUTEX_RECURSIVE);
+
     pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutexattr_settype(&attr, type);
 
 	mtx->mtx = PTHREAD_MUTEX_INITIALIZER;
     pthread_mutex_init(&mtx->mtx, &attr);
@@ -676,6 +678,10 @@ static const LUA_REG_TYPE thread[] = {
     { LSTRKEY( "sleepms"     ),			LFUNCVAL( lthread_sleepms       ) },
     { LSTRKEY( "sleepus"     ),			LFUNCVAL( lthread_sleepus       ) },
     { LSTRKEY( "usleep"      ),			LFUNCVAL( lthread_sleepus       ) },
+
+    { LSTRKEY( "Lock"    		    ),	LINTVAL( PTHREAD_MUTEX_NORMAL    ) },
+    { LSTRKEY( "RecursiveLock"      ),	LINTVAL( PTHREAD_MUTEX_RECURSIVE ) },
+
 	DRIVER_REGISTER_LUA_ERRORS(thread)
 	{ LNILKEY, LNILVAL }
 };
