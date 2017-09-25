@@ -4,6 +4,9 @@ void ssd1306_clear();
 void ssd1306_show();
 void ssd1306_invert(bool b);
 void ssd1306_rotation(int r);
+void ssd1306_dim(bool is_dim);
+void ssd1306_startscroll(int from, int to, int dir);
+void ssd1306_stopscroll();
 
 void ssd1306_pixel(int x, int y, int c);
 void ssd1306_line(int xb, int yb, int xe, int ye, int c);

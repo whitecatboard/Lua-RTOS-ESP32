@@ -216,6 +216,26 @@ void ssd1306_clear(){ display.clearDisplay(); }
 void ssd1306_show(){ display.display(); }
 void ssd1306_invert(bool b){ display.invertDisplay(b); }
 void ssd1306_rotation(int r){ display.setRotation(r); }
+void ssd1306_dim(bool is_dim){ display.dim(is_dim); }
+void ssd1306_startscroll(int from, int to, int dir){ 
+	switch(dir){
+		case 1:
+			display.startscrollright(from, to);
+			break;
+		case 2:
+			display.startscrollleft(from, to);
+			break;
+		case 3:
+			display.startscrolldiagright(from, to);
+			break;
+		case 4:
+			display.startscrolldiagleft(from, to);
+			break;
+		default:
+			break;
+	}
+}
+void ssd1306_stopscroll(){ display.stopscroll(); }
 
 void ssd1306_pixel(int x, int y, int c){ display.drawPixel(x, y, c ? WHITE : BLACK); }
 void ssd1306_line(int xb, int yb, int xe, int ye, int c){ 

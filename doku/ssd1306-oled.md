@@ -33,6 +33,23 @@ set rotation of graphical operation on the screen
 
 * rot -- [0..3] - rotation. 0, 90, 180, 270 degrees
 
+## dim(is_dim)
+dimming
+* is_dim -- 1 - display is dimmed, 0 - display is normal
+
+## scrollStart(dir, rowFrom, rowTo)
+start scrolling of display
+* dir -- direction of scrolling:
+  1. scroll right, 
+  1. scroll left,
+  1. scroll diag right, 
+  1. scroll diag left,
+* rowFrom -- begining row to scrolling (default 0)
+* rowTo -- ending row to scrolling (default 128-1)
+
+## scrollStop()
+stop scrolling of display
+
 # graphical ops
 
 ## point(x, y, clr)

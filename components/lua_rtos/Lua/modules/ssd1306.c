@@ -38,12 +38,34 @@ static int lssd1306_autoshow( lua_State* L){
 }
 static int lssd1306_invert( lua_State* L){
 	int n = lua_gettop(L);
+	int inv;
 	if(n > 0) 
 		inv = lua_toboolean(L, 1);
 	else
 		inv = inv == 0 ? 1 : 0;
 	ssd1306_invert(inv);
 	if(autoshow) ssd1306_show();
+	return 0;
+}
+static int lssd1306_dim( lua_State* L){
+	int n = lua_gettop(L);
+	ssd1306_dim(
+			n > 0 ? lua_toboolean(L, 1) : 0
+			);
+	return 0;
+}
+static int lssd1306_startscroll( lua_State* L){
+	int n = lua_gettop(L);
+	if(n < 1) return 0;
+	ssd1306_startscroll(
+			luaL_checkinteger(L, 1),
+			n > 1 ? luaL_checkinteger(L, 2) : 0,
+			n > 2 ? luaL_checkinteger(L, 3) : 128-1
+			);
+	return 0;
+}
+static int lssd1306_stopscroll( lua_State* L){
+	ssd1306_stopscroll();
 	return 0;
 }
 static int lssd1306_rotation( lua_State* L){
@@ -313,30 +335,33 @@ static const LUA_REG_TYPE lssd1306_map[] = {
 //    { LSTRKEY( "init"  ),			LFUNCVAL( lssd1306_init ) },
     { LSTRKEY( "cls" ),				LFUNCVAL( lssd1306_cls ) },
     { LSTRKEY( "show" ),			LFUNCVAL( lssd1306_show ) },
-    { LSTRKEY( "autoshow" ),			LFUNCVAL( lssd1306_autoshow ) },
+    { LSTRKEY( "autoshow" ),		LFUNCVAL( lssd1306_autoshow ) },
     { LSTRKEY( "invert" ),			LFUNCVAL( lssd1306_invert ) },    
-    { LSTRKEY( "rotation" ),			LFUNCVAL( lssd1306_rotation ) },    
+    { LSTRKEY( "dim" ),				LFUNCVAL( lssd1306_dim ) },    
+    { LSTRKEY( "scrollStart" ),		LFUNCVAL( lssd1306_startscroll ) },    
+    { LSTRKEY( "scrollStop" ),		LFUNCVAL( lssd1306_stopscroll ) },    
+    { LSTRKEY( "rotation" ),		LFUNCVAL( lssd1306_rotation ) },    
     
     { LSTRKEY( "point" ),			LFUNCVAL( lssd1306_point ) },
     { LSTRKEY( "line" ),			LFUNCVAL( lssd1306_line ) },
     { LSTRKEY( "rect" ),			LFUNCVAL( lssd1306_rect ) },
-    { LSTRKEY( "rectFill" ),			LFUNCVAL( lssd1306_fillRect ) },
-    { LSTRKEY( "rectRound" ),			LFUNCVAL( lssd1306_roundRect ) },
-    { LSTRKEY( "rectRoundFill" ),			LFUNCVAL( lssd1306_fillRoundRect ) },
+    { LSTRKEY( "rectFill" ),		LFUNCVAL( lssd1306_fillRect ) },
+    { LSTRKEY( "rectRound" ),		LFUNCVAL( lssd1306_roundRect ) },
+    { LSTRKEY( "rectRoundFill" ),	LFUNCVAL( lssd1306_fillRoundRect ) },
     { LSTRKEY( "circle" ),			LFUNCVAL( lssd1306_circle ) },
-    { LSTRKEY( "circleFill" ),			LFUNCVAL( lssd1306_fillCircle ) },
-    { LSTRKEY( "triangle" ),			LFUNCVAL( lssd1306_triangle ) },
-    { LSTRKEY( "triangleFill" ),			LFUNCVAL( lssd1306_fillTriangle ) },
+    { LSTRKEY( "circleFill" ),		LFUNCVAL( lssd1306_fillCircle ) },
+    { LSTRKEY( "triangle" ),		LFUNCVAL( lssd1306_triangle ) },
+    { LSTRKEY( "triangleFill" ),	LFUNCVAL( lssd1306_fillTriangle ) },
     
     { LSTRKEY( "bitmap" ),			LFUNCVAL( lssd1306_bitmap ) },
     
-    { LSTRKEY( "textColor" ),			LFUNCVAL( lssd1306_textColor ) },
-    { LSTRKEY( "textSize" ),			LFUNCVAL( lssd1306_textSize ) },
-    { LSTRKEY( "textFont" ),			LFUNCVAL( lssd1306_textFont ) },
+    { LSTRKEY( "textColor" ),		LFUNCVAL( lssd1306_textColor ) },
+    { LSTRKEY( "textSize" ),		LFUNCVAL( lssd1306_textSize ) },
+    { LSTRKEY( "textFont" ),		LFUNCVAL( lssd1306_textFont ) },
     { LSTRKEY( "textPos" ),			LFUNCVAL( lssd1306_cursor ) },
-    { LSTRKEY( "textGetBounds" ),			LFUNCVAL( lssd1306_textGetBnd ) },
+    { LSTRKEY( "textGetBounds" ),	LFUNCVAL( lssd1306_textGetBnd ) },
     { LSTRKEY( "print" ),			LFUNCVAL( lssd1306_print ) },
-    { LSTRKEY( "chr" ),			LFUNCVAL( lssd1306_chr ) },
+    { LSTRKEY( "chr" ),				LFUNCVAL( lssd1306_chr ) },
     { LNILKEY, LNILVAL }
 };
 
