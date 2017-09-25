@@ -6,9 +6,10 @@
 * Adafruit Arduino libraries are used to support of OLED. in the Lua it is the class "ssd1306".
 * support of Arduino libraries and arduino code were embedded into Lua-RTOS-ESP32.
 
+# SSD1306 Lua documentation
+[ssd1306 Lua object & text/graphical functions](./doku/ssd1306-oled.md)
 
 # To Do
-* documentation of OLED functions (lua "ssd1306" class)
 * simpler scheme to expand Lua-RTOS-ESP32 with new C modules
 
 # How to compile
