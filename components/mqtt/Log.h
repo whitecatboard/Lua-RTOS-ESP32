@@ -42,7 +42,7 @@
 #define Log(level, msgno, fmt, ...) \
 	do { \
 		if (msgno < 0) { \
-			syslog(level, fmt, ##__VA_ARGS__); \
+			syslog(LOG_DEBUG, fmt, ##__VA_ARGS__); \
 		} else { \
 			if ((level == TRACE_PROTOCOL) || (level == LOG_PROTOCOL)) { \
 				syslog(LOG_DEBUG, (const char *)Messages_get(msgno, level), ##__VA_ARGS__); \
