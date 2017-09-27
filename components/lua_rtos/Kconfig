@@ -1003,6 +1003,14 @@ menu "Lua RTOS"
 				config LUA_RTOS_LUA_USE_CAN
 					bool "Include CAN module in build"
 					default y
+
+				config LUA_RTOS_LUA_USE_CPU
+					bool "Include CPU module in build"
+					default y
+
+				config LUA_RTOS_LUA_USE_ULP
+					bool "Include ULP module in build"
+					default y
 			endmenu
 		endmenu
 endmenu

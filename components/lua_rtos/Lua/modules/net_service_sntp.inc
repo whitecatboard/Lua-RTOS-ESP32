@@ -44,7 +44,7 @@ static int lsntp_start(lua_State* L) {
 	}
 
 	sntp_setoperatingmode (SNTP_OPMODE_POLL);
-	sntp_setservername(0, ntp_server);
+	sntp_setservername(0, (char*)ntp_server);
 	sntp_init();
 
 	return 0;

@@ -48,14 +48,7 @@ static int lcaptivedns_start(lua_State* L) {
 }
 
 static int lcaptivedns_stop(lua_State* L) {
-	driver_error_t *error;
-
-	if ((error = net_check_connectivity())) {
-    	return luaL_driver_error(L, error);
-	}
-
 	captivedns_stop();
-
 	return 0;
 }
 

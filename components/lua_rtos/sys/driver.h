@@ -70,6 +70,8 @@
 #define TIMER_DRIVER_ID    28
 #define ENCODER_DRIVER_ID  29
 #define MDNS_DRIVER_ID     30
+#define CPU_DRIVER_ID      31
+#define ULP_DRIVER_ID      32
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -96,6 +98,8 @@
 #define TIMER_DRIVER driver_get_by_name("timer")
 #define ENCODER_DRIVER driver_get_by_name("encoder")
 #define MDNS_DRIVER driver_get_by_name("mdns")
+#define CPU_DRIVER driver_get_by_name("cpu")
+#define ULP_DRIVER driver_get_by_name("ulp")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 
