@@ -231,8 +231,8 @@ static int lmqtt_client( lua_State* L ){
       return luaL_exception(L, LUA_MQTT_ERR_CANT_SET_CALLBACKS);
     }
 
-   luaL_getmetatable(L, "mqtt.cli");
-   lua_setmetatable(L, -2);
+    luaL_getmetatable(L, "mqtt.cli");
+    lua_setmetatable(L, -2);
 
     return 1;
 }
@@ -422,8 +422,14 @@ static const LUA_REG_TYPE lmqtt_client_map[] = {
 };
 
 LUALIB_API int luaopen_mqtt( lua_State *L ) {
-    luaL_newmetarotable(L,"mqtt.cli", (void *)lmqtt_client_map);
-    return 0;
+  luaL_newmetarotable(L,"mqtt.cli", (void *)lmqtt_client_map);
+
+#if !LUA_USE_ROTABLE
+  luaL_newlib(L, mqtt);
+  return 1;
+#else
+	return 0;
+#endif
 }
 
 MODULE_REGISTER_MAPPED(MQTT, mqtt, lmqtt_map, luaopen_mqtt);

@@ -118,7 +118,7 @@ static int ladc_attach( lua_State* L ) {
 static int ladc_read( lua_State* L ) {
     int raw;
     double mvlots;
-	driver_error_t *error;
+    driver_error_t *error;
     adc_userdata *adc = NULL;
 
     adc = (adc_userdata *)luaL_checkudata(L, 1, "adc.chan");

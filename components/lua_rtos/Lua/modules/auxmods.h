@@ -37,31 +37,31 @@ LUALIB_API int ( luaopen_cpu )( lua_State* L );
 #define AUXLIB_ADC      "adc"
 LUALIB_API int ( luaopen_adc )( lua_State *L );
 
-#define AUXLIB_MQTT  "mqtt"
+#define AUXLIB_MQTT     "mqtt"
 LUALIB_API int ( luaopen_mqtt )( lua_State *L );
 
-#define AUXLIB_THREAD "thread"
+#define AUXLIB_THREAD   "thread"
 LUALIB_API int (luaopen_thread) (lua_State* L);
 
-#define AUXLIB_SCREEN "screen"
+#define AUXLIB_SCREEN   "screen"
 LUALIB_API int (luaopen_screen) (lua_State* L);
 
-#define AUXLIB_GPS "gps"
+#define AUXLIB_GPS      "gps"
 LUALIB_API int (luaopen_gps) (lua_State* L);
 
-#define AUXLIB_STEPPER "stepper"
+#define AUXLIB_STEPPER  "stepper"
 LUALIB_API int (luaopen_stepper) (lua_State* L);
 
-#define AUXLIB_I2C "i2c"
+#define AUXLIB_I2C      "i2c"
 LUALIB_API int (luaopen_i2c) (lua_State* L);
 
-#define AUXLIB_LORA "lora"
+#define AUXLIB_LORA     "lora"
 LUALIB_API int (luaopen_lora) (lua_State* L);
 
-#define AUXLIB_PACK "pack"
+#define AUXLIB_PACK     "pack"
 LUALIB_API int (luaopen_pack) (lua_State* L);
 
-#define AUXLIB_NVS "nvs"
+#define AUXLIB_NVS      "nvs"
 LUALIB_API int (luaopen_nvs) (lua_State* L);
 
 // Helper macros

@@ -217,7 +217,7 @@ void _sys_init() {
             openlog(__progname, LOG_NDELAY , LOG_LOCAL1);
         } else {
         	syslog(LOG_ERR, "can't redirect console messages to file system, an SDCARD is needed");
-        }   
+        }
     #endif
 
     // Continue init ...
