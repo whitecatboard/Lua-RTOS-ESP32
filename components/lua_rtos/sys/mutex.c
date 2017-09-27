@@ -35,12 +35,8 @@
 #include <sys/mutex.h>
 #include <sys/panic.h>
 
-void _mtx_init() {
-}
-
 void mtx_init(struct mtx *mutex, const char *name, const char *type, int opts) {    
     mutex->sem = xSemaphoreCreateBinary();
-
     if (mutex->sem) {
         if (xPortInIsrContext()) {
             BaseType_t xHigherPriorityTaskWoken = pdFALSE;

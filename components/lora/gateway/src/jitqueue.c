@@ -28,7 +28,7 @@ Maintainer: Michael Coracin
 #include <assert.h>
 #include <math.h>
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 #include "trace.h"
 #include "jitqueue.h"

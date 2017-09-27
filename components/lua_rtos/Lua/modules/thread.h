@@ -32,7 +32,7 @@
 
 #include "lstate.h"
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 struct lthread {
     lua_State *PL; // Parent thread
@@ -43,6 +43,10 @@ struct lthread {
     int thid;
     pthread_t thread;
 };
+
+typedef struct {
+	pthread_mutex_t mtx;
+} mutex_userdata;
 
 #endif	/* LTHREAD_H */
 

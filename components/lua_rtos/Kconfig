@@ -898,7 +898,7 @@ menu "Lua RTOS"
 					bool "Include package module in build"
 					default y
 			endmenu
-			menu "Lua RTOS Modules"
+			menu "Lua RTOS Modules"			
 				config LUA_RTOS_LUA_USE_THREAD
 					bool "Include thread module in build"
 					default y

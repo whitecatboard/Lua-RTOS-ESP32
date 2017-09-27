@@ -63,7 +63,7 @@
 #include "soc/io_mux_reg.h"
 
 #include <stdint.h>
-#include <pthread/pthread.h>
+#include <pthread.h>
 #include <sys/driver.h>
 
 struct uart {

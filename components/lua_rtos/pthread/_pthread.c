@@ -2,7 +2,7 @@
  * Lua RTOS, pthread implementation over FreeRTOS
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -34,6 +34,7 @@
 
 #include "lua.h"
 #include "thread.h"
+#include "_pthread.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -42,8 +43,6 @@
 
 #include <sys/mutex.h>
 #include <sys/queue.h>
-#include <pthread/pthread.h>
-#include "freertos/adds.h"
 
 #include "lauxlib.h"
 
@@ -53,6 +52,8 @@ struct list thread_list;
 
 struct mtx once_mtx;
 struct mtx cond_mtx;
+
+static uint8_t inited = 0;
 
 struct pthreadTaskArg {
     void *(*pthread_function) (void *);
@@ -65,14 +66,18 @@ struct pthreadTaskArg {
 void pthreadTask(void *task_arguments);
 
 void _pthread_init() {
-    // Create mutexes
-    mtx_init(&once_mtx, NULL, NULL, 0);
-    mtx_init(&cond_mtx, NULL, NULL, 0);
-    
-    // Init lists
-    list_init(&thread_list, 1);
-    list_init(&mutex_list, 1);
-    list_init(&key_list, 1);
+	if (!inited) {
+	    // Create mutexes
+	    mtx_init(&once_mtx, NULL, NULL, 0);
+	    mtx_init(&cond_mtx, NULL, NULL, 0);
+
+	    // Init lists
+	    list_init(&thread_list, 1);
+	    list_init(&mutex_list, 1);
+	    list_init(&key_list, 1);
+
+	    inited = 1;
+	}
 }
 
 int _pthread_create(pthread_t *id, int priority, int stacksize, int cpu, int initial_state,
@@ -84,7 +89,7 @@ int _pthread_create(pthread_t *id, int priority, int stacksize, int cpu, int ini
     struct pthread *thread;
     struct pthread *parent_thread;
     int current_thread, i;
-    
+
     // Set pthread arguments for creation
     taskArgs = (struct pthreadTaskArg *)malloc(sizeof(struct pthreadTaskArg));
     if (!taskArgs) {
@@ -128,7 +133,7 @@ int _pthread_create(pthread_t *id, int priority, int stacksize, int cpu, int ini
     mtx_init(&thread->init_mtx, NULL, NULL, 0);
 
     // Add to the thread list
-    res = list_add(&thread_list, thread, id);
+    res = list_add(&thread_list, (void *)thread, (int *)id);
     if (res) {
         free(taskArgs);
         free(thread);
@@ -212,7 +217,7 @@ int _pthread_join(pthread_t id) {
     }
 
     // Add join to the join list
-    res = list_add(&thread->join_list, join, &idx); 
+    res = list_add(&thread->join_list, (void *)join, (int *)&idx);
     if (res) {
         vQueueDelete(join->queue);
         free(join);
@@ -229,7 +234,7 @@ int _pthread_join(pthread_t id) {
 int _pthread_free(pthread_t id) {
     struct pthread *thread;
     int res;
-    
+
     _pthread_mutex_free();
     
     // Get thread
@@ -256,7 +261,7 @@ int _pthread_free(pthread_t id) {
 sig_t _pthread_signal(int s, sig_t h) {
     struct pthread *thread; // Current thread
     sig_t prev_h;           // Previous handler
-    
+
     if (s > PTHREAD_NSIG) {
         errno = EINVAL;
         return SIG_ERR;
@@ -279,7 +284,7 @@ sig_t _pthread_signal(int s, sig_t h) {
 void IRAM_ATTR _pthread_queue_signal(int s) {
     struct pthread *thread; // Current thread
     int index;
-    
+
     index = list_first(&thread_list);
     while (index >= 0) {
         list_get(&thread_list, index, (void **)&thread);
@@ -297,7 +302,7 @@ void IRAM_ATTR _pthread_queue_signal(int s) {
 int IRAM_ATTR _pthread_has_signal(int s) {
     struct pthread *thread; // Current thread
     int index;
-    
+
     index = list_first(&thread_list);
     while (index >= 0) {
         list_get(&thread_list, index, (void **)&thread);
@@ -420,7 +425,7 @@ void pthreadTask(void *taskArgs) {
     struct pthread_clean *clean; 	  	  // Current clean
     struct pthread *thread;      		  // Current thread
 	lua_rtos_tcb_t *lua_rtos_tcb;         // Lua RTOS specific TCB parts
-	
+
     char c = '1';
     int index;
 
@@ -518,5 +523,7 @@ int pthread_cancel(pthread_t thread) {
 }
 
 esp_err_t esp_pthread_init(void) {
-    return ESP_OK;
+	_pthread_init();
+
+	return ESP_OK;
 }

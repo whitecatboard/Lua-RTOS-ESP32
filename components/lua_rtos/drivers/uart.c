@@ -79,7 +79,7 @@
 #include <sys/syslog.h>
 #include <sys/delay.h>
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 #include <drivers/uart.h>
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>

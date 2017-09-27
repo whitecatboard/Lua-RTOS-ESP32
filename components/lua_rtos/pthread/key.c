@@ -2,7 +2,7 @@
  * Lua RTOS, pthread implementation over FreeRTOS
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -27,9 +27,10 @@
  * this software.
  */
 
+#include "_pthread.h"
+
 #include <errno.h>
 #include <stdlib.h>
-#include <pthread/pthread.h>
 
 extern struct list key_list;
 
@@ -50,13 +51,13 @@ int pthread_key_create(pthread_key_t *k, void (*destructor)(void*)) {
     list_init(&key->specific,1);
     
     // Add key to key list
-    res = list_add(&key_list, key, k);
+    res = list_add(&key_list, (void *)key, (int*)k);
     if (res) {
         free(key);
         errno = res;
         return res;
     }
-    
+
     return 0;
 }
 
