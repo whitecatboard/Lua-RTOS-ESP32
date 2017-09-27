@@ -409,9 +409,10 @@ int enc424j600_init(struct netif *netif) {
 		return 0;
 	}
 
-	syslog(LOG_INFO, "enc424j600 is at spi%d, pin cs=%s%d, speed %d Mhz",
+	syslog(LOG_INFO, "enc424j600 is at spi%d, cs=%s%d, int=%s%d, speed %d Mhz",
 			CONFIG_SPI_ETHERNET_SPI,
 			gpio_portname(CONFIG_SPI_ETHERNET_CS), gpio_name(CONFIG_SPI_ETHERNET_CS),
+			gpio_portname(CONFIG_SPI_ETHERNET_INT), gpio_name(CONFIG_SPI_ETHERNET_INT),
 			CONFIG_SPI_ETHERNET_SPEED / 1000000);
 
 	if (phy_reset() < 0) {

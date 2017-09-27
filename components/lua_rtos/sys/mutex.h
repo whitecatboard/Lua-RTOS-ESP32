@@ -27,8 +27,8 @@
  * this software.
  */
 
-#ifndef MUTEX_H_H
-#define	MUTEX_H_H
+#ifndef _MUTEX_H
+#define	_MUTEX_H
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -45,5 +45,5 @@ int  mtx_trylock(struct	mtx *mutex);
 void mtx_unlock(struct mtx *mutex);
 void mtx_destroy(struct	mtx *mutex);
 
-#endif	/* MUTEX_H_H */
+#endif	/* _MUTEX_H */
 

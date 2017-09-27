@@ -28,7 +28,7 @@
  */
 
 #include <signal.h>
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 void _signal_init() {
 }

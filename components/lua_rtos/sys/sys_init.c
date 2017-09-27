@@ -70,7 +70,7 @@ uint8_t flash_unique_id[8];
 #ifdef RUN_TESTS
 #include <unity.h>
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 void *_sys_tests(void *arg) {
 	printf("Running tests ...\r\n\r\n");
@@ -134,7 +134,6 @@ void _sys_init() {
 	// Init important things for Lua RTOS
 	_clock_init();
 	_cpu_init();
-    _mtx_init();
     _driver_init();
     _pthread_init();
 

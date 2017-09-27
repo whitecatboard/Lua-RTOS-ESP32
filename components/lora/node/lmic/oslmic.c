@@ -26,7 +26,7 @@
 #include <sys/syslog.h>
 #include <sys/driver.h>
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 extern void hal_lmic_command();
 

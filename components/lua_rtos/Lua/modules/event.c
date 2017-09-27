@@ -46,7 +46,7 @@
 
 #include <sys/driver.h>
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 #define EVENT_ERR_NOT_ENOUGH_MEMORY (DRIVER_EXCEPTION_BASE(EVENT_DRIVER_ID) |  0)
 
@@ -347,15 +347,16 @@ thread.start(function()
   	  e1:wait()
 	  tmr.delay(2)
 	  print("hi from 1")
+	  e2:broadcast()
   end
 end)
 
 thread.start(function()
   while true do
   	  e2:wait()
-  	  e1:broadcast()
   	  tmr.delay(4)
 	  print("hi from 2")
+  	  e1:broadcast()
   end
 end)
 

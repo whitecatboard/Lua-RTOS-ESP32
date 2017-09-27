@@ -66,10 +66,6 @@ LDFLAGS += -Wl,--wrap=lwip_close_r
 #
 # Lua configuration
 #
-CFLAGS += -DLUA_USE_CTYPE
-CFLAGS += -DLUA_32BITS
-CFLAGS += -DLUA_USE_CTYPE
-CFLAGS += -DLUA_C89_NUMBERS
 
 CFLAGS += -DDEBUG_FREE_MEM=0           # Enable LUA free mem debug utility (only for debug purposes)
 CFLAGS += -DLUA_USE_LUA_LOCK=1		   # Enable if Lua must use real lua_lock / lua_unlock implementation

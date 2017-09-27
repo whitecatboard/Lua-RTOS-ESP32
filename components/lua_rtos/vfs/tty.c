@@ -38,7 +38,7 @@
 
 #include <sys/stat.h>
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 #include <drivers/uart.h>
 
