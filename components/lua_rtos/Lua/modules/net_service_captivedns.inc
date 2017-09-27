@@ -1,7 +1,7 @@
 /*
  * Lua RTOS, lua captivedns module
  *
- * Copyright (C) 2015 - 2017
+ * Author: Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.
  *

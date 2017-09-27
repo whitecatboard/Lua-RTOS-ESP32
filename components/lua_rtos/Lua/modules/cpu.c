@@ -1,10 +1,7 @@
 /*
  * Lua RTOS, Lua CPU module
  *
- * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L.
- *
- * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ * Author: Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.
  *
