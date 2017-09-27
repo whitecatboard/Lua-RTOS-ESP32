@@ -291,7 +291,7 @@ driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr
 		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
 	}
 
-	if (speed == -1) {
+	if ((speed < 0) || (speed == 0)) {
 		speed = 400000;
 	}
 
