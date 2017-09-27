@@ -97,14 +97,14 @@ static int os_edit (lua_State *L) {
 static int os_sleep(lua_State *L) {
 	unsigned int seconds = luaL_checkinteger(L, 1);
 
-	luaL_deprecated(L, "os.sleep", "cpu.sleep");
+	//luaL_deprecated(L, "os.sleep", "cpu.sleep");
 
 	cpu_sleep(seconds);
 	return 0;
 }
 
 static int os_reset_reason(lua_State *L) {
-	luaL_deprecated(L, "os.resetreason", "cpu.resetreason");
+	//luaL_deprecated(L, "os.resetreason", "cpu.resetreason");
 
 	lua_pushinteger(L, cpu_reset_reason());
 	return 1;
@@ -357,7 +357,7 @@ static int os_cpu(lua_State *L) {
 	char model[18];
 	char cpuInfo[26];
 	
-	luaL_deprecated(L, "os.cpu", "cpu.model");
+	//luaL_deprecated(L, "os.cpu", "cpu.model");
 
 	cpu_model(model);
 	revision = cpu_revision();
@@ -373,7 +373,7 @@ static int os_cpu(lua_State *L) {
 }
 
 static int os_board(lua_State *L) {
-	luaL_deprecated(L, "os.board", "cpu.board");
+	//luaL_deprecated(L, "os.board", "cpu.board");
 	lua_pushstring(L, LUA_RTOS_BOARD);
 	return 1;
 }
