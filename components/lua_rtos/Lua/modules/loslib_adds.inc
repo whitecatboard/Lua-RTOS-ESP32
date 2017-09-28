@@ -318,7 +318,7 @@ static int os_ls (lua_State *L) {
 		//	type = 'l';
 		//	sprintf(size,"%8d", ent->d_fsize);
 		} else {
-			strcpy(size, "		-");
+			strcpy(size, "       -");
 		}
 		
 		printf("%c\t%s\t%s\t%s\n",
