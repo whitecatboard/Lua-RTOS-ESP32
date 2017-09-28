@@ -86,6 +86,28 @@ void *_sys_tests(void *arg) {
 
 #endif
 
+/*
+   Shows the firmware copyright notice. You can modify the default copyright notice if
+   the following conditions are met:
+
+   1. The whitecat logo cannot be changed. You can remove the whitecat logo, but you
+      cannot change it. The whitecat logo is:
+
+        /\       /\
+       /  \_____/  \
+      /_____________\
+      W H I T E C A T
+
+   2. Any other copyright notices cannot be removed. This includes any references to
+      Lua RTOS, Lua, and copyright notices that may appear in the future.
+*/
+void __attribute__((weak)) firmware_copyright_notice() {
+	printf("  /\\       /\\\r\n");
+    printf(" /  \\_____/  \\\r\n");
+    printf("/_____________\\\r\n");
+    printf("W H I T E C A T\r\n\r\n");
+}
+
 void _sys_init() {
 	// Set default power down mode for all RTC power domains in deep sleep
 	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
@@ -151,10 +173,7 @@ void _sys_init() {
 
 	console_clear();
 
-	printf("  /\\       /\\\r\n");
-    printf(" /  \\_____/  \\\r\n");
-    printf("/_____________\\\r\n");
-    printf("W H I T E C A T\r\n\r\n");
+	firmware_copyright_notice();
 
     printf(
 		"Lua RTOS %s. Copyright (C) 2015 - 2017 whitecatboard.org\r\n\r\nbuild %d\r\ncommit %s\r\n",
