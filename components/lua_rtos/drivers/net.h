@@ -27,6 +27,10 @@
  * this software.
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_NET
+
 #ifndef NET_H_
 #define NET_H_
 
@@ -65,6 +69,9 @@ typedef struct {
 #define NET_ERR_INVALID_IP                 (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  1)
 #define NET_ERR_NO_MORE_CALLBACKS          (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  2)
 #define NET_ERR_NO_CALLBACK_NOT_FOUND      (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  3)
+
+extern const int net_errors;
+extern const int net_error_map;
 
 typedef void (*net_event_register_callback_t)(system_event_t *event);
 
@@ -133,5 +140,7 @@ driver_error_t *net_event_register_callback(net_event_register_callback_t func);
  *     	 NET_ERR_NO_MORE_CALLBACKS
  */
 driver_error_t *net_event_unregister_callback(net_event_register_callback_t func);
+
+#endif
 
 #endif

@@ -27,9 +27,15 @@
  * this software.
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_USE_HTTP_SERVER
+
 #ifndef HTTP_PREPROCESSOR_H_
 #define HTTP_PREPROCESSOR_H_
 
 int http_process_lua_page(const char *ipath, const char *opath);
+
+#endif
 
 #endif

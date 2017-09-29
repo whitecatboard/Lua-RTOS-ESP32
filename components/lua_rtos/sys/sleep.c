@@ -2,7 +2,7 @@
  * Lua RTOS, sleep functions
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -31,15 +31,19 @@
 #include "freertos/task.h"
 
 #include <sys/sleep.h>
- 
+
+#if NEWLIB_HAVE_SLEEP == 0
 unsigned sleep(unsigned int secs) {
     vTaskDelay( (secs * 1000) / ((TickType_t) 1000 / configTICK_RATE_HZ));
 
     return 0;
 }
+#endif
 
+#if NEWLIB_HAVE_USLEEP == 0
 int usleep(useconds_t usec) {
 	vTaskDelay(usec / ((TickType_t) 1000000 / configTICK_RATE_HZ));
 
 	return 0;
 }
+#endif

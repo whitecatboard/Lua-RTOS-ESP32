@@ -29,7 +29,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_SPI_ETHERNET
+#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_SPI_ETHERNET
 
 #ifndef _SPI_ETH_
 #define _SPI_ETH_
@@ -46,6 +46,9 @@
 #define SPI_ETH_ERR_NOT_INIT               (DRIVER_EXCEPTION_BASE(SPI_ETH_DRIVER_ID) |  1)
 #define SPI_ETH_ERR_NOT_START              (DRIVER_EXCEPTION_BASE(SPI_ETH_DRIVER_ID) |  2)
 #define SPI_ETH_ERR_CANT_CONNECT           (DRIVER_EXCEPTION_BASE(SPI_ETH_DRIVER_ID) |  3)
+
+extern const int spi_eth_errors;
+extern const int spi_eth_error_map;
 
 driver_error_t *spi_eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1, uint32_t dns2);
 driver_error_t *spi_eth_start();

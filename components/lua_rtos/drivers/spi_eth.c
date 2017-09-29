@@ -29,7 +29,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_SPI_ETHERNET
+#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_SPI_ETHERNET
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
@@ -51,10 +51,13 @@
 
 #include <drivers/spi_eth.h>
 
-DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, CannotSetup, "can't setup", SPI_ETH_ERR_CANT_INIT);
-DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, NotSetup, "ethernet is not setup", SPI_ETH_ERR_NOT_INIT);
-DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, NotStarted, "ethernet is not started", SPI_ETH_ERR_NOT_START);
-DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, CannotConnect, "can't connect, check cable", SPI_ETH_ERR_CANT_CONNECT);
+// Register drivers and errors
+DRIVER_REGISTER_BEGIN(SPI_ETH,spi_eth,NULL,NULL,NULL);
+	DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, CannotSetup, "can't setup", SPI_ETH_ERR_CANT_INIT);
+	DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, NotSetup, "ethernet is not setup", SPI_ETH_ERR_NOT_INIT);
+	DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, NotStarted, "ethernet is not started", SPI_ETH_ERR_NOT_START);
+	DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, CannotConnect, "can't connect, check cable", SPI_ETH_ERR_CANT_CONNECT);
+DRIVER_REGISTER_END(SPI_ETH,spi_eth,NULL,NULL,NULL);
 
 extern EventGroupHandle_t netEvent;
 
@@ -66,6 +69,8 @@ driver_error_t *spi_eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t 
 	tcpip_adapter_ip_info_t ip_info;
 	ip_addr_t dns;
 	ip_addr_t *dns_p = &dns;
+
+	esp_event_set_default_spi_eth_handlers();
 
 	// Init network, if needed
 	if (!status_get(STATUS_SPI_ETH_SETUP)) {
@@ -82,6 +87,7 @@ driver_error_t *spi_eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t 
 		ip_info.netmask.addr = mask;
 		ip_info.gw.addr = gw;
 
+		tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_SPI_ETH);
 		tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_SPI_ETH, &ip_info);
 
 		// If present, set dns1, else set to 8.8.8.8
@@ -158,7 +164,5 @@ driver_error_t *spi_eth_stat(ifconfig_t *info) {
 
 	return NULL;
 }
-
-DRIVER_REGISTER(SPI_ETH,spi_eth,NULL,NULL,NULL);
 
 #endif

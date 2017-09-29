@@ -56,6 +56,9 @@
 #define SPI_ERR_DEVICE_IS_NOT_SELECTED 	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  8)
 #define SPI_ERR_CANNOT_CHANGE_PINMAP 	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  9)
 
+extern const int spi_errors;
+extern const int spi_error_map;
+
 // Flags
 #define SPI_FLAG_WRITE  (1 << 0)
 #define SPI_FLAG_READ   (1 << 1)
@@ -547,5 +550,7 @@ driver_error_t *spi_bulk_read32(int deviceid, uint32_t nelements, uint32_t *data
  *     	 SPI_ERR_NOT_ENOUGH_MEMORY
  */
 driver_error_t *spi_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data);
+
+driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags);
 
 #endif

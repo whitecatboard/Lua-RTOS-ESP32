@@ -12,7 +12,6 @@
 #ifndef _lorabase_h_
 #define _lorabase_h_
 
-#include "luartos.h"
 #include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE

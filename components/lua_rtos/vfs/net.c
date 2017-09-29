@@ -27,9 +27,9 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
-#if USE_NET_VFS
+#if CONFIG_LUA_RTOS_LUA_USE_NET
 
 #include "freertos/FreeRTOS.h"
 #include "lwip/sockets.h"

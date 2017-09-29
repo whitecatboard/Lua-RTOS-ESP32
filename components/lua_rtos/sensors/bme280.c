@@ -54,6 +54,7 @@
 #include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_BME280
 
 #include "bme280.h"
 
@@ -68,7 +69,9 @@
 // Sensor specification and registration
 const sensor_t __attribute__((used,unused,section(".sensors"))) bme280_sensor = {
 	.id = "BME280",
-	.interface = I2C_INTERFACE,
+	.interface = {
+		{.type = I2C_INTERFACE},
+	},
 	.data = {
 		{.id = "temperature", .type = SENSOR_DATA_DOUBLE},
 		{.id = "humidity", .type = SENSOR_DATA_DOUBLE},
@@ -2353,7 +2356,7 @@ static int bme280_getsby_ms(int sby) {
 
 //------------------------------------------------------
 int bm280_get_mode(sensor_instance_t *unit, char *buf) {
-    p_bme280 = unit->setup.i2c.userdata;
+    p_bme280 = unit->setup[0].i2c.userdata;
 	u8 mode = 255;
 	u8 sby = 255;
 	s32 com_rslt = ERROR;
@@ -2412,12 +2415,12 @@ int bm280_get_mode(sensor_instance_t *unit, char *buf) {
 //-----------------------------------------------------
 driver_error_t *bme280_presetup(sensor_instance_t *unit) {
 	// Set default values, if not provided
-	if (unit->setup.i2c.devid == 0) {
-		unit->setup.i2c.devid = BME280_I2C_ADDRESS1;
+	if (unit->setup[0].i2c.devid == 0) {
+		unit->setup[0].i2c.devid = BME280_I2C_ADDRESS1;
 	}
 
-	if (unit->setup.i2c.speed == 0) {
-		unit->setup.i2c.speed = 400000;
+	if (unit->setup[0].i2c.speed == 0) {
+		unit->setup[0].i2c.speed = 400000;
 	}
 
 	return NULL;
@@ -2427,7 +2430,7 @@ driver_error_t *bme280_setup(sensor_instance_t *unit) {
     s32 com_rslt = ERROR;
 
     // Sanity checks
-	if ((unit->setup.i2c.devid != BME280_I2C_ADDRESS1) && (unit->setup.i2c.devid != BME280_I2C_ADDRESS2)) {
+	if ((unit->setup[0].i2c.devid != BME280_I2C_ADDRESS1) && (unit->setup[0].i2c.devid != BME280_I2C_ADDRESS2)) {
 		return driver_error(SENSOR_DRIVER, SENSOR_ERR_INVALID_ADDRESS, NULL);
 	}
 
@@ -2439,7 +2442,7 @@ driver_error_t *bme280_setup(sensor_instance_t *unit) {
 	// Set default mode & standby time & address
 	unit->properties[0].integerd.value = BME280_SLEEP_MODE;
 	unit->properties[1].integerd.value = BME280_STANDBY_TIME_125_MS;
-	unit->properties[2].integerd.value = unit->setup.i2c.devid;
+	unit->properties[2].integerd.value = unit->setup[0].i2c.devid;
 
 	// Allocate space for buffer
 	char *buffer = (char *)calloc(32, 1);
@@ -2449,9 +2452,9 @@ driver_error_t *bme280_setup(sensor_instance_t *unit) {
 	sprintf(buffer, "SLEEP");
 	unit->properties[3].stringd.value = buffer;
 
-	p_bme280->unit = unit->setup.i2c.id;
+	p_bme280->unit = unit->setup[0].i2c.id;
 	p_bme280->transaction = I2C_TRANSACTION_INITIALIZER;
-	unit->setup.i2c.userdata = p_bme280;
+	unit->setup[0].i2c.userdata = p_bme280;
 
     p_bme280->chip_id = 0;
 	p_bme280->mode = 255;
@@ -2514,10 +2517,10 @@ driver_error_t *bme280_setup(sensor_instance_t *unit) {
 
 //-------------------------------------------------------------------------------
 driver_error_t *bme280_acquire(sensor_instance_t *unit, sensor_value_t *values) {
-    if (!unit->setup.i2c.userdata) {
+    if (!unit->setup[0].i2c.userdata) {
 		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_SETUP, NULL);
     }
-    p_bme280 = unit->setup.i2c.userdata;
+    p_bme280 = unit->setup[0].i2c.userdata;
 
 	double temp = 0.0;
 	double pres = 0.0;
@@ -2533,10 +2536,10 @@ driver_error_t *bme280_acquire(sensor_instance_t *unit, sensor_value_t *values) 
 
 //---------------------------------------------------------------------------------------------
 driver_error_t *bme280_get(sensor_instance_t *unit, const char *id, sensor_value_t *property) {
-    if (!unit->setup.i2c.userdata) {
+    if (!unit->setup[0].i2c.userdata) {
 		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_SETUP, NULL);
     }
-    p_bme280 = unit->setup.i2c.userdata;
+    p_bme280 = unit->setup[0].i2c.userdata;
 
     if (strcmp(id,"mode") == 0) {
 		property->integerd.value  = bm280_get_mode(unit, NULL);
@@ -2572,10 +2575,10 @@ driver_error_t *bme280_get(sensor_instance_t *unit, const char *id, sensor_value
  */
 //--------------------------------------------------------------------------------------------
 driver_error_t *bme280_set(sensor_instance_t *unit, const char *id, sensor_value_t *property) {
-    if (!unit->setup.i2c.userdata) {
+    if (!unit->setup[0].i2c.userdata) {
 		return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_SETUP, NULL);
     }
-    p_bme280 = unit->setup.i2c.userdata;
+    p_bme280 = unit->setup[0].i2c.userdata;
 
     if (strcmp(id,"mode") == 0) {
 		u8 mode, md;
@@ -2628,4 +2631,5 @@ driver_error_t *bme280_set(sensor_instance_t *unit, const char *id, sensor_value
 	return NULL;
 }
 
+#endif
 #endif

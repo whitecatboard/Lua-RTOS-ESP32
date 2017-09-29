@@ -32,10 +32,11 @@
 
 #include "esp_system.h"
 #include "esp_attr.h"
-#include "esp_deep_sleep.h"
+#include "esp_sleep.h"
 #include "rom/rtc.h"
 #include <soc/dport_reg.h>
 #include <soc/efuse_reg.h>
+#include "soc/rtc.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -48,6 +49,7 @@
 #include <drivers/gpio.h>
 #include <drivers/uart.h>
 #include <drivers/power_bus.h>
+#include <drivers/wifi.h>
 
 extern uint8_t flash_unique_id[8];
 
@@ -55,11 +57,19 @@ void _cpu_init() {
 }
 
 unsigned int cpu_port_number(unsigned int pin) {
-	return 1;
+	if ((pin <= 39) || (!EXTERNAL_GPIO)) {
+		return 1;
+	} else {
+		return 2 + ((pin - EXTERNAL_GPIO_PINS) >> 3);
+	}
 }
 
 uint8_t cpu_gpio_number(uint8_t pin) {
-	return pin;
+	if ((pin <= 39) || (!EXTERNAL_GPIO)) {
+		return pin;
+	} else {
+		return ((pin - EXTERNAL_GPIO_PINS) % 7);
+	}
 }
 
 unsigned int cpu_pin_number(unsigned int pin) {
@@ -67,37 +77,53 @@ unsigned int cpu_pin_number(unsigned int pin) {
 }
 
 gpio_pin_mask_t cpu_port_io_pin_mask(unsigned int port) {
-	return GPIO_ALL;
+	if ((port == 1) || (!EXTERNAL_GPIO)) {
+		return GPIO_ALL;
+	} else {
+		return 0xff;
+	}
 }
 
 unsigned int cpu_has_gpio(unsigned int port, unsigned int bit) {
-	return (cpu_port_io_pin_mask(port) & (1 << bit));
+	if (port == 1) {
+		return (cpu_port_io_pin_mask(port) & (1 << bit));
+	} else {
+		if (bit < 8) {
+			return 1;
+		}
+
+		return 0;
+	}
 }
 
 unsigned int cpu_has_port(unsigned int port) {
-	return (port == 1);
+	if (!EXTERNAL_GPIO) {
+		return (port == 1);
+	} else {
+		return (port <= GPIO_PORTS);
+	}
 }
 
 void cpu_model(char *buffer) {
-	sprintf(buffer, "ESP32 rev %d", cpu_revission());
+	sprintf(buffer, "ESP32 rev %d", cpu_revision());
 }
 
-int cpu_speed() {
-	return CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ;
+uint32_t cpu_speed() {
+	return rtc_clk_cpu_freq_value(rtc_clk_cpu_freq_get());
 }
 
-int cpu_revission() {
+int cpu_revision() {
 	return (REG_READ(EFUSE_BLK0_RDATA3_REG) >> EFUSE_RD_CHIP_VER_RESERVE_S) && EFUSE_RD_CHIP_VER_RESERVE_V;
 }
 
 void cpu_show_info() {
 	char buffer[40];
-    
+
 	cpu_model(buffer);
 	if (!*buffer) {
-        syslog(LOG_ERR, "cpu unknown CPU");
+		syslog(LOG_ERR, "cpu unknown CPU");
 	} else {
-        syslog(LOG_INFO, "cpu %s at %d Mhz", buffer, cpu_speed());        		
+		syslog(LOG_INFO, "cpu %s at %d Mhz", buffer, cpu_speed() / 1000000);
 	}
 }
 
@@ -113,7 +139,7 @@ void cpu_show_flash_info() {
 			flash_unique_id[6], flash_unique_id[7]
 	);
 
-    syslog(LOG_INFO, "flash EUI %s", buffer);
+	syslog(LOG_INFO, "flash EUI %s", buffer);
 	#endif
 }
 
@@ -129,10 +155,42 @@ void cpu_sleep(int seconds) {
 
 	// Put ESP32 in deep sleep mode
 	if (status_get(STATUS_NEED_RTC_SLOW_MEM)) {
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+		esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
 	}
 
-    esp_deep_sleep(seconds * 1000000LL);
+	esp_deep_sleep(seconds * 1000000LL);
+}
+
+void cpu_deepsleep() {
+	wifi_stop();
+
+	// Stop powerbus
+	#if CONFIG_LUA_RTOS_USE_POWER_BUS
+	pwbus_off();
+	#endif
+
+	// Stop all UART units. This is done for prevent strangers characters
+	// on the console when CPU begins to enter in the sleep phase
+	uart_stop(-1);
+
+	// Put ESP32 in deep sleep mode
+	if (status_get(STATUS_NEED_RTC_SLOW_MEM)) {
+		esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+	}
+
+/*
+ * esp_deep_sleep does NOT shut down WiFi, BT, and higher level protocol
+ * connections gracefully.
+ * Make sure relevant WiFi and BT stack functions are called to close any
+ * connections and deinitialize the peripherals. These include:
+ *     - esp_bluedroid_disable
+ *     - esp_bt_controller_disable
+ *     - esp_wifi_stop
+ *
+ * This function does not return.
+ */
+
+	esp_deep_sleep_start();
 }
 
 void cpu_reset() {
@@ -142,3 +200,8 @@ void cpu_reset() {
 int cpu_reset_reason() {
 	return rtc_get_reset_reason(0);
 }
+
+int cpu_wakeup_reason() {
+	return esp_sleep_get_wakeup_cause();
+}
+

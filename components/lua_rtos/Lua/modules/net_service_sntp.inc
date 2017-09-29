@@ -37,13 +37,15 @@
 static int lsntp_start(lua_State* L) {
 	driver_error_t *error;
 
+	const char* ntp_server = luaL_optstring(L, 1, "pool.ntp.org");
+
 	if ((error = net_check_connectivity())) {
-    	return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
-  sntp_setoperatingmode(SNTP_OPMODE_POLL);
-  sntp_setservername(0, "pool.ntp.org");
-  sntp_init();
+	sntp_setoperatingmode (SNTP_OPMODE_POLL);
+	sntp_setservername(0, (char*)ntp_server);
+	sntp_init();
 
 	return 0;
 }
@@ -53,8 +55,6 @@ static int lsntp_stop(lua_State* L) {
 	return 0;
 }
 
-static const LUA_REG_TYPE sntp_map[] = {
-    { LSTRKEY( "start" ),	 LFUNCVAL( lsntp_start   ) },
-    { LSTRKEY( "stop"  ),	 LFUNCVAL( lsntp_stop    ) },
-	{ LNILKEY, LNILVAL }
-};
+static const LUA_REG_TYPE sntp_map[] = { { LSTRKEY( "start" ),
+		LFUNCVAL( lsntp_start ) }, { LSTRKEY( "stop" ),
+		LFUNCVAL( lsntp_stop ) }, { LNILKEY, LNILVAL } };

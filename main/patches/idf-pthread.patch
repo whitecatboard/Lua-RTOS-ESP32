@@ -1,0 +1,67 @@
+diff --git a/components/newlib/include/pthread.h b/components/newlib/include/pthread.h
+index db1f9c1..41e29fb 100644
+--- a/components/newlib/include/pthread.h
++++ b/components/newlib/include/pthread.h
+@@ -311,6 +311,7 @@ void 	_EXFUN(pthread_testcancel, (void));
+ 
+ /* Establishing Cancellation Handlers, P1003.1c/Draft 10, p. 184 */
+ 
++#if 0
+ void	_EXFUN(_pthread_cleanup_push,
+ 	(struct _pthread_cleanup_context *_context,
+ 	void (*_routine)(void *), void *_arg));
+@@ -328,6 +329,7 @@ void	_EXFUN(_pthread_cleanup_pop,
+ #define pthread_cleanup_pop(_execute) \
+     _pthread_cleanup_pop(&_pthread_clup_ctx, (_execute)); \
+   } while (0)
++#endif
+ 
+ #if defined(_GNU_SOURCE)
+ void	_EXFUN(_pthread_cleanup_push_defer,
+@@ -429,3 +431,5 @@ int	_EXFUN(pthread_rwlock_timedwrlock,
+ 
+ #endif
+ /* end of include file */
++
++#include <pthread/_pthread.h>
+diff --git a/components/newlib/include/sys/sched.h b/components/newlib/include/sys/sched.h
+index 8554fc2..81f2ac5 100644
+--- a/components/newlib/include/sys/sched.h
++++ b/components/newlib/include/sys/sched.h
+@@ -45,6 +45,8 @@ extern "C" {
+ 
+ struct sched_param {
+   int sched_priority;           /* Process execution scheduling priority */
++  cpu_set_t affinityset;
++  int initial_state;
+ 
+ #if defined(_POSIX_SPORADIC_SERVER) || defined(_POSIX_THREAD_SPORADIC_SERVER)
+   int sched_ss_low_priority;    /* Low scheduling priority for sporadic */
+   diff --git a/components/newlib/include/sys/types.h b/components/newlib/include/sys/types.h
+index ed33e0a..7fbbe21 100644
+--- a/components/newlib/include/sys/types.h
++++ b/components/newlib/include/sys/types.h
+@@ -296,6 +296,8 @@ typedef long suseconds_t;
+  */
+ #if defined(_POSIX_THREADS) && !defined(__CYGWIN__)
+ 
++typedef int cpu_set_t;
++
+ #include <sys/sched.h>
+ 
+ /*
+diff --git a/components/pthread/component.mk b/components/pthread/component.mk
+index cd69bb3..1d34434 100644
+--- a/components/pthread/component.mk
++++ b/components/pthread/component.mk
+@@ -2,8 +2,8 @@
+ # Component Makefile
+ #
+ 
+-COMPONENT_SRCDIRS := .
++COMPONENT_SRCDIRS :=
+ 
+ #COMPONENT_ADD_INCLUDEDIRS := include
+ 
+-COMPONENT_ADD_LDFLAGS := -lpthread
++COMPONENT_ADD_LDFLAGS :=

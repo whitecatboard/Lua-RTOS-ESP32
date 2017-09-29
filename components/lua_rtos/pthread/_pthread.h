@@ -2,7 +2,7 @@
  * Lua RTOS, pthread implementation over FreeRTOS
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -29,13 +29,16 @@
 
 #include "luartos.h"
 
-#ifndef PTHREAD_H
-#define	PTHREAD_H
+#ifndef __PTHREAD_H
+#define	__PTHREAD_H
 
 #include "freertos/FreeRTOS.h"
+#include "freertos/adds.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
+
+#include <pthread.h>
 
 #include <sys/mutex.h>
 #include <sys/list.h>
@@ -70,29 +73,9 @@
 #define PTHREAD_INITIAL_STATE_RUN     1
 #define PTHREAD_INITIAL_STATE_SUSPEND 2
 
-// Mutex types
-#define PTHREAD_MUTEX_NORMAL          1
-#define PTHREAD_MUTEX_ERRORCHECK      2
-#define PTHREAD_MUTEX_RECURSIVE       3
-#define PTHREAD_MUTEX_DEFAULT         4
-
-// Initializers
-#define PTHREAD_MUTEX_INITIALIZER     0
-
-#if !MTX_USE_EVENTS
-#define PTHREAD_ONCE_INIT             {NULL}
-#define PTHREAD_COND_INITIALIZER      {.mutex.sem = NULL, .referenced = 0}
-#else
-#define PTHREAD_ONCE_INIT             {NULL}
-#define PTHREAD_COND_INITIALIZER      {.mutex.mtxid = -1, .referenced = 0}
-#endif
+//#define PTHREAD_ONCE_INIT             {NULL}
 
 // Required structures and types
-struct pthread_mutex_attr {
-    int type;
-};
-
-typedef struct pthread_mutex_attr pthread_mutexattr_t;
 
 struct pthread_mutex {
     SemaphoreHandle_t sem;
@@ -100,23 +83,14 @@ struct pthread_mutex {
     int type;
 };
 
-typedef unsigned int pthread_mutex_t;
-typedef unsigned int pthread_condattr_t;
-typedef int pthread_t;
-typedef int pthread_key_t;
-
 struct pthread_cond {
     struct mtx mutex;
     int referenced;
 };
 
-typedef struct pthread_cond pthread_cond_t;
-
 struct pthread_once {
     struct mtx mutex;
 };
-
-typedef struct pthread_once pthread_once_t;
 
 struct pthread_key_specific {
     pthread_t thread;
@@ -153,13 +127,10 @@ struct pthread_attr {
     int cpuset;
 };
 
-struct sched_param {
-    int sched_priority;
-};
+//struct sched_param {
+//    int sched_priority;
+//};
 
-typedef int cpu_set_t;
-
-typedef struct pthread_attr pthread_attr_t;
 
 // Helper functions, only for internal use
 void  _pthread_init();
@@ -207,7 +178,6 @@ int  pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const 
 int pthread_cond_signal(pthread_cond_t *cond);
 
 int  pthread_once(pthread_once_t *once_control, void (*init_routine)(void));
-void pthread_cleanup_push(void (*routine)(void *), void *arg);
 int  pthread_setcancelstate(int state, int *oldstate);
 int  pthread_key_create(pthread_key_t *k, void (*destructor)(void*));
 int  pthread_setspecific(pthread_key_t k, const void *value);
@@ -219,8 +189,8 @@ pthread_t pthread_self(void);
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                           void *(*start_routine) (void *), void *args);
-        
-#define pthread_exit(v) return v
 
-#endif	/* PTHREAD_H */
+void pthread_cleanup_push(void (*routine)(void *), void *arg);
+
+#endif	/* __PTHREAD_H */
 

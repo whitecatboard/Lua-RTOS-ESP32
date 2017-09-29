@@ -1,10 +1,7 @@
 /*
  * Lua RTOS, Lua MDNS module
  *
- * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
- *
- * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ * Author: Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.
  *
@@ -59,12 +56,15 @@
 #define LUA_MDNS_ERR_CANT_ADD_SERVICE    (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  4)
 #define LUA_MDNS_ERR_CANT_REMOVE_SERVICE (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  5)
 
-DRIVER_REGISTER_ERROR(MDNS, mdns, CannotCreateService, "can't create service", LUA_MDNS_ERR_CANT_CREATE_SERVICE);
-DRIVER_REGISTER_ERROR(MDNS, mdns, CannotStop, "can't stop", LUA_MDNS_ERR_CANT_STOP);
-DRIVER_REGISTER_ERROR(MDNS, mdns, CannotResolveHost, "can't resolve host", LUA_MDNS_ERR_CANT_RESOLVE_HOST);
-DRIVER_REGISTER_ERROR(MDNS, mdns, CannotFindService, "can't find service", LUA_MDNS_ERR_CANT_FIND_SERVICE);
-DRIVER_REGISTER_ERROR(MDNS, mdns, CannotAddService, "can't add service", LUA_MDNS_ERR_CANT_ADD_SERVICE);
-DRIVER_REGISTER_ERROR(MDNS, mdns, CannotRemoveService, "can't remove service", LUA_MDNS_ERR_CANT_REMOVE_SERVICE);
+// Register drivers and errors
+DRIVER_REGISTER_BEGIN(MDNS,mdns,NULL,NULL,NULL);
+	DRIVER_REGISTER_ERROR(MDNS, mdns, CannotCreateService, "can't create service", LUA_MDNS_ERR_CANT_CREATE_SERVICE);
+	DRIVER_REGISTER_ERROR(MDNS, mdns, CannotStop, "can't stop", LUA_MDNS_ERR_CANT_STOP);
+	DRIVER_REGISTER_ERROR(MDNS, mdns, CannotResolveHost, "can't resolve host", LUA_MDNS_ERR_CANT_RESOLVE_HOST);
+	DRIVER_REGISTER_ERROR(MDNS, mdns, CannotFindService, "can't find service", LUA_MDNS_ERR_CANT_FIND_SERVICE);
+	DRIVER_REGISTER_ERROR(MDNS, mdns, CannotAddService, "can't add service", LUA_MDNS_ERR_CANT_ADD_SERVICE);
+	DRIVER_REGISTER_ERROR(MDNS, mdns, CannotRemoveService, "can't remove service", LUA_MDNS_ERR_CANT_REMOVE_SERVICE);
+DRIVER_REGISTER_END(MDNS,mdns,NULL,NULL,NULL);
 
 typedef struct {
     lua_State *L;
@@ -75,14 +75,8 @@ typedef struct {
 static int lmdns_start( lua_State* L ){
   int rc = 0;
   int interface = luaL_checkinteger( L, 1 );
-  const char *hostname = 0;
-  const char *instance = 0;
-	if (lua_gettop(L) > 1) {
-    hostname = luaL_checkstring( L, 2 );
-		if (lua_gettop(L) > 2) {
-		  instance = luaL_checkstring( L, 3 );
-		}
-	}
+  const char *hostname = luaL_optstring( L, 2, NULL );
+  const char *instance = luaL_optstring( L, 3, NULL );
 
   mdns_userdata *mdns = (mdns_userdata *)lua_newuserdata(L, sizeof(mdns_userdata));
   mdns->L = L;
@@ -189,11 +183,8 @@ static int lmdns_resolve_host( lua_State* L ) {
   int rc;
   mdns_userdata *mdns = (mdns_userdata *)luaL_checkudata(L, 1, "mdns.cli");
   const char *hostname = luaL_checkstring( L, 2 );
-  int seconds = DEFAULT_TIMEOUT_SECONDS;
-	if (lua_gettop(L) > 2) {
-  	seconds = luaL_checkinteger( L, 3 );
-		if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
-	}
+  int seconds = luaL_optinteger(L, 3, DEFAULT_TIMEOUT_SECONDS);
+	if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
 
   luaL_argcheck(L, mdns, 1, "mdns expected");
 
@@ -210,11 +201,8 @@ static int lmdns_find_service( lua_State* L ) {
   mdns_userdata *mdns = (mdns_userdata *)luaL_checkudata(L, 1, "mdns.cli");
   const char *service = luaL_checkstring( L, 2 );
   const char *protocol = luaL_checkstring( L, 3 );
-  int seconds = DEFAULT_TIMEOUT_SECONDS;
-	if (lua_gettop(L) > 3) {
-  	seconds = luaL_checkinteger( L, 4 );
-		if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
-	}
+  int seconds = luaL_optinteger(L, 4, DEFAULT_TIMEOUT_SECONDS);
+	if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
 	
   luaL_argcheck(L, mdns, 1, "mdns expected");
 
@@ -320,8 +308,12 @@ static const LUA_REG_TYPE mdns_map[] = {
   { LSTRKEY( "WIFI_STA" ),     LINTVAL( TCPIP_ADAPTER_IF_STA     ) },
   { LSTRKEY( "WIFI_AP"  ),     LINTVAL( TCPIP_ADAPTER_IF_AP      ) },
   { LSTRKEY( "ETH"      ),     LINTVAL( TCPIP_ADAPTER_IF_ETH     ) },
+#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_SPI_ETHERNET
   { LSTRKEY( "SPI_ETH"  ),     LINTVAL( TCPIP_ADAPTER_IF_SPI_ETH ) },
+#endif
 
+  // Error definitions
+  DRIVER_REGISTER_LUA_ERRORS(mdns)
   { LNILKEY, LNILVAL }
 };
 
@@ -333,16 +325,20 @@ static const LUA_REG_TYPE lmdns_service_map[] = {
   { LSTRKEY( "removeservice" ), LFUNCVAL( lmdns_remove_service   ) },
   { LSTRKEY( "__metatable" ),   LROVAL  ( lmdns_service_map      ) },
   { LSTRKEY( "__index"     ),   LROVAL  ( lmdns_service_map      ) },
-  { LSTRKEY( "__gc"        ),   LROVAL  ( lmdns_service_gc       ) },
+  { LSTRKEY( "__gc"        ),   LFUNCVAL( lmdns_service_gc       ) },
   { LNILKEY, LNILVAL }
 };
 
 //called from luaopen_net
 LUALIB_API int luaopen_mdns( lua_State *L ) {
-    luaL_newmetarotable(L,"mdns.cli", (void *)lmdns_service_map);
-    return 0;
-}
+  luaL_newmetarotable(L,"mdns.cli", (void *)lmdns_service_map);
 
-DRIVER_REGISTER(MDNS,mdns,NULL,NULL,NULL);
+#if !LUA_USE_ROTABLE
+  luaL_newlib(L, mdns);
+  return 1;
+#else
+	return 0;
+#endif
+}
 
 #endif

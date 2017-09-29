@@ -7,6 +7,7 @@
 #include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_DS1820
 
 #include <math.h>
 #include <string.h>
@@ -27,7 +28,9 @@ static unsigned char ow_alarm_device [MAX_ONEWIRE_SENSORS][8];
 // Sensor specification and registration
 const sensor_t __attribute__((used,unused,section(".sensors"))) ds1820_sensor = {
 	.id = "DS1820",
-	.interface = OWIRE_INTERFACE,
+	.interface = {
+		{.type = OWIRE_INTERFACE},
+	},
 	.data = {
 		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
 	},
@@ -537,8 +540,8 @@ static uint8_t numDS1820dev(uint8_t dev) {
  */
 //------------------------------------------------------
 void ds1820_getrom(sensor_instance_t *unit, char *ROM) {
-	uint8_t owdev = unit->setup.owire.owdevice;
-	uint8_t sens = unit->setup.owire.owsensor - 1;
+	uint8_t owdev = unit->setup[0].owire.owdevice;
+	uint8_t sens = unit->setup[0].owire.owsensor - 1;
 
 	sens = owire_addess_to_dev(owdev, sens);
 
@@ -550,8 +553,8 @@ void ds1820_getrom(sensor_instance_t *unit, char *ROM) {
 
 //-------------------------------------------------------
 void ds1820_gettype(sensor_instance_t *unit, char *buf) {
-	uint8_t owdev = unit->setup.owire.owdevice;
-	uint8_t sens = unit->setup.owire.owsensor - 1;
+	uint8_t owdev = unit->setup[0].owire.owdevice;
+	uint8_t sens = unit->setup[0].owire.owsensor - 1;
 
 	sens = owire_addess_to_dev(owdev, sens);
 
@@ -569,7 +572,7 @@ uint8_t ds1820_get_res(sensor_instance_t *unit) {
 void ow_list(sensor_instance_t *unit) {
 	char rombuf[17];
 	char family[12];
-	uint8_t owdev = unit->setup.owire.owdevice;
+	uint8_t owdev = unit->setup[0].owire.owdevice;
 
 	for (int i=0;i<ow_devices[owdev].numdev;i++) {
 		for (int j = 0; j < 8; j++) {
@@ -587,7 +590,7 @@ void ow_list(sensor_instance_t *unit) {
 
 //----------------------------------------------
 uint8_t ds1820_numdev(sensor_instance_t *unit) {
-	uint8_t dev = unit->setup.owire.owdevice;
+	uint8_t dev = unit->setup[0].owire.owdevice;
 
 	return numDS1820dev(dev);
 }
@@ -624,8 +627,8 @@ static uint8_t _set_resolution(uint8_t ds_res, uint8_t dev, uint8_t ds_dev) {
 //-----------------------------------------------------
 driver_error_t *ds1820_setup(sensor_instance_t *unit) {
 	// DS1820 specific setup, check for devices on the bus
-	uint8_t dev = unit->setup.owire.owdevice;
-	uint8_t ds_dev = unit->setup.owire.owsensor;
+	uint8_t dev = unit->setup[0].owire.owdevice;
+	uint8_t ds_dev = unit->setup[0].owire.owsensor;
 
 	ds_dev = owire_addess_to_dev(dev, ds_dev);
 
@@ -658,8 +661,8 @@ driver_error_t *ds1820_setup(sensor_instance_t *unit) {
 //--------------------------------------------------------------------------------------------
 driver_error_t *ds1820_set(sensor_instance_t *unit, const char *id, sensor_value_t *property) {
 	if (strcmp(id,"resolution") == 0) {
-		unsigned char ds_dev = unit->setup.owire.owsensor;
-		uint8_t dev = unit->setup.owire.owdevice;
+		unsigned char ds_dev = unit->setup[0].owire.owsensor;
+		uint8_t dev = unit->setup[0].owire.owdevice;
 
 		ds_dev = owire_addess_to_dev(dev, ds_dev);
 
@@ -674,8 +677,8 @@ driver_error_t *ds1820_set(sensor_instance_t *unit, const char *id, sensor_value
 
 //-------------------------------------------------------------------------------
 driver_error_t *ds1820_acquire(sensor_instance_t *unit, sensor_value_t *values) {
-	unsigned char sens = unit->setup.owire.owsensor - 1;
-	uint8_t dev = unit->setup.owire.owdevice;
+	unsigned char sens = unit->setup[0].owire.owsensor - 1;
+	uint8_t dev = unit->setup[0].owire.owdevice;
 
 	sens = owire_addess_to_dev(dev, sens);
 
@@ -779,4 +782,5 @@ driver_error_t *ds1820_get(sensor_instance_t *unit, const char *id, sensor_value
 	return NULL;
 }
 
+#endif
 #endif

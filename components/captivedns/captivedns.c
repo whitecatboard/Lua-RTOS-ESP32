@@ -23,9 +23,9 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-#include "luartos.h"
+#include "sdkconfig.h"
 
-#if LUA_USE_HTTP
+#if CONFIG_LUA_RTOS_USE_HTTP_SERVER
 
 #include "lwip/err.h"
 #include "lwip/sockets.h"

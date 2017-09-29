@@ -2,7 +2,7 @@
  * Lua RTOS, WIFI driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -32,7 +32,9 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_WIFI_ENABLED
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_NET
 
 #include "net.h"
 
@@ -63,6 +65,9 @@
 #define WIFI_ERR_INVALID_ARGUMENT		(DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  16)
 #define WIFI_ERR_NOT_SUPPORT			(DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  17)
 #define WIFI_ERR_NOT_STOPPED			(DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  18)
+
+extern const int wifi_errors;
+extern const int wifi_error_map;
 
 driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list);
 driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int powersave, int channel, int hidden);

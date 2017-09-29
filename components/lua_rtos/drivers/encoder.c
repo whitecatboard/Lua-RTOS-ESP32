@@ -90,9 +90,13 @@
 #include <drivers/encoder.h>
 #include <drivers/gpio.h>
 
+DRIVER_REGISTER_BEGIN(ENCODER, encoder, NULL, NULL, NULL);
+
 // Driver message errors
 DRIVER_REGISTER_ERROR(ENCODER, encoder, NotEnoughtMemory, "not enough memory", ENCODER_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_ERROR(ENCODER, encoder, InvalidPin, "invalid pin", ENCODER_ERR_INVALID_PIN);
+
+DRIVER_REGISTER_END(ENCODER, encoder, NULL, NULL, NULL);
 
 /*
  * The below state table has, for each state (row), the new state
@@ -172,26 +176,31 @@ static void encoder_task(void *arg) {
         xQueueReceive(queue, &data, portMAX_DELAY);
 
         if (data.h->callback) {
-        	data.h->callback(data.h->callback_id, data.value, data.type);
+        	data.h->callback(data.h->callback_id, data.dir, data.counter, data.button);
         }
     }
 }
 
 static void IRAM_ATTR encoder_isr(void* arg) {
 	encoder_h_t *encoder = (encoder_h_t *)arg;
-	uint8_t result;
+	encoder_deferred_data_t data;
+	uint8_t result, has_data;
+	int8_t dir;
 
-	// Get A, B & SW pin values
-	uint32_t port = GPIO.in;
-	uint8_t A = (port >> encoder->A) & 0x1;
-	uint8_t B = (port >> encoder->B) & 0x1;
+	has_data = 0;
+	dir = 0;
+
+	uint8_t A = gpio_ll_pin_get(encoder->A);
+	uint8_t B = gpio_ll_pin_get(encoder->B);
 	uint8_t SW;
 
 	if (encoder->SW >= 0) {
-		SW = (port >> encoder->SW) & 0x1;
+		SW = gpio_ll_pin_get(encoder->SW);
 	} else {
 		SW = 1;
 	}
+
+	SW = (SW==0?1:0);
 
 	// Grab state of input pins.
 	uint8_t pinstate = (A << 1) | B;
@@ -202,43 +211,30 @@ static void IRAM_ATTR encoder_isr(void* arg) {
 
 	if (result == DIR_CW) {
 		encoder->counter++;
+		has_data = 1;
+		dir = 1;
 	} else if (result == DIR_CCW) {
 		encoder->counter--;
+		has_data = 1;
+		dir = -1;
 	}
 
-	if ((result == DIR_CW) || (result == DIR_CCW)) {
-		if (encoder->callback) {
-			if (encoder->deferred) {
-				encoder_deferred_data_t data;
+	has_data |= (SW != encoder->sw_latch);
 
-				data.h = encoder;
-				data.value = encoder->counter;
-				data.type = EncoderMove;
+	encoder->sw_latch = SW;
 
-				xQueueSendFromISR(queue, &data, NULL);
-			} else {
-				encoder->callback(encoder->callback_id, encoder->counter, 0);
-			}
+	if (has_data && encoder->callback) {
+		if (encoder->deferred) {
+			data.h = encoder;
+			data.counter = encoder->counter;
+			data.button = encoder->sw_latch;
+			data.dir = dir;
+
+			xQueueSendFromISR(queue, &data, NULL);
+		} else {
+			encoder->callback(encoder->callback_id, dir, encoder->counter, encoder->sw_latch);
 		}
 	}
-
-	if (SW == 0) {
-		if (encoder->callback) {
-			if (encoder->deferred) {
-				encoder_deferred_data_t data;
-
-				data.h = encoder;
-				data.value = encoder->counter;
-				data.type = EncoderSwitch;
-
-				xQueueSendFromISR(queue, &data, NULL);
-			} else {
-				encoder->callback(encoder->callback_id, encoder->counter, 1);
-			}
-		}
-	}
-
-	encoder->sw_value = SW==0?1:0;
 }
 
 /*
@@ -252,32 +248,32 @@ driver_error_t *encoder_setup(int8_t a, int8_t b, int8_t sw, encoder_h_t **h) {
 		return driver_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "a and b pins are required");
 	}
 
-	if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << a))) {
+	if (!GPIO_CHECK_INPUT(a)) {
 		return driver_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "A, must be an input PIN");
 	}
 
-	if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << b))) {
+	if (!GPIO_CHECK_INPUT(b)) {
 		return driver_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "B, must be an input PIN");
 	}
 
-	if ((sw > 0) && (!(GPIO_ALL_IN & (GPIO_BIT_MASK << sw)))) {
+	if ((sw > 0) && !GPIO_CHECK_INPUT(sw)) {
 		return driver_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "SW, must be an input PIN");
 	}
 
 	// Lock resources
     if ((lock_error = driver_lock(ENCODER_DRIVER, 0, GPIO_DRIVER, a, 0, "A"))) {
     	// Revoked lock on pin
-    	return driver_lock_error(SPI_DRIVER, lock_error);
+    	return driver_lock_error(ENCODER_DRIVER, lock_error);
     }
 
     if ((lock_error = driver_lock(ENCODER_DRIVER, 0, GPIO_DRIVER, b, 0, "B"))) {
     	// Revoked lock on pin
-    	return driver_lock_error(SPI_DRIVER, lock_error);
+    	return driver_lock_error(ENCODER_DRIVER, lock_error);
     }
 
     if ((lock_error = driver_lock(ENCODER_DRIVER, 0, GPIO_DRIVER, sw, 0, "SW"))) {
     	// Revoked lock on pin
-    	return driver_lock_error(SPI_DRIVER, lock_error);
+    	return driver_lock_error(ENCODER_DRIVER, lock_error);
     }
 
     // Allocate space for the encoder
@@ -291,40 +287,15 @@ driver_error_t *encoder_setup(int8_t a, int8_t b, int8_t sw, encoder_h_t **h) {
     encoder->SW = sw;
     encoder->state = R_START;
 
-    // Configure pins as input
-    gpio_config_t io_conf;
+    gpio_pin_input(a);
+    gpio_pin_input(b);
 
-    // A
-    io_conf.intr_type = GPIO_INTR_ANYEDGE;
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pin_bit_mask = (1ULL << a);
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 1;
-
-    gpio_config(&io_conf);
-
-    // B
-    io_conf.pin_bit_mask = (1ULL << b);
-    gpio_config(&io_conf);
-
-    // SW
-    if (sw >= 0) {
-    	io_conf.pin_bit_mask = (1ULL << sw);
-    	gpio_config(&io_conf);
-    }
-
-	// Configure interrupts
-    if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
-    	gpio_install_isr_service(0);
-
-    	status_set(STATUS_ISR_SERVICE_INSTALLED);
-    }
-
-    gpio_isr_handler_add(a, encoder_isr, (void *)encoder);
-    gpio_isr_handler_add(b, encoder_isr, (void *)encoder);
+    gpio_isr_attach(a, encoder_isr, GPIO_INTR_ANYEDGE, (void *)encoder);
+    gpio_isr_attach(b, encoder_isr, GPIO_INTR_ANYEDGE, (void *)encoder);
 
     if (sw >= 0) {
-    	gpio_isr_handler_add(sw, encoder_isr, (void *)encoder);
+        gpio_pin_input(sw);
+        gpio_isr_attach(sw, encoder_isr, GPIO_INTR_ANYEDGE, (void *)encoder);
     }
 
     *h = encoder;
@@ -343,20 +314,22 @@ driver_error_t *encoder_unsetup(encoder_h_t *h) {
 	}
 
 	// Remove interrupts
-	gpio_isr_handler_remove(h->A);
-	gpio_isr_handler_remove(h->B);
+	gpio_isr_detach(h->A);
+	gpio_isr_detach(h->B);
 
 	if (h->SW >= 0) {
-		gpio_isr_handler_remove(h->SW);
+		gpio_isr_detach(h->SW);
 	}
 
 	if (attached == 1) {
 		if (task) {
 			vTaskDelete(task);
+			task = NULL;
 		}
 
 		if (queue) {
 			vQueueDelete(queue);
+			queue = NULL;
 		}
 	}
 
@@ -372,7 +345,7 @@ driver_error_t *encoder_unsetup(encoder_h_t *h) {
 driver_error_t *encoder_read(encoder_h_t *h, int32_t *val, uint8_t *sw) {
 	portDISABLE_INTERRUPTS();
 	*val = h->counter;
-	*sw = h->sw_value;
+	*sw = h->sw_latch;
 	portENABLE_INTERRUPTS();
 
 	return NULL;
@@ -417,5 +390,3 @@ driver_error_t *encoder_register_callback(encoder_h_t *h, encoder_callback_t cal
 
 	return NULL;
 }
-
-DRIVER_REGISTER(ENCODER, encoder, NULL, NULL, NULL);

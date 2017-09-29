@@ -2,7 +2,7 @@
  * Lua RTOS, pthread implementation over FreeRTOS
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -27,19 +27,17 @@
  * this software.
  */
 
-#include "luartos.h"
-
-#include "freertos/FreeRTOS.h"
+#include "_pthread.h"
 
 #include <errno.h>
-#include <pthread/pthread.h>
 
 int pthread_attr_init(pthread_attr_t *attr) {
-    attr->stack_size = CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE;
-    attr->initial_state = PTHREAD_INITIAL_STATE_RUN;
-    attr->sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
-    attr->cpuset = tskNO_AFFINITY;
-    
+    attr->stacksize = CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE;
+
+    attr->schedparam.initial_state = PTHREAD_INITIAL_STATE_RUN;
+    attr->schedparam.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
+	attr->schedparam.affinityset = 0; // Not affinity
+
     return 0;
 }
 
@@ -54,7 +52,7 @@ int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize) {
         return errno;
     }
     
-    attr->stack_size = stacksize;
+    attr->stacksize = stacksize;
     
     return 0;
 }
@@ -65,13 +63,13 @@ int pthread_attr_setinitialstate(pthread_attr_t *attr, int initial_state) {
         return errno;
     }
     
-    attr->initial_state = initial_state;
-    
+    attr->schedparam.initial_state = initial_state;
+
     return 0;
 }
 
 int pthread_attr_getstacksize(const pthread_attr_t *attr, size_t *stacksize) {
-    *stacksize = attr->stack_size;
+    *stacksize = attr->stacksize;
     
     return 0;
 }
@@ -82,13 +80,13 @@ int pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *p
         return errno;
     }
 
-    attr->sched_priority = param->sched_priority;
+    attr->schedparam.sched_priority = param->sched_priority;
 
     return 0;
 }
 
 int pthread_attr_getschedparam(const pthread_attr_t *attr, struct sched_param *param) {
-	param->sched_priority = attr->sched_priority;
+	param->sched_priority = attr->schedparam.sched_priority;
 
 	return 0;
 }
@@ -107,7 +105,7 @@ int pthread_attr_setaffinity_np(pthread_attr_t *attr, size_t cpusetsize, const c
 		return errno;
 	}
 
-	attr->cpuset = *cpuset;
+	attr->schedparam.affinityset = *cpuset;
 
 	return 0;
 }
@@ -118,7 +116,7 @@ int pthread_attr_getaffinity_np(const pthread_attr_t *attr, size_t cpusetsize, c
 		return errno;
 	}
 
-	*cpuset = attr->cpuset;
+	*cpuset = attr->schedparam.affinityset;
 
 	return 0;
 }

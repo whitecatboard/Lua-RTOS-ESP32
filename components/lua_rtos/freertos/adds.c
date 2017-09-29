@@ -38,6 +38,8 @@
 
 #include <stdint.h>
 
+uint8_t lua_rtos_int_enabled = 1;
+
 // Global state
 static lua_State *gL = NULL;
 

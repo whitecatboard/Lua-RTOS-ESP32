@@ -144,9 +144,7 @@ CODE facilitynames[] = {
 };
 #endif
 
-#ifdef KERNEL
 #define LOG_PRINTF  -1  /* pseudo-priority to indicate use of printf */
-#endif
 
 /*
  * arguments to setlogmask.

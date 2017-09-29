@@ -2,7 +2,7 @@
  * Lua RTOS, sleep functions
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -27,12 +27,20 @@
  * this software.
  */
 
+#if NEWLIB_HAVE_SLEEP == 0 || NEWLIB_HAVE_USLEEP == 0
+
 #ifndef _SYS_SLEEP_H_
 #define _SYS_SLEEP_H_
 
 #include <sys/types.h>
 
+#if NEWLIB_HAVE_SLEEP == 0
 unsigned sleep(unsigned int secs);
-int usleep(useconds_t usec);
+#endif
 
+#if NEWLIB_HAVE_USLEEP == 0
+int usleep(useconds_t usec);
+#endif
 #endif /* !_SYS_SLEEP_H_ */
+
+#endif

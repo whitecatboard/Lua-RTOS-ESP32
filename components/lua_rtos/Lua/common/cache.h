@@ -2,7 +2,7 @@
  * Lua RTOS, Read Only tables cache
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -27,7 +27,7 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
 
@@ -38,19 +38,21 @@
 
 #define ROTABLE_CACHE_LENGTH 8
 
+#include <sys/mutex.h>
+
 struct rotable_cache_entry {
 	struct rotable_cache_entry *previous; // Previous entry
 	struct rotable_cache_entry *next;     // Next entry
 
 	luaR_entry *rotable; // cached rotable
 	luaR_entry *entry;   // cached entry
-
 	uint32_t used;
 };
 
 typedef struct {
-	uint32_t miss; // Number of cache misses
-	uint32_t hit;  // Number of cache hits
+	uint32_t miss;  // Number of cache misses
+	uint32_t hit;   // Number of cache hits
+	struct mtx mtx; // Mutex for protect cache entries
 
 	struct rotable_cache_entry *first; // First entry
 	struct rotable_cache_entry *last;  // Last entry

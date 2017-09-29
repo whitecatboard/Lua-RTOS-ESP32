@@ -43,9 +43,6 @@
 #include <drivers/cpu.h>
 #include <drivers/spi.h>
 
-// This variables are defined at linker time
-extern LUA_REG_TYPE spi_error_map[];
-
 extern spi_bus_t spi_bus[CPU_LAST_SPI + 1];
 
 static int lspi_pins(lua_State* L) {
@@ -131,36 +128,6 @@ static int lspi_setpins(lua_State* L) {
 	}
 
 	return 0;
-}
-
-static int lspi_setup(lua_State* L) {
-	int id, data_bits, is_master, cs;
-	driver_error_t *error;
-	uint32_t clock;
-	int spi_mode = 0;
-	int flags = DRIVER_ALL_FLAGS;
-
-	luaL_deprecated(L, "spi.setup", "spi.attach");
-
-	id = luaL_checkinteger(L, 1);
-	is_master = luaL_checkinteger(L, 2) == 1;
-	cs = luaL_checkinteger(L, 3);
-	clock = luaL_checkinteger(L, 4);
-	data_bits = luaL_checkinteger(L, 5);
-	spi_mode = luaL_checkinteger(L, 6);
-	flags = luaL_optinteger(L, 7, SPI_FLAG_WRITE | SPI_FLAG_READ);
-
-	spi_userdata *spi = (spi_userdata *)lua_newuserdata(L, sizeof(spi_userdata));
-
-	if ((error = spi_setup(id, is_master, cs, spi_mode, clock * 1000, flags, &spi->spi_device))) {
-	    return luaL_driver_error(L, error);
-	}
-
-    luaL_getmetatable(L, "spi.ins");
-    lua_setmetatable(L, -2);
-
-	(void)data_bits;
-	return 1;
 }
 
 static int lspi_attach(lua_State* L) {
@@ -285,11 +252,10 @@ static int lspi_ins_gc (lua_State *L) {
 }
 
 static const LUA_REG_TYPE lspi_map[] = {
-	{ LSTRKEY( "setup"      ),	 LFUNCVAL( lspi_setup    ) },
 	{ LSTRKEY( "attach"     ),	 LFUNCVAL( lspi_attach   ) },
 	{ LSTRKEY( "pins"       ),	 LFUNCVAL( lspi_pins     ) },
 	{ LSTRKEY( "setpins"    ),	 LFUNCVAL( lspi_setpins  ) },
-	{ LSTRKEY( "error"      ),   LROVAL  ( spi_error_map ) },
+	DRIVER_REGISTER_LUA_ERRORS(spi)
 	{ LSTRKEY( "WRITE"      ),	 LINTVAL ( SPI_FLAG_WRITE) },
 	{ LSTRKEY( "READ"       ),	 LINTVAL ( SPI_FLAG_READ ) },
 	{ LSTRKEY( "MASTER"     ),	 LINTVAL ( 1 ) },
@@ -308,7 +274,7 @@ static const LUA_REG_TYPE lspi_ins_map[] = {
 	{ LSTRKEY( "readwrite"   ),	 LFUNCVAL( lspi_readwrite ) },
     { LSTRKEY( "__metatable" ),	 LROVAL  ( lspi_ins_map   ) },
 	{ LSTRKEY( "__index"     ),  LROVAL  ( lspi_ins_map   ) },
-	{ LSTRKEY( "__gc"        ),  LROVAL  ( lspi_ins_gc    ) },
+	{ LSTRKEY( "__gc"        ),  LFUNCVAL( lspi_ins_gc    ) },
     { LNILKEY, LNILVAL }
 };
 

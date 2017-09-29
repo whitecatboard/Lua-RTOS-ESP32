@@ -105,6 +105,9 @@
 #define ILI9341_CANNOT_SETUP             (DRIVER_EXCEPTION_BASE(ILI9341_DRIVER_ID) |  0)
 #define ILI9341_ERR_NOT_ENOUGH_MEMORY    (DRIVER_EXCEPTION_BASE(ILI9341_DRIVER_ID) |  1)
 
+extern const int ili9341_errors;
+extern const int ili9341_error_map;
+
 driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation);
 void ili9341_set_orientation(uint8_t m);
 

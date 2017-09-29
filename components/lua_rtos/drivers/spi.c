@@ -89,17 +89,21 @@ extern void spi_flash_enable_interrupts_caches_and_other_cpu();
 // Driver locks
 static driver_unit_lock_t spi_locks[(CPU_LAST_SPI + 1) * SPI_BUS_DEVICES];
 
-// Driver message errors
-DRIVER_REGISTER_ERROR(SPI, spi, InvalidMode, "invalid mode", SPI_ERR_INVALID_MODE);
-DRIVER_REGISTER_ERROR(SPI, spi, InvalidUnit, "invalid unit", SPI_ERR_INVALID_UNIT);
-DRIVER_REGISTER_ERROR(SPI, spi, SlaveNotAllowed, "slave mode not allowed", SPI_ERR_SLAVE_NOT_ALLOWED);
-DRIVER_REGISTER_ERROR(SPI, spi, NotEnoughtMemory, "not enough memory", SPI_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(SPI, spi, PinNowAllowed, "pin not allowed", SPI_ERR_PIN_NOT_ALLOWED);
-DRIVER_REGISTER_ERROR(SPI, spi, NoMoreDevicesAllowed, "no more devices allowed", SPI_ERR_NO_MORE_DEVICES_ALLOWED);
-DRIVER_REGISTER_ERROR(SPI, spi, InvalidDevice, "invalid device", SPI_ERR_INVALID_DEVICE);
-DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSetup, "invalid device", SPI_ERR_DEVICE_NOT_SETUP);
-DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSelected, "device is not selected", SPI_ERR_DEVICE_IS_NOT_SELECTED);
-DRIVER_REGISTER_ERROR(SPI, spi, CannotChangePinMap, "cannot change pin map once the SPI unit has an attached device", SPI_ERR_CANNOT_CHANGE_PINMAP);
+// Register driver and messages
+static void _spi_init();
+
+DRIVER_REGISTER_BEGIN(SPI,spi,spi_locks,_spi_init,NULL);
+	DRIVER_REGISTER_ERROR(SPI, spi, InvalidMode, "invalid mode", SPI_ERR_INVALID_MODE);
+	DRIVER_REGISTER_ERROR(SPI, spi, InvalidUnit, "invalid unit", SPI_ERR_INVALID_UNIT);
+	DRIVER_REGISTER_ERROR(SPI, spi, SlaveNotAllowed, "slave mode not allowed", SPI_ERR_SLAVE_NOT_ALLOWED);
+	DRIVER_REGISTER_ERROR(SPI, spi, NotEnoughtMemory, "not enough memory", SPI_ERR_NOT_ENOUGH_MEMORY);
+	DRIVER_REGISTER_ERROR(SPI, spi, PinNowAllowed, "pin not allowed", SPI_ERR_PIN_NOT_ALLOWED);
+	DRIVER_REGISTER_ERROR(SPI, spi, NoMoreDevicesAllowed, "no more devices allowed", SPI_ERR_NO_MORE_DEVICES_ALLOWED);
+	DRIVER_REGISTER_ERROR(SPI, spi, InvalidDevice, "invalid device", SPI_ERR_INVALID_DEVICE);
+	DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSetup, "invalid device", SPI_ERR_DEVICE_NOT_SETUP);
+	DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSelected, "device is not selected", SPI_ERR_DEVICE_IS_NOT_SELECTED);
+	DRIVER_REGISTER_ERROR(SPI, spi, CannotChangePinMap, "cannot change pin map once the SPI unit has an attached device", SPI_ERR_CANNOT_CHANGE_PINMAP);
+DRIVER_REGISTER_END(SPI,spi,spi_locks,_spi_init,NULL);
 
 spi_bus_t spi_bus[CPU_LAST_SPI + 1];
 
@@ -405,34 +409,6 @@ static void IRAM_ATTR spi_ll_restore_registers(int unit) {
  * End of extracted code from arduino-esp32
  */
 
-static driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
-    driver_unit_lock_error_t *lock_error = NULL;
-
-    // Lock pins
-    if ((flags & SPI_FLAG_READ) && (spi_bus[unit].miso >= 0)) {
-        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].miso, flags, "MISO"))) {
-        	// Revoked lock on pin
-        	return driver_lock_error(SPI_DRIVER, lock_error);
-        }
-    }
-
-    if ((flags & SPI_FLAG_WRITE)  && (spi_bus[unit].mosi >= 0)) {
-        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].mosi, flags, "MOSI"))) {
-        	// Revoked lock on pin
-        	return driver_lock_error(SPI_DRIVER, lock_error);
-        }
-    }
-
-    if (spi_bus[unit].clk >= 0){
-        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].clk, flags, "CLK"))) {
-        	// Revoked lock on pin
-        	return driver_lock_error(SPI_DRIVER, lock_error);
-        }
-    }
-
-    return NULL;
-}
-
 static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 	if (flags & SPI_FLAG_NO_DMA) {
 		// Enable SPI unit
@@ -510,7 +486,7 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 	        .quadhd_io_num=-1
 	    };
 
-	    ret = spi_bus_initialize(unit - 1, &buscfg, 1);
+	    ret = spi_bus_initialize(unit - 1, &buscfg, unit - 1);
 	    assert(ret==ESP_OK);
 	}
 }
@@ -884,7 +860,7 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode,
 		return driver_error(SPI_DRIVER, SPI_ERR_SLAVE_NOT_ALLOWED, NULL);
     }
 
-    if (mode >= 3) {
+    if (mode > 3) {
 		return driver_error(SPI_DRIVER, SPI_ERR_INVALID_MODE, NULL);
     }
 
@@ -1289,4 +1265,30 @@ driver_error_t *spi_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data) 
 	return NULL;
 }
 
-DRIVER_REGISTER(SPI,spi,spi_locks,_spi_init,NULL);
+driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
+    driver_unit_lock_error_t *lock_error = NULL;
+
+    // Lock pins
+    if ((flags & SPI_FLAG_READ) && (spi_bus[unit].miso >= 0)) {
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].miso, flags, "MISO"))) {
+        	// Revoked lock on pin
+        	return driver_lock_error(SPI_DRIVER, lock_error);
+        }
+    }
+
+    if ((flags & SPI_FLAG_WRITE)  && (spi_bus[unit].mosi >= 0)) {
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].mosi, flags, "MOSI"))) {
+        	// Revoked lock on pin
+        	return driver_lock_error(SPI_DRIVER, lock_error);
+        }
+    }
+
+    if (spi_bus[unit].clk >= 0){
+        if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[unit].clk, flags, "CLK"))) {
+        	// Revoked lock on pin
+        	return driver_lock_error(SPI_DRIVER, lock_error);
+        }
+    }
+
+    return NULL;
+}

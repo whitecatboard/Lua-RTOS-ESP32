@@ -29,12 +29,10 @@
 
 #include "luartos.h"
 
-#if CONFIG_WIFI_ENABLED && CONFIG_LUA_RTOS_LUA_USE_NET
+#if CONFIG_LUA_RTOS_LUA_USE_NET
 
 #include <string.h>
 #include <stdio.h>
-
-extern LUA_REG_TYPE wifi_error_map[];
 
 static int lwifi_setup(lua_State* L) {
 	driver_error_t *error;
@@ -200,8 +198,8 @@ static int lwifi_stat(lua_State* L) {
 			info.mac[4],info.mac[5]
 		);
 
-		printf("    ip  address %s / netmask %s\r\n", ipa, maska);
-		printf("    gw  address %s\r\n", gwa);
+		printf("   ip address %s / netmask %s\r\n", ipa, maska);
+		printf("   gw address %s\r\n\r\n", gwa);
 
 		if (!ip6_addr_cmp(IP6_ADDR_ANY6, &info.ip6)) {
 			char tmp[46];
@@ -219,7 +217,7 @@ static int lwifi_stat(lua_State* L) {
 			sprintf(tmp, IPV6STR, IPV62STR(info.ip6));
 		}
 
-		lua_createtable(L, 0, strlen(tmp) > 0 ? 5:4);
+		lua_createtable(L, 0, strlen(tmp) > 0 ? 6:5);
 
 		lua_pushstring(L, "wf");
 		lua_setfield (L, -2, "interface");
@@ -235,6 +233,14 @@ static int lwifi_stat(lua_State* L) {
 		sprintf(tmp, IPSTR, ip4_addr1_16(&info.netmask),ip4_addr2_16(&info.netmask),ip4_addr3_16(&info.netmask),ip4_addr4_16(&info.netmask));
 		lua_pushstring(L, tmp);
 		lua_setfield (L, -2, "netmask");
+
+		sprintf(tmp, "%02x:%02x:%02x:%02x:%02x:%02x",
+			info.mac[0],info.mac[1],
+			info.mac[2],info.mac[3],
+			info.mac[4],info.mac[5]
+		);
+		lua_pushstring(L, tmp);
+		lua_setfield (L, -2, "mac");
 
 		if (strlen(tmp) > 0 ) {
 			lua_pushstring(L, tmp);
@@ -273,7 +279,7 @@ static const LUA_REG_TYPE wifi_map[] = {
 	{ LSTRKEY( "auth"      ),	 LROVAL  ( wifi_auth_map      ) },
 	{ LSTRKEY( "mode"      ),	 LROVAL  ( wifi_mode_map      ) },
 	{ LSTRKEY( "powersave" ),	 LROVAL  ( wifi_powersave_map ) },
-	{ LSTRKEY( "error"     ),	 LROVAL  ( wifi_error_map     ) },
+	DRIVER_REGISTER_LUA_ERRORS(wifi)
 	{ LNILKEY, LNILVAL }
 };
 

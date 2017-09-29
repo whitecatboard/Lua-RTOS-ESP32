@@ -30,8 +30,9 @@
 #include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_TMP36
 
-#include "tmp36.h"
+#define TMP36_SAMPLES 10
 
 #include <math.h>
 
@@ -40,10 +41,15 @@
 #include <drivers/sensor.h>
 #include <drivers/adc.h>
 
+driver_error_t *tmp36_setup(sensor_instance_t *unit);
+driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values);
+
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) tmp36_sensor = {
 	.id = "TMP36",
-	.interface = ADC_INTERFACE,
+	.interface = {
+		{.type = ADC_INTERFACE},
+	},
 	.data = {
 		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
 	},
@@ -60,11 +66,10 @@ driver_error_t *tmp36_setup(sensor_instance_t *unit) {
 
 driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	driver_error_t *error;
-	int raw = 0;
 	double mvolts = 0;
 
-	// Read value
-	if ((error = adc_read(&unit->setup.adc.h, &raw, &mvolts))) {
+	// Read average for some samples
+	if ((error = adc_read_avg(&unit->setup[0].adc.h, TMP36_SAMPLES, NULL, &mvolts))) {
 		return error;
 	}
 
@@ -75,4 +80,5 @@ driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	return NULL;
 }
 
+#endif
 #endif

@@ -29,8 +29,30 @@
 #ifndef __DRIVERS_CAN_REGDEF_H_
 #define __DRIVERS_CAN_REGDEF_H_
 
+#include "CAN.h"	//CAN_FIR_t
+
 /** \brief Start address of CAN registers */
 #define MODULE_CAN              					((volatile CAN_Module_t    *)0x3ff6b000)
+
+/** \brief Get standard message ID */
+#define _CAN_GET_STD_ID								(((uint32_t)MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.STD.ID[0] << 3) | \
+													(MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.STD.ID[1] >> 5))
+
+/** \brief Get extended message ID */
+#define _CAN_GET_EXT_ID								(((uint32_t)MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.EXT.ID[0] << 21) | \
+													(MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.EXT.ID[1] << 13) | \
+													(MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.EXT.ID[2] << 5) | \
+													(MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.EXT.ID[3] >> 3 ))
+
+/** \brief Set standard message ID */
+#define _CAN_SET_STD_ID(x)							MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.STD.ID[0] = ((x) >> 3);	\
+													MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.STD.ID[1] = ((x) << 5);
+
+/** \brief Set extended message ID */
+#define _CAN_SET_EXT_ID(x)							MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.EXT.ID[0] = ((x) >> 21);	\
+													MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.EXT.ID[1] = ((x) >> 13);	\
+													MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.EXT.ID[2] = ((x) >> 5);	\
+													MODULE_CAN->MBX_CTRL.FCTRL.TX_RX.EXT.ID[3] = ((x) << 3);	\
 
 /** \brief Interrupt status register */
 typedef enum  {
@@ -52,6 +74,7 @@ typedef enum  {
 	__CAN_OC_NOM=			0b10,					/**< \brief normal output mode */
 	__CAN_OC_COM=			0b11,					/**< \brief clock output mode */
 }__CAN_OCMODE_t;
+
 
 /**
  * CAN controller (SJA1000).
@@ -182,18 +205,8 @@ typedef struct {
             uint32_t MASK[4];						/**< \brief Acceptance Mask */
             uint32_t RESERVED2[5];
         } ACC;										/**< \brief Acceptance filtering */
-
         struct {
-        	union{uint32_t U;						/**< \brief Unsigned access */
-        	    struct {
-					unsigned int DLC:4;             /**< \brief [3:0] DLC, Data length container */
-					unsigned int unknown_2:2;       /**< \brief \internal unknown */
-					unsigned int RTR:1;             /**< \brief [6:6] RTR, Remote Transmission Request */
-					unsigned int FF:1;              /**< \brief [7:7] Frame Format */
-					unsigned int reserved_24:24;    /**< \brief \internal Reserved */
-        	    } B;
-        	} FIR;									/**< \brief Frame information record */
-
+        	CAN_FIR_t	FIR;						/**< \brief Frame information record */
         	union{
 				struct {
 					uint32_t ID[2];					/**< \brief Standard frame message-ID*/
@@ -207,7 +220,6 @@ typedef struct {
         	}TX_RX;									/**< \brief RX/TX interface */
         }FCTRL;										/**< \brief Function control regs */
     } MBX_CTRL;										/**< \brief Mailbox control */
-
 	union{uint32_t U;								/**< \brief Unsigned access */
 	    struct {
 			unsigned int RMC:8; 					/**< \brief RMC[7:0] RX Message Counter */

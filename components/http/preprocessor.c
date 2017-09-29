@@ -27,6 +27,10 @@
  * this software.
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_USE_HTTP_SERVER
+
 #include <stdio.h>
 
 int http_process_lua_page(const char *ipath, const char *opath) {
@@ -185,3 +189,5 @@ int http_process_lua_page(const char *ipath, const char *opath) {
 
     return 0;
 }
+
+#endif

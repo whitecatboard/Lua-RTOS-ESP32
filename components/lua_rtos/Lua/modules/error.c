@@ -39,14 +39,11 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
 	driver_error_t err;
     int ret_val;
     
-    bcopy(error, &err, sizeof(driver_error_t));
-    free(error);
+    memcpy(&err, error, sizeof(driver_error_t));
     
     if (err.type == LOCK) {
         ret_val = luaL_error(L,
-            "%s%d, %s%d is used by %s%d",
-			err.lock_error->owner_driver->name,
-			err.lock_error->owner_unit,
+            "%s%d is used by %s%d",
 			err.lock_error->target_driver->name,
 			err.lock_error->target_unit,
 			err.lock_error->lock->owner->name,
@@ -54,6 +51,7 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
 		);
         
         free(err.lock_error);
+        free(error);
 
         return ret_val;
     } else if (err.type == OPERATION) {
@@ -73,6 +71,8 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     	}
     }
     
+    free(error);
+
     return luaL_error(L, driver_get_err_msg(error));
 }
 

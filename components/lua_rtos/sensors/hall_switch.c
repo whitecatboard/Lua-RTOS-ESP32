@@ -30,18 +30,23 @@
 #include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_HALL_SWITCH
 
 #include <drivers/sensor.h>
 
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) hall_switch_sensor = {
 	.id = "HALL_SWITCH",
-	.interface = GPIO_INTERFACE,
-	.int_driven = 1,
-	.int_driven_on_val = 0,
+	.interface = {
+		{
+			.type = GPIO_INTERFACE,
+			.flags = SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_H(0) | SENSOR_FLAG_ON_L(1)
+		},
+	},
 	.data = {
 		{.id = "on", .type = SENSOR_DATA_INT},
 	}
 };
 
+#endif
 #endif

@@ -43,63 +43,80 @@ int stackDump(lua_State *L) {
 }
 
 static int luaB_try (lua_State *L) {
+	int i, status;
+
+    // At least one function is needed
+    luaL_checkany(L, 1);
+
+    // Check that all arguments are functions
     int total = lua_gettop(L);
-    
-    int tryFunc = LUA_NOREF, catchFunc = LUA_NOREF, finallyFunc = LUA_NOREF;
 
-    if (total == 3) {
-        luaL_checktype(L, 1, LUA_TFUNCTION);
-        finallyFunc = luaL_ref(L, LUA_REGISTRYINDEX);
-        total--;
+    for(i=1;i <= total;i++) {
+    	luaL_checktype(L, i, LUA_TFUNCTION);
     }
-    
-    if (total == 2) {
-        luaL_checktype(L, 1, LUA_TFUNCTION);
-        catchFunc = luaL_ref(L, LUA_REGISTRYINDEX);
-        total--;        
-    }
-
-    luaL_checktype(L, 1, LUA_TFUNCTION);
-    tryFunc = luaL_ref(L, LUA_REGISTRYINDEX);
 
     // Call try function
-    lua_rawgeti(L, LUA_REGISTRYINDEX, tryFunc);
-    
-    int status = lua_pcall(L, 0, 0, 0); 
-    if (status != LUA_OK) {
-        if (catchFunc != LUA_NOREF) {
-            const char *msg = lua_tostring(L, -1);
-            
-            // Parse error message, with format
-            // where:line-number error-code:error-message
-            //
-            // where and line-number are mandatory
-            // error-code is optional
-            const char *whereEnd = strchr(msg,':');
-            const char *lineEnd = strchr(whereEnd + 1,':');
-            const char *messageStart;
-            
-            int error_code;
-            
-            if (!sscanf(lineEnd + 2,"%d:", &error_code)) {
-                error_code = 0;
-                messageStart = lineEnd + 2;
-            } else {
-                messageStart = strchr(lineEnd + 2,':');
-                messageStart++;
-            }
-            
-            lua_remove(L, -2);
-                        
-            // Call fails, call to catch function
-            lua_rawgeti(L, LUA_REGISTRYINDEX, catchFunc); 
-            
-            // Push where (where error occurs)
-            lua_pushlstring(L, msg, whereEnd - msg);
-            
+	lua_insert(L, 1);
+    if (lua_gettop(L) > 2) {
+    	lua_insert(L, 1);
+    }
+
+    status = lua_pcall(L, 0, 0, 0);
+    if ((status != LUA_OK) && (status != LUA_YIELD)) {
+    	// The is an error
+
+    	// Get and parse error message, with format
+		// where:line-number error-code:error-message
+		//
+		// where and line-number are mandatory
+		// error-code is optional
+		const char *msg = lua_tostring(L, -1);
+
+		const char *whereEnd = NULL;
+		const char *lineEnd = NULL;
+		const char *messageStart = NULL;;
+		int error_code;
+
+		whereEnd = strchr(msg,':');
+		if (whereEnd) {
+			lineEnd = strchr(whereEnd + 1,':');
+		}
+
+		if (lineEnd) {
+			if (!sscanf(lineEnd + 2,"%d:", &error_code)) {
+				error_code = 0;
+				messageStart = lineEnd + 2;
+			} else {
+				messageStart = strchr(lineEnd + 2,':');
+				messageStart++;
+			}
+		}
+
+		// Remove error message
+		lua_pop(L, 1);
+
+		if (lua_gettop(L) > 0) {
+			// Have catch function
+    		// Call catch
+
+    		if (lua_gettop(L) > 1) {
+    			lua_insert(L, 1);
+    		}
+
+    		// Push where (where error occurs)
+    		if (whereEnd) {
+    			lua_pushlstring(L, msg, whereEnd - msg);
+    		} else {
+    			lua_pushnil(L);
+    		}
+
             // Push line (line number where error occurs)
-            lua_pushlstring(L, whereEnd + 1, lineEnd -whereEnd - 1);
-            
+    		if (lineEnd) {
+    			lua_pushlstring(L, whereEnd + 1, lineEnd -whereEnd - 1);
+    		} else {
+    			lua_pushnil(L);
+    		}
+
             // Push error code
             if (!error_code) {
                 // No error code, push nil value
@@ -107,42 +124,30 @@ static int luaB_try (lua_State *L) {
             } else {
                 lua_pushinteger(L, error_code);
             }
-            
+
             // Push error message
-            lua_pushstring(L, messageStart);
-            
-            status = lua_pcall(L, 4, 0, 0);    
-			if (status != LUA_OK) {
-				const char *msg = lua_tostring(L, -1);
+            if (messageStart) {
+            	lua_pushstring(L, messageStart);
+            } else {
+            	lua_pushstring(L, msg);
+            }
 
-			    if ( tryFunc!= LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, tryFunc);
-			    if ( catchFunc!= LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, catchFunc);
-			    if ( finallyFunc!= LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, finallyFunc);
-				
-				luaL_error(L, msg);
-			}			
-        }
+    		status = lua_pcall(L, 4, 0, 0);
+    	    if ((status != LUA_OK) && (status != LUA_YIELD)) {
+    	    	// Catch function has failed, raise an error
+				return luaL_error(L, msg);
+    	    }
+    	}
     }
-    
-    if (finallyFunc != LUA_NOREF) {
-       // Call finally
-        lua_rawgeti(L, LUA_REGISTRYINDEX, finallyFunc);
-        status = lua_pcall(L, 0, 0, 0); 
-		if (status != LUA_OK) {
-			const char *msg = lua_tostring(L, -1);
 
-		    if ( tryFunc!= LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, tryFunc);
-		    if ( catchFunc!= LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, catchFunc);
-		    if ( finallyFunc!= LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, finallyFunc);
-			
-			luaL_error(L, msg);
-		}			
+    if (total == 3) {
+    	status = lua_pcall(L, 0, 0, 0);
+    	if ((status != LUA_OK) && (status != LUA_YIELD)) {
+	    	// Finally function has failed, raise an error
+			return luaL_error(L, lua_tostring(L, -1));
+    	}
     }
-    
-    if ( tryFunc!= LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, tryFunc);
-    if ( catchFunc!= LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, catchFunc);
-    if ( finallyFunc!= LUA_NOREF) luaL_unref(L, LUA_REGISTRYINDEX, finallyFunc);
-    
+
     return 0;
 }
 

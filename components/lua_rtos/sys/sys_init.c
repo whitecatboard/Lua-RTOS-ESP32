@@ -2,7 +2,7 @@
  * Lua RTOS, system init
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -32,7 +32,7 @@
 #include "lua.h"
 #include "esp_log.h"
 #include "esp_vfs.h"
-#include "esp_deep_sleep.h"
+#include "esp_sleep.h"
 #include "driver/periph_ctrl.h"
 
 #include <esp_spi_flash.h>
@@ -70,7 +70,7 @@ uint8_t flash_unique_id[8];
 #ifdef RUN_TESTS
 #include <unity.h>
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 void *_sys_tests(void *arg) {
 	printf("Running tests ...\r\n\r\n");
@@ -86,24 +86,46 @@ void *_sys_tests(void *arg) {
 
 #endif
 
+/*
+   Shows the firmware copyright notice. You can modify the default copyright notice if
+   the following conditions are met:
+
+   1. The whitecat logo cannot be changed. You can remove the whitecat logo, but you
+      cannot change it. The whitecat logo is:
+
+        /\       /\
+       /  \_____/  \
+      /_____________\
+      W H I T E C A T
+
+   2. Any other copyright notices cannot be removed. This includes any references to
+      Lua RTOS, Lua, and copyright notices that may appear in the future.
+*/
+void __attribute__((weak)) firmware_copyright_notice() {
+	printf("  /\\       /\\\r\n");
+    printf(" /  \\_____/  \\\r\n");
+    printf("/_____________\\\r\n");
+    printf("W H I T E C A T\r\n\r\n");
+}
+
 void _sys_init() {
 	// Set default power down mode for all RTC power domains in deep sleep
 	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
 	#else
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
 	#endif
 
 	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_SLOW_MEM
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
 	#else
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
 	#endif
 
 	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_FAST_MEM
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
 	#else
-	    esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
 	#endif
 
 	// Increment bootcount
@@ -134,7 +156,6 @@ void _sys_init() {
 	// Init important things for Lua RTOS
 	_clock_init();
 	_cpu_init();
-    _mtx_init();
     _driver_init();
     _pthread_init();
 
@@ -152,10 +173,7 @@ void _sys_init() {
 
 	console_clear();
 
-	printf("  /\\       /\\\r\n");
-    printf(" /  \\_____/  \\\r\n");
-    printf("/_____________\\\r\n");
-    printf("W H I T E C A T\r\n\r\n");
+	firmware_copyright_notice();
 
     printf(
 		"Lua RTOS %s. Copyright (C) 2015 - 2017 whitecatboard.org\r\n\r\nbuild %d\r\ncommit %s\r\n",
@@ -178,7 +196,7 @@ void _sys_init() {
 	    pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_STACK_SIZE);
 
 	    // Set priority
-	    sched.sched_priority = LUA_TASK_PRIORITY;
+	    sched.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
 	    pthread_attr_setschedparam(&attr, &sched);
 
 	    // Set CPU
@@ -200,7 +218,7 @@ void _sys_init() {
     cpu_show_flash_info();
 
     //Init filesystems
-	#if USE_NET_VFS
+	#if CONFIG_LUA_RTOS_LUA_USE_NET
     	vfs_net_register();
 	#endif
 
@@ -218,9 +236,9 @@ void _sys_init() {
             openlog(__progname, LOG_NDELAY , LOG_LOCAL1);
         } else {
         	syslog(LOG_ERR, "can't redirect console messages to file system, an SDCARD is needed");
-        }   
+        }
     #endif
-        
+
     // Continue init ...
     printf("\n");
 }

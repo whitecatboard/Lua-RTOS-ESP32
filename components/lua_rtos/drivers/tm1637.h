@@ -82,6 +82,9 @@ driver_error_t *tm1637_write(int deviceid, const char *data, uint8_t brightness)
 // M1637 errors
 #define TM1637_ERR_TIMEOUT             (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  1)
 
+extern const int tm1637_errors;
+extern const int tm1637_error_map;
+
 #endif
 
 #endif /* TM1637_H_ */

@@ -2,7 +2,7 @@
  * Lua RTOS, main start program
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -27,6 +27,8 @@
  * this software.
  */
 
+#include <sys/features.h>
+
 #include "luartos.h"
 
 #include "freertos/FreeRTOS.h"
@@ -44,7 +46,7 @@
 
 #include <drivers/gpio.h>
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 void luaos_main();
 void _sys_init();
@@ -64,10 +66,10 @@ void app_main() {
 	
 	_sys_init();
 
-	#if USE_LED_ACT
+	#if CONFIG_LUA_RTOS_USE_LED_ACT
 	// Init leds
-	gpio_pin_output(LED_ACT);
-	gpio_pin_clr(LED_ACT);
+	gpio_pin_output(CONFIG_LUA_RTOS_LED_ACT);
+	gpio_pin_clr(CONFIG_LUA_RTOS_LED_ACT);
 	#endif
 
 	// Create and run a pthread for the Lua interpreter

@@ -34,12 +34,7 @@
 
 #include <sys/driver.h>
 
-typedef enum {
-	EncoderMove,
-	EncoderSwitch
-} encoder_deferred_data_type_t;
-
-typedef void (*encoder_callback_t)(int, uint32_t, uint8_t);
+typedef void (*encoder_callback_t)(int, int8_t, uint32_t, uint8_t);
 
 typedef struct {
 	int8_t A;            		 ///< A pin
@@ -47,7 +42,7 @@ typedef struct {
 	int8_t SW;            		 ///< SW pin
 	uint8_t state;      		 ///< Current state's machine state
 	int32_t counter;    		 ///< Current counter value
-	uint8_t sw_value;			 ///< Current switch value
+	uint8_t sw_latch;			 ///< Current switch value
 	encoder_callback_t callback; ///< Callback function
 	int callback_id;             ///< Callback id
 	uint8_t deferred;            ///< Deferred callback?
@@ -55,13 +50,17 @@ typedef struct {
 
 typedef struct {
 	encoder_h_t *h;
-	uint32_t value;
-	encoder_deferred_data_type_t type;
+	int8_t dir;
+	uint32_t counter;
+	uint32_t button;
 } encoder_deferred_data_t;
 
 // Encoder errors
 #define ENCODER_ERR_NOT_ENOUGH_MEMORY           (DRIVER_EXCEPTION_BASE(ENCODER_DRIVER_ID) |  0)
 #define ENCODER_ERR_INVALID_PIN                 (DRIVER_EXCEPTION_BASE(ENCODER_DRIVER_ID) |  1)
+
+extern const int encoder_errors;
+extern const int encoder_error_map;
 
 driver_error_t *encoder_setup(int8_t a, int8_t b, int8_t sw, encoder_h_t **h);
 driver_error_t *encoder_unsetup(encoder_h_t *h);

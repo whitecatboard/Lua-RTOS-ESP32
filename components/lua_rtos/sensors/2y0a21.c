@@ -37,8 +37,7 @@
 #include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
-
-#include "2y0a21.h"
+#if CONFIG_LUA_RTOS_USE_SENSOR_2Y0A21
 
 #include <math.h>
 
@@ -53,7 +52,9 @@ driver_error_t *s2y0a21_acquire(sensor_instance_t *unit, sensor_value_t *values)
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) s2y0a21_sensor = {
 	.id = "2Y0A21",
-	.interface = ADC_INTERFACE,
+	.interface = {
+		{.type = ADC_INTERFACE},
+	},
 	.data = {
 		{.id = "distance", .type = SENSOR_DATA_FLOAT},
 	},
@@ -76,7 +77,7 @@ driver_error_t  *distance(sensor_instance_t *unit, sensor_value_t *values, int *
 
 	for (int i = 0; i < 25; i++) {
 		// Read value
-		if ((error = adc_read(&unit->setup.adc.h, &raw, &mvolts))) {
+		if ((error = adc_read(&unit->setup[0].adc.h, &raw, &mvolts))) {
 			return error;
 		}
 
@@ -116,4 +117,5 @@ driver_error_t *s2y0a21_acquire(sensor_instance_t *unit, sensor_value_t *values)
 	return NULL;
 }
 
+#endif
 #endif

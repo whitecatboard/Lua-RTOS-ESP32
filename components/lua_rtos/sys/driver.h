@@ -62,7 +62,7 @@
 #define EVENT_DRIVER_ID    20
 #define SPI_ETH_DRIVER_ID  21
 #define CAN_DRIVER_ID      22
-#define SPI_SD_DRIVER_ID   23
+#define SYSTEM_DRIVER_ID   23
 #define PCD8544_DRIVER_ID  24
 #define GDISPLAY_DRIVER_ID 25
 #define ST7735_DRIVER_ID   26
@@ -70,6 +70,8 @@
 #define TIMER_DRIVER_ID    28
 #define ENCODER_DRIVER_ID  29
 #define MDNS_DRIVER_ID     30
+#define CPU_DRIVER_ID      31
+#define ULP_DRIVER_ID      32
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -88,14 +90,16 @@
 #define SPI_ETH_DRIVER driver_get_by_name("spi_eth")
 #define CAN_DRIVER driver_get_by_name("can")
 #define PWBUS_DRIVER driver_get_by_name("pwbus")
-#define SPI_SD_DRIVER driver_get_by_name("spi_sd")
+#define SYSTEM_DRIVER driver_get_by_name("system")
 #define PCD8544_DRIVER driver_get_by_name("pcd8544")
 #define GDISPLAY_DRIVER driver_get_by_name("gdisplay")
-#define ST7735_DRIVER driver_get_by_name("ST7735")
-#define ILI9341_DRIVER driver_get_by_name("ILI9341")
-#define TIMER_DRIVER driver_get_by_name("TIMER")
-#define ENCODER_DRIVER driver_get_by_name("ENCODER")
+#define ST7735_DRIVER driver_get_by_name("st7735")
+#define ILI9341_DRIVER driver_get_by_name("ili9341")
+#define TIMER_DRIVER driver_get_by_name("timer")
+#define ENCODER_DRIVER driver_get_by_name("encoder")
 #define MDNS_DRIVER driver_get_by_name("mdns")
+#define CPU_DRIVER driver_get_by_name("cpu")
+#define ULP_DRIVER driver_get_by_name("ulp")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 
@@ -105,7 +109,7 @@ struct driver_unit_lock;
 struct driver_unit_lock_error;
 
 typedef struct {
-	int exception;
+	uint32_t exception;
 	const char *message;
 } driver_message_t;
 
@@ -119,7 +123,7 @@ typedef struct {
     driver_error_type       type;      // Type of error
     const struct driver    *driver;    // Driver that caused error
     int                     unit;      // Driver unit that caused error
-    int                     exception; // Exception code
+    uint32_t                exception; // Exception code
     const char 			   *msg;       // Error message
 
     struct driver_unit_lock_error *lock_error;
@@ -132,7 +136,7 @@ typedef struct {
  */
 typedef struct driver {
 	const char *name;           		  /*!< Driver name */
-	const int  exception_base;  	      /*!< The exception base number for this driver. When a exception is raised the exception number is exception_base + exception number */
+	const uint32_t  exception_base;  	  /*!< The exception base number for this driver. When a exception is raised the exception number is exception_base + exception number */
 	const driver_message_t *error;        /*!< Array of exception error messages */
 	const struct driver_unit_lock *lock;  /*!< Array locks */
 	const int locks;					  /*!< Number of locks */
@@ -199,19 +203,25 @@ const driver_t *driver_get_by_name(const char *name);
  * @return NULL if driver not found, or a pointer to a driver_t structure
  *         if driver is found.
  */
-const driver_t *driver_get_by_exception_base(const int exception_base);
+const driver_t *driver_get_by_exception_base(const uint32_t exception_base);
 
 const char *driver_get_err_msg(driver_error_t *error);
-const char *driver_get_err_msg_by_exception(int exception);
+const char *driver_get_err_msg_by_exception(uint32_t exception);
 const char *driver_get_name(driver_error_t *error);
 
 driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error_t *lock_error);
 driver_error_t *driver_error(const driver_t *driver, unsigned int code, const char *msg);
 driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit, uint8_t flags, const char *tag);
+void driver_unlock_all(const driver_t *owner_driver, int owner_unit);
+
 void _driver_init();
 char *driver_target_name(const driver_t *target_driver, int target_unit, const char *tag);
 
 #define DRIVER_SECTION(s) __attribute__((used,unused,section(s)))
+
+#define DRIVER_PASTER_WITH_SEP(x,y,z) x##y##z
+#define DRIVER_EVALUATOR_WITH_SEP(x,y,z) DRIVER_PASTER_WITH_SEP(x,y,z)
+#define DRIVER_CONCAT_WITH_SEP(x,y,z) DRIVER_EVALUATOR_WITH_SEP(x,y,z)
 
 #define DRIVER_PASTER(x,y) x##y
 #define DRIVER_EVALUATOR(x,y) DRIVER_PASTER(x,y)
@@ -221,11 +231,21 @@ char *driver_target_name(const driver_t *target_driver, int target_unit, const c
 #define DRIVER_TOSTRING_EVALUATOR(x) DRIVER_TOSTRING_PASTER(x)
 #define DRIVER_TOSTRING(x) DRIVER_TOSTRING_EVALUATOR(x)
 
-#define DRIVER_REGISTER(name,lname,locka,initf,lockf) \
-	const DRIVER_SECTION(DRIVER_TOSTRING(.drivers)) driver_t DRIVER_CONCAT(driver_,lname) = {DRIVER_TOSTRING(lname),  DRIVER_EXCEPTION_BASE(DRIVER_CONCAT(name,_DRIVER_ID)),  (void *)DRIVER_CONCAT(lname,_errors), locka, ((locka!=NULL)?(sizeof(locka)/sizeof(driver_unit_lock_t)):0), initf, lockf};
+#define DRIVER_REGISTER_BEGIN(name,lname,locka,initf,lockf) \
+const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error)) int DRIVER_CONCAT_WITH_SEP(lname,_,errors_end) = 0; \
+const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error_map)) int DRIVER_CONCAT_WITH_SEP(lname,_,error_map_end) = 0;
+
+#define DRIVER_REGISTER_END(name,lname,locka,initf,lockf) \
+const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error)) int DRIVER_CONCAT_WITH_SEP(lname,_,errors) = 0; \
+const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error_map)) int DRIVER_CONCAT_WITH_SEP(lname,_,error_map) = 0; \
+const DRIVER_SECTION(DRIVER_TOSTRING(.drivers)) driver_t DRIVER_CONCAT(driver_,lname) = {DRIVER_TOSTRING(lname),  DRIVER_EXCEPTION_BASE(DRIVER_CONCAT(name,_DRIVER_ID)),  (void *)((&(DRIVER_CONCAT(lname,_errors)))+1), locka, ((locka!=NULL)?(sizeof(locka)/sizeof(driver_unit_lock_t)):0), initf, lockf};
+
 #endif
 
 #define DRIVER_REGISTER_ERROR(name, lname, key, msg, exception) \
-	extern const driver_message_t DRIVER_CONCAT(lname,_errors)[]; \
-	const __attribute__((used,unused,section(DRIVER_TOSTRING(DRIVER_CONCAT(.lname,_errors))))) driver_message_t DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_errors)) = {exception, msg}; \
-	const __attribute__((used,unused,section(DRIVER_TOSTRING(DRIVER_CONCAT(.lname,_error_map))))) LUA_REG_TYPE DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_error_map)) = {LSTRKEY(DRIVER_TOSTRING(key)), LINTVAL(exception)};
+	const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error)) driver_message_t DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_errors)) = {exception, msg}; \
+	const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error_map)) LUA_REG_TYPE DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_error_map)) = {LSTRKEY(DRIVER_TOSTRING(key)), LINTVAL(exception)};
+
+#define DRIVER_REGISTER_LUA_ERRORS(lname) \
+	{LSTRKEY("error"), LROVAL( ((LUA_REG_TYPE *)((&DRIVER_CONCAT_WITH_SEP(lname,_,error_map)) + 1)) )},
+

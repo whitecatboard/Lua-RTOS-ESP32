@@ -11,6 +11,9 @@
 #include <limits.h>
 #include <stddef.h>
 
+#define LUA_USE_CTYPE 1
+#define LUA_32BITS
+#define LUA_C89_NUMBERS
 
 /*
 ** ===================================================================

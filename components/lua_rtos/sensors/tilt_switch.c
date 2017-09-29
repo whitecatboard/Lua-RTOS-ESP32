@@ -1,15 +1,12 @@
 /*
- * SD flash card disk driver.
+ * Lua RTOS, Tilt switch sensor (example SW-520D)
  *
- * Copyright (C) 2014 Serge Vakulenko, <serge@vak.ru>
- *
- * -------------------------------------------------------------
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Lua RTOS integration
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- * -------------------------------------------------------------
+ *
+ * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -30,24 +27,29 @@
  * this software.
  */
 
-#ifndef SD_H
-#define SD_H
+#include "sdkconfig.h"
 
-#include <sys/driver.h>
+#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_TILT_SWITCH
 
-#define NSD             1
-#define NPARTITIONS     4
-#define SECTSIZE        512
+#include <drivers/sensor.h>
 
-// SD SPI errors
-#define SPI_SD_ERR_CANT_INIT             (DRIVER_EXCEPTION_BASE(SPI_SD_DRIVER_ID) |  0)
+// Sensor specification and registration
+static const sensor_t __attribute__((used,unused,section(".sensors"))) tilt_switch_sensor = {
+	.id = "TILT_SWITCH",
+	.interface = {
+		{
+			.type = GPIO_INTERFACE,
 
-driver_error_t *sd_init(int unit);
+			// 1000: debouncing threshold period
+			.flags = SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_H(0) | SENSOR_FLAG_ON_L(1) |
+					 SENSOR_FLAG_DEBOUNCING | SENSOR_FLAG_DEBOUNCING_THRESHOLD(100000)
+		},
+	},
+	.data = {
+		{.id = "on", .type = SENSOR_DATA_INT},
+	}
+};
 
-int sd_size(int unit);
-int sd_write(int unit, unsigned offset, char *data, unsigned bcount);
-int sd_read(int unit, unsigned int offset, char *data, unsigned int bcount);
-int sd_has_partition(int unit, int type);
-int sd_has_partitions(int unit);
-
+#endif
 #endif

@@ -24,7 +24,7 @@ Maintainer: Michael Coracin
 #include <stdio.h>        /* printf, fprintf, snprintf, fopen, fputs */
 #include <stdint.h>        /* C99 types */
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 #include "trace.h"
 #include "timersync.h"

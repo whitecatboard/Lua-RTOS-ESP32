@@ -65,23 +65,6 @@
  * ----------------------------------------------------------------------------------------------
  */
 
-/* ##########################################################################################
- * There is a problem when using NET_VFS
- *   (USE_NET_VFS defined - true if CONFIG_WIFI_ENABLED || CONFIG_ETHERNET)
- *
- * Socket fd returned by socket() function is not the fd returned by lwip_socket(),
- * it is the file descriptor returned by fopen("/dev/socket/n","a+") in __wrap_lwip_socket(),
- * which causes closesocket() (lwip_close()) not to close the socket properly.
- * As a temporary  workaround, variable '_curl_socket' is added to lua_rtos/lwip/socket.c
- * which tells __wrap_lwip_socket() to return the original lwip_socket() fd if set to 1
- *
- * ------------------------------------------------------------------------------------------
- * --- This problem affects all functions which uses closesocket() function (ping(), ...) ---
- * --- All of those functions do not close the socket properly                            ---
- * ------------------------------------------------------------------------------------------
- * ##########################################################################################
- */
-
 /* ====================================================================================================
  * To add curl module to Lua system it is necessary to make two additions to lua_rtos/Lua/modules/net.c
  *   - Include this file:

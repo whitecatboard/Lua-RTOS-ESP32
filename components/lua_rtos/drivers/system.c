@@ -1,12 +1,12 @@
 /*
- * Lua RTOS, PING))) #28015 sensor (Distance Sensor)
+ * Lua RTOS, SYSTE; driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
- *
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- *
- * All rights reserved.
+ * 
+ * All rights reserved.  
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -27,15 +27,13 @@
  * this software.
  */
 
-#include "luartos.h"
-
-#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#include "sdkconfig.h"
 
 #include <sys/driver.h>
-#include <drivers/sensor.h>
 
-driver_error_t *ping28015_setup(sensor_instance_t *unit);
-driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *values);
-driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting);
+#include <drivers/system.h>
 
-#endif
+// Register driver and errors
+DRIVER_REGISTER_BEGIN(SYSTEM,system,NULL,NULL,NULL);
+	DRIVER_REGISTER_ERROR(SYSTEM, system, LockError, "lock error", SYSTEM_ERR_LOCK);
+DRIVER_REGISTER_END(SYSTEM,system,NULL,NULL,NULL);

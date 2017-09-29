@@ -26,61 +26,13 @@
 #define LUA_RTOS_BOARD "GENERIC"
 #endif
 
-/*
- * Lua modules to build
- *
- */
-#define USE_NET CONFIG_WIFI_ENABLED || CONFIG_ETHERNET
-
-#define USE_NET_VFS USE_NET
-
-#if CONFIG_LUA_RTOS_USE_HTTP_SERVER
-#define LUA_USE_HTTP 1
-#else
-	#if LUA_RTOS_USE_HTTP_SERVER
-	#define LUA_USE_HTTP 1
-	#else
-	#define LUA_USE_HTTP 0
-	#endif
-#endif
+/* Fat file system */
+#define CONFIG_LUA_RTOS_USE_FAT CONFIG_LUA_RTOS_USE_SPI_SD
 
 /*
  * Lua RTOS
  */
-#define LUA_TASK_PRIORITY  CONFIG_LUA_RTOS_LUA_TASK_PRIORITY
 #define LUA_USE_ROTABLE	   1
-
-#if CONFIG_LUA_RTOS_USE_LED_ACT
-#define LED_ACT CONFIG_LUA_RTOS_LED_ACT
-#define USE_LED_ACT 1
-#else
-#define LED_ACT 0
-#define USE_LED_ACT 0
-#endif
-
-#define SD_LED LED_ACT
-
-/*
- * SPI
- */
-#define USE_SPI (CONFIG_LUA_RTOS_LUA_USE_SPI || CONFIG_LUA_RTOS_LUA_USE_LORA)
-
-/*
- * I2C
- */
-#define USE_I2C (CONFIG_LUA_RTOS_LUA_USE_I2C)
-
-/*
- * UART
- */
-#define USE_UART CONFIG_LUA_RTOS_LUA_USE_UART
-
-// Use console?
-#ifdef CONFIG_USE_CONSOLE
-#define USE_CONSOLE CONFIG_USE_CONSOLE
-#else
-#define USE_CONSOLE 1
-#endif
 
 // Get the UART assigned to the console
 #if CONFIG_LUA_RTOS_CONSOLE_UART0
@@ -120,7 +72,6 @@
 #endif
 
 // LoRa WAN
-
 #define US_PER_OSTICK   20
 #define OSTICKS_PER_SEC 50000
 #define LMIC_SPI_KHZ    1000
@@ -150,5 +101,26 @@
 #endif
 
 #define THREAD_LOCAL_STORAGE_POINTER_ID (CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS - 1)
+
+// External GPIO
+#define EXTERNAL_GPIO 0
+#define EXTERNAL_GPIO_PINS 0
+#define EXTERNAL_GPIO_PORTS 0
+#if CONFIG_GPIO_PCA9698 ||  CONFIG_GPIO_PCA9505
+	#undef EXTERNAL_GPIO_PINS
+	#define EXTERNAL_GPIO_PINS 40
+	#undef EXTERNAL_GPIO_PORTS
+	#define EXTERNAL_GPIO_PORTS 5
+	#undef EXTERNAL_GPIO
+	#define EXTERNAL_GPIO 1
+
+	#if CONFIG_GPIO_PCA9698
+	#define EXTERNAL_GPIO_NAME "PCA9698"
+	#endif
+
+#if CONFIG_GPIO_PCA9505
+	#define EXTERNAL_GPIO_NAME "PCA9505"
+	#endif
+#endif
 
 #endif

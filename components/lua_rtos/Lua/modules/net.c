@@ -27,7 +27,9 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_NET
 
 #include "lua.h"
 #include "lauxlib.h"
@@ -56,8 +58,6 @@
 
 #include <sys/driver.h>
 #include <drivers/net.h>
-
-extern LUA_REG_TYPE net_error_map[];
 
 typedef union {
 	uint32_t ipaddr;
@@ -190,7 +190,7 @@ static int lnet_stat(lua_State* L) {
 
 	// This should be done in a more elegant way in future versions ...
 
-#if CONFIG_WIFI_ENABLED && CONFIG_LUA_RTOS_LUA_USE_NET
+#if CONFIG_LUA_RTOS_LUA_USE_NET
 	// Call wf.stat
 	lua_getglobal(L, "net");
 	lua_getfield(L, -1, "wf");
@@ -207,10 +207,6 @@ static int lnet_stat(lua_State* L) {
 		lua_settable(L, -3);
 	} else {
 		lua_settop(L, 0);
-	}
-
-	if (table) {
-		lua_pushinteger(L, 1);
 	}
 #endif
 
@@ -244,7 +240,7 @@ static int lnet_connected(lua_State* L) {
 
 static const LUA_REG_TYPE service_map[] = {
 	{ LSTRKEY( "sntp" ), LROVAL ( sntp_map ) },
-#if LUA_USE_HTTP
+#if CONFIG_LUA_RTOS_USE_HTTP_SERVER
 	{ LSTRKEY( "http" ), LROVAL ( http_map ) },
 	{ LSTRKEY( "captivedns" ), LROVAL ( captivedns_map ) },
 #endif
@@ -263,11 +259,10 @@ static const LUA_REG_TYPE net_map[] = {
 
 #if CONFIG_LUA_RTOS_LUA_USE_SCP_NET
 	{ LSTRKEY( "scp" ), LROVAL ( scp_map ) },
+	{ LSTRKEY( "ssh" ), LROVAL ( ssh_map ) },
 #endif
 
-#if CONFIG_WIFI_ENABLED && CONFIG_LUA_RTOS_LUA_USE_NET
 	{ LSTRKEY( "wf" ), LROVAL ( wifi_map ) },
-#endif
 
 	#if CONFIG_SPI_ETHERNET && CONFIG_LUA_RTOS_LUA_USE_NET
 	{ LSTRKEY( "en" ), LROVAL ( spi_eth_map ) },
@@ -278,7 +273,7 @@ static const LUA_REG_TYPE net_map[] = {
 #endif
 
 	{ LSTRKEY( "service" ), LROVAL ( service_map ) },
-	{ LSTRKEY( "error" ), LROVAL ( net_error_map ) },
+	DRIVER_REGISTER_LUA_ERRORS(net)
 	{ LNILKEY, LNILVAL }
 };
 
@@ -300,3 +295,5 @@ MODULE_REGISTER_MAPPED(NET, net, net_map, luaopen_net);
 
  net.lookup("whitecarboard.org")
  */
+
+#endif

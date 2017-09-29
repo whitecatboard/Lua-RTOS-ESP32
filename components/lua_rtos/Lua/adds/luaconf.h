@@ -13,12 +13,12 @@
 #if LUA_USE_LUA_LOCK
 	void LuaLock(lua_State *L);
 	void LuaUnlock(lua_State *L);
-	
+
 	#define lua_lock(L)          LuaLock(L)
 	#define lua_unlock(L)        LuaUnlock(L)
 	#define luai_threadyield(L) {lua_unlock(L); lua_lock(L);}
 #else
-	#define lua_lock(L)          
+	#define lua_lock(L)
 	#define lua_unlock(L)        
 	#define luai_threadyield(L) 
 #endif
@@ -76,13 +76,25 @@
 #define lua_saveline(L,idx)     { (void)L; (void)idx; }
 #define lua_freeline(L,b)       { (void)L; (void)b; }
 
-// Adds in standard Lua modukes
+// Adds in standard Lua modules
 
 #define LBASELIB_REG_ADDS \
     {"dumpstack", stackDump}, \
     {"try", luaB_try}, 
         
 #define LBASELIB_OPEN_ADDS 
+
+#if CONFIG_LUA_RTOS_LUA_USE_CPU
+    #define LINIT_REG_CPU {AUXLIB_CPU, luaopen_cpu},
+#else
+    #define LINIT_REG_CPU
+#endif
+
+#if CONFIG_LUA_RTOS_LUA_USE_ULP
+    #define LINIT_REG_ULP {AUXLIB_ULP, luaopen_ulp},
+#else
+    #define LINIT_REG_ULP
+#endif
 
 #if CONFIG_LUA_RTOS_LUA_USE_TMR
     #define LINIT_REG_TMR {AUXLIB_TMR, luaopen_tmr},
@@ -176,6 +188,8 @@
   LINIT_REG_ADC \
   LINIT_REG_SPI \
   LINIT_REG_MQTT \
+  LINIT_REG_CPU \
+  LINIT_REG_ULP \
   LINIT_REG_THREAD \
   LINIT_REG_SCREEN \
   LINIT_REG_UART \

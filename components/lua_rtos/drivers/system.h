@@ -1,12 +1,12 @@
 /*
- * Lua RTOS, TMP36 sensor (temperature)
+ * Lua RTOS, SYSTEM driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
- *
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- *
- * All rights reserved.
+ * 
+ * All rights reserved.  
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -27,14 +27,11 @@
  * this software.
  */
 
-#include "luartos.h"
-
-#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#ifndef _SYSTEM_H
+#define	_SYSTEM_H
 
 #include <sys/driver.h>
-#include <drivers/sensor.h>
 
-driver_error_t *tmp36_setup(sensor_instance_t *unit);
-driver_error_t *tmp36_acquire(sensor_instance_t *unit, sensor_value_t *values);
+#define SYSTEM_ERR_LOCK             (DRIVER_EXCEPTION_BASE(SYSTEM_DRIVER_ID) |  0)
 
-#endif
+#endif	/* _SYSTEM_H */
