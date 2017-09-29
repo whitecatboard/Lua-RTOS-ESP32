@@ -380,6 +380,15 @@ int process(FILE *f) {
 	path = strtok(NULL, " ");
 	protocol = strtok(NULL, "\r");
 
+	//in case the protocol wasn't given we need to fix the path
+	if(!protocol) {
+		len = strlen(path)-1;
+		while(len>0 && (path[len]=='\r' || path[len]=='\n')) {
+			path[len] = 0;
+			len--;
+		}
+	}
+
 	if(path) {
 		data = strchr(path, '?');
 	  if (data) {
@@ -421,8 +430,7 @@ int process(FILE *f) {
 	} // AP mode
 
 	if (!method || !path) return -1; //protocol may be omitted
-
-	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol);
+	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol ? protocol:"");
 
 	fseek(f, 0, SEEK_CUR); // force change of stream direction
 
