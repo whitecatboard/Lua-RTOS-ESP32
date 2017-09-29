@@ -47,12 +47,16 @@
 #include <drivers/cpu.h>
 #include <drivers/timer.h>
 
-// Driver message errors
-DRIVER_REGISTER_ERROR(TIMER, timer, InvalidUnit, "invalid unit", TIMER_ERR_INVALID_UNIT);
-DRIVER_REGISTER_ERROR(TIMER, timer, NotEnoughtMemory, "not enough memory", TIMER_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(TIMER, timer, NoMoreTimers, "no more timers available", TIMER_ERR_NO_MORE_TIMERS);
-DRIVER_REGISTER_ERROR(TIMER, timer, InvalidPeriod, "invalid period", TIMER_ERR_INVALID_PERIOD);
-DRIVER_REGISTER_ERROR(TIMER, timer, NotSetup, "is not setup", TIMER_ERR_IS_NOT_SETUP);
+// Register driver and messages
+static void tmr_init();
+
+DRIVER_REGISTER_BEGIN(TIMER,timer,NULL,tmr_init,NULL);
+	DRIVER_REGISTER_ERROR(TIMER, timer, InvalidUnit, "invalid unit", TIMER_ERR_INVALID_UNIT);
+	DRIVER_REGISTER_ERROR(TIMER, timer, NotEnoughtMemory, "not enough memory", TIMER_ERR_NOT_ENOUGH_MEMORY);
+	DRIVER_REGISTER_ERROR(TIMER, timer, NoMoreTimers, "no more timers available", TIMER_ERR_NO_MORE_TIMERS);
+	DRIVER_REGISTER_ERROR(TIMER, timer, InvalidPeriod, "invalid period", TIMER_ERR_INVALID_PERIOD);
+	DRIVER_REGISTER_ERROR(TIMER, timer, NotSetup, "is not setup", TIMER_ERR_IS_NOT_SETUP);
+DRIVER_REGISTER_END(TIMER,timer,NULL,tmr_init,NULL);
 
 typedef struct {
 	tmr_t timer[CPU_LAST_TIMER + 1]; ///< Timer array with needed information about timers
@@ -119,7 +123,7 @@ static int have_timers(int8_t groupn) {
 	return 0;
 }
 
-static void IRAM_ATTR get_group_idx(int8_t unit, int *groupn, int *idx) {
+void IRAM_ATTR get_group_idx(int8_t unit, int *groupn, int *idx) {
 	switch (unit) {
 		case 0: *groupn = 0; *idx = 0; return;
 		case 1: *groupn = 0; *idx = 1; return;
@@ -396,5 +400,3 @@ driver_error_t *tmr_stop(int8_t unit) {
 
 	return NULL;
 }
-
-DRIVER_REGISTER(TIMER,timer,NULL,tmr_init,NULL);

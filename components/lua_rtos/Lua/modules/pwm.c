@@ -46,34 +46,6 @@
 #include <drivers/cpu.h>
 #include <drivers/pwm.h>
 
-extern const LUA_REG_TYPE pwm_error_map[];
-
-static int lpwm_setup( lua_State* L ) {
-	driver_error_t *error;
-    int8_t pin;
-    int32_t freq;
-    double duty;
-
-	luaL_deprecated(L, "pwm.setup", "pwm.attach");
-
-    pwm_userdata *pwm = (pwm_userdata *)lua_newuserdata(L, sizeof(pwm_userdata));
-
-    pwm->unit = 0;
-
-    pin = luaL_checkinteger( L, 1 );
-    freq = luaL_checkinteger( L, 2 );
-    duty = luaL_checknumber(L, 3);
-
-    if ((error = pwm_setup(pwm->unit, -1, pin, freq, duty, &pwm->channel))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    luaL_getmetatable(L, "pwm.inst");
-    lua_setmetatable(L, -2);
-
-    return 1;
-}
-
 static int lpwm_attach( lua_State* L ) {
 	driver_error_t *error;
     int8_t pin;
@@ -186,7 +158,6 @@ static int lpwm_stop(lua_State* L) {
 }
 
 static const LUA_REG_TYPE lpwm_map[] = {
-    { LSTRKEY("setup" ),	LFUNCVAL(lpwm_setup)     },
     { LSTRKEY("setupchan" ),LFUNCVAL(lpwm_setupchan) },
     { LSTRKEY("attach" ),	LFUNCVAL(lpwm_attach)    },
 	PWM_PWM0
@@ -207,9 +178,7 @@ static const LUA_REG_TYPE lpwm_map[] = {
 	PWM_PWM_CH13
 	PWM_PWM_CH14
 	PWM_PWM_CH15
-
-	// Error definitions
-	{LSTRKEY("error"),  LROVAL( pwm_error_map )},
+	DRIVER_REGISTER_LUA_ERRORS(pwm)
   	{ LNILKEY, LNILVAL }
 };
 

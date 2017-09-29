@@ -112,8 +112,11 @@
 #define GPIO38_NAME	"GPIO38"
 #define GPIO39_NAME	"GPIO39"
 
-// ESP32 has only 1 GPIO port
+#if EXTERNAL_GPIO
+#define GPIO_PORTS (EXTERNAL_GPIO_PORTS + 1)
+#else
 #define GPIO_PORTS 1
+#endif
 
 // ESP32 has 40 GPIO per port
 #define GPIO_PER_PORT 40
@@ -132,7 +135,12 @@ typedef uint64_t gpio_pin_mask_t;
 #define GPIO_BIT_MASK 1ULL
 
 #define CPU_FIRST_GPIO GPIO0
+
+#if !EXTERNAL_GPIO
 #define CPU_LAST_GPIO  GPIO39
+#else
+#define CPU_LAST_GPIO  (GPIO39 + EXTERNAL_GPIO_PINS)
+#endif
 
  /*
   * ----------------------------------------------------------------
@@ -333,7 +341,7 @@ typedef uint64_t gpio_pin_mask_t;
 #endif
 
 void _cpu_init();
-int cpu_revission();
+int cpu_revision();
 void cpu_model(char *buffer);
 void cpu_reset();
 void cpu_show_info();
@@ -349,6 +357,9 @@ void cpu_idle(int seconds);
 unsigned int cpu_has_gpio(unsigned int port, unsigned int pin);
 unsigned int cpu_has_port(unsigned int port);
 void cpu_sleep(int seconds);
+void cpu_deepsleep();
 int cpu_reset_reason();
+int cpu_wakeup_reason();
 uint8_t cpu_gpio_number(uint8_t pin);
 void cpu_show_flash_info();
+uint32_t cpu_speed();

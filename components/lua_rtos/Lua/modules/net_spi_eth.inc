@@ -29,14 +29,12 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_SPI_ETHERNET && CONFIG_LUA_RTOS_LUA_USE_NET
+#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_SPI_ETHERNET
 
 #include <string.h>
 #include <stdio.h>
 
 #include <drivers/spi_eth.h>
-
-extern LUA_REG_TYPE spi_eth_error_map[];
 
 static int lspi_eth_setup(lua_State* L) {
 	driver_error_t *error;
@@ -118,7 +116,7 @@ static int lspi_eth_stat(lua_State* L) {
 			printf("   ip address %s netmask %s\r\n", ipa, maska);
 			printf("   gw address %s\r\n\r\n", gwa);
 	} else {
-		char tmp[17];
+		char tmp[18];
 
 		lua_createtable(L, 0, 4);
 
@@ -136,6 +134,14 @@ static int lspi_eth_stat(lua_State* L) {
 		sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&info.netmask),ip4_addr2_16(&info.netmask),ip4_addr3_16(&info.netmask),ip4_addr4_16(&info.netmask));
         lua_pushstring(L, tmp);
         lua_setfield (L, -2, "netmask");
+
+		sprintf(tmp, "%02x:%02x:%02x:%02x:%02x:%02x",
+			info.mac[0],info.mac[1],
+			info.mac[2],info.mac[3],
+			info.mac[4],info.mac[5]
+		);
+		lua_pushstring(L, tmp);
+		lua_setfield (L, -2, "mac");
 	}
 
 	return table;
@@ -146,7 +152,7 @@ static const LUA_REG_TYPE spi_eth_map[] = {
     { LSTRKEY( "start" ),	 LFUNCVAL( lspi_eth_start   ) },
     { LSTRKEY( "stop"  ),	 LFUNCVAL( lspi_eth_stop    ) },
     { LSTRKEY( "stat"  ),	 LFUNCVAL( lspi_eth_stat    ) },
-    { LSTRKEY( "error" ),	 LROVAL  ( spi_eth_error_map ) },
+	DRIVER_REGISTER_LUA_ERRORS(spi_eth)
 	{ LNILKEY, LNILVAL }
 };
 

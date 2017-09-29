@@ -156,4 +156,6 @@ driver_error_t *tmr_start(int8_t unit);
  */
 driver_error_t *tmr_stop(int8_t unit);
 
+void get_group_idx(int8_t unit, int *groupn, int *idx);
+
 #endif	/* TIMER_H */

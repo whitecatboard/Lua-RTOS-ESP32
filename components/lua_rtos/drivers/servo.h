@@ -53,6 +53,9 @@ typedef struct servo_instance {
 #define SERVO_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SERVO_DRIVER_ID) |  0)
 #define SERVO_ERR_NOT_ENOUGH_MEMORY		   (DRIVER_EXCEPTION_BASE(SERVO_DRIVER_ID) |  1)
 
+extern const int servo_errors;
+extern const int servo_error_map;
+
 // Driver functions
 driver_error_t *servo_setup(int8_t pin, servo_instance_t **instance);
 driver_error_t *servo_write(servo_instance_t *instance, double value);

@@ -41,9 +41,6 @@
 
 #include <drivers/servo.h>
 
-// This variables are defined at linker time
-extern LUA_REG_TYPE servo_error_map[];
-
 static int lservo_attach( lua_State* L ) {
 	driver_error_t *error;
 
@@ -96,7 +93,7 @@ static int lservo_ins_gc (lua_State *L) {
 
 static const LUA_REG_TYPE lservo_map[] = {
     { LSTRKEY( "attach"  ),			LFUNCVAL( lservo_attach ) },
-	{ LSTRKEY ("error"   ), 		LROVAL( servo_error_map )},
+	DRIVER_REGISTER_LUA_ERRORS(servo)
     { LNILKEY, LNILVAL }
 };
 
@@ -104,7 +101,7 @@ static const LUA_REG_TYPE lservo_ins_map[] = {
     { LSTRKEY( "write"        ),	LFUNCVAL( lservo_write   ) },
 	{ LSTRKEY( "__metatable"  ),    LROVAL  ( lservo_ins_map ) },
 	{ LSTRKEY( "__index"      ),   	LROVAL  ( lservo_ins_map ) },
-	{ LSTRKEY( "__gc"         ),   	LROVAL  ( lservo_ins_gc ) },
+	{ LSTRKEY( "__gc"         ),   	LFUNCVAL( lservo_ins_gc ) },
     { LNILKEY, LNILVAL }
 };
 

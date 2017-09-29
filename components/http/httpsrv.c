@@ -25,9 +25,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
-#include "luartos.h"
 
-#if LUA_USE_HTTP
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_USE_HTTP_SERVER
 
 #include "preprocessor.h"
 
@@ -41,7 +42,7 @@
 #include <sys/delay.h>
 
 #include "esp_wifi_types.h"
-#include <pthread/pthread.h>
+#include <pthread.h>
 #include <esp_wifi.h>
 
 #include <time.h>
@@ -60,6 +61,7 @@
 #include "lualib.h"
 #include "lauxlib.h"
 #include <drivers/net.h>
+#include <drivers/spi_eth.h>
 
 char *strcasestr(const char *haystack, const char *needle);
 driver_error_t *wifi_stat(ifconfig_t *info);
@@ -505,7 +507,6 @@ static void http_net_callback(system_event_t *event){
 	syslog(LOG_DEBUG, "event: %d\r\n", event->event_id);
 
 	switch (event->event_id) {
-#if CONFIG_WIFI_ENABLED
 		case SYSTEM_EVENT_STA_START:                /**< ESP32 station start */
 			if (wifi_mode != WIFI_MODE_STA) {
 				wifi_mode = WIFI_MODE_STA;
@@ -538,7 +539,6 @@ static void http_net_callback(system_event_t *event){
 				}
 			}
 			break;
-#endif
 
 		default :
 			break;
@@ -553,7 +553,7 @@ static void *http_thread(void *arg) {
 		LWIP_ASSERT("httpd_init: socket failed", server >= 0);
 		if(0 > server) {
 			syslog(LOG_ERR, "couldn't create server socket\n");
-			pthread_exit(NULL);
+			return NULL;
 		}
 
 		u8_t one = 1;
@@ -567,14 +567,14 @@ static void *http_thread(void *arg) {
 		LWIP_ASSERT("httpd_init: bind failed", rc == 0);
 		if(0 != rc) {
 			syslog(LOG_ERR, "couldn't bind to port %d\n", CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
-			pthread_exit(NULL);
+			return NULL;
 		}
 
 		listen(server, 5);
 		LWIP_ASSERT("httpd_init: listen failed", server >= 0);
 		if(0 > server) {
 			syslog(LOG_ERR, "couldn't listen on port %d\n", CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
-			pthread_exit(NULL);
+			return NULL;
 		}
 
 		// Set the timeout for accept
@@ -634,7 +634,7 @@ static void *http_thread(void *arg) {
 	*/
 
 	http_refcount--;
-	pthread_exit(NULL);
+	return NULL;
 }
 
 int http_start(lua_State* L) {
@@ -652,7 +652,6 @@ int http_start(lua_State* L) {
 		LL=L;
 		strcpy(ip4addr, "0.0.0.0");
 
-#if CONFIG_WIFI_ENABLED
 		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&wifi_mode)))) {
 			return luaL_error(L, "couldn't get wifi mode");
 		}
@@ -662,14 +661,13 @@ int http_start(lua_State* L) {
 			}
 			strcpy(ip4addr, inet_ntoa(info.ip));
 		}
-#else
-#if CONFIG_SPI_ETHERNET
+
+		#if CONFIG_SPI_ETHERNET && 0
 		if ((error = spi_eth_stat(&info))) {
 			return luaL_error(L, "couldn't get spi eth IP");
 		}
 		strcpy(ip4addr, inet_ntoa(info.ip));
-#endif
-#endif
+		#endif
 
 		if ((error = net_event_register_callback(http_net_callback))) {
 			syslog(LOG_WARNING, "couldn't register net callback, please restart http service from lua after changing connectivity\n");

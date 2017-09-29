@@ -30,7 +30,7 @@
 #include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
-#if LUA_USE_GPS
+#if CONFIG_LUA_RTOS_USE_SENSOR_GPS
 
 #include "gps.h"
 #include "nmea0183.h"
@@ -45,7 +45,9 @@
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) gps_sensor = {
 	.id = "GPS",
-	.interface = UART_INTERFACE,
+	.interface = {
+		{.type = UART_INTERFACE},
+	},
 	.data = {
 		{.id = "lon", .type = SENSOR_DATA_DOUBLE},
 		{.id = "lat" , .type = SENSOR_DATA_DOUBLE},
@@ -70,7 +72,7 @@ static void gps(void *args) {
  * Operation functions
  */
 driver_error_t *gps_setup(sensor_instance_t *unit) {
-	xTaskCreatePinnedToCore(gps, "gps", configMINIMAL_STACK_SIZE, (void *)((int)unit->setup.uart.id), 21, NULL, 0);
+	xTaskCreatePinnedToCore(gps, "gps", configMINIMAL_STACK_SIZE, (void *)((int)unit->setup[0].uart.id), 21, NULL, 0);
 
 	return NULL;
 }
@@ -85,16 +87,3 @@ driver_error_t *gps_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 
 #endif
 #endif
-
-/*
-
-gps = sensor.attach("GPS", uart.UART1, 9600, 8, uart.PARNONE, uart.STOP1)
-
-while true do
-	lon, lat, sats = gps:read("all")
-
-	print("lat: "..lat..", lon: "..lon..", sats: "..sats)
-	tmr.delay(1)
-end
-
-*/

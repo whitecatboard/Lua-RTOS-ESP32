@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <pthread/pthread.h>
+#include <pthread.h>
 
 #include <sys/delay.h>
 

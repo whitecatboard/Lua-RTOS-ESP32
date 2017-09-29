@@ -2,7 +2,7 @@
  * Lua RTOS, PING))) #28015 sensor (Distance Sensor)
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -30,8 +30,8 @@
 #include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_PING28015
 
-#include "ping28015.h"
 #include "freertos/FreeRTOS.h"
 
 #include <math.h>
@@ -43,15 +43,23 @@
 #include <drivers/sensor.h>
 #include <drivers/gpio.h>
 
+driver_error_t *ping28015_setup(sensor_instance_t *unit);
+driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *values);
+driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting);
+
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) ping28015_sensor = {
 	.id = "PING28015",
-	.interface = GPIO_INTERFACE,
-	.data = {
-		{.id = "distance",    .type = SENSOR_DATA_FLOAT},
+	.interface = {
+		{.type = GPIO_INTERFACE},
 	},
+	.data = {
+		{.id = "distance", .type = SENSOR_DATA_DOUBLE},
+	},
+	.interface_name = {"SIG"},
 	.properties = {
-		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
+		{.id = "calibration", .type = SENSOR_DATA_DOUBLE},
+		{.id = "temperature", .type = SENSOR_DATA_DOUBLE},
 	},
 	.setup = ping28015_setup,
 	.acquire = ping28015_acquire,
@@ -59,105 +67,85 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) ping28015
 };
 
 /*
- * Helper functions
- */
-
-/*
  * Operation functions
  */
 driver_error_t *ping28015_setup(sensor_instance_t *unit) {
-	// Set temperature to 20 ºC if any temperature is provided
-	unit->properties[0].floatd.value = 20;
+	// Set default calibration value
+	unit->properties[0].doubled.value = 0;
 
-	// Ignore first measure
-	gpio_pin_clr(unit->setup.gpio.gpio);
-	delay(20);
+	// Set temperature to 20 ºC if no current temperature is provided
+	unit->properties[1].doubled.value = 20;
+
+	// Ignore some measures
+	sensor_value_t tmp[2];
+	int i;
+
+	for(i = 0;i < 2;i++) {
+		ping28015_acquire(unit, tmp);
+		udelay(200);
+	}
 
 	return NULL;
 }
 
 driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting) {
-	if (strcmp(id,"temperature") == 0) {
+	if (strcmp(id,"calibration") == 0) {
 		memcpy(&unit->properties[0], setting, sizeof(sensor_value_t));
+	} else if (strcmp(id,"temperature") == 0) {
+		memcpy(&unit->properties[1], setting, sizeof(sensor_value_t));
 	}
 
 	return NULL;
 }
 
 driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *values) {
-	int gpio = unit->setup.gpio.gpio;
-	unsigned start, end;
-	double time;
-	uint8_t val;
+	// Configure pin as output
+	gpio_pin_output(unit->setup[0].gpio.gpio);
 
 	// Trigger pulse
-	gpio_pin_output(gpio);
-	gpio_pin_set(gpio);
+	gpio_pin_set(unit->setup[0].gpio.gpio);
 	udelay(5);
-	gpio_pin_clr(gpio);
+	gpio_pin_clr(unit->setup[0].gpio.gpio);
 
-	// Wait for echo
-	// We have to measure time of echo pulse
-	portDISABLE_INTERRUPTS();
-	gpio_pin_input(gpio);
+	// Configure pin as input
+	gpio_pin_input(unit->setup[0].gpio.gpio);
 
-	// Echo Holdoff
-	time = 0.0;
-	start = xthal_get_ccount();
-	end = start;
-
-	gpio_pin_get(gpio, &val);
-	while (!val && (time <= 750)) {
-		end = xthal_get_ccount();
-		time = (((double)((double)end - (double)start) / (double)(CPU_HZ / (1000000.0 * (CPU_HZ / CORE_TIMER_HZ))))) / (double)2.0;
-		gpio_pin_get(gpio, &val);
-	}
-
-	if (time > 800) {
+	// Get echo pulse width in usecs
+	double time = gpio_get_pulse_time(unit->setup[0].gpio.gpio, 1, 18500);
+	if (time < 0.0) {
 		return driver_error(SENSOR_DRIVER, SENSOR_ERR_TIMEOUT, NULL);
 	}
-
-	// Echo Return Pulse
-	time = 0.0;
-	start = xthal_get_ccount();
-	gpio_pin_get(gpio, &val);
-	while (val && (time <= 185000)) {
-		end = xthal_get_ccount();
-		time = (((double)((double)end - (double)start) / (double)(CPU_HZ / (1000000.0 * (CPU_HZ / CORE_TIMER_HZ))))) / (double)2.0;
-		gpio_pin_get(gpio, &val);
-	}
-
-	portENABLE_INTERRUPTS();
-
-	if (time > 185000) {
-		return driver_error(SENSOR_DRIVER, SENSOR_ERR_TIMEOUT, NULL);
-	}
-
-	/*
-	 * Calculate time in microseconds
-	 *
-	 * The sound comes out of the sensor, is reflected in an object, and returns to the sensor,
-	 * so time from sensor to object is time / 2
-	 */
-	time = (((double)((double)end - (double)start) / (double)(CPU_HZ / (1000000.0 * (CPU_HZ / CORE_TIMER_HZ))))) / (double)2.0;
 
 	/*
 	 * Calculate distance
 	 *
 	 * Sound speed depends on ambient temperature
-	 * sound speed = 331.5 + (0.6 * temperature) m/s
-	 * sound speed = 33150 + (0.6 * temperature) cm/s
+	 * sound speed = 331.5 + (0.6 * temperature) m/sec
+	 * sound speed = 331500 + (60 * temperature) mm/sec
+	 *
 	 */
 
-	// First calculate centimeters per usec
-	double cm_per_usecs = ((33150.0 + (0.6 * ((double)unit->properties[0].floatd.value))) / 1000000.0);
+	// First calculate mm per usec
+	double mm_per_usecs = (331500.0 + (60.0 * (unit->properties[1].doubled.value))) / 1000000.0;
 
-	values[0].floatd.value = (float)((double)time * cm_per_usecs);
+	// Calculate distance in centimeters.
+	// Please, take note that the width of the echo is the time that the ultrasonic pulse takes to travel
+	// from the sensor to the object, plus the time to back to the sensor, so we have to consider time / 2.
+	// 1 decimal precision.
+	if (time == 0) {
+		values[0].doubled.value = 2;
+	} else {
+		values[0].doubled.value =
+			  round((((((time / 2.0)) * mm_per_usecs) / 10.0 +
+			  unit->properties[0].doubled.value)) * 10.00) / 10.00;
+	}
 
-	// Delay for next measure
-	udelay(200);
+	// Next value can get in 200 useconds
+	gettimeofday(&unit->next, NULL);
+	unit->next.tv_usec += 200;
 
 	return NULL;
 }
 
+#endif
 #endif

@@ -2,7 +2,7 @@
  * Lua RTOS, pthread implementation over FreeRTOS
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -27,33 +27,42 @@
  * this software.
  */
 
+#include "_pthread.h"
+
 #include <errno.h>
 #include <sys/mutex.h>
-#include <pthread/pthread.h>
 
 extern struct mtx cond_mtx;
-
-#if MTX_USE_EVENTS
-extern eventg_t eventg[MTX_EVENT_GROUPS];
-#endif
 
 int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) {
 	// Atrr values in this implementation are not allowed
 	if (attr) {
-		return EINVAL;
+		mtx_unlock(&cond_mtx);
+		return ENOMEM;
 	}
 
 	mtx_lock(&cond_mtx);
 
-	if (cond->referenced > 0) {
+	struct pthread_cond *scond;
+
+	if (*cond != PTHREAD_COND_INITIALIZER) {
+		scond = calloc(1, sizeof(struct pthread_cond));
+		if (!scond) {
+        	mtx_unlock(&cond_mtx);
+			return ENOMEM;
+		}
+	} else {
+		scond = (struct pthread_cond *)cond;
+	}
+
+	if (scond->referenced > 0) {
 		mtx_unlock(&cond_mtx);
 		return EBUSY;
 	}
 
-	#if !MTX_USE_EVENTS
-    if (!cond->mutex.sem) {
-        mtx_init(&cond->mutex, NULL, NULL, 0);
-        if (!cond->mutex.sem) {
+    if (!scond->mutex.sem) {
+        mtx_init(&scond->mutex, NULL, NULL, 0);
+        if (!scond->mutex.sem) {
         	mtx_unlock(&cond_mtx);
         	return ENOMEM;
         }
@@ -61,20 +70,8 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) {
     	mtx_unlock(&cond_mtx);
     	return EBUSY;
     }
-	#else
-    if (cond->mutex.mtxid < 0) {
-        mtx_init(&cond->mutex, NULL, NULL, 0);
-        if (cond->mutex.mtxid < 0) {
-        	mtx_unlock(&cond_mtx);
-        	return ENOMEM;
-        }
-    } else {
-    	mtx_unlock(&cond_mtx);
-    	return EBUSY;
-    }
-	#endif
     
-    cond->referenced = 0;
+    scond->referenced = 0;
 
     mtx_unlock(&cond_mtx);
 
@@ -84,26 +81,24 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) {
 int pthread_cond_destroy(pthread_cond_t *cond) {
 	mtx_lock(&cond_mtx);
 
-	if (cond->referenced > 0) {
+	if (*cond == PTHREAD_COND_INITIALIZER) {
+    	mtx_unlock(&cond_mtx);
+    	return EINVAL;
+	}
+
+	struct pthread_cond *scond = (struct pthread_cond *)cond;
+
+	if (scond->referenced > 0) {
 		mtx_unlock(&cond_mtx);
 		return EBUSY;
 	}
 
-	#if !MTX_USE_EVENTS
-    if (cond->mutex.sem) {
-        mtx_destroy(&cond->mutex);
+    if (scond->mutex.sem) {
+        mtx_destroy(&scond->mutex);
     } else {
     	mtx_unlock(&cond_mtx);
     	return EINVAL;
     }
-	#else
-    if (cond->mutex.mtxid >= 0) {
-        mtx_destroy(&cond->mutex);
-    } else {
-    	mtx_unlock(&cond_mtx);
-    	return EINVAL;
-    }
-	#endif
 
     mtx_unlock(&cond_mtx);
 	
@@ -111,27 +106,29 @@ int pthread_cond_destroy(pthread_cond_t *cond) {
 }
 
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
-	#if !MTX_USE_EVENTS
-	if (!cond->mutex.sem) {
+
+	if (*cond == PTHREAD_COND_INITIALIZER) {
+    	mtx_unlock(&cond_mtx);
+    	return EINVAL;
+	}
+
+	struct pthread_cond *scond = (struct pthread_cond *)cond;
+
+	if (!scond->mutex.sem) {
 		return EINVAL;
 	}
-	#else
-	if (cond->mutex.mtxid < 0) {
-		return EINVAL;
-	}
-	#endif
 
 	// At this point cond is protected by mutex, so is not necessary to use
 	// cond_mtx
-	cond->referenced++;
+	scond->referenced++;
 
     // Wait for condition
-    mtx_lock(&cond->mutex);
+    mtx_lock(&scond->mutex);
 
     // If current thread is the first that calls to pthread_cond_wait, lock
     // again for block thread
-    if (cond->referenced == 1) {
-        mtx_lock(&cond->mutex);
+    if (scond->referenced == 1) {
+        mtx_lock(&scond->mutex);
 
     }
 
@@ -143,37 +140,33 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
 int pthread_cond_timedwait(pthread_cond_t *cond, 
     pthread_mutex_t *mutex, const struct timespec *abstime) { 
     
-	#if !MTX_USE_EVENTS
-	if (!cond->mutex.sem) {
+	if (*cond == PTHREAD_COND_INITIALIZER) {
+    	mtx_unlock(&cond_mtx);
+    	return EINVAL;
+	}
+
+	struct pthread_cond *scond = (struct pthread_cond *)cond;
+
+	struct pthread_mutex *smutex = (struct pthread_mutex *)mutex;
+
+	if (!smutex->sem) {
 		return EINVAL;
 	}
-	#else
-	if (cond->mutex.mtxid < 0) {
-		return EINVAL;
-	}
-	#endif
 
 	// At this point cond is protected by mutex, so is not necessary to use
 	// cond_mtx
-	cond->referenced++;
+	scond->referenced++;
 
     // If current thread is the first that calls to pthread_cond_wait, lock
     // again for block thread
-    if (cond->referenced == 1) {
-        mtx_lock(&cond->mutex);
+    if (scond->referenced == 1) {
+        mtx_lock(&scond->mutex);
     }
 
     // Wait for condition
-	#if !MTX_USE_EVENTS
-    if (xSemaphoreTake(cond->mutex.sem, (1000 * abstime->tv_sec) / portTICK_PERIOD_MS ) != pdTRUE) {
+    if (xSemaphoreTake(scond->mutex.sem, (1000 * abstime->tv_sec) / portTICK_PERIOD_MS ) != pdTRUE) {
         return ETIMEDOUT;
     }
-	#else
-  	EventBits_t uxBits = xEventGroupWaitBits(MTX_EVENTG(cond->mutex.mtxid).eg, MTX_EVENTG_BIT(cond->mutex.mtxid), pdTRUE, pdTRUE, (1000 * abstime->tv_sec) / portTICK_PERIOD_MS );
-  	if (!(uxBits & MTX_EVENTG_BIT(cond->mutex.mtxid))) {
-        return ETIMEDOUT;
-  	}
-	#endif
     
     pthread_mutex_unlock(mutex);
     
@@ -181,23 +174,24 @@ int pthread_cond_timedwait(pthread_cond_t *cond,
 }
 
 int pthread_cond_signal(pthread_cond_t *cond) {
-	#if !MTX_USE_EVENTS
-	if (!cond->mutex.sem) {
+	if (*cond == PTHREAD_COND_INITIALIZER) {
+    	mtx_unlock(&cond_mtx);
+    	return EINVAL;
+	}
+
+	struct pthread_cond *scond = (struct pthread_cond *)cond;
+
+	if (!scond->mutex.sem) {
 		return EINVAL;
 	}
-	#else
-	if (cond->mutex.mtxid < 0) {
-		return EINVAL;
-	}
-	#endif
 
 	// At this point cond is protected by mutex, prior to calling pthread_cond_wait or
 	// pthread_cond_timedwait. pthread_cond_init / pthread_cond_destroy fails due to
-	// cond->referenced > 0, so is not necessary to use cond_mtx
-	cond->referenced--;
+	// referenced > 0, so is not necessary to use cond_mtx
+	scond->referenced--;
 
 	// Release cond
-	mtx_unlock(&cond->mutex);
+	mtx_unlock(&scond->mutex);
 
     return 0;
 }

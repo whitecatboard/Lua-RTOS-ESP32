@@ -49,8 +49,6 @@ typedef struct {
     double accel;    // Acceleration in units/secs^2
 } stepper_userdata;
 
-extern LUA_REG_TYPE stepper_error_map[];
-
 static int lstepper_attach( lua_State* L ){
 	driver_error_t *error;
     uint8_t unit = 0;
@@ -172,7 +170,7 @@ static int lstepper_start( lua_State* L ){
 
 static const LUA_REG_TYPE lstepper_map[] = {
     { LSTRKEY( "attach" ),		  LFUNCVAL( lstepper_attach    ) },
-	{ LSTRKEY( "error"  ), 		  LROVAL  ( stepper_error_map  ) },
+	DRIVER_REGISTER_LUA_ERRORS(stepper)
 	{ LSTRKEY( "start"  ),		  LFUNCVAL( lstepper_start     ) },
 	{ LNILKEY, LNILVAL }
 };

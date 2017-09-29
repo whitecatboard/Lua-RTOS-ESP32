@@ -46,16 +46,14 @@
 
 #include <sys/driver.h>
 
-#include <pthread/pthread.h>
-
-// This variables are defined at linker time
-extern LUA_REG_TYPE event_error_map[];
-
-// Module errors
+#include <pthread.h>
 
 #define EVENT_ERR_NOT_ENOUGH_MEMORY (DRIVER_EXCEPTION_BASE(EVENT_DRIVER_ID) |  0)
 
-DRIVER_REGISTER_ERROR(EVENT, event, NotEnoughtMemory, "not enough memory", EVENT_ERR_NOT_ENOUGH_MEMORY);
+// Register driver and messages
+DRIVER_REGISTER_BEGIN(EVENT,event,NULL,NULL,NULL);
+	DRIVER_REGISTER_ERROR(EVENT, event, NotEnoughtMemory, "not enough memory", EVENT_ERR_NOT_ENOUGH_MEMORY);
+DRIVER_REGISTER_END(EVENT,event,NULL,NULL,NULL);
 
 /*
  * Get the listener that corresponds to the current thread. If current thread has not
@@ -314,7 +312,7 @@ static int levent_ins_gc (lua_State *L) {
 
 static const LUA_REG_TYPE levent_map[] = {
     { LSTRKEY( "create"  ),			LFUNCVAL( levent_create   ) },
-	{ LSTRKEY( "error"   ), 		LROVAL  ( event_error_map )},
+	DRIVER_REGISTER_LUA_ERRORS(event)
     { LNILKEY, LNILVAL }
 };
 
@@ -325,7 +323,7 @@ static const LUA_REG_TYPE levent_ins_map[] = {
   	{ LSTRKEY( "broadcast"   ),		LFUNCVAL( levent_broadcast   ) },
 	{ LSTRKEY( "__metatable" ),    	LROVAL  ( levent_ins_map     ) },
 	{ LSTRKEY( "__index"     ),   	LROVAL  ( levent_ins_map     ) },
-	{ LSTRKEY( "__gc"        ),   	LROVAL  ( levent_ins_gc      ) },
+	{ LSTRKEY( "__gc"        ),   	LFUNCVAL( levent_ins_gc      ) },
     { LNILKEY, LNILVAL }
 };
 
@@ -335,7 +333,6 @@ LUALIB_API int luaopen_event( lua_State *L ) {
 }
 
 MODULE_REGISTER_MAPPED(EVENT, event, levent_map, luaopen_event);
-DRIVER_REGISTER(EVENT,event,NULL,NULL,NULL);
 
 #endif
 
@@ -350,15 +347,16 @@ thread.start(function()
   	  e1:wait()
 	  tmr.delay(2)
 	  print("hi from 1")
+	  e2:broadcast()
   end
 end)
 
 thread.start(function()
   while true do
   	  e2:wait()
-  	  e1:broadcast()
   	  tmr.delay(4)
 	  print("hi from 2")
+  	  e1:broadcast()
   end
 end)
 

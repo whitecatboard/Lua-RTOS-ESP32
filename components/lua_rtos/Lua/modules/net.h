@@ -27,9 +27,15 @@
  * this software.
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_NET
+
 #ifndef LNET_H_
 #define LNET_H_
 
 #include <drivers/wifi.h>
+
+#endif
 
 #endif

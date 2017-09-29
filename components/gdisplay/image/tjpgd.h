@@ -1,6 +1,11 @@
 /*----------------------------------------------------------------------------/
 / TJpgDec - Tiny JPEG Decompressor include file               (C)ChaN, 2012
 /----------------------------------------------------------------------------*/
+
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_GDISPLAY
+
 #ifndef _TJPGDEC
 #define _TJPGDEC
 
@@ -20,9 +25,9 @@ extern "C" {
 
 #include "integer.h"
 
-typedef int16_t SHORT;
-typedef int32_t LONG;
-typedef int32_t	INT;
+typedef short SHORT;
+typedef long LONG;
+typedef int	INT;
 
 /* Error code */
 typedef enum {
@@ -85,3 +90,5 @@ JRESULT jd_decomp (JDEC*, UINT(*)(JDEC*,void*,JRECT*), BYTE);
 #endif
 
 #endif /* _TJPGDEC */
+
+#endif

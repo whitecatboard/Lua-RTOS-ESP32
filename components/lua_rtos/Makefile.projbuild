@@ -6,6 +6,21 @@ ifneq (foo$(TEST_COMPONENTS), foo)
 CFLAGS += -DRUN_TESTS
 endif
 
+CFLAGS += -Wno-error=implicit-function-declaration -Wno-error=pointer-sign -Wno-error=address
+
+#
+# Lua RTOS configuration
+# 
+CFLAGS += -DNEWLIB_HAVE_SLEEP=1
+CFLAGS += -DNEWLIB_HAVE_USLEEP=1
+
+CFLAGS += -DCPU_HZ=240000000L                   # CPU frequency in hertz
+CFLAGS += -DCORE_TIMER_HZ=240000000L            # CPU core timer frequency
+CFLAGS += -D_CLOCKS_PER_SEC_=configTICK_RATE_HZ # Number of interrupt ticks for reach 1 second
+
+CFLAGS += -DPATH_MAX=64
+CFLAGS += -DMAXNAMLEN=64
+
 CFLAGS += -DCONFIG_MAX_FD_BITS=4
 CFLAGS += -DLWIP_IPV6=1
 CFLAGS += -DLWIP_RAW=1
@@ -14,8 +29,6 @@ CFLAGS += -DLWIP_DNS=1
 CFLAGS += -DLWIP_UDP=1
 CFLAGS += -DLWIP_SOCKET=1
 CFLAGS += -DLWIP_DNS_API_DEFINE_ERRORS=1
-
-CFLAGS += -Wno-error=implicit-function-declaration -Wno-error=pointer-sign -Wno-error=address
 
 LDFLAGS += -Wl,--wrap=_realloc_r
 LDFLAGS += -Wl,--wrap=_malloc_r
@@ -26,10 +39,7 @@ LDFLAGS += -Wl,--wrap=_rename_r
 LDFLAGS += -Wl,--wrap=_stat_r
 LDFLAGS += -Wl,--wrap=mkdir
 LDFLAGS += -Wl,--wrap=opendir
-#LDFLAGS += -Wl,--wrap=closedir
-#LDFLAGS += -Wl,--wrap=readdir
 LDFLAGS += -Wl,--wrap=rmdir
-
 LDFLAGS += -Wl,--wrap=lwip_socket
 LDFLAGS += -Wl,--wrap=lwip_accept_r
 LDFLAGS += -Wl,--wrap=lwip_bind_r
@@ -53,33 +63,12 @@ LDFLAGS += -Wl,--wrap=lwip_ioctl_r
 LDFLAGS += -Wl,--wrap=lwip_fcntl_r
 LDFLAGS += -Wl,--wrap=lwip_close_r
 
-CFLAGS += -DPLATFORM_ESP32
-CFLAGS += -DKERNEL
-CFLAGS += -DLUA_USE_CTYPE
-CFLAGS += -DLUA_32BITS
-CFLAGS += -DLUA_USE_CTYPE
-CFLAGS += -DLUA_C89_NUMBERS
-
-#
-# LuaOS configuration
-# 
-CFLAGS += -DCPU_HZ=240000000L                   # CPU frequency in hertz
-CFLAGS += -DCORE_TIMER_HZ=240000000L            # CPU core timer frequency
-CFLAGS += -D_CLOCKS_PER_SEC_=configTICK_RATE_HZ # Number of interrupt ticks for reach 1 second
-CFLAGS += -DMTX_USE_EVENTS=0                    # Use event groups in mtx implementation (experimental)
-
-CFLAGS += -DUSE_RTC=0						    # Enable RTC
-CFLAGS += -DPATH_MAX=64
-CFLAGS += -DMAXNAMLEN=64
-
 #
 # Lua configuration
 #
+
 CFLAGS += -DDEBUG_FREE_MEM=0           # Enable LUA free mem debug utility (only for debug purposes)
-CFLAGS += -DLUA_USE_LUA_LOCK=0		   # Enable if Lua must use real lua_lock / lua_unlock implementation
-# CFLAGS += -DSTRCACHE_N=1
-# CFLAGS += -DSTRCACHE_M=1
-# CFLAGS += -DMINSTRTABSIZE=32
+CFLAGS += -DLUA_USE_LUA_LOCK=1		   # Enable if Lua must use real lua_lock / lua_unlock implementation
 
 # Define BUILD_TIME flag, with the EPOCH time when Lua RTOS is build.
 # This is used for set system time when RTC is not set.
@@ -90,6 +79,7 @@ CFLAGS += -DBUILD_TIME=$(shell date +%s)
 endif
 
 # Define BUILD_COMMIT flag, with the commit hash number used in build.
+# This is used in os.version Lua function for return the build commit.
 ifneq (foo$(LUA_RTOS_BUILD_COMMIT), foo)
 CFLAGS += -DBUILD_COMMIT=$(LUA_RTOS_BUILD_COMMIT)
 else

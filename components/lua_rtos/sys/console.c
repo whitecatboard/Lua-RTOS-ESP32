@@ -27,9 +27,9 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
-#if USE_CONSOLE
+#if CONFIG_LUA_RTOS_USE_CONSOLE
 
 #include <stdio.h>
 #include <stdlib.h>

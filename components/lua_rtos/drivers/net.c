@@ -27,13 +27,14 @@
  * this software.
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_NET
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 
-#if CONFIG_WIFI_ENABLED
 #include "esp_wifi.h"
-#endif
-
 #include "esp_system.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
@@ -51,11 +52,13 @@
 // This macro gets a reference for this driver into drivers array
 #define NET_DRIVER driver_get_by_name("net")
 
-// Driver message errors
-DRIVER_REGISTER_ERROR(NET, net, NotAvailable, "network is not available", NET_ERR_NOT_AVAILABLE);
-DRIVER_REGISTER_ERROR(NET, net, InvalidIpAddr, "invalid IP adddress", NET_ERR_INVALID_IP);
-DRIVER_REGISTER_ERROR(NET, net, NoMoreCallbacksAvailable, "no more callbacks available", NET_ERR_NO_MORE_CALLBACKS);
-DRIVER_REGISTER_ERROR(NET, net, CallbackNotFound, "callback not found", NET_ERR_NO_CALLBACK_NOT_FOUND);
+// Register drivers and errors
+DRIVER_REGISTER_BEGIN(NET,net,NULL,NULL,NULL);
+	DRIVER_REGISTER_ERROR(NET, net, NotAvailable, "network is not available", NET_ERR_NOT_AVAILABLE);
+	DRIVER_REGISTER_ERROR(NET, net, InvalidIpAddr, "invalid IP adddress", NET_ERR_INVALID_IP);
+	DRIVER_REGISTER_ERROR(NET, net, NoMoreCallbacksAvailable, "no more callbacks available", NET_ERR_NO_MORE_CALLBACKS);
+	DRIVER_REGISTER_ERROR(NET, net, CallbackNotFound, "callback not found", NET_ERR_NO_CALLBACK_NOT_FOUND);
+DRIVER_REGISTER_END(NET,net,NULL,NULL,NULL);
 
 // FreeRTOS events used by driver
 EventGroupHandle_t netEvent;
@@ -71,8 +74,6 @@ static net_event_register_callback_t callback[MAX_NET_EVENT_CALLBACKS] = {0};
  */
 static esp_err_t event_handler(void *ctx, system_event_t *event) {
 	switch (event->event_id) {
-
-#if CONFIG_WIFI_ENABLED
 		case SYSTEM_EVENT_WIFI_READY: 	            /**< ESP32 WiFi ready */
 			break;
 
@@ -160,9 +161,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 			}
  			xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
 			break;
-#endif
 
-#if CONFIG_ETHERNET
 		case SYSTEM_EVENT_ETH_START:                /**< ESP32 ethernet start */
 			break;
 
@@ -178,8 +177,6 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
 		case SYSTEM_EVENT_ETH_GOT_IP:               /**< ESP32 ethernet got IP from connected AP */
 			break;
-#endif
-
 #if CONFIG_SPI_ETHERNET
 		case SYSTEM_EVENT_SPI_ETH_START:            /**< ESP32 spi ethernet start */
 			break;
@@ -200,7 +197,6 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
  			xEventGroupSetBits(netEvent, evSPI_ETH_CONNECTED);
 			break;
 #endif
-
 		default :
 			break;
 	}
@@ -305,4 +301,4 @@ driver_error_t *net_event_unregister_callback(net_event_register_callback_t func
 	return driver_error(NET_DRIVER, NET_ERR_NO_MORE_CALLBACKS,NULL);
 }
 
-DRIVER_REGISTER(NET,net,NULL,NULL,NULL);
+#endif

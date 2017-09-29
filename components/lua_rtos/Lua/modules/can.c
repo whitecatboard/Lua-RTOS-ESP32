@@ -44,24 +44,7 @@
 #include <drivers/can.h>
 #include <drivers/cpu.h>
 
-extern LUA_REG_TYPE can_error_map[];
-
 static int dump_stop = 0;
-
-static int lcan_setup(lua_State* L) {
-	driver_error_t *error;
-
-	luaL_deprecated(L, "can.setup", "can.attach");
-
-	int id = luaL_checkinteger(L, 1);
-	uint32_t speed = luaL_checkinteger(L, 2);
-
-    if ((error = can_setup(id, speed))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    return 0;
-}
 
 static int lcan_attach(lua_State* L) {
 	driver_error_t *error;
@@ -86,6 +69,34 @@ static int lcan_send(lua_State* L) {
 	const char *data = luaL_checkstring(L, 5);
 
     if ((error = can_tx(id, msg_id, msg_id_type, (uint8_t *)data, len))) {
+    	return luaL_driver_error(L, error);
+    }
+
+	return 0;
+}
+
+static int lcan_add_filter(lua_State* L) {
+	driver_error_t *error;
+
+	int id = luaL_checkinteger(L, 1);
+	int fromId = luaL_checkinteger(L, 2);
+	int toId = luaL_checkinteger(L, 3);
+
+    if ((error = can_add_filter(id, fromId, toId))) {
+    	return luaL_driver_error(L, error);
+    }
+
+	return 0;
+}
+
+static int lcan_remove_filter(lua_State* L) {
+	driver_error_t *error;
+
+	int id = luaL_checkinteger(L, 1);
+	int fromId = luaL_checkinteger(L, 2);
+	int toId = luaL_checkinteger(L, 3);
+
+    if ((error = can_remove_filter(id, fromId, toId))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -172,15 +183,15 @@ static int lcan_stats(lua_State* L) {
 #endif
 
 static const LUA_REG_TYPE lcan_map[] = {
-    { LSTRKEY( "setup"   ),		  LFUNCVAL( lcan_setup   ) },
-    { LSTRKEY( "attach"  ),		  LFUNCVAL( lcan_attach  ) },
-    { LSTRKEY( "send"    ),		  LFUNCVAL( lcan_send    ) },
-    { LSTRKEY( "receive" ),		  LFUNCVAL( lcan_recv    ) },
-    { LSTRKEY( "dump"    ),		  LFUNCVAL( lcan_dump    ) },
+    { LSTRKEY( "attach"       ),		  LFUNCVAL( lcan_attach        ) },
+    { LSTRKEY( "addfilter"    ),		  LFUNCVAL( lcan_add_filter    ) },
+    { LSTRKEY( "removefilter" ),		  LFUNCVAL( lcan_remove_filter ) },
+    { LSTRKEY( "send"         ),		  LFUNCVAL( lcan_send          ) },
+    { LSTRKEY( "receive"      ),		  LFUNCVAL( lcan_recv          ) },
+    { LSTRKEY( "dump"         ),		  LFUNCVAL( lcan_dump          ) },
 	CAN_CAN0
 	CAN_CAN1
-	{LSTRKEY("error"), 			  LROVAL( can_error_map    )},
-
+	DRIVER_REGISTER_LUA_ERRORS(can)
 	{LSTRKEY("STD"), LINTVAL(0)},
 	{LSTRKEY("EXT"), LINTVAL(1)},
 

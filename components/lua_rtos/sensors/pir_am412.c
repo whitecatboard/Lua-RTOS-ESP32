@@ -30,18 +30,23 @@
 #include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_PIR_AM412
 
 #include <drivers/sensor.h>
 
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) am412_sensor = {
 	.id = "AM412",
-	.interface = GPIO_INTERFACE,
-	.int_driven = 1,
-	.int_driven_on_val = 1,
+	.interface = {
+		{
+			.type = GPIO_INTERFACE,
+			.flags = SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_H(1) | SENSOR_FLAG_ON_L(0)
+		},
+	},
 	.data = {
 		{.id = "presence", .type = SENSOR_DATA_INT},
 	}
 };
 
+#endif
 #endif

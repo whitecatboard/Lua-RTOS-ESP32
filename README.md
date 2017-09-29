@@ -24,7 +24,7 @@ The Whitecat IDE is available at: [https://ide.whitecatboard.org](https://ide.wh
 
 In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have more information about this.
 
-# How to get Lua RTOS firmware?
+# How to get the Lua RTOS firmware?
 
 ## Prerequisites
 
@@ -38,47 +38,97 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 
 ## Method 1: get a precompiled firmware
 
-1. Install esptool (the ESP32 flasher utility), following  [this instructions](https://github.com/espressif/esptool).
+1. Install The Whitecat Console. The Whitecat Console is a command line tool that allows the programmer to flash a Lua RTOS compatible board with the last available firmware.
 
-1. Get the precompiled binaries for your board:
+   * Download The Whitecat Console binary for your platform.
+     - [Ubuntu](http://downloads.whitecatboard.org/console/linux/wcc)
+     - [Mac OS](http://downloads.whitecatboard.org/console/osx/wcc)
+     - [Windows](http://downloads.whitecatboard.org/console/windows/wcc.exe)
+   
+   * Copy The Whitecat Console binary to a folder accessed by the system path.
+     - Ubuntu: sudo cp wcc /usr/bin
+     - Mac OS: sudo cp wcc /usr/bib
+     - Windows: runas /noprofile /user:Administrator "copy wcc.exe c:\windows\system32"
+   
+   * Test that The Whitecat Console binary works well.
+   
+     For Ubuntu / Mac OS open a terminal and type:
+   
+     ```lua
+     $ wcc
+     usage: wcc -p port | -ports [-ls path | -down source destination | -up source destination |
+     -f | -d]
+      
+     -ports:        list all available serial ports on your computer
+     -p port:       serial port device, for example /dev/tty.SLAB_USBtoUART
+     -ls path:      list files present in path
+     -down src dst: transfer the source file (board) to destination file (computer)
+     -up src dst:   transfer the source file (computer) to destination file (board)
+     -f:            flash board with last firmware
+     -d:            show debug messages
+     ```
 
-   | Board              |
-   |--------------------|
-   | [WHITECAT ESP32 N1](http://whitecatboard.org/firmware.php?board=WHITECAT-ESP32-N1)  | 
-   | [ESP32 CORE](http://whitecatboard.org/firmware.php?board=ESP32-CORE-BOARD)  | 
-   | [ESP32 THING](http://whitecatboard.org/firmware.php?board=ESP32-THING)  | 
-   | [GENERIC](http://whitecatboard.org/firmware.php?board=GENERIC)  | 
+     For Windows open a "command" window and type wcc.exe 
 
-1. Uncompress to your favorite folder:
+2. Find which serial device is used by your board.
 
-   ```lua
-   unzip LuaRTOS.10.WHITECAT-ESP32-N1.1488209955.zip
-   ```
-
-1. Go to the uncompressed folder, and flash:
-
-   ```lua
-   cd LuaRTOS.10.WHITECAT-ESP32-N1.1488209955
-   ```
-
-   For flash the firmware:
+   Open a terminal with your board unplugged.
    
    ```lua
-   python <esp-idf path>/components/esptool_py/esptool/esptool.py --chip esp32 --port "<usb path>" --baud 921600
-   --before "default_reset" --after "hard_reset" write_flash -z --flash_mode "dio" --flash_freq "40m"
-   --flash_size detect 0x1000 bootloader.WHITECAT-ESP32-N1.bin 0x10000
-   lua_rtos.WHITECAT-ESP32-N1.bin 0x8000 partitions_singleapp.WHITECAT-ESP32-N1.bin
+   $ wcc -ports
+   Available serial ports on your computer:
+   
+   /dev/cu.Bluetooth-Incoming-Port
+   /dev/cu.Bluetooth-Modem
    ```
 
-   For flash the filesystem:
+   Now plug your board.
 
    ```lua
-   python <esp-idf path>/components/esptool_py/esptool/esptool.py --chip esp32 --port "<usb path>" --baud 921600
-   --before "default_reset" --after "hard_reset" write_flash -z --flash_mode "dio" --flash_freq "40m"
-   --flash_size detect 0x180000 spiffs_image.WHITECAT-ESP32-N1.bin
+   $ wcc -ports
+   Available serial ports on your computer:
+
+   /dev/cu.Bluetooth-Incoming-Port
+   /dev/cu.Bluetooth-Modem
+   /dev/cu.SLAB_USBtoUART
    ```
    
-   Change "esp-idf path" and "usb path" according to your needs.
+   In the above example, board is using /dev/cu.SLAB\_USBtoUART serial device. This device will be used in the following steps as parameter value -p.
+
+   For windows use wcc.exe instead of wcc.
+   
+3. Flash your board.
+
+   Open a terminal with your board plugged.
+
+   ```lua
+   $ wcc -p /dev/cu.SLAB_USBtoUART -f
+   ```
+   
+   If you are flashing the Lua RTOS firmware for first time you will get an error:
+   
+   ```lua
+   Unknown board model.
+   Maybe your firmware is corrupted, or you haven't a valid Lua RTOS firmware installed.
+
+   Do you want to install a valid firmware now [y/n])?
+   ```
+   
+   Enter "y" if you want to install a valid firmware:
+   
+   ```lua
+   Please, enter your board type:
+     1: WHITECAT N1
+     2: ESP32 CORE BOARD
+     3: ESP32 THING
+     4: GENERIC
+
+   Type: 
+   ```
+   
+   Finally enter your board type and your board will be flashed.
+   
+   For windows use wcc.exe instead of wcc.
 
 ## Method 2: build by yourself
 
@@ -165,8 +215,8 @@ You can connect to the Lua RTOS console using your favorite terminal emulator pr
    ```
    
    ```lua
-      /\       /\
-     /  \_____/  \
+     /\       /\
+    /  \_____/  \
    /_____________\
    W H I T E C A T
 
@@ -194,4 +244,4 @@ You can connect to the Lua RTOS console using your favorite terminal emulator pr
 ---
 Lua RTOS is free for you, but funds are required for make it possible. Feel free to donate as little or as much as you wish. Every donation is very much appreciated.
 
-[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=M8BG7JGEPZUP6)
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=M8BG7JGEPZUP6&lc=US)

@@ -2,7 +2,7 @@
  * Lua RTOS, pthread implementation over FreeRTOS
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -28,9 +28,9 @@
  */
 
 #include "luartos.h"
+#include "_pthread.h"
 
 #include <errno.h>
-#include <pthread/pthread.h>
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                           void *(*start_routine) (void *), void *args) {
@@ -38,32 +38,36 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 	int priority;      // Priority
     int stacksize;     // Stack size
     int initial_state; // Initial state
-    int cpu;           // CPU affinity
+    int cpu = 0;       // CPU affinity
 
     int res;
 
     // Get some arguments need for the thread creation
     if (attr) {
-        stacksize = attr->stack_size;
+        stacksize = attr->stacksize;
         if (stacksize < PTHREAD_STACK_MIN) {
             errno = EINVAL;
             return EINVAL;
         }
-        priority = attr->sched_priority;
-        initial_state = attr->initial_state;
-        cpu = attr->cpuset;
+        priority = attr->schedparam.sched_priority;
+        cpu = attr->schedparam.affinityset;
+        initial_state = attr->schedparam.initial_state;
     } else {
         stacksize = CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE;
         initial_state = PTHREAD_INITIAL_STATE_RUN;
         priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
-
-        if (portNUM_PROCESSORS > 0) {
-        	cpu = 0;
-        } else {
-        	cpu = tskNO_AFFINITY;
-        }
     }
-     
+
+    cpu &= 0b11;
+
+    if (cpu & 0b01) {
+    	cpu = 0;
+    } else if (cpu & 0b10) {
+    	cpu = 1;
+    } else {
+    	cpu = tskNO_AFFINITY;
+    }
+
     // Create a new pthread
     res = _pthread_create(thread, priority, stacksize, cpu, initial_state, start_routine, args);
     if (res) {

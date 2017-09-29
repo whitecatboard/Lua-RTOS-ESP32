@@ -56,7 +56,7 @@ Maintainer: Michael Coracin
 #include "lwip/ip_addr.h"
 
 #include <sys/stat.h>
-#include <pthread/pthread.h>
+#include <pthread.h>
 // Lua RTOS end
 
 #include "trace.h"

@@ -29,7 +29,7 @@
 	#define cond_type HANDLE
 	#define sem_type HANDLE
 #else
-	#include <pthread/pthread.h>
+	#include <pthread.h>
 	#include <sys/semaphore.h>
 	#define thread_type pthread_t
 	#define thread_id_type pthread_t

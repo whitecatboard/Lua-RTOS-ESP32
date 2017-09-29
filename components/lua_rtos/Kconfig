@@ -1,4 +1,17 @@
 menu "Lua RTOS"
+	config LUA_RTOS_VDD
+		int "CPU power voltage (VDDA)"
+		range 2300 3600
+		default 3332
+		help
+			This sets the CPU power voltage (VDDA). The ideal value of this voltage is generally 3300 mVolts,
+			but due to the manufacturing processes and components used that may not always be the same this
+			value may be different from the ideal one.
+			
+			For a correct operation of the ADC and some sensors it is necessary that you indicate the exact
+			value for your board. Please measure this value with a suitable equipment. A good and cheap
+			choice is using an external ADC as an ADS1115.
+			
 	choice LUA_RTOS_BOARD_TYPE
 		prompt "Board Type"
 		default LUA_RTOS_BOARD_WHITECAT_N1ESP32
@@ -158,14 +171,6 @@ menu "Lua RTOS"
 						range 4096 65536
 						default 4096
 			endmenu
-			menu "FAT"
-					config LUA_RTOS_USE_FAT
-						bool "Use FAT"
-						default n
-						help
-							Select for enable FAT file system support. Enabling this implies that you have an SD Card
-							appropriately connected to your ESP32 board.		
-			endmenu
 		endmenu
 
 		menu "Hardware"
@@ -286,39 +291,66 @@ menu "Lua RTOS"
 		endmenu
 		
 		menu "Internal ADC"
-			config ADC_INTERNAL_VREF_P
-				int "vref+"
-				range 0 3900
-				default 3300
+			config ADC_INTERNAL_VREF
+				int "vref"
+				range 1000 1200
+				default 1108
 				help
-					Positive voltage reference in mVolts.	
-					
-			config ADC_INTERNAL_VREF_N
-				int "vref-"
-				range 0 3300
-				default 0
-				help
-					Negative voltage reference in mVolts.	
+					Voltage reference in mVolts.						
+		endmenu
+
+		menu "External GPIO"
+			choice EXTERNAL_GPIO_TYPE
+				prompt "External GPIO chip"
+				default EXTERNAL_GPIO_NONE
+
+				config EXTERNAL_GPIO_NONE
+					bool "None"
+			
+				config GPIO_PCA9698
+					bool "PCA9698, 40 IO, no pull-up"
+				
+				config GPIO_PCA9505
+					bool "PCA9505, 40 IO, pull-up"
+			endchoice
+		
+			config PCA9xxx_I2C
+				depends on (GPIO_PCA9698 || GPIO_PCA9505)
+					int "PCA9xxx I2C port"
+					range 0 1
+					default 0
+					help
+						I2C port where PCA9xxx is attached
+
+			config PCA9xxx_INT
+				depends on (GPIO_PCA9698 || GPIO_PCA9505)
+					int "PCA9xxx INT pint"
+					range 0 39
+					default 26
+					help
+						GPIO where PCA9xxx INT pin is attached.
+
+			config PCA9xxx_I2C_SPEED
+				depends on (GPIO_PCA9698 || GPIO_PCA9505)
+					int "PCA9xxx I2C port speed"
+					range 100000 1000000
+					default 1000000
+					help
+						I2C PCA9xxx port speed in hertz
+
+			config PCA9xxx_I2C_ADDRESS
+				depends on (GPIO_PCA9698 || GPIO_PCA9505)
+					int "PCA9xxx I2C port address"
+					range 0 255
+					default 32
+					help
+						I2C PCA9xxx port speed in hertz		
 		endmenu
 		
 		menu "External ADC"
-			config ADC_EXTERNAL_VREF_P
-				int "vref+"
-				range 0 6000
-				default 3300
-				help
-					Positive voltage reference in mVolts.	
-					
-			config ADC_EXTERNAL_VREF_N
-				int "vref-"
-				range 0 3300
-				default 0
-				help
-					Negative voltage reference in mVolts.	
-
 			config ADC_ADS1115
 				bool "Use I2C ADC ADS1115"
-				default n
+				default y
 				help
 					ADS1115 is an ADC converter with I2C interface. 4 channels, resolution of 16 bits.
 
@@ -340,7 +372,7 @@ menu "Lua RTOS"
 
 			config ADC_MCP3008
 				bool "Use SPI ADC MCP3008"
-				default n
+				default y
 				help
 					MCP3008 is an ADC converter with SPI interface. 8 channels, resolution of 10 bits.
 
@@ -364,7 +396,7 @@ menu "Lua RTOS"
 
 			config ADC_MCP3208
 				bool "Use SPI ADC MCP3208"
-				default n
+				default y
 				help
 					MCP3208 is an ADC converter with SPI interface. 8 channels, resolution of 12 bits.
 
@@ -575,7 +607,7 @@ menu "Lua RTOS"
 					range 1 3
 					default 3
 				help
-					Select the SPI port number where SD Card is attached
+					Select the SPI port number where SD Card is attached.
 		
 			config LUA_RTOS_SD_CS
 				depends on LUA_RTOS_USE_SPI_SD
@@ -633,11 +665,126 @@ menu "Lua RTOS"
 				help
 					GPIO where display touch pannel CS signal is attached.
 				endmenu
-		endmenu		
-	
+		
+			menu "Sensors"
+				config LUA_RTOS_USE_SENSOR_2Y0A21
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "2Y0A21"
+					default y		
+				config LUA_RTOS_USE_SENSOR_KEY_MATRIX_4_4
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "4 x 4 key matrix"
+					default y		
+				config LUA_RTOS_USE_SENSOR_A49E
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "A49E"
+					default y	
+				config LUA_RTOS_USE_SENSOR_ANALOG_JOYSTICK
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Analog Joystick"
+					default y	
+				config LUA_RTOS_USE_SENSOR_BH1620FVC
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "BH1620FVC"
+					default y		
+				config LUA_RTOS_USE_SENSOR_BH1721FVC
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "BH1721FVC"
+					default y							
+				config LUA_RTOS_USE_SENSOR_BDE0600G
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "BDE0600G"
+					default y		
+				config LUA_RTOS_USE_SENSOR_BME280
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "BME280"
+					default y		
+				config LUA_RTOS_USE_SENSOR_DHT11
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "DHT11"
+					default y		
+				config LUA_RTOS_USE_SENSOR_DHT22
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "DHT22"
+					default y		
+				config LUA_RTOS_USE_SENSOR_DHT23
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "DHT23"
+					default y		
+				config LUA_RTOS_USE_SENSOR_DS1820
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "DS1820"
+					default y		
+				config LUA_RTOS_USE_SENSOR_GPS
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "GPS"
+					default y		
+				config LUA_RTOS_USE_SENSOR_GUVA_S12SD
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "GUVA-S12SD"
+					default y							
+				config LUA_RTOS_USE_SENSOR_HALL_SWITCH
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Hall effect switch"
+					default y		
+				config LUA_RTOS_USE_SENSOR_LDR
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "LDR"
+					default y		
+                config LUA_RTOS_USE_SENSOR_ML8511
+                    depends on LUA_RTOS_LUA_USE_SENSOR
+                    bool "ML8511"
+                    default y       
+				config LUA_RTOS_USE_SENSOR_PIR_AM412
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "AM412 based PIR sensor"
+					default y		
+				config LUA_RTOS_USE_SENSOR_POT
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Potentiometer"
+					default y							
+				config LUA_RTOS_USE_SENSOR_PUSH_SWITCH
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Push switch"
+					default y						
+				config LUA_RTOS_USE_SENSOR_RELATIVE_ROTARY_ENCODER
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Relative rotary encoder"
+					default y	
+				config LUA_RTOS_USE_SENSOR_SDS011
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "SDS011"
+					default y		
+				config LUA_RTOS_USE_SENSOR_THERMISTOR
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Thermistor"
+					default y		
+				config LUA_RTOS_USE_SENSOR_TILT_SWITCH
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Tilt Switch"
+					default y	
+				config LUA_RTOS_USE_SENSOR_US015
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "US-015"
+					default y	
+				config LUA_RTOS_USE_SENSOR_2P_TOGGLE_SWITCH	
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Toggle switch (2 positions)"
+					default y						
+				config LUA_RTOS_USE_SENSOR_3P_TOGGLE_SWITCH	
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "Toggle switch (3 positions)"
+					default y						
+				config LUA_RTOS_USE_SENSOR_TMP36
+					depends on LUA_RTOS_LUA_USE_SENSOR
+					bool "TMP36"
+					default y		
+			endmenu	
+		endmenu
+		
 		menu "HTTP server"
 			config LUA_RTOS_USE_HTTP_SERVER
-				depends on (WIFI_ENABLED || ETHERNET) && LUA_RTOS_LUA_USE_NET
+				depends on LUA_RTOS_LUA_USE_NET
 					bool "Enable HTTP server"
 					default y
 
@@ -755,7 +902,7 @@ menu "Lua RTOS"
 					bool "Include package module in build"
 					default y
 			endmenu
-			menu "Lua RTOS Modules"
+			menu "Lua RTOS Modules"			
 				config LUA_RTOS_LUA_USE_THREAD
 					bool "Include thread module in build"
 					default y
@@ -796,74 +943,78 @@ menu "Lua RTOS"
 					bool "Include pack module in build"
 					default y
 	
-			menu "Hardware Access Modules"
-					config LUA_RTOS_LUA_USE_ADC
-						bool "Include adc module in build"
-						default y	
-			
-					config LUA_RTOS_LUA_USE_I2C
-						bool "Include i2c module in build"
-						default y
+				config LUA_RTOS_LUA_USE_ADC
+					bool "Include adc module in build"
+					default y	
 		
-					config LUA_RTOS_LUA_USE_PIO
-						bool "Include pio (gpio) module in build"
-						default y
+				config LUA_RTOS_LUA_USE_I2C
+					bool "Include i2c module in build"
+					default y
 	
-					config LUA_RTOS_LUA_USE_PWM
-						bool "Include pwm module in build"
-						default y
-		
-					config LUA_RTOS_LUA_USE_SPI
-						bool "Include spi module in build"
-						default y
-		
-					config LUA_RTOS_LUA_USE_TMR
-						bool "Include tmr (timer) module in build"
-						default y
+				config LUA_RTOS_LUA_USE_PIO
+					bool "Include pio (gpio) module in build"
+					default y
+
+				config LUA_RTOS_LUA_USE_PWM
+					bool "Include pwm module in build"
+					default y
 	
-					config LUA_RTOS_LUA_USE_UART
-						bool "Include uart module in build"
-						default y
-
-					config LUA_RTOS_LUA_USE_ENCODER
-						bool "Include encoder module in build"
-						default y
-			endmenu
-			menu "Communication Modules"
-					config LUA_RTOS_LUA_USE_NET
-						depends on WIFI_ENABLED || ETHERNET
-						bool "Include net module in build"
-						default y
-
-					config LUA_RTOS_LUA_USE_CURL_NET
-						depends on LUA_RTOS_LUA_USE_NET
-						bool "Include curl support in net module"
-						default y
-
-					config LUA_RTOS_LUA_USE_SCP_NET
-						depends on LUA_RTOS_LUA_USE_NET
-						bool "Include scp support in net module"
-						default y
+				config LUA_RTOS_LUA_USE_SPI
+					bool "Include spi module in build"
+					default y
 	
-					config LUA_RTOS_LUA_USE_LORA
-						depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE || LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
-						bool "Include lora module in build"
-						default n
-	
-					config LUA_RTOS_LUA_USE_MQTT
-						depends on WIFI_ENABLED || ETHERNET
-						bool "Include MQTT module in build"
-						default n
+				config LUA_RTOS_LUA_USE_TMR
+					bool "Include tmr (timer) module in build"
+					default y
 
-					config LUA_RTOS_LUA_USE_MDNS
-						depends on WIFI_ENABLED || ETHERNET
-						bool "Include MDNS module in build"
-						default n
+				config LUA_RTOS_LUA_USE_UART
+					bool "Include uart module in build"
+					default y
 
-					config LUA_RTOS_LUA_USE_CAN
-						bool "Include CAN module in build"
-						default y
-			endmenu
+				config LUA_RTOS_LUA_USE_ENCODER
+					bool "Include encoder module in build"
+					default y
+
+				config LUA_RTOS_LUA_USE_NET
+					bool "Include net module in build"
+					default y
+
+				config LUA_RTOS_LUA_USE_CURL_NET
+					depends on LUA_RTOS_LUA_USE_NET
+					bool "Include curl support in net module"
+					default y
+				
+				config LUA_RTOS_LUA_USE_SCP_NET
+					depends on LUA_RTOS_LUA_USE_NET
+					bool "Include scp support in net module"
+					default y
+
+				config LUA_RTOS_LUA_USE_LORA
+					depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE || LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
+					bool "Include lora module in build"
+					default n
+
+				config LUA_RTOS_LUA_USE_MQTT
+					depends on LUA_RTOS_LUA_USE_NET
+					bool "Include MQTT module in build"
+					default y
+
+				config LUA_RTOS_LUA_USE_MDNS
+					depends on LUA_RTOS_LUA_USE_NET
+					bool "Include MDNS module in build"
+					default n
+
+				config LUA_RTOS_LUA_USE_CAN
+					bool "Include CAN module in build"
+					default y
+
+				config LUA_RTOS_LUA_USE_CPU
+					bool "Include CPU module in build"
+					default y
+
+				config LUA_RTOS_LUA_USE_ULP
+					bool "Include ULP module in build"
+					default y
 			endmenu
 		endmenu
 endmenu

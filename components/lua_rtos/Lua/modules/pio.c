@@ -51,7 +51,9 @@ static void IRAM_ATTR pio_intr_handler(void* arg) {
 	pio_intr_t *args = (pio_intr_t *)arg;
 	pio_intr_data_t data;
 
-	gpio_intr_disable(args->pin);
+	if (args->pin < 40) {
+		gpio_intr_disable(args->pin);
+	}
 
 	// Get pin value
 	switch (args->type) {
@@ -77,7 +79,9 @@ static void pioTask(void *taskArgs) {
 	        lua_call(args->L, 1, 0);
 	    }
 
-    	gpio_intr_enable(args->pin);
+	    if (args->pin < 40) {
+	    	gpio_intr_enable(args->pin);
+	    }
 	}
 }
 
@@ -124,7 +128,14 @@ static int pio_op(lua_State *L, unsigned port, gpio_pin_mask_t pinmask, int op, 
 			}
 			break;
 			
-		case PLATFORM_IO_PIN_CLEAR:
+
+        case PLATFORM_IO_PIN_INV:
+			if ((error = gpio_pin_inv_mask(port, pinmask))) {
+				return luaL_driver_error(L, error);
+			}
+			break;
+
+        case PLATFORM_IO_PIN_CLEAR:
 			if ((error = gpio_pin_clr_mask(port, pinmask))) {
 				return luaL_driver_error(L, error);
 			}
@@ -185,7 +196,7 @@ static int pioh_set_pins(lua_State* L, int stackidx, int op) {
     if (!cpu_has_gpio(port, pin)) {
       return luaL_error(L, "invalid pin");
     }
-    
+
     pio_masks[port - 1] |= GPIO_BIT_MASK << pin;
   }
   
@@ -306,6 +317,10 @@ static int pio_gen_setval(lua_State *L, int optype, gpio_pin_mask_t val, int sta
     	return pioh_set_ports(L, stackidx, PLATFORM_IO_PORT_SET_VALUE, val);
 }
 
+static int pio_gen_invval(lua_State *L, int optype, gpio_pin_mask_t val, int stackidx) {
+    return pioh_set_pins(L, stackidx, PLATFORM_IO_PIN_INV);
+}
+
 // Module functions
 static int pio_pin_setdir(lua_State *L) {
 	return pio_gen_setdir(L, PIO_PIN_OP);
@@ -335,6 +350,10 @@ static int pio_pin_sethigh(lua_State *L) {
 
 static int pio_pin_setlow(lua_State *L) {
 	return pio_gen_setval(L, PIO_PIN_OP, 0, 1);
+}
+
+static int pio_pin_invval(lua_State *L) {
+	return pio_gen_invval(L, PIO_PIN_OP, 0, 1);
 }
 
 static int pio_pin_getval(lua_State *L) {
@@ -380,8 +399,7 @@ static int pio_pin_interrupt(lua_State *L) {
 
     args = (pio_intr_t *)calloc(1,sizeof(pio_intr_t));
     if (!args) {
-    	// TO DO: exception
-    	return 0;
+		return luaL_exception(L, GPIO_ERR_NOT_ENOUGH_MEMORY);
 
     }
     args->callbak = callback;
@@ -391,31 +409,13 @@ static int pio_pin_interrupt(lua_State *L) {
     args->q = xQueueCreate(qsize, sizeof(pio_intr_data_t));
     if (!args->q) {
     	free(args);
-
-    	// TO DO: exception
-    	return 0;
+		return luaL_exception(L, GPIO_ERR_NOT_ENOUGH_MEMORY);
     }
 
     // ISR related task must run on the same core that ISR handler is added
     xTaskCreatePinnedToCore(pioTask, "lpio", stack, args, priority, NULL, xPortGetCoreID());
 
-    gpio_config_t io_conf;
-
-    io_conf.intr_type = type;
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pin_bit_mask = (1ULL << pin);
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 1;
-
-    gpio_config(&io_conf);
-
-    if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
-    	gpio_install_isr_service(0);
-
-    	status_set(STATUS_ISR_SERVICE_INSTALLED);
-    }
-
-    gpio_isr_handler_add(pin, pio_intr_handler, (void*) args);
+    gpio_isr_attach(pin, pio_intr_handler, type, args);
 
 	return 0;
 }
@@ -489,6 +489,7 @@ static const LUA_REG_TYPE pio_pin_map[] = {
     { LSTRKEY( "setval"    ),			LFUNCVAL( pio_pin_setval     ) },
     { LSTRKEY( "sethigh"   ),			LFUNCVAL( pio_pin_sethigh    ) },
     { LSTRKEY( "setlow"    ),			LFUNCVAL( pio_pin_setlow     ) },
+    { LSTRKEY( "inv"       ),			LFUNCVAL( pio_pin_invval     ) },
     { LSTRKEY( "getval"    ),			LFUNCVAL( pio_pin_getval     ) },
     { LSTRKEY( "num"  	   ),			LFUNCVAL( pio_pin_pinnum     ) },
     { LSTRKEY( "interrupt" ),			LFUNCVAL( pio_pin_interrupt  ) },

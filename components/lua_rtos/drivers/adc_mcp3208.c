@@ -41,7 +41,32 @@
 static int spi_device = -1;
 
 driver_error_t *adc_mcp3208_setup(adc_channel_t *chan) {
+	driver_unit_lock_error_t *lock_error = NULL;
 	driver_error_t *error;
+
+	// Apply default resolution if needed
+	if (chan->resolution == 0) {
+		chan->resolution = 12;
+	}
+
+	if (chan->devid == 0) {
+		chan->devid = CONFIG_ADC_MCP3208_CS;
+	}
+
+	if (chan->vref == 0) {
+		chan->vref = CONFIG_LUA_RTOS_VDD;
+	}
+
+	// Sanity checks
+	if (chan->max != 0) {
+		return driver_error(ADC_DRIVER, ADC_ERR_MAX_SET_NOT_ALLOWED, NULL);
+	}
+
+	if (chan->resolution != 12) {
+		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_RESOLUTION, NULL);
+	}
+
+	chan->max = chan->vref;
 
     // Init SPI bus
 	if (spi_device == -1) {
@@ -50,14 +75,25 @@ driver_error_t *adc_mcp3208_setup(adc_channel_t *chan) {
 		}
 	}
 
+	// Lock resources
+	if ((lock_error = driver_lock(ADC_DRIVER, chan->unit, SPI_DRIVER, spi_device, DRIVER_ALL_FLAGS, "MCP3208"))) {
+		return driver_lock_error(ADC_DRIVER, lock_error);
+	}
+
 	if (!chan->setup) {
-		syslog(LOG_INFO, "adc MCP3208 channel %d at spi%d, cs=%s%d", chan->channel, CONFIG_ADC_MCP3208_SPI, gpio_portname(CONFIG_ADC_MCP3208_CS), gpio_name(CONFIG_ADC_MCP3208_CS));
+		syslog(
+				LOG_INFO,
+				"adc MCP3208 channel %d at spi%d, cs=%s%d, %d bits of resolution",
+				chan->channel, CONFIG_ADC_MCP3208_SPI, gpio_portname(CONFIG_ADC_MCP3208_CS),
+				gpio_name(CONFIG_ADC_MCP3208_CS),
+				chan->resolution
+		);
 	}
 
 	return NULL;
 }
 
-driver_error_t *adc_mcp3208_read(adc_channel_t *chan, int *raw) {
+driver_error_t *adc_mcp3208_read(adc_channel_t *chan, int *raw, double *mvolts) {
 	uint8_t buff[3];
 
 	int channel = chan->channel;
@@ -67,10 +103,18 @@ driver_error_t *adc_mcp3208_read(adc_channel_t *chan, int *raw) {
 
     spi_ll_select(spi_device);
     spi_ll_bulk_rw(spi_device, 3, buff);
-
     spi_ll_deselect(spi_device);
 
-    *raw = (buff[1] & 0b1111) << 8 | buff[2];
+	int traw = (buff[1] & 0b1111) << 8 | buff[2];
+	double tmvolts = (double)((traw) * (chan->max)) / (double)chan->max_val;
+
+	if (raw) {
+		*raw = traw;
+	}
+
+	if (mvolts) {
+		*mvolts = tmvolts;
+	}
 
     return NULL;
 }

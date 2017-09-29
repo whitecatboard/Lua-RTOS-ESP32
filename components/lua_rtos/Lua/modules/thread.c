@@ -62,14 +62,17 @@
 #define LUA_THREAD_ERR_INVALID_CPU_AFFINITY (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  6)
 #define LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  7)
 
-DRIVER_REGISTER_ERROR(THREAD, thread, NotEnoughtMemory, "not enough memory", LUA_THREAD_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(THREAD, thread, NotAllowed, "not allowed", LUA_THREAD_ERR_NOT_ALLOWED);
-DRIVER_REGISTER_ERROR(THREAD, thread, NonExistentThread, "non-existent thread", LUA_THREAD_ERR_NON_EXISTENT);
-DRIVER_REGISTER_ERROR(THREAD, thread, CannotStart, "cannot start thread", LUA_THREAD_ERR_CANNOT_START);
-DRIVER_REGISTER_ERROR(THREAD, thread, InvalidStackSize, "invalid stack size", LUA_THREAD_ERR_INVALID_STACK_SIZE);
-DRIVER_REGISTER_ERROR(THREAD, thread, InvalidPriority, "invalid priority", LUA_THREAD_ERR_INVALID_PRIORITY);
-DRIVER_REGISTER_ERROR(THREAD, thread, InvalidCPUAffinity, "invalid CPU affinity", LUA_THREAD_ERR_INVALID_CPU_AFFINITY);
-DRIVER_REGISTER_ERROR(THREAD, thread, CannotMonitorAsTable, "you can't monitor thread as table", LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE);
+// Register driver and messages
+DRIVER_REGISTER_BEGIN(THREAD,thread,NULL,NULL,NULL);
+	DRIVER_REGISTER_ERROR(THREAD, thread, NotEnoughtMemory, "not enough memory", LUA_THREAD_ERR_NOT_ENOUGH_MEMORY);
+	DRIVER_REGISTER_ERROR(THREAD, thread, NotAllowed, "not allowed", LUA_THREAD_ERR_NOT_ALLOWED);
+	DRIVER_REGISTER_ERROR(THREAD, thread, NonExistentThread, "non-existent thread", LUA_THREAD_ERR_NON_EXISTENT);
+	DRIVER_REGISTER_ERROR(THREAD, thread, CannotStart, "cannot start thread", LUA_THREAD_ERR_CANNOT_START);
+	DRIVER_REGISTER_ERROR(THREAD, thread, InvalidStackSize, "invalid stack size", LUA_THREAD_ERR_INVALID_STACK_SIZE);
+	DRIVER_REGISTER_ERROR(THREAD, thread, InvalidPriority, "invalid priority", LUA_THREAD_ERR_INVALID_PRIORITY);
+	DRIVER_REGISTER_ERROR(THREAD, thread, InvalidCPUAffinity, "invalid CPU affinity", LUA_THREAD_ERR_INVALID_CPU_AFFINITY);
+	DRIVER_REGISTER_ERROR(THREAD, thread, CannotMonitorAsTable, "you can't monitor thread as table", LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE);
+DRIVER_REGISTER_END(THREAD,thread,NULL,NULL,NULL);
 
 #define thread_status_RUNNING   1
 #define thread_status_SUSPENDED 2
@@ -533,6 +536,64 @@ static int lthread_create(lua_State* L) {
     return new_thread(L, 0);
 }    
 
+static int lthread_create_mutex(lua_State* L) {
+	mutex_userdata *mtx = (mutex_userdata *)lua_newuserdata(L, sizeof(mutex_userdata));
+
+	// Init mutex
+    pthread_mutexattr_t attr;
+
+    int type = luaL_optinteger(L, 2, PTHREAD_MUTEX_RECURSIVE);
+
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, type);
+
+	mtx->mtx = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_init(&mtx->mtx, &attr);
+
+    luaL_getmetatable(L, "thread.mutex");
+    lua_setmetatable(L, -2);
+
+    return 1;
+}
+
+static int lthread_lock(lua_State* L) {
+	mutex_userdata *mtx = NULL;
+
+	mtx = (mutex_userdata *)luaL_checkudata(L, 1, "thread.mutex");
+    luaL_argcheck(L, mtx, 1, "mutex expected");
+
+	pthread_mutex_lock(&mtx->mtx);
+
+    return 0;
+}
+
+static int lthread_unlock(lua_State* L) {
+	mutex_userdata *mtx = NULL;
+
+	mtx = (mutex_userdata *)luaL_checkudata(L, 1, "thread.mutex");
+    luaL_argcheck(L, mtx, 1, "mutex expected");
+
+	pthread_mutex_unlock(&mtx->mtx);
+
+	return 0;
+}
+
+static int lthread_trylock(lua_State* L) {
+	mutex_userdata *mtx = NULL;
+
+	mtx = (mutex_userdata *)luaL_checkudata(L, 1, "thread.mutex");
+    luaL_argcheck(L, mtx, 1, "mutex expected");
+
+    int res = pthread_mutex_trylock(&mtx->mtx);
+    if (res == EBUSY) {
+    	lua_pushboolean(L, 0);
+    } else {
+    	lua_pushboolean(L, 1);
+    }
+
+    return 1;
+}
+
 static int lthread_sleep(lua_State* L) {
     int seconds;
     
@@ -604,39 +665,44 @@ static int lthread_status(lua_State* L) {
 
 #include "modules.h"
 
-extern LUA_REG_TYPE thread_error_map[];
-
 static const LUA_REG_TYPE thread[] = {
-    { LSTRKEY( "status"  ),			LFUNCVAL( lthread_status  ) },
-    { LSTRKEY( "create"  ),			LFUNCVAL( lthread_create  ) },
-    { LSTRKEY( "start"   ),			LFUNCVAL( lthread_start   ) },
-    { LSTRKEY( "suspend" ),			LFUNCVAL( lthread_suspend ) },
-    { LSTRKEY( "resume"  ),			LFUNCVAL( lthread_resume  ) },
-    { LSTRKEY( "stop"    ),			LFUNCVAL( lthread_stop    ) },
-    { LSTRKEY( "list"    ),			LFUNCVAL( lthread_list    ) },
-    { LSTRKEY( "sleep"   ),			LFUNCVAL( lthread_sleep   ) },
-    { LSTRKEY( "sleepms" ),			LFUNCVAL( lthread_sleepms ) },
-    { LSTRKEY( "sleepus" ),			LFUNCVAL( lthread_sleepus ) },
-    { LSTRKEY( "usleep"  ),			LFUNCVAL( lthread_sleepus ) },
+    { LSTRKEY( "status"      ),			LFUNCVAL( lthread_status        ) },
+    { LSTRKEY( "create"      ),			LFUNCVAL( lthread_create        ) },
+    { LSTRKEY( "createmutex" ),			LFUNCVAL( lthread_create_mutex  ) },
+    { LSTRKEY( "start"       ),			LFUNCVAL( lthread_start         ) },
+    { LSTRKEY( "suspend"     ),			LFUNCVAL( lthread_suspend       ) },
+    { LSTRKEY( "resume"      ),			LFUNCVAL( lthread_resume        ) },
+    { LSTRKEY( "stop"        ),			LFUNCVAL( lthread_stop          ) },
+    { LSTRKEY( "list"        ),			LFUNCVAL( lthread_list          ) },
+    { LSTRKEY( "sleep"       ),			LFUNCVAL( lthread_sleep         ) },
+    { LSTRKEY( "sleepms"     ),			LFUNCVAL( lthread_sleepms       ) },
+    { LSTRKEY( "sleepus"     ),			LFUNCVAL( lthread_sleepus       ) },
+    { LSTRKEY( "usleep"      ),			LFUNCVAL( lthread_sleepus       ) },
 
-	// Error definitions
-	{LSTRKEY("error"),  			LROVAL( thread_error_map )},
+    { LSTRKEY( "Lock"    		    ),	LINTVAL( PTHREAD_MUTEX_NORMAL    ) },
+    { LSTRKEY( "RecursiveLock"      ),	LINTVAL( PTHREAD_MUTEX_RECURSIVE ) },
 
+	DRIVER_REGISTER_LUA_ERRORS(thread)
+	{ LNILKEY, LNILVAL }
+};
+
+static const LUA_REG_TYPE mutex_map[] = {
+	{ LSTRKEY( "lock"        ),   LFUNCVAL( lthread_lock    ) },
+	{ LSTRKEY( "unlock"      ),   LFUNCVAL( lthread_unlock  ) },
+	{ LSTRKEY( "trylock"     ),   LFUNCVAL( lthread_trylock ) },
+    { LSTRKEY( "__metatable" ),	  LROVAL  ( mutex_map       ) },
+	{ LSTRKEY( "__index"     ),   LROVAL  ( mutex_map       ) },
 	{ LNILKEY, LNILVAL }
 };
 
 int luaopen_thread(lua_State* L) {
 	list_init(&lua_threads, 1);
+
+	luaL_newmetarotable(L,"thread.mutex", (void *)mutex_map);
 	
-#if !LUA_USE_ROTABLE
-    luaL_newlib(L, thread);
-    return 1;
-#else
 	return 0;
-#endif
 } 
  
 MODULE_REGISTER_MAPPED(THREAD, thread, thread, luaopen_thread);
-DRIVER_REGISTER(THREAD,thread,NULL,NULL,NULL);
 
 #endif

@@ -1,8 +1,8 @@
 /*
- * Lua RTOS, 2Y0A21 sensor (proximity)
+ * Lua RTOS, Push switch sensor
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -27,14 +27,43 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
-#if 0
+#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 
-#include <sys/driver.h>
 #include <drivers/sensor.h>
+#if CONFIG_LUA_RTOS_USE_SENSOR_2P_TOGGLE_SWITCH
 
-driver_error_t *s2y0a21_setup(sensor_instance_t *unit);
-driver_error_t *s2y0a21_acquire(sensor_instance_t *unit, sensor_value_t *values);
+driver_error_t *_2_pos_switch_setup(sensor_instance_t *unit);
 
+// Sensor specification and registration
+static const sensor_t __attribute__((used,unused,section(".sensors"))) _2_pos_switch_sensor = {
+	.id = "2P_TOGGLE_SWITCH",
+	.interface = {
+		{
+			.type = GPIO_INTERFACE,
+
+			.flags = SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_H(0) | SENSOR_FLAG_ON_L(1) |
+					 SENSOR_FLAG_DEBOUNCING | SENSOR_FLAG_DEBOUNCING_THRESHOLD(10000)
+		},
+	},
+	.data = {
+		{.id = "pos", .type = SENSOR_DATA_INT},
+	},
+	.interface_name = {"P1"},
+	.setup = _2_pos_switch_setup
+};
+
+driver_error_t *_2_pos_switch_setup(sensor_instance_t *unit) {
+	// Get initial state
+	if (gpio_ll_pin_get(unit->setup[0].gpio.gpio) == 0) {
+		unit->data[0].integerd.value = SENSOR_FLAG_GET_ON_L(unit->sensor->interface[0]);
+	}
+
+	unit->latch[0].value.integerd.value = unit->data[0].integerd.value;
+
+	return NULL;
+}
+
+#endif
 #endif

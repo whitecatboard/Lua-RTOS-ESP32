@@ -27,7 +27,7 @@
  * this software.
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #include "freertos/FreeRTOS.h"
 #include "esp_freertos_hooks.h"
@@ -37,7 +37,7 @@
 
 #include <drivers/gpio.h>
 
-#if USE_LED_ACT
+#if CONFIG_LUA_RTOS_USE_LED_ACT
 static volatile uint64_t tdelta = 0;
 
 unsigned int activity = 0;
@@ -50,7 +50,7 @@ void IRAM_ATTR newTick(void) {
 
         if (activity <= 0) {
 			activity = 0;
-			gpio_ll_pin_inv(LED_ACT);
+			gpio_ll_pin_inv(CONFIG_LUA_RTOS_LED_ACT);
 		}
     }
 }
@@ -58,7 +58,7 @@ void IRAM_ATTR newTick(void) {
 #endif
 
 void _clock_init(void) {
-	#if USE_LED_ACT
+	#if CONFIG_LUA_RTOS_USE_LED_ACT
     esp_register_freertos_tick_hook(&newTick);
 	#endif
 }

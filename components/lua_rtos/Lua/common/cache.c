@@ -39,11 +39,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 static rotable_cache_t cache;
 
 void rotable_cache_dump() {
 	struct rotable_cache_entry *entry = cache.first;
 	int i = 0;
+
+	mtx_lock(&cache.mtx);
 
 	while (entry) {
 		printf("[%d]: used %d ", i, entry->used);
@@ -63,6 +66,8 @@ void rotable_cache_dump() {
 	printf("\r\n");
 
 	printf("hit: %d, miss: %d\r\n", cache.hit, cache.miss);
+
+	mtx_unlock(&cache.mtx);
 
 	printf("\r\n\r\n");
 }
@@ -97,11 +102,16 @@ int rotable_cache_init() {
 
 	cache.last = entries;
 
+	// Init mutex
+	mtx_init(&cache.mtx, NULL, NULL, 0);
+
 	return 0;
 }
 
 const IRAM_ATTR TValue *rotable_cache_get(const luaR_entry *rotable, const char *strkey) {
 	struct rotable_cache_entry *entry = cache.first;
+
+	mtx_lock(&cache.mtx);
 
 	// rotable strkey is cached?
 	while (entry) {
@@ -128,6 +138,7 @@ const IRAM_ATTR TValue *rotable_cache_get(const luaR_entry *rotable, const char 
 				}
 			}
 
+			mtx_unlock(&cache.mtx);
 			return &entry->entry->value;
 			break;
 		}
@@ -138,10 +149,14 @@ const IRAM_ATTR TValue *rotable_cache_get(const luaR_entry *rotable, const char 
 	// miss
 	cache.miss++;
 
+	mtx_unlock(&cache.mtx);
+
 	return NULL;
 }
 
 void IRAM_ATTR rotable_cache_put(const luaR_entry *rotable, const luaR_entry *entry) {
+	mtx_lock(&cache.mtx);
+
 	struct rotable_cache_entry *first  = cache.last;
 	struct rotable_cache_entry *second = cache.first;
 	struct rotable_cache_entry *last   = cache.last->previous;
@@ -157,6 +172,8 @@ void IRAM_ATTR rotable_cache_put(const luaR_entry *rotable, const luaR_entry *en
 	cache.first = first;
 	cache.first->used = 1;
 	cache.last = last;
+
+	mtx_unlock(&cache.mtx);
 }
 
 /*

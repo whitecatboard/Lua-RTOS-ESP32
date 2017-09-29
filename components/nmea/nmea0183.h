@@ -27,12 +27,12 @@
  * this software.
  */
 
-#if LUA_USE_GPS
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_USE_SENSOR_GPS
 
 #ifndef NMEA0183_H
 #define	NMEA0183_H
-
-#include "sdkconfig.h"
 
 #define MAX_NMA_SIZE 82
 
