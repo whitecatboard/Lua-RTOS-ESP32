@@ -380,13 +380,23 @@ int process(FILE *f) {
 	path = strtok(NULL, " ");
 	protocol = strtok(NULL, "\r");
 
+	if(!path) {
+		len = strlen(method)-1;
+		while(len>0 && (method[len]=='\r' || method[len]=='\n')) {
+			method[len] = 0;
+			len--;
+		}
+		path = "/";
+	}
+
 	//in case the protocol wasn't given we need to fix the path
 	if(!protocol) {
 		len = strlen(path)-1;
-		while(len>0 && (path[len]=='\r' || path[len]=='\n')) {
+		while(len>=0 && (path[len]=='\r' || path[len]=='\n')) {
 			path[len] = 0;
 			len--;
 		}
+		if(!strlen(path)) path = "/";
 	}
 
 	if(path) {
