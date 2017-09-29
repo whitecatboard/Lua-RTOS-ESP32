@@ -71,7 +71,7 @@ driver_error_t *adc_mcp3008_setup(adc_channel_t *chan) {
 
     // Init SPI bus
 	if (spi_device == -1) {
-		if ((error = spi_setup(CONFIG_ADC_MCP3208_SPI, 1, chan->devid, 0, CONFIG_ADC_MCP3208_SPEED, SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
+		if ((error = spi_setup(CONFIG_ADC_MCP3008_SPI, 1, chan->devid, 0, CONFIG_ADC_MCP3008_SPEED, SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
 			return error;
 		}
 	}
@@ -79,9 +79,9 @@ driver_error_t *adc_mcp3008_setup(adc_channel_t *chan) {
 	if (!chan->setup) {
 		syslog(
 				LOG_INFO,
-				"adc MCP3208 channel %d at spi%d, cs=%s%d, %d bits of resolution",
-				chan->channel, CONFIG_ADC_MCP3208_SPI, gpio_portname(CONFIG_ADC_MCP3208_CS),
-				gpio_name(CONFIG_ADC_MCP3208_CS),
+				"adc MCP3008 channel %d at spi%d, cs=%s%d, %d bits of resolution",
+				chan->channel, CONFIG_ADC_MCP3008_SPI, gpio_portname(CONFIG_ADC_MCP3008_CS),
+				gpio_name(CONFIG_ADC_MCP3008_CS),
 				chan->resolution
 		);
 	}
