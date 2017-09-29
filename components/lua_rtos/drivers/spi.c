@@ -87,7 +87,7 @@ extern void spi_flash_disable_interrupts_caches_and_other_cpu();
 extern void spi_flash_enable_interrupts_caches_and_other_cpu();
 
 // Driver locks
-static driver_unit_lock_t spi_locks[(CPU_LAST_SPI + 1) * SPI_BUS_DEVICES];
+static driver_unit_lock_t spi_locks[(CPU_LAST_SPI * SPI_BUS_DEVICES) + 1];
 
 // Register driver and messages
 static void _spi_init();
