@@ -150,15 +150,6 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 			break;
 
 		case SYSTEM_EVENT_AP_STA_GOT_IP6:           /**< ESP32 station or ap interface v6IP addr is preferred */
-			{
-				wifi_mode_t mode;
-				esp_err_t err = esp_wifi_get_mode(&mode);
-				if(!err) {
-					ip6_addr_t adr;
-					tcpip_adapter_get_ip6_linklocal( (mode == WIFI_MODE_STA) ? ESP_IF_WIFI_STA : ESP_IF_WIFI_AP, &adr);
-					syslog(LOG_DEBUG, "%s got IPv6 " IPV6STR "\n", (mode == WIFI_MODE_STA) ? "STA" : "AP", IPV62STR(adr));
-				}
-			}
  			xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
 			break;
 
