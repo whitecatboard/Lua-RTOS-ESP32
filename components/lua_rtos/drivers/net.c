@@ -44,6 +44,7 @@
 #include <string.h>
 
 #include <sys/status.h>
+#include <sys/syslog.h>
 
 #include <drivers/net.h>
 #include <drivers/wifi.h>
@@ -89,6 +90,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
 		case SYSTEM_EVENT_STA_CONNECTED:            /**< ESP32 station connected to AP */
 			status_set(STATUS_WIFI_CONNECTED);
+			tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_STA);
 			break;
 
 		case SYSTEM_EVENT_STA_DISCONNECTED:         /**< ESP32 station disconnected from AP */
@@ -130,6 +132,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
 		case SYSTEM_EVENT_AP_START:                 /**< ESP32 soft-AP start */
 			status_set(STATUS_WIFI_CONNECTED);
+			tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_AP);
 			break;
 
 		case SYSTEM_EVENT_AP_STOP:                  /**< ESP32 soft-AP stop */
@@ -157,6 +160,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 			break;
 
 		case SYSTEM_EVENT_ETH_CONNECTED:            /**< ESP32 ethernet phy link up */
+			tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_ETH);
 			break;
 
 		case SYSTEM_EVENT_ETH_DISCONNECTED:         /**< ESP32 ethernet phy link down */
@@ -173,6 +177,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
 		case SYSTEM_EVENT_SPI_ETH_CONNECTED:        /**< ESP32 spi ethernet phy link up */
 			status_set(STATUS_SPI_ETH_CONNECTED);
+			tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_SPI_ETH);
 			break;
 
 		case SYSTEM_EVENT_SPI_ETH_DISCONNECTED:     /**< ESP32 spi ethernet phy link down */

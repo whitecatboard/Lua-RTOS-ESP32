@@ -51,7 +51,7 @@
 #include <dirent.h>
 #include <sys/syslog.h>
 
-#define SERVER         "lua-rtos-http-server/1.0"
+#define SERVER_ID      "lua-rtos-http-server/1.0"
 #define PROTOCOL       "HTTP/1.1"
 #define RFC1123FMT     "%a, %d %b %Y %H:%M:%S GMT"
 #define HTTP_BUFF_SIZE 1024
@@ -112,7 +112,7 @@ char *get_mime_type(char *name) {
 
 void send_headers(FILE *f, int status, char *title, char *extra, char *mime, int length) {
 	fprintf(f, "%s %d %s\r\n", PROTOCOL, status, title);
-	fprintf(f, "Server: %s\r\n", SERVER);
+	fprintf(f, "Server: %s\r\n", SERVER_ID);
 	if (extra) fprintf(f, "%s\r\n", extra);
 	if (mime) fprintf(f, "Content-Type: %s\r\n", mime);
 
@@ -380,6 +380,25 @@ int process(FILE *f) {
 	path = strtok(NULL, " ");
 	protocol = strtok(NULL, "\r");
 
+	if(!path) {
+		len = strlen(method)-1;
+		while(len>0 && (method[len]=='\r' || method[len]=='\n')) {
+			method[len] = 0;
+			len--;
+		}
+		path = "/";
+	}
+
+	//in case the protocol wasn't given we need to fix the path
+	if(!protocol) {
+		len = strlen(path)-1;
+		while(len>=0 && (path[len]=='\r' || path[len]=='\n')) {
+			path[len] = 0;
+			len--;
+		}
+		if(!strlen(path)) path = "/";
+	}
+
 	if(path) {
 		data = strchr(path, '?');
 	  if (data) {
@@ -421,8 +440,7 @@ int process(FILE *f) {
 	} // AP mode
 
 	if (!method || !path) return -1; //protocol may be omitted
-
-	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol);
+	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol ? protocol:"");
 
 	fseek(f, 0, SEEK_CUR); // force change of stream direction
 
@@ -546,10 +564,10 @@ static void http_net_callback(system_event_t *event){
 }
 
 static void *http_thread(void *arg) {
-	struct sockaddr_in sin;
+	struct sockaddr_in6 sin;
 
 	if(0 == server) {
-		server = socket(AF_INET, SOCK_STREAM, 0);
+		server = socket(AF_INET6, SOCK_STREAM, 0);
 		LWIP_ASSERT("httpd_init: socket failed", server >= 0);
 		if(0 > server) {
 			syslog(LOG_ERR, "couldn't create server socket\n");
@@ -560,9 +578,9 @@ static void *http_thread(void *arg) {
 		setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 
 		memset(&sin, 0, sizeof(sin));
-		sin.sin_family      = AF_INET;
-		sin.sin_addr.s_addr = INADDR_ANY;
-		sin.sin_port        = htons(CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
+		sin.sin6_family = AF_INET6;
+		memcpy(&sin.sin6_addr.un.u32_addr, &in6addr_any, sizeof(in6addr_any));
+		sin.sin6_port   = htons(CONFIG_LUA_RTOS_HTTP_SERVER_PORT);
 		int rc = bind(server, (struct sockaddr *) &sin, sizeof (sin));
 		LWIP_ASSERT("httpd_init: bind failed", rc == 0);
 		if(0 != rc) {
