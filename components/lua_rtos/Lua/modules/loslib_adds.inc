@@ -21,6 +21,7 @@
 #include <sys/status.h>
 #include <sys/console.h>
 #include <drivers/spi.h>
+#include <drivers/i2c.h>
 #include <drivers/cpu.h>
 #include <sys/mount.h>
 
@@ -710,7 +711,6 @@ static int os_locks(lua_State *L) {
 	int first = 0;
 	int has_locks = 0;
 	int unit = 0;
-
 	while (cdriver->name) {
 		if (cdriver->lock) {
 			first = 1;
@@ -729,6 +729,8 @@ static int os_locks(lua_State *L) {
 
 					if (strcmp(cdriver->name, "spi") == 0) {
 						unit = ((lock / SPI_BUS_DEVICES) << 8) | (lock % SPI_BUS_DEVICES);
+					} else if (strcmp(cdriver->name, "i2c") == 0) {
+						unit = ((lock / I2C_BUS_DEVICES) << 8) | (lock % I2C_BUS_DEVICES);
 					} else {
 						unit = lock;
 					}

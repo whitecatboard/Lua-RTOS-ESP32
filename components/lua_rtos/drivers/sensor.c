@@ -256,19 +256,22 @@ static driver_error_t *sensor_owire_setup(uint8_t interface, sensor_instance_t *
 
 static driver_error_t *sensor_i2c_setup(uint8_t interface, sensor_instance_t *unit) {
 	driver_error_t *error;
-
-    driver_unit_lock_error_t *lock_error = NULL;
-	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, I2C_DRIVER, unit->setup[interface].i2c.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
-		return driver_lock_error(SENSOR_DRIVER, lock_error);
-	}
+	int i2cdevice;
 
 	#if CONFIG_LUA_RTOS_USE_POWER_BUS
 	pwbus_on();
 	#endif
 
-    if ((error = i2c_setup(unit->setup[interface].i2c.id, I2C_MASTER, unit->setup[interface].i2c.speed, 0, 0))) {
+    if ((error = i2c_setup(unit->setup[interface].i2c.id, I2C_MASTER, unit->setup[interface].i2c.speed, 0, 0, &i2cdevice))) {
     	return error;
     }
+
+    unit->setup[interface].i2c.id = i2cdevice;
+
+    driver_unit_lock_error_t *lock_error = NULL;
+	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, I2C_DRIVER, unit->setup[interface].i2c.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+		return driver_lock_error(SENSOR_DRIVER, lock_error);
+	}
 
 	return NULL;
 }

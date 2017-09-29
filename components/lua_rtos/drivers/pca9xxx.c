@@ -141,10 +141,10 @@ static driver_error_t *pca9xxx_write_register(uint8_t reg, uint8_t val) {
 	buff[0] = reg;
 	buff[1] = val;
 
-	error = i2c_start(CONFIG_PCA9xxx_I2C, &transaction);if (error) return error;
-	error = i2c_write_address(CONFIG_PCA9xxx_I2C, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 0);if (error) return error;
-	error = i2c_write(CONFIG_PCA9xxx_I2C, &transaction, (char *)&buff, sizeof(buff));if (error) return error;
-	error = i2c_stop(CONFIG_PCA9xxx_I2C, &transaction);if (error) return error;
+	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) return error;
+	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 0);if (error) return error;
+	error = i2c_write(pca_9xxx->i2cdevice, &transaction, (char *)&buff, sizeof(buff));if (error) return error;
+	error = i2c_stop(pca_9xxx->i2cdevice, &transaction);if (error) return error;
 
 	return NULL;
 }
@@ -157,13 +157,13 @@ static driver_error_t * pca9xxx_read_all_register(uint8_t reg, uint8_t *val) {
 
 	buff[0] = reg & 0b10000000;
 
-	error = i2c_start(CONFIG_PCA9xxx_I2C, &transaction);if (error) return error;
-	error = i2c_write_address(CONFIG_PCA9xxx_I2C, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 0);if (error) return error;
-	error = i2c_write(CONFIG_PCA9xxx_I2C, &transaction, (char *)&buff, 1);if (error) return error;
-	error = i2c_start(CONFIG_PCA9xxx_I2C, &transaction);if (error) return error;
-	error = i2c_write_address(CONFIG_PCA9xxx_I2C, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 1);if (error) return error;
-	error = i2c_read(CONFIG_PCA9xxx_I2C, &transaction, (char *)val, 5);if (error) return error;
-	error = i2c_stop(CONFIG_PCA9xxx_I2C, &transaction);if (error) return error;
+	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) return error;
+	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 0);if (error) return error;
+	error = i2c_write(pca_9xxx->i2cdevice, &transaction, (char *)&buff, 1);if (error) return error;
+	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) return error;
+	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 1);if (error) return error;
+	error = i2c_read(pca_9xxx->i2cdevice, &transaction, (char *)val, 5);if (error) return error;
+	error = i2c_stop(pca_9xxx->i2cdevice, &transaction);if (error) return error;
 
 	return NULL;
 }
@@ -174,8 +174,9 @@ static driver_error_t * pca9xxx_read_all_register(uint8_t reg, uint8_t *val) {
 
 driver_error_t *pca9xxx_setup() {
 	driver_error_t *error;
+	int i2cdevice;
 
-	if ((error = i2c_setup(CONFIG_PCA9xxx_I2C, I2C_MASTER, CONFIG_PCA9xxx_I2C_SPEED, 0, 0))) {
+	if ((error = i2c_setup(CONFIG_PCA9xxx_I2C, I2C_MASTER, CONFIG_PCA9xxx_I2C_SPEED, 0, 0, &i2cdevice))) {
 		return error;
 	}
 
@@ -185,6 +186,8 @@ driver_error_t *pca9xxx_setup() {
 		if (!pca_9xxx) {
 			return driver_error(GPIO_DRIVER, GPIO_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
+
+		pca_9xxx->i2cdevice = i2cdevice;
 
 		// Init mutex
 		pca_9xxx->mtx = xSemaphoreCreateRecursiveMutex();

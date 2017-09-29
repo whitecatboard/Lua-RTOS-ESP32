@@ -222,7 +222,7 @@ typedef struct {
 		} owire;
 
 		struct {
-			uint8_t  id;
+			uint16_t  id;
 			uint32_t speed;
 			int8_t  sda;
 			int8_t  scl;
