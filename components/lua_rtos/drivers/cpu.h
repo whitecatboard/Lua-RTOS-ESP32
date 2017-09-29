@@ -342,7 +342,7 @@ typedef uint64_t gpio_pin_mask_t;
 
 void _cpu_init();
 int cpu_revision();
-void cpu_model(char *buffer);
+void cpu_model(char *buffer, int buflen);
 void cpu_reset();
 void cpu_show_info();
 unsigned int cpu_pins();

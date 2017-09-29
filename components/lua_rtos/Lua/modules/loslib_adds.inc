@@ -314,10 +314,10 @@ static int os_ls (lua_State *L) {
 		type = 'd';
 		if (ent->d_type == DT_REG) {
 			type = 'f';
-			sprintf(size,"%8d", ent->d_fsize);
+			snprintf(size, sizeof(size),"%8d", ent->d_fsize);
 		//} else if (ent->d_type == DT_LNK) {
 		//	type = 'l';
-		//	sprintf(size,"%8d", ent->d_fsize);
+		//	snprintf(size, sizeof(size),"%8d", ent->d_fsize);
 		} else {
 			strcpy(size, "       -");
 		}
@@ -360,12 +360,12 @@ static int os_cpu(lua_State *L) {
 	
 	//luaL_deprecated(L, "os.cpu", "cpu.model");
 
-	cpu_model(model);
+	cpu_model(model, sizeof(model));
 	revision = cpu_revision();
 	if (revision) {
-		sprintf(cpuInfo, "%s rev A%d", model, cpu_revision());
+		snprintf(cpuInfo, sizeof(cpuInfo), "%s rev A%d", model, cpu_revision());
 	} else {
-		sprintf(cpuInfo, "%s", model);
+		snprintf(cpuInfo, sizeof(cpuInfo), "%s", model);
 	}
 	
 	lua_pushstring(L, cpuInfo);
@@ -676,7 +676,7 @@ static int os_flash_unique_id(lua_State *L) {
 	#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
 	char buffer[17];
 
-	sprintf(buffer,
+	snprintf(buffer, sizeof(buffer)
 			"%02x%02x%02x%02x%02x%02x%02x%02x",
 			flash_unique_id[0], flash_unique_id[1],
 			flash_unique_id[2], flash_unique_id[3],

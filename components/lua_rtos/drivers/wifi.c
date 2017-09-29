@@ -113,10 +113,10 @@ driver_error_t *wifi_check_error(esp_err_t error) {
 
 			buffer = malloc(40);
 			if (!buffer) {
-				panic("not enougth memory");
+				panic("not enough memory");
 			}
 
-			sprintf(buffer, "missing wifi error case %d", error);
+			snprintf(buffer, 40, "missing wifi error case %d", error);
 
 			return driver_error(WIFI_DRIVER, WIFI_ERR_CANT_INIT, buffer);
 		}

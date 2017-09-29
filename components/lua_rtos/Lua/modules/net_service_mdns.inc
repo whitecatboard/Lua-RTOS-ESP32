@@ -147,14 +147,14 @@ static int results_to_table( lua_State* L, mdns_userdata *mdns )
 
 			if(!ip4_addr_isany(&res->addr)) {
 				lua_pushstring(L, "ip");
-				sprintf(tmp, IPSTR, ip4_addr1_16(&res->addr),ip4_addr2_16(&res->addr),ip4_addr3_16(&res->addr),ip4_addr4_16(&res->addr));
+				snprintf(tmp, sizeof(tmp), IPSTR, ip4_addr1_16(&res->addr),ip4_addr2_16(&res->addr),ip4_addr3_16(&res->addr),ip4_addr4_16(&res->addr));
 				lua_pushstring(L, tmp);
 				lua_settable(L, -3);
 			}
 
 			if(!ip6_addr_isany(&res->addrv6)) {
 				lua_pushstring(L, "ipv6");
-				sprintf(tmp, IPV6STR, IPV62STR(res->addrv6));
+				snprintf(tmp, sizeof(tmp), IPV6STR, IPV62STR(res->addrv6));
 				lua_pushstring(L, tmp);
 				lua_settable(L, -3);
 			}
