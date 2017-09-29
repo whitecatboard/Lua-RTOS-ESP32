@@ -169,7 +169,9 @@ driver_error_t *gpio_pin_output(uint8_t pin) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	}
 #endif
 
 	return NULL;
@@ -206,7 +208,9 @@ driver_error_t *gpio_pin_input(uint8_t pin) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	}
 #endif
 
     return NULL;
@@ -235,7 +239,9 @@ driver_error_t *gpio_pin_set(uint8_t pin) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	}
 #endif
 
 	return NULL;
@@ -264,7 +270,9 @@ driver_error_t *gpio_pin_clr(uint8_t pin) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	}
 #endif
 
 	return NULL;
@@ -293,7 +301,9 @@ driver_error_t *gpio_pin_inv(uint8_t pin) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	}
 #endif
 
 	return NULL;
@@ -313,7 +323,9 @@ driver_error_t *gpio_pin_get(uint8_t pin, uint8_t *val) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	}
 #endif
 
 	*val = gpio_ll_pin_get(pin);
@@ -339,7 +351,9 @@ driver_error_t *gpio_pin_pullup(uint8_t pin) {
 		return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_UP_NOT_ALLOWED, NULL);
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	}
 #endif
 
 	return NULL;
@@ -363,7 +377,9 @@ driver_error_t *gpio_pin_pulldwn(uint8_t pin) {
 		return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_DOWN_NOT_ALLOWED, NULL);
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	}
 #endif
 
 	return NULL;
@@ -385,7 +401,9 @@ driver_error_t *gpio_pin_nopull(uint8_t pin) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	}
 #endif
 
 	return NULL;
@@ -437,7 +455,9 @@ driver_error_t *gpio_pin_input_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	}
 #endif
 
     return NULL;
@@ -476,7 +496,9 @@ driver_error_t *gpio_pin_output_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	}
 #endif
 
     return NULL;
@@ -515,7 +537,9 @@ driver_error_t *gpio_pin_pullup_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 		return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_UP_NOT_ALLOWED, NULL);
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	}
 #endif
 	
 	return NULL;
@@ -554,7 +578,9 @@ driver_error_t *gpio_pin_pulldwn_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 		return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_DOWN_NOT_ALLOWED, NULL);
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	}
 #endif
 
 	return NULL;
@@ -593,7 +619,9 @@ driver_error_t *gpio_pin_nopull_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 		return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_DOWN_NOT_ALLOWED, NULL);
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	}
 #endif
 
 	return NULL;
@@ -637,7 +665,9 @@ driver_error_t *gpio_pin_set_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	}
 #endif
 
 	return NULL;
@@ -681,7 +711,9 @@ driver_error_t *gpio_port_set(uint8_t port, gpio_pin_mask_t pinmask) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	}
 #endif
 
 	return error;
@@ -724,7 +756,9 @@ driver_error_t *gpio_pin_clr_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	}
 #endif
 
 	return NULL;
@@ -768,7 +802,9 @@ driver_error_t *gpio_pin_inv_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	}
 #endif
 
 	return NULL;
@@ -811,7 +847,9 @@ driver_error_t *gpio_pin_get_mask(uint8_t port, gpio_pin_mask_t pinmask, gpio_pi
 		pca_9xxx_pin_get_mask(port - 2, (uint8_t)pinmask, (uint8_t *)value);
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	}
 #endif
 
 	return NULL;
@@ -837,7 +875,9 @@ driver_error_t *gpio_port_input(uint8_t port) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	}
 #endif
 
 	return NULL;
@@ -858,7 +898,9 @@ driver_error_t *gpio_port_output(uint8_t port) {
 		}
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	}
 #endif
 
 	return NULL;
@@ -874,7 +916,9 @@ driver_error_t *gpio_port_get(uint8_t port, gpio_pin_mask_t *value) {
 		pca_9xxx_pin_get_mask(port - 2, 0xff, (uint8_t *)value);
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	}
 #endif
 
 	return NULL;
@@ -890,7 +934,9 @@ driver_error_t *gpio_port_get_mask(uint8_t port, gpio_pin_mask_t *value) {
 		pca_9xxx_pin_get_mask(port - 2, 0xff,  (uint8_t *)value);
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PORT, NULL);
+	}
 #endif
 
 	return NULL;
