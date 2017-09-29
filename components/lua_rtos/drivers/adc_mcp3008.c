@@ -41,6 +41,7 @@
 static int spi_device = -1;
 
 driver_error_t *adc_mcp3008_setup(adc_channel_t *chan) {
+	driver_unit_lock_error_t *lock_error = NULL;
 	driver_error_t *error;
 
 	// Apply default resolution if needed
@@ -74,6 +75,11 @@ driver_error_t *adc_mcp3008_setup(adc_channel_t *chan) {
 		if ((error = spi_setup(CONFIG_ADC_MCP3008_SPI, 1, chan->devid, 0, CONFIG_ADC_MCP3008_SPEED, SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
 			return error;
 		}
+	}
+
+	// Lock resources
+	if ((lock_error = driver_lock(ADC_DRIVER, chan->unit, SPI_DRIVER, spi_device, DRIVER_ALL_FLAGS, "MCP3008"))) {
+		return driver_lock_error(ADC_DRIVER, lock_error);
 	}
 
 	if (!chan->setup) {

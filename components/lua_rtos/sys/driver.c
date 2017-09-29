@@ -153,20 +153,21 @@ driver_error_t *driver_error(const driver_t *driver, uint32_t exception, const c
 }
 
 char *driver_target_name(const driver_t *target_driver, int target_unit, const char *tag) {
-	int unit = -1;
-	int device = -1;
+	uint8_t unit;
 
 	// In some cases the target driver can have more than one device
 	// attached. This is the case of the SPI driver, in which a SPI unit
 	// (spi bus) have one or more devices attached.
 	//
-	// In this case we split the target_unit into the target_unit and the
-	// target_device.
+	// In this case we have to decode target_unit to obtain the unit.
 	if (strcmp(target_driver->name, "spi") == 0) {
 		if (target_unit > CPU_LAST_SPI) {
 			unit = (target_unit & 0xff00) >> 8;
-			device = (target_unit & 0x00ff);
+		} else {
+			unit = target_unit;
 		}
+	} else {
+		unit = target_unit;
 	}
 
 	char *buffer = malloc(80);
@@ -174,18 +175,10 @@ char *driver_target_name(const driver_t *target_driver, int target_unit, const c
 		panic("not enough memory");
 	}
 
-	if (unit >= 0) {
-		if (tag) {
-			sprintf(buffer, "%s%d (%s) (device %d)", target_driver->name, unit, tag, device);
-		} else {
-			sprintf(buffer, "%s%d (device %d)", target_driver->name, unit, device);
-		}
+	if (tag) {
+		sprintf(buffer, "%s%d (%s)", target_driver->name, unit, tag);
 	} else {
-		if (tag) {
-			sprintf(buffer, "%s%d (%s)", target_driver->name, target_unit, tag);
-		} else {
-			sprintf(buffer, "%s%d", target_driver->name, target_unit);
-		}
+		sprintf(buffer, "%s%d", target_driver->name, unit);
 	}
 
 	return buffer;
