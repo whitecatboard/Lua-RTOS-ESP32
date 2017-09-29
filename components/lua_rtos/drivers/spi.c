@@ -486,7 +486,7 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 	        .quadhd_io_num=-1
 	    };
 
-	    ret = spi_bus_initialize(unit - 1, &buscfg, 1);
+	    ret = spi_bus_initialize(unit - 1, &buscfg, unit - 1);
 	    assert(ret==ESP_OK);
 	}
 }
