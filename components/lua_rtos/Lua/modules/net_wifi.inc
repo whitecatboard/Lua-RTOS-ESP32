@@ -199,12 +199,12 @@ static int lwifi_stat(lua_State* L) {
 		);
 
 		printf("   ip address %s / netmask %s\r\n", ipa, maska);
-		printf("   gw address %s\r\n\r\n", gwa);
+		printf("   gw address %s\r\n", gwa);
 
 		if (!ip6_addr_cmp(IP6_ADDR_ANY6, &info.ip6)) {
 			char tmp[46];
 			sprintf(tmp, IPV6STR, IPV62STR(info.ip6));
-			printf("    ip6 address %s\r\n", tmp);
+			printf("  ip6 address %s\r\n", tmp);
 		}
 
 		printf("\r\n");
