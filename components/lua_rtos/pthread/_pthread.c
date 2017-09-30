@@ -266,11 +266,12 @@ sig_t _pthread_signal(int s, sig_t h) {
         errno = EINVAL;
         return SIG_ERR;
     }
-    
+
     // Get thread
-    list_get(&thread_list, pthread_self(), (void **)&thread);
-    
-    if (thread) {
+    //
+    // Signals are send only to thread 1 (see _pthread_queue_signal)
+    // pthread_self cannot be use because is called from a system task (thread 0)
+    if (list_get(&thread_list, 1, (void **)&thread) == 0) {
         // Add handler
         prev_h = thread->signals[s];
         thread->signals[s] = h;

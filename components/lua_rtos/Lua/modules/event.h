@@ -54,7 +54,6 @@ typedef struct {
 	struct mtx mtx;        // Mutex for protect the listeners list and the queue
 	struct list listeners; // List of listeners for this event
 	uint8_t pending;       // Number of listeners that are processing the event
-	uint8_t waiting_for;   // Number of listener that caller must be wait for it's termination
 	xQueueHandle q;        // This is used by the listener for inform the caller that event is processed
 } event_userdata_t;
 

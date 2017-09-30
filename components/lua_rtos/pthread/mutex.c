@@ -164,7 +164,7 @@ int IRAM_ATTR pthread_mutex_unlock(pthread_mutex_t *mut) {
     
     // Unlock
     if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
-        xSemaphoreGiveRecursive(mutex->sem);        
+        xSemaphoreGiveRecursive(mutex->sem);
     } else {
         xSemaphoreGive(mutex->sem);        
     }

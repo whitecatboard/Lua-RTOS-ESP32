@@ -13,8 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <vfs.h>
-
+#include <vfs/vfs.h>
 #include <sys/driver.h>
 #include <sys/stat.h>
 #include <sys/syslog.h>
