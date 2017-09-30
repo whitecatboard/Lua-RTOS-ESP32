@@ -104,8 +104,8 @@ unsigned int cpu_has_port(unsigned int port) {
 	}
 }
 
-void cpu_model(char *buffer) {
-	sprintf(buffer, "ESP32 rev %d", cpu_revision());
+void cpu_model(char *buffer, int buflen) {
+	snprintf(buffer, buflen, "ESP32 rev %d", cpu_revision());
 }
 
 uint32_t cpu_speed() {
@@ -119,7 +119,7 @@ int cpu_revision() {
 void cpu_show_info() {
 	char buffer[40];
 
-	cpu_model(buffer);
+	cpu_model(buffer, sizeof(buffer));
 	if (!*buffer) {
 		syslog(LOG_ERR, "cpu unknown CPU");
 	} else {
@@ -131,7 +131,7 @@ void cpu_show_flash_info() {
 	#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
 	char buffer[17];
 
-	sprintf(buffer,
+	snprintf(buffer, sizeof(buffer), 
 			"%02x%02x%02x%02x%02x%02x%02x%02x",
 			flash_unique_id[0], flash_unique_id[1],
 			flash_unique_id[2], flash_unique_id[3],

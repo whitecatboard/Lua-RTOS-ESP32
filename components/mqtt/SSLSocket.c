@@ -42,7 +42,7 @@ extern Sockets s;
 
 void SSLSocket_addPendingRead(int sock);
 
-static ssl_mutex_type sslCoreMutex;
+static ssl_mutex_type sslCoreMutex = 0;
 
 #if defined(WIN32) || defined(WIN64)
 #define iov_len len
@@ -170,7 +170,10 @@ int SSLSocket_initialize()
 void SSLSocket_terminate()
 {
 	FUNC_ENTRY;
-	SSL_destroy_mutex(&sslCoreMutex);
+	if(sslCoreMutex) {
+		SSL_destroy_mutex(&sslCoreMutex);
+		sslCoreMutex = 0;
+	}
 	FUNC_EXIT;
 }
 

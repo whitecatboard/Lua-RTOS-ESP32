@@ -159,7 +159,7 @@ static int messageArrived(void *context, char * topicName, int topicLen, MQTTCli
 
 static void connectionLost(void* context, char* cause) {
     mqtt_userdata *mqtt = (mqtt_userdata *)context;
-    if (mqtt) {
+    if (mqtt && mqtt->callback_mtx.sem) {
 	    mtx_lock(&mqtt->callback_mtx); //protect from being deleted by our own module
 
 			int rc = -1;
@@ -197,7 +197,7 @@ static int lmqtt_client( lua_State* L ){
     int secure;
     size_t lenClientId, lenHost;
     mqtt_userdata *mqtt;
-    char url[100];
+    char url[250];
         
     clientId = luaL_checklstring( L, 1, &lenClientId );
     host = luaL_checklstring( L, 2, &lenHost );
@@ -209,12 +209,13 @@ static int lmqtt_client( lua_State* L ){
     // Allocate mqtt structure and initialize
     mqtt = (mqtt_userdata *)lua_newuserdata(L, sizeof(mqtt_userdata));
     mqtt->L = L;
+    mqtt->client = NULL;
     mqtt->callbacks = NULL;
     mqtt->secure = secure;
     mtx_init(&mqtt->callback_mtx, NULL, NULL, 0);
     
     // Calculate uri
-    sprintf(url, "%s://%s:%d", mqtt->secure ? "ssl":"tcp", host, port);
+    snprintf(url, sizeof(url), "%s://%s:%d", mqtt->secure ? "ssl":"tcp", host, port);
     
     if (!client_inited) {
         MQTTClient_init();
@@ -350,14 +351,16 @@ static int lmqtt_publish( lua_State* L ) {
 }
 
 static int lmqtt_disconnect( lua_State* L ) {
-    int rc;
+    int rc = 0;
 
     mqtt_userdata *mqtt = NULL;
     
     mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt.cli");
     luaL_argcheck(L, mqtt, 1, "mqtt expected");
     
-    rc = MQTTClient_disconnect(mqtt->client, 0);
+    if (MQTTClient_isConnected(mqtt->client)) {
+		  rc = MQTTClient_disconnect(mqtt->client, 0);
+		}
     if (rc == 0) {
         return 0;
     } else {
@@ -372,7 +375,7 @@ static int lmqtt_client_gc (lua_State *L) {
     mqtt_subs_callback *nextcallback;
     
     mqtt = (mqtt_userdata *)luaL_testudata(L, 1, "mqtt.cli");
-    if (mqtt) {        
+    if (mqtt && mqtt->callback_mtx.sem) {
         // Destroy callbacks
         mtx_lock(&mqtt->callback_mtx);
 
@@ -384,14 +387,18 @@ static int lmqtt_client_gc (lua_State *L) {
             free(callback);
             callback = nextcallback;
         }
+        mqtt->callbacks = NULL;
 
         mtx_unlock(&mqtt->callback_mtx);
 
         // Disconnect and destroy client
-        MQTTClient_disconnect(mqtt->client, 0);
-        MQTTClient_destroy(&mqtt->client);        
+        if (MQTTClient_isConnected(mqtt->client)) {
+	        MQTTClient_disconnect(mqtt->client, 0);
+        }
+        MQTTClient_destroy(&mqtt->client);
         
         mtx_destroy(&mqtt->callback_mtx);
+        //mtx_destroy does mqtt->callback_mtx.sem = 0;
     }
    
     return 0;

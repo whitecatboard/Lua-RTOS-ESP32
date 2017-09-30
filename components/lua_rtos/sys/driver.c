@@ -174,9 +174,9 @@ char *driver_target_name(const driver_t *target_driver, int target_unit, const c
 	}
 
 	if (tag) {
-		sprintf(buffer, "%s%d (%s)", target_driver->name, unit, tag);
+		snprintf(buffer, 40, "%s%d (%s)", target_driver->name, unit, tag);
 	} else {
-		sprintf(buffer, "%s%d", target_driver->name, unit);
+		snprintf(buffer, 40, "%s%d", target_driver->name, unit);
 	}
 
 	return buffer;

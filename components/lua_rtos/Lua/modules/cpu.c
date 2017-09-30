@@ -64,12 +64,12 @@ static int lcpu_model(lua_State *L) {
 	char model[18];
 	char cpuInfo[26];
 
-	cpu_model(model);
+	cpu_model(model, sizeof(model));
 	revision = cpu_revision();
 	if (revision) {
-		sprintf(cpuInfo, "%s rev A%d", model, cpu_revision());
+		snprintf(cpuInfo, sizeof(cpuInfo), "%s rev A%d", model, cpu_revision());
 	} else {
-		sprintf(cpuInfo, "%s", model);
+		snprintf(cpuInfo, sizeof(cpuInfo), "%s", model);
 	}
 
 	lua_pushstring(L, cpuInfo);
