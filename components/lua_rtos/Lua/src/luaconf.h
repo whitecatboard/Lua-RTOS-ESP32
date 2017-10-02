@@ -12,7 +12,7 @@
 #include <stddef.h>
 
 #define LUA_USE_CTYPE    1
-#define LUA_USE_LUA_LOCK 0
+#define LUA_USE_LUA_LOCK 1
 
 /*
 ** ===================================================================

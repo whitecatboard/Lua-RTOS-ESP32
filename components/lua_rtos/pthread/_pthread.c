@@ -47,7 +47,6 @@
 #include "lauxlib.h"
 
 struct list key_list;
-struct list mutex_list;
 struct list thread_list;
 
 struct mtx once_mtx;
@@ -73,7 +72,6 @@ void _pthread_init() {
 
 	    // Init lists
 	    list_init(&thread_list, 1);
-	    list_init(&mutex_list, 1);
 	    list_init(&key_list, 1);
 
 	    inited = 1;

@@ -46,7 +46,7 @@ extern int threadInited;
 #if LUA_USE_LUA_LOCK
 #include <pthread.h>
 
-pthread_mutex_t lua_mutex;
+pthread_mutex_t lua_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 inline void LuaLockInit(lua_State *L) {
     pthread_mutexattr_t attr;

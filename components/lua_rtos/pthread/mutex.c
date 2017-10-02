@@ -34,8 +34,6 @@
 #include <errno.h>
 #include <stdlib.h>
 
-extern struct list mutex_list;
-
 static int _check_attr(const pthread_mutexattr_t *attr) {
     int type = attr->type;
         
@@ -94,7 +92,7 @@ int pthread_mutex_init(pthread_mutex_t *mut, const pthread_mutexattr_t *attr) {
         errno = ENOMEM;
         return ENOMEM;
     }
-    
+
     mutex->owner = pthread_self();
 
     *mut = (unsigned int )mutex;
