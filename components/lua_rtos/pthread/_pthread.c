@@ -235,8 +235,6 @@ int _pthread_free(pthread_t id) {
     struct pthread *thread;
     int res;
 
-    _pthread_mutex_free();
-    
     // Get thread
     res = list_get(&thread_list, id, (void **)&thread);
     if (res) {
