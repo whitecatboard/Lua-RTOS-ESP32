@@ -74,8 +74,6 @@ DRIVER_REGISTER_BEGIN(MQTT,mqtt,NULL,NULL,NULL);
 DRIVER_REGISTER_END(MQTT,mqtt,NULL,NULL,NULL);
 
 static int client_inited = 0;
-//needs to be persistent for connectionLost MQTTClient_connect to work
-static MQTTClient_SSLOptions ssl_opts = MQTTClient_SSLOptions_initializer;
 
 typedef struct {
     char *topic;
@@ -91,6 +89,7 @@ typedef struct {
     MQTTClient client;
     
     mqtt_subs_callback *callbacks;
+    const char *ca_file;
 
     int secure;
 } mqtt_userdata;
@@ -198,13 +197,15 @@ static int lmqtt_client( lua_State* L ){
     size_t lenClientId, lenHost;
     mqtt_userdata *mqtt;
     char url[250];
-        
-    clientId = luaL_checklstring( L, 1, &lenClientId );
-    host = luaL_checklstring( L, 2, &lenHost );
+
+    clientId = luaL_checklstring( L, 1, &lenClientId ); //is being strdup'd in MQTTClient_create
+    host = luaL_checklstring( L, 2, &lenHost ); //url is being strdup'd in MQTTClient_connectURI
     port = luaL_checkinteger( L, 3 );
 
     luaL_checktype(L, 4, LUA_TBOOLEAN);
     secure = lua_toboolean( L, 4 );
+
+    const char *ca_file = luaL_optstring( L, 5, NULL );
     
     // Allocate mqtt structure and initialize
     mqtt = (mqtt_userdata *)lua_newuserdata(L, sizeof(mqtt_userdata));
@@ -212,6 +213,7 @@ static int lmqtt_client( lua_State* L ){
     mqtt->client = NULL;
     mqtt->callbacks = NULL;
     mqtt->secure = secure;
+    mqtt->ca_file = (ca_file ? strdup(ca_file):NULL); //save for use during mqtt_connect
     mtx_init(&mqtt->callback_mtx, NULL, NULL, 0);
     
     // Calculate uri
@@ -222,6 +224,7 @@ static int lmqtt_client( lua_State* L ){
         client_inited = 1;
     }
     
+    //url is being strdup'd in MQTTClient_connectURI
     rc = MQTTClient_create(&mqtt->client, url, clientId, MQTTCLIENT_PERSISTENCE_NONE, NULL);
     if (rc < 0){
       return luaL_exception(L, LUA_MQTT_ERR_CANT_CREATE_CLIENT);
@@ -271,10 +274,13 @@ static int lmqtt_connect( lua_State* L ) {
     conn_opts.keepAliveInterval = 60;
     conn_opts.reliable = 0;
     conn_opts.cleansession = 0;
-    conn_opts.username = user;
-    conn_opts.password = password;
-    ssl_opts.enableServerCertAuth = 0;
-    conn_opts.ssl = &ssl_opts;
+    conn_opts.username = user; //is being strdup'd in MQTTClient_connectURI
+    conn_opts.password = password; //is being strdup'd in MQTTClient_connectURI
+
+    MQTTClient_SSLOptions ssl_opts = MQTTClient_SSLOptions_initializer;
+    ssl_opts.trustStore = mqtt->ca_file; //is being malloc'd in MQTTClient_connectURI
+    ssl_opts.enableServerCertAuth = (ssl_opts.trustStore != NULL);
+    conn_opts.ssl = &ssl_opts; //is being malloc'd in MQTTClient_connectURI
 
     bcopy(&conn_opts, &mqtt->conn_opts, sizeof(MQTTClient_connectOptions));
 

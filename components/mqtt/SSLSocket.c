@@ -35,8 +35,33 @@
 
 #include <openssl/ssl.h>
 #include <string.h>
-
 #include <sys/status.h>
+
+#include "mbedtls/platform.h"
+#include "mbedtls/net_sockets.h"
+#include "mbedtls/esp_debug.h"
+#include "mbedtls/ssl.h"
+#include "mbedtls/entropy.h"
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/error.h"
+#include "mbedtls/certs.h"
+
+struct ssl_pm
+{
+    /* local socket file description */
+    mbedtls_net_context fd;
+    /* remote client socket file description */
+    mbedtls_net_context cl_fd;
+
+    mbedtls_ssl_config conf;
+
+    mbedtls_ctr_drbg_context ctr_drbg;
+
+    mbedtls_ssl_context ssl;
+
+    mbedtls_entropy_context entropy;
+};
+
 
 extern Sockets s;
 
@@ -63,8 +88,10 @@ int SSLSocket_error(char* aString, SSL* ssl, int sock, int rc)
     if (ssl)
         error = SSL_get_error(ssl, rc);
 
-    if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
-			Log(TRACE_MIN, -1, "SSLSocket error WANT_READ/WANT_WRITE in %s for socket %d", aString, sock);
+    if (error == SSL_ERROR_WANT_READ)
+			Log(TRACE_MIN, -1, "SSLSocket WANT_READ in %s for socket %d", aString, sock);
+    else if (error == SSL_ERROR_WANT_WRITE)
+			Log(TRACE_MIN, -1, "SSLSocket WANT_WRITE in %s for socket %d", aString, sock);
     else
     {
         if (strcmp(aString, "shutdown") != 0)
@@ -177,6 +204,28 @@ void SSLSocket_terminate()
 	FUNC_EXIT;
 }
 
+static void mbedtls_zeroize( void *v, size_t n ) {
+    volatile unsigned char *p = v; while( n-- ) *p++ = 0;
+}
+
+int SSL_CTX_load_verify_locations(SSL_CTX *ctx, const char *CAfile,
+                                  const char *CApath) {
+  /* Path is not supported */
+  if (CApath != NULL) {
+    return 0;
+  }
+
+  size_t n;
+  unsigned char *buf;
+
+	if( mbedtls_pk_load_file( CAfile, &buf, &n ) != 0 ) return 0;
+  X509* client_CA = d2i_X509(NULL, buf, n);
+  mbedtls_zeroize( buf, n );
+  mbedtls_free( buf );
+
+	return SSL_CTX_add_client_CA(ctx, client_CA);
+}
+
 int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 {
 	int rc = 1;
@@ -184,7 +233,7 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 	FUNC_ENTRY;
 	
 	if (net->ctx == NULL)
-		if ((net->ctx = SSL_CTX_new(TLS_client_method())) == NULL)	/* TLS_client_method for compatibility with SSLv2, SSLv3 and TLSv1 */
+		if ((net->ctx = SSL_CTX_new(TLS_client_method())) == NULL)	/* TLS_client_method for compatibility with TLSv1 */
 		{
 			rc = SSLSocket_error("SSL_CTX_new", NULL, net->socket, rc);
 			goto exit;
@@ -198,8 +247,11 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 
 	if (opts->trustStore)
 	{
-		rc = SSLSocket_error("trustStore not supported!", NULL, net->socket, rc);
-		goto free_ctx;
+		if ((rc = SSL_CTX_load_verify_locations(net->ctx, opts->trustStore, NULL)) != 1)
+		{
+			SSLSocket_error("SSL_CTX_load_verify_locations", NULL, net->socket, rc);
+			goto free_ctx;
+		}
 	}
 
 	if (opts->enabledCipherSuites != NULL)
@@ -262,6 +314,10 @@ int SSLSocket_connect(SSL* ssl, int sock)
 	if (rc != 1)
 	{
 		int error;
+
+		error = SSL_get_verify_result(ssl);
+		//printf("SSL_get_verify_result: %i\n", error);
+
 		error = SSLSocket_error("SSL_connect", ssl, sock, rc);
 		if (error == SSL_FATAL)
 			rc = error;

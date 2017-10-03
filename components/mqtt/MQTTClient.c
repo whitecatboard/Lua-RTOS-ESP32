@@ -1082,8 +1082,8 @@ int MQTTClient_connectURI(MQTTClient handle, MQTTClient_connectOptions* options,
 	}
 #endif
 
-	m->c->username = options->username;
-	m->c->password = options->password;
+	m->c->username = MQTTStrdup(options->username);
+	m->c->password = MQTTStrdup(options->password);
 	m->c->retryInterval = options->retryInterval;
 
 	if (options->struct_version >= 3)
@@ -1212,7 +1212,7 @@ int MQTTClient_disconnect1(MQTTClient handle, int timeout, int call_connection_l
 		rc = MQTTCLIENT_DISCONNECTED;
 		goto exit;
 	}
-	was_connected = m->c->connected; /* should be 1 */
+	was_connected = (m->c->connected && m->c->connect_state==3); /* should be 1 */
 	if (m->c->connected != 0)
 	{
 		start = MQTTClient_start_clock();
