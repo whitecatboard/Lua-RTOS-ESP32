@@ -35,8 +35,33 @@
 
 #include <openssl/ssl.h>
 #include <string.h>
-
 #include <sys/status.h>
+
+#include "mbedtls/platform.h"
+#include "mbedtls/net_sockets.h"
+#include "mbedtls/esp_debug.h"
+#include "mbedtls/ssl.h"
+#include "mbedtls/entropy.h"
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/error.h"
+#include "mbedtls/certs.h"
+
+struct ssl_pm
+{
+    /* local socket file description */
+    mbedtls_net_context fd;
+    /* remote client socket file description */
+    mbedtls_net_context cl_fd;
+
+    mbedtls_ssl_config conf;
+
+    mbedtls_ctr_drbg_context ctr_drbg;
+
+    mbedtls_ssl_context ssl;
+
+    mbedtls_entropy_context entropy;
+};
+
 
 extern Sockets s;
 
@@ -177,6 +202,21 @@ void SSLSocket_terminate()
 	FUNC_EXIT;
 }
 
+int SSL_CTX_load_verify_locations(SSL_CTX *ctx, const char *CAfile,
+                                  const char *CApath) {
+  /* Path is not supported */
+  if (CApath != NULL) {
+    return 0;
+  }
+
+  /*
+   * PolasrSSL requires CA certificates to be explicitly load
+   * x509_crt_parse_file returns 0 on success
+   */
+  mbedtls_x509_crt_init(ctx->client_CA->x509_pm);
+  return mbedtls_x509_crt_parse_file(ctx->client_CA->x509_pm, CAfile) == 0;
+}
+
 int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 {
 	int rc = 1;
@@ -184,7 +224,7 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 	FUNC_ENTRY;
 	
 	if (net->ctx == NULL)
-		if ((net->ctx = SSL_CTX_new(TLS_client_method())) == NULL)	/* TLS_client_method for compatibility with SSLv2, SSLv3 and TLSv1 */
+		if ((net->ctx = SSL_CTX_new(TLS_client_method())) == NULL)	/* TLS_client_method for compatibility with TLSv1 */
 		{
 			rc = SSLSocket_error("SSL_CTX_new", NULL, net->socket, rc);
 			goto exit;
@@ -198,8 +238,12 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 
 	if (opts->trustStore)
 	{
-		rc = SSLSocket_error("trustStore not supported!", NULL, net->socket, rc);
-		goto free_ctx;
+		printf("THOR: SSL_CTX_load_verify_location: %i %s\n", (int)net->ctx, opts->trustStore);
+		if ((rc = SSL_CTX_load_verify_locations(net->ctx, opts->trustStore, NULL)) != 1)
+		{
+			SSLSocket_error("SSL_CTX_load_verify_locations", NULL, net->socket, rc);
+			goto free_ctx;
+		}
 	}
 
 	if (opts->enabledCipherSuites != NULL)
@@ -239,7 +283,7 @@ int SSLSocket_setSocketForSSL(networkHandles* net, MQTTClient_SSLOptions* opts)
 	{
 
 		if (opts->enableServerCertAuth) 
-			SSL_CTX_set_verify(net->ctx, SSL_VERIFY_PEER, NULL);
+			SSL_CTX_set_verify(net->ctx, SSL_VERIFY_NONE, NULL);
 	
 		net->ssl = SSL_new(net->ctx);
 
@@ -262,6 +306,10 @@ int SSLSocket_connect(SSL* ssl, int sock)
 	if (rc != 1)
 	{
 		int error;
+
+		error = SSL_get_verify_result(ssl);
+		printf("THOR: SSL_get_verify_result %i\n", error);
+
 		error = SSLSocket_error("SSL_connect", ssl, sock, rc);
 		if (error == SSL_FATAL)
 			rc = error;
@@ -290,6 +338,12 @@ int SSLSocket_getch(SSL* ssl, int socket, char* c)
 		goto exit;
 
 	if ((rc = SSL_read(ssl, c, (size_t)1)) < 0)
+	{
+		usleep(100*1000); //100ms
+		rc = SSL_read(ssl, c, (size_t)1);
+	}
+
+	if (rc < 0)
 	{
 		int err = SSLSocket_error("SSL_read - getch", ssl, socket, rc);
 		if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
