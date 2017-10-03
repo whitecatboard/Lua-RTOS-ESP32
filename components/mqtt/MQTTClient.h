@@ -464,7 +464,7 @@ typedef struct
 	const char struct_id[4];
 	/** The version number of this structure.  Must be 0 */
 	int struct_version;	
-	
+
 	/** The file in PEM format containing the public digital certificates trusted by the client. */
 	const char* trustStore;
 
@@ -472,14 +472,14 @@ typedef struct
 	* the client's private key. 
 	*/
 	const char* keyStore;
-	
+
 	/** If not included in the sslKeyStore, this setting points to the file in PEM format containing
 	* the client's private key.
 	*/
 	const char* privateKey;
 	/** The password to load the client's privateKey if encrypted. */
 	const char* privateKeyPassword;
- 
+
 	/**
 	* The list of cipher suites that the client will present to the server during the SSL handshake. For a 
 	* full explanation of the cipher list format, please see the OpenSSL on-line documentation:
@@ -490,12 +490,12 @@ typedef struct
 	*/
 	const char* enabledCipherSuites;
 
-    /** True/False option to enable verification of the server certificate **/
-    int enableServerCertAuth;
-  
+	/** True/False option to enable verification of the server certificate **/
+	int enableServerCertAuth;
+
 } MQTTClient_SSLOptions;
 
-#define MQTTClient_SSLOptions_initializer { {'M', 'Q', 'T', 'S'}, 0, "/examples/lua/letsencrypt.pem", NULL, NULL, NULL, NULL, 1 }
+#define MQTTClient_SSLOptions_initializer { {'M', 'Q', 'T', 'S'}, 0, NULL, NULL, NULL, NULL, NULL, 0 }
 
 /**
  * MQTTClient_connectOptions defines several settings that control the way the

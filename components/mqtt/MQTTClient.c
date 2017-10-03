@@ -1082,8 +1082,8 @@ int MQTTClient_connectURI(MQTTClient handle, MQTTClient_connectOptions* options,
 	}
 #endif
 
-	m->c->username = options->username;
-	m->c->password = options->password;
+	m->c->username = MQTTStrdup(options->username);
+	m->c->password = MQTTStrdup(options->password);
 	m->c->retryInterval = options->retryInterval;
 
 	if (options->struct_version >= 3)
