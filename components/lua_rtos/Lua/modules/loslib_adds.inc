@@ -268,8 +268,54 @@ static int os_mkdir (lua_State *L) {
 	return luaL_fileresult(L, mkdir(path, 0) == 0, path);
 }
 
+inline int fnmatch(/*const*/ char *pattern, const char *string, int flags) {
+	int i=0;
+	int si=strlen(string)-1;
+	int pi=strlen(pattern)-1;
+
+	(void) flags;
+
+	// the following does support just one asterisk
+	while (string[i]!=0 && pattern[i]!=0 && pattern[i]!='*' && string[i]==pattern[i]) {
+		i++;
+	}
+	if (pattern[i]=='*' || (string[i]==0 && pattern[i]==0))
+	{
+		if (pattern[i+1]!=0) {					
+			//need to check strlen(pattern)-i chars from the back...
+			while (string[si]!=0 && pattern[pi]!=0 && string[si]==pattern[pi] && pi>i) {
+				si--; pi--;
+			}
+			if (pi==i) {
+				return 0;
+			}
+		}
+		else {
+			return 0;
+		}
+	}
+
+	// the following does support just exactly two asterisk:
+	// one at the very start plus one at the very end
+	pi=strlen(pattern)-1;
+	if (pattern[0]=='*' && pattern[pi]=='*') {
+		// yes we could copy the pattern each time instead of this hack...
+		pattern[pi]=0;
+		pattern++;
+		const char* result = strstr(string, pattern);
+		pattern--;
+		pattern[pi]='*';
+		if (NULL!=result) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
 static int os_ls (lua_State *L) {
 	const char *path = luaL_optstring(L, 1, NULL);
+	char *filename = NULL;
 	DIR *dir = NULL;
 	struct dirent *ent;
 	char type;
@@ -280,7 +326,32 @@ static int os_ls (lua_State *L) {
 	struct stat sb;
 	struct tm *tm_info;
 
-	// If path is not present get the current directory as path
+	if (path) {
+		dir = opendir(path);
+		if (!dir) {
+			//search back to the last dir name
+			filename = (char*)path + strlen(path) - 1;
+			while (filename > path && *filename!=0 && *filename!='/') {
+				filename--;
+			}
+			//string given is not a valid path
+			//so try to find a matching file
+			//in the current folder
+			if (filename==path) {
+				filename = (char*)path;
+				path = NULL;
+			}
+			else if (*filename == '/') {
+				*filename = 0; //will cut off the filename from the path
+				filename++;
+			}
+		}
+		else {
+			closedir(dir);
+		}
+	}
+
+	// If path is not present (at all or any more) get the current directory as path
 	if (!path) {
 		if (!getcwd(cpath, PATH_MAX)) {
 			return luaL_fileresult(L, 0, cpath);
@@ -321,13 +392,10 @@ static int os_ls (lua_State *L) {
 		} else {
 			strcpy(size, "       -");
 		}
-		
-		printf("%c\t%s\t%s\t%s\n",
-			type,
-			size,
-			tbuffer,
-			ent->d_name
-		);
+
+		if (filename==NULL || 0==fnmatch(filename, ent->d_name, 0)) { //our implementation above does support only a subset
+			printf("%c\t%s\t%s\t%s\n", type, size, tbuffer, ent->d_name);
+		}
 	}
 
 	//tty_unlock();
