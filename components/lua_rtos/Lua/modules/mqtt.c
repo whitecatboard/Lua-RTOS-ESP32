@@ -273,7 +273,12 @@ static int lmqtt_connect( lua_State* L ) {
     conn_opts.cleansession = 0;
     conn_opts.username = user;
     conn_opts.password = password;
-    ssl_opts.enableServerCertAuth = 0;
+
+    /* temporarily set via MQTTClient_SSLOptions_initializer
+    ssl_opts.enableServerCertAuth = 1;
+    ssl_opts.trustStore = "/examples/lua/letsencrypt.pem";
+    */
+
     conn_opts.ssl = &ssl_opts;
 
     bcopy(&conn_opts, &mqtt->conn_opts, sizeof(MQTTClient_connectOptions));

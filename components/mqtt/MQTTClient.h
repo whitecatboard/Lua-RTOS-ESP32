@@ -495,7 +495,7 @@ typedef struct
   
 } MQTTClient_SSLOptions;
 
-#define MQTTClient_SSLOptions_initializer { {'M', 'Q', 'T', 'S'}, 0, NULL, NULL, NULL, NULL, NULL, 1 }
+#define MQTTClient_SSLOptions_initializer { {'M', 'Q', 'T', 'S'}, 0, "/examples/lua/letsencrypt.pem", NULL, NULL, NULL, NULL, 1 }
 
 /**
  * MQTTClient_connectOptions defines several settings that control the way the
