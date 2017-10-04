@@ -67,7 +67,7 @@ extern Sockets s;
 
 void SSLSocket_addPendingRead(int sock);
 
-static ssl_mutex_type sslCoreMutex = 0;
+static ssl_mutex_type sslCoreMutex = PTHREAD_MUTEX_INITIALIZER;
 
 #if defined(WIN32) || defined(WIN64)
 #define iov_len len
