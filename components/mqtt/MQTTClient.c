@@ -1212,7 +1212,7 @@ int MQTTClient_disconnect1(MQTTClient handle, int timeout, int call_connection_l
 		rc = MQTTCLIENT_DISCONNECTED;
 		goto exit;
 	}
-	was_connected = (m->c->connected && m->c->connect_state==3); /* should be 1 */
+	was_connected = m->c->connected; /* should be 1 */
 	if (m->c->connected != 0)
 	{
 		start = MQTTClient_start_clock();
@@ -1240,6 +1240,7 @@ int MQTTClient_disconnect1(MQTTClient handle, int timeout, int call_connection_l
 exit:
 	if (stop)
 		MQTTClient_stop();
+
 	if (call_connection_lost && m->cl && was_connected)
 	{
 		Log(TRACE_MIN, -1, "Calling connectionLost for client %s", m->c->clientID);
