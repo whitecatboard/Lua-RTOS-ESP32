@@ -204,6 +204,7 @@ void SSLSocket_terminate()
 	FUNC_EXIT;
 }
 
+void *ssl_mem_zalloc(size_t size);
 static void mbedtls_zeroize( void *v, size_t n ) {
     volatile unsigned char *p = v; while( n-- ) *p++ = 0;
 }
@@ -219,11 +220,17 @@ int SSL_CTX_load_verify_locations(SSL_CTX *ctx, const char *CAfile,
   unsigned char *buf;
 
 	if( mbedtls_pk_load_file( CAfile, &buf, &n ) != 0 ) return 0;
-  X509* client_CA = d2i_X509(NULL, buf, n);
-  mbedtls_zeroize( buf, n );
-  mbedtls_free( buf );
+	// no need to free ctx->client_CA before calling SSL_CTX_add_client_CA
+	X509* server_CA = d2i_X509(NULL, buf, n);
+	mbedtls_zeroize( buf, n );
+	mbedtls_free( buf );
 
-	return SSL_CTX_add_client_CA(ctx, client_CA);
+	//SSL_CTX_add_client_CA(ctx, server_CA) <- will load a cert into ctx->client_CA
+	//SSL_CTX_use_certificate(ctx, server_CA) <- will load a cert into ctx->cert->x509
+
+	//ssl_pm_reload_crt will hand over ctx->client_CA to mbedtls_ssl_conf_ca_chain
+	//so despite it might look weired we need to call SSL_CTX_add_client_CA here...
+	return SSL_CTX_add_client_CA(ctx, server_CA);
 }
 
 int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
@@ -232,12 +239,13 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 	
 	FUNC_ENTRY;
 	
-	if (net->ctx == NULL)
+	if (net->ctx == NULL) {
 		if ((net->ctx = SSL_CTX_new(TLS_client_method())) == NULL)	/* TLS_client_method for compatibility with TLSv1 */
 		{
 			rc = SSLSocket_error("SSL_CTX_new", NULL, net->socket, rc);
 			goto exit;
 		}
+	}
 	
 	if (opts->keyStore)
 	{
@@ -252,6 +260,7 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 			SSLSocket_error("SSL_CTX_load_verify_locations", NULL, net->socket, rc);
 			goto free_ctx;
 		}
+		Log(TRACE_MAX, -1, "SSLSocket_createContext: Loaded server certificate from %s", opts->trustStore);
 	}
 
 	if (opts->enabledCipherSuites != NULL)
@@ -284,15 +293,16 @@ exit:
 int SSLSocket_setSocketForSSL(networkHandles* net, MQTTClient_SSLOptions* opts)
 {
 	int rc = 1;
-	
+
 	FUNC_ENTRY;
 	
 	if (net->ctx != NULL || (rc = SSLSocket_createContext(net, opts)) == 1)
 	{
 
-		if (opts->enableServerCertAuth) 
+		if (opts->enableServerCertAuth) {
 			SSL_CTX_set_verify(net->ctx, SSL_VERIFY_PEER, NULL);
-	
+		}
+
 		net->ssl = SSL_new(net->ctx);
 
 		if ((rc = SSL_set_fd(net->ssl, net->socket)) != 1)
@@ -314,15 +324,18 @@ int SSLSocket_connect(SSL* ssl, int sock)
 	if (rc != 1)
 	{
 		int error;
-
-		error = SSL_get_verify_result(ssl);
-		//printf("SSL_get_verify_result: %i\n", error);
-
-		error = SSLSocket_error("SSL_connect", ssl, sock, rc);
-		if (error == SSL_FATAL)
+		if (ssl->verify_mode!=SSL_VERIFY_NONE && (error = SSL_get_verify_result(ssl)) != X509_V_OK) {
+			Log(TRACE_MIN, -1, "SSLSocket error %d in %s for socket %d\n", error, "SSL_get_verify_result", sock);
+			error = SSL_get_error(ssl, rc);
 			rc = error;
-		if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
-			rc = TCPSOCKET_INTERRUPTED;
+		}
+		else {
+			error = SSLSocket_error("SSL_connect", ssl, sock, rc);
+			if (error == SSL_FATAL)
+				rc = error;
+			if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
+				rc = TCPSOCKET_INTERRUPTED;
+		}
 	}
 
 	FUNC_EXIT_RC(rc);
@@ -450,6 +463,10 @@ int SSLSocket_close(networkHandles* net)
 	FUNC_ENTRY;
 	if (net->ssl) {
 		rc = SSL_shutdown(net->ssl);
+
+		//nasty bug... must NOT free original net->ssl->session or else the reconnect won't work
+		net->ssl->session = ssl_mem_zalloc(sizeof(SSL_SESSION));
+
 		SSL_free(net->ssl);
 		net->ssl = NULL;
 	}
