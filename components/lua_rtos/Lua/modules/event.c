@@ -294,7 +294,7 @@ static int levent_ins_gc (lua_State *L) {
 
 	        vQueueDelete((xQueueHandle)listener_data->q);
 
-	        list_remove(&udata->listeners, idx, 0);
+	        list_remove(&udata->listeners, idx, 1);
 	        idx = list_next(&udata->listeners, idx);
 	    }
 
