@@ -943,6 +943,16 @@ driver_error_t *gpio_port_get_mask(uint8_t port, gpio_pin_mask_t *value) {
 }
 
 driver_error_t *gpio_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type, void *args) {
+	driver_error_t *error;
+
+	if ((error = gpio_pin_input(pin))) {
+		return error;
+	}
+
+	if ((error = gpio_pin_pullup(pin))) {
+		return error;
+	}
+
 	if (pin < 40) {
 		// Sanity checks
 		if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {

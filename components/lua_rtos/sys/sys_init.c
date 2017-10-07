@@ -35,12 +35,15 @@
 #include "esp_sleep.h"
 #include "driver/periph_ctrl.h"
 
+#include "nvs_flash.h"
+#include "nvs.h"
+
 #include <esp_spi_flash.h>
 
-#include <vfs.h>
 #include <string.h>
 #include <stdio.h>
 
+#include <vfs/vfs.h>
 #include <sys/reent.h>
 #include <sys/syslog.h>
 #include <sys/console.h>
@@ -109,6 +112,8 @@ void __attribute__((weak)) firmware_copyright_notice() {
 }
 
 void _sys_init() {
+    nvs_flash_init();
+
 	// Set default power down mode for all RTC power domains in deep sleep
 	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
 	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);

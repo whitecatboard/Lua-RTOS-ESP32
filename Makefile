@@ -4,7 +4,7 @@
 #
 
 PROJECT_NAME := lua_rtos
-LUA_RTOS_PATCHES := $(abspath $(wildcard main/patches/*.patch))
+LUA_RTOS_PATCHES := $(abspath $(wildcard components/lua_rtos/patches/*.patch))
 
 all_binaries: configure-idf-lua-rtos configure-idf-lua-rtos-tests
 

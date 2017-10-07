@@ -93,6 +93,7 @@ mutex_type Thread_create_mutex()
 		mutex = CreateMutex(NULL, 0, NULL);
 	#else
 		mutex = malloc(sizeof(pthread_mutex_t));
+		*mutex = PTHREAD_MUTEX_INITIALIZER;
 		rc = pthread_mutex_init(mutex, NULL);
 	#endif
 	FUNC_EXIT_RC(rc);

@@ -13,8 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <vfs.h>
-
+#include <vfs/vfs.h>
 #include <sys/driver.h>
 #include <sys/stat.h>
 #include <sys/syslog.h>
@@ -744,7 +743,7 @@ static int os_flash_unique_id(lua_State *L) {
 	#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
 	char buffer[17];
 
-	snprintf(buffer, sizeof(buffer)
+	snprintf(buffer, sizeof(buffer),
 			"%02x%02x%02x%02x%02x%02x%02x%02x",
 			flash_unique_id[0], flash_unique_id[1],
 			flash_unique_id[2], flash_unique_id[3],

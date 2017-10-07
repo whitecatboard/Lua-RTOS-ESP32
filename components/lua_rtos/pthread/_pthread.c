@@ -47,7 +47,6 @@
 #include "lauxlib.h"
 
 struct list key_list;
-struct list mutex_list;
 struct list thread_list;
 
 struct mtx once_mtx;
@@ -73,7 +72,6 @@ void _pthread_init() {
 
 	    // Init lists
 	    list_init(&thread_list, 1);
-	    list_init(&mutex_list, 1);
 	    list_init(&key_list, 1);
 
 	    inited = 1;
@@ -235,8 +233,6 @@ int _pthread_free(pthread_t id) {
     struct pthread *thread;
     int res;
 
-    _pthread_mutex_free();
-    
     // Get thread
     res = list_get(&thread_list, id, (void **)&thread);
     if (res) {
@@ -266,11 +262,12 @@ sig_t _pthread_signal(int s, sig_t h) {
         errno = EINVAL;
         return SIG_ERR;
     }
-    
+
     // Get thread
-    list_get(&thread_list, pthread_self(), (void **)&thread);
-    
-    if (thread) {
+    //
+    // Signals are send only to thread 1 (see _pthread_queue_signal)
+    // pthread_self cannot be use because is called from a system task (thread 0)
+    if (list_get(&thread_list, 1, (void **)&thread) == 0) {
         // Add handler
         prev_h = thread->signals[s];
         thread->signals[s] = h;

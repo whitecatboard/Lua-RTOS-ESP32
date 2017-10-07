@@ -171,6 +171,7 @@ static driver_error_t *sensor_adc_setup(uint8_t interface, sensor_instance_t *un
 
 static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
+	driver_error_t *error;
 
 	// Sanity checks
 	if (unit->setup[interface].gpio.gpio < 40) {
@@ -196,17 +197,23 @@ static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *u
 
     if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_OFF) {
     	if (unit->sensor->interface[interface].flags & SENSOR_FLAG_DEBOUNCING) {
-    		driver_error_t *error;
     		uint16_t threshold = SENSOR_FLAG_GET_DEBOUNCING_THRESHOLD(unit->sensor->interface[interface]);
     		if ((error = gpio_debouncing_register(unit->setup[interface].gpio.gpio, threshold, debouncing, (void *)(&unit->setup[interface])))) {
     			return error;
     		}
     	} else {
-        	gpio_isr_attach(unit->setup[interface].gpio.gpio, isr, GPIO_INTR_ANYEDGE, (void *)(&unit->setup[interface]));
+        	if ((error = gpio_isr_attach(unit->setup[interface].gpio.gpio, isr, GPIO_INTR_ANYEDGE, (void *)(&unit->setup[interface])))) {
+        		return error;
+        	}
     	}
     } else {
-        gpio_pin_output(unit->setup[interface].gpio.gpio);
-    	gpio_pin_set(unit->setup[interface].gpio.gpio);
+        if ((error = gpio_pin_output(unit->setup[interface].gpio.gpio))) {
+        	return error;
+        }
+
+    	if ((error = gpio_pin_set(unit->setup[interface].gpio.gpio))) {
+    		return error;
+    	}
     }
 
 	return NULL;
