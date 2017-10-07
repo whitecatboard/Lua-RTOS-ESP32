@@ -796,6 +796,14 @@ menu "Lua RTOS"
 				help
 					TCP port where HTTP server listens
 
+			config LUA_RTOS_HTTP_SERVER_PORT_SSL
+				depends on LUA_RTOS_USE_HTTP_SERVER
+					int "HTTPS server port"
+					range 0 65536
+					default 443
+				help
+					TCP port where HTTPS server listens
+
 			config LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT
 				depends on LUA_RTOS_USE_HTTP_SERVER
 					string "HTTP document root"
