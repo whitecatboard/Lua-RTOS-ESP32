@@ -818,6 +818,12 @@ static void *http_thread(void *arg) {
 	if (config->secure) {
 		SSL_CTX_free(ctx);
 		ctx = NULL;
+
+		free(config->certificate);
+		config->certificate = NULL;
+
+		free(config->private_key);
+		config->private_key = NULL;
 	}
 
 	syslog(LOG_INFO, "http: server shutting down on port %d\n", config->port);
@@ -838,16 +844,7 @@ static void *http_thread(void *arg) {
 	http_refcount--;
 
 	if (0 == http_refcount) {
-		if (http_secure.certificate) {
-			free(http_secure.certificate);
-			http_secure.certificate = NULL;
-		}
-		if (http_secure.private_key) {
-			free(http_secure.private_key);
-			http_secure.private_key = NULL;
-		}
-
-		//last one should unregister the callback
+		//last one needs to unregister the callback
 		driver_error_t *error;
 		if ((error = net_event_unregister_callback(http_net_callback))) {
 			syslog(LOG_WARNING, "couldn't unregister net callback\n");
