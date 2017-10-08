@@ -181,20 +181,6 @@ thread_id_type Thread_getid()
 }
 
 
-#if defined(USE_NAMED_SEMAPHORES)
-#define MAX_NAMED_SEMAPHORES 10
-
-static int named_semaphore_count = 0;
-
-static struct 
-{
-	sem_type sem;
-	char name[NAME_MAX-4];
-} named_semaphores[MAX_NAMED_SEMAPHORES];
- 
-#endif
-
-
 /**
  * Create a new semaphore
  * @return the new condition variable
@@ -206,7 +192,7 @@ sem_type Thread_create_sem()
 
 	FUNC_ENTRY;
 
-        rc = sys_sem_new((sys_sem_t *)&sem, 0);
+	rc = sys_sem_new((sys_sem_t *)&sem, 0);
 
 	FUNC_EXIT_RC(rc);
 	(void) rc;

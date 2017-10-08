@@ -202,42 +202,48 @@ static int l_nvs_read(lua_State *L) {
     // Read key size
     size_t key_size = 0;
     err = nvs_get_blob(handle_to_settings, key,NULL, &key_size);
-	if (err != ESP_OK) {
-		nvs_error(L, err);
-	}
+    if (err != ESP_OK) {
+    	nvs_error(L, err);
+    	nvs_close(handle_to_settings);
+    	return 0;
+    }
 
-	// Alloc space for retrieve key value
-	val_val = malloc(key_size);
-	if (!val_val) {
-		// TO DO
-	}
+    // Alloc space for retrieve key value
+    val_val = malloc(key_size);
+    if (!val_val) {
+    	nvs_error(L, ESP_ERR_NO_MEM);
+    	nvs_close(handle_to_settings);
+    	return 0;
+    }
 
     // Read key value
     err = nvs_get_blob(handle_to_settings, key,val_val, &key_size);
-	if (err != ESP_OK) {
-		nvs_error(L, err);
-	}
+    if (err != ESP_OK) {
+    	nvs_error(L, err);
+    	nvs_close(handle_to_settings);
+    	return 0;
+    }
 
-	val_type = *((char*)val_val);
-	switch (val_type) {
-		case LNVS_TYPE_INT:
-			lua_pushinteger(L, *((lua_Integer *)(val_val + 1)));
-			break;
-		case LNVS_TYPE_NUMBER:
-			lua_pushnumber(L, *((lua_Number *)(val_val + 1)));
-			break;
-		case LNVS_TYPE_BOOLEAN:
-			lua_pushboolean(L, *((int *)(val_val + 1)));
-			break;
-		case LNVS_TYPE_NIL:
-			lua_pushnil(L);
-			break;
-		case LNVS_TYPE_STRING:
-			lua_pushstring(L, ((const char *)(val_val + 1)));
-			break;
-	}
+    val_type = *((char*)val_val);
+    switch (val_type) {
+    	case LNVS_TYPE_INT:
+    		lua_pushinteger(L, *((lua_Integer *)(val_val + 1)));
+    		break;
+    	case LNVS_TYPE_NUMBER:
+    		lua_pushnumber(L, *((lua_Number *)(val_val + 1)));
+    		break;
+    	case LNVS_TYPE_BOOLEAN:
+    		lua_pushboolean(L, *((int *)(val_val + 1)));
+    		break;
+    	case LNVS_TYPE_NIL:
+    		lua_pushnil(L);
+    		break;
+    	case LNVS_TYPE_STRING:
+    		lua_pushstring(L, ((const char *)(val_val + 1)));
+    		break;
+    }
 
-	free(val_val);
+    free(val_val);
 
     // Close
     nvs_close(handle_to_settings);

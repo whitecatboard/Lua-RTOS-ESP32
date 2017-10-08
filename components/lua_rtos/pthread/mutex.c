@@ -185,11 +185,11 @@ int pthread_mutex_trylock(pthread_mutex_t *mut) {
 }
 
 int pthread_mutex_destroy(pthread_mutex_t *mut) {
-	struct pthread_mutex *mutex = ( struct pthread_mutex *)(*mut);
-
     if (!mut) {
         return EINVAL;
     }
+
+    struct pthread_mutex *mutex = ( struct pthread_mutex *)(*mut);
 
     if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
         xSemaphoreGiveRecursive(mutex->sem);

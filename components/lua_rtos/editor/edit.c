@@ -1671,7 +1671,7 @@ void paste_selection(struct editor *ed) {
 // Editor Commands
 //
 
-void open_editor(struct editor *ed) {
+struct editor *open_editor(struct editor *ed) {
   int rc;
   char *filename;
   struct env *env = ed->env;
@@ -1696,6 +1696,8 @@ void open_editor(struct editor *ed) {
     }
   }
   ed->refresh = 1;
+  
+  return ed;
 }
 
 void new_editor(struct editor *ed) {
@@ -1749,7 +1751,7 @@ void save_editor(struct editor *ed) {
   ed->refresh = 1;
 }
 
-void close_editor(struct editor *ed) {
+struct editor *close_editor(struct editor *ed) {
   struct env *env = ed->env;
   
   if (ed->dirty) {
@@ -1768,6 +1770,8 @@ void close_editor(struct editor *ed) {
     new_file(ed, "");
   }
   ed->refresh = 1;
+  
+  return ed;
 }
 
 void find_text(struct editor *ed, int next) {
@@ -2040,11 +2044,11 @@ void edit(struct editor *ed) {
         case ctrl('z'): undo(ed); break;
         case ctrl('r'): redo(ed); break;
         case ctrl('v'): paste_selection(ed); break;
-        case ctrl('o'): open_editor(ed); ed = ed->env->current; break;
+        case ctrl('o'): ed = open_editor(ed); break;
         case ctrl('n'): new_editor(ed); ed = ed->env->current; break;
         case ctrl('s'): save_editor(ed); break;
 #endif
-        case ctrl('w'): close_editor(ed); ed = ed->env->current; break;
+        case ctrl('w'): ed = close_editor(ed); break;
       }
     }
   }

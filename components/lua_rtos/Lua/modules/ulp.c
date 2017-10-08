@@ -81,7 +81,6 @@ static int lulp_load(lua_State *L) {
 	FILE *fp;
 	fp = fopen(binary, "rb");
 	if (!fp) {
-		fclose(fp);
 		return luaL_fileresult(L, 0, binary);
 	}
 
