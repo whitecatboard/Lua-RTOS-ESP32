@@ -89,6 +89,7 @@ int pthread_mutex_init(pthread_mutex_t *mut, const pthread_mutexattr_t *attr) {
     if(!mutex->sem){
         *mut = PTHREAD_MUTEX_INITIALIZER;
         free(mutex->sem);
+        free(mutex);
         errno = ENOMEM;
         return ENOMEM;
     }

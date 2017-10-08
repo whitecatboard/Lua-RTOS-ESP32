@@ -81,7 +81,10 @@ int pthread_setspecific(pthread_key_t k, const void *value) {
     
     specific->thread = pthread_self();
     specific->value = value;
-    
+
+		int index;
+    list_add(&key->specific, (void **)&specific, &index);
+
     return 0;
 }
 

@@ -89,6 +89,7 @@ static int lulp_load(lua_State *L) {
 	stat(binary, &fileinfo);
 
 	if ((size_t)fileinfo.st_size > CONFIG_ULP_COPROC_RESERVE_MEM) {
+		fclose(fp);
 		return luaL_error(L, "cannot load binary file, maximum allowed size is " XTSTR(CONFIG_ULP_COPROC_RESERVE_MEM));
 	}
 

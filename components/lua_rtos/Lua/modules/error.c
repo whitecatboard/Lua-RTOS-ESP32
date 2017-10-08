@@ -71,9 +71,10 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     	}
     }
     
+    int rc = luaL_error(L, driver_get_err_msg(error));
     free(error);
 
-    return luaL_error(L, driver_get_err_msg(error));
+    return rc;
 }
 
 int luaL_deprecated(lua_State* L, const char *old, const char *new) {
