@@ -1678,7 +1678,7 @@ struct editor *open_editor(struct editor *ed) {
 
   if (!prompt(ed, "Open file: ", 1)) {
     ed->refresh = 1;
-    return;
+    return ed;
   }
   filename = (char *)ed->env->linebuf;
   
@@ -1758,7 +1758,7 @@ struct editor *close_editor(struct editor *ed) {
     display_message(ed, "Close %s without saving changes (y/n)? ", ed->filename);
     if (!ask()) {
       ed->refresh = 1;
-      return;
+      return ed;
     }
   }
   
