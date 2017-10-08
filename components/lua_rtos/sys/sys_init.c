@@ -112,7 +112,7 @@ void __attribute__((weak)) firmware_copyright_notice() {
 }
 
 void _sys_init() {
-    nvs_flash_init();
+	nvs_flash_init();
 
 	// Set default power down mode for all RTC power domains in deep sleep
 	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
@@ -136,18 +136,19 @@ void _sys_init() {
 	// Increment bootcount
 	boot_count++;
 
-	// TO DO: do this only if RTC is not set
-	struct timeval tv;
-
 	esp_log_level_set("*", ESP_LOG_ERROR);
 
 	// Disable hardware modules modules
 	periph_module_disable(PERIPH_LEDC_MODULE);
 
-	tv.tv_sec = BUILD_TIME;
-	tv.tv_usec = 0;
-
-	settimeofday(&tv, NULL);
+	// set the current time only if RTC has not already been set
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	if (tv.tv_sec < BUILD_TIME) {
+		tv.tv_sec = BUILD_TIME;
+		tv.tv_usec = 0;
+		settimeofday(&tv, NULL);
+	}
 
 	#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
 	// Get flash unique id
