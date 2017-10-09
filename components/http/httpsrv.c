@@ -91,7 +91,7 @@ static int socket_server_normal = 0;
 static int socket_server_secure = 0;
 
 typedef struct {
-  const int port;
+  int port;
   int *server; //socket
   const int secure;
   char *certificate;
@@ -261,7 +261,6 @@ static void chunk(http_request_handle *request, const char *fmt, ...) {
 		}
 
 		va_end(args);
-
 		free(buffer);
 	}
 }
@@ -908,15 +907,19 @@ int http_start(lua_State* L) {
 		// Create threads
 		http_shutdown = 0;
 
-		res = pthread_create(&thread_normal, &attr, http_thread, &http_normal);
-		if (res) {
-			return luaL_error(L, "couldn't start http_thread");
+		http_normal.port = luaL_optinteger( L, 1, CONFIG_LUA_RTOS_HTTP_SERVER_PORT );
+		if (http_normal.port) {
+			res = pthread_create(&thread_normal, &attr, http_thread, &http_normal);
+			if (res) {
+				return luaL_error(L, "couldn't start http_thread");
+			}
 		}
 
-		http_secure.certificate = strdup(luaL_optstring( L, 1, NULL ));
-		http_secure.private_key = strdup(luaL_optstring( L, 2, NULL ));
+		http_secure.port = luaL_optinteger( L, 2, CONFIG_LUA_RTOS_HTTP_SERVER_PORT_SSL );
+		http_secure.certificate = strdup(luaL_optstring( L, 3, NULL ));
+		http_secure.private_key = strdup(luaL_optstring( L, 4, NULL ));
 
-		if( http_secure.certificate && http_secure.private_key) {
+		if ( http_secure.port && http_secure.certificate && http_secure.private_key ) {
 			res = pthread_create(&thread_secure, &attr, http_thread, &http_secure);
 			if (res) {
 				return luaL_error(L, "couldn't start secure http_thread");
