@@ -41,17 +41,11 @@
 #define min(A,B) ( (A) < (B) ? (A):(B))
 #endif
 
+void Protocol_processPublication(Publish* publish, Clients* client);
+void MQTTProtocol_closeSession(Clients* client, int sendwill);
+
 extern MQTTProtocol state;
 extern ClientStates* bstate;
-
-
-static void MQTTProtocol_storeQoS0(Clients* pubclient, Publish* publish);
-static int MQTTProtocol_startPublishCommon(
-		Clients* pubclient,
-		Publish* publish,
-		int qos,
-		int retained);
-static void MQTTProtocol_retries(time_t now, Clients* client, int regardless);
 
 /**
  * List callback function for comparing Message structures by message id
@@ -217,10 +211,20 @@ Publications* MQTTProtocol_storePublication(Publish* publish, int* len)
 	p->refcount = 1;
 
 	*len = (int)strlen(publish->topic)+1;
+
+	/*
+	if (Heap_findItem(publish->topic))
+		p->topic = publish->topic;
+	else
 	{
 		p->topic = malloc(*len);
 		strcpy(p->topic, publish->topic);
 	}
+	*/
+
+	p->topic = malloc(*len);
+	strcpy(p->topic, publish->topic);
+
 	*len += sizeof(Publications);
 
 	p->topiclen = publish->topiclen;
@@ -666,7 +670,7 @@ void MQTTProtocol_freeClient(Clients* client)
 	free(client->clientID);
 	if (client->will)
 	{
-		free(client->will->payload);
+		free(client->will->msg);
 		free(client->will->topic);
 		free(client->will);
 	}

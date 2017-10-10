@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2017 IBM Corp.
+ * Copyright (c) 2009, 2016 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -16,8 +16,6 @@
  *    Ian Craggs - allow compilation for OpenSSL < 1.0
  *    Ian Craggs - fix for bug #453883
  *    Ian Craggs - fix for bug #480363, issue 13
- *    Ian Craggs - SNI support
- *    Ian Craggs - fix for issues #155, #160
  *******************************************************************************/
 
 /**
@@ -98,8 +96,8 @@ int SSLSocket_error(char* aString, SSL* ssl, int sock, int rc)
     {
         if (strcmp(aString, "shutdown") != 0)
         	Log(TRACE_MIN, -1, "SSLSocket error %d in %s for socket %d rc %d errno %d %s\n", error, aString, sock, rc, errno, strerror(errno));
-		if (error == SSL_ERROR_SSL || error == SSL_ERROR_SYSCALL)
-			error = SSL_FATAL;
+				if (error == SSL_ERROR_SSL || error == SSL_ERROR_SYSCALL)
+					error = SSL_FATAL;
     }
     FUNC_EXIT_RC(error);
     return error;
@@ -292,7 +290,7 @@ exit:
 }
 
 
-int SSLSocket_setSocketForSSL(networkHandles* net, MQTTClient_SSLOptions* opts, char* hostname)
+int SSLSocket_setSocketForSSL(networkHandles* net, MQTTClient_SSLOptions* opts)
 {
 	int rc = 1;
 
@@ -309,12 +307,8 @@ int SSLSocket_setSocketForSSL(networkHandles* net, MQTTClient_SSLOptions* opts, 
 
 		if ((rc = SSL_set_fd(net->ssl, net->socket)) != 1)
 			SSLSocket_error("SSL_set_fd", net->ssl, net->socket, rc);
-
-		struct ssl_pm *ssl_pm = (struct ssl_pm *)net->ssl->ssl_pm;
-		if ((rc = mbedtls_ssl_set_hostname(&(ssl_pm->ssl), hostname)))
-			SSLSocket_error("SSL_set_tlsext_host_name", NULL, net->socket, rc);
 	}
-
+		
 	FUNC_EXIT_RC(rc);
 	return rc;
 }

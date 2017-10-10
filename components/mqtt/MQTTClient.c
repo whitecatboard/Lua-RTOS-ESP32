@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2017 IBM Corp.
+ * Copyright (c) 2009, 2015 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -13,7 +13,7 @@
  * Contributors:
  *    Ian Craggs - initial API and implementation and/or initial documentation
  *    Ian Craggs - bug 384016 - segv setting will message
- *    Ian Craggs - bug 384053 - v1.0.0.7 - stop MQTTClient_receive on socket error
+ *    Ian Craggs - bug 384053 - v1.0.0.7 - stop MQTTClient_receive on socket error 
  *    Ian Craggs, Allan Stockdill-Mander - add ability to connect with SSL
  *    Ian Craggs - multiple server connection support
  *    Ian Craggs - fix for bug 413429 - connectionLost not called
@@ -29,9 +29,6 @@
  *    Ian Craggs - fix for bug 459791 - deadlock in WaitForCompletion for bad client
  *    Ian Craggs - fix for bug 474905 - insufficient synchronization for subscribe, unsubscribe, connect
  *    Ian Craggs - make it clear that yield and receive are not intended for multi-threaded mode (bug 474748)
- *    Ian Craggs - SNI support, message queue unpersist bug
- *    Ian Craggs - binary will message support
- *    Ian Craggs - waitforCompletion fix #240
  *******************************************************************************/
 
 /**
@@ -63,8 +60,6 @@
 
 #if defined(OPENSSL)
 #include <openssl/ssl.h>
-#else
-#define URI_SSL "ssl://"
 #endif
 
 #define	timersub(a, b, result)						      \
@@ -186,9 +181,18 @@ void MQTTClient_init()
 
 static volatile int initialized = 0;
 static List* handles = NULL;
+static time_t last;
 static int running = 0;
 static int tostop = 0;
 static thread_id_type run_id = 0;
+
+MQTTPacket* MQTTClient_waitfor(MQTTClient handle, int packet_type, int* rc, long timeout);
+MQTTPacket* MQTTClient_cycle(int* sock, unsigned long timeout, int* rc);
+int MQTTClient_cleanSession(Clients* client);
+void MQTTClient_stop();
+int MQTTClient_disconnect_internal(MQTTClient handle, int timeout);
+int MQTTClient_disconnect1(MQTTClient handle, int timeout, int call_connection_lost, int stop);
+void MQTTClient_writeComplete(int socket);
 
 typedef struct
 {
@@ -283,32 +287,6 @@ long MQTTClient_elapsed(struct timeval start)
 }
 #endif
 
-static void MQTTClient_terminate(void);
-static void MQTTClient_emptyMessageQueue(Clients* client);
-static int MQTTClient_deliverMessage(
-		int rc, MQTTClients* m,
-		char** topicName, int* topicLen,
-		MQTTClient_message** message);
-static int clientSockCompare(void* a, void* b);
-static thread_return_type WINAPI connectionLost_call(void* context);
-static thread_return_type WINAPI MQTTClient_run(void* n);
-static void MQTTClient_stop(void);
-static void MQTTClient_closeSession(Clients* client);
-static int MQTTClient_cleanSession(Clients* client);
-static int MQTTClient_connectURIVersion(
-	MQTTClient handle, MQTTClient_connectOptions* options,
-	const char* serverURI, int MQTTVersion,
-	START_TIME_TYPE start, long millisecsTimeout);
-static int MQTTClient_connectURI(MQTTClient handle, MQTTClient_connectOptions* options, const char* serverURI);
-static int MQTTClient_disconnect1(MQTTClient handle, int timeout, int internal, int stop);
-static int MQTTClient_disconnect_internal(MQTTClient handle, int timeout);
-static void MQTTClient_retry(void);
-static MQTTPacket* MQTTClient_cycle(int* sock, unsigned long timeout, int* rc);
-static MQTTPacket* MQTTClient_waitfor(MQTTClient handle, int packet_type, int* rc, long timeout);
-/*static int pubCompare(void* a, void* b); */
-static void MQTTProtocol_checkPendingWrites(void);
-static void MQTTClient_writeComplete(int socket);
-
 
 int MQTTClient_create(MQTTClient* handle, const char* serverURI, const char* clientId,
 		int persistence_type, void* persistence_context)
@@ -347,16 +325,13 @@ int MQTTClient_create(MQTTClient* handle, const char* serverURI, const char* cli
 	memset(m, '\0', sizeof(MQTTClients));
 	if (strncmp(URI_TCP, serverURI, strlen(URI_TCP)) == 0)
 		serverURI += strlen(URI_TCP);
+#if defined(OPENSSL)
 	else if (strncmp(URI_SSL, serverURI, strlen(URI_SSL)) == 0)
 	{
-#if defined(OPENSSL)
 		serverURI += strlen(URI_SSL);
 		m->ssl = 1;
-#else
-        rc = MQTTCLIENT_SSL_NOT_SUPPORTED;
-        goto exit;
-#endif
 	}
+#endif
 	m->serverURI = MQTTStrdup(serverURI);
 	ListAppend(handles, m, sizeof(MQTTClients));
 
@@ -454,6 +429,7 @@ void MQTTClient_destroy(MQTTClient* handle)
 #endif
 		MQTTClient_emptyMessageQueue(m->c);
 		MQTTProtocol_freeClient(m->c);
+
 		if (!ListRemove(bstate->clients, m->c))
 			Log(LOG_ERROR, 0, NULL);
 		else
@@ -488,6 +464,7 @@ void MQTTClient_destroy(MQTTClient* handle)
 			Log(LOG_ERROR, -1, "free error");
 	}	
 	*handle = NULL;
+
 	if (bstate->clients->count == 0)
 		MQTTClient_terminate();
 
@@ -515,7 +492,7 @@ void MQTTClient_free(void* memory)
 }
 
 
-static int MQTTClient_deliverMessage(int rc, MQTTClients* m, char** topicName, int* topicLen, MQTTClient_message** message)
+int MQTTClient_deliverMessage(int rc, MQTTClients* m, char** topicName, int* topicLen, MQTTClient_message** message)
 {
 	qEntry* qe = (qEntry*)(m->c->messageQueue->first->content);
 
@@ -541,7 +518,7 @@ static int MQTTClient_deliverMessage(int rc, MQTTClients* m, char** topicName, i
  * @param b second integer value
  * @return boolean indicating whether a and b are equal
  */
-static int clientSockCompare(void* a, void* b)
+int clientSockCompare(void* a, void* b)
 {
 	MQTTClients* m = (MQTTClients*)a;
 	return m->c->net.socket == *(int*)b;
@@ -554,7 +531,7 @@ static int clientSockCompare(void* a, void* b)
  * @param context a pointer to the relevant client
  * @return thread_return_type standard thread return value - not used here
  */
-static thread_return_type WINAPI connectionLost_call(void* context)
+thread_return_type WINAPI connectionLost_call(void* context)
 {
 	MQTTClients* m = (MQTTClients*)context;
 
@@ -567,7 +544,7 @@ static thread_return_type WINAPI connectionLost_call(void* context)
 
 
 /* This is the thread function that handles the calling of callback functions if set */
-static thread_return_type WINAPI MQTTClient_run(void* n)
+thread_return_type WINAPI MQTTClient_run(void* n)
 {
 	long timeout = 10L; /* first time in we have a small timeout.  Gets things started more quickly */
 
@@ -643,13 +620,7 @@ static thread_return_type WINAPI MQTTClient_run(void* n)
 				 * so we must be careful how we use it.
 				 */
 				if (rc)
-				{
-					#if !defined(NO_PERSISTENCE)
-					if (m->c->persistence)
-						MQTTPersistence_unpersistQueueEntry(m->c, (MQTTPersistence_qEntry*)qe);
-					#endif
 					ListRemove(m->c->messageQueue, qe);
-				}
 				else
 					Log(TRACE_MIN, -1, "False returned from messageArrived for client %s, message remains on queue",
 						m->c->clientID);
@@ -709,7 +680,7 @@ static thread_return_type WINAPI MQTTClient_run(void* n)
 }
 
 
-static void MQTTClient_stop()
+void MQTTClient_stop()
 {
 	int rc = 0;
 
@@ -778,7 +749,7 @@ int MQTTClient_setCallbacks(MQTTClient handle, void* context, MQTTClient_connect
 }
 
 
-static void MQTTClient_closeSession(Clients* client)
+void MQTTClient_closeSession(Clients* client)
 {
 	FUNC_ENTRY;
 	client->good = 0;
@@ -807,7 +778,7 @@ static void MQTTClient_closeSession(Clients* client)
 }
 
 
-static int MQTTClient_cleanSession(Clients* client)
+int MQTTClient_cleanSession(Clients* client)
 {
 	int rc = 0;
 
@@ -870,7 +841,7 @@ void Protocol_processPublication(Publish* publish, Clients* client)
 }
 
 
-static int MQTTClient_connectURIVersion(MQTTClient handle, MQTTClient_connectOptions* options, const char* serverURI, int MQTTVersion,
+int MQTTClient_connectURIVersion(MQTTClient handle, MQTTClient_connectOptions* options, const char* serverURI, int MQTTVersion,
 	START_TIME_TYPE start, long millisecsTimeout)
 {
 	MQTTClients* m = handle;
@@ -914,20 +885,11 @@ static int MQTTClient_connectURIVersion(MQTTClient handle, MQTTClient_connectOpt
 			rc = SOCKET_ERROR;
 			goto exit;
 		}
-
+		
 #if defined(OPENSSL)
 		if (m->ssl)
 		{
-			int port;
-			char* hostname;
-			int setSocketForSSLrc = 0;
-
-			hostname = MQTTProtocol_addressPort(m->serverURI, &port);
-			setSocketForSSLrc = SSLSocket_setSocketForSSL(&m->c->net, m->c->sslopts, hostname);
-			if (hostname != m->serverURI)
-				free(hostname);
-
-			if (setSocketForSSLrc != MQTTCLIENT_SUCCESS)
+			if (SSLSocket_setSocketForSSL(&m->c->net, m->c->sslopts) != MQTTCLIENT_SUCCESS)
 			{
 				if (m->c->session != NULL)
 					if ((rc = SSL_set_session(m->c->net.ssl, m->c->session)) != 1)
@@ -1039,9 +1001,9 @@ exit:
 	if (rc == MQTTCLIENT_SUCCESS)
 	{
 		if (options->struct_version == 4) /* means we have to fill out return values */
-		{
+		{			
 			options->returned.serverURI = serverURI;
-			options->returned.MQTTVersion = MQTTVersion;
+			options->returned.MQTTVersion = MQTTVersion;    
 			options->returned.sessionPresent = sessionPresent;
 		}
 	}
@@ -1051,22 +1013,8 @@ exit:
   return rc;
 }
 
-static int retryLoopInterval = 5;
 
-static void setRetryLoopInterval(int keepalive)
-{
-	int proposed = keepalive / 10;
-
-	if (proposed < 1)
-		proposed = 1;
-	else if (proposed > 5)
-		proposed = 5;
-	if (proposed < retryLoopInterval)
-		retryLoopInterval = proposed;
-}
-
-
-static int MQTTClient_connectURI(MQTTClient handle, MQTTClient_connectOptions* options, const char* serverURI)
+int MQTTClient_connectURI(MQTTClient handle, MQTTClient_connectOptions* options, const char* serverURI)
 {
 	MQTTClients* m = handle;
 	START_TIME_TYPE start;
@@ -1079,48 +1027,26 @@ static int MQTTClient_connectURI(MQTTClient handle, MQTTClient_connectOptions* o
 	start = MQTTClient_start_clock();
 
 	m->c->keepAliveInterval = options->keepAliveInterval;
-	setRetryLoopInterval(options->keepAliveInterval);
 	m->c->cleansession = options->cleansession;
 	m->c->maxInflightMessages = (options->reliable) ? 1 : 10;
 
 	if (m->c->will)
 	{
-		free(m->c->will->payload);
+		free(m->c->will->msg);
 		free(m->c->will->topic);
 		free(m->c->will);
 		m->c->will = NULL;
 	}
 
-	if (options->will && (options->will->struct_version == 0 || options->will->struct_version == 1))
+	if (options->will && options->will->struct_version == 0)
 	{
-		const void* source = NULL;
-
 		m->c->will = malloc(sizeof(willMessages));
-		if (options->will->message || (options->will->struct_version == 1 && options->will->payload.data))
-		{
-			if (options->will->struct_version == 1 && options->will->payload.data)
-			{
-				m->c->will->payloadlen = options->will->payload.len;
-				source = options->will->payload.data;
-			}
-			else
-			{
-				m->c->will->payloadlen = strlen(options->will->message);
-				source = (void*)options->will->message;
-			}
-			m->c->will->payload = malloc(m->c->will->payloadlen);
-			memcpy(m->c->will->payload, source, m->c->will->payloadlen);
-		}
-		else
-		{
-			m->c->will->payload = NULL;
-			m->c->will->payloadlen = 0;
-		}
+		m->c->will->msg = MQTTStrdup(options->will->message);
 		m->c->will->qos = options->will->qos;
 		m->c->will->retained = options->will->retained;
 		m->c->will->topic = MQTTStrdup(options->will->topicName);
 	}
-
+	
 #if defined(OPENSSL)
 	if (m->c->sslopts)
 	{
@@ -1158,13 +1084,6 @@ static int MQTTClient_connectURI(MQTTClient handle, MQTTClient_connectOptions* o
 
 	m->c->username = MQTTStrdup(options->username);
 	m->c->password = MQTTStrdup(options->password);
-	if (options->password)
-		m->c->passwordlen = strlen(options->password);
-	else if (options->struct_version >= 5 && options->binarypwd.data)
-	{
-		m->c->password = options->binarypwd.data; //XXX THOR need to dup here!
-		m->c->passwordlen = options->binarypwd.len;
-	}
 	m->c->retryInterval = options->retryInterval;
 
 	if (options->struct_version >= 3)
@@ -1200,7 +1119,9 @@ int MQTTClient_connect(MQTTClient handle, MQTTClient_connectOptions* options)
 		goto exit;
 	}
 
-	if (strncmp(options->struct_id, "MQTC", 4) != 0 || 	options->struct_version < 0 || options->struct_version > 5)
+	if (strncmp(options->struct_id, "MQTC", 4) != 0 || 
+		(options->struct_version != 0 && options->struct_version != 1 && options->struct_version != 2
+			&& options->struct_version != 3 && options->struct_version != 4))
 	{
 		rc = MQTTCLIENT_BAD_STRUCTURE;
 		goto exit;
@@ -1208,13 +1129,13 @@ int MQTTClient_connect(MQTTClient handle, MQTTClient_connectOptions* options)
 
 	if (options->will) /* check validity of will options structure */
 	{
-		if (strncmp(options->will->struct_id, "MQTW", 4) != 0 || (options->will->struct_version != 0 && options->will->struct_version != 1))
+		if (strncmp(options->will->struct_id, "MQTW", 4) != 0 || options->will->struct_version != 0)
 		{
 			rc = MQTTCLIENT_BAD_STRUCTURE;
 			goto exit;
 		}
 	}
-
+	
 #if defined(OPENSSL)
 	if (options->struct_version != 0 && options->ssl) /* check validity of SSL options structure */
 	{
@@ -1260,10 +1181,6 @@ int MQTTClient_connect(MQTTClient handle, MQTTClient_connectOptions* options)
 exit:
 	if (m->c->will)
 	{
-		if (m->c->will->payload)
-			free(m->c->will->payload);
-		if (m->c->will->topic)
-			free(m->c->will->topic);
 		free(m->c->will);
 		m->c->will = NULL;
 	}
@@ -1277,7 +1194,7 @@ exit:
 /**
  * mqttclient_mutex must be locked when you call this function, if multi threaded
  */
-static int MQTTClient_disconnect1(MQTTClient handle, int timeout, int call_connection_lost, int stop)
+int MQTTClient_disconnect1(MQTTClient handle, int timeout, int call_connection_lost, int stop)
 {
 	MQTTClients* m = handle;
 	START_TIME_TYPE start;
@@ -1323,6 +1240,7 @@ static int MQTTClient_disconnect1(MQTTClient handle, int timeout, int call_conne
 exit:
 	if (stop)
 		MQTTClient_stop();
+
 	if (call_connection_lost && m->cl && was_connected)
 	{
 		Log(TRACE_MIN, -1, "Calling connectionLost for client %s", m->c->clientID);
@@ -1336,7 +1254,7 @@ exit:
 /**
  * mqttclient_mutex must be locked when you call this function, if multi threaded
  */
-static int MQTTClient_disconnect_internal(MQTTClient handle, int timeout)
+int MQTTClient_disconnect_internal(MQTTClient handle, int timeout)
 {
 	return MQTTClient_disconnect1(handle, timeout, 1, 1);
 }
@@ -1407,7 +1325,7 @@ int MQTTClient_subscribeMany(MQTTClient handle, int count, char* const* topic, i
 			rc = MQTTCLIENT_BAD_UTF8_STRING;
 			goto exit;
 		}
-
+		
 		if(qos[i] < 0 || qos[i] > 2)
 		{
 			rc = MQTTCLIENT_BAD_QOS;
@@ -1699,14 +1617,13 @@ exit:
 }
 
 
-static void MQTTClient_retry(void)
+void MQTTClient_retry(void)
 {
-	static time_t last = 0L;
 	time_t now;
 
 	FUNC_ENTRY;
 	time(&(now));
-	if (difftime(now, last) > retryLoopInterval)
+	if (difftime(now, last) > 5)
 	{
 		time(&(last));
 		MQTTProtocol_keepalive(now);
@@ -1718,7 +1635,7 @@ static void MQTTClient_retry(void)
 }
 
 
-static MQTTPacket* MQTTClient_cycle(int* sock, unsigned long timeout, int* rc)
+MQTTPacket* MQTTClient_cycle(int* sock, unsigned long timeout, int* rc)
 {
 	struct timeval tp = {0L, 0L};
 	static Ack ack;
@@ -1805,14 +1722,14 @@ static MQTTPacket* MQTTClient_cycle(int* sock, unsigned long timeout, int* rc)
 }
 
 
-static MQTTPacket* MQTTClient_waitfor(MQTTClient handle, int packet_type, int* rc, long timeout)
+MQTTPacket* MQTTClient_waitfor(MQTTClient handle, int packet_type, int* rc, long timeout)
 {
 	MQTTPacket* pack = NULL;
 	MQTTClients* m = handle;
 	START_TIME_TYPE start = MQTTClient_start_clock();
 
 	FUNC_ENTRY;
-	if (((MQTTClients*)handle) == NULL || timeout <= 0L)
+	if (((MQTTClients*)handle) == NULL)
 	{
 		*rc = MQTTCLIENT_FAILURE;
 		goto exit;
@@ -2013,23 +1930,29 @@ int MQTTClient_waitForCompletion(MQTTClient handle, MQTTClient_deliveryToken mdt
 		rc = MQTTCLIENT_FAILURE;
 		goto exit;
 	}
+	if (m->c->connected == 0)
+	{
+		rc = MQTTCLIENT_DISCONNECTED;
+		goto exit;
+	}
+
+	if (ListFindItem(m->c->outboundMsgs, &mdt, messageIDCompare) == NULL)
+	{
+		rc = MQTTCLIENT_SUCCESS; /* well we couldn't find it */
+		goto exit;
+	}
 
 	elapsed = MQTTClient_elapsed(start);
 	while (elapsed < timeout)
 	{
-		if (m->c->connected == 0)
-		{
-			rc = MQTTCLIENT_DISCONNECTED;
-			goto exit;
-		}
+		Thread_unlock_mutex(mqttclient_mutex);
+		MQTTClient_yield();
+		Thread_lock_mutex(mqttclient_mutex);
 		if (ListFindItem(m->c->outboundMsgs, &mdt, messageIDCompare) == NULL)
 		{
 			rc = MQTTCLIENT_SUCCESS; /* well we couldn't find it */
 			goto exit;
 		}
-		Thread_unlock_mutex(mqttclient_mutex);
-		MQTTClient_yield();
-		Thread_lock_mutex(mqttclient_mutex);
 		elapsed = MQTTClient_elapsed(start);
 	}
 
@@ -2124,7 +2047,7 @@ void MQTTProtocol_checkPendingWrites()
 }
 
 
-static void MQTTClient_writeComplete(int socket)
+void MQTTClient_writeComplete(int socket)				
 {
 	ListElement* found = NULL;
 	
