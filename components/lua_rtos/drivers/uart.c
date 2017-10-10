@@ -101,8 +101,8 @@ DRIVER_REGISTER_BEGIN(UART,uart,uart_locks,NULL,uart_lock_resources);
 DRIVER_REGISTER_END(UART,uart,uart_locks,NULL,uart_lock_resources);
 
 // Flags for determine some UART states
-#define UART_FLAG_INIT		(1 << 1)
-#define UART_FLAG_IRQ_INIT	(1 << 2)
+#define UART_FLAG_INIT		(1 << 0)
+#define UART_FLAG_IRQ_INIT	(1 << 1)
 
 #define ETS_UART_INUM  5
 #define UART_INTR_SOURCE(u) ((u==0)?ETS_UART0_INTR_SOURCE:( (u==1)?ETS_UART1_INTR_SOURCE:((u==2)?ETS_UART2_INTR_SOURCE:0)))
@@ -206,7 +206,7 @@ static void uart_pin_config(int8_t unit, uint8_t flags) {
     // Configure TX
     if ((flags & UART_FLAG_WRITE) && (uart[unit].tx >= 0)) {
         PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[uart[unit].tx], PIN_FUNC_GPIO);
-        gpio_set_direction(uart[unit].tx, GPIO_MODE_OUTPUT);
+        gpio_set_level(uart[unit].tx, 1);
         gpio_matrix_out(uart[unit].tx, tx_sig, 0, 0);
     }
 
@@ -302,75 +302,71 @@ void IRAM_ATTR uart_ll_set_raw(uint8_t raw) {
 	console_raw = raw;
 }
 
-void IRAM_ATTR uart_rx_intr_handler(void *para) {
+void IRAM_ATTR uart_rx_intr_handler(void *args) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     uint32_t uart_intr_status = 0;
     console_deferred_data data;
 
 	uint8_t byte, status;
 	int signal = 0;
-	int unit = 0;
+	int unit = (int)args;
 
-	for(;unit < NUART;unit++) {
-		if (!(uart[unit].flags & UART_FLAG_INIT)) continue;
+	uart_intr_status = READ_PERI_REG(UART_INT_ST_REG(unit));
 
-		uart_intr_status = READ_PERI_REG(UART_INT_ST_REG(unit)) ;
+	while (uart_intr_status != 0x0) {
+		if (UART_FRM_ERR_INT_ST == (uart_intr_status & UART_FRM_ERR_INT_ST)) {
+			WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_FRM_ERR_INT_CLR);
+		} else if (UART_RXFIFO_FULL_INT_ST == (uart_intr_status & UART_RXFIFO_FULL_INT_ST)) {
+			WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_RXFIFO_FULL_INT_CLR);
 
-	    while (uart_intr_status != 0x0) {
-	        if (UART_FRM_ERR_INT_ST == (uart_intr_status & UART_FRM_ERR_INT_ST)) {
-	            WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_FRM_ERR_INT_CLR);
-	        } else if (UART_RXFIFO_FULL_INT_ST == (uart_intr_status & UART_RXFIFO_FULL_INT_ST)) {
-	            WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_RXFIFO_FULL_INT_CLR);
+			while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT) {
+				byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
+				if (queue_byte(unit, byte, &status, &signal)) {
+					// Put byte to UART queue
+					xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
+				} else {
+					if (signal) {
+						data.type = 0;
+						data.data = signal;
 
-	            while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT) {
-					byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
-					if (queue_byte(unit, byte, &status, &signal)) {
-			            // Put byte to UART queue
-			            xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
-					} else {
-						if (signal) {
-							data.type = 0;
-							data.data = signal;
-
-							xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
-						}
-
-						if (status) {
-							data.type = 1;
-							data.data = status;
-
-							xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
-						}
+						xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
 					}
-	            }
-	        } else if (UART_RXFIFO_TOUT_INT_ST == (uart_intr_status & UART_RXFIFO_TOUT_INT_ST)) {
-	            WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_RXFIFO_TOUT_INT_CLR);
 
-	            while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT) {
-					byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
-					if (queue_byte(unit, byte, &status, &signal)) {
-			            // Put byte to UART queue
-			            xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
-					} else {
-						if (signal) {
-							data.type = 0;
-							data.data = signal;
+					if (status) {
+						data.type = 1;
+						data.data = status;
 
-							xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
-						}
-
-						if (status) {
-							data.type = 1;
-							data.data = status;
-
-							xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
-						}
+						xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
 					}
-	            }
-	        }
+				}
+			}
+		} else if (UART_RXFIFO_TOUT_INT_ST == (uart_intr_status & UART_RXFIFO_TOUT_INT_ST)) {
+			WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_RXFIFO_TOUT_INT_CLR);
 
-	        uart_intr_status = READ_PERI_REG(UART_INT_ST_REG(unit)) ;
-	    }
+			while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT) {
+				byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
+				if (queue_byte(unit, byte, &status, &signal)) {
+					// Put byte to UART queue
+					xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
+				} else {
+					if (signal) {
+						data.type = 0;
+						data.data = signal;
+
+						xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
+					}
+
+					if (status) {
+						data.type = 1;
+						data.data = status;
+
+						xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
+					}
+				}
+			}
+		}
+
+		uart_intr_status = READ_PERI_REG(UART_INT_ST_REG(unit));
 	}
 
 	portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
@@ -403,6 +399,7 @@ driver_error_t *uart_pin_map(int unit, int rx, int tx) {
 	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
 		return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
 	}
+
     if (uart[unit].flags & UART_FLAG_INIT) {
 		return driver_error(SPI_DRIVER, UART_ERR_CANNOT_CHANGE_PINMAP, NULL);
     }
@@ -491,6 +488,13 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 
 	// There are not errors, continue with init ...
 
+    // Enable module
+    switch (unit) {
+    	case 0: periph_module_enable(PERIPH_UART0_MODULE); break;
+    	case 1: periph_module_enable(PERIPH_UART1_MODULE); break;
+    	case 2: periph_module_enable(PERIPH_UART2_MODULE); break;
+    }
+
     // If the requested queue size is greater than current queue size,
 	// delete it and create a new one
     if (qs > uart[unit].qs) {
@@ -533,7 +537,7 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 
     uart[unit].flags |= UART_FLAG_INIT;
 
-	if ((flags & (UART_FLAG_READ | UART_FLAG_WRITE)) == (UART_FLAG_READ | UART_FLAG_WRITE)) {
+    if ((flags & (UART_FLAG_READ | UART_FLAG_WRITE)) == (UART_FLAG_READ | UART_FLAG_WRITE)) {
 	    syslog(LOG_INFO, "%s: at pins rx=%s%d/tx=%s%d",names[unit],
 	            gpio_portname(uart[unit].rx), gpio_name(uart[unit].rx),
 	            gpio_portname(uart[unit].tx), gpio_name(uart[unit].tx));
@@ -561,30 +565,28 @@ driver_error_t *uart_setup_interrupts(int8_t unit) {
     }
 
     uint32_t reg_val = 0;
-	uint32_t mask = UART_RXFIFO_TOUT_INT_ENA | UART_FRM_ERR_INT_ENA | UART_RXFIFO_FULL_INT_ENA;
-		
-	ESP_INTR_DISABLE(ETS_UART_INUM);
+	uint32_t mask = UART_RXFIFO_TOUT_INT_ENA_M | UART_FRM_ERR_INT_ENA_M | UART_RXFIFO_FULL_INT_ENA_M;
+
+	esp_intr_alloc(UART_INTR_SOURCE(unit), ESP_INTR_FLAG_IRAM, uart_rx_intr_handler, (void *)((uint32_t)unit), NULL);
+
+	WRITE_PERI_REG(UART_INT_CLR_REG(unit), 0x1ff);
 
 	// Update CONF1 register
     reg_val = READ_PERI_REG(UART_CONF1_REG(unit)) & ~((UART_RX_FLOW_THRHD << UART_RX_FLOW_THRHD_S) | UART_RX_FLOW_EN) ;
 
-    reg_val |= ((mask & UART_RXFIFO_TOUT_INT_ENA) ?
+    reg_val |= ((mask & UART_RXFIFO_TOUT_INT_ENA_M) ?
                 (((2 & UART_RX_TOUT_THRHD) << UART_RX_TOUT_THRHD_S) | UART_RX_TOUT_EN) : 0);
 
-    reg_val |= ((mask & UART_RXFIFO_FULL_INT_ENA) ?
+    reg_val |= ((mask & UART_FRM_ERR_INT_ENA_M) ?
                 ((10 & UART_RXFIFO_FULL_THRHD) << UART_RXFIFO_FULL_THRHD_S) : 0);
 
-    reg_val |= ((mask & UART_TXFIFO_EMPTY_INT_ENA) ?
+    reg_val |= ((mask & UART_RXFIFO_FULL_INT_ENA_M) ?
                 ((20 & UART_TXFIFO_EMPTY_THRHD) << UART_TXFIFO_EMPTY_THRHD_S) : 0);
 
     WRITE_PERI_REG(UART_CONF1_REG(unit), reg_val);
 
-	// Update INT_ENA register
+    // Update INT_ENA register
     WRITE_PERI_REG(UART_INT_ENA_REG(unit), mask);
-	
-	intr_matrix_set(xPortGetCoreID(), UART_INTR_SOURCE(unit), ETS_UART_INUM);
-	xt_set_interrupt_handler(ETS_UART_INUM, uart_rx_intr_handler, NULL);
-	ESP_INTR_ENABLE(ETS_UART_INUM);
 	
 	syslog(LOG_INFO, "%s: interrupts enabled",names[unit]);
 
