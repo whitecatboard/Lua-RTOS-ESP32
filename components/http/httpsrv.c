@@ -916,8 +916,10 @@ int http_start(lua_State* L) {
 		}
 
 		http_secure.port = luaL_optinteger( L, 2, CONFIG_LUA_RTOS_HTTP_SERVER_PORT_SSL );
-		http_secure.certificate = strdup(luaL_optstring( L, 3, NULL ));
-		http_secure.private_key = strdup(luaL_optstring( L, 4, NULL ));
+		char *certificate = luaL_optstring( L, 3, NULL );
+		char *private_key = luaL_optstring( L, 4, NULL );
+		http_secure.certificate = certificate ? strdup(certificate) : NULL;
+		http_secure.private_key = private_key ? strdup(private_key) : NULL;
 
 		if ( http_secure.port && http_secure.certificate && http_secure.private_key ) {
 			res = pthread_create(&thread_secure, &attr, http_thread, &http_secure);
