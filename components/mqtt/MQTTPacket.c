@@ -84,6 +84,9 @@ pf new_packets[] =
 };
 
 
+static char* readUTFlen(char** pptr, char* enddata, int* len);
+static int MQTTPacket_send_ack(int type, int msgid, int dup, networkHandles *net);
+
 /**
  * Reads one MQTT packet from a socket.
  * @param socket a socket from which to read an MQTT packet
@@ -432,6 +435,20 @@ void writeUTF(char** pptr, const char* string)
 	writeInt(pptr, (int)len);
 	memcpy(*pptr, string, len);
 	*pptr += len;
+}
+
+
+/**
+ * Writes length delimited data to an output buffer
+ * @param pptr pointer to the output buffer - incremented by the number of bytes used & returned
+ * @param data the data to write
+ * @param datalen the length of the data to write
+ */
+void writeData(char** pptr, const void* data, int datalen)
+{
+	writeInt(pptr, datalen);
+	memcpy(*pptr, data, datalen);
+	*pptr += datalen;
 }
 
 

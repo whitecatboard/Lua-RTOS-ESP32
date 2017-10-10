@@ -199,22 +199,20 @@ static void connectionLost(void* context, char* cause) {
 // Lua: result = setup( id, clock )
 static int lmqtt_client( lua_State* L ){
     int rc = 0;
-    const char *host;
-    const char *clientId;
-    int port;
-    int secure;
     size_t lenClientId, lenHost;
     mqtt_userdata *mqtt;
     char url[250];
 
-    clientId = luaL_checklstring( L, 1, &lenClientId ); //is being strdup'd in MQTTClient_create
-    host = luaL_checklstring( L, 2, &lenHost ); //url is being strdup'd in MQTTClient_connectURI
-    port = luaL_checkinteger( L, 3 );
+    const char *clientId = luaL_checklstring( L, 1, &lenClientId ); //is being strdup'd in MQTTClient_create
+    const char *host = luaL_checklstring( L, 2, &lenHost ); //url is being strdup'd in MQTTClient_connectURI
+    int port = luaL_checkinteger( L, 3 );
 
-    luaL_checktype(L, 4, LUA_TBOOLEAN);
-    secure = lua_toboolean( L, 4 );
+		int persistence = luaL_optinteger( L, 4, MQTTCLIENT_PERSISTENCE_NONE );
 
-    const char *ca_file = luaL_optstring( L, 5, NULL );
+    luaL_checktype(L, 5, LUA_TBOOLEAN);
+    int secure = lua_toboolean( L, 5 );
+
+    const char *ca_file = luaL_optstring( L, 6, NULL );
     
     // Allocate mqtt structure and initialize
     mqtt = (mqtt_userdata *)lua_newuserdata(L, sizeof(mqtt_userdata));
@@ -238,7 +236,7 @@ static int lmqtt_client( lua_State* L ){
     }
     
     //url is being strdup'd in MQTTClient_connectURI
-    rc = MQTTClient_create(&mqtt->client, url, clientId, MQTTCLIENT_PERSISTENCE_NONE, NULL);
+    rc = MQTTClient_create(&mqtt->client, url, clientId, persistence, NULL);
     if (rc < 0){
       return luaL_exception(L, LUA_MQTT_ERR_CANT_CREATE_CLIENT);
     }
@@ -442,6 +440,10 @@ static const LUA_REG_TYPE lmqtt_map[] = {
   { LSTRKEY("QOS0"), LINTVAL(0) },
   { LSTRKEY("QOS1"), LINTVAL(1) },
   { LSTRKEY("QOS2"), LINTVAL(2) },
+
+  { LSTRKEY("PERSISTENCE_FILE"), LINTVAL(MQTTCLIENT_PERSISTENCE_DEFAULT) },
+  { LSTRKEY("PERSISTENCE_NONE"), LINTVAL(MQTTCLIENT_PERSISTENCE_NONE) },
+  { LSTRKEY("PERSISTENCE_USER"), LINTVAL(MQTTCLIENT_PERSISTENCE_USER) },
 
   // Error definitions
   DRIVER_REGISTER_LUA_ERRORS(mqtt)

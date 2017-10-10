@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2014 IBM Corp.
+ * Copyright (c) 2009, 2017 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -14,6 +14,7 @@
  *    Ian Craggs - initial API and implementation and/or initial documentation
  *    Ian Craggs, Allan Stockdill-Mander - SSL updates
  *    Ian Craggs - MQTT 3.1.1 support
+ *    Ian Craggs - big endian Linux reversed definition
  *******************************************************************************/
 
 #if !defined(MQTTPACKET_H)
@@ -43,6 +44,12 @@ enum msgTypes
 	PINGREQ, PINGRESP, DISCONNECT
 };
 
+#if defined(__linux__)
+#include <endian.h>
+#if __BYTE_ORDER == __BIG_ENDIAN
+	#define REVERSED 1
+#endif
+#endif
 
 /**
  * Bitfields for the MQTT header byte.
@@ -223,6 +230,7 @@ unsigned char readChar(char** pptr);
 void writeChar(char** pptr, char c);
 void writeInt(char** pptr, int anInt);
 void writeUTF(char** pptr, const char* string);
+void writeData(char** pptr, const void* data, int datalen);
 
 char* MQTTPacket_name(int ptype);
 
