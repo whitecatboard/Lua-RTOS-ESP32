@@ -283,6 +283,8 @@ driver_error_t *sensor_register_callback(sensor_instance_t *unit, sensor_callbac
 void sensor_queue_callbacks(sensor_instance_t *unit, uint8_t from, uint8_t to);
 void sensor_init_data(sensor_instance_t *unit);
 void sensor_update_data(sensor_instance_t *unit, uint8_t from, uint8_t to, sensor_value_t *new_data, uint64_t delay, uint64_t rate, uint8_t ignore, uint64_t ignore_val);
+void IRAM_ATTR sensor_lock(sensor_instance_t *unit);
+void IRAM_ATTR sensor_unlock(sensor_instance_t *unit);
 
 // SENSOR errors
 #define SENSOR_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(SENSOR_DRIVER_ID) |  0)

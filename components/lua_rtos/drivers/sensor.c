@@ -535,8 +535,7 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 
 		for (j=0;j < SENSOR_MAX_INTERFACES;j++) {
 			is_auto = (
-				(unit->sensor->interface[j].flags & (SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF)) &&
-				(SENSOR_FLAG_GET_PROPERTY(unit->sensor->interface[j]) == i)
+				(unit->sensor->interface[j].flags & (SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF))
 			);
 
 			if (is_auto) break;
@@ -565,9 +564,8 @@ driver_error_t *sensor_read(sensor_instance_t *unit, const char *id, sensor_valu
 	*value = NULL;
 	for(idx=0;idx <  SENSOR_MAX_PROPERTIES;idx++) {
 		if (unit->sensor->data[idx].id) {
-			if (strcmp(unit->sensor->data[idx].id,id) == 0) {
+			if (strcmp(unit->sensor->data[idx].id, id) == 0) {
 				*value = &unit->data[idx];
-
 				mtx_unlock(&unit->mtx);
 				return NULL;
 			}
@@ -804,6 +802,14 @@ void IRAM_ATTR sensor_update_data(sensor_instance_t *unit, uint8_t from, uint8_t
 		unit->latch[i].t = now;
 	}
 
+	mtx_unlock(&unit->mtx);
+}
+
+void IRAM_ATTR sensor_lock(sensor_instance_t *unit) {
+	mtx_lock(&unit->mtx);
+}
+
+void IRAM_ATTR sensor_unlock(sensor_instance_t *unit) {
 	mtx_unlock(&unit->mtx);
 }
 
