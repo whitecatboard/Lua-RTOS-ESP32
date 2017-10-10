@@ -348,11 +348,28 @@ menu "Lua RTOS"
 		endmenu
 		
 		menu "External ADC"
-			config ADC_ADS1115
-				bool "Use I2C ADC ADS1115"
-				default y
-				help
-					ADS1115 is an ADC converter with I2C interface. 4 channels, resolution of 16 bits.
+            choice LUA_RTOS_EXTERNAL_ADC_TYPE
+                prompt "External ADC Type"       
+                    default EXTERNAL_ADC_NONE
+
+                config EXTERNAL_ADC_NONE
+                    bool "None"
+                
+                config ADC_ADS1115
+                    bool "Use I2C ADC ADS1115"
+                    help
+                        ADS1115 is an ADC converter with I2C interface. 4 channels, resolution of 16 bits.
+    
+                config ADC_MCP3008
+                    bool "Use SPI ADC MCP3008"
+                    help
+                        MCP3008 is an ADC converter with SPI interface. 8 channels, resolution of 10 bits.
+    
+                config ADC_MCP3208
+                    bool "Use SPI ADC MCP3208"
+                    help
+                        MCP3208 is an ADC converter with SPI interface. 8 channels, resolution of 12 bits.
+            endchoice    
 
 			config ADC_ADS1115_I2C
 				depends on ADC_ADS1115
@@ -369,12 +386,6 @@ menu "Lua RTOS"
 					default 400000
 					help
 						I2C port speed in hertz
-
-			config ADC_MCP3008
-				bool "Use SPI ADC MCP3008"
-				default y
-				help
-					MCP3008 is an ADC converter with SPI interface. 8 channels, resolution of 10 bits.
 
 			config ADC_MCP3008_SPI
 				depends on ADC_MCP3008
@@ -393,12 +404,6 @@ menu "Lua RTOS"
 					int "MCP3008 speed in Hertz"
 					range 1000000 3600000
 					default 1000000						
-
-			config ADC_MCP3208
-				bool "Use SPI ADC MCP3208"
-				default y
-				help
-					MCP3208 is an ADC converter with SPI interface. 8 channels, resolution of 12 bits.
 
 			config ADC_MCP3208_SPI
 				depends on ADC_MCP3208
