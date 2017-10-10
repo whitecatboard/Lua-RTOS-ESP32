@@ -39,23 +39,26 @@
 #include <drivers/cpu.h>
 #include "rom/rtc.h"
 #include "esp_sleep.h"
+#include "esp_panic.h"
 
 extern const int cpu_error_map;
 
 // Module errors
-#define LUA_CPU_ERR_CANT_WAKEON_EXT0   (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  0)
-#define LUA_CPU_ERR_CANT_WAKEON_EXT1   (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  1)
-#define LUA_CPU_ERR_CANT_WAKEON_TIMER  (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  2)
-#define LUA_CPU_ERR_CANT_WAKEON_TOUCH  (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  3)
-#define LUA_CPU_ERR_CANT_WAKEON_ULP    (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  4)
+#define LUA_CPU_ERR_CANT_WAKEON_EXT0    (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  0)
+#define LUA_CPU_ERR_CANT_WAKEON_EXT1    (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  1)
+#define LUA_CPU_ERR_CANT_WAKEON_TIMER   (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  2)
+#define LUA_CPU_ERR_CANT_WAKEON_TOUCH   (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  3)
+#define LUA_CPU_ERR_CANT_WAKEON_ULP     (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  4)
+#define LUA_CPU_ERR_CANT_SET_WATCHPOINT (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  5)
 
 // Register drivers and errors
 DRIVER_REGISTER_BEGIN(CPU,cpu,NULL,NULL,NULL);
-	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnExt0,  "can't wake on EXT0",  LUA_CPU_ERR_CANT_WAKEON_EXT0);
-	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnExt1,  "can't wake on EXT1",  LUA_CPU_ERR_CANT_WAKEON_EXT1);
-	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnTimer, "can't wake on timer", LUA_CPU_ERR_CANT_WAKEON_TIMER);
-	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnTouch, "can't wake on touch", LUA_CPU_ERR_CANT_WAKEON_TOUCH);
-	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnULP,   "can't wake on ULP",   LUA_CPU_ERR_CANT_WAKEON_ULP);
+	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnExt0,    "can't wake on EXT0",   LUA_CPU_ERR_CANT_WAKEON_EXT0);
+	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnExt1,    "can't wake on EXT1",   LUA_CPU_ERR_CANT_WAKEON_EXT1);
+	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnTimer,   "can't wake on timer",  LUA_CPU_ERR_CANT_WAKEON_TIMER);
+	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnTouch,   "can't wake on touch",  LUA_CPU_ERR_CANT_WAKEON_TOUCH);
+	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnULP,     "can't wake on ULP",    LUA_CPU_ERR_CANT_WAKEON_ULP);
+	DRIVER_REGISTER_ERROR(CPU, cpu, CannotSetWatchpoint, "can't set Watchpoint", LUA_CPU_ERR_CANT_SET_WATCHPOINT);
 DRIVER_REGISTER_END(CPU,cpu,NULL,NULL,NULL);
 
 static int lcpu_model(lua_State *L) {
@@ -172,8 +175,20 @@ static int lcpu_wakeup_ext1_pin(lua_State *L) {
 				//printf("Woke up from unknown GPIO\n");
 				return 0;
 		}
-		
+
 	}
+	return 0;
+}
+
+static int lcpu_watchpoint(lua_State *L) {
+	uint32_t addr = luaL_checkinteger(L, 1);
+	int size = luaL_optinteger(L, 2, 4); //must be one of 2^n, with n in [0..6]
+	int flags = luaL_optinteger(L, 3, ESP_WATCHPOINT_STORE); //when to break
+
+	if (size!=1 && size!=2 && size!=4 && size!=8 && size!=16 && size!=32 && size!=64)
+		return luaL_exception(L, LUA_CPU_ERR_CANT_SET_WATCHPOINT);
+
+	esp_set_watchpoint(0, (void *)addr, size, flags); //watchpoint 1 may be used by freertos CONFIG_FREERTOS_WATCHPOINT_END_OF_STACK
 	return 0;
 }
 
@@ -187,6 +202,7 @@ static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "deepsleep" ),              LFUNCVAL( lcpu_deepsleep ) },
   { LSTRKEY( "wakeupext1pin" ),          LFUNCVAL( lcpu_wakeup_ext1_pin ) },
   { LSTRKEY( "wakeupext1mask" ),         LFUNCVAL( lcpu_wakeup_ext1_mask ) },
+  { LSTRKEY( "watchpoint" ),             LFUNCVAL( lcpu_watchpoint ) },
 
   { LSTRKEY( "RESET_POWERON" ),          LINTVAL( POWERON_RESET          ) },
   { LSTRKEY( "RESET_SW" ),               LINTVAL( SW_RESET               ) },
@@ -209,6 +225,10 @@ static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "WAKEUP_TIMER" ),           LINTVAL( ESP_SLEEP_WAKEUP_TIMER     ) },
   { LSTRKEY( "WAKEUP_TOUCHPAD" ),        LINTVAL( ESP_SLEEP_WAKEUP_TOUCHPAD  ) },
   { LSTRKEY( "WAKEUP_ULP" ),             LINTVAL( ESP_SLEEP_WAKEUP_ULP       ) },
+
+  { LSTRKEY( "WATCHPOINT_LOAD" ),        LINTVAL( ESP_WATCHPOINT_LOAD    ) },
+  { LSTRKEY( "WATCHPOINT_STORE" ),       LINTVAL( ESP_WATCHPOINT_STORE   ) },
+  { LSTRKEY( "WATCHPOINT_ACCESS" ),      LINTVAL( ESP_WATCHPOINT_ACCESS  ) },
 
 	DRIVER_REGISTER_LUA_ERRORS(cpu)
 	{ LNILKEY, LNILVAL }

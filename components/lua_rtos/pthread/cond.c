@@ -51,12 +51,14 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) {
         	mtx_unlock(&cond_mtx);
 			return ENOMEM;
 		}
+		scond->referenced = 0;
 	} else {
 		scond = (struct pthread_cond *)cond;
 	}
 
 	if (scond->referenced > 0) {
 		mtx_unlock(&cond_mtx);
+		if (*cond != PTHREAD_COND_INITIALIZER) free(scond);
 		return EBUSY;
 	}
 
@@ -64,10 +66,12 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) {
         mtx_init(&scond->mutex, NULL, NULL, 0);
         if (!scond->mutex.sem) {
         	mtx_unlock(&cond_mtx);
+        	if (*cond != PTHREAD_COND_INITIALIZER) free(scond);
         	return ENOMEM;
         }
     } else {
     	mtx_unlock(&cond_mtx);
+    	if (*cond != PTHREAD_COND_INITIALIZER) free(scond);
     	return EBUSY;
     }
     

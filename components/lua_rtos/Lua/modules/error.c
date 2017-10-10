@@ -62,18 +62,29 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     			driver_get_err_msg(&err),
                 err.msg
             );
+        
+        free(err.lock_error);
+        free(error);
+
+        return ret_val;
     	} else {
             ret_val = luaL_error(L,
                 "%d:%s",
     			err.exception,
     			driver_get_err_msg(&err)
             );
+        
+        free(err.lock_error);
+        free(error);
+
+        return ret_val;
     	}
     }
     
+    ret_val = luaL_error(L, driver_get_err_msg(error));
     free(error);
 
-    return luaL_error(L, driver_get_err_msg(error));
+    return ret_val;
 }
 
 int luaL_deprecated(lua_State* L, const char *old, const char *new) {

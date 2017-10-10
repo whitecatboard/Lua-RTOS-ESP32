@@ -145,20 +145,16 @@ static driver_error_t *wifi_init(wifi_mode_t mode) {
 }
 
 static driver_error_t *wifi_deinit() {
-	// TO DO
-	// esp_wifi_dinit: This API can not be called yet and will be done in the future.
-	#if 0
 	driver_error_t *error;
 	if (status_get(STATUS_WIFI_INITED)) {
 		// Remove and stop wifi driver from system
 		if ((error = wifi_check_error(esp_wifi_deinit()))) return error;
 
-		// Remove event group
-		vEventGroupDelete(netEvent);
+		// doesn't seem to be recreated so DON'T remove the event group
+		// vEventGroupDelete(netEvent);
 
 		status_clear(STATUS_WIFI_INITED);
 	}
-	#endif
 
 	return NULL;
 }

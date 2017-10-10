@@ -619,6 +619,7 @@ static DIR* vfs_spiffs_opendir(const char* name) {
 
     	return (DIR *)dir;
     } else {
+    	free(dir);
     	errno = ENOENT;
     	return NULL;
     }
@@ -643,6 +644,7 @@ static int vfs_spiffs_rmdir(const char* name) {
     check_path(name, &base_is_dir, &full_is_dir, &is_file, &file_num);
     if (full_is_dir) {
     	if (file_num > 0) {
+    		free(dir);
     		errno = ENOTEMPTY;
     		return -1;
     	} else {
@@ -652,24 +654,27 @@ static int vfs_spiffs_rmdir(const char* name) {
 	        // Open SPIFFS file
 	    	spiffs_file FP = SPIFFS_open(&fs, npath, SPIFFS_RDWR, 0);
 	        if (FP < 0) {
+	        	free(dir);
 	        	errno = spiffs_result(fs.err_code);
 	        	return -1;
 	        }
 
 	        // Remove SPIFSS file
 	        if (SPIFFS_fremove(&fs, FP) < 0) {
-	            errno = spiffs_result(fs.err_code);
+	        	free(dir);
+	        	errno = spiffs_result(fs.err_code);
 	        	SPIFFS_close(&fs, FP);
 	        	return -1;
 	        }
 
-	    	SPIFFS_close(&fs, FP);
-
+        	SPIFFS_close(&fs, FP);
+        	free(dir);
         	return 0;
     	}
     } else {
+       	free(dir);
        	errno = ENOENT;
-		return -1;
+       	return -1;
     }
 }
 
@@ -1026,17 +1031,11 @@ void vfs_spiffs_format() {
 	// Create the root folder
     spiffs_file fd = SPIFFS_open(&fs, "/.", SPIFFS_CREAT | SPIFFS_RDWR, 0);
     if (fd < 0) {
-        free(my_spiffs_work_buf);
-        free(my_spiffs_fds);
-        free(my_spiffs_cache);
         syslog(LOG_ERR, "spiffs%d can't create root folder (%s)",unit, strerror(spiffs_result(fs.err_code)));
         return;
     }
 
     if (SPIFFS_close(&fs, fd) < 0) {
-        free(my_spiffs_work_buf);
-        free(my_spiffs_fds);
-        free(my_spiffs_cache);
         syslog(LOG_ERR, "spiffs%d can't create root folder (%s)",unit, strerror(spiffs_result(fs.err_code)));
         return;
     }

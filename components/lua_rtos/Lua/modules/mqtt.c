@@ -422,6 +422,7 @@ static int lmqtt_client_gc (lua_State *L) {
         if (mqtt->ca_file) {
         	free((char*)mqtt->ca_file);
         	mqtt->ca_file = NULL;
+        	mqtt->ssl_opts.trustStore = NULL;
         }
         if (mqtt->conn_opts.username) {
         	free((char*)mqtt->conn_opts.username);
