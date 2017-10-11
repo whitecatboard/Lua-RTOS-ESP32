@@ -82,7 +82,7 @@ static int lmdns_start( lua_State* L ){
   mdns->L = L;
 
   rc = mdns_init(interface, &(mdns->client));
-  if (rc < 0){
+  if (0 != rc){
     return luaL_exception(L, LUA_MDNS_ERR_CANT_CREATE_SERVICE);
   }
 
