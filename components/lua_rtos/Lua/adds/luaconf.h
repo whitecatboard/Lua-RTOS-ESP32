@@ -72,13 +72,6 @@
 #define lua_saveline(L,idx)     { (void)L; (void)idx; }
 #define lua_freeline(L,b)       { (void)L; (void)b; }
 
-#if CONFIG_LUA_RTOS_LUA_USE_SSD1306
-    #define LINIT_REG_OSCREEN {AUXLIB_SSD1306, luaopen_ssd1306},
-#else
-    #define LINIT_REG_OSCREEN
-#endif
-
-  LINIT_REG_OSCREEN \
 
 #ifdef liolib_c
 #undef liolib_c
