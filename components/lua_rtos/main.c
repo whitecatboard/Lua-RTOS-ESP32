@@ -63,8 +63,6 @@ int linenoise(char *buf, const char *prompt);
 void app_main() {
 	_sys_init();
 
-	initArduino();
-
 	#if CONFIG_LUA_RTOS_USE_LED_ACT
 	// Init leds
 	gpio_pin_output(CONFIG_LUA_RTOS_LED_ACT);

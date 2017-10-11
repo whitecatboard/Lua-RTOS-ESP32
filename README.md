@@ -1,24 +1,3 @@
-# Differences of this fork
-* this fork of Lua-RTOS-ESP32 is need for d-duino-esp32 like popular chinese boads. (ESP32 dev board with installed I2C 0.96'' OLED display. SDA=gpio5, SCL=gpio4)
-
-![d-duino-esp32](./d-duino-esp32.jpg)
-
-* Adafruit Arduino libraries are used to support of OLED. in the Lua it is the class "ssd1306".
-* support of Arduino libraries and arduino code were embedded into Lua-RTOS-ESP32.
-
-# SSD1306 Lua documentation
-[ssd1306 Lua object & text/graphical functions](./doku/ssd1306-oled.md)
-
-# To Do
-* simpler scheme to expand Lua-RTOS-ESP32 with new C modules
-
-# How to compile
-* look down to "Method 2: build by yourself" section
-* run script
-```
-./bld.sh
-```
-
 # What's Lua RTOS?
 
 Lua RTOS is a real-time operating system designed to run on embedded systems, with minimal requirements of FLASH and RAM memory. Currently Lua RTOS is available for ESP32, ESP8266 and PIC32MZ platforms, and can be easilly ported to other 32-bit platforms.
