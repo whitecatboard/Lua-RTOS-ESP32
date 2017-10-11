@@ -73,7 +73,7 @@ typedef struct {
 
 // Lua: result = setup( id, clock )
 static int lmdns_start( lua_State* L ){
-  int rc = 0;
+  int rc;
   int interface = luaL_checkinteger( L, 1 );
   const char *hostname = luaL_optstring( L, 2, NULL );
   const char *instance = luaL_optstring( L, 3, NULL );
@@ -82,20 +82,20 @@ static int lmdns_start( lua_State* L ){
   mdns->L = L;
 
   rc = mdns_init(interface, &(mdns->client));
-  if (rc < 0){
+  if (rc != 0) {
     return luaL_exception(L, LUA_MDNS_ERR_CANT_CREATE_SERVICE);
   }
 
 	if(hostname != 0) {
 		rc = mdns_set_hostname(mdns->client, hostname);
-	  if (rc < 0){
+		if (rc != 0) {
 	    printf( "mdns: could not set hostname\n");
 	  }
 	}
 	
 	if(instance != 0) {
 		rc = mdns_set_instance(mdns->client, instance);
-	  if (rc < 0){
+		if (rc != 0) {
 	    printf( "mdns: could not set instance name\n");
 	  }
 	}
@@ -242,13 +242,13 @@ static int lmdns_add_service( lua_State* L ) {
   luaL_argcheck(L, mdns, 1, "mdns expected");
 
   rc = mdns_service_add(mdns->client, service, protocol, port);
-  if(rc != 0) {
+  if (rc != 0) {
     return luaL_exception(L, LUA_MDNS_ERR_CANT_ADD_SERVICE);
   }
 
 	if(instance != 0) {
 	  rc = mdns_service_instance_set(mdns->client, service, protocol, instance);
-	  if (rc < 0){
+		if (rc != 0) {
 	    printf( "mdns: could not set instance name\n");
 	  }
 	}
@@ -271,7 +271,7 @@ static int lmdns_remove_service( lua_State* L ) {
   luaL_argcheck(L, mdns, 1, "mdns expected");
 
   rc = mdns_service_remove(mdns->client, service, protocol);
-  if(rc != 0) {
+  if (rc != 0) {
     return luaL_exception(L, LUA_MDNS_ERR_CANT_REMOVE_SERVICE);
   }
   return 0;
@@ -283,7 +283,7 @@ static int lmdns_stop( lua_State* L ) {
   luaL_argcheck(L, mdns, 1, "mdns expected");
   
   rc = mdns_service_remove_all(mdns->client);
-  if(rc != 0) {
+  if (rc != 0) {
     return luaL_exception(L, LUA_MDNS_ERR_CANT_STOP);
   }
   return 0;
