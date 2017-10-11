@@ -89,6 +89,7 @@ int pthread_mutex_init(pthread_mutex_t *mut, const pthread_mutexattr_t *attr) {
     if(!mutex->sem){
         *mut = PTHREAD_MUTEX_INITIALIZER;
         free(mutex->sem);
+        free(mutex);
         errno = ENOMEM;
         return ENOMEM;
     }
@@ -184,11 +185,11 @@ int pthread_mutex_trylock(pthread_mutex_t *mut) {
 }
 
 int pthread_mutex_destroy(pthread_mutex_t *mut) {
-	struct pthread_mutex *mutex = ( struct pthread_mutex *)(*mut);
-
     if (!mut) {
         return EINVAL;
     }
+
+    struct pthread_mutex *mutex = ( struct pthread_mutex *)(*mut);
 
     if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
         xSemaphoreGiveRecursive(mutex->sem);

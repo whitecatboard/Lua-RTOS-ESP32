@@ -162,17 +162,69 @@ static int os_remove (lua_State *L) {
   return luaL_fileresult(L, remove(filename) == 0, filename);
 #else
   struct stat statbuf;
-  const char *filename = luaL_checkstring(L, 1);
+  char *filename = (char*) luaL_checkstring(L, 1);
 
-  if (stat(filename, &statbuf) != 0) {
-	  return luaL_fileresult(L, 0, filename);
-  }
+  if (stat(filename, &statbuf) == 0) {
+		if (S_ISDIR(statbuf.st_mode)) {
+			return luaL_fileresult(L, rmdir(filename) == 0, filename);
+		} else {
+			return luaL_fileresult(L, remove(filename) == 0, filename);
+		}
+	}
 
-  if (S_ISDIR(statbuf.st_mode)) {
-	  return luaL_fileresult(L, rmdir(filename) == 0, filename);
-  } else {
-	  return luaL_fileresult(L, remove(filename) == 0, filename);
-  }
+	const char* result = strstr(filename, "*");
+	if (NULL != result) {
+		const char *path = filename;
+		char cpath[PATH_MAX];
+		DIR *dir = NULL;
+		struct dirent *ent;
+		int found = 0;
+		int rc = 0;
+
+		//search back to the last dir name
+		filename = (char*)path + strlen(path) - 1;
+		while (filename > path && *filename!=0 && *filename!='/') {
+			filename--;
+		}
+		//not path given
+		//so try to find a matching file
+		//in the current folder
+		if (filename==path) {
+			filename = (char*)path;
+			if (!getcwd(cpath, PATH_MAX)) {
+				return luaL_fileresult(L, 0, filename);
+			}
+			path = cpath;
+		}
+		else if (*filename == '/') {
+			*filename = 0; //will cut off the filename from the path
+			filename++;
+		}
+
+		// Open directory
+		if (!(dir = opendir(path))) {
+			return luaL_fileresult(L, 0, path);
+		}
+		// Read entries
+		while ((ent = readdir(dir)) != NULL) {
+			if (0==fnmatch(filename, ent->d_name, 0)) { //our implementation above does support only a subset
+				found++;
+				if (stat(ent->d_name, &statbuf) == 0) {
+					rc = (S_ISDIR(statbuf.st_mode) ? rmdir(ent->d_name) : remove(ent->d_name));
+					if ( 0 != rc ) {
+						closedir(dir);
+						return luaL_fileresult(L, rc, ent->d_name);
+					}
+				}
+			}
+		}
+		closedir(dir);
+
+		if (found>0)
+			return 0;
+	}
+
+  return luaL_fileresult(L, 0, filename);
 #endif
   // LUA RTOS END
 }

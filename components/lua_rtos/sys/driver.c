@@ -137,7 +137,7 @@ driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error
     return error;
 }
 
-// Create a driver error of type operation
+// Create a driver error
 driver_error_t *driver_error(const driver_t *driver, uint32_t exception, const char *msg) {
 	driver_error_t *error;
 

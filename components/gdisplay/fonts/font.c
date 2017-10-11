@@ -84,11 +84,13 @@ static int load_file_font(const char * fontfile, int info)
 	// Get file size
     if (stat(fontfile, &sb) != 0) {
     	syslog(LOG_ERR, "Error getting font file size");
+		fclose(fhndl);
 		return 0;
     }
 	int fsize = sb.st_size;
 	if (fsize < 30) {
 		syslog(LOG_ERR, "Error getting font file size");
+		fclose(fhndl);
 		return 0;
 	}
 
@@ -685,6 +687,9 @@ driver_error_t *gdisplay_string_pos(int x, int y, const char *buf, int *posx, in
 		return NULL;
 	}
 
+	// Get cursor
+	gdisplay_get_cursor(&cx, &cy);
+
 	if ((x != LASTX) || (y != LASTY))
 		gdisplay_set_offset(0);
 	if (x == LASTX)
@@ -694,9 +699,6 @@ driver_error_t *gdisplay_string_pos(int x, int y, const char *buf, int *posx, in
 
 	// Get clip window
 	gdisplay_get_clip_window(&x1,&y1,&x2,&y2);
-
-	// Get cursor
-	gdisplay_get_cursor(&cx, &cy);
 
 	w = getStringWidth((char*) buf);
 	h = cfont.y_size; // font height

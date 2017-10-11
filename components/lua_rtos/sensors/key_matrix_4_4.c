@@ -42,6 +42,7 @@
 
 #include <sys/mutex.h>
 #include <sys/driver.h>
+#include <sys/delay.h>
 
 #include <drivers/sensor.h>
 #include <drivers/gpio.h>

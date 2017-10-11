@@ -50,19 +50,14 @@ static const adc_dev_t adc_devs[] = {
 	{"INTERNAL", adc_internal_setup, adc_internal_read},
 #if CONFIG_ADC_MCP3008
 	{"MCP3008", adc_mcp3008_setup, adc_mcp3008_read},
-#else
-	{NULL, NULL, NULL},
 #endif
 #if CONFIG_ADC_MCP3208
 	{"MCP3208", adc_mcp3208_setup, adc_mcp3208_read},
-#else
-	{NULL, NULL, NULL},
 #endif
 #if CONFIG_ADC_ADS1115
 	{"ADS1115", adc_ads1115_setup, adc_ads1115_read},
-#else
-	{NULL, NULL, NULL},
 #endif
+	{NULL, NULL, NULL},
 };
 
 // List of channels
@@ -139,12 +134,12 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t vr
 			}
 		}
 	} else {
-		if ((unit < CPU_FIRST_ADC) || (unit > CPU_LAST_ADC + 3)) {
+		if ((unit < CPU_FIRST_ADC) || (unit > CPU_LAST_ADC + 1)) {
 			return driver_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, NULL);
 		}
 
 		if (!adc_devs[unit - CPU_FIRST_ADC].name) {
-			return driver_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, adc_devs[unit].name);
+			return driver_error(ADC_DRIVER, ADC_ERR_INVALID_UNIT, NULL);
 		}
 	}
 
