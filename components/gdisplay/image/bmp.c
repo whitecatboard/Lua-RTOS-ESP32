@@ -154,6 +154,8 @@ driver_error_t *gdisplay_image_bmp(int x, int y, const char *fname) {
 
 		palette = malloc(palette_size);
 		if (!palette) {
+			free(buf);
+			fclose(fhndl);
 			return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_NOT_ENOUGH_MEMORY, "palette");
 		}
 

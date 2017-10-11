@@ -139,9 +139,18 @@ void Socket_outInitialize()
 void Socket_outTerminate()
 {
 	FUNC_ENTRY;
-	ListFree(s.connect_pending);
-	ListFree(s.write_pending);
-	ListFree(s.clientsds);
+	if (s.connect_pending) {
+		ListFree(s.connect_pending);
+		s.connect_pending = NULL;
+	}
+	if (s.write_pending) {
+		ListFree(s.write_pending);
+		s.write_pending = NULL;
+	}
+	if (s.clientsds) {
+		ListFree(s.clientsds);
+		s.clientsds = NULL;
+	}
 	SocketBuffer_terminate();
 #if defined(WIN32) || defined(WIN64)
 	WSACleanup();
@@ -827,7 +836,7 @@ char* Socket_getaddrname(struct sockaddr* sa, int sock)
 #else
 	struct sockaddr_in *sin = (struct sockaddr_in *)sa;
 	inet_ntop(sin->sin_family, &sin->sin_addr, addr_string, ADDRLEN);
-	sprintf(&addr_string[strlen(addr_string)], ":%d", ntohs(sin->sin_port));
+	snprintf(&addr_string[strlen(addr_string)], sizeof(addr_string)-strlen(addr_string), ":%d", ntohs(sin->sin_port));
 #endif
 	return addr_string;
 }

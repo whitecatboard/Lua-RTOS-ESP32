@@ -2554,8 +2554,8 @@ driver_error_t *bme280_get(sensor_instance_t *unit, const char *id, sensor_value
 		// Free previous value, if needed
 		if (!property->stringd.value) {
 			// Allocate space for buffer
-			char *buffer = (char *)calloc(32, 1);
-			if (!buffer) {
+			property->stringd.value = (char *)calloc(32, 1);
+			if (!property->stringd.value) {
 				return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 			}
 		}
@@ -2602,8 +2602,8 @@ driver_error_t *bme280_set(sensor_instance_t *unit, const char *id, sensor_value
 							// set mode string
 							if (!unit->properties[3].stringd.value) {
 								// Allocate space for buffer
-								char *buffer = (char *)calloc(32, 1);
-								if (!buffer) {
+								property->stringd.value = (char *)calloc(32, 1);
+								if (!property->stringd.value) {
 									return driver_error(SENSOR_DRIVER, SENSOR_ERR_NOT_ENOUGH_MEMORY, NULL);
 								}
 							}

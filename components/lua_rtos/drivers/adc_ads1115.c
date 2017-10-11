@@ -40,12 +40,13 @@
 #include <drivers/adc.h>
 #include <drivers/adc_ads1115.h>
 
+static int i2cdevice;
+
 /*
  * Helper functions
  */
 driver_error_t *adc_ads1115_write_reg(uint8_t type, adc_ads1115_reg_t *reg, uint8_t address) {
 	int transaction = I2C_TRANSACTION_INITIALIZER;
-	uint8_t i2c = CONFIG_ADC_ADS1115_I2C;
 	driver_error_t *error;
 	uint8_t buff[3];
 
@@ -53,17 +54,16 @@ driver_error_t *adc_ads1115_write_reg(uint8_t type, adc_ads1115_reg_t *reg, uint
 	buff[1] = reg->byte.h;
 	buff[2] = reg->byte.l;
 
-	error = i2c_start(i2c, &transaction);if (error) return error;
-	error = i2c_write_address(i2c, &transaction, address, 0);if (error) return error;
-	error = i2c_write(i2c, &transaction, (char *)&buff, sizeof(buff));if (error) return error;
-	error = i2c_stop(i2c, &transaction);if (error) return error;
+	error = i2c_start(i2cdevice, &transaction);if (error) return error;
+	error = i2c_write_address(i2cdevice, &transaction, address, 0);if (error) return error;
+	error = i2c_write(i2cdevice, &transaction, (char *)&buff, sizeof(buff));if (error) return error;
+	error = i2c_stop(i2cdevice, &transaction);if (error) return error;
 
 	return NULL;
 }
 
 driver_error_t *adc_ads1115_read_reg(uint8_t type, adc_ads1115_reg_t *reg, uint8_t address) {
 	int transaction = I2C_TRANSACTION_INITIALIZER;
-	uint8_t i2c = CONFIG_ADC_ADS1115_I2C;
 	driver_error_t *error;
 	uint8_t buff[1];
 	uint16_t val;
@@ -71,16 +71,16 @@ driver_error_t *adc_ads1115_read_reg(uint8_t type, adc_ads1115_reg_t *reg, uint8
 	// Point to register
 	buff[0] = type;
 
-	error = i2c_start(i2c, &transaction);if (error) return error;
-	error = i2c_write_address(i2c, &transaction, address, 0);if (error) return error;
-	error = i2c_write(i2c, &transaction, (char *)&buff, sizeof(buff));if (error) return error;
-	error = i2c_stop(i2c, &transaction);if (error) return error;
+	error = i2c_start(i2cdevice, &transaction);if (error) return error;
+	error = i2c_write_address(i2cdevice, &transaction, address, 0);if (error) return error;
+	error = i2c_write(i2cdevice, &transaction, (char *)&buff, sizeof(buff));if (error) return error;
+	error = i2c_stop(i2cdevice, &transaction);if (error) return error;
 
 	// Read register
-	error = i2c_start(i2c, &transaction);if (error) return error;
-	error = i2c_write_address(i2c, &transaction, address, 1);if (error) return error;
-	error = i2c_read(i2c, &transaction, (char *)&val, sizeof(val));if (error) return error;
-	error = i2c_stop(i2c, &transaction);if (error) return error;
+	error = i2c_start(i2cdevice, &transaction);if (error) return error;
+	error = i2c_write_address(i2cdevice, &transaction, address, 1);if (error) return error;
+	error = i2c_read(i2cdevice, &transaction, (char *)&val, sizeof(val));if (error) return error;
+	error = i2c_stop(i2cdevice, &transaction);if (error) return error;
 
 	#if (BYTE_ORDER == LITTLE_ENDIAN)
 	reg->word.val = (uint16_t)(val >> 8) | ((uint16_t)(val & 0xff) << 8);
@@ -126,7 +126,7 @@ driver_error_t *adc_ads1115_setup(adc_channel_t *chan) {
 	}
 
 	// Setup
-	if ((error = i2c_setup(i2c, I2C_MASTER, CONFIG_ADC_ADS1115_I2C_SPEED, 0, 0))) {
+	if ((error = i2c_setup(i2c, I2C_MASTER, CONFIG_ADC_ADS1115_I2C_SPEED, 0, 0, &i2cdevice))) {
 		return error;
 	}
 

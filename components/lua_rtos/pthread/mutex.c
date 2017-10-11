@@ -34,8 +34,6 @@
 #include <errno.h>
 #include <stdlib.h>
 
-extern struct list mutex_list;
-
 static int _check_attr(const pthread_mutexattr_t *attr) {
     int type = attr->type;
         
@@ -65,8 +63,7 @@ int pthread_mutex_init(pthread_mutex_t *mut, const pthread_mutexattr_t *attr) {
     }
 
     // Test if it's init yet
-    res = list_get(&mutex_list, *mut, (void **)&mutex);
-    if (!res) {
+    if (*mut != PTHREAD_MUTEX_INITIALIZER) {
         errno = EBUSY;
         return EBUSY;
     }
@@ -90,23 +87,16 @@ int pthread_mutex_init(pthread_mutex_t *mut, const pthread_mutexattr_t *attr) {
         mutex->sem = xSemaphoreCreateMutex();
     }
     if(!mutex->sem){
-        *mut = 0;
+        *mut = PTHREAD_MUTEX_INITIALIZER;
         free(mutex->sem);
+        free(mutex);
         errno = ENOMEM;
         return ENOMEM;
     }
-    
+
     mutex->owner = pthread_self();
-    
-    // Add mutext to the list
-    res = list_add(&mutex_list, mutex, (int *)mut);
-    if (res) {
-        free(mutex->sem);
-        vSemaphoreDelete(mutex->sem);
-        
-        errno = res;
-        return res;
-    }
+
+    *mut = (unsigned int )mutex;
 
     return 0;    
 }
@@ -120,16 +110,13 @@ int IRAM_ATTR pthread_mutex_lock(pthread_mutex_t *mut) {
     }
 
     if ((intptr_t) *mut == PTHREAD_MUTEX_INITIALIZER) {
-    	pthread_mutex_init(mut, NULL);
+    	if ((res = pthread_mutex_init(mut, NULL))) {
+    		return res;
+    	}
     }
 
-    // Get mutex
-    res = list_get(&mutex_list, *mut, (void **)&mutex);
-    if (res) {
-        errno = res;
-        return res;
-    }
-    
+    mutex = (struct pthread_mutex *)(*mut);
+
     // Lock
     if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
         if (xSemaphoreTakeRecursive(mutex->sem, PTHREAD_MTX_LOCK_TIMEOUT) != pdPASS) {
@@ -149,48 +136,38 @@ int IRAM_ATTR pthread_mutex_lock(pthread_mutex_t *mut) {
 }
 
 int IRAM_ATTR pthread_mutex_unlock(pthread_mutex_t *mut) {
-    struct pthread_mutex *mutex;
-    int res;
+	struct pthread_mutex *mutex = ( struct pthread_mutex *)(*mut);
 
     if (!mut) {
         return EINVAL;
     }
-    // Get mutex
-    res = list_get(&mutex_list, *mut, (void **)&mutex);
-    if (res) {
-        errno = res;
-        return res;
-    }
-    
+
     // Unlock
     if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
-        xSemaphoreGiveRecursive(mutex->sem);        
+        xSemaphoreGiveRecursive(mutex->sem);
     } else {
-        xSemaphoreGive(mutex->sem);        
+        xSemaphoreGive(mutex->sem);
     }
 
     return 0;
 }
 
 int pthread_mutex_trylock(pthread_mutex_t *mut) {
-    struct pthread_mutex *mutex;
-    int res;
+	struct pthread_mutex *mutex;
+	int res;
 
     if (!mut) {
         return EINVAL;
     }
 
     if ((intptr_t) *mut == PTHREAD_MUTEX_INITIALIZER) {
-    	pthread_mutex_init(mut, NULL);
+    	if ((res = pthread_mutex_init(mut, NULL))) {
+    		return res;
+    	}
     }
 
-    // Get mutex
-    res = list_get(&mutex_list, *mut, (void **)&mutex);
-    if (res) {
-        errno = res;
-        return res;
-    }
-    
+    mutex = ( struct pthread_mutex *)(*mut);
+
     // Try lock
     if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
         if (xSemaphoreTakeRecursive(mutex->sem,0 ) != pdTRUE) {
@@ -208,24 +185,16 @@ int pthread_mutex_trylock(pthread_mutex_t *mut) {
 }
 
 int pthread_mutex_destroy(pthread_mutex_t *mut) {
-    struct pthread_mutex *mutex;
-    int res;
-
     if (!mut) {
         return EINVAL;
     }
 
-    // Get mutex
-    res = list_get(&mutex_list, *mut, (void **)&mutex);
-    if (res) {
-        errno = res;
-        return res;
-    }
+    struct pthread_mutex *mutex = ( struct pthread_mutex *)(*mut);
 
     if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
-        xSemaphoreGiveRecursive(mutex->sem);  
+        xSemaphoreGiveRecursive(mutex->sem);
     } else {
-        xSemaphoreGive(mutex->sem);                
+        xSemaphoreGive(mutex->sem);
     }
     
     vSemaphoreDelete(mutex->sem);
@@ -265,22 +234,4 @@ int pthread_mutexattr_init(pthread_mutexattr_t *attr) {
     attr->is_initialized = 1;
 
     return 0;
-}
-
-void _pthread_mutex_free() {
-    struct pthread_mutex *mutex;
-    int index;
-
-    index = list_first(&mutex_list);
-    while (index >= 0) {
-        list_get(&mutex_list, index, (void **)&mutex);
-         
-        if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
-            while (xSemaphoreGiveRecursive(mutex->sem) == pdTRUE);  
-        } else {
-            xSemaphoreGive(mutex->sem);                
-        }            
-        
-        index = list_next(&mutex_list, index);
-    }    
 }

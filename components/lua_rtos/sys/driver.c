@@ -137,7 +137,7 @@ driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error
     return error;
 }
 
-// Create a driver error of type operation
+// Create a driver error
 driver_error_t *driver_error(const driver_t *driver, uint32_t exception, const char *msg) {
 	driver_error_t *error;
 
@@ -153,20 +153,19 @@ driver_error_t *driver_error(const driver_t *driver, uint32_t exception, const c
 }
 
 char *driver_target_name(const driver_t *target_driver, int target_unit, const char *tag) {
-	int unit = -1;
-	int device = -1;
+	uint8_t unit;
 
 	// In some cases the target driver can have more than one device
 	// attached. This is the case of the SPI driver, in which a SPI unit
 	// (spi bus) have one or more devices attached.
 	//
-	// In this case we split the target_unit into the target_unit and the
-	// target_device.
+	// In this case we have to decode target_unit to obtain the unit.
 	if (strcmp(target_driver->name, "spi") == 0) {
-		if (target_unit > CPU_LAST_SPI) {
-			unit = (target_unit & 0xff00) >> 8;
-			device = (target_unit & 0x00ff);
-		}
+		unit = (target_unit & 0xff00) >> 8;
+	} else if (strcmp(target_driver->name, "i2c") == 0) {
+		unit = (target_unit & 0xff00) >> 8;
+	} else {
+		unit = target_unit;
 	}
 
 	char *buffer = malloc(80);
@@ -174,27 +173,19 @@ char *driver_target_name(const driver_t *target_driver, int target_unit, const c
 		panic("not enough memory");
 	}
 
-	if (unit >= 0) {
-		if (tag) {
-			sprintf(buffer, "%s%d (%s) (device %d)", target_driver->name, unit, tag, device);
-		} else {
-			sprintf(buffer, "%s%d (device %d)", target_driver->name, unit, device);
-		}
+	if (tag) {
+		snprintf(buffer, 40, "%s%d (%s)", target_driver->name, unit, tag);
 	} else {
-		if (tag) {
-			sprintf(buffer, "%s%d (%s)", target_driver->name, target_unit, tag);
-		} else {
-			sprintf(buffer, "%s%d", target_driver->name, target_unit);
-		}
+		snprintf(buffer, 40, "%s%d", target_driver->name, unit);
 	}
 
 	return buffer;
 }
 
 static int lock_index(const driver_t *driver, int unit) {
-	int tunit = -1;
-	int tdevice = -1;
-	int index = 0;
+	int tunit;
+	int tdevice;
+	int index;
 
 	// In some cases the target driver can have more than one device
 	// attached. This is the case of the SPI driver, in which a SPI unit
@@ -203,14 +194,13 @@ static int lock_index(const driver_t *driver, int unit) {
 	// In this case we split the target_unit into the target_unit and the
 	// target_device.
 	if (strcmp(driver->name, "spi") == 0) {
-		if (unit > CPU_LAST_SPI) {
-			tunit = (unit & 0xff00) >> 8;
-			tdevice = (unit & 0x00ff);
-		}
-	}
-
-	if (tunit >= 0) {
+		tunit = (unit & 0xff00) >> 8;
+		tdevice = (unit & 0x00ff);
 		index = (tunit * SPI_BUS_DEVICES) + tdevice;
+	} else if (strcmp(driver->name, "i2c") == 0) {
+		tunit = (unit & 0xff00) >> 8;
+		tdevice = (unit & 0x00ff);
+		index = (tunit * I2C_BUS_DEVICES) + tdevice;
 	} else {
 		index = unit;
 	}
@@ -246,6 +236,10 @@ void driver_unlock_all(const driver_t *owner_driver, int owner_unit) {
 // Try to obtain a lock on an unit driver
 driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit, uint8_t flags, const char *tag) {
 	mtx_lock(&driver_mtx);
+
+	if (strcmp(owner_driver->name, "spi") == 0) {
+		owner_unit = (owner_unit << 8);
+	}
 
     // Get the target driver lock array
 	driver_unit_lock_t *target_lock = (driver_unit_lock_t *)target_driver->lock;

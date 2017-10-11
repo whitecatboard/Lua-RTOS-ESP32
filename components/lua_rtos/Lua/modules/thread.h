@@ -44,5 +44,9 @@ struct lthread {
     pthread_t thread;
 };
 
+typedef struct {
+	pthread_mutex_t mtx;
+} mutex_userdata;
+
 #endif	/* LTHREAD_H */
 

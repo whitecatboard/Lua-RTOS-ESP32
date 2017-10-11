@@ -68,6 +68,7 @@ typedef struct {
 	void *isr_args[PCA9xxx_PINS];
 	TaskHandle_t task;
 	SemaphoreHandle_t mtx;
+	int i2cdevice;
 } pca_9xxx_t;
 
 // PCA9698 errors

@@ -128,6 +128,7 @@ static int li2c_setpins(lua_State* L) {
 static int li2c_attach( lua_State* L ) {
 	int speed = -1;
 	driver_error_t *error;
+	int i2cdevice;
 
     int id = luaL_checkinteger(L, 1);
     int mode = luaL_checkinteger(L, 2);
@@ -136,7 +137,7 @@ static int li2c_attach( lua_State* L ) {
     	speed = luaL_checkinteger(L, 3);
     }
 
-    if ((error = i2c_setup(id, mode, speed, 0, 0))) {
+    if ((error = i2c_setup(id, mode, speed, 0, 0, &i2cdevice))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -146,7 +147,7 @@ static int li2c_attach( lua_State* L ) {
        	return luaL_exception(L, I2C_ERR_NOT_ENOUGH_MEMORY);
     }
 
-    user_data->unit = id;
+    user_data->unit = i2cdevice;
     user_data->transaction = I2C_TRANSACTION_INITIALIZER;
 
     luaL_getmetatable(L, "i2c.trans");

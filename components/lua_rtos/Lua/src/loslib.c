@@ -21,7 +21,6 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
-
 /*
 ** {==================================================================
 ** List of valid conversion specifiers for the 'strftime' function;
@@ -163,17 +162,69 @@ static int os_remove (lua_State *L) {
   return luaL_fileresult(L, remove(filename) == 0, filename);
 #else
   struct stat statbuf;
-  const char *filename = luaL_checkstring(L, 1);
+  char *filename = (char*) luaL_checkstring(L, 1);
 
-  if (stat(filename, &statbuf) != 0) {
-	  return luaL_fileresult(L, 0, filename);
-  }
+  if (stat(filename, &statbuf) == 0) {
+		if (S_ISDIR(statbuf.st_mode)) {
+			return luaL_fileresult(L, rmdir(filename) == 0, filename);
+		} else {
+			return luaL_fileresult(L, remove(filename) == 0, filename);
+		}
+	}
 
-  if (S_ISDIR(statbuf.st_mode)) {
-	  return luaL_fileresult(L, rmdir(filename) == 0, filename);
-  } else {
-	  return luaL_fileresult(L, remove(filename) == 0, filename);
-  }
+	const char* result = strstr(filename, "*");
+	if (NULL != result) {
+		const char *path = filename;
+		char cpath[PATH_MAX];
+		DIR *dir = NULL;
+		struct dirent *ent;
+		int found = 0;
+		int rc = 0;
+
+		//search back to the last dir name
+		filename = (char*)path + strlen(path) - 1;
+		while (filename > path && *filename!=0 && *filename!='/') {
+			filename--;
+		}
+		//not path given
+		//so try to find a matching file
+		//in the current folder
+		if (filename==path) {
+			filename = (char*)path;
+			if (!getcwd(cpath, PATH_MAX)) {
+				return luaL_fileresult(L, 0, filename);
+			}
+			path = cpath;
+		}
+		else if (*filename == '/') {
+			*filename = 0; //will cut off the filename from the path
+			filename++;
+		}
+
+		// Open directory
+		if (!(dir = opendir(path))) {
+			return luaL_fileresult(L, 0, path);
+		}
+		// Read entries
+		while ((ent = readdir(dir)) != NULL) {
+			if (0==fnmatch(filename, ent->d_name, 0)) { //our implementation above does support only a subset
+				found++;
+				if (stat(ent->d_name, &statbuf) == 0) {
+					rc = (S_ISDIR(statbuf.st_mode) ? rmdir(ent->d_name) : remove(ent->d_name));
+					if ( 0 != rc ) {
+						closedir(dir);
+						return luaL_fileresult(L, rc, ent->d_name);
+					}
+				}
+			}
+		}
+		closedir(dir);
+
+		if (found>0)
+			return 0;
+	}
+
+  return luaL_fileresult(L, 0, filename);
 #endif
   // LUA RTOS END
 }
@@ -419,56 +470,58 @@ static int os_exit (lua_State *L) {
 
 static const LUA_REG_TYPE syslib[] =
 {
-  { LSTRKEY( "date" ),       LFUNCVAL( os_date ) },
-  { LSTRKEY( "difftime" ),   LFUNCVAL( os_difftime ) },
-  { LSTRKEY( "clock" ),      LFUNCVAL( os_clock ) },
-  { LSTRKEY( "remove" ),     LFUNCVAL( os_remove ) },
-  { LSTRKEY( "rename" ),     LFUNCVAL( os_rename ) },
-  { LSTRKEY( "time" ),       LFUNCVAL( os_time ) },
-  { LSTRKEY( "tmpname" ),    LFUNCVAL( os_tmpname ) },
-  { LSTRKEY( "exit" ),       LFUNCVAL( os_exit ) },
-  { LSTRKEY( "execute" ),    LFUNCVAL( os_execute ) },
-  { LSTRKEY( "setlocale" ),  LFUNCVAL( os_setlocale ) },
-  { LSTRKEY( "getenv" ),  	 LFUNCVAL( os_getenv ) },
+  { LSTRKEY( "date" ),        LFUNCVAL( os_date ) },
+  { LSTRKEY( "difftime" ),    LFUNCVAL( os_difftime ) },
+  { LSTRKEY( "clock" ),       LFUNCVAL( os_clock ) },
+  { LSTRKEY( "remove" ),      LFUNCVAL( os_remove ) },
+  { LSTRKEY( "rename" ),      LFUNCVAL( os_rename ) },
+  { LSTRKEY( "time" ),        LFUNCVAL( os_time ) },
+  { LSTRKEY( "tmpname" ),     LFUNCVAL( os_tmpname ) },
+  { LSTRKEY( "exit" ),        LFUNCVAL( os_exit ) },
+  { LSTRKEY( "execute" ),     LFUNCVAL( os_execute ) },
+  { LSTRKEY( "setlocale" ),   LFUNCVAL( os_setlocale ) },
+  { LSTRKEY( "getenv" ),  	  LFUNCVAL( os_getenv ) },
 
-  { LSTRKEY( "locks" ),  	 LFUNCVAL( os_locks ) },
-  { LSTRKEY( "exists" ),  	 LFUNCVAL( os_exists ) },
-  { LSTRKEY( "stdout" ),     LFUNCVAL( os_stdout ) },
-  { LSTRKEY( "clear" ),      LFUNCVAL( os_clear ) },
-  { LSTRKEY( "cpu" ),        LFUNCVAL( os_cpu ) },
-  { LSTRKEY( "board" ),      LFUNCVAL( os_board ) },
-  { LSTRKEY( "sleep" ),      LFUNCVAL( os_sleep ) },
-  { LSTRKEY( "version" ),    LFUNCVAL( os_version ) },
-  { LSTRKEY( "ls" ),         LFUNCVAL( os_ls ) },
-  { LSTRKEY( "cd" ),         LFUNCVAL( os_cd ) },
-  { LSTRKEY( "pwd" ),        LFUNCVAL( os_pwd ) },
-  { LSTRKEY( "mkdir" ),      LFUNCVAL( os_mkdir ) },
-  { LSTRKEY( "logcons" ),    LFUNCVAL( os_logcons ) },
-  { LSTRKEY( "loglevel" ),   LFUNCVAL( os_loglevel ) },
-  { LSTRKEY( "stats" ),      LFUNCVAL( os_stats ) },
-  { LSTRKEY( "format" ),     LFUNCVAL( os_format ) },
-  { LSTRKEY( "history" ),    LFUNCVAL( os_history ) },
-  { LSTRKEY( "shell" ),      LFUNCVAL( os_shell ) },
-  { LSTRKEY( "cp" ),         LFUNCVAL( os_cp ) },
-  { LSTRKEY( "cat" ),        LFUNCVAL( os_cat ) },
-  { LSTRKEY( "more" ),       LFUNCVAL( os_more ) },
-  { LSTRKEY( "dmesg" ),      LFUNCVAL( os_dmesg ) },
-  { LSTRKEY( "run" ),        LFUNCVAL( os_run ) },
-  { LSTRKEY( "luarunning" ), LFUNCVAL( os_lua_running ) },
+  { LSTRKEY( "locks" ),  	    LFUNCVAL( os_locks ) },
+  { LSTRKEY( "exists" ),  	  LFUNCVAL( os_exists ) },
+  { LSTRKEY( "stdout" ),      LFUNCVAL( os_stdout ) },
+  { LSTRKEY( "clear" ),       LFUNCVAL( os_clear ) },
+  { LSTRKEY( "cpu" ),         LFUNCVAL( os_cpu ) }, //deprecated
+  { LSTRKEY( "board" ),       LFUNCVAL( os_board ) }, //deprecated
+  { LSTRKEY( "sleep" ),       LFUNCVAL( os_sleep ) }, //deprecated
+  { LSTRKEY( "version" ),     LFUNCVAL( os_version ) },
+  { LSTRKEY( "ls" ),          LFUNCVAL( os_ls ) },
+  { LSTRKEY( "cd" ),          LFUNCVAL( os_cd ) },
+  { LSTRKEY( "pwd" ),         LFUNCVAL( os_pwd ) },
+  { LSTRKEY( "mkdir" ),       LFUNCVAL( os_mkdir ) },
+  { LSTRKEY( "logcons" ),     LFUNCVAL( os_logcons ) },
+  { LSTRKEY( "loglevel" ),    LFUNCVAL( os_loglevel ) },
+  { LSTRKEY( "stats" ),       LFUNCVAL( os_stats ) },
+  { LSTRKEY( "format" ),      LFUNCVAL( os_format ) },
+  { LSTRKEY( "history" ),     LFUNCVAL( os_history ) },
+  { LSTRKEY( "shell" ),       LFUNCVAL( os_shell ) },
+  { LSTRKEY( "cp" ),          LFUNCVAL( os_cp ) },
+  { LSTRKEY( "cat" ),         LFUNCVAL( os_cat ) },
+  { LSTRKEY( "more" ),        LFUNCVAL( os_more ) },
+  { LSTRKEY( "dmesg" ),       LFUNCVAL( os_dmesg ) },
+  { LSTRKEY( "run" ),         LFUNCVAL( os_run ) },
+  { LSTRKEY( "luarunning" ),  LFUNCVAL( os_lua_running ) },
   { LSTRKEY( "luainterpreter" ), LFUNCVAL( os_lua_interpreter ) },
-  { LSTRKEY( "resetreason" ), LFUNCVAL( os_reset_reason ) },
-  { LSTRKEY( "bootcount" ),  LFUNCVAL( os_bootcount ) },
-  { LSTRKEY( "flashEUI" ),   LFUNCVAL( os_flash_unique_id ) },
-  { LSTRKEY( "edit" ),       LFUNCVAL( os_edit ) },
-  { LSTRKEY( "LOG_INFO" ),   LINTVAL( LOG_INFO ) },
-  { LSTRKEY( "LOG_EMERG" ),  LINTVAL( LOG_EMERG ) },
-  { LSTRKEY( "LOG_ALERT" ),  LINTVAL( LOG_ALERT ) },
-  { LSTRKEY( "LOG_CRIT" ),   LINTVAL( LOG_CRIT ) },
-  { LSTRKEY( "LOG_ERR" ),    LINTVAL( LOG_ERR ) },
-  { LSTRKEY( "LOG_WARNING" ),LINTVAL( LOG_WARNING ) },
-  { LSTRKEY( "LOG_NOTICE" ), LINTVAL( LOG_NOTICE ) },
-  { LSTRKEY( "LOG_DEBUG" ),  LINTVAL( LOG_DEBUG ) },
-  { LSTRKEY( "LOG_ALL" ),    LINTVAL( 0b11111111 ) },
+  { LSTRKEY( "resetreason" ), LFUNCVAL( os_reset_reason ) }, //deprecated
+  { LSTRKEY( "bootcount" ),   LFUNCVAL( os_bootcount ) },
+  { LSTRKEY( "flashEUI" ),    LFUNCVAL( os_flash_unique_id ) },
+  { LSTRKEY( "edit" ),        LFUNCVAL( os_edit ) },
+
+  { LSTRKEY( "LOG_INFO" ),    LINTVAL( LOG_INFO    ) },
+  { LSTRKEY( "LOG_EMERG" ),   LINTVAL( LOG_EMERG   ) },
+  { LSTRKEY( "LOG_ALERT" ),   LINTVAL( LOG_ALERT   ) },
+  { LSTRKEY( "LOG_CRIT" ),    LINTVAL( LOG_CRIT    ) },
+  { LSTRKEY( "LOG_ERR" ),     LINTVAL( LOG_ERR     ) },
+  { LSTRKEY( "LOG_WARNING" ), LINTVAL( LOG_WARNING ) },
+  { LSTRKEY( "LOG_NOTICE" ),  LINTVAL( LOG_NOTICE  ) },
+  { LSTRKEY( "LOG_DEBUG" ),   LINTVAL( LOG_DEBUG   ) },
+  { LSTRKEY( "LOG_ALL" ),     LINTVAL( 0b11111111  ) },
+
   { LNILKEY, LNILVAL }
 };
 

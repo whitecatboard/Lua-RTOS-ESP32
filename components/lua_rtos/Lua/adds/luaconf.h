@@ -66,71 +66,11 @@
         if (e != -1) close(e); \
         e = (e == -1); }
 
-
-//#include <Lua/common/linenoise.h>
-//#include "lstate.h"
-
 #undef  lua_readline
 #define lua_readline(L,b,p)     ((void)L, (linenoise(b, p)) != -1)
 
 #define lua_saveline(L,idx)     { (void)L; (void)idx; }
 #define lua_freeline(L,b)       { (void)L; (void)b; }
-
-// Adds in standard Lua modukes
-
-#define LBASELIB_REG_ADDS \
-    {"dumpstack", stackDump}, \
-    {"try", luaB_try}, 
-        
-#define LBASELIB_OPEN_ADDS 
-
-#if CONFIG_LUA_RTOS_LUA_USE_TMR
-    #define LINIT_REG_TMR {AUXLIB_TMR, luaopen_tmr},
-#else
-    #define LINIT_REG_TMR
-#endif
-
-#if LUA_USE_CAN
-    #define LINIT_REG_CAN {AUXLIB_CAN, luaopen_can},
-#else
-    #define LINIT_REG_CAN
-#endif
-
-#if CONFIG_LUA_RTOS_LUA_USE_NET
-    #define LINIT_REG_NET {AUXLIB_NET, luaopen_net},
-#else
-    #define LINIT_REG_NET
-#endif
-
-#if CONFIG_LUA_RTOS_LUA_USE_ADC
-    #define LINIT_REG_ADC {AUXLIB_ADC, luaopen_adc},
-#else
-    #define LINIT_REG_ADC
-#endif
-
-#if CONFIG_LUA_RTOS_LUA_USE_SPI
-    #define LINIT_REG_SPI {AUXLIB_SPI, luaopen_spi},
-#else
-    #define LINIT_REG_SPI
-#endif
-
-#if CONFIG_LUA_RTOS_LUA_USE_MQTT
-    #define LINIT_REG_MQTT {AUXLIB_MQTT, luaopen_mqtt},
-#else
-    #define LINIT_REG_MQTT
-#endif
-
-#if CONFIG_LUA_RTOS_LUA_USE_THREAD
-    #define LINIT_REG_THREAD {AUXLIB_THREAD, luaopen_thread },
-#else
-    #define LINIT_REG_THREAD
-#endif
-
-#if CONFIG_LUA_RTOS_LUA_USE_SCREEN
-    #define LINIT_REG_SCREEN {AUXLIB_SCREEN, luaopen_screen},
-#else
-    #define LINIT_REG_SCREEN
-#endif
 
 #if CONFIG_LUA_RTOS_LUA_USE_SSD1306
     #define LINIT_REG_OSCREEN {AUXLIB_SSD1306, luaopen_ssd1306},
@@ -138,106 +78,11 @@
     #define LINIT_REG_OSCREEN
 #endif
 
-#if CONFIG_LUA_RTOS_LUA_USE_UART
-    #define LINIT_REG_UART {AUXLIB_UART, luaopen_uart},
-#else
-    #define LINIT_REG_UART
-#endif
-
-#if CONFIG_LUA_RTOS_LUA_USE_PWM
-    #define LINIT_REG_PWM {AUXLIB_PWM, luaopen_pwm},
-#else
-    #define LINIT_REG_PWM
-#endif
-
-#if LUA_USE_GPS
-    #define LINIT_REG_GPS {AUXLIB_GPS, luaopen_gps},
-#else
-    #define LINIT_REG_GPS
-#endif
-
-#if LUA_USE_STEPPER
-    #define LINIT_REG_STEPPER {AUXLIB_STEPPER, luaopen_stepper},
-#else
-    #define LINIT_REG_STEPPER
-#endif
-
-#if CONFIG_LUA_RTOS_LUA_USE_I2C
-   // #define LINIT_REG_I2C {AUXLIB_I2C, luaopen_i2c},
-#else
-    #define LINIT_REG_I2C
-#endif
-
-#if CONFIG_LUA_RTOS_LUA_USE_LORA
-    #define LINIT_REG_LORA {AUXLIB_LORA, luaopen_lora},
-#else
-    #define LINIT_REG_LORA
-#endif
-
-#define LINIT_REG_ADDS \
-  LINIT_REG_PIO \
-  LINIT_REG_TMR \
-  LINIT_REG_CAN \
-  LINIT_REG_NET \
-  LINIT_REG_ADC \
-  LINIT_REG_SPI \
-  LINIT_REG_MQTT \
-  LINIT_REG_THREAD \
-  LINIT_REG_SCREEN \
   LINIT_REG_OSCREEN \
-  LINIT_REG_UART \
-  LINIT_REG_PWM \
-  LINIT_REG_GPS \
-  LINIT_REG_STEPPER \
-  LINIT_REG_I2C \
-  LINIT_REG_LORA \
-  LINIT_REG_PACK
-      
-#define LINIT_OPEN_ADDS
-
-#define LIOLIB_REG_ADDS {"receive", f_receive}, {"send", f_send},
-#define LIOLIB_OPEN_ADDS
-
-#define LOSLIB_REG_SHELL {"shell",     os_shell},
-#define LOSLIB_REG_EDITOR {"edit",      os_edit},
-
-#if 0
-#define LOSLIB_REG_ADDS \
-  LOSLIB_REG_SHELL \
-  {"history",   os_history}, \
-  {"cp",        os_cp}, \
-  {"ls",        os_ls}, \
-  {"cd",        os_cd}, \
-  {"pwd",       os_pwd}, \
-  {"mkdir",     os_mkdir}, \
-  LOSLIB_REG_EDITOR \
-  {"clear",     os_clear}, \
-  {"cat",       os_cat}, \
-  {"more",      os_more}, \
-  {"dmesg",     os_dmesg}, \
-  {"format",    os_format}, \
-  {"idle",      os_idle}, \
-  {"loglevel",  os_loglevel}, \
-  {"logcons",   os_logcons}, \
-  {"stats",     os_stats}, \
-  {"version",   os_version}, \
-  {"cpu",       os_cpu}, \
-  {"run",       os_run}, 
-#else
-#define LOSLIB_REG_ADDS
-#endif
-
-#if 0	  	 
-#define LOSLIB_OPEN_ADDS \
-  os_constants(L);
-#else
-  #define LOSLIB_OPEN_ADDS
-#endif
 
 #ifdef liolib_c
 #undef liolib_c
 #include <Lua/modules/liolib_adds.inc>
-	  //#include <sys/syscalls/mount.h>
 #endif
 
 #ifdef loslib_c

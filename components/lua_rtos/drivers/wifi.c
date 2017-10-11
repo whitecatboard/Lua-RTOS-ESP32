@@ -43,6 +43,9 @@
 
 #include "rom/rtc.h"
 
+#include "lwip/dns.h"
+#include "lwip/ip_addr.h"
+
 #include <string.h>
 #include <stdlib.h>
 
@@ -113,10 +116,10 @@ driver_error_t *wifi_check_error(esp_err_t error) {
 
 			buffer = malloc(40);
 			if (!buffer) {
-				panic("not enougth memory");
+				panic("not enough memory");
 			}
 
-			sprintf(buffer, "missing wifi error case %d", error);
+			snprintf(buffer, 40, "missing wifi error case %d", error);
 
 			return driver_error(WIFI_DRIVER, WIFI_ERR_CANT_INIT, buffer);
 		}
@@ -145,20 +148,16 @@ static driver_error_t *wifi_init(wifi_mode_t mode) {
 }
 
 static driver_error_t *wifi_deinit() {
-	// TO DO
-	// esp_wifi_dinit: This API can not be called yet and will be done in the future.
-	#if 0
 	driver_error_t *error;
 	if (status_get(STATUS_WIFI_INITED)) {
 		// Remove and stop wifi driver from system
 		if ((error = wifi_check_error(esp_wifi_deinit()))) return error;
 
-		// Remove event group
-		vEventGroupDelete(netEvent);
+		// doesn't seem to be recreated so DON'T remove the event group
+		// vEventGroupDelete(netEvent);
 
 		status_clear(STATUS_WIFI_INITED);
 	}
-	#endif
 
 	return NULL;
 }
@@ -242,9 +241,12 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 	return NULL;
 }
 
-driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int powersave, int channel, int hidden) {
+driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1, uint32_t dns2, int powersave, int channel, int hidden) {
 	driver_error_t *error;
 	wifi_interface_t interface;
+	tcpip_adapter_ip_info_t ip_info;
+	ip_addr_t dns;
+	ip_addr_t *dns_p = &dns;
 
 	status_clear(STATUS_WIFI_SETUP);
 
@@ -304,6 +306,27 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int pow
 
 	status_set(STATUS_WIFI_SETUP);
 
+	// Set ip / mask / gw, if present
+	if (ip && mask && gw) {
+		ip_info.ip.addr = ip;
+		ip_info.netmask.addr = mask;
+		ip_info.gw.addr = gw;
+
+		tcpip_adapter_dhcpc_stop(ESP_IF_WIFI_STA);
+		tcpip_adapter_set_ip_info(ESP_IF_WIFI_STA, &ip_info);
+
+		// If present, set dns1, else set to 8.8.8.8
+		if (!dns1) dns1 = 134744072;
+		ip_addr_set_ip4_u32(dns_p, dns1);
+
+		dns_setserver(0, (const ip_addr_t *)&dns);
+
+		// If present, set dns2, else set to 8.8.4.4
+		if (!dns2) dns2 = 67373064;
+		ip_addr_set_ip4_u32(dns_p, dns2);
+
+		dns_setserver(1, (const ip_addr_t *)&dns);
+	}
 	return NULL;
 }
 
@@ -357,6 +380,7 @@ driver_error_t *wifi_stop() {
 
 driver_error_t *wifi_stat(ifconfig_t *info) {
 	tcpip_adapter_ip_info_t esp_info;
+	ip6_addr_t adr;
 	uint8_t mac[6] = {0,0,0,0,0,0};
 
 	driver_error_t *error;
@@ -373,6 +397,8 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 	// Get WIFI IF info
 	if ((error = wifi_check_error(tcpip_adapter_get_ip_info(interface, &esp_info)))) return error;
 
+	if ((error = wifi_check_error(tcpip_adapter_get_ip6_linklocal(interface, &adr)))) ip6_addr_set(&adr,IP6_ADDR_ANY6);
+
 	// Get MAC info
 	if (status_get(STATUS_WIFI_STARTED)) {
 		if ((error = wifi_check_error(esp_wifi_get_mac(interface, mac)))) return error;
@@ -382,6 +408,7 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 	info->gw = esp_info.gw;
 	info->ip = esp_info.ip;
 	info->netmask = esp_info.netmask;
+	info->ip6 = adr;
 
 	memcpy(info->mac, mac, sizeof(mac));
 

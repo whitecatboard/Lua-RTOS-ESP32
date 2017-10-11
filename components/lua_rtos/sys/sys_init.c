@@ -35,12 +35,15 @@
 #include "esp_sleep.h"
 #include "driver/periph_ctrl.h"
 
+#include "nvs_flash.h"
+#include "nvs.h"
+
 #include <esp_spi_flash.h>
 
-#include <vfs.h>
 #include <string.h>
 #include <stdio.h>
 
+#include <vfs/vfs.h>
 #include <sys/reent.h>
 #include <sys/syslog.h>
 #include <sys/console.h>
@@ -86,7 +89,31 @@ void *_sys_tests(void *arg) {
 
 #endif
 
+/*
+   Shows the firmware copyright notice. You can modify the default copyright notice if
+   the following conditions are met:
+
+   1. The whitecat logo cannot be changed. You can remove the whitecat logo, but you
+      cannot change it. The whitecat logo is:
+
+        /\       /\
+       /  \_____/  \
+      /_____________\
+      W H I T E C A T
+
+   2. Any other copyright notices cannot be removed. This includes any references to
+      Lua RTOS, Lua, and copyright notices that may appear in the future.
+*/
+void __attribute__((weak)) firmware_copyright_notice() {
+	printf("  /\\       /\\\r\n");
+    printf(" /  \\_____/  \\\r\n");
+    printf("/_____________\\\r\n");
+    printf("W H I T E C A T\r\n\r\n");
+}
+
 void _sys_init() {
+	nvs_flash_init();
+
 	// Set default power down mode for all RTC power domains in deep sleep
 	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
 	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
@@ -109,18 +136,19 @@ void _sys_init() {
 	// Increment bootcount
 	boot_count++;
 
-	// TO DO: do this only if RTC is not set
-	struct timeval tv;
-
 	esp_log_level_set("*", ESP_LOG_ERROR);
 
 	// Disable hardware modules modules
 	periph_module_disable(PERIPH_LEDC_MODULE);
 
-	tv.tv_sec = BUILD_TIME;
-	tv.tv_usec = 0;
-
-	settimeofday(&tv, NULL);
+	// set the current time only if RTC has not already been set
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	if (tv.tv_sec < BUILD_TIME) {
+		tv.tv_sec = BUILD_TIME;
+		tv.tv_usec = 0;
+		settimeofday(&tv, NULL);
+	}
 
 	#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
 	// Get flash unique id
@@ -151,10 +179,7 @@ void _sys_init() {
 
 	console_clear();
 
-	printf("  /\\       /\\\r\n");
-    printf(" /  \\_____/  \\\r\n");
-    printf("/_____________\\\r\n");
-    printf("W H I T E C A T\r\n\r\n");
+	firmware_copyright_notice();
 
     printf(
 		"Lua RTOS %s. Copyright (C) 2015 - 2017 whitecatboard.org\r\n\r\nbuild %d\r\ncommit %s\r\n",
@@ -217,7 +242,7 @@ void _sys_init() {
             openlog(__progname, LOG_NDELAY , LOG_LOCAL1);
         } else {
         	syslog(LOG_ERR, "can't redirect console messages to file system, an SDCARD is needed");
-        }   
+        }
     #endif
 
     // Continue init ...

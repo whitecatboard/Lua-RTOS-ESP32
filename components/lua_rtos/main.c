@@ -34,7 +34,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
-#include "nvs_flash.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -62,8 +61,6 @@ void *lua_start(void *arg) {
 int linenoise(char *buf, const char *prompt);
 
 void app_main() {
-    nvs_flash_init();
-	
 	_sys_init();
 
 	initArduino();

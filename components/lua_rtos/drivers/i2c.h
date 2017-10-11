@@ -43,7 +43,12 @@
 
 #include <drivers/cpu.h>
 
+#define I2C_BUS_DEVICES 3
 #define I2C_TRANSACTION_INITIALIZER -1
+
+typedef struct i2c_device {
+	int speed;
+} i2c_device_t;
 
 // Internal driver structure
 typedef struct i2c {
@@ -52,6 +57,7 @@ typedef struct i2c {
 	int8_t sda;
 	int8_t scl;
 	SemaphoreHandle_t mtx;
+	i2c_device_t device[I2C_BUS_DEVICES];
 } i2c_t;
 
 #define I2C_SLAVE	0 /*!< I2C slave mode */
@@ -68,7 +74,7 @@ typedef struct i2c {
 #define I2C_ERR_TIMEOUT					 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  7)
 #define I2C_ERR_PIN_NOT_ALLOWED		     (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  8)
 #define I2C_ERR_CANNOT_CHANGE_PINMAP     (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  10)
-
+#define I2C_ERR_NO_MORE_DEVICES_ALLOWED  (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  11)
 extern const int i2c_errors;
 extern const int i2c_error_map;
 
@@ -97,6 +103,7 @@ driver_error_t *i2c_pin_map(int unit, int sda, int scl);
  * @param speed I2C bus speed, expressed in kilohertzs.
  * @param addr10_en In slave mode, if 1 enables 10-bit address, if 0 disables 10-bit address.
  * @param addr In slave mode, the device address.
+ * @param deviceid A pointer to an integer with a device identifier assigned to the I2C device.
  *
  * @return
  *     - NULL success
@@ -105,7 +112,7 @@ driver_error_t *i2c_pin_map(int unit, int sda, int scl);
  *     	 SPI_ERR_INVALID_UNIT
  *     	 A LOCK error, if sda, or scl gpios are used by other driver
  */
-driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr);
+driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr, int *deviceid);
 
 driver_error_t *i2c_setspeed(int unit, int speed);
 
@@ -113,7 +120,7 @@ driver_error_t *i2c_setspeed(int unit, int speed);
  * @brief Start an I2C transaction, if configured in master mode. This function is thread safe.
  *        The transaction stores all the I2C in a buffer until i2c_stop or i2c_flush is called.
  *
- * @param unit I2C unit, can be either 0 or 1.
+ * @param deviceid Device identifier.
  * @param transaction A pointer to an integer used to store the transaction's id.
  *
  * @return
@@ -124,12 +131,12 @@ driver_error_t *i2c_setspeed(int unit, int speed);
  *     	 I2C_ERR_IS_NOT_SETUP
  *     	 I2C_ERR_INVALID_OPERATION
  */
-driver_error_t *i2c_start(int unit, int *transaction);
+driver_error_t *i2c_start(int deviceid, int *transaction);
 
 /**
  * @brief Stop an I2C transaction, if configured in master mode. This function is thread safe.
  *
- * @param unit I2C unit, can be either 0 or 1.
+ * @param deviceid Device identifier.
  * @param transaction A pointer to an integer which stores the transaction's id.
  *
  * @return
@@ -141,12 +148,12 @@ driver_error_t *i2c_start(int unit, int *transaction);
  *     	 I2C_ERR_INVALID_OPERATION
  *     	 I2C_ERR_INVALID_TRANSACTION
  */
-driver_error_t *i2c_stop(int unit, int *transaction);
+driver_error_t *i2c_stop(int deviceid, int *transaction);
 
 /**
  * @brief Write an adress for read, or write, if configured in master mode. This function is thread safe.
  *
- * @param unit I2C unit, can be either 0 or 1.
+ * @param deviceid Device identifier.
  * @param transaction A pointer to an integer which stores the transaction's id.
  * @param adress The address.
  * @param read Can be either 0 (write) or 1 (read).
@@ -160,12 +167,12 @@ driver_error_t *i2c_stop(int unit, int *transaction);
  *     	 I2C_ERR_INVALID_OPERATION
  *     	 I2C_ERR_INVALID_TRANSACTION
  */
-driver_error_t *i2c_write_address(int unit, int *transaction, char address, int read);
+driver_error_t *i2c_write_address(int deviceid, int *transaction, char address, int read);
 
 /**
  * @brief Write data, if configured in master mode. This function is thread safe.
  *
- * @param unit I2C unit, can be either 0 or 1.
+ * @param deviceid Device identifier.
  * @param transaction A pointer to an integer which stores the transaction's id.
  * @param data A pointer to the data buffer to send.
  * @param len Length of data to send, in bytes.
@@ -179,12 +186,12 @@ driver_error_t *i2c_write_address(int unit, int *transaction, char address, int 
  *     	 I2C_ERR_INVALID_OPERATION
  *     	 I2C_ERR_INVALID_TRANSACTION
  */
-driver_error_t *i2c_write(int unit, int *transaction, char *data, int len);
+driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len);
 
 /**
  * @brief Read data, if configured in master mode. This function is thread safe.
  *
- * @param unit I2C unit, can be either 0 or 1.
+ * @param deviceid Device identifier.
  * @param transaction A pointer to an integer which stores the transaction's id.
  * @param data A pointer to the data buffer to read.
  * @param len Length of data to read, in bytes.
@@ -198,12 +205,12 @@ driver_error_t *i2c_write(int unit, int *transaction, char *data, int len);
  *     	 I2C_ERR_INVALID_OPERATION
  *     	 I2C_ERR_INVALID_TRANSACTION
  */
-driver_error_t *i2c_read(int unit, int *transaction, char *data, int len);
+driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len);
 
 /**
  * @brief Flush all operations. This function is thread safe.
  *
- * @param unit I2C unit, can be either 0 or 1.
+ * @param deviceid Device identifier.
  * @param transaction A pointer to an integer which stores the transaction's id.
  * @param new_transaction If 1 creates a new transaction.
  *
@@ -216,6 +223,6 @@ driver_error_t *i2c_read(int unit, int *transaction, char *data, int len);
  *     	 I2C_ERR_INVALID_OPERATION
  *     	 I2C_ERR_INVALID_TRANSACTION
  */
-driver_error_t *i2c_flush(int unit, int *transaction, int new_transaction);
+driver_error_t *i2c_flush(int deviceid, int *transaction, int new_transaction);
 
 #endif /* I2C_H */

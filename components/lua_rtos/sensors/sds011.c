@@ -81,8 +81,10 @@ static void sds011_task(void *args) {
 			}
 
 			if (buff[8] == checksum) {
-				unit->data[0].doubled.value = ((double)((buff[3] << 8) + buff[1]))/(double)10.0;
+				sensor_lock(unit);
+				unit->data[0].doubled.value = ((double)((buff[3] << 8) + buff[2]))/(double)10.0;
 				unit->data[1].doubled.value = ((double)((buff[5] << 8) + buff[4]))/(double)10.0;
+				sensor_unlock(unit);
 			}
 		}
 	}

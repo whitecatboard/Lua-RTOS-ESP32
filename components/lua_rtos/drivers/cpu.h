@@ -341,8 +341,8 @@ typedef uint64_t gpio_pin_mask_t;
 #endif
 
 void _cpu_init();
-int cpu_revission();
-void cpu_model(char *buffer);
+int cpu_revision();
+void cpu_model(char *buffer, int buflen);
 void cpu_reset();
 void cpu_show_info();
 unsigned int cpu_pins();
@@ -357,7 +357,9 @@ void cpu_idle(int seconds);
 unsigned int cpu_has_gpio(unsigned int port, unsigned int pin);
 unsigned int cpu_has_port(unsigned int port);
 void cpu_sleep(int seconds);
+void cpu_deepsleep();
 int cpu_reset_reason();
+int cpu_wakeup_reason();
 uint8_t cpu_gpio_number(uint8_t pin);
 void cpu_show_flash_info();
 uint32_t cpu_speed();

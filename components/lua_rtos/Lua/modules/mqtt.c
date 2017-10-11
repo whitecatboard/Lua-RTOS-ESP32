@@ -50,6 +50,9 @@
 #include <sys/mutex.h>
 #include <sys/delay.h>
 #include <sys/status.h>
+#include <sys/syslog.h>
+
+#define MQTT_MAX_RECONNECT_RETRIES 10
 
 void MQTTClient_init();
 
@@ -74,8 +77,6 @@ DRIVER_REGISTER_BEGIN(MQTT,mqtt,NULL,NULL,NULL);
 DRIVER_REGISTER_END(MQTT,mqtt,NULL,NULL,NULL);
 
 static int client_inited = 0;
-//needs to be persistent for connectionLost MQTTClient_connect to work
-static MQTTClient_SSLOptions ssl_opts = MQTTClient_SSLOptions_initializer;
 
 typedef struct {
     char *topic;
@@ -88,9 +89,11 @@ typedef struct {
     struct mtx callback_mtx;
     
     MQTTClient_connectOptions conn_opts;
+    MQTTClient_SSLOptions ssl_opts;
     MQTTClient client;
     
     mqtt_subs_callback *callbacks;
+    const char *ca_file;
 
     int secure;
 } mqtt_userdata;
@@ -159,29 +162,34 @@ static int messageArrived(void *context, char * topicName, int topicLen, MQTTCli
 
 static void connectionLost(void* context, char* cause) {
     mqtt_userdata *mqtt = (mqtt_userdata *)context;
-    if (mqtt) {
+    if (mqtt && mqtt->callback_mtx.sem) {
 	    mtx_lock(&mqtt->callback_mtx); //protect from being deleted by our own module
 
 			int rc = -1;
 			if (NETWORK_AVAILABLE()) {
 		    
-				for(int retries = 8; rc < 0 && retries; retries--) {
+				syslog(LOG_DEBUG, "mqtt: trying to reconnect\n");
+				usleep(500 * 1000); //wait before trying to reconnect (this does only sleep the THREAD, NOT the cpu)
+				for(int retries = 1; mqtt->client && rc < 0 && retries <= MQTT_MAX_RECONNECT_RETRIES; retries++) {
 					rc = MQTTClient_connect(mqtt->client, &mqtt->conn_opts);
-			    //printf( "mqtt: connection reconnect: %i\n", rc);
 					if (rc < 0) {
-						sleep(1); //wait before retrying (this does only sleep the THREAD, NOT the cpu)
+						syslog(LOG_DEBUG, "mqtt: reconnect attempt %i: %i\n", retries, rc);
+						usleep(500 * 1000); //wait before retrying (this does only sleep the THREAD, NOT the cpu)
 					}
 				}
 				
 			}
-			else
-		    printf( "mqtt: connection lost - no network available\n");
 
 			if (rc < 0) {
-		    printf( "mqtt: connection lost\n");
+				if (NETWORK_AVAILABLE()) {
+				  syslog(LOG_DEBUG, "mqtt: connection lost\n"); //reconnect didn't succeed
+				}
+				else {
+				  syslog(LOG_DEBUG, "mqtt: connection lost - no network available\n"); //reconnect not possible at all
+				}
 			}
 			else {
-		    printf( "mqtt: reconnected\n");
+		    syslog(LOG_DEBUG, "mqtt: reconnected\n");
 			}
 
 	    mtx_unlock(&mqtt->callback_mtx);
@@ -197,30 +205,39 @@ static int lmqtt_client( lua_State* L ){
     int secure;
     size_t lenClientId, lenHost;
     mqtt_userdata *mqtt;
-    char url[100];
-        
-    clientId = luaL_checklstring( L, 1, &lenClientId );
-    host = luaL_checklstring( L, 2, &lenHost );
+    char url[250];
+
+    clientId = luaL_checklstring( L, 1, &lenClientId ); //is being strdup'd in MQTTClient_create
+    host = luaL_checklstring( L, 2, &lenHost ); //url is being strdup'd in MQTTClient_connectURI
     port = luaL_checkinteger( L, 3 );
 
     luaL_checktype(L, 4, LUA_TBOOLEAN);
     secure = lua_toboolean( L, 4 );
+
+    const char *ca_file = luaL_optstring( L, 5, NULL );
     
     // Allocate mqtt structure and initialize
     mqtt = (mqtt_userdata *)lua_newuserdata(L, sizeof(mqtt_userdata));
     mqtt->L = L;
+    mqtt->client = NULL;
     mqtt->callbacks = NULL;
     mqtt->secure = secure;
+    mqtt->ca_file = (ca_file ? strdup(ca_file):NULL); //save for use during mqtt_connect
     mtx_init(&mqtt->callback_mtx, NULL, NULL, 0);
-    
+
+    // needed for lmqtt_client_gc to not crash freeing the username and password
+    MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
+    bcopy(&conn_opts, &mqtt->conn_opts, sizeof(MQTTClient_connectOptions));
+
     // Calculate uri
-    sprintf(url, "%s://%s:%d", mqtt->secure ? "ssl":"tcp", host, port);
+    snprintf(url, sizeof(url), "%s://%s:%d", mqtt->secure ? "ssl":"tcp", host, port);
     
     if (!client_inited) {
         MQTTClient_init();
         client_inited = 1;
     }
     
+    //url is being strdup'd in MQTTClient_connectURI
     rc = MQTTClient_create(&mqtt->client, url, clientId, MQTTCLIENT_PERSISTENCE_NONE, NULL);
     if (rc < 0){
       return luaL_exception(L, LUA_MQTT_ERR_CANT_CREATE_CLIENT);
@@ -231,8 +248,8 @@ static int lmqtt_client( lua_State* L ){
       return luaL_exception(L, LUA_MQTT_ERR_CANT_SET_CALLBACKS);
     }
 
-   luaL_getmetatable(L, "mqtt.cli");
-   lua_setmetatable(L, -2);
+    luaL_getmetatable(L, "mqtt.cli");
+    lua_setmetatable(L, -2);
 
     return 1;
 }
@@ -264,17 +281,19 @@ static int lmqtt_connect( lua_State* L ) {
     user = luaL_checkstring( L, 2 );
     password = luaL_checkstring( L, 3  );
 
+    MQTTClient_SSLOptions ssl_opts = MQTTClient_SSLOptions_initializer;
+    ssl_opts.trustStore = mqtt->ca_file; //has been strdup'd already
+    ssl_opts.enableServerCertAuth = (ssl_opts.trustStore != NULL);
+    bcopy(&ssl_opts, &mqtt->ssl_opts, sizeof(MQTTClient_SSLOptions));
+
     MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
-    
     conn_opts.connectTimeout = 4;
     conn_opts.keepAliveInterval = 60;
     conn_opts.reliable = 0;
     conn_opts.cleansession = 0;
-    conn_opts.username = user;
-    conn_opts.password = password;
-    ssl_opts.enableServerCertAuth = 0;
-    conn_opts.ssl = &ssl_opts;
-
+    conn_opts.username = strdup(user); //needs to be strdup'd here for connectionLost usage
+    conn_opts.password = strdup(password); // //needs to be strdup'd here for connectionLost usage
+    conn_opts.ssl = &mqtt->ssl_opts;
     bcopy(&conn_opts, &mqtt->conn_opts, sizeof(MQTTClient_connectOptions));
 
 retry:
@@ -350,14 +369,16 @@ static int lmqtt_publish( lua_State* L ) {
 }
 
 static int lmqtt_disconnect( lua_State* L ) {
-    int rc;
+    int rc = 0;
 
     mqtt_userdata *mqtt = NULL;
     
     mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt.cli");
     luaL_argcheck(L, mqtt, 1, "mqtt expected");
     
-    rc = MQTTClient_disconnect(mqtt->client, 0);
+    if (MQTTClient_isConnected(mqtt->client)) {
+		  rc = MQTTClient_disconnect(mqtt->client, 0);
+		}
     if (rc == 0) {
         return 0;
     } else {
@@ -372,7 +393,7 @@ static int lmqtt_client_gc (lua_State *L) {
     mqtt_subs_callback *nextcallback;
     
     mqtt = (mqtt_userdata *)luaL_testudata(L, 1, "mqtt.cli");
-    if (mqtt) {        
+    if (mqtt && mqtt->callback_mtx.sem) {
         // Destroy callbacks
         mtx_lock(&mqtt->callback_mtx);
 
@@ -384,14 +405,33 @@ static int lmqtt_client_gc (lua_State *L) {
             free(callback);
             callback = nextcallback;
         }
+        mqtt->callbacks = NULL;
 
         mtx_unlock(&mqtt->callback_mtx);
 
         // Disconnect and destroy client
-        MQTTClient_disconnect(mqtt->client, 0);
-        MQTTClient_destroy(&mqtt->client);        
+        if (MQTTClient_isConnected(mqtt->client)) {
+	        MQTTClient_disconnect(mqtt->client, 0);
+        }
+        MQTTClient_destroy(&mqtt->client);
+        mqtt->client = NULL;
         
         mtx_destroy(&mqtt->callback_mtx);
+        //mtx_destroy does mqtt->callback_mtx.sem = 0;
+
+        if (mqtt->ca_file) {
+        	free((char*)mqtt->ca_file);
+        	mqtt->ca_file = NULL;
+        	mqtt->ssl_opts.trustStore = NULL;
+        }
+        if (mqtt->conn_opts.username) {
+        	free((char*)mqtt->conn_opts.username);
+        	mqtt->conn_opts.username = NULL;
+        }
+        if (mqtt->conn_opts.password) {
+        	free((char*)mqtt->conn_opts.password);
+        	mqtt->conn_opts.password = NULL;
+        }
     }
    
     return 0;
@@ -422,8 +462,14 @@ static const LUA_REG_TYPE lmqtt_client_map[] = {
 };
 
 LUALIB_API int luaopen_mqtt( lua_State *L ) {
-    luaL_newmetarotable(L,"mqtt.cli", (void *)lmqtt_client_map);
-    return 0;
+  luaL_newmetarotable(L,"mqtt.cli", (void *)lmqtt_client_map);
+
+#if !LUA_USE_ROTABLE
+  luaL_newlib(L, mqtt);
+  return 1;
+#else
+	return 0;
+#endif
 }
 
 MODULE_REGISTER_MAPPED(MQTT, mqtt, lmqtt_map, luaopen_mqtt);

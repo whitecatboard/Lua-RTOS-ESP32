@@ -223,20 +223,11 @@ static int luart_write( lua_State* L ) {
             if ((c < 0) || (c > 255)) {
                 return luaL_error(L, "invalid argument %d (not a byte)", i);                     
             }
-            
-            if (id == CONSOLE_UART) {
-                fwrite(&c, 1, 1, stdout);
-            } else {
-                uart_write(id, c);
-            }
+
+            uart_write(id, c);
         } else if (lua_type( L, i) == LUA_TSTRING) {
             s = lua_tolstring(L, i, NULL);
-            
-            if (id == CONSOLE_UART) {
-                fwrite(s, strlen(s) + 1, 1, stdout);
-            } else {
-                uart_writes(id, (char *)s);
-            }
+            uart_writes(id, (char *)s);
         } else {
             return luaL_error(L, "invalid argument %d", i);  
         }

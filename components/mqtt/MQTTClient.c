@@ -311,10 +311,6 @@ int MQTTClient_create(MQTTClient* handle, const char* serverURI, const char* cli
 
 	if (!initialized)
 	{
-		#if defined(HEAP_H)
-			Heap_initialize();
-		#endif
-		//Log_initialize((Log_nameValue*)MQTTClient_getVersionInfo());
 		bstate->clients = ListInitialize();
 		Socket_outInitialize();
 		Socket_setWriteCompleteCallback(MQTTClient_writeComplete);
@@ -375,17 +371,18 @@ void MQTTClient_terminate(void)
 	MQTTClient_stop();
 	if (initialized)
 	{
-		ListFree(bstate->clients);
-		ListFree(handles);
-		handles = NULL;
+		if (bstate->clients) {
+			ListFree(bstate->clients);
+			bstate->clients = NULL;
+		}
+		if (handles) {
+			ListFree(handles);
+			handles = NULL;
+		}
 		Socket_outTerminate();
 #if defined(OPENSSL)
 		SSLSocket_terminate();
 #endif
-		#if defined(HEAP_H)
-			Heap_terminate();
-		#endif
-		Log_terminate();
 		initialized = 0;
 	}
 	FUNC_EXIT;
@@ -425,27 +422,49 @@ void MQTTClient_destroy(MQTTClient* handle)
 	if (m->c)
 	{
 		int saved_socket = m->c->net.socket;
-		char* saved_clientid = MQTTStrdup(m->c->clientID);
+		char* saved_clientid = m->c->clientID ? MQTTStrdup(m->c->clientID) : NULL;
+
 #if !defined(NO_PERSISTENCE)
 		MQTTPersistence_close(m->c);
 #endif
 		MQTTClient_emptyMessageQueue(m->c);
 		MQTTProtocol_freeClient(m->c);
+
 		if (!ListRemove(bstate->clients, m->c))
 			Log(LOG_ERROR, 0, NULL);
 		else
 			Log(TRACE_MIN, 1, NULL, saved_clientid, saved_socket);
-		free(saved_clientid);
+
+		if (saved_clientid)
+			free(saved_clientid);
 	}
-	if (m->serverURI)
+	if (m->serverURI) {
 		free(m->serverURI);
-	Thread_destroy_sem(m->connect_sem);
-	Thread_destroy_sem(m->connack_sem);
-	Thread_destroy_sem(m->suback_sem);
-	Thread_destroy_sem(m->unsuback_sem);
-	if (!ListRemove(handles, m))
-		Log(LOG_ERROR, -1, "free error");
+		m->serverURI = NULL;
+	}
+	if (m->connect_sem) {
+		Thread_destroy_sem(m->connect_sem);
+		m->connect_sem = NULL;
+	}
+	if (m->connack_sem) {
+		Thread_destroy_sem(m->connack_sem);
+		m->connack_sem = NULL;
+	}
+	if (m->suback_sem) {
+		Thread_destroy_sem(m->suback_sem);
+		m->suback_sem = NULL;
+	}
+	if (m->unsuback_sem) {
+		Thread_destroy_sem(m->unsuback_sem);
+		m->unsuback_sem = NULL;
+	}
+
+	if (handles) {
+		if (!ListRemove(handles, m))
+			Log(LOG_ERROR, -1, "free error");
+	}	
 	*handle = NULL;
+
 	if (bstate->clients->count == 0)
 		MQTTClient_terminate();
 
@@ -1063,8 +1082,8 @@ int MQTTClient_connectURI(MQTTClient handle, MQTTClient_connectOptions* options,
 	}
 #endif
 
-	m->c->username = options->username;
-	m->c->password = options->password;
+	m->c->username = MQTTStrdup(options->username);
+	m->c->password = MQTTStrdup(options->password);
 	m->c->retryInterval = options->retryInterval;
 
 	if (options->struct_version >= 3)
@@ -1221,6 +1240,7 @@ int MQTTClient_disconnect1(MQTTClient handle, int timeout, int call_connection_l
 exit:
 	if (stop)
 		MQTTClient_stop();
+
 	if (call_connection_lost && m->cl && was_connected)
 	{
 		Log(TRACE_MIN, -1, "Calling connectionLost for client %s", m->c->clientID);
@@ -1964,7 +1984,6 @@ int MQTTClient_getPendingDeliveryTokens(MQTTClient handle, MQTTClient_deliveryTo
 		int count = 0;
 
 		*tokens = malloc(sizeof(MQTTClient_deliveryToken) * (m->c->outboundMsgs->count + 1));
-		/*Heap_unlink(__FILE__, __LINE__, *tokens);*/
 		while (ListNextElement(m->c->outboundMsgs, &current))
 		{
 			Messages* m = (Messages*)(current->content);

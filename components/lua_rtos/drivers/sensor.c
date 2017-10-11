@@ -171,6 +171,7 @@ static driver_error_t *sensor_adc_setup(uint8_t interface, sensor_instance_t *un
 
 static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
+	driver_error_t *error;
 
 	// Sanity checks
 	if (unit->setup[interface].gpio.gpio < 40) {
@@ -196,17 +197,23 @@ static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *u
 
     if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_OFF) {
     	if (unit->sensor->interface[interface].flags & SENSOR_FLAG_DEBOUNCING) {
-    		driver_error_t *error;
     		uint16_t threshold = SENSOR_FLAG_GET_DEBOUNCING_THRESHOLD(unit->sensor->interface[interface]);
     		if ((error = gpio_debouncing_register(unit->setup[interface].gpio.gpio, threshold, debouncing, (void *)(&unit->setup[interface])))) {
     			return error;
     		}
     	} else {
-        	gpio_isr_attach(unit->setup[interface].gpio.gpio, isr, GPIO_INTR_ANYEDGE, (void *)(&unit->setup[interface]));
+        	if ((error = gpio_isr_attach(unit->setup[interface].gpio.gpio, isr, GPIO_INTR_ANYEDGE, (void *)(&unit->setup[interface])))) {
+        		return error;
+        	}
     	}
     } else {
-        gpio_pin_output(unit->setup[interface].gpio.gpio);
-    	gpio_pin_set(unit->setup[interface].gpio.gpio);
+        if ((error = gpio_pin_output(unit->setup[interface].gpio.gpio))) {
+        	return error;
+        }
+
+    	if ((error = gpio_pin_set(unit->setup[interface].gpio.gpio))) {
+    		return error;
+    	}
     }
 
 	return NULL;
@@ -256,19 +263,22 @@ static driver_error_t *sensor_owire_setup(uint8_t interface, sensor_instance_t *
 
 static driver_error_t *sensor_i2c_setup(uint8_t interface, sensor_instance_t *unit) {
 	driver_error_t *error;
-
-    driver_unit_lock_error_t *lock_error = NULL;
-	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, I2C_DRIVER, unit->setup[interface].i2c.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
-		return driver_lock_error(SENSOR_DRIVER, lock_error);
-	}
+	int i2cdevice;
 
 	#if CONFIG_LUA_RTOS_USE_POWER_BUS
 	pwbus_on();
 	#endif
 
-    if ((error = i2c_setup(unit->setup[interface].i2c.id, I2C_MASTER, unit->setup[interface].i2c.speed, 0, 0))) {
+    if ((error = i2c_setup(unit->setup[interface].i2c.id, I2C_MASTER, unit->setup[interface].i2c.speed, 0, 0, &i2cdevice))) {
     	return error;
     }
+
+    unit->setup[interface].i2c.id = i2cdevice;
+
+    driver_unit_lock_error_t *lock_error = NULL;
+	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, I2C_DRIVER, unit->setup[interface].i2c.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+		return driver_lock_error(SENSOR_DRIVER, lock_error);
+	}
 
 	return NULL;
 }
@@ -525,8 +535,7 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
 
 		for (j=0;j < SENSOR_MAX_INTERFACES;j++) {
 			is_auto = (
-				(unit->sensor->interface[j].flags & (SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF)) &&
-				(SENSOR_FLAG_GET_PROPERTY(unit->sensor->interface[j]) == i)
+				(unit->sensor->interface[j].flags & (SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF))
 			);
 
 			if (is_auto) break;
@@ -555,9 +564,8 @@ driver_error_t *sensor_read(sensor_instance_t *unit, const char *id, sensor_valu
 	*value = NULL;
 	for(idx=0;idx <  SENSOR_MAX_PROPERTIES;idx++) {
 		if (unit->sensor->data[idx].id) {
-			if (strcmp(unit->sensor->data[idx].id,id) == 0) {
+			if (strcmp(unit->sensor->data[idx].id, id) == 0) {
 				*value = &unit->data[idx];
-
 				mtx_unlock(&unit->mtx);
 				return NULL;
 			}
@@ -794,6 +802,14 @@ void IRAM_ATTR sensor_update_data(sensor_instance_t *unit, uint8_t from, uint8_t
 		unit->latch[i].t = now;
 	}
 
+	mtx_unlock(&unit->mtx);
+}
+
+void IRAM_ATTR sensor_lock(sensor_instance_t *unit) {
+	mtx_lock(&unit->mtx);
+}
+
+void IRAM_ATTR sensor_unlock(sensor_instance_t *unit) {
 	mtx_unlock(&unit->mtx);
 }
 

@@ -51,7 +51,7 @@
 #define NACK_VAL       0x1     /*!< I2C nack value */
 
 // Driver locks
-driver_unit_lock_t i2c_locks[CPU_LAST_I2C + 1];
+driver_unit_lock_t i2c_locks[(CPU_LAST_I2C + 1) * I2C_BUS_DEVICES];
 
 // Register driver and messages
 static void i2c_init();
@@ -67,6 +67,7 @@ DRIVER_REGISTER_BEGIN(I2C,i2c,i2c_locks,i2c_init,NULL);
 	DRIVER_REGISTER_ERROR(I2C, i2c, Timeout, "timeout", I2C_ERR_TIMEOUT);
 	DRIVER_REGISTER_ERROR(I2C, i2c, PinNowAllowed, "pin not allowed", I2C_ERR_PIN_NOT_ALLOWED);
 	DRIVER_REGISTER_ERROR(I2C, i2c, CannotChangePinMap, "cannot change pin map once the I2C unit has an attached device", I2C_ERR_CANNOT_CHANGE_PINMAP);
+	DRIVER_REGISTER_ERROR(I2C, i2c, NoMoreDevicesAllowed, "no more devices allowed", I2C_ERR_NO_MORE_DEVICES_ALLOWED);
 DRIVER_REGISTER_END(I2C,i2c,i2c_locks,i2c_init,NULL);
 
 // i2c info needed by driver
@@ -78,6 +79,17 @@ static struct list transactions;
 /*
  * Helper functions
  */
+
+static int i2c_get_free_device(int unit) {
+	int i;
+
+	for(i = 0;i < I2C_BUS_DEVICES;i++) {
+		if (i2c[unit].device[i].speed == 0) return i;
+	}
+
+	return -1;
+}
+
 static void i2c_lock(uint8_t unit) {
 	xSemaphoreTakeRecursive(i2c[unit].mtx, portMAX_DELAY);
 }
@@ -283,7 +295,7 @@ driver_error_t *i2c_pin_map(int unit, int sda, int scl) {
 	return NULL;
 }
 
-driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr) {
+driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr, int *deviceid) {
 	driver_error_t *error;
 
     // Sanity checks
@@ -291,74 +303,72 @@ driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr
 		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
 	}
 
-	if (speed == -1) {
+	if ((speed < 0) || (speed == 0)) {
 		speed = 400000;
 	}
 
 	i2c_lock(unit);
 
-	// If unit is setup, remove first
-	if (i2c[unit].setup) {
-		i2c_driver_delete(unit);
+	// Setup only once
+	if (!i2c[unit].setup) {
+	    if ((error = i2c_lock_resources(unit))) {
+	    	i2c_unlock(unit);
 
-#if 0
-		if (unit == 0) {
-			periph_module_disable(PERIPH_I2C0_MODULE);
-		} else {
-			periph_module_disable(PERIPH_I2C1_MODULE);
+			return error;
 		}
-#endif
 
-		i2c[unit].setup = 0;
+	    // Enable module
+	    if (unit == 0) {
+			periph_module_enable(PERIPH_I2C0_MODULE);
+		} else {
+			periph_module_enable(PERIPH_I2C1_MODULE);
+		}
+
+	    // Setup
+	    int buff_len = 0;
+	    i2c_config_t conf;
+
+	    conf.sda_io_num = i2c[unit].sda;
+	    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
+	    conf.scl_io_num = i2c[unit].scl;
+	    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+
+	    if (mode == I2C_MASTER) {
+	        conf.mode = I2C_MODE_MASTER;
+	        conf.master.clk_speed = speed;
+	        buff_len = 0;
+	    } else {
+	    	conf.mode = I2C_MODE_SLAVE;
+	    	conf.slave.addr_10bit_en = addr10_en;
+	    	conf.slave.slave_addr = addr;
+	    	buff_len = 1024;
+	    }
+
+	    i2c_param_config(unit, &conf);
+	    i2c_driver_install(unit, conf.mode, buff_len, buff_len, 0);
+
+	    i2c[unit].mode = mode;
+	    i2c[unit].setup = 1;
+
+	    syslog(LOG_INFO,
+	        "i2c%u at pins scl=%s%d/sdc=%s%d", unit,
+	        gpio_portname(i2c[unit].scl), gpio_name(i2c[unit].scl),
+	        gpio_portname(i2c[unit].sda), gpio_name(i2c[unit].sda)
+	    );
 	}
 
-    if ((error = i2c_lock_resources(unit))) {
-    	i2c_unlock(unit);
-
-		return error;
+	// Get a free device
+	int device = i2c_get_free_device(unit);
+	if (device < 0) {
+		// No more devices
+		return driver_error(I2C_DRIVER, I2C_ERR_NO_MORE_DEVICES_ALLOWED, NULL);
 	}
 
-    // Enable module
-    if (unit == 0) {
-		periph_module_enable(PERIPH_I2C0_MODULE);
-	} else {
-		periph_module_enable(PERIPH_I2C1_MODULE);
-	}
+	i2c[unit].device[device].speed = speed;
 
-    // Setup
-    int buff_len = 0;
-    i2c_config_t conf;
-
-    conf.sda_io_num = i2c[unit].sda;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_io_num = i2c[unit].scl;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-
-    if (mode == I2C_MASTER) {
-        conf.mode = I2C_MODE_MASTER;
-        conf.master.clk_speed = speed;
-        buff_len = 0;
-    } else {
-    	conf.mode = I2C_MODE_SLAVE;
-    	conf.slave.addr_10bit_en = addr10_en;
-    	conf.slave.slave_addr = addr;
-    	buff_len = 1024;
-    }
-
-    i2c_param_config(unit, &conf);
-    i2c_driver_install(unit, conf.mode, buff_len, buff_len, 0);
-
-    i2c[unit].mode = mode;
-    i2c[unit].setup = 1;
+	*deviceid = ((unit << 8) | device);
 
 	i2c_unlock(unit);
-
-    syslog(LOG_INFO,
-        "i2c%u at pins scl=%s%d/sdc=%s%d at speed %d hz", unit,
-        gpio_portname(i2c[unit].scl), gpio_name(i2c[unit].scl),
-        gpio_portname(i2c[unit].sda), gpio_name(i2c[unit].sda),
-		speed
-    );
 
     return NULL;
 }
@@ -385,9 +395,12 @@ driver_error_t *i2c_setspeed(int unit, int speed) {
 	return NULL;
 }
 
-driver_error_t *i2c_start(int unit, int *transaction) {
+driver_error_t *i2c_start(int deviceid, int *transaction) {
 	driver_error_t *error;
 	i2c_cmd_handle_t cmd = NULL;
+
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
 
 	// Sanity checks
 	if ((error = i2c_check(unit))) {
@@ -399,6 +412,8 @@ driver_error_t *i2c_start(int unit, int *transaction) {
 	}
 
 	i2c_lock(unit);
+
+	i2c_setspeed(unit, i2c[unit].device[device].speed);
 
 	if ((error = i2c_create_or_get_command(unit, transaction, &cmd))) {
 		i2c_unlock(unit);
@@ -412,8 +427,10 @@ driver_error_t *i2c_start(int unit, int *transaction) {
 	return NULL;
 }
 
-driver_error_t *i2c_stop(int unit, int *transaction) {
+driver_error_t *i2c_stop(int deviceid, int *transaction) {
 	driver_error_t *error;
+
+	int unit = (deviceid & 0xff00) >> 8;
 
 	// Sanity checks
 	if ((error = i2c_check(unit))) {
@@ -446,8 +463,10 @@ driver_error_t *i2c_stop(int unit, int *transaction) {
 	return NULL;
 }
 
-driver_error_t *i2c_write_address(int unit, int *transaction, char address, int read) {
+driver_error_t *i2c_write_address(int deviceid, int *transaction, char address, int read) {
 	driver_error_t *error;
+
+	int unit = (deviceid & 0xff00) >> 8;
 
 	// Sanity checks
 	if ((error = i2c_check(unit))) {
@@ -475,8 +494,10 @@ driver_error_t *i2c_write_address(int unit, int *transaction, char address, int 
 	return NULL;
 }
 
-driver_error_t *i2c_write(int unit, int *transaction, char *data, int len) {
+driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len) {
 	driver_error_t *error;
+
+	int unit = (deviceid & 0xff00) >> 8;
 
 	// Sanity checks
 	if ((error = i2c_check(unit))) {
@@ -508,8 +529,10 @@ driver_error_t *i2c_write(int unit, int *transaction, char *data, int len) {
     return NULL;
 }
 
-driver_error_t *i2c_read(int unit, int *transaction, char *data, int len) {
+driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len) {
 	driver_error_t *error;
+
+	int unit = (deviceid & 0xff00) >> 8;
 
 	// Sanity checks
 	if ((error = i2c_check(unit))) {

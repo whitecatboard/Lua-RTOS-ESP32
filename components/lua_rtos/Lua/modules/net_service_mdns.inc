@@ -1,10 +1,7 @@
 /*
  * Lua RTOS, Lua MDNS module
  *
- * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
- *
- * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ * Author: Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.
  *
@@ -78,14 +75,8 @@ typedef struct {
 static int lmdns_start( lua_State* L ){
   int rc = 0;
   int interface = luaL_checkinteger( L, 1 );
-  const char *hostname = 0;
-  const char *instance = 0;
-	if (lua_gettop(L) > 1) {
-    hostname = luaL_checkstring( L, 2 );
-		if (lua_gettop(L) > 2) {
-		  instance = luaL_checkstring( L, 3 );
-		}
-	}
+  const char *hostname = luaL_optstring( L, 2, NULL );
+  const char *instance = luaL_optstring( L, 3, NULL );
 
   mdns_userdata *mdns = (mdns_userdata *)lua_newuserdata(L, sizeof(mdns_userdata));
   mdns->L = L;
@@ -156,14 +147,14 @@ static int results_to_table( lua_State* L, mdns_userdata *mdns )
 
 			if(!ip4_addr_isany(&res->addr)) {
 				lua_pushstring(L, "ip");
-				sprintf(tmp, IPSTR, ip4_addr1_16(&res->addr),ip4_addr2_16(&res->addr),ip4_addr3_16(&res->addr),ip4_addr4_16(&res->addr));
+				snprintf(tmp, sizeof(tmp), IPSTR, ip4_addr1_16(&res->addr),ip4_addr2_16(&res->addr),ip4_addr3_16(&res->addr),ip4_addr4_16(&res->addr));
 				lua_pushstring(L, tmp);
 				lua_settable(L, -3);
 			}
 
 			if(!ip6_addr_isany(&res->addrv6)) {
 				lua_pushstring(L, "ipv6");
-				sprintf(tmp, IPV6STR, IPV62STR(res->addrv6));
+				snprintf(tmp, sizeof(tmp), IPV6STR, IPV62STR(res->addrv6));
 				lua_pushstring(L, tmp);
 				lua_settable(L, -3);
 			}
@@ -192,11 +183,8 @@ static int lmdns_resolve_host( lua_State* L ) {
   int rc;
   mdns_userdata *mdns = (mdns_userdata *)luaL_checkudata(L, 1, "mdns.cli");
   const char *hostname = luaL_checkstring( L, 2 );
-  int seconds = DEFAULT_TIMEOUT_SECONDS;
-	if (lua_gettop(L) > 2) {
-  	seconds = luaL_checkinteger( L, 3 );
-		if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
-	}
+  int seconds = luaL_optinteger(L, 3, DEFAULT_TIMEOUT_SECONDS);
+	if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
 
   luaL_argcheck(L, mdns, 1, "mdns expected");
 
@@ -213,11 +201,8 @@ static int lmdns_find_service( lua_State* L ) {
   mdns_userdata *mdns = (mdns_userdata *)luaL_checkudata(L, 1, "mdns.cli");
   const char *service = luaL_checkstring( L, 2 );
   const char *protocol = luaL_checkstring( L, 3 );
-  int seconds = DEFAULT_TIMEOUT_SECONDS;
-	if (lua_gettop(L) > 3) {
-  	seconds = luaL_checkinteger( L, 4 );
-		if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
-	}
+  int seconds = luaL_optinteger(L, 4, DEFAULT_TIMEOUT_SECONDS);
+	if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
 	
   luaL_argcheck(L, mdns, 1, "mdns expected");
 
@@ -323,8 +308,12 @@ static const LUA_REG_TYPE mdns_map[] = {
   { LSTRKEY( "WIFI_STA" ),     LINTVAL( TCPIP_ADAPTER_IF_STA     ) },
   { LSTRKEY( "WIFI_AP"  ),     LINTVAL( TCPIP_ADAPTER_IF_AP      ) },
   { LSTRKEY( "ETH"      ),     LINTVAL( TCPIP_ADAPTER_IF_ETH     ) },
+#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_SPI_ETHERNET
   { LSTRKEY( "SPI_ETH"  ),     LINTVAL( TCPIP_ADAPTER_IF_SPI_ETH ) },
+#endif
 
+  // Error definitions
+  DRIVER_REGISTER_LUA_ERRORS(mdns)
   { LNILKEY, LNILVAL }
 };
 
@@ -342,8 +331,14 @@ static const LUA_REG_TYPE lmdns_service_map[] = {
 
 //called from luaopen_net
 LUALIB_API int luaopen_mdns( lua_State *L ) {
-    luaL_newmetarotable(L,"mdns.cli", (void *)lmdns_service_map);
-    return 0;
+  luaL_newmetarotable(L,"mdns.cli", (void *)lmdns_service_map);
+
+#if !LUA_USE_ROTABLE
+  luaL_newlib(L, mdns);
+  return 1;
+#else
+	return 0;
+#endif
 }
 
 #endif

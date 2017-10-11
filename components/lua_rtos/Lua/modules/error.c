@@ -36,43 +36,71 @@
 #include <sys/driver.h>
 
 int luaL_driver_error(lua_State* L, driver_error_t *error) {
-	driver_error_t err;
     int ret_val;
     
-    memcpy(&err, error, sizeof(driver_error_t));
-    
-    if (err.type == LOCK) {
-        ret_val = luaL_error(L,
-            "%s%d is used by %s%d",
-			err.lock_error->target_driver->name,
-			err.lock_error->target_unit,
-			err.lock_error->lock->owner->name,
-			err.lock_error->lock->unit
-		);
-        
-        free(err.lock_error);
-        free(error);
+    // Copy relevant information about the error in the stack space.
+    //
+    // This is needed because *error is created in the heap and must be
+    // destroy, but relevant information is used when calling to the
+    // luaL_error interrupts the program flow and instructions after this
+    // call are not executed, so any free call after this call is not
+    // executed.
+    const char *msg = NULL;
+    const char *ext_msg = NULL;
+    const char *target_name;
+    const char *owner_name;
+    int target_unit;
+    int owner_unit;
+    int exception;
 
-        return ret_val;
-    } else if (err.type == OPERATION) {
-    	if (err.msg) {
-            ret_val = luaL_error(L,
-                "%d:%s (%s)",
-    			err.exception,
-    			driver_get_err_msg(&err),
-                err.msg
-            );
-    	} else {
-            ret_val = luaL_error(L,
-                "%d:%s",
-    			err.exception,
-    			driver_get_err_msg(&err)
-            );
+    int error_type = error->type;
+
+    if (error_type == LOCK) {
+    	target_name = error->lock_error->target_driver->name;
+		owner_name = error->lock_error->lock->owner->name;
+		target_unit = error->lock_error->target_unit;
+		owner_unit = error->lock_error->lock->unit;
+
+		free(error->lock_error);
+    } else if (error_type == OPERATION) {
+    	msg = driver_get_err_msg(error);
+
+    	if (error->msg) {
+    		ext_msg = error ->msg;
     	}
+
+    	exception = error->exception;
     }
     
     free(error);
 
+    if (error_type == LOCK) {
+        ret_val = luaL_error(L,
+            "%s%d is used by %s%d",
+			target_name,
+			target_unit,
+			owner_name,
+			owner_unit
+		);
+        
+        return ret_val;
+    } else if (error_type == OPERATION) {
+    	if (ext_msg) {
+            ret_val = luaL_error(L,
+                "%d:%s (%s)",
+    			exception,
+				msg,
+				ext_msg
+            );
+    	} else {
+            ret_val = luaL_error(L,
+                "%d:%s",
+    			exception,
+				msg
+            );
+    	}
+    }
+    
     return luaL_error(L, driver_get_err_msg(error));
 }
 

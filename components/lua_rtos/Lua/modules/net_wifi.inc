@@ -37,34 +37,43 @@
 static int lwifi_setup(lua_State* L) {
 	driver_error_t *error;
 
-	int mode = luaL_checkinteger(L, 1);
-	const char *ssid = luaL_checkstring(L, 2);
-	const char *password = luaL_checkstring(L, 3);
 	int powersave = 0;
 	int channel = 0;
 	int hidden = 0;
 
+	uint32_t ip = 0;
+	uint32_t mask = 0;
+	uint32_t gw = 0;
+	uint32_t dns1 = 0;
+	uint32_t dns2 = 0;
 
-	if (lua_gettop(L) > 3) {
-		powersave = luaL_checkinteger(L, 4);
+	int mode = luaL_checkinteger(L, 1);
+	const char *ssid = luaL_checkstring(L, 2);
+	const char *password = luaL_checkstring(L, 3);
 
-		if (lua_gettop(L) > 4) {
-			channel = luaL_checkinteger(L, 5);
+	if (mode == WIFI_MODE_STA) {
+		// Get IP info, if present
+		ip = luaL_optinteger(L, 4, 0);
+		mask = luaL_optinteger(L, 5, 0);
+		gw = luaL_optinteger(L, 6, 0);
+		dns1 = luaL_optinteger(L, 7, 0);
+		dns2 = luaL_optinteger(L, 8, 0);
+		powersave = luaL_optinteger(L, 9, 0);
+		channel = luaL_optinteger(L, 10, 0);
+	} else if (mode == WIFI_MODE_AP) {
+		powersave = luaL_optinteger(L, 4, 0);
+		channel = luaL_optinteger(L, 5, 0);
 
-			// Get arguments related only to AP mode
-			if (mode == WIFI_MODE_STA) {
-				if (lua_gettop(L) > 5) {
-					luaL_checktype(L, 6, LUA_TBOOLEAN);
-					if (lua_toboolean(L, 6)) {
-						hidden = 1;
-					}
-				}
+		if (lua_gettop(L) > 5) {
+			luaL_checktype(L, 6, LUA_TBOOLEAN);
+			if (lua_toboolean(L, 6)) {
+				hidden = 1;
 			}
 		}
 	}
 
 	// Setup wifi
-	if ((error = wifi_setup(mode, (char *)ssid, (char *)password, powersave, channel, hidden))) {
+	if ((error = wifi_setup(mode, (char *)ssid, (char *)password, ip, mask, gw, dns1, dns2, powersave, channel, hidden))) {
 		return luaL_driver_error(L, error);
 	}
 
@@ -198,29 +207,43 @@ static int lwifi_stat(lua_State* L) {
 			info.mac[4],info.mac[5]
 		);
 
-		printf("   ip address %s netmask %s\r\n", ipa, maska);
-		printf("   gw address %s\r\n\r\n", gwa);
-	} else {
-		char tmp[18];
+		printf("   ip address %s / netmask %s\r\n", ipa, maska);
+		printf("   gw address %s\r\n", gwa);
 
-		lua_createtable(L, 0, 4);
+		if (!ip6_addr_cmp(IP6_ADDR_ANY6, &info.ip6)) {
+			char tmp[46];
+			snprintf(tmp, sizeof(tmp), IPV6STR, IPV62STR(info.ip6));
+			printf("  ip6 address %s\r\n", tmp);
+		}
+
+		printf("\r\n");
+
+	} else {
+		char tmp[46];
+		tmp[0] = 0;
+
+		if (!ip6_addr_cmp(IP6_ADDR_ANY6, &info.ip6)) {
+			snprintf(tmp, sizeof(tmp), IPV6STR, IPV62STR(info.ip6));
+		}
+
+		lua_createtable(L, 0, strlen(tmp) > 0 ? 6:5);
 
 		lua_pushstring(L, "wf");
 		lua_setfield (L, -2, "interface");
 
-		sprintf(tmp, IPSTR, ip4_addr1_16(&info.ip),ip4_addr2_16(&info.ip),ip4_addr3_16(&info.ip),ip4_addr4_16(&info.ip));
+		snprintf(tmp, sizeof(tmp), IPSTR, ip4_addr1_16(&info.ip),ip4_addr2_16(&info.ip),ip4_addr3_16(&info.ip),ip4_addr4_16(&info.ip));
 		lua_pushstring(L, tmp);
 		lua_setfield (L, -2, "ip");
 
-		sprintf(tmp, IPSTR, ip4_addr1_16(&info.gw),ip4_addr2_16(&info.gw),ip4_addr3_16(&info.gw),ip4_addr4_16(&info.gw));
+		snprintf(tmp, sizeof(tmp), IPSTR, ip4_addr1_16(&info.gw),ip4_addr2_16(&info.gw),ip4_addr3_16(&info.gw),ip4_addr4_16(&info.gw));
 		lua_pushstring(L, tmp);
 		lua_setfield (L, -2, "gw");
 
-		sprintf(tmp, IPSTR, ip4_addr1_16(&info.netmask),ip4_addr2_16(&info.netmask),ip4_addr3_16(&info.netmask),ip4_addr4_16(&info.netmask));
+		snprintf(tmp, sizeof(tmp), IPSTR, ip4_addr1_16(&info.netmask),ip4_addr2_16(&info.netmask),ip4_addr3_16(&info.netmask),ip4_addr4_16(&info.netmask));
 		lua_pushstring(L, tmp);
 		lua_setfield (L, -2, "netmask");
 
-		sprintf(tmp, "%02x:%02x:%02x:%02x:%02x:%02x",
+		snprintf(tmp, sizeof(tmp), "%02x:%02x:%02x:%02x:%02x:%02x",
 			info.mac[0],info.mac[1],
 			info.mac[2],info.mac[3],
 			info.mac[4],info.mac[5]
@@ -228,6 +251,10 @@ static int lwifi_stat(lua_State* L) {
 		lua_pushstring(L, tmp);
 		lua_setfield (L, -2, "mac");
 
+		if (strlen(tmp) > 0 ) {
+			lua_pushstring(L, tmp);
+			lua_setfield (L, -2, "ip6");
+		}
 	}
 
 	return table;

@@ -39,12 +39,12 @@
 /**
  * Default input queue buffer
  */
-static socket_queue* def_queue;
+static socket_queue* def_queue = NULL;
 
 /**
  * List of queued input buffers
  */
-static List* queues;
+static List* queues = NULL;
 
 /**
  * List of queued write buffers
@@ -94,8 +94,14 @@ void SocketBuffer_initialize(void)
  */
 void SocketBuffer_freeDefQ(void)
 {
-	free(def_queue->buf);
-	free(def_queue);
+	if(def_queue) {
+		if (def_queue->buf) {
+			free(def_queue->buf);
+			def_queue->buf = NULL;
+		}
+		free(def_queue);
+		def_queue = NULL;
+	}
 }
 
 
@@ -108,9 +114,12 @@ void SocketBuffer_terminate(void)
 	ListEmpty(&writes);
 
 	FUNC_ENTRY;
-	while (ListNextElement(queues, &cur))
-		free(((socket_queue*)(cur->content))->buf);
-	ListFree(queues);
+	if (queues) {
+		while (ListNextElement(queues, &cur))
+			free(((socket_queue*)(cur->content))->buf);
+		ListFree(queues);
+		queues = NULL;
+	}
 	SocketBuffer_freeDefQ();
 	FUNC_EXIT;
 }

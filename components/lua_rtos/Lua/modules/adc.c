@@ -118,7 +118,7 @@ static int ladc_attach( lua_State* L ) {
 static int ladc_read( lua_State* L ) {
     int raw;
     double mvlots;
-	driver_error_t *error;
+    driver_error_t *error;
     adc_userdata *adc = NULL;
 
     adc = (adc_userdata *)luaL_checkudata(L, 1, "adc.chan");
@@ -141,9 +141,15 @@ static const LUA_REG_TYPE ladc_map[] = {
 	ADC_ADC2
 	ADC_ADC3
 	ADC_ADC4
+#if CONFIG_ADC_MCP3008
     { LSTRKEY( "MCP3008" ),		  LINTVAL( CPU_LAST_ADC + 1 ) },
-    { LSTRKEY( "MCP3208" ),		  LINTVAL( CPU_LAST_ADC + 2 ) },
-    { LSTRKEY( "ADS1115" ),		  LINTVAL( CPU_LAST_ADC + 3 ) },
+#endif
+#if CONFIG_ADC_MCP3208
+	{ LSTRKEY( "MCP3208" ),		  LINTVAL( CPU_LAST_ADC + 1 ) },
+#endif
+#if CONFIG_ADC_ADS1115
+    { LSTRKEY( "ADS1115" ),		  LINTVAL( CPU_LAST_ADC + 1 ) },
+#endif
 	ADC_ADC_CH0
 	ADC_ADC_CH1
 	ADC_ADC_CH2
