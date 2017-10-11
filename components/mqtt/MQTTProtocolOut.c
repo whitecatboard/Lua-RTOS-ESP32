@@ -117,7 +117,7 @@ int MQTTProtocol_connect(const char* ip_address, Clients* aClient, int MQTTVersi
 			if (SSLSocket_setSocketForSSL(&aClient->net, aClient->sslopts, addr) == 1)
 			{
 				rc = SSLSocket_connect(aClient->net.ssl, aClient->net.socket);
-				if (rc == TCPSOCKET_INTERRUPTED) //XXX THOR -1 before
+				if (rc == /*TCPSOCKET_INTERRUPTED*/ -1)
 					aClient->connect_state = 2; /* SSL connect called - wait for completion */
 			}
 			else

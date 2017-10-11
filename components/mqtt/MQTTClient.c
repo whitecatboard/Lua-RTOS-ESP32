@@ -1162,7 +1162,7 @@ static int MQTTClient_connectURI(MQTTClient handle, MQTTClient_connectOptions* o
 		m->c->passwordlen = strlen(options->password);
 	else if (options->struct_version >= 5 && options->binarypwd.data)
 	{
-		m->c->password = options->binarypwd.data; //XXX THOR need to dup here!
+		m->c->password = MQTTStrdup(options->binarypwd.data);
 		m->c->passwordlen = options->binarypwd.len;
 	}
 	m->c->retryInterval = options->retryInterval;
