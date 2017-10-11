@@ -936,13 +936,9 @@ menu "Lua RTOS"
 					bool "Include stepper module in build"
 					default y
 	
-				config LUA_RTOS_LUA_USE_SSD1306
-					bool "Include ssd1306 oled module in build"
-					default y
-
 				config LUA_RTOS_LUA_USE_GDISPLAY
 					bool "Include gdisplay module in build"
-					default n
+					default y
 
 				config LUA_RTOS_LUA_USE_SDISPLAY
 					bool "Include Segment Display module in build"
