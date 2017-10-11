@@ -80,6 +80,8 @@ MODULE_REGISTER_UNMAPPED(PACKAGE, package, luaopen_package);
 LUALIB_API void luaL_openlibs (lua_State *L) {
   const luaL_Reg *lib = lua_libs1;
 
+  #include "lua/user_modules.inc"
+
   for (; lib->name; lib++) {
     if (lib->func) {
   		debug_free_mem_begin(luaL_openlibs);
