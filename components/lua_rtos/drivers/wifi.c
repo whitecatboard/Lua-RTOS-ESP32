@@ -43,6 +43,9 @@
 
 #include "rom/rtc.h"
 
+#include "lwip/dns.h"
+#include "lwip/ip_addr.h"
+
 #include <string.h>
 #include <stdlib.h>
 
@@ -238,9 +241,12 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 	return NULL;
 }
 
-driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int powersave, int channel, int hidden) {
+driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1, uint32_t dns2, int powersave, int channel, int hidden) {
 	driver_error_t *error;
 	wifi_interface_t interface;
+	tcpip_adapter_ip_info_t ip_info;
+	ip_addr_t dns;
+	ip_addr_t *dns_p = &dns;
 
 	status_clear(STATUS_WIFI_SETUP);
 
@@ -300,6 +306,27 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, int pow
 
 	status_set(STATUS_WIFI_SETUP);
 
+	// Set ip / mask / gw, if present
+	if (ip && mask && gw) {
+		ip_info.ip.addr = ip;
+		ip_info.netmask.addr = mask;
+		ip_info.gw.addr = gw;
+
+		tcpip_adapter_dhcpc_stop(ESP_IF_WIFI_STA);
+		tcpip_adapter_set_ip_info(ESP_IF_WIFI_STA, &ip_info);
+
+		// If present, set dns1, else set to 8.8.8.8
+		if (!dns1) dns1 = 134744072;
+		ip_addr_set_ip4_u32(dns_p, dns1);
+
+		dns_setserver(0, (const ip_addr_t *)&dns);
+
+		// If present, set dns2, else set to 8.8.4.4
+		if (!dns2) dns2 = 67373064;
+		ip_addr_set_ip4_u32(dns_p, dns2);
+
+		dns_setserver(1, (const ip_addr_t *)&dns);
+	}
 	return NULL;
 }
 
