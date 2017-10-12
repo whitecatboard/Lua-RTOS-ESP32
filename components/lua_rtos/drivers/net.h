@@ -141,6 +141,8 @@ driver_error_t *net_event_register_callback(net_event_register_callback_t func);
  */
 driver_error_t *net_event_unregister_callback(net_event_register_callback_t func);
 
+driver_error_t *net_ping(const char *name, int count, int interval, int size, int timeout);
+
 #endif
 
 #endif

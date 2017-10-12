@@ -45,33 +45,32 @@ typedef struct {
 	const uint8_t mandatory;
 	const uint8_t optional;
 	const char *usage;
-	const uint8_t returns;
 } command_t;
 
 static const command_t command[] = {
-	{"luac", NULL, "compile", 1, 0, "luac source destination", 0},
-	{"cat", "os", "cat", 1, 0, "cat filename", 0},
-	{"cd", "os", "cd", 0, 1, "cd path", 0},
-	{"cp", "os", "cp", 2, 0, "cp from to", 0},
-	{"dmesg", "os", "dmesg", 0, 0, NULL, 0},
-	{"do", "_G", "dofile", 1, 0, "do [lua script]", 0},
-	{"clear", "os", "clear", 0, 0, NULL, 0},
-	{"edit", "os", "edit", 1, 0, "edit [filename]", 0},
-	{"exit", "os", "exit", 0, 0, NULL, 0},
-	{"reboot", "os", "exit", 0, 0, NULL, 0},
-	{"ls", "os", "ls", 0, 1, "ls [pattern]", 0},
-	{"dir", "os", "ls", 0, 1, "dir [pattern]", 0},
-	{"mkdir", "os", "mkdir", 1, 0, "mkdir path", 0},
-	{"more", "os", "more", 1, 0, "more filename", 0},
-	{"mv", "os", "rename", 2, 0, "mv old new", 0},
-	{"netstat", "net", "stat", 0, 0, NULL, 0},
-	{"ping", "net", "ping", 1, 0, "ping destination", 0},
-	{"pwd", "os", "pwd", 0, 0, NULL, 1},
-	{"remove", "os", "remove", 1, 0, "remove filename", 0},
-	{"rename", "os", "rename", 2, 0, "rename old new", 0},
-	{"rm", "os", "remove", 1, 0, "rm filename", 0},
-	{"unlink", "os", "remove", 1, 0, "unlink filename", 0},
-	{NULL, NULL, NULL, 0, 0, NULL, 0},
+	{"luac", NULL, "compile", 1, 0, "luac source destination"},
+	{"cat", "os", "cat", 1, 0, "cat filename"},
+	{"cd", "os", "cd", 0, 1, "cd path"},
+	{"cp", "os", "cp", 2, 0, "cp from to"},
+	{"dmesg", "os", "dmesg", 0, 0, NULL},
+	{"do", "_G", "dofile", 1, 0, "do [lua script]"},
+	{"clear", "os", "clear", 0, 0, NULL},
+	{"edit", "os", "edit", 1, 0, "edit [filename]"},
+	{"exit", "os", "exit", 0, 0, NULL},
+	{"reboot", "os", "exit", 0, 0, NULL},
+	{"ls", "os", "ls", 0, 1, "ls [pattern]"},
+	{"dir", "os", "ls", 0, 1, "dir [pattern]"},
+	{"mkdir", "os", "mkdir", 1, 0, "mkdir path"},
+	{"more", "os", "more", 1, 0, "more filename"},
+	{"mv", "os", "rename", 2, 0, "mv old new"},
+	{"netstat", "net", "stat", 0, 0, NULL},
+	{"ping", "net", "ping", 1, 0, "ping destination"},
+	{"pwd", "os", "pwd", 0, 0, NULL},
+	{"remove", "os", "remove", 1, 0, "remove filename"},
+	{"rename", "os", "rename", 2, 0, "rename old new"},
+	{"rm", "os", "remove", 1, 0, "rm filename"},
+	{"unlink", "os", "remove", 1, 0, "unlink filename"},
+	{NULL, NULL, NULL, 0, 0, NULL},
 };
 
 static char *lua_token_skip_spaces(char *buffer) {
@@ -185,8 +184,6 @@ void lua_shell(lua_State* L, char *buffer) {
 				lua_getglobal(L, command[cindex].function);
 		}
 
-		int top = lua_gettop(L);
-
 		// Prepare arguments
 		int i, args = 0;
 
@@ -205,38 +202,31 @@ void lua_shell(lua_State* L, char *buffer) {
 		// the function arguments
 
 		// Call, and make room for 4 return values
-			lua_pcall(L, args, 4, 0);
+		lua_pcall(L, args, 4, 0);
 
-			// After the call the stack is
-			// a reference to the module (if any)
-			//
-			// If error:
-			//		nil= top vaiable
-			//		error description = top + 1 variable
-			//
-			// If no error:
-			//		the return values
-
-			// Check for errors
-			if ((lua_type(L, top) == LUA_TNIL) && (lua_type(L, top + 1) == LUA_TSTRING))	{
-				const char *msg = lua_tostring(L, top + 1);
+		// Check for errors
+		if ((lua_type(L, 3) == LUA_TNIL) && (lua_type(L, 4) == LUA_TSTRING)) {
+			const char *msg = lua_tostring(L, 4);
 			if (msg) {
 				printf("%s\r\n", msg);
-				}
-
-				// Clear stack
-			lua_settop(L, 0);
-			} else {
-				if ((lua_type(L, top) != LUA_TNIL) && (command[cindex].returns)) {
-					lua_copy(L, top, 2);
-					lua_settop(L, top);
-				} else {
-					// Clear stack
-				lua_settop(L, 0);
-				}
 			}
 
-			*buffer = 0x00;
+			// Clear stack
+			lua_settop(L, 0);
+		} else if ((lua_type(L, 1) == LUA_TNIL) && (lua_type(L, 3) == LUA_TSTRING))	{
+			const char *msg = lua_tostring(L, 3);
+			if (msg) {
+				printf("%s\r\n", msg);
+			}
+
+			// Clear stack
+			lua_settop(L, 0);
+		} else {
+			// Clear stack
+			lua_settop(L, 0);
+		}
+
+		*buffer = 0x00;
 	}
 	else if ((cindex < 0) && (itoken == 1)) {
 		// Not a command - maybe it's a lua script?

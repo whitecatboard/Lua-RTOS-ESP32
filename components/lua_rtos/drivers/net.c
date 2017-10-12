@@ -49,6 +49,8 @@
 #include <drivers/net.h>
 #include <drivers/wifi.h>
 
+#include <lwip/ping.h>
+
 // This macro gets a reference for this driver into drivers array
 #define NET_DRIVER driver_get_by_name("net")
 
@@ -290,6 +292,16 @@ driver_error_t *net_event_unregister_callback(net_event_register_callback_t func
 	}
 
 	return driver_error(NET_DRIVER, NET_ERR_NO_MORE_CALLBACKS,NULL);
+}
+
+driver_error_t *net_ping(const char *name, int count, int interval, int size, int timeout) {
+	driver_error_t *error;
+
+	if ((error = net_check_connectivity())) return error;
+
+	ping(name, count, interval, size, timeout);
+
+	return NULL;
 }
 
 #endif
