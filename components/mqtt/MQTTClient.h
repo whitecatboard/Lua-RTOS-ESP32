@@ -228,6 +228,9 @@ typedef void* MQTTClient;
 typedef int MQTTClient_deliveryToken;
 typedef int MQTTClient_token;
 
+
+DLLExport int MQTTClient_connected(MQTTClient handle);
+
 /**
  * A structure representing the payload and attributes of an MQTT message. The
  * message topic is not part of this structure (see MQTTClient_publishMessage(),
