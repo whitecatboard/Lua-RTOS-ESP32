@@ -3,11 +3,11 @@
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution. 
+ * and Eclipse Distribution License v1.0 which accompany this distribution.
  *
- * The Eclipse Public License is available at 
+ * The Eclipse Public License is available at
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at 
+ * and the Eclipse Distribution License is available at
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
@@ -33,6 +33,7 @@ include "LinkedList"
 include "Clients"
 BE*/
 
+//typedef unsigned int bool;
 typedef void* (*pf)(unsigned char, char*, size_t);
 
 #define BAD_MQTT_PACKET -4
@@ -232,7 +233,7 @@ void writeInt(char** pptr, int anInt);
 void writeUTF(char** pptr, const char* string);
 void writeData(char** pptr, const void* data, int datalen);
 
-char* MQTTPacket_name(int ptype);
+const char* MQTTPacket_name(int ptype);
 
 void* MQTTPacket_Factory(networkHandles* net, int* error);
 int MQTTPacket_send(networkHandles* net, Header header, char* buffer, size_t buflen, int free);

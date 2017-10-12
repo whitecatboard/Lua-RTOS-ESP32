@@ -1,13 +1,13 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2014 IBM Corp.
+ * Copyright (c) 2009, 2017 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution. 
+ * and Eclipse Distribution License v1.0 which accompany this distribution.
  *
- * The Eclipse Public License is available at 
+ * The Eclipse Public License is available at
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at 
+ * and the Eclipse Distribution License is available at
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
@@ -15,6 +15,7 @@
  *    Ian Craggs, Allan Stockdill-Mander - async client updates
  *    Ian Craggs - bug #415042 - start Linux thread as disconnected
  *    Ian Craggs - fix for bug #420851
+ *    Ian Craggs - change MacOS semaphore implementation
  *******************************************************************************/
 
 /**
@@ -35,10 +36,7 @@
 #undef realloc
 #undef free
 
-#include "lwip/sys.h"
-
 #if !defined(WIN32) && !defined(WIN64)
-#include <stdint.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/time.h>
@@ -48,6 +46,8 @@
 #include <limits.h>
 #endif
 #include <stdlib.h>
+
+#include "OsWrapper.h"
 
 /**
  * Start a new thread
@@ -83,7 +83,7 @@ thread_type Thread_start(thread_fn fn, void* parameter)
  * Create a new mutex
  * @return the new mutex
  */
-mutex_type Thread_create_mutex()
+mutex_type Thread_create_mutex(void)
 {
 	mutex_type mutex = NULL;
 	int rc = 0;
@@ -91,6 +91,8 @@ mutex_type Thread_create_mutex()
 	FUNC_ENTRY;
 	#if defined(WIN32) || defined(WIN64)
 		mutex = CreateMutex(NULL, 0, NULL);
+		if (mutex == NULL)
+			rc = GetLastError();
 	#else
 		mutex = malloc(sizeof(pthread_mutex_t));
 		*mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -171,7 +173,7 @@ void Thread_destroy_mutex(mutex_type mutex)
  * Get the thread id of the thread from which this function is called
  * @return thread id, type varying according to OS
  */
-thread_id_type Thread_getid()
+thread_id_type Thread_getid(void)
 {
 	#if defined(WIN32) || defined(WIN64)
 		return GetCurrentThreadId();
@@ -185,7 +187,7 @@ thread_id_type Thread_getid()
  * Create a new semaphore
  * @return the new condition variable
  */
-sem_type Thread_create_sem()
+sem_type Thread_create_sem(void)
 {
 	sem_type sem = NULL;
 	int rc = 0;
@@ -286,7 +288,7 @@ int Thread_destroy_sem(sem_type sem)
  * Create a new condition variable
  * @return the condition variable struct
  */
-cond_type Thread_create_cond()
+cond_type Thread_create_cond(void)
 {
 	cond_type condvar = NULL;
 	int rc = 0;

@@ -42,6 +42,8 @@
 #include <signal.h>
 #include <ctype.h>
 
+//#include "Heap.h"
+
 int Socket_setnonblocking(int sock);
 int Socket_error(char* aString, int sock);
 int Socket_addSocket(int newSd);
@@ -114,7 +116,7 @@ int Socket_error(char* aString, int sock)
 /**
  * Initialize the socket module
  */
-void Socket_outInitialize()
+void Socket_outInitialize(void)
 {
 #if defined(WIN32) || defined(WIN64)
 	WORD    winsockVer = 0x0202;
@@ -143,7 +145,7 @@ void Socket_outInitialize()
 /**
  * Terminate the socket module
  */
-void Socket_outTerminate()
+void Socket_outTerminate(void)
 {
 	FUNC_ENTRY;
 	if (s.connect_pending) {

@@ -3,11 +3,11 @@
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution. 
+ * and Eclipse Distribution License v1.0 which accompany this distribution.
  *
- * The Eclipse Public License is available at 
+ * The Eclipse Public License is available at
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at 
+ * and the Eclipse Distribution License is available at
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
@@ -36,6 +36,7 @@
 #endif
 #include "SocketBuffer.h"
 #include "StackTrace.h"
+//#include "Heap.h"
 
 #if !defined(min)
 #define min(A,B) ( (A) < (B) ? (A):(B))
@@ -82,7 +83,7 @@ int MQTTProtocol_assignMsgId(Clients* client)
 	while (ListFindItem(client->outboundMsgs, &msgid, messageIDCompare) != NULL)
 	{
 		msgid = (msgid == MAX_MSG_ID) ? 1 : msgid + 1;
-		if (msgid == start_msgid) 
+		if (msgid == start_msgid)
 		{ /* we've tried them all - none free */
 			msgid = 0;
 			break;
@@ -95,7 +96,7 @@ int MQTTProtocol_assignMsgId(Clients* client)
 }
 
 
-void MQTTProtocol_storeQoS0(Clients* pubclient, Publish* publish)
+static void MQTTProtocol_storeQoS0(Clients* pubclient, Publish* publish)
 {
 	int len;
 	pending_write* pw = NULL;
@@ -123,7 +124,7 @@ void MQTTProtocol_storeQoS0(Clients* pubclient, Publish* publish)
  * @param retained boolean - whether to set the MQTT retained flag
  * @return the completion code
  */
-int MQTTProtocol_startPublishCommon(Clients* pubclient, Publish* publish, int qos, int retained)
+static int MQTTProtocol_startPublishCommon(Clients* pubclient, Publish* publish, int qos, int retained)
 {
 	int rc = TCPSOCKET_COMPLETE;
 
@@ -217,6 +218,11 @@ Publications* MQTTProtocol_storePublication(Publish* publish, int* len)
 	p->refcount = 1;
 
 	*len = (int)strlen(publish->topic)+1;
+	/*
+	if (Heap_findItem(publish->topic))
+		p->topic = publish->topic;
+	else
+	*/
 	{
 		p->topic = malloc(*len);
 		strcpy(p->topic, publish->topic);
@@ -555,7 +561,7 @@ void MQTTProtocol_keepalive(time_t now)
  * @param client - the client to which to apply the retry processing
  * @param regardless boolean - retry packets regardless of retry interval (used on reconnect)
  */
-void MQTTProtocol_retries(time_t now, Clients* client, int regardless)
+static void MQTTProtocol_retries(time_t now, Clients* client, int regardless)
 {
 	ListElement* outcurrent = NULL;
 
@@ -754,6 +760,7 @@ char* MQTTStrncpy(char *dest, const char *src, size_t dest_size)
 {
 	return MQTTStrncpyInt(dest, src, dest_size, 1);
 }
+
 
 /**
 * Duplicate a string, safely, allocating space on the heap

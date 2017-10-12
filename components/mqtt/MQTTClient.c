@@ -42,6 +42,7 @@
 
 #define _GNU_SOURCE /* for pthread_mutexattr_settype */
 #include <stdlib.h>
+#include <string.h>
 #if !defined(WIN32) && !defined(WIN64)
 	#include <sys/time.h>
 #endif
@@ -57,9 +58,7 @@
 #include "Thread.h"
 #include "SocketBuffer.h"
 #include "StackTrace.h"
-
-#include <string.h>
-#include <sys/time.h>
+//#include "Heap.h"
 
 #if defined(OPENSSL)
 #include <openssl/ssl.h>
@@ -67,20 +66,19 @@
 #define URI_SSL "ssl://"
 #endif
 
-#define	timersub(a, b, result)						      \
-  do {									      \
-    (result)->tv_sec = (a)->tv_sec - (b)->tv_sec;			      \
-    (result)->tv_usec = (a)->tv_usec - (b)->tv_usec;			      \
-    if ((result)->tv_usec < 0) {					      \
-      --(result)->tv_sec;						      \
-      (result)->tv_usec += 1000000;					      \
-    }									      \
-  } while (0)
+#include "OsWrapper.h"
 
 #define URI_TCP "tcp://"
 
 #define BUILD_TIMESTAMP "##MQTTCLIENT_BUILD_TAG##"
 #define CLIENT_VERSION  "##MQTTCLIENT_VERSION_TAG##"
+
+void MQTTClient_global_init(MQTTClient_init_options* inits)
+{
+#if defined(OPENSSL)
+	SSLSocket_handleOpensslInit(inits->do_openssl_init);
+#endif
+}
 
 static ClientStates ClientState =
 {
@@ -166,7 +164,11 @@ void MQTTClient_init()
 	int rc;
 
 	pthread_mutexattr_init(&attr);
+#if !defined(_WRS_KERNEL)
 	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
+#else
+	/* #warning "no pthread_mutexattr_settype" */
+#endif /* !defined(_WRS_KERNEL) */
 	if ((rc = pthread_mutex_init(mqttclient_mutex, &attr)) != 0)
 		printf("MQTTClient: error %d initializing client_mutex\n", rc);
 	if ((rc = pthread_mutex_init(socket_mutex, &attr)) != 0)
@@ -333,6 +335,10 @@ int MQTTClient_create(MQTTClient* handle, const char* serverURI, const char* cli
 
 	if (!initialized)
 	{
+		#if defined(HEAP_H)
+			//Heap_initialize();
+		#endif
+		//Log_initialize((Log_nameValue*)MQTTClient_getVersionInfo());
 		bstate->clients = ListInitialize();
 		Socket_outInitialize();
 		Socket_setWriteCompleteCallback(MQTTClient_writeComplete);
@@ -390,7 +396,7 @@ exit:
 }
 
 
-void MQTTClient_terminate(void)
+static void MQTTClient_terminate(void)
 {
 	FUNC_ENTRY;
 	MQTTClient_stop();
@@ -408,13 +414,17 @@ void MQTTClient_terminate(void)
 #if defined(OPENSSL)
 		SSLSocket_terminate();
 #endif
+		#if defined(HEAP_H)
+			Heap_terminate();
+		#endif
+		Log_terminate();
 		initialized = 0;
 	}
 	FUNC_EXIT;
 }
 
 
-void MQTTClient_emptyMessageQueue(Clients* client)
+static void MQTTClient_emptyMessageQueue(Clients* client)
 {
 	FUNC_ENTRY;
 	/* empty message queue */
@@ -709,7 +719,7 @@ static thread_return_type WINAPI MQTTClient_run(void* n)
 }
 
 
-static void MQTTClient_stop()
+static void MQTTClient_stop(void)
 {
 	int rc = 0;
 
@@ -1238,11 +1248,11 @@ int MQTTClient_connect(MQTTClient handle, MQTTClient_connectOptions* options)
 	else
 	{
 		int i;
-		
+
 		for (i = 0; i < options->serverURIcount; ++i)
 		{
 			char* serverURI = options->serverURIs[i];
-			
+
 			if (strncmp(URI_TCP, serverURI, strlen(URI_TCP)) == 0)
 				serverURI += strlen(URI_TCP);
 #if defined(OPENSSL)
@@ -1254,7 +1264,7 @@ int MQTTClient_connect(MQTTClient handle, MQTTClient_connectOptions* options)
 #endif
 			if ((rc = MQTTClient_connectURI(handle, options, serverURI)) == MQTTCLIENT_SUCCESS)
 				break;
-		}	
+		}
 	}
 
 exit:
@@ -1441,14 +1451,14 @@ int MQTTClient_subscribeMany(MQTTClient handle, int count, char* const* topic, i
 		Thread_lock_mutex(mqttclient_mutex);
 		if (pack != NULL)
 		{
-			Suback* sub = (Suback*)pack;	
+			Suback* sub = (Suback*)pack;
 			ListElement* current = NULL;
 			i = 0;
 			while (ListNextElement(sub->qoss, &current))
 			{
 				int* reqqos = (int*)(current->content);
 				qos[i++] = *reqqos;
-			}	
+			}
 			rc = MQTTProtocol_handleSubacks(pack, m->c->net.socket);
 			m->pack = NULL;
 		}
@@ -1603,7 +1613,7 @@ int MQTTClient_publish(MQTTClient handle, const char* topicName, int payloadlen,
 		goto exit;
 
 	/* If outbound queue is full, block until it is not */
-	while (m->c->outboundMsgs->count >= m->c->maxInflightMessages || 
+	while (m->c->outboundMsgs->count >= m->c->maxInflightMessages ||
          Socket_noPendingWrites(m->c->net.socket) == 0) /* wait until the socket is free of large packets being written */
 	{
 		if (blocked == 0)
@@ -1933,7 +1943,7 @@ int MQTTClient_receive(MQTTClient handle, char** topicName, int* topicLen, MQTTC
 	{
 		int sock = 0;
 		MQTTClient_cycle(&sock, (timeout > elapsed) ? timeout - elapsed : 0L, &rc);
-		
+
 		if (rc == SOCKET_ERROR)
 		{
 			if (ListFindItem(handles, &sock, clientSockCompare) && 	/* find client corresponding to socket */
@@ -1990,12 +2000,12 @@ exit:
 	FUNC_EXIT;
 }
 
-
-int pubCompare(void* a, void* b)
+/*
+static int pubCompare(void* a, void* b)
 {
 	Messages* msg = (Messages*)a;
 	return msg->publish == (Publications*)b;
-}
+}*/
 
 
 int MQTTClient_waitForCompletion(MQTTClient handle, MQTTClient_deliveryToken mdt, unsigned long timeout)
@@ -2061,6 +2071,7 @@ int MQTTClient_getPendingDeliveryTokens(MQTTClient handle, MQTTClient_deliveryTo
 		int count = 0;
 
 		*tokens = malloc(sizeof(MQTTClient_deliveryToken) * (m->c->outboundMsgs->count + 1));
+		/*Heap_unlink(__FILE__, __LINE__, *tokens);*/
 		while (ListNextElement(m->c->outboundMsgs, &current))
 		{
 			Messages* m = (Messages*)(current->content);
@@ -2075,7 +2086,7 @@ exit:
 	return rc;
 }
 
-MQTTClient_nameValue* MQTTClient_getVersionInfo()
+MQTTClient_nameValue* MQTTClient_getVersionInfo(void)
 {
 	#define MAX_INFO_STRINGS 3
 	static MQTTClient_nameValue libinfo[MAX_INFO_STRINGS + 1];
@@ -2101,7 +2112,7 @@ MQTTClient_nameValue* MQTTClient_getVersionInfo()
  * Cleaning up means removing any publication data that was stored because the write did
  * not originally complete.
  */
-void MQTTProtocol_checkPendingWrites()
+static void MQTTProtocol_checkPendingWrites(void)
 {
 	FUNC_ENTRY;
 	if (state.pending_writes.count > 0)
@@ -2127,17 +2138,17 @@ void MQTTProtocol_checkPendingWrites()
 static void MQTTClient_writeComplete(int socket)
 {
 	ListElement* found = NULL;
-	
+
 	FUNC_ENTRY;
 	/* a partial write is now complete for a socket - this will be on a publish*/
-	
+
 	MQTTProtocol_checkPendingWrites();
-	
+
 	/* find the client using this socket */
 	if ((found = ListFindItem(handles, &socket, clientSockCompare)) != NULL)
 	{
 		MQTTClients* m = (MQTTClients*)(found->content);
-		
+
 		time(&(m->c->net.lastSent));
 	}
 	FUNC_EXIT;

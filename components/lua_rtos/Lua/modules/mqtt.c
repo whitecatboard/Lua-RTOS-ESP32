@@ -87,11 +87,11 @@ typedef struct {
 typedef struct {
     lua_State *L;
     struct mtx callback_mtx;
-    
+
     MQTTClient_connectOptions conn_opts;
     MQTTClient_SSLOptions ssl_opts;
     MQTTClient client;
-    
+
     mqtt_subs_callback *callbacks;
     const char *ca_file;
 
@@ -100,30 +100,30 @@ typedef struct {
 
 static int add_subs_callback(mqtt_userdata *mqtt, const char *topic, int call) {
     mqtt_subs_callback *callback;
-    
+
     // Create and populate callback structure
     callback = (mqtt_subs_callback *)malloc(sizeof(mqtt_subs_callback));
     if (!callback) {
         errno = ENOMEM;
         return -1;
     }
-    
+
     callback->topic = (char *)malloc(strlen(topic) + 1);
     if (!callback->topic) {
         errno = ENOMEM;
         free(callback);
         return -1;
     }
-    
+
     strcpy(callback->topic, topic);
-    
+
     callback->callback = call;
-    
+
     mtx_lock(&mqtt->callback_mtx);
     callback->next = mqtt->callbacks;
     mqtt->callbacks = callback;
     mtx_unlock(&mqtt->callback_mtx);
-    
+
     return 0;
 }
 
@@ -133,7 +133,7 @@ static int messageArrived(void *context, char * topicName, int topicLen, MQTTCli
 
 		  mqtt_subs_callback *callback;
 		  int call = 0;
-		  
+
 		  mtx_lock(&mqtt->callback_mtx);
 
 		  callback = mqtt->callbacks;
@@ -147,16 +147,16 @@ static int messageArrived(void *context, char * topicName, int topicLen, MQTTCli
 		              lua_call(mqtt->L, 2, 0);
 		          }
 		      }
-		      
+
 		      callback = callback->next;
 		  }
 
 		  mtx_unlock(&mqtt->callback_mtx);
-		  
+
 		  MQTTClient_freeMessage(&m);
 		  MQTTClient_free(topicName);
 
-		}    
+		}
     return 1;
 }
 
@@ -167,7 +167,7 @@ static void connectionLost(void* context, char* cause) {
 
 			int rc = -1;
 			if (NETWORK_AVAILABLE()) {
-		    
+
 				syslog(LOG_DEBUG, "mqtt: trying to reconnect\n");
 				usleep(500 * 1000); //wait before trying to reconnect (this does only sleep the THREAD, NOT the cpu)
 				for(int retries = 1; mqtt->client && rc < 0 && retries <= MQTT_MAX_RECONNECT_RETRIES; retries++) {
@@ -177,7 +177,7 @@ static void connectionLost(void* context, char* cause) {
 						usleep(500 * 1000); //wait before retrying (this does only sleep the THREAD, NOT the cpu)
 					}
 				}
-				
+
 			}
 
 			if (rc < 0) {
@@ -207,13 +207,13 @@ static int lmqtt_client( lua_State* L ){
     const char *host = luaL_checklstring( L, 2, &lenHost ); //url is being strdup'd in MQTTClient_connectURI
     int port = luaL_checkinteger( L, 3 );
 
-		int persistence = luaL_optinteger( L, 4, MQTTCLIENT_PERSISTENCE_NONE );
+    int persistence = luaL_optinteger( L, 4, MQTTCLIENT_PERSISTENCE_NONE );
 
     luaL_checktype(L, 5, LUA_TBOOLEAN);
     int secure = lua_toboolean( L, 5 );
 
     const char *ca_file = luaL_optstring( L, 6, NULL );
-    
+
     // Allocate mqtt structure and initialize
     mqtt = (mqtt_userdata *)lua_newuserdata(L, sizeof(mqtt_userdata));
     mqtt->L = L;
@@ -229,12 +229,12 @@ static int lmqtt_client( lua_State* L ){
 
     // Calculate uri
     snprintf(url, sizeof(url), "%s://%s:%d", mqtt->secure ? "ssl":"tcp", host, port);
-    
+
     if (!client_inited) {
         MQTTClient_init();
         client_inited = 1;
     }
-    
+
     //url is being strdup'd in MQTTClient_connectURI
     rc = MQTTClient_create(&mqtt->client, url, clientId, persistence, NULL);
     if (rc < 0){
@@ -255,10 +255,10 @@ static int lmqtt_client( lua_State* L ){
 static int lmqtt_connected( lua_State* L ) {
     int rc;
     mqtt_userdata *mqtt = NULL;
-    
+
     mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt.cli");
     luaL_argcheck(L, mqtt, 1, "mqtt expected");
-    
+
     rc = MQTTClient_connected(mqtt->client);
 
     lua_pushboolean( L, rc == MQTTCLIENT_SUCCESS ? 1 : 0 );
@@ -272,10 +272,10 @@ static int lmqtt_connect( lua_State* L ) {
     const char *user;
     const char *password;
     mqtt_userdata *mqtt = NULL;
-    
+
     mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt.cli");
     luaL_argcheck(L, mqtt, 1, "mqtt expected");
-    
+
     user = luaL_checkstring( L, 2 );
     password = luaL_checkstring( L, 3  );
 
@@ -303,8 +303,8 @@ retry:
       }
 
       return luaL_exception(L, LUA_MQTT_ERR_CANT_CONNECT);
-    }    
-    
+    }
+
     return 0;
 }
 
@@ -313,25 +313,25 @@ static int lmqtt_subscribe( lua_State* L ) {
     int qos;
     const char *topic;
     int callback = 0;
-    
+
     mqtt_userdata *mqtt = NULL;
-    
+
     mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt.cli");
     luaL_argcheck(L, mqtt, 1, "mqtt expected");
-    
+
     topic = luaL_checkstring( L, 2 );
     qos = luaL_checkinteger( L, 3 );
-    
+
     luaL_checktype(L, 4, LUA_TFUNCTION);
 
     // Copy argument (function) to the top of stack
-    lua_pushvalue(L, 4); 
+    lua_pushvalue(L, 4);
 
     // Copy function reference
     callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    add_subs_callback(mqtt, topic, callback);        
-    
+    add_subs_callback(mqtt, topic, callback);
+
     rc = MQTTClient_subscribe(mqtt->client, topic, qos);
     if (rc == 0) {
         return 0;
@@ -348,15 +348,15 @@ static int lmqtt_publish( lua_State* L ) {
     char *payload;
 
     mqtt_userdata *mqtt = NULL;
-    
+
     mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt.cli");
     luaL_argcheck(L, mqtt, 1, "mqtt expected");
-    
+
     topic = luaL_checkstring( L, 2 );
     payload = (char *)luaL_checklstring( L, 3, &payload_len );
     qos = luaL_checkinteger( L, 4 );
-    
-    rc = MQTTClient_publish(mqtt->client, topic, payload_len, payload, 
+
+    rc = MQTTClient_publish(mqtt->client, topic, payload_len, payload,
             qos, 0, NULL);
 
     if (rc == 0) {
@@ -370,10 +370,10 @@ static int lmqtt_disconnect( lua_State* L ) {
     int rc = 0;
 
     mqtt_userdata *mqtt = NULL;
-    
+
     mqtt = (mqtt_userdata *)luaL_checkudata(L, 1, "mqtt.cli");
     luaL_argcheck(L, mqtt, 1, "mqtt expected");
-    
+
     if (MQTTClient_isConnected(mqtt->client)) {
 		  rc = MQTTClient_disconnect(mqtt->client, 0);
 		}
@@ -389,7 +389,7 @@ static int lmqtt_client_gc (lua_State *L) {
     mqtt_userdata *mqtt = NULL;
     mqtt_subs_callback *callback;
     mqtt_subs_callback *nextcallback;
-    
+
     mqtt = (mqtt_userdata *)luaL_testudata(L, 1, "mqtt.cli");
     if (mqtt && mqtt->callback_mtx.sem) {
         // Destroy callbacks
@@ -399,7 +399,7 @@ static int lmqtt_client_gc (lua_State *L) {
         while (callback) {
             luaL_unref(L, LUA_REGISTRYINDEX, callback->callback);
             nextcallback = callback->next;
-        
+
             free(callback);
             callback = nextcallback;
         }
@@ -413,7 +413,7 @@ static int lmqtt_client_gc (lua_State *L) {
         }
         MQTTClient_destroy(&mqtt->client);
         mqtt->client = NULL;
-        
+
         mtx_destroy(&mqtt->callback_mtx);
         //mtx_destroy does mqtt->callback_mtx.sem = 0;
 
@@ -431,7 +431,7 @@ static int lmqtt_client_gc (lua_State *L) {
         	mqtt->conn_opts.password = NULL;
         }
     }
-   
+
     return 0;
 }
 

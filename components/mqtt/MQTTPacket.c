@@ -3,11 +3,11 @@
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution. 
+ * and Eclipse Distribution License v1.0 which accompany this distribution.
  *
- * The Eclipse Public License is available at 
+ * The Eclipse Public License is available at
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at 
+ * and the Eclipse Distribution License is available at
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
@@ -34,6 +34,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+//#include "Heap.h"
+
 #if !defined(min)
 #define min(A,B) ( (A) < (B) ? (A):(B))
 #endif
@@ -41,14 +43,14 @@
 /**
  * List of the predefined MQTT v3 packet names.
  */
-static char* packet_names[] =
+static const char *packet_names[] =
 {
 	"RESERVED", "CONNECT", "CONNACK", "PUBLISH", "PUBACK", "PUBREC", "PUBREL",
 	"PUBCOMP", "SUBSCRIBE", "SUBACK", "UNSUBSCRIBE", "UNSUBACK",
 	"PINGREQ", "PINGRESP", "DISCONNECT"
 };
 
-char** MQTTClient_packet_names = packet_names;
+const char** MQTTClient_packet_names = packet_names;
 
 
 /**
@@ -56,7 +58,7 @@ char** MQTTClient_packet_names = packet_names;
  * @param ptype packet code
  * @return the corresponding string, or "UNKNOWN"
  */
-char* MQTTPacket_name(int ptype)
+const char* MQTTPacket_name(int ptype)
 {
 	return (ptype >= 0 && ptype <= DISCONNECT) ? packet_names[ptype] : "UNKNOWN";
 }
@@ -107,7 +109,7 @@ void* MQTTPacket_Factory(networkHandles* net, int* error)
 
 	/* read the packet data from the socket */
 #if defined(OPENSSL)
-	*error = (net->ssl) ? SSLSocket_getch(net->ssl, net->socket, &header.byte) : Socket_getch(net->socket, &header.byte); 
+	*error = (net->ssl) ? SSLSocket_getch(net->ssl, net->socket, &header.byte) : Socket_getch(net->socket, &header.byte);
 #else
 	*error = Socket_getch(net->socket, &header.byte);
 #endif
@@ -120,7 +122,7 @@ void* MQTTPacket_Factory(networkHandles* net, int* error)
 
 	/* now read the rest, the variable header and payload */
 #if defined(OPENSSL)
-	data = (net->ssl) ? SSLSocket_getdata(net->ssl, net->socket, remaining_length, &actual_len) : 
+	data = (net->ssl) ? SSLSocket_getdata(net->ssl, net->socket, remaining_length, &actual_len) :
 						Socket_getdata(net->socket, remaining_length, &actual_len);
 #else
 	data = Socket_getdata(net->socket, remaining_length, &actual_len);
@@ -172,7 +174,7 @@ exit:
  * @param buflen the length of the data in buffer to be written
  * @return the completion code (TCPSOCKET_COMPLETE etc)
  */
-int MQTTPacket_send(networkHandles* net, Header header, char* buffer, size_t buflen, int must_free)
+int MQTTPacket_send(networkHandles* net, Header header, char* buffer, size_t buflen, int freeData)
 {
 	int rc;
 	size_t buf0len;
@@ -194,14 +196,14 @@ int MQTTPacket_send(networkHandles* net, Header header, char* buffer, size_t buf
 
 #if defined(OPENSSL)
 	if (net->ssl)
-		rc = SSLSocket_putdatas(net->ssl, net->socket, buf, buf0len, 1, &buffer, &buflen, &must_free);
+		rc = SSLSocket_putdatas(net->ssl, net->socket, buf, buf0len, 1, &buffer, &buflen, &freeData);
 	else
 #endif
-		rc = Socket_putdatas(net->socket, buf, buf0len, 1, &buffer, &buflen, &must_free);
+		rc = Socket_putdatas(net->socket, buf, buf0len, 1, &buffer, &buflen, &freeData);
 		
 	if (rc == TCPSOCKET_COMPLETE)
 		time(&(net->lastSent));
-	
+
 	if (rc != TCPSOCKET_INTERRUPTED)
 	  free(buf);
 
@@ -246,10 +248,10 @@ int MQTTPacket_sends(networkHandles* net, Header header, int count, char** buffe
 	else
 #endif
 		rc = Socket_putdatas(net->socket, buf, buf0len, count, buffers, buflens, frees);
-		
+
 	if (rc == TCPSOCKET_COMPLETE)
 		time(&(net->lastSent));
-	
+
 	if (rc != TCPSOCKET_INTERRUPTED)
 	  free(buf);
 	FUNC_EXIT_RC(rc);
@@ -347,7 +349,7 @@ int readInt(char** pptr)
  * have caused an overrun.
  *
  */
-char* readUTFlen(char** pptr, char* enddata, int* len)
+static char* readUTFlen(char** pptr, char* enddata, int* len)
 {
 	char* string = NULL;
 
@@ -542,7 +544,7 @@ void MQTTPacket_freePublish(Publish* pack)
  * @param net the network handle to send the data to
  * @return the completion code (e.g. TCPSOCKET_COMPLETE)
  */
-int MQTTPacket_send_ack(int type, int msgid, int dup, networkHandles *net)
+static int MQTTPacket_send_ack(int type, int msgid, int dup, networkHandles *net)
 {
 	Header header;
 	int rc;

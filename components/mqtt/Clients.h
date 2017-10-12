@@ -3,11 +3,11 @@
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution. 
+ * and Eclipse Distribution License v1.0 which accompany this distribution.
  *
- * The Eclipse Public License is available at 
+ * The Eclipse Public License is available at
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at 
+ * and the Eclipse Distribution License is available at
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
@@ -24,7 +24,7 @@
 #include <time.h>
 #if defined(OPENSSL)
 #if defined(WIN32) || defined(WIN64)
-#include "winsock2.h"
+#include <winsock2.h>
 #endif
 #include <openssl/ssl.h>
 #endif
@@ -168,10 +168,10 @@ typedef struct
 	char* clientID;					      /**< the string id of the client */
 	const char* username;					/**< MQTT v3.1 user name */
 	int passwordlen;              /**< MQTT password length */
-	const void* password;			/**< MQTT v3.1 binary password */
+	const void* password;					/**< MQTT v3.1 binary password */
 	unsigned int cleansession : 1;	/**< MQTT clean session flag */
 	unsigned int connected : 1;		/**< whether it is currently connected */
-	unsigned int good : 1; 			/**< if we have an error on the socket we turn this off */
+	unsigned int good : 1; 			  /**< if we have an error on the socket we turn this off */
 	unsigned int ping_outstanding : 1;
 	int connect_state : 4;
 	networkHandles net;

@@ -1,13 +1,13 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2016 IBM Corp.
+ * Copyright (c) 2009, 2017 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution. 
+ * and Eclipse Distribution License v1.0 which accompany this distribution.
  *
- * The Eclipse Public License is available at 
+ * The Eclipse Public License is available at
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at 
+ * and the Eclipse Distribution License is available at
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
@@ -34,9 +34,10 @@
 
 #include "MQTTProtocolOut.h"
 #include "StackTrace.h"
+//#include "Heap.h"
 
-extern MQTTProtocol state;
 extern ClientStates* bstate;
+
 
 
 /**
@@ -124,12 +125,12 @@ int MQTTProtocol_connect(const char* ip_address, Clients* aClient, int MQTTVersi
 				rc = SOCKET_ERROR;
 		}
 #endif
-		
+
 		if (rc == 0)
 		{
 			/* Now send the MQTT connect packet */
 			if ((rc = MQTTPacket_send_connect(aClient, MQTTVersion)) == 0)
-				aClient->connect_state = 3; /* MQTT Connect sent - wait for CONNACK */ 
+				aClient->connect_state = 3; /* MQTT Connect sent - wait for CONNACK */
 			else
 				aClient->connect_state = 0;
 		}
