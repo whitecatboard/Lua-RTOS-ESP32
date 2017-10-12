@@ -561,7 +561,8 @@ static int IRAM_ATTR vfs_spiffs_rename(const char *src, const char *dst) {
 
     	SPIFFS_opendir(&fs, "/", &d);
     	while (SPIFFS_readdir(&d, &e)) {
-    		if (!strncmp(src, (const char *)e.name, min(strlen((char *)e.name), strlen(src)))) {
+//    		if (!strncmp(src, (const char *)e.name, min(strlen((char *)e.name), strlen(src)))) {
+    		if ( !strncmp(src, (const char *)e.name, strlen(src) ) && e.name[strlen(src)] == '/' ) {
     			strlcpy(dpath, dst, PATH_MAX);
     			csrc = (char *)src;
     			cname = (char *)e.name;

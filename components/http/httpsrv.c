@@ -73,6 +73,7 @@
 #include <drivers/net.h>
 #include <drivers/spi_eth.h>
 
+
 char *strcasestr(const char *haystack, const char *needle);
 driver_error_t *wifi_stat(ifconfig_t *info);
 driver_error_t *wifi_check_error(esp_err_t error);

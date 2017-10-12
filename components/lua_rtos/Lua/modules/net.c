@@ -145,6 +145,8 @@ static int lnet_unpackip(lua_State *L) {
 }
 
 static int lnet_ping(lua_State* L) {
+	driver_error_t *error;
+
 	const char* name = luaL_checkstring(L, 1);
 	int top = lua_gettop(L);
 	int i, count = 0, interval = 0, size = 0, timeout = 0;
@@ -166,7 +168,9 @@ static int lnet_ping(lua_State* L) {
 		}
 	}
 
-	ping(name, count, interval, size, timeout);
+	if ((error = net_ping(name, count, interval, size, timeout))) {
+		return luaL_driver_error(L, error);
+	}
 
 	return 0;
 }

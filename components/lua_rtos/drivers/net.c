@@ -49,8 +49,7 @@
 #include <drivers/net.h>
 #include <drivers/wifi.h>
 
-// This macro gets a reference for this driver into drivers array
-#define NET_DRIVER driver_get_by_name("net")
+#include <lwip/ping.h>
 
 // Register drivers and errors
 DRIVER_REGISTER_BEGIN(NET,net,NULL,NULL,NULL);
@@ -58,6 +57,9 @@ DRIVER_REGISTER_BEGIN(NET,net,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(NET, net, InvalidIpAddr, "invalid IP adddress", NET_ERR_INVALID_IP);
 	DRIVER_REGISTER_ERROR(NET, net, NoMoreCallbacksAvailable, "no more callbacks available", NET_ERR_NO_MORE_CALLBACKS);
 	DRIVER_REGISTER_ERROR(NET, net, CallbackNotFound, "callback not found", NET_ERR_NO_CALLBACK_NOT_FOUND);
+	DRIVER_REGISTER_ERROR(NET, net, NameCannotBeResolved, "name cannot be resolved", NET_ERR_NAME_CANNOT_BE_RESOLVED);
+	DRIVER_REGISTER_ERROR(NET, net, CannotCreateSocket, "cannot create socket", NET_ERR_NAME_CANNOT_CREATE_SOCKET);
+	DRIVER_REGISTER_ERROR(NET, net, CannotSetupSocket, "cannot create socket", NET_ERR_NAME_CANNOT_SETUP_SOCKET);
 DRIVER_REGISTER_END(NET,net,NULL,NULL,NULL);
 
 // FreeRTOS events used by driver
@@ -258,12 +260,11 @@ driver_error_t *net_lookup(const char *name, struct sockaddr_in *address) {
 		}
 
 		freeaddrinfo(result);
-
-		return NULL;
 	} else {
-		printf("net_lookup error %d, errno %d (%s)\r\n",rc, errno, strerror(rc));
-		return NULL;
+		return driver_error(NET_DRIVER, NET_ERR_NAME_CANNOT_BE_RESOLVED,NULL);
 	}
+
+	return NULL;
 }
 
 driver_error_t *net_event_register_callback(net_event_register_callback_t func) {
@@ -290,6 +291,16 @@ driver_error_t *net_event_unregister_callback(net_event_register_callback_t func
 	}
 
 	return driver_error(NET_DRIVER, NET_ERR_NO_MORE_CALLBACKS,NULL);
+}
+
+driver_error_t *net_ping(const char *name, int count, int interval, int size, int timeout) {
+	driver_error_t *error;
+
+	if ((error = net_check_connectivity())) return error;
+
+	if ((error = ping(name, count, interval, size, timeout))) return error;
+
+	return NULL;
 }
 
 #endif

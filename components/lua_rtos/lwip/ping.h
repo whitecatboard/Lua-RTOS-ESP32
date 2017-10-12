@@ -2,7 +2,7 @@
  * Lua RTOS, ping utility
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -59,4 +59,6 @@
  *
  */
 
-void ping(const char *name, int count, int interval, int size, int timeout);
+#include <sys/driver.h>
+
+driver_error_t *ping(const char *name, int count, int interval, int size, int timeout);
