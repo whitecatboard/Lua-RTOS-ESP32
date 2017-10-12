@@ -229,6 +229,13 @@ typedef int MQTTClient_deliveryToken;
 typedef int MQTTClient_token;
 
 
+/** 
+ * This function returns if a connection is established
+ * @param handle A valid client handle from a successful call to
+ * MQTTClient_create().
+ * @return ::MQTTCLIENT_SUCCESS if the client is connected.
+ * An error code is returned if there is no connection.
+ */
 DLLExport int MQTTClient_connected(MQTTClient handle);
 
 /**
