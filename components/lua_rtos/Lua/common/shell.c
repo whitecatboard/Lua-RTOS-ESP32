@@ -64,6 +64,8 @@ static const command_t command[] = {
 	{"mkdir", "os", "mkdir", 1, 0, "mkdir path", 0},
 	{"more", "os", "more", 1, 0, "more filename", 0},
 	{"mv", "os", "rename", 2, 0, "mv old new", 0},
+	{"netstat", "net", "stat", 0, 0, NULL, 0},
+	{"ping", "net", "ping", 1, 0, "ping destination", 0},
 	{"pwd", "os", "pwd", 0, 0, NULL, 1},
 	{"remove", "os", "remove", 1, 0, "remove filename", 0},
 	{"rename", "os", "rename", 2, 0, "rename old new", 0},

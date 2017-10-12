@@ -37,34 +37,43 @@
 static int lwifi_setup(lua_State* L) {
 	driver_error_t *error;
 
-	int mode = luaL_checkinteger(L, 1);
-	const char *ssid = luaL_checkstring(L, 2);
-	const char *password = luaL_checkstring(L, 3);
 	int powersave = 0;
 	int channel = 0;
 	int hidden = 0;
 
+	uint32_t ip = 0;
+	uint32_t mask = 0;
+	uint32_t gw = 0;
+	uint32_t dns1 = 0;
+	uint32_t dns2 = 0;
 
-	if (lua_gettop(L) > 3) {
-		powersave = luaL_checkinteger(L, 4);
+	int mode = luaL_checkinteger(L, 1);
+	const char *ssid = luaL_checkstring(L, 2);
+	const char *password = luaL_checkstring(L, 3);
 
-		if (lua_gettop(L) > 4) {
-			channel = luaL_checkinteger(L, 5);
+	if (mode == WIFI_MODE_STA) {
+		// Get IP info, if present
+		ip = luaL_optinteger(L, 4, 0);
+		mask = luaL_optinteger(L, 5, 0);
+		gw = luaL_optinteger(L, 6, 0);
+		dns1 = luaL_optinteger(L, 7, 0);
+		dns2 = luaL_optinteger(L, 8, 0);
+		powersave = luaL_optinteger(L, 9, 0);
+		channel = luaL_optinteger(L, 10, 0);
+	} else if (mode == WIFI_MODE_AP) {
+		powersave = luaL_optinteger(L, 4, 0);
+		channel = luaL_optinteger(L, 5, 0);
 
-			// Get arguments related only to AP mode
-			if (mode == WIFI_MODE_STA) {
-				if (lua_gettop(L) > 5) {
-					luaL_checktype(L, 6, LUA_TBOOLEAN);
-					if (lua_toboolean(L, 6)) {
-						hidden = 1;
-					}
-				}
+		if (lua_gettop(L) > 5) {
+			luaL_checktype(L, 6, LUA_TBOOLEAN);
+			if (lua_toboolean(L, 6)) {
+				hidden = 1;
 			}
 		}
 	}
 
 	// Setup wifi
-	if ((error = wifi_setup(mode, (char *)ssid, (char *)password, powersave, channel, hidden))) {
+	if ((error = wifi_setup(mode, (char *)ssid, (char *)password, ip, mask, gw, dns1, dns2, powersave, channel, hidden))) {
 		return luaL_driver_error(L, error);
 	}
 
