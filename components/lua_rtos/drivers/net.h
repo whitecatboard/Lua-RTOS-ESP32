@@ -64,11 +64,17 @@ typedef struct {
     ip6_addr_t ip6;
 } ifconfig_t;
 
+// This macro gets a reference for this driver into drivers array
+#define NET_DRIVER driver_get_by_name("net")
+
 // NET errors
 #define NET_ERR_NOT_AVAILABLE              (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  0)
 #define NET_ERR_INVALID_IP                 (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  1)
 #define NET_ERR_NO_MORE_CALLBACKS          (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  2)
 #define NET_ERR_NO_CALLBACK_NOT_FOUND      (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  3)
+#define NET_ERR_NAME_CANNOT_BE_RESOLVED	   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  4)
+#define NET_ERR_NAME_CANNOT_CREATE_SOCKET  (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  5)
+#define NET_ERR_NAME_CANNOT_SETUP_SOCKET   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  6)
 
 extern const int net_errors;
 extern const int net_error_map;

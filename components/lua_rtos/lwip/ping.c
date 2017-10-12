@@ -2,7 +2,7 @@
  * Lua RTOS, ping utility
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -79,9 +79,9 @@
 #include "lwip/dns.h"
 
 #include <sys/delay.h>
-#include <sys/driver.h>
 
 #include <drivers/net.h>
+#include <drivers/wifi.h>
 
 static uint16_t ping_seq_num;
 static uint8_t stopped = 0;
@@ -239,7 +239,7 @@ static void stop_action (int i) {
  * Operation functions
  *
  */
-void ping(const char *name, int count, int interval, int size, int timeout) {
+driver_error_t *ping(const char *name, int count, int interval, int size, int timeout) {
   driver_error_t *error;
   struct sockaddr_in address;
   ip4_addr_t ping_target;
@@ -264,14 +264,12 @@ void ping(const char *name, int count, int interval, int size, int timeout) {
 
   // Create socket
   if ((s = socket(AF_INET, SOCK_RAW, IP_PROTO_ICMP)) < 0) {
-	  // TODO: error
-	  return;
+	  return driver_error(NET_DRIVER, NET_ERR_NAME_CANNOT_CREATE_SOCKET,NULL);
   }
 
   // Resolve name
   if ((error = net_lookup(name, &address))) {
-	  // TODO: error
-	  return;
+	  return driver_error(NET_DRIVER, NET_ERR_NAME_CANNOT_BE_RESOLVED,NULL);
   }
 
   ping_target.addr = address.sin_addr.s_addr;
@@ -285,8 +283,8 @@ void ping(const char *name, int count, int interval, int size, int timeout) {
 
   if (setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tout, sizeof(tout)) < 0) {
 	  closesocket(s);
-	  // TODO: error
-	  return;
+	  return driver_error(NET_DRIVER, NET_ERR_NAME_CANNOT_SETUP_SOCKET,NULL);
+	  return NULL;
   }
 
   stopped = 0;
@@ -326,4 +324,6 @@ void ping(const char *name, int count, int interval, int size, int timeout) {
   if (received) {
 	  printf("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\r\n", min_time, mean_time, max_time, sqrt(var_time / received));
   }
+
+  return NULL;
 }
