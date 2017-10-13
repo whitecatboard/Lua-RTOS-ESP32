@@ -200,7 +200,8 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    ```
   
    Remember to check the device name for your board's USB-TO-SERIAL adapter under the "Serial flasher config / Default serial port" category.
- 
+
+
 7. Compile:
 
    If you are building Lua RTOS due to an esp-idf or Lua RTOS update revert previous Lua RTOS patches for ensure that new patches will be applied to esp-idf.
@@ -220,6 +221,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    ```lua
    make flashfs
    ```
+
    
 # Connect to the console
 
