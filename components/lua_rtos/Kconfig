@@ -790,8 +790,8 @@ menu "Lua RTOS"
 		menu "HTTP server"
 			config LUA_RTOS_USE_HTTP_SERVER
 				depends on LUA_RTOS_LUA_USE_NET
-					bool "Enable HTTP server"
-					default y
+				bool "Enable HTTP server"
+				default y
 
 			config LUA_RTOS_HTTP_SERVER_PORT
 				depends on LUA_RTOS_USE_HTTP_SERVER
@@ -815,7 +815,31 @@ menu "Lua RTOS"
 					default /				
 				help
 					base folder where HTTP server looks for files
-		endmenu
+
+            config LUA_RTOS_HTTP_SERVER_STACK_SIZE
+                depends on LUA_RTOS_USE_HTTP_SERVER               
+                int "HTTP thread stack size"
+                range 10240 20480
+                default 10240
+                help
+                    Default stack size assigned to HTTP thread.
+
+            config LUA_RTOS_HTTP_SERVER_TASK_PRIORITY
+                depends on LUA_RTOS_USE_HTTP_SERVER               
+                int "HTTP thread riority"
+                range 3 25
+                default 18
+                help
+                    Task priority assigned to HTTP thread.
+
+            config LUA_RTOS_HTTP_SERVER_TASK_CPU
+                depends on !FREERTOS_UNICORE
+                int "HTTP task CPU affinity"
+                range 0 1
+                default 1
+                help
+                    CPU affinity for the task assigned to the HTTP server.        		
+        endmenu
 		
 		menu "Lua"
 			menu "Tuning"

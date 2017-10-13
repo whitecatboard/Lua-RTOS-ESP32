@@ -544,7 +544,6 @@ esp_err_t esp_pthread_init(void) {
 
 int pthread_setname_np(pthread_t id, const char *name) {
     struct pthread *thread;
-    int idx;
     int res;
 
     // Sanity checks
@@ -569,7 +568,6 @@ int pthread_setname_np(pthread_t id, const char *name) {
 
 int pthread_getname_np(pthread_t id, char *name, size_t len) {
     struct pthread *thread;
-    int idx;
     int res;
 
     // Get the thread

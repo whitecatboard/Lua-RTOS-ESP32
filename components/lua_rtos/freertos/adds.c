@@ -227,6 +227,12 @@ task_info_t *GetTaskInfo() {
 		info[i].prio = status_array[i].uxCurrentPriority;
 		info[i].task_type = task_type;
 		info[i].core = ctask->xCoreID;
+
+		// Some system tasks shows 255!!
+		if (info[i].core > 1) {
+			info[i].core = 0;
+		}
+
 		info[i].free_stack = uxTaskGetStackHighWaterMark(status_array[i].xHandle);
 		info[i].stack_size = ctask->pxEndOfStack - ctask->pxStack + 4;
 		memcpy(info[i].name, status_array[i].pcTaskName, configMAX_TASK_NAME_LEN);

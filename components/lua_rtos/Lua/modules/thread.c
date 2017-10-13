@@ -289,7 +289,7 @@ static int lthread_list(lua_State *L) {
 	}
 
 	// Check if user wants to monitor threads at regular intervals
-	if (lua_gettop(L) == 2) {
+	if (lua_gettop(L) > 1) {
 		luaL_checktype(L, 2, LUA_TBOOLEAN);
 		if (lua_toboolean(L, 2)) {
 			monitor = 1;
@@ -297,7 +297,7 @@ static int lthread_list(lua_State *L) {
 	}
 
 	// Check if user wants to list all threads
-	if (lua_gettop(L) == 3) {
+	if (lua_gettop(L) > 2) {
 		luaL_checktype(L, 3, LUA_TBOOLEAN);
 		if (lua_toboolean(L, 3)) {
 			all = 1;
