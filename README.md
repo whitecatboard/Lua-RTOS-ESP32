@@ -204,23 +204,23 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 
 7. Compile:
 
-  If you are building Lua RTOS due to an esp-idf or Lua RTOS update revert previous Lua RTOS patches for ensure that new patches will be applied to esp-idf.
-   
-  ```lua
-  make restore-idf
-  ```
-   
-  Build Lua RTOS, and flash it to your ESP32 board:
+   If you are building Lua RTOS due to an esp-idf or Lua RTOS update revert previous Lua RTOS patches for ensure that new patches will be applied to esp-idf.
 
-  ```lua
-  make flash
-  ```
+   ```lua
+   make restore-idf
+   ```
 
-  Flash the spiffs file system image to your ESP32 board:
-   
-  ```lua
-  make flashfs
-  ```
+   Build Lua RTOS, and flash it to your ESP32 board:
+
+   ```lua
+   make flash
+   ```
+
+   Flash the spiffs file system image to your ESP32 board:
+
+   ```lua
+   make flashfs
+   ```
 
    
 # Connect to the console
