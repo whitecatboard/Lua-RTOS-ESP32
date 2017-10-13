@@ -137,18 +137,35 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    * [Mac OS]( http://esp-idf.readthedocs.io/en/latest/get-started/macos-setup.html)
    * [Linux](http://esp-idf.readthedocs.io/en/latest/get-started/linux-setup.html)
 
-1. Clone esp-idf repository from ESPRESSIF:
+1. Clone or pull esp-idf repository from ESPRESSIF:
 
+   If you are build Lua RTOS for first time, clone the esp-idf repository:
+   
    ```lua
    git clone --recursive https://github.com/espressif/esp-idf.git
    ```
 
-1. Clone Lua RTOS repository:
+   otherwise, pull last esp-idf changes from your esp-idf folder:
+   
+   ```lua
+   git pull origin master
+   git pull --recurse-submodules
+   ```
+ 
+1. Clone or pull Lua RTOS repository:
 
+   If you are building Lua RTOS for first time, clone Lua RTOS repository:
+   
    ```lua
    git clone --recursive https://github.com/whitecatboard/Lua-RTOS-ESP32
    ```
    
+   otherwise, pull last Lua RTOS changes from your Lua Lua-RTOS-ESP32 folder:
+   
+   ```lua
+   git pull origin master
+   ```
+   
 1. Setup the build environment:
    
    Go to Lua-RTOS-ESP32 folder:
@@ -186,6 +203,12 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    
 1. Compile:
 
+   If you are building Lua RTOS due to an esp-idf or Lua RTOS update revert previous Lua RTOS patches for ensure that new patches will be applied to esp-idf.
+   
+   ```lua
+   make restore-idf
+   ```
+   
    Build Lua RTOS, and flash it to your ESP32 board:
 
    ```lua
