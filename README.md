@@ -150,7 +150,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    ```lua
    git pull origin master
    git pull --recurse-submodules
-   ```
+   ```
  
 1. Clone or pull Lua RTOS repository:
 
@@ -164,7 +164,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    
    ```lua
    git pull origin master
-   ```
+   ```
    
 1. Setup the build environment:
    
@@ -205,9 +205,9 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 
    If you are building Lua RTOS due to an esp-idf or Lua RTOS update revert previous Lua RTOS patches for ensure that new patches will be applied to esp-idf.
    
-   ```lua
+   ```lua
    make restore-idf
-   ```
+   ```
    
    Build Lua RTOS, and flash it to your ESP32 board:
 
