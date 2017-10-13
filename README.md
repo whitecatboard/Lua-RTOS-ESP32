@@ -147,7 +147,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 
    otherwise, pull last esp-idf changes from your esp-idf folder:
    
-   ```lua
+   ```lua
    git pull origin master
    git pull --recurse-submodules
    ```
