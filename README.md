@@ -165,7 +165,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    ```lua
    git pull origin master
    ```
-   
+
 4. Setup the build environment:
    
    Go to Lua-RTOS-ESP32 folder:
