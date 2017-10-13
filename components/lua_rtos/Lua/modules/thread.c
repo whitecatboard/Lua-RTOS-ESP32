@@ -275,6 +275,7 @@ static int lthread_list(lua_State *L) {
     char type[7];
 	uint8_t table = 0;
 	uint8_t monitor = 0;
+	uint8_t all = 0;
 	task_info_t *info;
 	task_info_t *cinfo;
 
@@ -292,6 +293,14 @@ static int lthread_list(lua_State *L) {
 		luaL_checktype(L, 2, LUA_TBOOLEAN);
 		if (lua_toboolean(L, 2)) {
 			monitor = 1;
+		}
+	}
+
+	// Check if user wants to list all threads
+	if (lua_gettop(L) == 3) {
+		luaL_checktype(L, 3, LUA_TBOOLEAN);
+		if (lua_toboolean(L, 3)) {
+			all = 1;
 		}
 	}
 
@@ -327,6 +336,11 @@ monitor_loop:
 
 	cinfo = info;
 	while (cinfo->stack_size > 0) {
+		if ((cinfo->task_type != 2) && (!all)) {
+			cinfo++;
+			continue;
+		}
+
 		// Get status
 		switch (cinfo->status) {
 			case StatusRunning: strcpy(status,"run"); break;
@@ -358,7 +372,7 @@ monitor_loop:
 		} else {
 			lua_pushinteger(L, i);
 
-			lua_createtable(L, 0, 8);
+			lua_createtable(L, 0, 9);
 
 			lua_pushinteger(L, cinfo->thid);
 	        lua_setfield (L, -2, "thid");
@@ -374,6 +388,9 @@ monitor_loop:
 
 	        lua_pushinteger(L, cinfo->core);
 	        lua_setfield (L, -2, "core");
+
+	        lua_pushinteger(L, cinfo->prio);
+	        lua_setfield (L, -2, "prio");
 
 	        lua_pushinteger(L, cinfo->stack_size);
 	        lua_setfield (L, -2, "stack_size");
