@@ -902,7 +902,10 @@ int http_start(lua_State* L) {
 		pthread_attr_setschedparam(&attr, &sched);
 
 		// Set CPU
-		cpu_set_t cpu_set = CONFIG_LUA_RTOS_LUA_TASK_CPU;
+		cpu_set_t cpu_set = CPU_INITIALIZER;
+
+		CPU_SET(CONFIG_LUA_RTOS_LUA_TASK_CPU, &cpu_set);
+
 		pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
 
 		// Create threads
@@ -914,6 +917,8 @@ int http_start(lua_State* L) {
 			if (res) {
 				return luaL_error(L, "couldn't start http_thread");
 			}
+
+			pthread_setname_np(thread_normal, "http");
 		}
 
 		http_secure.port = luaL_optinteger( L, 2, CONFIG_LUA_RTOS_HTTP_SERVER_PORT_SSL );
@@ -927,6 +932,8 @@ int http_start(lua_State* L) {
 			if (res) {
 				return luaL_error(L, "couldn't start secure http_thread");
 			}
+
+			pthread_setname_np(thread_normal, "ssl_http");
 		}
 	}
 

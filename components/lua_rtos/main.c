@@ -88,7 +88,10 @@ void app_main() {
     pthread_attr_setschedparam(&attr, &sched);
 
     // Set CPU
-    cpu_set_t cpu_set = CONFIG_LUA_RTOS_LUA_TASK_CPU;
+    cpu_set_t cpu_set = CPU_INITIALIZER;
+
+    CPU_SET(CONFIG_LUA_RTOS_LUA_TASK_CPU, &cpu_set);
+
     pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
 
     // Create thread
@@ -96,6 +99,8 @@ void app_main() {
     if (res) {
 		panic("Cannot start lua");
 	}
+
+    pthread_setname_np(thread, "lua");
 	
 	debug_free_mem_end(lua_main_thread, NULL);	
 }

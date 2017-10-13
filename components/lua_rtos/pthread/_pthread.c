@@ -159,7 +159,7 @@ int _pthread_create(pthread_t *id, int priority, int stacksize, int cpu, int ini
     if (cpu == tskNO_AFFINITY) {
         res = xTaskCreate(pthreadTask, "lthread", stacksize, taskArgs, priority, &xCreatedTask);
     } else {
-        res = xTaskCreatePinnedToCore(&pthreadTask, "lthread", stacksize, taskArgs,priority, &xCreatedTask, cpu);
+        res = xTaskCreatePinnedToCore(pthreadTask, "lthread", stacksize, taskArgs,priority, &xCreatedTask, cpu);
     }
 
     if(res != pdPASS) {
@@ -344,7 +344,7 @@ int _pthread_core(pthread_t id) {
         return res;
     }
 
-    return (int)uxGetCoreID(thread->task);
+    return (int)ucGetCoreID(thread->task);
 }
 
 int _pthread_stack(pthread_t id) {
@@ -386,9 +386,15 @@ int _pthread_suspend(pthread_t id) {
         return res;
     }
     
+    UBaseType_t priority = uxTaskPriorityGet(NULL);
+    vTaskPrioritySet(NULL, 22);
+
     // Suspend
+    uxSetThreadStatus(thread->task, StatusSuspended);
     vTaskSuspend(thread->task);
     
+    vTaskPrioritySet(NULL, priority);
+
     return 0;
 }
 
@@ -404,9 +410,23 @@ int _pthread_resume(pthread_t id) {
     }
         
     // Resume
+    uxSetThreadStatus(thread->task, StatusRunning);
     vTaskResume(thread->task);
 
     return 0;
+}
+
+struct pthread *_pthread_get(pthread_t id) {
+    struct pthread *thread;
+    int res;
+
+    // Get the thread
+    res = list_get(&thread_list, id, (void **)&thread);
+    if (res) {
+    	return NULL;
+    }
+
+	return thread;
 }
 
 // This is the callback function for free Lua RTOS specific TCB parts
@@ -441,22 +461,14 @@ void pthreadTask(void *taskArgs) {
 		
 	vTaskSetThreadLocalStoragePointerAndDelCallback(NULL, THREAD_LOCAL_STORAGE_POINTER_ID, (void *)lua_rtos_tcb, pthreadLocaleStoragePointerCallback);
 
-	// Store CPU core id when thread is running
-	uxSetCoreID(xPortGetCoreID());
+    // Assume that the default thread is not a Lua thread
+	uxSetLThread(NULL);
 
-	// Store stack size
-	uxSetStack(args->stack);
-
-    // Set thread id
+	// Set thread id
     uxSetThreadId(args->id);
 
-#if CONFIG_LUA_RTOS_LUA_USE_THREAD
-	if (args->args) {
-		// Set Lua context into TCB
-		uxSetLuaState(((struct lthread *)args->args)->L);
-	}
-#endif
-		
+    uxSetThreadStatus(NULL, StatusRunning);
+
 	// Lua RTOS specific TCB parts are set, parent thread can continue
     mtx_unlock(&thread->init_mtx);
     
@@ -466,22 +478,27 @@ void pthreadTask(void *taskArgs) {
     
     // Call start function
     int *status = args->pthread_function(args->args);
-#if CONFIG_LUA_RTOS_LUA_USE_THREAD
-    if (status) {
-        if (*status != LUA_OK) {
-            struct lthread *thread;
-            thread = (struct lthread *)args->args;
 
-            const char *msg = lua_tostring(thread->L, -1);
-            lua_writestringerror("%s\n", msg);
-            lua_pop(thread->L, 1);
+    // If it is a Lua tread check for the status
+    if (pvGetLuaState()) {
+        if (status) {
+            if (*status != LUA_OK) {
+                struct lthread *thread;
+                thread = (struct lthread *)args->args;
+
+                const char *msg = lua_tostring(thread->L, -1);
+                lua_writestringerror("%s\n", msg);
+                lua_pop(thread->L, 1);
+            }
+
+            free(status);
+        } else {
+        	(void)status;
         }
-
-        free(status);
+    } else {
+    	(void)status;
     }
-#else
-		(void)status;
-#endif
+
     // Inform from thread end to joined threads
     index = list_first(&thread->join_list);
     while (index >= 0) {
@@ -523,4 +540,54 @@ esp_err_t esp_pthread_init(void) {
 	_pthread_init();
 
 	return ESP_OK;
+}
+
+int pthread_setname_np(pthread_t id, const char *name) {
+    struct pthread *thread;
+    int idx;
+    int res;
+
+    // Sanity checks
+	if (strlen(name) > configMAX_TASK_NAME_LEN - 1) {
+		return ERANGE;
+	}
+
+    // Get the thread
+    res = list_get(&thread_list, id, (void **)&thread);
+    if (res) {
+    	return EINVAL;
+    }
+
+    // Get the TCB task for this thread
+    tskTCB_t *task = (tskTCB_t *)(thread->task);
+
+    // Copy the name into the TCB
+    strncpy(task->pcTaskName, name, configMAX_TASK_NAME_LEN - 1);
+
+	return 0;
+}
+
+int pthread_getname_np(pthread_t id, char *name, size_t len) {
+    struct pthread *thread;
+    int idx;
+    int res;
+
+    // Get the thread
+    res = list_get(&thread_list, id, (void **)&thread);
+    if (res) {
+    	return EINVAL;
+    }
+
+    // Get the TCB task for this thread
+    tskTCB_t *task = (tskTCB_t *)(thread->task);
+
+    // Sanity checks
+	if (strlen(task->pcTaskName) < len - 1) {
+		return ERANGE;
+	}
+
+	// Copy the name from the TCB
+	strncpy(name, task->pcTaskName, configMAX_TASK_NAME_LEN - 1);
+
+	return 0;
 }

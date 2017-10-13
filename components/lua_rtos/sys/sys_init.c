@@ -206,7 +206,10 @@ void _sys_init() {
 	    pthread_attr_setschedparam(&attr, &sched);
 
 	    // Set CPU
-	    cpu_set_t cpu_set = LUA_TASK_CPU;
+	    cpu_set_t cpu_set = CPU_INITIALIZER;
+
+	    CPU_SET(CONFIG_LUA_TASK_CPU, &cpu_set);
+
 	    pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
 
 		// Create thread
