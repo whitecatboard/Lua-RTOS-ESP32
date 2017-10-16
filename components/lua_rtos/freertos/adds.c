@@ -112,7 +112,9 @@ lua_State* pvGetLuaState() {
 	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(NULL, THREAD_LOCAL_STORAGE_POINTER_ID))) {
 
 		// Get current lua state from Lua RTOS specific TCB parts
-		L = lua_rtos_tcb->lthread->L;
+		if (lua_rtos_tcb->lthread) {
+			L = lua_rtos_tcb->lthread->L;
+		}
 	}
 
 	if (L == NULL) {
