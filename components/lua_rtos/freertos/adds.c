@@ -42,6 +42,22 @@
 // Global state
 static lua_State *gL = NULL;
 
+static int compare(const void *a, const void *b) {
+	if (((task_info_t *)a)->task_type < ((task_info_t *)b)->task_type) {
+		return 1;
+	} else if (((task_info_t*)a)->task_type > ((task_info_t *)b)->task_type) {
+		return -1;
+	} else {
+		if (((task_info_t *)a)->core < ((task_info_t *)b)->core) {
+			return -1;
+		} else if (((task_info_t *)a)->core > ((task_info_t *)b)->core) {
+			return 1;
+		} else {
+			return strcmp(((task_info_t *)a)->name, ((task_info_t *)b)->name);
+		}
+	}
+}
+
 void uxSetThreadId(UBaseType_t id) {
 	lua_rtos_tcb_t *lua_rtos_tcb;
 	
@@ -241,6 +257,8 @@ task_info_t *GetTaskInfo() {
 	}
 
 	free(status_array);
+
+	qsort (info, task_num, sizeof (task_info_t), compare);
 
 	return info;
 }
