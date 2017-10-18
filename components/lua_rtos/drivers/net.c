@@ -98,18 +98,14 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 		case SYSTEM_EVENT_STA_DISCONNECTED:         /**< ESP32 station disconnected from AP */
 			if (!status_get(STATUS_WIFI_CONNECTED)) {
 				if (retries > WIFI_CONNECT_RETRIES) {
-					status_clear(STATUS_WIFI_CONNECTED);
 					xEventGroupSetBits(netEvent, evWIFI_CANT_CONNECT);
 					retries = 0;
 					break;
 				} else {
 					retries++;
-
-					status_clear(STATUS_WIFI_CONNECTED);
 					esp_wifi_connect();
 				}
 			}
-
 			status_clear(STATUS_WIFI_CONNECTED);
 			break;
 
@@ -121,15 +117,20 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 			break;
 
 		case SYSTEM_EVENT_STA_WPS_ER_SUCCESS:       /**< ESP32 station wps succeeds in enrollee mode */
+			wifi_wps_disable();
+			esp_wifi_connect();
 			break;
 
 		case SYSTEM_EVENT_STA_WPS_ER_FAILED:        /**< ESP32 station wps fails in enrollee mode */
+			wifi_wps_reconnect();
 			break;
 
 		case SYSTEM_EVENT_STA_WPS_ER_TIMEOUT:       /**< ESP32 station wps timeout in enrollee mode */
+			wifi_wps_reconnect();
 			break;
 
 		case SYSTEM_EVENT_STA_WPS_ER_PIN:           /**< ESP32 station wps pin code in enrollee mode */
+			wifi_wps_pin(event->event_info.sta_er_pin.pin_code);
 			break;
 
 		case SYSTEM_EVENT_AP_START:                 /**< ESP32 soft-AP start */

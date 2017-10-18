@@ -55,6 +55,8 @@
 #include <sys/syslog.h>
 
 #include <drivers/wifi.h>
+#include <esp_wps.h>
+#include <pthread.h>
 
 #define WIFI_LOG(m) syslog(LOG_DEBUG, m);
 
@@ -88,6 +90,13 @@ extern EventGroupHandle_t netEvent;
 #define evWIFI_SCAN_END 	       	 ( 1 << 0 )
 #define evWIFI_CONNECTED 	       	 ( 1 << 1 )
 #define evWIFI_CANT_CONNECT          ( 1 << 2 )
+
+static int wps_mode = WPS_TYPE_PBC;
+static esp_wps_config_t wps_config_pbc = WPS_CONFIG_INIT_DEFAULT(WPS_TYPE_PBC);
+static esp_wps_config_t wps_config_pin = WPS_CONFIG_INIT_DEFAULT(WPS_TYPE_PIN);
+static wifi_wps_pin_cb* wps_pin_callback = NULL;
+
+#define WPSPIN2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6], (a)[7]
 
 driver_error_t *wifi_check_error(esp_err_t error) {
 	if (error == ESP_ERR_WIFI_OK) return NULL;
@@ -369,6 +378,8 @@ driver_error_t *wifi_stop() {
 		return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_INIT, NULL);
 	}
 
+	wifi_wps_disable();
+
 	if (status_get(STATUS_WIFI_STARTED)) {
 		if ((error = wifi_check_error(esp_wifi_stop()))) return error;
 
@@ -413,6 +424,73 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 	memcpy(info->mac, mac, sizeof(mac));
 
 	return NULL;
+}
+
+driver_error_t *wifi_wps(int wpsmode, wifi_wps_pin_cb* callback) {
+	driver_error_t *error;
+
+	status_clear(STATUS_WIFI_SETUP);
+
+	if (status_get(STATUS_WIFI_INITED)) {
+		if(status_get(STATUS_WIFI_STARTED)) {
+			if ((error = wifi_check_error(esp_wifi_stop()))) return error;
+			status_clear(STATUS_WIFI_STARTED);
+		}
+		status_clear(STATUS_WIFI_INITED);
+	}
+
+	wps_mode = wpsmode;
+	wps_pin_callback = callback;
+
+	// Attach wifi driver
+	if ((error = wifi_init(WIFI_MODE_STA))) return error;
+
+	status_set(STATUS_WIFI_SETUP);
+
+	if ((error = wifi_check_error(esp_wifi_start()))) return error;
+	status_set(STATUS_WIFI_STARTED);
+
+	if (wps_mode != WPS_TYPE_DISABLE) {
+		if ((error = wifi_check_error(esp_wifi_wps_enable(wps_mode == WPS_TYPE_PIN ? &wps_config_pin : &wps_config_pbc)))) return error;
+		if ((error = wifi_check_error(esp_wifi_wps_start(0)))) return error;
+	}
+	return NULL;
+}
+
+void wifi_wps_reconnect() {
+	esp_wifi_wps_disable();
+	if (wps_mode != WPS_TYPE_DISABLE) {
+		esp_wifi_wps_enable(wps_mode == WPS_TYPE_PIN ? &wps_config_pin : &wps_config_pbc);
+		esp_wifi_wps_start(0);
+	}
+}
+
+void wifi_wps_disable() {
+	if (wps_mode != WPS_TYPE_DISABLE) {
+		esp_wifi_wps_disable();
+		wps_mode = WPS_TYPE_DISABLE;
+	}
+}
+
+static void* wifi_wps_pin_call(void* pin) {
+	(*(wps_pin_callback))((char*)pin);
+	return 0;
+}
+
+void wifi_wps_pin(uint8_t *pin_code) {
+	char *pin = (char*)malloc(9);
+	snprintf(pin, 9, "%c%c%c%c%c%c%c%c", WPSPIN2STR(pin_code));
+	pin[8] = '\0';
+	if (wps_pin_callback != NULL) {
+		pthread_t thread = 0;
+		pthread_attr_t attr;
+
+		pthread_attr_init(&attr);
+		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+		if (pthread_create(&thread, &attr, wifi_wps_pin_call, pin) != 0)
+			thread = 0;
+		pthread_attr_destroy(&attr);
+	}
 }
 
 #endif

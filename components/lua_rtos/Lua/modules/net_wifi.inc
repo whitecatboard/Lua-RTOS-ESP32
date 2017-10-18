@@ -33,6 +33,10 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <esp_wps.h>
+
+static int wps_callback = LUA_NOREF;
+static lua_State* LL;
 
 static int lwifi_setup(lua_State* L) {
 	driver_error_t *error;
@@ -260,6 +264,44 @@ static int lwifi_stat(lua_State* L) {
 	return table;
 }
 
+static void lwifi_wps_pin(char* pin) {
+	if (wps_callback != LUA_NOREF) {
+		int len = strlen(pin);
+		lua_rawgeti(LL, LUA_REGISTRYINDEX, wps_callback);
+    lua_pushinteger(LL, len);
+    lua_pushlstring(LL, pin, len);
+		lua_call(LL, 2, 0);
+  }
+  free(pin);
+}
+
+static int lwifi_wps(lua_State* L) {
+	driver_error_t *error;
+
+	LL = L;
+	if (wps_callback != LUA_NOREF) {
+		luaL_unref(L, LUA_REGISTRYINDEX, wps_callback);
+		wps_callback = LUA_NOREF;
+	}
+
+	int wpsmode = luaL_optinteger(L, 1, WPS_TYPE_PBC);
+	if (wpsmode != WPS_TYPE_PBC) {
+    luaL_checktype(L, 2, LUA_TFUNCTION);
+
+    // Copy argument (function) to the top of stack
+    lua_pushvalue(L, 2);
+
+    // Copy function reference
+    wps_callback = luaL_ref(L, LUA_REGISTRYINDEX);
+	}
+
+	if ((error = wifi_wps(wpsmode, lwifi_wps_pin))) {
+		return luaL_driver_error(L, error);
+	}
+
+	return 0;
+}
+
 static const LUA_REG_TYPE wifi_auth_map[] = {
 	{ LSTRKEY( "OPEN"         ), LINTVAL( WIFI_AUTH_OPEN ) },
 	{ LSTRKEY( "WEP"          ), LINTVAL( WIFI_AUTH_WEP ) },
@@ -279,15 +321,23 @@ static const LUA_REG_TYPE wifi_powersave_map[] = {
 	{ LSTRKEY( "MODEM"         ), LINTVAL( WIFI_PS_MODEM ) },
 };
 
+static const LUA_REG_TYPE wifi_wpstype_map[] = {
+	{ LSTRKEY( "DISABLE"       ), LINTVAL( WPS_TYPE_DISABLE ) },
+	{ LSTRKEY( "PBC"           ), LINTVAL( WPS_TYPE_PBC ) },
+	{ LSTRKEY( "PIN"           ), LINTVAL( WPS_TYPE_PIN ) },
+};
+
 static const LUA_REG_TYPE wifi_map[] = {
 	{ LSTRKEY( "setup"     ),	 LFUNCVAL( lwifi_setup        ) },
 	{ LSTRKEY( "scan"      ),	 LFUNCVAL( lwifi_scan         ) },
 	{ LSTRKEY( "start"     ),	 LFUNCVAL( lwifi_start        ) },
 	{ LSTRKEY( "stop"      ),	 LFUNCVAL( lwifi_stop         ) },
 	{ LSTRKEY( "stat"      ),	 LFUNCVAL( lwifi_stat         ) },
+	{ LSTRKEY( "startwps"  ),	 LFUNCVAL( lwifi_wps          ) },
 	{ LSTRKEY( "auth"      ),	 LROVAL  ( wifi_auth_map      ) },
 	{ LSTRKEY( "mode"      ),	 LROVAL  ( wifi_mode_map      ) },
 	{ LSTRKEY( "powersave" ),	 LROVAL  ( wifi_powersave_map ) },
+	{ LSTRKEY( "wpstype"   ),	 LROVAL  ( wifi_wpstype_map   ) },
 	DRIVER_REGISTER_LUA_ERRORS(wifi)
 	{ LNILKEY, LNILVAL }
 };
