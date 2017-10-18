@@ -63,7 +63,7 @@
 
 DRIVER_REGISTER_BEGIN(WIFI,wifi,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, CannotSetup, "can't setup", WIFI_ERR_CANT_INIT);
-	DRIVER_REGISTER_ERROR(WIFI, wifi, CannotConnect, "can't connect, review your SSID / password", WIFI_ERR_CANT_CONNECT);
+	DRIVER_REGISTER_ERROR(WIFI, wifi, CannotConnect, "can't connect review your SSID / password", WIFI_ERR_CANT_CONNECT);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, GeneralFail, "general fail", WIFI_ERR_WIFI_FAIL);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, NotEnoughtMemory, "not enough memory", WIFI_ERR_WIFI_NO_MEM);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, NotSetup, "wifi is not setup", WIFI_ERR_WIFI_NOT_INIT);
