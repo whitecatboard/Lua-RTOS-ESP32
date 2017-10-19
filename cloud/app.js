@@ -27,10 +27,115 @@
  * this software.
  */
 
+require("./mqtt.js")
 require("./ttn.js")
 require("./pack.js")
+
+var exec = require('child_process').exec;
+
+function getTTNDeviceInfo(node, callback) {
+	child = exec("ttnctl devices info " + node, function (error, stdout, stderr) {
+		var AppEUI  = "";
+		var DevEUI  = "";
+		var DevAddr = "";
+		var AppSKey = "";
+		var NwkSKey = "";
+		
+  	  	if (error !== null) {
+			callback({
+				AppEUI: AppEUI,
+				DevEUI: DevEUI,
+				DevAddr: DevAddr,
+				AppSKey: AppSKey,
+				NwkSKey: NwkSKey
+			});
+
+			return;
+  	  	}
+		
+		var found = (/.*AppEUI\:\s(.*)/gi).exec(stdout);
+		if (found) {
+			AppEUI = found[1];
+		}
+
+		found = (/.*DevEUI\:\s(.*)/gi).exec(stdout);
+		if (found) {
+			DevEUI = found[1];
+		}
+
+		found = (/.*DevAddr\:\s(.*)/gi).exec(stdout);
+		if (found) {
+			DevAddr = found[1];
+		}
+
+		found = (/.*AppSKey\:\s(.*)/gi).exec(stdout);
+		if (found) {
+			AppSKey = found[1];
+		}
+
+		found = (/.*NwkSKey\:\s(.*)/gi).exec(stdout);
+		if (found) {
+			NwkSKey = found[1];
+		}
+				
+		callback({
+			AppEUI: AppEUI,
+			DevEUI: DevEUI,
+			DevAddr: DevAddr,
+			AppSKey: AppSKey,
+			NwkSKey: NwkSKey
+		});
+	});
+};
+
+function createTTNDevice(node, callback) {
+	child = exec("ttnctl devices register " + node, function (error, stdout, stderr) {
+  	  	if (error !== null) {
+			getTTNDeviceInfo(node, function(info) {
+				callback(info);
+				return;
+			});
+
+			return;
+  	  	}
+		
+		child = exec("ttnctl devices personalize " + node, function (error, stdout, stderr) {
+	  	  	if (error !== null) {
+				getTTNDeviceInfo(node, function(info) {
+					callback(info);
+					return;
+				});
+	  	  	}
+		
+			getTTNDeviceInfo(node, function(info) {
+				callback(info);
+			});
+		});	
+	});	
+};
 
 TTNCallback = function(message) {
 	// Process your message here
 	console.log(message);
+};
+
+// Topics
+//
+// /ide/user/login
+// /ide/user/login_info
+MQTTCallback = function(topic, message) {
+	var topicParts = topic.split("/");
+	
+	if (topicParts[1] != "ide") return;
+	
+	var user = topicParts[2];
+	var op = topicParts[3];
+
+	if (op == "login") {
+		createTTNDevice(user, function(info) {
+			MQTTPublish("/ide/" + node + "/login_info", JSON.stringify({
+				TTN: info
+			}));
+		});
+	}
 };

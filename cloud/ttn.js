@@ -69,7 +69,7 @@ TTNConnect = function() {
 		});
 
 		TTNClient.on('connect', function () {
-			console.log("connected");
+			console.log("connected to " + MQTTSettings.broker);
 			console.log()
 		
 			TTNClient.subscribe("+/devices/+/up");

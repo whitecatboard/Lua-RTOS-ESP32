@@ -8,3 +8,12 @@ TTNSettings = {
 	"port": 1883,
 	"callback": TTNCallback
 }
+
+// MQTT credentials
+MQTTSettings = {
+	"broker": "mqtts://mqtt.whitecatboard.org",
+	"user": "ide",
+	"password": "pin8miente",
+	"port": 8883,
+	"callback": MQTTCallback
+}

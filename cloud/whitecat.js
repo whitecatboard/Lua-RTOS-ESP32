@@ -28,5 +28,7 @@
  */
 
 require("./ttn.js")
+require("./mqtt.js")
 
-TTNConnect();
+//TTNConnect();
+MQTTConnect();

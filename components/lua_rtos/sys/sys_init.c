@@ -172,6 +172,8 @@ void _sys_init() {
     _signal_init();
 
 	esp_vfs_unregister("/dev/uart");
+	esp_vfs_unregister("/dev/uart");
+
 	vfs_tty_register();
 
 	printf("Booting Lua RTOS...\r\n");
