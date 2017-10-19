@@ -81,6 +81,7 @@ void wifi_wps_pin(uint8_t *pin_code);
 typedef void wifi_wps_pin_cb(char* pin);
 
 driver_error_t *wifi_wps(int wpsmode, wifi_wps_pin_cb* callback);
+driver_error_t *wifi_smartconfig();
 
 #endif
 

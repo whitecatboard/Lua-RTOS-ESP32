@@ -302,6 +302,17 @@ static int lwifi_wps(lua_State* L) {
 	return 0;
 }
 
+static int lwifi_smartconfig(lua_State* L) {
+	driver_error_t *error;
+
+	if ((error = wifi_smartconfig())) {
+		return luaL_driver_error(L, error);
+	}
+
+	return 0;
+}
+
+
 static const LUA_REG_TYPE wifi_auth_map[] = {
 	{ LSTRKEY( "OPEN"         ), LINTVAL( WIFI_AUTH_OPEN ) },
 	{ LSTRKEY( "WEP"          ), LINTVAL( WIFI_AUTH_WEP ) },
@@ -334,6 +345,7 @@ static const LUA_REG_TYPE wifi_map[] = {
 	{ LSTRKEY( "stop"      ),	 LFUNCVAL( lwifi_stop         ) },
 	{ LSTRKEY( "stat"      ),	 LFUNCVAL( lwifi_stat         ) },
 	{ LSTRKEY( "startwps"  ),	 LFUNCVAL( lwifi_wps          ) },
+	{ LSTRKEY( "startsc"   ),	 LFUNCVAL( lwifi_smartconfig  ) },
 	{ LSTRKEY( "auth"      ),	 LROVAL  ( wifi_auth_map      ) },
 	{ LSTRKEY( "mode"      ),	 LROVAL  ( wifi_mode_map      ) },
 	{ LSTRKEY( "powersave" ),	 LROVAL  ( wifi_powersave_map ) },

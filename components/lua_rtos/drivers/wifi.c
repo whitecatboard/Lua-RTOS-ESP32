@@ -56,6 +56,7 @@
 
 #include <drivers/wifi.h>
 #include <esp_wps.h>
+#include <esp_smartconfig.h>
 #include <pthread.h>
 
 #define WIFI_LOG(m) syslog(LOG_DEBUG, m);
@@ -379,6 +380,7 @@ driver_error_t *wifi_stop() {
 	}
 
 	wifi_wps_disable();
+	esp_smartconfig_stop();
 
 	if (status_get(STATUS_WIFI_STARTED)) {
 		if ((error = wifi_check_error(esp_wifi_stop()))) return error;
@@ -491,6 +493,83 @@ void wifi_wps_pin(uint8_t *pin_code) {
 			thread = 0;
 		pthread_attr_destroy(&attr);
 	}
+}
+
+static void wifi_smartconfig_callback(smartconfig_status_t status, void *pdata)
+{
+	switch (status) {
+		case SC_STATUS_WAIT:
+			//printf("SC_STATUS_WAIT\n");
+			break;
+		case SC_STATUS_FIND_CHANNEL:
+			//printf("SC_STATUS_FIND_CHANNEL\n");
+			break;
+		case SC_STATUS_GETTING_SSID_PSWD:
+			//printf("SC_STATUS_GETTING_SSID_PSWD\n");
+			break;
+		case SC_STATUS_LINK:
+			//printf("SC_STATUS_LINK\n");
+			{
+				wifi_config_t *wifi_config = pdata;
+				printf("SSID:%s\n", wifi_config->sta.ssid);
+				printf("PASSWORD:%s\n", wifi_config->sta.password);
+
+				esp_wifi_disconnect();
+				//don't call esp_smartconfig_stop() here
+
+				//XXX todo FIXME callback to lua
+
+				/* may connect to new AP here
+				esp_wifi_set_config(ESP_IF_WIFI_STA, wifi_config);
+				esp_wifi_connect();
+				*/
+			}
+			break;
+		case SC_STATUS_LINK_OVER:
+			//printf("SC_STATUS_LINK_OVER\n");
+			/* never reached here during impl
+			if (pdata != NULL) {
+				uint8_t phone_ip[4] = { 0 };
+				memcpy(phone_ip, (uint8_t* )pdata, 4);
+				printf("Phone ip: %d.%d.%d.%d\n", phone_ip[0], phone_ip[1], phone_ip[2], phone_ip[3]);
+			}
+			*/
+			break;
+		default:
+			break;
+	}
+}
+
+driver_error_t *wifi_smartconfig() {
+	driver_error_t *error;
+
+	status_clear(STATUS_WIFI_SETUP);
+
+	if (status_get(STATUS_WIFI_INITED)) {
+		if(status_get(STATUS_WIFI_STARTED)) {
+			if ((error = wifi_check_error(esp_wifi_stop()))) return error;
+			status_clear(STATUS_WIFI_STARTED);
+		}
+		status_clear(STATUS_WIFI_INITED);
+	}
+
+	// Attach wifi driver
+	if ((error = wifi_init(WIFI_MODE_STA))) return error;
+
+	status_set(STATUS_WIFI_SETUP);
+
+	if ((error = wifi_check_error(esp_wifi_start()))) return error;
+	/*
+	EventBits_t uxBits = xEventGroupWaitBits(netEvent, evWIFI_CONNECTED | evWIFI_CANT_CONNECT, pdTRUE, pdFALSE, portMAX_DELAY);
+	if (uxBits & (evWIFI_CONNECTED)) {
+		status_set(STATUS_WIFI_STARTED);
+	}
+	*/
+
+	if ((error = wifi_check_error(esp_smartconfig_set_type(SC_TYPE_ESPTOUCH_AIRKISS)))) return error;
+	if ((error = wifi_check_error(esp_smartconfig_start(wifi_smartconfig_callback)))) return error;
+
+	return NULL;
 }
 
 #endif
