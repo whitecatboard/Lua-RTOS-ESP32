@@ -36,7 +36,7 @@ int pthread_attr_init(pthread_attr_t *attr) {
 
     attr->schedparam.initial_state = PTHREAD_INITIAL_STATE_RUN;
     attr->schedparam.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
-	attr->schedparam.affinityset = 0; // Not affinity
+	attr->schedparam.affinityset = 0; // No affinity
 
     return 0;
 }

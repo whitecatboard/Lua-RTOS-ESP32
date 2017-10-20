@@ -47,6 +47,16 @@
 #include <signal.h>
 
 
+#define CPU_INITIALIZER 0
+
+// Add CPU cpu to set
+#define CPU_SET(ncpu, cpuset) \
+	*(cpuset) |= (1 << ncpu)
+
+// Test to see if CPU cpu is a member of set.
+#define CPU_ISSET(ncpu, cpuset) \
+	(*(cpuset) & (1 << ncpu))
+
 // Each thread maintains a signal handler copy. Typically there are around 32 defined
 // signals, but not signals are required for applications. For example, in Lua only
 // SIGINT is used.
@@ -150,6 +160,7 @@ sig_t _pthread_signal(int s, sig_t h);
 int   _pthread_get_prio();
 int   _pthread_stack_free(pthread_t id);
 int   _pthread_stack(pthread_t id);
+struct pthread *_pthread_get(pthread_t id);
 
 // API functions
 int  pthread_attr_init(pthread_attr_t *attr);
@@ -184,6 +195,9 @@ int  pthread_setspecific(pthread_key_t k, const void *value);
 void *pthread_getspecific(pthread_key_t k);
 int  pthread_join(pthread_t thread, void **value_ptr);
 int pthread_cancel(pthread_t thread);
+
+int pthread_setname_np(pthread_t id, const char *name);
+int pthread_getname_np(pthread_t id, char *name, size_t len);
 
 pthread_t pthread_self(void);
 

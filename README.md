@@ -137,19 +137,36 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    * [Mac OS]( http://esp-idf.readthedocs.io/en/latest/get-started/macos-setup.html)
    * [Linux](http://esp-idf.readthedocs.io/en/latest/get-started/linux-setup.html)
 
-1. Clone esp-idf repository from ESPRESSIF:
+2. Clone or pull esp-idf repository from ESPRESSIF:
 
+   If you are build Lua RTOS for first time, clone the esp-idf repository:
+   
    ```lua
    git clone --recursive https://github.com/espressif/esp-idf.git
    ```
 
-1. Clone Lua RTOS repository:
+   otherwise, pull last esp-idf changes from your esp-idf folder:
+   
+   ```lua
+   git pull origin master
+   git pull --recurse-submodules
+   ```
+ 
+3. Clone or pull Lua RTOS repository:
 
+   If you are building Lua RTOS for first time, clone Lua RTOS repository:
+   
    ```lua
    git clone --recursive https://github.com/whitecatboard/Lua-RTOS-ESP32
    ```
    
-1. Setup the build environment:
+   otherwise, pull last Lua RTOS changes from your Lua Lua-RTOS-ESP32 folder:
+   
+   ```lua
+   git pull origin master
+   ```
+
+4. Setup the build environment:
    
    Go to Lua-RTOS-ESP32 folder:
    
@@ -165,7 +182,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    source ./env
    ```
 
-1. Set the default configuration for your board:
+5. Set the default configuration for your board:
 
    | Board              | Run this command                                     |
    |--------------------|------------------------------------------------------|
@@ -174,17 +191,24 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    | ESP32 THING        | make SDKCONFIG_DEFAULTS=ESP32-THING defconfig        |
    | GENERIC            | make SDKCONFIG_DEFAULTS=GENERIC defconfig            |
 
-1. Change the default configuration:
+6. Change the default configuration:
 
    You can change the default configuration doing:
    
    ```lua
    make menuconfig
    ```
-   
+  
    Remember to check the device name for your board's USB-TO-SERIAL adapter under the "Serial flasher config / Default serial port" category.
-   
-1. Compile:
+
+
+7. Compile:
+
+   If you are building Lua RTOS due to an esp-idf or Lua RTOS update revert previous Lua RTOS patches for ensure that new patches will be applied to esp-idf.
+
+   ```lua
+   make restore-idf
+   ```
 
    Build Lua RTOS, and flash it to your ESP32 board:
 
@@ -193,10 +217,11 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    ```
 
    Flash the spiffs file system image to your ESP32 board:
-   
+
    ```lua
    make flashfs
    ```
+
    
 # Connect to the console
 

@@ -1,7 +1,7 @@
 /*
- * Lua RTOS, http lua page preprocessor
+ * Whitecat Ecosystem, main program for cloud integration
  *
- * Copyright (C) 2015 - 2017
+ * Copyright (C) 2015 - 2016
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
@@ -27,15 +27,8 @@
  * this software.
  */
 
-#include "sdkconfig.h"
+require("./ttn.js")
+require("./mqtt.js")
 
-#if CONFIG_LUA_RTOS_USE_HTTP_SERVER
-
-#ifndef HTTP_PREPROCESSOR_H_
-#define HTTP_PREPROCESSOR_H_
-
-int http_process_lua_page(const char *ipath, const char *opath);
-
-#endif
-
-#endif
+//TTNConnect();
+MQTTConnect();

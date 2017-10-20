@@ -34,16 +34,6 @@
 
 #include <pthread.h>
 
-struct lthread {
-    lua_State *PL; // Parent thread
-    lua_State *L;  // Thread state
-    int function_ref;
-    int thread_ref;
-    int status;
-    int thid;
-    pthread_t thread;
-};
-
 typedef struct {
 	pthread_mutex_t mtx;
 } mutex_userdata;

@@ -31,6 +31,7 @@
 #include "_pthread.h"
 
 #include <errno.h>
+#include <pthread.h>
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                           void *(*start_routine) (void *), void *args) {
@@ -38,7 +39,8 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 	int priority;      // Priority
     int stacksize;     // Stack size
     int initial_state; // Initial state
-    int cpu = 0;       // CPU affinity
+
+    cpu_set_t cpu_set = CPU_INITIALIZER;
 
     int res;
 
@@ -50,7 +52,7 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
             return EINVAL;
         }
         priority = attr->schedparam.sched_priority;
-        cpu = attr->schedparam.affinityset;
+        cpu_set = attr->schedparam.affinityset;
         initial_state = attr->schedparam.initial_state;
     } else {
         stacksize = CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE;
@@ -58,12 +60,15 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
         priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
     }
 
-    cpu &= 0b11;
+    // CPU affinity
+    int cpu = 0;
 
-    if (cpu & 0b01) {
-    	cpu = 0;
-    } else if (cpu & 0b10) {
-    	cpu = 1;
+    if (cpu_set != CPU_INITIALIZER) {
+    	if (CPU_ISSET(0, &cpu_set)) {
+    		cpu = 0;
+    	} else if (CPU_ISSET(1, &cpu_set)) {
+    		cpu = 1;
+    	}
     } else {
     	cpu = tskNO_AFFINITY;
     }

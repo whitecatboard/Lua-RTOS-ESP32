@@ -116,7 +116,6 @@ static int IRAM_ATTR vfs_tty_close(int fd) {
 
 void vfs_tty_register() {
     esp_vfs_t vfs = {
-        .fd_offset = 0,
         .flags = ESP_VFS_FLAG_DEFAULT,
         .write = &vfs_tty_write,
         .open = &vfs_tty_open,

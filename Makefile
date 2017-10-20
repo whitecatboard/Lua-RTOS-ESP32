@@ -3,12 +3,16 @@
 # project subdirectory.
 #
 
+CURRENT_IDF := 2e8441df9eb046b2436981dbaaa442b312f12101
+
 PROJECT_NAME := lua_rtos
 LUA_RTOS_PATCHES := $(abspath $(wildcard components/lua_rtos/patches/*.patch))
 
 all_binaries: configure-idf-lua-rtos configure-idf-lua-rtos-tests
 
 clean: restore-idf
+
+defconfig: configure-idf-lua-rtos
 
 configure-idf-lua-rtos-tests:
 	@echo "Configure esp-idf for Lua RTOS tests ..."
@@ -22,6 +26,7 @@ configure-idf-lua-rtos: $(LUA_RTOS_PATCHES)
 ifeq ("$(wildcard $(IDF_PATH)/lua_rtos_patches)","")
 	@echo "Reverting previous Lua RTOS esp-idf patches ..."
 	@cd $(IDF_PATH) && git checkout .
+	@cd $(IDF_PATH) && git checkout $(CURRENT_IDF)
 	@echo "Applying Lua RTOS esp-idf patches ..."
 	@cd $(IDF_PATH) && git apply --whitespace=warn $^
 	@touch $(IDF_PATH)/lua_rtos_patches
@@ -30,6 +35,7 @@ endif
 restore-idf:
 	@echo "Revert previous Lua RTOS esp-idf patches ..."
 	@cd $(IDF_PATH) && git checkout .
+	@cd $(IDF_PATH) && git checkout master
 ifneq ("$(wildcard $(IDF_PATH)/lua_rtos_patches)","")
 	@rm $(IDF_PATH)/lua_rtos_patches
 endif

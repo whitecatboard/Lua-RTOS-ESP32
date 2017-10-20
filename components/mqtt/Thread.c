@@ -72,6 +72,9 @@ thread_type Thread_start(thread_fn fn, void* parameter)
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	if (pthread_create(&thread, &attr, fn, parameter) != 0)
 		thread = 0;
+
+	pthread_setname_np(thread, "mqtt");
+
 	pthread_attr_destroy(&attr);
 #endif
 	FUNC_EXIT;

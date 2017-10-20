@@ -71,7 +71,10 @@ driver_error_t *os_init () {
         pthread_attr_setschedparam(&attr, &sched);
 
         // Set CPU
-        cpu_set_t cpu_set = CONFIG_LUA_RTOS_LORA_NODE_TASK_CPU;
+        cpu_set_t cpu_set = CPU_INITIALIZER;
+
+        CPU_SET(CONFIG_LUA_RTOS_LORA_NODE_TASK_CPU, &cpu_set);
+
         pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
 
         // Create thread
@@ -79,6 +82,8 @@ driver_error_t *os_init () {
         if (res) {
     		return driver_error(LORA_DRIVER, LORA_ERR_CANT_SETUP, "cannot start run_loop");
         }
+
+        pthread_setname_np(thread, "lmic");
     } else {
 		return driver_error(LORA_DRIVER, LORA_ERR_CANT_SETUP, "radio phy not detected");
     }
