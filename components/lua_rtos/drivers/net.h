@@ -108,6 +108,7 @@ driver_error_t *net_check_connectivity();
  * @brief Lookup for a hostname, and get the IP, doing a DNS search.
  *
  * @param name The hostname.
+ * @param name The port number.
  * @param address A pointer to a sockaddr_in structure where put the IP address.
  *
  * @return
@@ -116,7 +117,7 @@ driver_error_t *net_check_connectivity();
  *
  *     	 NET_ERR_NOT_AVAILABLE
  */
-driver_error_t *net_lookup(const char *name, struct sockaddr_in *address);
+driver_error_t *net_lookup(const char *name, int port, struct sockaddr_in *address);
 
 /**
  * @brief Register a function callback in the network event loop. When an event is
@@ -148,6 +149,8 @@ driver_error_t *net_event_register_callback(net_event_register_callback_t func);
 driver_error_t *net_event_unregister_callback(net_event_register_callback_t func);
 
 driver_error_t *net_ping(const char *name, int count, int interval, int size, int timeout);
+
+driver_error_t *net_reconnect();
 
 #endif
 

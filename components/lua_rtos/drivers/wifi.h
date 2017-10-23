@@ -74,6 +74,7 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_
 driver_error_t *wifi_start();
 driver_error_t *wifi_stop();
 driver_error_t *wifi_stat(ifconfig_t *info);
+driver_error_t *wifi_get_mac(uint8_t mac[6]);
 
 #endif
 

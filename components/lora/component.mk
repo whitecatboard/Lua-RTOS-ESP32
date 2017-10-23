@@ -4,8 +4,8 @@
 
 ifdef CONFIG_LUA_RTOS_LUA_USE_LORA
 
-COMPONENT_SRCDIRS := ./gateway/src ./node/lmic ./common
-COMPONENT_ADD_INCLUDEDIRS := ./gateway/inc ./node/lmic ./common
+COMPONENT_SRCDIRS := ./gateway/multi_channel/src ./gateway/single_channel ./node/lmic ./common
+COMPONENT_ADD_INCLUDEDIRS := ./gateway/multi_channel/inc ./gateway/single_channel ./node/lmic ./common
 
 else
 

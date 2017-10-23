@@ -81,7 +81,7 @@ static int lnet_lookup(lua_State* L) {
 	}
 
 	// Resolve name
-	if ((error = net_lookup(name, &address))) {
+	if ((error = net_lookup(name, 0, &address))) {
 		return luaL_driver_error(L, error);
 	}
 

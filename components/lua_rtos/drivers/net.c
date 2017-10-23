@@ -233,7 +233,7 @@ driver_error_t *net_check_connectivity() {
 	return NULL;
 }
 
-driver_error_t *net_lookup(const char *name, struct sockaddr_in *address) {
+driver_error_t *net_lookup(const char *name, int port, struct sockaddr_in *address) {
 	driver_error_t *error;
 	int rc = 0;
 
@@ -254,7 +254,7 @@ driver_error_t *net_lookup(const char *name, struct sockaddr_in *address) {
 		}
 
 		if (result->ai_family == AF_INET) {
-			address->sin_port = htons(0);
+			address->sin_port = htons(port);
 			address->sin_family = family = AF_INET;
 			address->sin_addr = ((struct sockaddr_in*)(result->ai_addr))->sin_addr;
 		}
@@ -300,6 +300,10 @@ driver_error_t *net_ping(const char *name, int count, int interval, int size, in
 
 	if ((error = ping(name, count, interval, size, timeout))) return error;
 
+	return NULL;
+}
+
+driver_error_t *net_reconnect() {
 	return NULL;
 }
 
