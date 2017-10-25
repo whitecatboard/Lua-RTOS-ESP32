@@ -75,6 +75,12 @@ typedef struct {
 #define NET_ERR_NAME_CANNOT_BE_RESOLVED	   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  4)
 #define NET_ERR_NAME_CANNOT_CREATE_SOCKET  (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  5)
 #define NET_ERR_NAME_CANNOT_SETUP_SOCKET   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  6)
+#define NET_ERR_NAME_CANNOT_CONNECT	  	   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  7)
+#define NET_ERR_CANNOT_CREATE_SSL	  	   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  8)
+#define NET_ERR_CANNOT_CONNECT_SSL		   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  9)
+#define NET_ERR_NOT_ENOUGH_MEMORY		   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  10)
+#define NET_ERR_INVALID_RESPONSE		   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  11)
+#define NET_ERR_INVALID_CONTENT		   	   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  12)
 
 extern const int net_errors;
 extern const int net_error_map;
@@ -151,6 +157,7 @@ driver_error_t *net_event_unregister_callback(net_event_register_callback_t func
 driver_error_t *net_ping(const char *name, int count, int interval, int size, int timeout);
 
 driver_error_t *net_reconnect();
+driver_error_t *net_ota();
 
 #endif
 

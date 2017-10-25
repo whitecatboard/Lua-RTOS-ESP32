@@ -38,6 +38,12 @@
 #include "esp_system.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
+#include "esp_ota_ops.h"
+
+#include "nvs.h"
+#include "nvs_flash.h"
+
+#include "openssl/ssl.h"
 
 #include <stdio.h>
 #include <errno.h>
@@ -47,6 +53,7 @@
 #include <sys/syslog.h>
 
 #include <drivers/net.h>
+#include <drivers/net_http.h>
 #include <drivers/wifi.h>
 
 #include <lwip/ping.h>
@@ -59,7 +66,13 @@ DRIVER_REGISTER_BEGIN(NET,net,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(NET, net, CallbackNotFound, "callback not found", NET_ERR_NO_CALLBACK_NOT_FOUND);
 	DRIVER_REGISTER_ERROR(NET, net, NameCannotBeResolved, "name cannot be resolved", NET_ERR_NAME_CANNOT_BE_RESOLVED);
 	DRIVER_REGISTER_ERROR(NET, net, CannotCreateSocket, "cannot create socket", NET_ERR_NAME_CANNOT_CREATE_SOCKET);
-	DRIVER_REGISTER_ERROR(NET, net, CannotSetupSocket, "cannot create socket", NET_ERR_NAME_CANNOT_SETUP_SOCKET);
+	DRIVER_REGISTER_ERROR(NET, net, CannotSetupSocket, "cannot setup socket", NET_ERR_NAME_CANNOT_SETUP_SOCKET);
+	DRIVER_REGISTER_ERROR(NET, net, CannotConnect, "cannot connect to server", NET_ERR_NAME_CANNOT_CONNECT);
+	DRIVER_REGISTER_ERROR(NET, net, CannotCreateSSL, "cannot create SSL", NET_ERR_CANNOT_CREATE_SSL);
+	DRIVER_REGISTER_ERROR(NET, net, CannotConnectSSL, "cannot connect SSL", NET_ERR_CANNOT_CONNECT_SSL);
+	DRIVER_REGISTER_ERROR(NET, net, NotEnoughtMemory, "not enough memory", NET_ERR_NOT_ENOUGH_MEMORY);
+	DRIVER_REGISTER_ERROR(NET, net, InvalidResponse, "invalid response", NET_ERR_INVALID_RESPONSE);
+	DRIVER_REGISTER_ERROR(NET, net, InvalidContent, "invalid content", NET_ERR_INVALID_CONTENT);
 DRIVER_REGISTER_END(NET,net,NULL,NULL,NULL);
 
 // FreeRTOS events used by driver
@@ -304,6 +317,108 @@ driver_error_t *net_ping(const char *name, int count, int interval, int size, in
 }
 
 driver_error_t *net_reconnect() {
+	return NULL;
+}
+
+driver_error_t *net_ota() {
+	driver_error_t *error;
+	net_http_client_t client = HTTP_CLIENT_INITIALIZER;
+	net_http_response_t response;
+	esp_ota_handle_t update_handle = 0 ;
+	uint8_t buffer[1024];
+
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    const esp_partition_t *update_partition = esp_ota_get_next_update_partition(NULL);
+
+    if (!update_partition) {
+	    syslog(LOG_ERR,
+			"OTA partition not found. You need an OTA compatible firmware."
+		);
+
+	    return NULL;
+    }
+
+    if ((error = net_check_connectivity())) {
+    	return error;
+    }
+
+    syslog(LOG_INFO, "Connecting to https://ota.whitecatboard.org ...");
+	if ((error = net_http_create_client("ota.whitecatboard.org", "443", &client))) {
+		return error;
+	}
+
+    syslog(LOG_INFO, "Current firmware commit is %s", BUILD_COMMIT);
+    sprintf((char *)buffer, "/?board=%s&commit=%s", LUA_RTOS_BOARD, BUILD_COMMIT);
+	if ((error = net_http_get(&client, (const char *)buffer, &response))) {
+		return error;
+	}
+
+	if ((response.code == 200) && (response.size > 0)) {
+	    syslog(LOG_INFO, "New firmware available");
+
+	    syslog(LOG_INFO,
+			"Running partition is %s, at offset 0x%08x",
+			 running->label, running->address
+		);
+
+	    syslog(LOG_INFO,
+	    	"Writing partition is %s, at offset 0x%x",
+			update_partition->label, update_partition->address
+		);
+
+	    syslog(LOG_INFO, "Begin OTA update ...");
+
+	    esp_err_t err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
+	    if (err != ESP_OK) {
+	        syslog(LOG_ERR, "Failed, error %d", err);
+	    }
+
+	    uint32_t address = update_partition->address;
+
+		while (response.size > 0){
+			if ((error = net_http_read_response(&response, buffer, sizeof(buffer)))) {
+				return error;
+			}
+
+            err = esp_ota_write(update_handle, buffer, response.len);
+            if (err != ESP_OK) {
+    		    syslog(LOG_ERR, "\nChunk written unsuccessfully in partition (offset 0x%08x), error %d", address, err);
+                return NULL;
+            } else {
+            	printf("\rChunk written successfully in partition at offset 0x%08x", address);
+            }
+
+            address = address + response.len;
+		}
+
+		syslog(LOG_INFO, "\nEnding OTA update ...");
+
+	    if (esp_ota_end(update_handle) != ESP_OK) {
+		    syslog(LOG_ERR, "Failed");
+	    } else {
+		    syslog(LOG_INFO, "Changing boot partition ...");
+		    err = esp_ota_set_boot_partition(update_partition);
+		    if (err != ESP_OK) {
+			    syslog(LOG_ERR, "Failed, err %d", err);
+		    } else {
+			    syslog(LOG_INFO, "Updated");
+		    }
+	    }
+	} else if (response.code == 470) {
+	    syslog(LOG_INFO, "Missing or bad arguments");
+	} else if (response.code == 471) {
+	    syslog(LOG_INFO, "No new firmware available");
+	}
+
+	if ((error = net_http_destroy_client(&client))) {
+		return error;
+	}
+
+	if (response.code == 200) {
+		syslog(LOG_INFO, "Restarting ...");
+		esp_restart();
+	}
+
 	return NULL;
 }
 

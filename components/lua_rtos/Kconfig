@@ -135,18 +135,6 @@ menu "Lua RTOS"
 						help
 							Select for enable SPIFFS file system support. SPIFFS uses the ESP32 board flash memory.
 		
-				config LUA_RTOS_SPIFFS_BASE_ADDR
-					depends on LUA_RTOS_USE_SPIFFS
-						hex "Base address"
-						range 100000 1FFE000
-						default 0x180000
-
-				config LUA_RTOS_SPIFFS_SIZE
-					depends on LUA_RTOS_USE_SPIFFS
-						int "Size"
-						range 262144 1048576
-						default 524288
-
 				config LUA_RTOS_SPIFFS_LOG_PAGE_SIZE
 					depends on LUA_RTOS_USE_SPIFFS
 						int "Logical page size"

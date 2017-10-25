@@ -33,6 +33,8 @@
 #include "esp_log.h"
 #include "esp_vfs.h"
 #include "esp_sleep.h"
+#include "esp_ota_ops.h"
+
 #include "driver/periph_ctrl.h"
 
 #include "nvs_flash.h"
@@ -58,7 +60,6 @@
 
 extern void _pthread_init();
 extern void _signal_init();
-extern void _mtx_init();
 extern void _cpu_init();
 extern void _clock_init();
 
@@ -183,9 +184,11 @@ void _sys_init() {
 
 	firmware_copyright_notice();
 
+    const esp_partition_t *running = esp_ota_get_running_partition();
+
     printf(
-		"Lua RTOS %s. Copyright (C) 2015 - 2017 whitecatboard.org\r\n\r\nbuild %d\r\ncommit %s\r\n",
-		LUA_OS_VER, BUILD_TIME, BUILD_COMMIT
+		"Lua RTOS %s. Copyright (C) 2015 - 2017 whitecatboard.org\r\n\r\nbuild %d\r\ncommit %s\r\nRunning from %s partition\r\n",
+		LUA_OS_VER, BUILD_TIME, BUILD_COMMIT, running->label
 	);
 
     printf("board type %s\r\n", LUA_RTOS_BOARD);

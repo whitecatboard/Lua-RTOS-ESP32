@@ -25,6 +25,7 @@
 #include <sys/mount.h>
 
 #include <drivers/uart.h>
+#include <drivers/net.h>
 
 extern const char *__progname;
 extern uint32_t boot_count;

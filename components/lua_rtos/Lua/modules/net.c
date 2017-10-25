@@ -242,6 +242,16 @@ static int lnet_connected(lua_State* L) {
   return 1;
 }
 
+static int lnet_ota(lua_State *L) {
+	driver_error_t *error;
+
+	if ((error = net_ota())) {
+    	return luaL_driver_error(L, error);
+	}
+
+	return 0;
+}
+
 static const LUA_REG_TYPE service_map[] = {
 	{ LSTRKEY( "sntp" ), LROVAL ( sntp_map ) },
 #if CONFIG_LUA_RTOS_USE_HTTP_SERVER
@@ -256,10 +266,11 @@ static const LUA_REG_TYPE service_map[] = {
 static const LUA_REG_TYPE net_map[] = {
 	{ LSTRKEY( "stat" ), LFUNCVAL ( lnet_stat ) },
 	{ LSTRKEY( "connected" ), LFUNCVAL ( lnet_connected ) },
-	{ LSTRKEY( "lookup" ), LFUNCVAL ( lnet_lookup ) },
-	{ LSTRKEY( "packip" ), LFUNCVAL ( lnet_packip ) },
-	{ LSTRKEY( "unpackip" ), LFUNCVAL ( lnet_unpackip ) },
-	{ LSTRKEY( "ping" ), LFUNCVAL ( lnet_ping ) },
+	{ LSTRKEY( "lookup" ),    LFUNCVAL ( lnet_lookup ) },
+	{ LSTRKEY( "packip" ),    LFUNCVAL ( lnet_packip ) },
+	{ LSTRKEY( "unpackip" ),  LFUNCVAL ( lnet_unpackip ) },
+	{ LSTRKEY( "ping" ),      LFUNCVAL ( lnet_ping ) },
+	{ LSTRKEY( "ota" ),       LFUNCVAL ( lnet_ota ) },
 
 #if CONFIG_LUA_RTOS_LUA_USE_SCP_NET
 	{ LSTRKEY( "scp" ), LROVAL ( scp_map ) },
