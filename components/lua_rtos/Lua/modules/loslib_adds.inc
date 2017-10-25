@@ -442,9 +442,10 @@ static int os_cpu(lua_State *L) {
 }
 
 static int os_board(lua_State *L) {
-	//luaL_deprecated(L, "os.board", "cpu.board");
 	lua_pushstring(L, LUA_RTOS_BOARD);
-	return 1;
+	lua_pushstring(L, CONFIG_LUA_RTOS_BOARD_SUBTYPE);
+	lua_pushstring(L, CONFIG_LUA_RTOS_BOARD_BRAND);
+	return 3;
 }
 
 static int os_logcons(lua_State *L) { 

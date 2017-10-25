@@ -11,7 +11,13 @@ menu "Lua RTOS"
 			For a correct operation of the ADC and some sensors it is necessary that you indicate the exact
 			value for your board. Please measure this value with a suitable equipment. A good and cheap
 			choice is using an external ADC as an ADS1115.
-			
+
+	config LUA_RTOS_BOARD_BRAND
+	    string "Board Brand"
+	    help
+			This is an additional information that may be blank. It is used, for example in the OTA update process
+			to determine the firmware to be used in the update.
+
 	choice LUA_RTOS_BOARD_TYPE
 		prompt "Board Type"
 		default LUA_RTOS_BOARD_WHITECAT_N1ESP32
@@ -29,7 +35,13 @@ menu "Lua RTOS"
 		config LUA_RTOS_BOARD_OTHER
 			bool "GENERIC"
 	endchoice
-	
+
+	config LUA_RTOS_BOARD_SUBTYPE
+	    string "Board Subtype"
+	    help
+			This is an additional information that may be blank. It is used, for example in the OTA update process
+			to determine the firmware to be used in the update.
+
 	menu "General"
 		menu "Deep Sleep"
 			config LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
