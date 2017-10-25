@@ -182,14 +182,18 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    source ./env
    ```
 
-5. Set the default configuration for your board:
+5. Set the default configuration for your board, with or without OTA support:
 
-   | Board              | Run this command                                     |
-   |--------------------|------------------------------------------------------|
-   | WHITECAT ESP32 N1  | make SDKCONFIG_DEFAULTS=WHITECAT-ESP32-N1 defconfig  |
-   | ESP32 CORE         | make SDKCONFIG_DEFAULTS=ESP32-CORE-BOARD defconfig   |
-   | ESP32 THING        | make SDKCONFIG_DEFAULTS=ESP32-THING defconfig        |
-   | GENERIC            | make SDKCONFIG_DEFAULTS=GENERIC defconfig            |
+   | Board                  | Run this command                                         |
+   |------------------------|----------------------------------------------------------|
+   | WHITECAT ESP32 N1      | make SDKCONFIG_DEFAULTS=WHITECAT-ESP32-N1 defconfig      |
+   | WHITECAT ESP32 N1 OTA  | make SDKCONFIG_DEFAULTS=WHITECAT-ESP32-N1-OTA defconfig  |
+   | ESP32 CORE             | make SDKCONFIG_DEFAULTS=ESP32-CORE-BOARD defconfig       |
+   | ESP32 CORE OTA         | make SDKCONFIG_DEFAULTS=ESP32-CORE-BOARD-OTA defconfig   |
+   | ESP32 THING            | make SDKCONFIG_DEFAULTS=ESP32-THING defconfig            |
+   | ESP32 THING OTA        | make SDKCONFIG_DEFAULTS=ESP32-THING-OTA defconfig        |
+   | GENERIC                | make SDKCONFIG_DEFAULTS=GENERIC defconfig                |
+   | GENERIC OTA            | make SDKCONFIG_DEFAULTS=GENERIC-OTA defconfig            |
 
 6. Change the default configuration:
 
