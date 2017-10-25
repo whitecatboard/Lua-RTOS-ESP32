@@ -38,6 +38,7 @@
 #include <signal.h>
 #include <ctype.h>
 
+ssize_t writev(int fd, const struct iovec *iov, int iovcnt);
 int Socket_close_only(int socket);
 int Socket_continueWrites(fd_set* pwset);
 

@@ -27,6 +27,10 @@
  * this software.
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_SINGLE_CHAN_GATEWAY
+
 #ifndef LORA_GATEWAY_SINGLE_CHANNEL_GATEWAY_H_
 #define LORA_GATEWAY_SINGLE_CHANNEL_GATEWAY_H_
 
@@ -49,5 +53,7 @@ extern const int lora_error_map;
 
 driver_error_t *lora_gw_setup(int band, const char *host, int port);
 void lora_gw_unsetup();
+
+#endif
 
 #endif
