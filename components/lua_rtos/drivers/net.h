@@ -81,6 +81,7 @@ typedef struct {
 #define NET_ERR_NOT_ENOUGH_MEMORY		   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  10)
 #define NET_ERR_INVALID_RESPONSE		   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  11)
 #define NET_ERR_INVALID_CONTENT		   	   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  12)
+#define NET_ERR_NO_OTA		   	   		   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  13)
 
 extern const int net_errors;
 extern const int net_error_map;

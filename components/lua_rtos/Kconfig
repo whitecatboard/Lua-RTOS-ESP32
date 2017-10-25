@@ -42,6 +42,14 @@ menu "Lua RTOS"
 			This is an additional information that may be blank. It is used, for example in the OTA update process
 			to determine the firmware to be used in the update.
 
+	menu "OTA"
+		config LUA_RTOS_OTA_SERVER_NAME
+		    string "OTA server name"
+		    default "ota.whitecatboard.org"
+		    help
+				OTA server name. Only OTA SSL servers are allowed.
+	endmenu
+	
 	menu "General"
 		menu "Deep Sleep"
 			config LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
