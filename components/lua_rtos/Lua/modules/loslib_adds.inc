@@ -4,6 +4,9 @@
 
 #include <freertos/FreeRTOS.h>
 
+#include "esp_partition.h"
+#include "esp_ota_ops.h"
+
 #include <limits.h>
 
 #include <sys/dirent.h>
@@ -822,4 +825,18 @@ static int os_locks(lua_State *L) {
 	}
 
 	return 0;
+}
+
+static int os_factory_reset(lua_State *L) {
+	// Find ota data partition
+    const esp_partition_t *partition =
+    	esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_OTA, NULL);
+
+    if (partition) {
+    	esp_partition_erase_range(partition, partition->address, partition->size);
+    }
+
+    esp_restart();
+
+    return 0;
 }
