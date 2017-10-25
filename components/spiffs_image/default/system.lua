@@ -13,7 +13,7 @@ os.history(true)           -- Enable/disable history
 
 -- Network setup
 do
-	local useWifi = true   -- Use wifi?
+	local useWifi = false           -- Use wifi?
 	
 	local ssid = "CITILAB"          -- Wifi SSID
 	local passwd = "wifi@citilab"   -- Wifi password
@@ -24,6 +24,8 @@ do
 		net.wf.start()
 	end
 
-	print("Updating time ...")
-	net.service.sntp.start()
+	if (useWifi) then
+		print("Updating time ...")
+		net.service.sntp.start()
+	end
 end
