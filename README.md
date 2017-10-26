@@ -56,16 +56,19 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    
      ```lua
      $ wcc
-     usage: wcc -p port | -ports [-ls path | -down source destination | -up source destination |
-     -f | -d]
-      
-     -ports:        list all available serial ports on your computer
-     -p port:       serial port device, for example /dev/tty.SLAB_USBtoUART
-     -ls path:      list files present in path
+     wcc -p port | -ports [-ls path | 
+            [-down source destination] | [-up source destination] | 
+            [-f | -ffs] | [-erase] | -d]
+
+     -ports:		  list all available serial ports on your computer
+     -p port:	     serial port device, for example /dev/tty.SLAB_USBtoUART
+     -ls path:	     list files present in path
      -down src dst: transfer the source file (board) to destination file (computer)
-     -up src dst:   transfer the source file (computer) to destination file (board)
-     -f:            flash board with last firmware
-     -d:            show debug messages
+     -up src dst:	  transfer the source file (computer) to destination file (board)
+     -f:		        flash board with last firmware
+     -ffs:		     flash board with last filesystem
+     -erase:		  erase flash board
+     -d:		        show debug messages
      ```
 
      For Windows open a "command" window and type wcc.exe 
@@ -105,6 +108,12 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    $ wcc -p /dev/cu.SLAB_USBtoUART -f
    ```
    
+   If you want to flash the default file system add the -ffs option.
+
+   ```lua
+   $ wcc -p /dev/cu.SLAB_USBtoUART -f -ffs
+   ```
+
    If you are flashing the Lua RTOS firmware for first time you will get an error:
    
    ```lua
@@ -119,9 +128,13 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    ```lua
    Please, enter your board type:
      1: WHITECAT N1
-     2: ESP32 CORE BOARD
-     3: ESP32 THING
-     4: GENERIC
+     2: WHITECAT N1 WITH OTA
+     3: ESP32 CORE BOARD
+     4: ESP32 CORE BOARD WITH OTA
+     5: ESP32 THING
+     6: ESP32 THING WITH OTA
+     7: GENERIC
+     8: GENERIC WITH OTA
 
    Type: 
    ```
@@ -129,6 +142,19 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    Finally enter your board type and your board will be flashed.
    
    For windows use wcc.exe instead of wcc.
+   
+   To upgrade a board with a Lua RTOS firmware installed on it:
+   
+   ```lua
+   $ wcc -p /dev/cu.SLAB_USBtoUART -f
+   ```
+   
+   If you need to change the firmware type on a board with a Lua RTOS firmware installed on it, for example to change an OTA firmware to a non OTA firmware:
+   
+   ```lua
+   $ wcc -p /dev/cu.SLAB_USBtoUART -erase
+   $ wcc -p /dev/cu.SLAB_USBtoUART -f
+   ```   
 
 ## Method 2: build by yourself
 
