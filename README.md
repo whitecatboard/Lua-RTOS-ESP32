@@ -61,10 +61,10 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
             [-f | -ffs] | [-erase] | -d]
 
      -ports:        list all available serial ports on your computer
-     -p port:	     serial port device, for example /dev/tty.SLAB_USBtoUART
-     -ls path:	     list files present in path
+     -p port:       serial port device, for example /dev/tty.SLAB_USBtoUART
+     -ls path:      list files present in path
      -down src dst: transfer the source file (board) to destination file (computer)
-     -up src dst:	  transfer the source file (computer) to destination file (board)
+     -up src dst:   transfer the source file (computer) to destination file (board)
      -f:            flash board with last firmware
      -ffs:          flash board with last filesystem
      -erase:        erase flash board
