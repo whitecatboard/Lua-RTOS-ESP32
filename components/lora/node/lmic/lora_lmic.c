@@ -67,7 +67,7 @@ DRIVER_REGISTER_BEGIN(LORA,lora, NULL,_lora_init,NULL);
 	DRIVER_REGISTER_ERROR(LORA, lora, NotEnoughtMemory, "not enough memory", LORA_ERR_NO_MEM);
 	DRIVER_REGISTER_ERROR(LORA, lora, ABPExpected, "ABP expected", LORA_ERR_ABP_EXPECTED);
 	DRIVER_REGISTER_ERROR(LORA, lora, CannotSetup, "can't setup", LORA_ERR_CANT_SETUP);
-	DRIVER_REGISTER_ERROR(LORA, lora, TransmissionFail, "transmission fail, ack not received", LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED);
+	DRIVER_REGISTER_ERROR(LORA, lora, TransmissionFail, "transmission fail ack not received", LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED);
 	DRIVER_REGISTER_ERROR(LORA, lora, InvalidArgument, "invalid argument", LORA_ERR_INVALID_ARGUMENT);
 	DRIVER_REGISTER_ERROR(LORA, lora, InvalidDataRate, "invalid data rate for your location", LORA_ERR_INVALID_DR);
 	DRIVER_REGISTER_ERROR(LORA, lora, InvalidBand, "invalid band for your location", LORA_ERR_INVALID_BAND);
