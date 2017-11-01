@@ -29,13 +29,13 @@
 
 #include "luartos.h"
 
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
+
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
 #include "modules.h"
 #include "error.h"
-
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE || CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_MULTI_CHAN_GATEWAY || CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_SINGLE_CHAN_GATEWAY
 
 #include <string.h>
 #include <stdlib.h>
@@ -44,8 +44,6 @@
 #include <lora/gateway/single_channel/gateway.h>
 
 #include <drivers/uart.h>
-
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
 
 static int rx_callback = 0;
 static lua_State* rx_callbackL;
@@ -111,32 +109,32 @@ static char *hex_str_pad(lua_State* L, const char  *str, int len) {
     return tmp;
 }
 
-static int llora_setup(lua_State* L) {
-	driver_error_t *error;
-
-	luaL_deprecated(L, "lora.setup", "lora.attach");
-
-    int band = luaL_checkinteger(L, 1);
-
-    // Setup in base of frequency
-    error = lora_setup(band);
-    if (error) {
-        return luaL_driver_error(L, error);
-    }
-
-    return 0;
-}
-
 static int llora_attach(lua_State* L) {
 	driver_error_t *error;
+    int type;
+    const char *host;
+    int port;
 
     int band = luaL_checkinteger(L, 1);
+    type = luaL_optinteger(L, 2, 0);
 
-    // Setup in base of frequency
-    error = lora_setup(band);
-    if (error) {
-        return luaL_driver_error(L, error);
-    }
+	if (type == 0) {
+		// Node
+	    error = lora_setup(band);
+	    if (error) {
+	        return luaL_driver_error(L, error);
+	    }
+	} else if (type == 1) {
+		host = luaL_optstring(L, 3, "router.eu.thethings.network");
+		port = luaL_optinteger(L, 4, 1700);
+
+		// Gateway
+		if ((error = lora_gw_setup(band, host, port))) {
+			return luaL_driver_error(L, error);
+		}
+	} else {
+		luaL_exception_extended(L, LORA_ERR_CANT_SETUP, "invalid type");
+	}
 
     return 0;
 }
@@ -406,31 +404,8 @@ static int llora_rx(lua_State* L) {
 
     return 0;
 }
-#endif
-
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_MULTI_CHAN_GATEWAY || CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_SINGLE_CHAN_GATEWAY
-static int llora_gw_start(lua_State* L) {
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_MULTI_CHAN_GATEWAY
-	lora_pkt_fwd();
-#else
-	driver_error_t *error;
-
-    int band = luaL_optinteger(L, 1, 868);
-	const char *host = luaL_optstring(L, 2, "router.eu.thethings.network");
-	int port = luaL_optinteger(L, 3, 1700);
-
-	if ((error = lora_gw_setup(band, host, port))) {
-		return luaL_driver_error(L, error);
-	}
-#endif
-
-    return 0;
-}
-#endif
 
 static const LUA_REG_TYPE lora_map[] = {
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
-    { LSTRKEY( "setup" ),        LFUNCVAL( llora_setup ) },
     { LSTRKEY( "attach" ),       LFUNCVAL( llora_attach ) },
     { LSTRKEY( "setDevAddr" ),   LFUNCVAL( llora_set_setDevAddr ) },
     { LSTRKEY( "setDevEui" ),    LFUNCVAL( llora_set_DevEui ) },
@@ -455,11 +430,9 @@ static const LUA_REG_TYPE lora_map[] = {
     { LSTRKEY( "BAND868" ),		 LINTVAL( 868 ) },
     { LSTRKEY( "BAND433" ), 	 LINTVAL( 433 ) },
     { LSTRKEY( "BAND915" ), 	 LINTVAL( 915 ) },
-#endif
 
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_MULTI_CHAN_GATEWAY || CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_SINGLE_CHAN_GATEWAY
-	{ LSTRKEY( "start" ),        LFUNCVAL( llora_gw_start ) },
-#endif
+    { LSTRKEY( "NODE"     ), 	 LINTVAL( 0 ) },
+    { LSTRKEY( "GATEWAY"  ), 	 LINTVAL( 1 ) },
 
 	DRIVER_REGISTER_LUA_ERRORS(lora)
 
@@ -467,12 +440,7 @@ static const LUA_REG_TYPE lora_map[] = {
 };
 
 int luaopen_lora(lua_State* L) {
-#if !LUA_USE_ROTABLE
-	luaL_newlib(L, lora_map);
-	return 1;
-#else
 	return 0;
-#endif
 }
 
 MODULE_REGISTER_MAPPED(LORA, lora, lora_map, luaopen_lora);
@@ -481,6 +449,8 @@ MODULE_REGISTER_MAPPED(LORA, lora, lora_map, luaopen_lora);
 
 /*
 	Simple channel gateway example:
+
+	lora.attach(lora.BAND868, lora.GATEWAY)
 
  	net.wf.setup(net.wf.mode.STA,"CITILAB","wifi@citilab")
 	net.wf.start()

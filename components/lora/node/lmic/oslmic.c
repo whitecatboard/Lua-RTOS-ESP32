@@ -11,7 +11,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
 
 #include "lmic.h"
 
@@ -64,16 +64,16 @@ driver_error_t *os_init () {
     	pthread_attr_init(&attr);
 
     	// Set stack size
-        pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LORA_NODE_STACK_SIZE);
+        pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LORA_STACK_SIZE);
 
         // Set priority
-        sched.sched_priority = CONFIG_LUA_RTOS_LORA_NODE_TASK_PRIORITY;
+        sched.sched_priority = CONFIG_LUA_RTOS_LORA_TASK_PRIORITY;
         pthread_attr_setschedparam(&attr, &sched);
 
         // Set CPU
         cpu_set_t cpu_set = CPU_INITIALIZER;
 
-        CPU_SET(CONFIG_LUA_RTOS_LORA_NODE_TASK_CPU, &cpu_set);
+        CPU_SET(CONFIG_LUA_RTOS_LORA_TASK_CPU, &cpu_set);
 
         pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
 

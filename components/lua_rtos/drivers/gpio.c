@@ -979,7 +979,9 @@ driver_error_t *gpio_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_
 		pca_9xxx_isr_attach(pin - 40, gpio_isr, type, args);
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	}
 #endif
 
 	return NULL;
@@ -1004,7 +1006,9 @@ driver_error_t *gpio_isr_detach(uint8_t pin) {
 		pca_9xxx_isr_detach(pin - 40);
 	}
 #else
-	return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	else {
+		return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
+	}
 #endif
 
 	return NULL;

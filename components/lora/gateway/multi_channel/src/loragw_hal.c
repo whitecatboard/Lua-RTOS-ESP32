@@ -684,12 +684,12 @@ int lgw_start(void) {
     uint64_t fsk_sync_word_reg;
 
     // Lua RTOS begin
-    gpio_pin_output(CONFIG_LUA_RTOS_LORA_GATEWAY_RST);
-    gpio_pin_clr(CONFIG_LUA_RTOS_LORA_GATEWAY_RST);
+    gpio_pin_output(CONFIG_LUA_RTOS_LORA_RST);
+    gpio_pin_clr(CONFIG_LUA_RTOS_LORA_RST);
     delay(10);
-    gpio_pin_set(CONFIG_LUA_RTOS_LORA_GATEWAY_RST);
+    gpio_pin_set(CONFIG_LUA_RTOS_LORA_RST);
     delay(10);
-    gpio_pin_clr(CONFIG_LUA_RTOS_LORA_GATEWAY_RST);
+    gpio_pin_clr(CONFIG_LUA_RTOS_LORA_RST);
     delay(10);
     // Lua RTOS end
 

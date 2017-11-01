@@ -28,7 +28,7 @@
  */
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_SINGLE_CHAN_GATEWAY
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
 
 #include "sx1276.h"
 
@@ -53,15 +53,17 @@ void sx1276_reset(uint8_t val) {
 			delay(5);
 		}
 	#else
-		if (val == 1) {
-			gpio_pin_output(CONFIG_LUA_RTOS_LORA_NODE_RST);
-			gpio_pin_set(CONFIG_LUA_RTOS_LORA_NODE_RST);
-		} else if (val == 0) {
-			gpio_pin_output(CONFIG_LUA_RTOS_LORA_NODE_RST);
-			gpio_pin_clr(CONFIG_LUA_RTOS_LORA_NODE_RST);
-		} else {
-			gpio_pin_input(CONFIG_LUA_RTOS_LORA_NODE_RST);
-		}
+		#if CONFIG_LUA_RTOS_LORA_RST >= 0
+			if (val == 1) {
+				gpio_pin_output(CONFIG_LUA_RTOS_LORA_RST);
+				gpio_pin_set(CONFIG_LUA_RTOS_LORA_RST);
+			} else if (val == 0) {
+				gpio_pin_output(CONFIG_LUA_RTOS_LORA_RST);
+				gpio_pin_clr(CONFIG_LUA_RTOS_LORA_RST);
+			} else {
+				gpio_pin_input(CONFIG_LUA_RTOS_LORA_RST);
+			}
+		#endif
 	#endif
 }
 

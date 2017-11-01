@@ -11,7 +11,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
 
 #include "esp_attr.h"
 
@@ -512,7 +512,6 @@ static void txlora () {
     // now we actually start the transmission
     opmode(OPMODE_TX);
 
-#if CONFIG_LUA_RTOS_LORA_NODE_DEBUG > 0
     u1_t sf = getSf(LMIC.rps) + 6; // 1 == SF7
     u1_t bw = getBw(LMIC.rps);
     u1_t cr = getCr(LMIC.rps);
@@ -522,7 +521,6 @@ static void txlora () {
            cr == CR_4_5 ? 5 : (cr == CR_4_6 ? 6 : (cr == CR_4_7 ? 7 : 8)),
            getIh(LMIC.rps)
    );
-#endif
 }
 
 // start transmitter (buf=LMIC.frame, len=LMIC.dataLen)
@@ -593,7 +591,6 @@ static void rxlora (u1_t rxmode) {
         opmode(OPMODE_RX);
     }
 
-#if CONFIG_LUA_RTOS_LORA_NODE_DEBUG > 0
     if (rxmode == RXMODE_RSSI) {
         syslog(LOG_DEBUG, "%lu: RXMODE_RSSI\n", (u4_t)os_getTime());
     } else {
@@ -609,7 +606,6 @@ static void rxlora (u1_t rxmode) {
                getIh(LMIC.rps)
        );
     }
-#endif
 }
 
 static void rxfsk (u1_t rxmode) {

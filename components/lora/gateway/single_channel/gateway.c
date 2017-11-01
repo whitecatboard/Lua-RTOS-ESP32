@@ -28,11 +28,13 @@
  */
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_SINGLE_CHAN_GATEWAY
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+
+#include "lora.h"
 
 #include "lwip/err.h"
 #include "lwip/sockets.h"
@@ -55,12 +57,6 @@
 #include <drivers/wifi.h>
 
 #define _localtime(t,r)  	((void)(r)->tm_sec, localtime(t))
-
-// Register driver and messages
-DRIVER_REGISTER_BEGIN(LORA,lora, NULL, NULL, NULL);
-	DRIVER_REGISTER_ERROR(LORA, lora, CannotSetup, "can't setup", LORA_ERR_CANT_SETUP);
-	DRIVER_REGISTER_ERROR(LORA, lora, NotEnoughtMemory, "not enough memory", LORA_ERR_NO_MEM);
-DRIVER_REGISTER_END(LORA,lora, NULL, NULL, NULL);
 
 // LoRa WAN data from phy
 typedef struct {
@@ -372,34 +368,34 @@ static void ttn_timer_task(void *arg) {
 driver_error_t *lora_gw_lock_resources(int unit) {
     driver_unit_lock_error_t *lock_error = NULL;
 
-	if ((lock_error = driver_lock(LORA_DRIVER, unit, SPI_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_SPI, DRIVER_ALL_FLAGS, NULL))) {
+	if ((lock_error = driver_lock(LORA_DRIVER, unit, SPI_DRIVER, CONFIG_LUA_RTOS_LORA_SPI, DRIVER_ALL_FLAGS, NULL))) {
 		// Revoked lock on pin
 		return driver_lock_error(LORA_DRIVER, lock_error);
 	}
 
-	#if !CONFIG_LUA_RTOS_USE_POWER_BUS
-    if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_RST, DRIVER_ALL_FLAGS, "RST"))) {
+	#if !CONFIG_LUA_RTOS_USE_POWER_BUS && (CONFIG_LUA_RTOS_LORA_RST >= 0)
+    if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_RST, DRIVER_ALL_FLAGS, "RST"))) {
     	// Revoked lock on pin
     	return driver_lock_error(LORA_DRIVER, lock_error);
     }
 	#endif
 
-	#if CONFIG_LUA_RTOS_LORA_NODE_DIO0
-	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_DIO0, DRIVER_ALL_FLAGS, "DIO0"))) {
+	#if CONFIG_LUA_RTOS_LORA_DIO0 >= 0
+	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_DIO0, DRIVER_ALL_FLAGS, "DIO0"))) {
 		// Revoked lock on pin
 		return driver_lock_error(LORA_DRIVER, lock_error);
 	}
 	#endif
 
-	#if CONFIG_LUA_RTOS_LORA_NODE_DIO1
-	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_DIO1, DRIVER_ALL_FLAGS, "DIO1"))) {
+	#if CONFIG_LUA_RTOS_LORA_DIO1 >= 0
+	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_DIO1, DRIVER_ALL_FLAGS, "DIO1"))) {
 		// Revoked lock on pin
 		return driver_lock_error(LORA_DRIVER, lock_error);
 	}
 	#endif
 
-	#if CONFIG_LUA_RTOS_LORA_NODE_DIO2
-	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_DIO2, DRIVER_ALL_FLAGS, "DIO2"))) {
+	#if CONFIG_LUA_RTOS_LORA_DIO2 >= 0
+	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_DIO2, DRIVER_ALL_FLAGS, "DIO2"))) {
 		// Revoked lock on pin
 		return driver_lock_error(LORA_DRIVER, lock_error);
 	}
@@ -411,6 +407,8 @@ driver_error_t *lora_gw_lock_resources(int unit) {
 driver_error_t *lora_gw_setup(int band, const char *host, int port) {
 	driver_error_t *error;
 	uint8_t mac[6];        // Mac address
+
+	syslog(LOG_INFO, "lora gw: starting");
 
 	// Check network connection
 	if ((error = net_check_connectivity())) {
@@ -437,7 +435,7 @@ driver_error_t *lora_gw_setup(int band, const char *host, int port) {
 	gw_eui[7] = mac[5];
 
 	// Init SPI bus
-	if ((error = spi_setup(CONFIG_LUA_RTOS_LORA_NODE_SPI, 1, CONFIG_LUA_RTOS_LORA_NODE_CS, 0, 1000000, SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
+	if ((error = spi_setup(CONFIG_LUA_RTOS_LORA_SPI, 1, CONFIG_LUA_RTOS_LORA_CS, 0, 1000000, SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
         return error;
     }
 
@@ -446,34 +444,37 @@ driver_error_t *lora_gw_setup(int band, const char *host, int port) {
     	return error;
     }
 
-	syslog(LOG_INFO, "lora gw: single gateway is at spi%d, pin cs=%s%d", CONFIG_LUA_RTOS_LORA_NODE_SPI,
-        gpio_portname(CONFIG_LUA_RTOS_LORA_NODE_CS), gpio_name(CONFIG_LUA_RTOS_LORA_NODE_CS)
+	syslog(LOG_INFO, "lora gw: single gateway is at spi%d, pin cs=%s%d", CONFIG_LUA_RTOS_LORA_SPI,
+        gpio_portname(CONFIG_LUA_RTOS_LORA_CS), gpio_name(CONFIG_LUA_RTOS_LORA_CS)
 	);
 
 	syslog(LOG_INFO, "lora gw: gateway EUI %02x%02x%02x%02x%02x%02x%02x%02x",
 		gw_eui[0],gw_eui[1],gw_eui[2],gw_eui[3],gw_eui[4],gw_eui[5], gw_eui[6], gw_eui[7]
 	);
 
-	#if !CONFIG_LUA_RTOS_USE_POWER_BUS
+	#if !CONFIG_LUA_RTOS_USE_POWER_BUS && (CONFIG_LUA_RTOS_LORA_RST >= 0)
 		// Init RESET pin
-		gpio_pin_output(CONFIG_LUA_RTOS_LORA_NODE_RST);
+		gpio_pin_output(CONFIG_LUA_RTOS_LORA_RST);
 	#endif
 
 	// Init DIO pins
-	#if CONFIG_LUA_RTOS_LORA_NODE_DIO0
-		if ((error = gpio_isr_attach(CONFIG_LUA_RTOS_LORA_NODE_DIO0, dio_intr_handler, GPIO_INTR_POSEDGE, (void*)0))) {
+	#if CONFIG_LUA_RTOS_LORA_DIO0 >= 0
+		if ((error = gpio_isr_attach(CONFIG_LUA_RTOS_LORA_DIO0, dio_intr_handler, GPIO_INTR_POSEDGE, (void*)0))) {
+			error->msg = "DIO0";
 			return error;
 		}
 	#endif
 
-	#if CONFIG_LUA_RTOS_LORA_NODE_DIO1
-		if ((error = gpio_isr_attach(CONFIG_LUA_RTOS_LORA_NODE_DIO1, dio_intr_handler, GPIO_INTR_POSEDGE, (void*)1))) {
+	#if CONFIG_LUA_RTOS_LORA_DIO1 >= 0
+		if ((error = gpio_isr_attach(CONFIG_LUA_RTOS_LORA_DIO1, dio_intr_handler, GPIO_INTR_POSEDGE, (void*)1))) {
+			error->msg = "DIO1";
 			return error;
 		}
 	#endif
 
-	#if CONFIG_LUA_RTOS_LORA_NODE_DIO2
-		if ((error = gpio_isr_attach(CONFIG_LUA_RTOS_LORA_NODE_DIO2, dio_intr_handler, GPIO_INTR_POSEDGE, (void*)2))) {
+	#if CONFIG_LUA_RTOS_LORA_DIO2 >= 0
+		if ((error = gpio_isr_attach(CONFIG_LUA_RTOS_LORA_DIO2, dio_intr_handler, GPIO_INTR_POSEDGE, (void*)2))) {
+			error->msg = "DIO2";
 			return error;
 		}
 	#endif
@@ -601,6 +602,8 @@ driver_error_t *lora_gw_setup(int band, const char *host, int port) {
 		lora_gw_unsetup();
 		return driver_error(LORA_DRIVER, LORA_ERR_CANT_SETUP, "radio transceiver not detected");
 	}
+
+	syslog(LOG_INFO, "lora gw: started");
 
 	return NULL;
 }

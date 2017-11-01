@@ -29,7 +29,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_SINGLE_CHAN_GATEWAY
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
 
 #ifndef LORA_GATEWAY_SINGLE_CHANNEL_GATEWAY_H_
 #define LORA_GATEWAY_SINGLE_CHANNEL_GATEWAY_H_
@@ -41,15 +41,6 @@
 
 #include <drivers/spi.h>
 #include <drivers/gpio.h>
-
-#define LORA_DRIVER driver_get_by_name("lora")
-
-// Lora errors
-#define LORA_ERR_CANT_SETUP				            (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  0)
-#define LORA_ERR_NO_MEM					            (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  1)
-
-extern const int lora_errors;
-extern const int lora_error_map;
 
 driver_error_t *lora_gw_setup(int band, const char *host, int port);
 void lora_gw_unsetup();

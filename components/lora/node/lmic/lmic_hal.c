@@ -29,7 +29,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
 
 #include "lmic.h"
 
@@ -110,29 +110,29 @@ driver_error_t *lmic_lock_resources(int unit, void *resources) {
 			return driver_lock_error(LORA_DRIVER, lock_error);
 	}
 
-	#if !CONFIG_LUA_RTOS_USE_POWER_BUS
-    if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_RST, DRIVER_ALL_FLAGS, "RST"))) {
+	#if !CONFIG_LUA_RTOS_USE_POWER_BUS && (CONFIG_LUA_RTOS_LORA_RST >= 0)
+    if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_RST, DRIVER_ALL_FLAGS, "RST"))) {
     	// Revoked lock on pin
     	return driver_lock_error(LORA_DRIVER, lock_error);
     }
 	#endif
 
-	#if CONFIG_LUA_RTOS_LORA_NODE_DIO0
-	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_DIO0, DRIVER_ALL_FLAGS, "DIO0"))) {
+	#if CONFIG_LUA_RTOS_LORA_DIO0 >= 0
+	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_DIO0, DRIVER_ALL_FLAGS, "DIO0"))) {
 		// Revoked lock on pin
 		return driver_lock_error(LORA_DRIVER, lock_error);
 	}
 	#endif
 
-	#if CONFIG_LUA_RTOS_LORA_NODE_DIO1
-	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_DIO1, DRIVER_ALL_FLAGS, "DIO1"))) {
+	#if CONFIG_LUA_RTOS_LORA_DIO1 >= 0
+	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_DIO1, DRIVER_ALL_FLAGS, "DIO1"))) {
 		// Revoked lock on pin
 		return driver_lock_error(LORA_DRIVER, lock_error);
 	}
 	#endif
 
-	#if CONFIG_LUA_RTOS_LORA_NODE_DIO2
-	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_NODE_DIO2, DRIVER_ALL_FLAGS, "DIO2"))) {
+	#if CONFIG_LUA_RTOS_LORA_DIO2 >= 0
+	if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_DIO2, DRIVER_ALL_FLAGS, "DIO2"))) {
 		// Revoked lock on pin
 		return driver_lock_error(LORA_DRIVER, lock_error);
 	}
@@ -145,8 +145,8 @@ driver_error_t *hal_init (void) {
 	driver_error_t *error;
 
 	// Init SPI bus
-	if ((error = spi_setup(CONFIG_LUA_RTOS_LORA_NODE_SPI, 1, CONFIG_LUA_RTOS_LORA_NODE_CS, 0, LMIC_SPI_KHZ * 1000, SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
-        syslog(LOG_ERR, "lmic cannot open spi%u", CONFIG_LUA_RTOS_LORA_NODE_SPI);
+	if ((error = spi_setup(CONFIG_LUA_RTOS_LORA_SPI, 1, CONFIG_LUA_RTOS_LORA_CS, 0, LMIC_SPI_KHZ * 1000, SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
+        syslog(LOG_ERR, "lmic cannot open spi%u", CONFIG_LUA_RTOS_LORA_SPI);
         return error;
     }
 
@@ -155,13 +155,13 @@ driver_error_t *hal_init (void) {
     	return error;
     }
 
-	syslog(LOG_INFO, "lmic is at spi%d, pin cs=%s%d", CONFIG_LUA_RTOS_LORA_NODE_SPI,
-        gpio_portname(CONFIG_LUA_RTOS_LORA_NODE_CS), gpio_name(CONFIG_LUA_RTOS_LORA_NODE_CS)
+	syslog(LOG_INFO, "lmic is at spi%d, pin cs=%s%d", CONFIG_LUA_RTOS_LORA_SPI,
+        gpio_portname(CONFIG_LUA_RTOS_LORA_CS), gpio_name(CONFIG_LUA_RTOS_LORA_CS)
 	);
 
-	#if !CONFIG_LUA_RTOS_USE_POWER_BUS
+	#if !CONFIG_LUA_RTOS_USE_POWER_BUS && (CONFIG_LUA_RTOS_LORA_RST >= 0)
 		// Init RESET pin
-		gpio_pin_output(CONFIG_LUA_RTOS_LORA_NODE_RST);
+		gpio_pin_output(CONFIG_LUA_RTOS_LORA_RST);
 	#endif
 
 	if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
@@ -171,25 +171,25 @@ driver_error_t *hal_init (void) {
 	}
 
 	// Init DIO pins
-	#if CONFIG_LUA_RTOS_LORA_NODE_DIO0
-		gpio_pin_input(CONFIG_LUA_RTOS_LORA_NODE_DIO0);
-
-		gpio_set_intr_type(CONFIG_LUA_RTOS_LORA_NODE_DIO0, GPIO_INTR_POSEDGE);
-	    gpio_isr_handler_add(CONFIG_LUA_RTOS_LORA_NODE_DIO0, dio_intr_handler, (void*) CONFIG_LUA_RTOS_LORA_NODE_DIO0);
-    #endif
-	
-	#if CONFIG_LUA_RTOS_LORA_NODE_DIO1
-		gpio_pin_input(CONFIG_LUA_RTOS_LORA_NODE_DIO1);
-
-		gpio_set_intr_type(CONFIG_LUA_RTOS_LORA_NODE_DIO1, GPIO_INTR_POSEDGE);
-		gpio_isr_handler_add(CONFIG_LUA_RTOS_LORA_NODE_DIO1, dio_intr_handler, (void*) CONFIG_LUA_RTOS_LORA_NODE_DIO1);
+	#if CONFIG_LUA_RTOS_LORA_DIO0 >= 0
+		if ((error = gpio_isr_attach(CONFIG_LUA_RTOS_LORA_DIO0, dio_intr_handler, GPIO_INTR_POSEDGE, (void*)0))) {
+			error->msg = "DIO0";
+			return error;
+		}
 	#endif
 
-	#if CONFIG_LUA_RTOS_LORA_NODE_DIO2
-		gpio_pin_input(CONFIG_LUA_RTOS_LORA_NODE_DIO2);
+	#if CONFIG_LUA_RTOS_LORA_DIO1 >= 0
+		if ((error = gpio_isr_attach(CONFIG_LUA_RTOS_LORA_DIO1, dio_intr_handler, GPIO_INTR_POSEDGE, (void*)1))) {
+			error->msg = "DIO1";
+			return error;
+		}
+	#endif
 
-		gpio_set_intr_type(CONFIG_LUA_RTOS_LORA_NODE_DIO2, GPIO_INTR_POSEDGE);
-		gpio_isr_handler_add(CONFIG_LUA_RTOS_LORA_NODE_DIO2, dio_intr_handler, (void*) CONFIG_LUA_RTOS_LORA_NODE_DIO2);
+	#if CONFIG_LUA_RTOS_LORA_DIO2 >= 0
+		if ((error = gpio_isr_attach(CONFIG_LUA_RTOS_LORA_DIO2, dio_intr_handler, GPIO_INTR_POSEDGE, (void*)2))) {
+			error->msg = "DIO2";
+			return error;
+		}
 	#endif
 
 	lmicSleepEvent = xQueueCreate(1, sizeof(uint32_t));
@@ -236,15 +236,17 @@ void hal_pin_rst (u1_t val) {
 			delay(5);
 		}
 	#else
-		if (val == 1) {
-			gpio_pin_output(CONFIG_LUA_RTOS_LORA_NODE_RST);
-			gpio_pin_set(CONFIG_LUA_RTOS_LORA_NODE_RST);
-		} else if (val == 0) {
-			gpio_pin_output(CONFIG_LUA_RTOS_LORA_NODE_RST);
-			gpio_pin_clr(CONFIG_LUA_RTOS_LORA_NODE_RST);
-		} else {
-			gpio_pin_input(CONFIG_LUA_RTOS_LORA_NODE_RST);
-		}
+		#if CONFIG_LUA_RTOS_LORA_RST >= 0
+			if (val == 1) {
+				gpio_pin_output(CONFIG_LUA_RTOS_LORA_RST);
+				gpio_pin_set(CONFIG_LUA_RTOS_LORA_RST);
+			} else if (val == 0) {
+				gpio_pin_output(CONFIG_LUA_RTOS_LORA_RST);
+				gpio_pin_clr(CONFIG_LUA_RTOS_LORA_RST);
+			} else {
+				gpio_pin_input(CONFIG_LUA_RTOS_LORA_RST);
+			}
+		#endif
 	#endif
 }
 
