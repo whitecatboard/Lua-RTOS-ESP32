@@ -47,6 +47,7 @@
 
 static int rx_callback = 0;
 static lua_State* rx_callbackL;
+static uint8_t is_gateway = 0;
 
 static void on_received(int port, char *payload) {
     if (rx_callback != LUA_NOREF) {
@@ -124,6 +125,9 @@ static int llora_attach(lua_State* L) {
 	    if (error) {
 	        return luaL_driver_error(L, error);
 	    }
+
+	    is_gateway = 0;
+
 	} else if (type == 1) {
 		host = luaL_optstring(L, 3, "router.eu.thethings.network");
 		port = luaL_optinteger(L, 4, 1700);
@@ -132,6 +136,8 @@ static int llora_attach(lua_State* L) {
 		if ((error = lora_gw_setup(band, host, port))) {
 			return luaL_driver_error(L, error);
 		}
+
+		is_gateway = 1;
 	} else {
 		luaL_exception_extended(L, LORA_ERR_CANT_SETUP, "invalid type");
 	}
@@ -140,6 +146,8 @@ static int llora_attach(lua_State* L) {
 }
 
 static int llora_set_setDevAddr(lua_State* L) {
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
     char *devAddr = hex_str_pad(L, luaL_checkstring(L, 1), 8);
 
     driver_error_t *error = lora_mac_set(LORA_MAC_SET_DEVADDR, devAddr);
@@ -153,7 +161,9 @@ static int llora_set_setDevAddr(lua_State* L) {
 }
 
 static int llora_set_DevEui(lua_State* L) {
-    char  *devEui = hex_str_pad(L, luaL_checkstring(L, 1), 16);
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	char  *devEui = hex_str_pad(L, luaL_checkstring(L, 1), 16);
 
     driver_error_t *error = lora_mac_set(LORA_MAC_SET_DEVEUI, devEui);
     if (error) {
@@ -166,7 +176,9 @@ static int llora_set_DevEui(lua_State* L) {
 }
 
 static int llora_set_AppEui(lua_State* L) {
-    char  *appEui = hex_str_pad(L, luaL_checkstring(L, 1), 16);
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	char  *appEui = hex_str_pad(L, luaL_checkstring(L, 1), 16);
 
     driver_error_t *error = lora_mac_set(LORA_MAC_SET_APPEUI, appEui);
     if (error) {
@@ -179,7 +191,9 @@ static int llora_set_AppEui(lua_State* L) {
 }
 
 static int llora_set_NwkSKey(lua_State* L) {
-    char  *nwkSKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	char  *nwkSKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
 
     driver_error_t *error = lora_mac_set(LORA_MAC_SET_NWKSKEY, nwkSKey);
     if (error) {
@@ -192,7 +206,9 @@ static int llora_set_NwkSKey(lua_State* L) {
 }
 
 static int llora_set_AppSKey(lua_State* L) {
-    char  *appSKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	char  *appSKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
 
     driver_error_t *error = lora_mac_set(LORA_MAC_SET_APPSKEY, appSKey);
     if (error) {
@@ -205,7 +221,9 @@ static int llora_set_AppSKey(lua_State* L) {
 }
 
 static int llora_set_AppKey(lua_State* L) {
-    char  *appKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	char  *appKey = hex_str_pad(L, luaL_checkstring(L, 1), 32);
 
     driver_error_t *error = lora_mac_set(LORA_MAC_SET_APPKEY, appKey);
     if (error) {
@@ -218,7 +236,9 @@ static int llora_set_AppKey(lua_State* L) {
 }
 
 static int llora_set_Dr(lua_State* L) {
-    int dr = luaL_checkinteger(L, 1);
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	int dr = luaL_checkinteger(L, 1);
 
     if ((dr < 0) || (dr > 7)) {
         return luaL_error(L, "%d:invalid data rate value (0 to 7)", LORA_ERR_INVALID_ARGUMENT);
@@ -237,7 +257,9 @@ static int llora_set_Dr(lua_State* L) {
 }
 
 static int llora_set_Adr(lua_State* L) {
-    char value[4];
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	char value[4];
 
     luaL_checktype(L, 1, LUA_TBOOLEAN);
     if (lua_toboolean( L, 1 )) {
@@ -255,7 +277,9 @@ static int llora_set_Adr(lua_State* L) {
 }
 
 static int llora_set_ReTx(lua_State* L) {
-    int rets = luaL_checkinteger(L, 1);
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	int rets = luaL_checkinteger(L, 1);
 
     if ((rets < 0) || (rets > 7)) {
         return luaL_error(L, "%d:invalid data rate value (0 to 8)", LORA_ERR_INVALID_ARGUMENT);
@@ -274,7 +298,9 @@ static int llora_set_ReTx(lua_State* L) {
 }
 
 static int llora_get_DevAddr(lua_State* L) {
-    char *value;
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	char *value;
 
     driver_error_t *error = lora_mac_get(LORA_MAC_GET_DEVADDR, &value);
     if (error) {
@@ -288,7 +314,9 @@ static int llora_get_DevAddr(lua_State* L) {
 }
 
 static int llora_get_DevEui(lua_State* L) {
-    char *value;
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	char *value;
 
     driver_error_t *error = lora_mac_get(LORA_MAC_GET_DEVEUI, &value);
     if (error) {
@@ -302,7 +330,9 @@ static int llora_get_DevEui(lua_State* L) {
 }
 
 static int llora_get_AppEui(lua_State* L) {
-    char *value;
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	char *value;
 
     driver_error_t *error = lora_mac_get(LORA_MAC_GET_APPEUI, &value);
     if (error) {
@@ -316,7 +346,9 @@ static int llora_get_AppEui(lua_State* L) {
 }
 
 static int llora_get_Dr(lua_State* L) {
-    char *value;
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	char *value;
 
     driver_error_t *error = lora_mac_get(LORA_MAC_GET_DR, &value);
     if (error) {
@@ -330,7 +362,9 @@ static int llora_get_Dr(lua_State* L) {
 }
 
 static int llora_get_Adr(lua_State* L) {
-    char *value;
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	char *value;
 
     driver_error_t *error = lora_mac_get(LORA_MAC_GET_ADR, &value);
     if (error) {
@@ -349,7 +383,9 @@ static int llora_get_Adr(lua_State* L) {
 }
 
 static int llora_get_ReTx(lua_State* L) {
-    char *value;
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	char *value;
 
     driver_error_t *error = lora_mac_get(LORA_MAC_GET_RETX, &value);
     if (error) {
@@ -363,7 +399,9 @@ static int llora_get_ReTx(lua_State* L) {
 }
 
 static int llora_join(lua_State* L) {
-    driver_error_t *error = lora_join();
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	driver_error_t *error = lora_join();
     if (error) {
         return luaL_driver_error(L, error);
     }
@@ -372,7 +410,9 @@ static int llora_join(lua_State* L) {
 }
 
 static int llora_tx(lua_State* L) {
-    luaL_checktype(L, 1, LUA_TBOOLEAN);
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	luaL_checktype(L, 1, LUA_TBOOLEAN);
     int cnf = lua_toboolean( L, 1 );
     int port = luaL_checkinteger(L, 2);
     const char *data = luaL_checkstring(L, 3);
@@ -394,7 +434,9 @@ static int llora_tx(lua_State* L) {
 }
 
 static int llora_rx(lua_State* L) {
-    luaL_checktype(L, 1, LUA_TFUNCTION);
+	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
+
+	luaL_checktype(L, 1, LUA_TFUNCTION);
     lua_pushvalue(L, 1);
 
     rx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -450,11 +492,10 @@ MODULE_REGISTER_MAPPED(LORA, lora, lora_map, luaopen_lora);
 /*
 	Simple channel gateway example:
 
-	lora.attach(lora.BAND868, lora.GATEWAY)
-
  	net.wf.setup(net.wf.mode.STA,"CITILAB","wifi@citilab")
 	net.wf.start()
 	net.service.sntp.start()
-	lora.start(lora.BAND868)
+
+	lora.attach(lora.BAND868, lora.GATEWAY)
 
  */

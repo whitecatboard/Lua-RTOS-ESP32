@@ -51,6 +51,7 @@
 #define LORA_ERR_INVALID_ARGUMENT                   (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  9)
 #define LORA_ERR_INVALID_DR							(DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) | 10)
 #define LORA_ERR_INVALID_BAND						(DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) | 11)
+#define LORA_ERR_NOT_ALLOWED						(DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) | 12)
 
 extern const int lora_errors;
 extern const int lora_error_map;
