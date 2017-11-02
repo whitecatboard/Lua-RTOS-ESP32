@@ -46,6 +46,14 @@ config.data.ethernet = {
 	dns2 = nil
 }
 
+-- HTTP server default config
+config.data.http = {
+	httpPort = 80,
+	httpsPort = 0, 
+	caFile = "",
+	keyFile = ""
+}
+
 -- Load configution
 dofile("config.lua")
 
@@ -85,7 +93,10 @@ end
 
 if (config.http) then
 	print("Starting http server ...")
-	net.service.http.start()
+	net.service.http.start(
+		config.data.http.httpPort, config.data.http.httpsPort,
+		config.data.http.caFile, config.data.http.keyFile
+	)
 end
 
 -- Main setups

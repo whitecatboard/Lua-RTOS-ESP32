@@ -50,3 +50,14 @@ config.data.ethernet = {
 	-- dns1 = net.packip(8, 8, 8, 8),
 	-- dns2 = net.packip(8, 8, 4, 4),
 }
+
+-- HTTP server configuration
+config.data.http = {
+	-- Put httpPort to 0 to disable http
+	httpPort = 80,
+	
+	-- Put httpsPort to 443 and caFile / keyFole to enable https
+	httpsPort = 0,  -- Uncomment to enable https / comment to disable it
+	caFile = "",
+	keyFile = "",
+}
