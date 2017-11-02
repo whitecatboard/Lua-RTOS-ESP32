@@ -208,7 +208,7 @@ driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1
 	return NULL;
 }
 
-driver_error_t *eth_start() {
+driver_error_t *eth_start(uint8_t silent) {
 	if (!status_get(STATUS_ETH_SETUP)) {
 		return driver_error(ETH_DRIVER, ETH_ERR_NOT_INIT, NULL);
 	}
@@ -216,17 +216,16 @@ driver_error_t *eth_start() {
 	if (!status_get(STATUS_ETH_STARTED)) {
 		esp_eth_enable();
 
-	    // Wait for connect
-	    EventBits_t uxBits = xEventGroupWaitBits(netEvent, evETH_CONNECTED | evETH_CANT_CONNECT, pdTRUE, pdFALSE, 10000 / portTICK_PERIOD_MS);
-	    if (uxBits & (evETH_CONNECTED)) {
-		    status_set(STATUS_ETH_STARTED);
-	    } else if (uxBits & (evETH_CANT_CONNECT)) {
-	    	status_clear(STATUS_ETH_STARTED);
-	    	return driver_error(ETH_DRIVER, ETH_ERR_CANT_CONNECT, NULL);
-	    } else {
-	    	status_clear(STATUS_ETH_STARTED);
-	    	return driver_error(ETH_DRIVER, ETH_ERR_CANT_CONNECT, NULL);
-	    }
+		if (!silent) {
+		    // Wait for connect
+		    EventBits_t uxBits = xEventGroupWaitBits(netEvent, evETH_CONNECTED | evETH_CANT_CONNECT, pdTRUE, pdFALSE, 10000 / portTICK_PERIOD_MS);
+		    if (uxBits & (evETH_CONNECTED)) {
+		    } else if (uxBits & (evETH_CANT_CONNECT)) {
+		    	return driver_error(ETH_DRIVER, ETH_ERR_CANT_CONNECT, NULL);
+		    } else {
+		    	return driver_error(ETH_DRIVER, ETH_ERR_CANT_CONNECT, NULL);
+		    }
+		}
 	}
 
 	return NULL;

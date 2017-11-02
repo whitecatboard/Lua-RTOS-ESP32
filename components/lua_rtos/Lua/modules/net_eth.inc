@@ -55,8 +55,16 @@ static int leth_setup(lua_State* L) {
 
 static int leth_start(lua_State* L) {
 	driver_error_t *error;
+	uint8_t silent = 1;
 
-	if ((error = eth_start())) {
+	if (lua_gettop(L) == 1) {
+		luaL_checktype(L, 1, LUA_TBOOLEAN);
+		if (lua_toboolean(L, 1)) {
+			silent = 1;
+		}
+	}
+
+	if ((error = eth_start(silent))) {
     	return luaL_driver_error(L, error);
 	}
 

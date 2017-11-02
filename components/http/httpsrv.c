@@ -42,6 +42,7 @@
 #include <sys/delay.h>
 
 #include "esp_wifi_types.h"
+#include "esp_log.h"
 #include <pthread.h>
 #include <esp_wifi.h>
 
@@ -83,7 +84,7 @@ extern void captivedns_stop();
 extern int captivedns_running();
 
 static lua_State *LL=NULL;
-static u8_t wifi_mode = WIFI_MODE_STA;
+static u8_t wifi_mode = WIFI_MODE_NULL;
 static u8_t http_refcount = 0;
 static u8_t volatile http_shutdown = 0;
 static u8_t http_captiverun = 0;
@@ -468,7 +469,6 @@ int process(http_request_handle *request) {
 	int len;
 
 	if (!do_gets(buf, sizeof (buf), request) || 0 == strlen(buf) ) {
-		syslog(LOG_WARNING, "http: got empty buffer\r");
 		send_error(request, 400, "Bad Request", NULL, "Got empty request buffer.");
 		return 0;
 	}
@@ -505,8 +505,7 @@ int process(http_request_handle *request) {
 	}
 
 	//only in AP mode we redirect arbitrary host names to our own host name
-	if (wifi_mode != WIFI_MODE_STA) {
-
+	if ((wifi_mode != WIFI_MODE_STA) && (wifi_mode != WIFI_MODE_NULL)) {
 		//find the Host: header and check if it matches our IP or captive server name
 		while (do_gets(pathbuf, sizeof (pathbuf), request) && strlen(pathbuf)>0 ) {
 
@@ -870,22 +869,24 @@ int http_start(lua_State* L) {
 		LL=L;
 		strcpy(ip4addr, "0.0.0.0");
 
+		esp_log_level_set("wifi", ESP_LOG_NONE);
+
 		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&wifi_mode)))) {
-			return luaL_error(L, "couldn't get wifi mode");
+			esp_log_level_set("wifi", ESP_LOG_ERROR);
+			free(error);
+			wifi_mode = WIFI_MODE_NULL;
 		}
+
 		if (wifi_mode != WIFI_MODE_STA) {
 			if ((error = wifi_stat(&info))) {
-				return luaL_error(L, "couldn't get wifi IP");
+				esp_log_level_set("wifi", ESP_LOG_ERROR);
+				free(error);
+				wifi_mode = WIFI_MODE_NULL;
 			}
 			strcpy(ip4addr, inet_ntoa(info.ip));
 		}
 
-		#if CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI && 0
-		if ((error = spi_eth_stat(&info))) {
-			return luaL_error(L, "couldn't get spi eth IP");
-		}
-		strcpy(ip4addr, inet_ntoa(info.ip));
-		#endif
+		esp_log_level_set("wifi", ESP_LOG_ERROR);
 
 		if ((error = net_event_register_callback(http_net_callback))) {
 			syslog(LOG_WARNING, "couldn't register net callback, please restart http service from lua after changing connectivity\n");

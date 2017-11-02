@@ -16,6 +16,7 @@ config = {
 	ap = false,
 	ethernet = false,
 	sntp = false,
+	http = false,
 	net = {
 		wifi = nil,
 		ethernet = nil
@@ -80,6 +81,11 @@ end
 if (config.sntp) then
 	print("Starting sntp client ...")
 	net.service.sntp.start()
+end
+
+if (config.http) then
+	print("Starting http server ...")
+	net.service.http.start()
 end
 
 -- Main setups

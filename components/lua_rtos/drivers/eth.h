@@ -44,7 +44,7 @@ extern const int eth_errors;
 extern const int eth_error_map;
 
 driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1, uint32_t dns2);
-driver_error_t *eth_start();
+driver_error_t *eth_start(uint8_t silent);
 driver_error_t *eth_stop();
 driver_error_t *eth_stat(ifconfig_t *info);
 
