@@ -33,6 +33,8 @@
 
 #include <stdio.h>
 
+#include <sys/syslog.h>
+
 int http_process_lua_page(const char *ipath, const char *opath) {
     FILE *ifp; // Input file
     FILE *ofp; // Output file

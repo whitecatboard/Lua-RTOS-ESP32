@@ -84,7 +84,7 @@ extern void captivedns_stop();
 extern int captivedns_running();
 
 static lua_State *LL=NULL;
-static u8_t wifi_mode = WIFI_MODE_NULL;
+static u8_t wifi_mode = WIFI_MODE_STA;
 static u8_t http_refcount = 0;
 static u8_t volatile http_shutdown = 0;
 static u8_t http_captiverun = 0;
@@ -294,7 +294,9 @@ int http_print(lua_State* L) {
 
 void send_file(http_request_handle *request, char *path, struct stat *statbuf, char *requestdata) {
 	int n;
-	char data[HTTP_BUFF_SIZE];
+	char *data;
+
+	assert(LL != NULL);
 
 	FILE *file = fopen(path, "r");
 
@@ -338,10 +340,15 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf, c
 		lua_setglobal(LL, "http_stream_handle");
 
 	} else {
-		int length = S_ISREG(statbuf->st_mode) ? statbuf->st_size : -1;
-		send_headers(request, 200, "OK", NULL, get_mime_type(path), length);
-		while ((n = fread(data, 1, sizeof (data), file)) > 0) request_write(request, data, n);
-		fclose(file);
+		data = calloc(1, HTTP_BUFF_SIZE);
+		if (data) {
+			int length = S_ISREG(statbuf->st_mode) ? statbuf->st_size : -1;
+			send_headers(request, 200, "OK", NULL, get_mime_type(path), length);
+			while ((n = fread(data, 1, sizeof (data), file)) > 0) request_write(request, data, n);
+			fclose(file);
+
+			free(data);
+		}
 	}
 }
 
@@ -505,7 +512,7 @@ int process(http_request_handle *request) {
 	}
 
 	//only in AP mode we redirect arbitrary host names to our own host name
-	if ((wifi_mode != WIFI_MODE_STA) && (wifi_mode != WIFI_MODE_NULL)) {
+	if (wifi_mode == WIFI_MODE_AP) {
 		//find the Host: header and check if it matches our IP or captive server name
 		while (do_gets(pathbuf, sizeof (pathbuf), request) && strlen(pathbuf)>0 ) {
 
@@ -541,6 +548,7 @@ int process(http_request_handle *request) {
 	if (!request->config->secure) fseek(request->file, 0, SEEK_CUR); // force change of stream direction
 
 	if (strcasecmp(method, "GET") != 0) {
+		syslog(LOG_DEBUG, "http: %s not supported\r", method);
 		send_error(request, 501, "Not supported", NULL, "Method is not supported.");
 	} else if (!filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL)) {
 		send_error(request, 404, "Not Found", NULL, "File not found.");
@@ -559,7 +567,7 @@ int process(http_request_handle *request) {
 			if (stat(pathbuf, &statbuf) >= 0) {
 				send_file(request, pathbuf, &statbuf, data);
 			} else {
-					filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.html");
+			      filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.html");
 				  if (stat(pathbuf, &statbuf) >= 0) {
 					  send_file(request, pathbuf, &statbuf, data);
 				  } else {
@@ -635,7 +643,7 @@ static void http_net_callback(system_event_t *event){
 			break;
 
 		case SYSTEM_EVENT_AP_START:                 /**< ESP32 soft-AP start */
-			if (wifi_mode != WIFI_MODE_AP) {
+			if (wifi_mode != WIFI_MODE_STA) {
 				driver_error_t *error;
 				ifconfig_t info;
 
@@ -874,14 +882,10 @@ int http_start(lua_State* L) {
 		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&wifi_mode)))) {
 			esp_log_level_set("wifi", ESP_LOG_ERROR);
 			free(error);
-			wifi_mode = WIFI_MODE_NULL;
-		}
-
-		if (wifi_mode != WIFI_MODE_STA) {
+		} else {
 			if ((error = wifi_stat(&info))) {
 				esp_log_level_set("wifi", ESP_LOG_ERROR);
 				free(error);
-				wifi_mode = WIFI_MODE_NULL;
 			}
 			strcpy(ip4addr, inet_ntoa(info.ip));
 		}
