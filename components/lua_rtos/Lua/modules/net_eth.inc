@@ -29,14 +29,14 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
+#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
 
 #include <string.h>
 #include <stdio.h>
 
-#include <drivers/spi_eth.h>
+#include <drivers/eth.h>
 
-static int lspi_eth_setup(lua_State* L) {
+static int leth_setup(lua_State* L) {
 	driver_error_t *error;
 
 	uint32_t ip = luaL_optinteger(L, 1, 0);
@@ -45,35 +45,35 @@ static int lspi_eth_setup(lua_State* L) {
 	uint32_t dns1 = luaL_optinteger(L, 4, 0);
 	uint32_t dns2 = luaL_optinteger(L, 5, 0);
 
-    // Setup spi_eth
-	if ((error = spi_eth_setup(ip, mask, gw, dns1, dns2))) {
+    // Setup eth
+	if ((error = eth_setup(ip, mask, gw, dns1, dns2))) {
     	return luaL_driver_error(L, error);
 	}
 
 	return 0;
 }
 
-static int lspi_eth_start(lua_State* L) {
+static int leth_start(lua_State* L) {
 	driver_error_t *error;
 
-	if ((error = spi_eth_start())) {
+	if ((error = eth_start())) {
     	return luaL_driver_error(L, error);
 	}
 
 	return 0;
 }
 
-static int lspi_eth_stop(lua_State* L) {
+static int leth_stop(lua_State* L) {
 	driver_error_t *error;
 
-	if ((error = spi_eth_stop())) {
+	if ((error = eth_stop())) {
     	return luaL_driver_error(L, error);
 	}
 
 	return 0;
 }
 
-static int lspi_eth_stat(lua_State* L) {
+static int leth_stat(lua_State* L) {
 	ifconfig_t info;
 	driver_error_t *error;
 	u8_t table = 0;
@@ -87,8 +87,8 @@ static int lspi_eth_stat(lua_State* L) {
 		}
 	}
 
-	if ((error = spi_eth_stat(&info))) {
-		if (error->exception != SPI_ETH_ERR_NOT_INIT) {
+	if ((error = eth_stat(&info))) {
+		if (error->exception != ETH_ERR_NOT_INIT) {
 			return luaL_driver_error(L, error);
 		}
 
@@ -147,12 +147,12 @@ static int lspi_eth_stat(lua_State* L) {
 	return table;
 }
 
-static const LUA_REG_TYPE spi_eth_map[] = {
-	{ LSTRKEY( "setup" ),	 LFUNCVAL( lspi_eth_setup   ) },
-    { LSTRKEY( "start" ),	 LFUNCVAL( lspi_eth_start   ) },
-    { LSTRKEY( "stop"  ),	 LFUNCVAL( lspi_eth_stop    ) },
-    { LSTRKEY( "stat"  ),	 LFUNCVAL( lspi_eth_stat    ) },
-	DRIVER_REGISTER_LUA_ERRORS(spi_eth)
+static const LUA_REG_TYPE eth_map[] = {
+	{ LSTRKEY( "setup" ),	 LFUNCVAL( leth_setup   ) },
+    { LSTRKEY( "start" ),	 LFUNCVAL( leth_start   ) },
+    { LSTRKEY( "stop"  ),	 LFUNCVAL( leth_stop    ) },
+    { LSTRKEY( "stat"  ),	 LFUNCVAL( leth_stat    ) },
+	DRIVER_REGISTER_LUA_ERRORS(eth)
 	{ LNILKEY, LNILVAL }
 };
 

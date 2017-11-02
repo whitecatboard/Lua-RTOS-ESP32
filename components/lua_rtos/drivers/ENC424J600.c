@@ -29,7 +29,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_SPI_ETHERNET
+#if CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
@@ -403,17 +403,17 @@ int enc424j600_init(struct netif *netif) {
 	// Configure SPI
 	driver_error_t *error;
 
-	if ((error = spi_setup(CONFIG_SPI_ETHERNET_SPI, 1, CONFIG_SPI_ETHERNET_CS, 0, CONFIG_SPI_ETHERNET_SPEED,
+	if ((error = spi_setup(CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI_SPI, 1, CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI_CS, 0, CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI_SPEED,
 			SPI_FLAG_WRITE | SPI_FLAG_READ, &spi_device))) {
-		syslog(LOG_ERR, "enc424j600 cannot open spi%d", CONFIG_SPI_ETHERNET_SPI);
+		syslog(LOG_ERR, "enc424j600 cannot open spi%d", CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI_SPI);
 		return 0;
 	}
 
 	syslog(LOG_INFO, "enc424j600 is at spi%d, cs=%s%d, int=%s%d, speed %d Mhz",
-			CONFIG_SPI_ETHERNET_SPI,
-			gpio_portname(CONFIG_SPI_ETHERNET_CS), gpio_name(CONFIG_SPI_ETHERNET_CS),
-			gpio_portname(CONFIG_SPI_ETHERNET_INT), gpio_name(CONFIG_SPI_ETHERNET_INT),
-			CONFIG_SPI_ETHERNET_SPEED / 1000000);
+			CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI_SPI,
+			gpio_portname(CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI_CS), gpio_name(CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI_CS),
+			gpio_portname(CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI_INT), gpio_name(CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI_INT),
+			CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI_SPEED / 1000000);
 
 	if (phy_reset() < 0) {
 		syslog(LOG_ERR, "enc424j600 can't reset");
@@ -482,10 +482,10 @@ int enc424j600_init(struct netif *netif) {
 		status_set(STATUS_ISR_SERVICE_INSTALLED);
 	}
 
-	gpio_pin_input(CONFIG_SPI_ETHERNET_INT);
+	gpio_pin_input(CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI_INT);
 
-	gpio_set_intr_type(CONFIG_SPI_ETHERNET_INT, GPIO_INTR_NEGEDGE);
-	gpio_isr_handler_add(CONFIG_SPI_ETHERNET_INT, ether_intr, NULL);
+	gpio_set_intr_type(CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI_INT, GPIO_INTR_NEGEDGE);
+	gpio_isr_handler_add(CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI_INT, ether_intr, NULL);
 
     // Enable interrupts
 	bfs_reg(EIE, ENC424J600_INT_MASK);

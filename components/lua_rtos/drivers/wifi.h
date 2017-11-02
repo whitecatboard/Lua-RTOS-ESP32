@@ -43,7 +43,7 @@
 
 #include <sys/driver.h>
 
-#define WIFI_CONNECT_RETRIES 1
+#define WIFI_CONNECT_RETRIES 2
 
 // WIFI errors
 #define WIFI_ERR_CANT_INIT              (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  0)

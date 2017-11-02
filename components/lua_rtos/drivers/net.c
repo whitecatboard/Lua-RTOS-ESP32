@@ -35,6 +35,7 @@
 #include "freertos/event_groups.h"
 
 #include "esp_wifi.h"
+#include "esp_eth.h"
 #include "esp_system.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
@@ -54,6 +55,7 @@
 #include <drivers/net.h>
 #include <drivers/net_http.h>
 #include <drivers/wifi.h>
+#include <drivers/eth.h>
 
 #include <lwip/ping.h>
 
@@ -170,20 +172,23 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
 		case SYSTEM_EVENT_ETH_START:                /**< ESP32 ethernet start */
 			break;
-
 		case SYSTEM_EVENT_ETH_STOP:                 /**< ESP32 ethernet stop */
 			break;
 
 		case SYSTEM_EVENT_ETH_CONNECTED:            /**< ESP32 ethernet phy link up */
+			status_set(STATUS_ETH_CONNECTED);
 			tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_ETH);
 			break;
 
 		case SYSTEM_EVENT_ETH_DISCONNECTED:         /**< ESP32 ethernet phy link down */
+			status_clear(STATUS_ETH_CONNECTED);
+			xEventGroupSetBits(netEvent, evETH_CANT_CONNECT);
 			break;
 
 		case SYSTEM_EVENT_ETH_GOT_IP:               /**< ESP32 ethernet got IP from connected AP */
+			xEventGroupSetBits(netEvent, evETH_CONNECTED);
 			break;
-#if CONFIG_SPI_ETHERNET
+#if CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
 		case SYSTEM_EVENT_SPI_ETH_START:            /**< ESP32 spi ethernet start */
 			break;
 

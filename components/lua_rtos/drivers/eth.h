@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, SPI ethernet driver
+ * Lua RTOS, RMII Ethernet driver
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
@@ -27,34 +27,25 @@
  * this software.
  */
 
-#include "sdkconfig.h"
-
-#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
-
-#ifndef _SPI_ETH_
-#define _SPI_ETH_
-
-#include "net.h"
-
-#include "esp_wifi.h"
-#include "tcpip_adapter.h"
+#ifndef DRIVERS_ETH_H_
+#define DRIVERS_ETH_H_
 
 #include <sys/driver.h>
 
+#include <drivers/net.h>
+
 // SPI ethernet errors
-#define SPI_ETH_ERR_CANT_INIT              (DRIVER_EXCEPTION_BASE(SPI_ETH_DRIVER_ID) |  0)
-#define SPI_ETH_ERR_NOT_INIT               (DRIVER_EXCEPTION_BASE(SPI_ETH_DRIVER_ID) |  1)
-#define SPI_ETH_ERR_NOT_START              (DRIVER_EXCEPTION_BASE(SPI_ETH_DRIVER_ID) |  2)
-#define SPI_ETH_ERR_CANT_CONNECT           (DRIVER_EXCEPTION_BASE(SPI_ETH_DRIVER_ID) |  3)
+#define ETH_ERR_CANT_INIT              (DRIVER_EXCEPTION_BASE(ETH_DRIVER_ID) |  0)
+#define ETH_ERR_NOT_INIT               (DRIVER_EXCEPTION_BASE(ETH_DRIVER_ID) |  1)
+#define ETH_ERR_NOT_START              (DRIVER_EXCEPTION_BASE(ETH_DRIVER_ID) |  2)
+#define ETH_ERR_CANT_CONNECT           (DRIVER_EXCEPTION_BASE(ETH_DRIVER_ID) |  3)
 
-extern const int spi_eth_errors;
-extern const int spi_eth_error_map;
+extern const int eth_errors;
+extern const int eth_error_map;
 
-driver_error_t *spi_eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1, uint32_t dns2);
-driver_error_t *spi_eth_start();
-driver_error_t *spi_eth_stop();
-driver_error_t *spi_eth_stat(ifconfig_t *info);
+driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1, uint32_t dns2);
+driver_error_t *eth_start();
+driver_error_t *eth_stop();
+driver_error_t *eth_stat(ifconfig_t *info);
 
-#endif
-
-#endif
+#endif /* DRIVERS_ETH_H_ */

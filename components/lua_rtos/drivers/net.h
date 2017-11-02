@@ -55,6 +55,8 @@
 #define evWIFI_CANT_CONNECT          ( 1 << 2 )
 #define evSPI_ETH_CONNECTED 	     ( 1 << 3 )
 #define evSPI_ETH_CANT_CONNECT       ( 1 << 4 )
+#define evETH_CONNECTED		 	     ( 1 << 5 )
+#define evETH_CANT_CONNECT  	     ( 1 << 6 )
 
 typedef struct {
     ip4_addr_t ip;

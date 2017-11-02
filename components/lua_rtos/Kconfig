@@ -432,41 +432,94 @@ menu "Lua RTOS"
                default 1000000                  
       endmenu
 
-      menu "SPI Ethernet"
-            config SPI_ETHERNET
-               bool "Use SPI Ethernet (ENC424J600)"
-               default n
-               help
-                  Select for enable SPI Ethernet. SPI Ethernet needs only 5 pins, while RMII needs 8 pins plus 2
-                  additional pins in some configurations (CRS_DV / PHY RESET).
+      menu "Ethernet"
+            choice LUA_RTOS_ETH_HW_TYPE
+                prompt "Ethernet hardware type"
+                default LUA_RTOS_ETH_NONE
+                help
+                    Select the ethernet hardware type.
+            
+                config LUA_RTOS_ETH_NONE
+                    bool "None"
+            
+                config LUA_RTOS_ETH_HW_TYPE_RMII
+                    bool "RMII interface"
+            
+                config CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
+                    bool "SPI interface"
+            endchoice
 
-         config SPI_ETHERNET_SPI
-            depends on SPI_ETHERNET
-               int "SPI Ethernet port"
-               range 2 3
-               default 3
-            help
-               Select the SPI port number SPI Ethernet is attached
-      
-         config SPI_ETHERNET_SPEED
-            depends on SPI_ETHERNET
-               int "SPI Ethernet speed in Hertz"
-               range 1000000 14000000
-               default 14000000                  
+            choice LUA_RTOS_ETH_PHY_TYPE
+                depends on LUA_RTOS_ETH_HW_TYPE_RMII
+                prompt "PHY type"
+                default PHY_LAN8720
+                help
+                    Select the ethernet phy type.
+            
+                config PHY_LAN8720
+                    bool "LAN8720"
+            
+                config PHY_TLK110
+                    bool "TLK110"
+            endchoice
 
-         config SPI_ETHERNET_CS
-            depends on SPI_ETHERNET
-               int "SPI Ethernet CS GPIO number"
-                  range 0 39
-                  default 26
+            config PHY_ADDRESS
+                depends on LUA_RTOS_ETH_HW_TYPE_RMII
+                int "PHY Address (0-31)"
+                default 1  if PHY_LAN8720
+                default 31 if PHY_TLK110
+                range 0 31
+                help
+                    Select the PHY Address (0-31) for the hardware configuration and PHY model.
+        
+            config PHY_POWER_PIN
+                depends on LUA_RTOS_ETH_HW_TYPE_RMII
+                int "PHY Power GPIO"
+                default 2
+                help
+                    GPIO number to use for powering on/off the PHY.
+
+            config PHY_SMI_MDC_PIN
+                depends on LUA_RTOS_ETH_HW_TYPE_RMII
+                int "SMI MDC Pin"
+                default 23
+                help
+                    GPIO number to use for SMI clock output MDC to PHY.
+            
+            config PHY_SMI_MDIO_PIN
+                depends on LUA_RTOS_ETH_HW_TYPE_RMII
+                int "SMI MDIO Pin"
+                default 18
+                help
+                   GPIO number to use for SMI data pin MDIO to/from PHY.
                   
-         config SPI_ETHERNET_INT
-            depends on SPI_ETHERNET
-               int "SPI Ethernet Interrupt GPIO number"
-                  range 0 39
-                  default 0
-                  help
-                     Select 0 if you want to use SPI Eternet poll instead of interrupt.
+            config SPI_ETHERNET_SPI
+               depends on CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
+                  int "SPI Ethernet port"
+                  range 2 3
+                  default 3
+               help
+                  Select the SPI port number SPI Ethernet is attached
+            
+            config SPI_ETHERNET_SPEED
+               depends on CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
+                  int "SPI Ethernet speed in Hertz"
+                  range 1000000 14000000
+                  default 14000000                  
+            
+            config SPI_ETHERNET_CS
+               depends on CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
+                  int "SPI Ethernet CS GPIO number"
+                     range 0 39
+                     default 26
+                     
+            config SPI_ETHERNET_INT
+               depends on CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
+                  int "SPI Ethernet Interrupt GPIO number"
+                     range 0 39
+                     default 0
+                     help
+                        Select 0 if you want to use SPI Eternet poll instead of interrupt.
       endmenu
 
       menu "LoRa Wan"

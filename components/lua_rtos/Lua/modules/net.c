@@ -39,6 +39,7 @@
 #include "modules.h"
 
 #include "net_wifi.inc"
+#include "net_eth.inc"
 #include "net_spi_eth.inc"
 #include "net_service_sntp.inc"
 #include "net_service_http.inc"
@@ -214,7 +215,7 @@ static int lnet_stat(lua_State* L) {
 	}
 #endif
 
-#if CONFIG_SPI_ETHERNET && CONFIG_LUA_RTOS_LUA_USE_NET
+#if CONFIG_LUA_RTOS_LUA_USE_NET && (CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI || CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII)
 	// Call wf.stat
 	lua_getglobal(L, "net");
 	lua_getfield(L, -1, "en");
@@ -279,8 +280,12 @@ static const LUA_REG_TYPE net_map[] = {
 
 	{ LSTRKEY( "wf" ), LROVAL ( wifi_map ) },
 
-	#if CONFIG_SPI_ETHERNET && CONFIG_LUA_RTOS_LUA_USE_NET
+#if CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI && CONFIG_LUA_RTOS_LUA_USE_NET
 	{ LSTRKEY( "en" ), LROVAL ( spi_eth_map ) },
+#endif
+
+#if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII && CONFIG_LUA_RTOS_LUA_USE_NET
+	{ LSTRKEY( "en" ), LROVAL ( eth_map ) },
 #endif
 
 #if CONFIG_LUA_RTOS_LUA_USE_CURL_NET

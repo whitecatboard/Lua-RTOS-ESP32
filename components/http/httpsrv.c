@@ -880,7 +880,7 @@ int http_start(lua_State* L) {
 			strcpy(ip4addr, inet_ntoa(info.ip));
 		}
 
-		#if CONFIG_SPI_ETHERNET && 0
+		#if CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI && 0
 		if ((error = spi_eth_stat(&info))) {
 			return luaL_error(L, "couldn't get spi eth IP");
 		}

@@ -14,7 +14,6 @@ all_binaries: configure-idf-lua-rtos configure-idf-lua-rtos-tests
 include $(IDF_PATH)/make/project.mk
 
 clean: restore-idf
-defconfig: restore-idf configure-idf-lua-rtos
 
 # Get patches files
 LUA_RTOS_PATCHES := $(abspath $(wildcard components/lua_rtos/patches/*.patch))

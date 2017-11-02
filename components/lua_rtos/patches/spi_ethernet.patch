@@ -6,7 +6,7 @@ index 8f1f2e9..b31377e 100644
  */
  static system_event_handler_t default_event_handlers[SYSTEM_EVENT_MAX] = { 0 };
  
-+#ifdef CONFIG_SPI_ETHERNET
++#ifdef CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
 +static esp_err_t system_event_spi_eth_start_handle_default(system_event_t *event);
 +static esp_err_t system_event_spi_eth_stop_handle_default(system_event_t *event);
 +static esp_err_t system_event_spi_eth_connected_handle_default(system_event_t *event);
@@ -123,8 +123,8 @@ index 950c05b..50fbb42 100644
  } esp_interface_t;
  
  #ifdef __cplusplus
- diff --git a/components/tcpip_adapter/include/tcpip_adapter.h b/components/tcpip_adapter/include/tcpip_adapter.h
-index 2e6db6b..8a8cd9f 100644
+diff --git a/components/tcpip_adapter/include/tcpip_adapter.h b/components/tcpip_adapter/include/tcpip_adapter.h
+index 2e6db6b..e0f3588 100644
 --- a/components/tcpip_adapter/include/tcpip_adapter.h
 +++ b/components/tcpip_adapter/include/tcpip_adapter.h
 @@ -110,7 +110,8 @@ typedef enum {
@@ -137,6 +137,18 @@ index 2e6db6b..8a8cd9f 100644
  } tcpip_adapter_if_t;
  
  /* status of DHCP client or DHCP server */
+@@ -352,11 +353,9 @@ esp_err_t tcpip_adapter_create_ip6_linklocal(tcpip_adapter_if_t tcpip_if);
+  */
+ esp_err_t tcpip_adapter_get_ip6_linklocal(tcpip_adapter_if_t tcpip_if, ip6_addr_t *if_ip6);
+ 
+-#if 0
+ esp_err_t tcpip_adapter_get_mac(tcpip_adapter_if_t tcpip_if, uint8_t *mac);
+ 
+ esp_err_t tcpip_adapter_set_mac(tcpip_adapter_if_t tcpip_if, uint8_t *mac);
+-#endif
+ 
+ /**
+  * @brief  Get DHCP server's status
 diff --git a/components/tcpip_adapter/tcpip_adapter_lwip b/components/tcpip_adapter/tcpip_adapter_lwip.c
 index d385fd4..d39f97b 100644
 --- a/components/tcpip_adapter/tcpip_adapter_lwip.c
@@ -162,7 +174,7 @@ index d385fd4..d39f97b 100644
      return ESP_OK;
  }
  
-+#ifdef CONFIG_SPI_ETHERNET
++#ifdef CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
 +esp_err_t tcpip_adapter_spi_eth_start(uint8_t *mac, tcpip_adapter_ip_info_t *ip_info)
 +{
 +     esp_netif_init_fn[TCPIP_ADAPTER_IF_SPI_ETH] = spi_ethernetif_init;
