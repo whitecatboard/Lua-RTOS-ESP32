@@ -204,10 +204,13 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
 		case SYSTEM_EVENT_SPI_ETH_DISCONNECTED:     /**< ESP32 spi ethernet phy link down */
 			status_clear(STATUS_SPI_ETH_CONNECTED);
+			status_clear(STATUS_SPI_ETH_STARTED);
+			xEventGroupSetBits(netEvent, evETH_CANT_CONNECT);
 			break;
 
 		case SYSTEM_EVENT_SPI_ETH_GOT_IP:           /**< ESP32 spi ethernet got IP from connected AP */
  			xEventGroupSetBits(netEvent, evSPI_ETH_CONNECTED);
+ 			status_set(STATUS_SPI_ETH_STARTED);
 			break;
 #endif
 		default :

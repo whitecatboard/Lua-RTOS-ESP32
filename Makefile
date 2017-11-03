@@ -3,13 +3,49 @@
 # project subdirectory.
 #
 
+# Supported boards
+define b
+   WHITECAT-ESP32-N1
+   WHITECAT-ESP32-N1-OTA
+   ESP32-CORE-BOARD
+   ESP32-CORE-BOARD-OTA
+   ESP32-THING
+   ESP32-THING-OTA
+   GENERIC
+   GENERIC-OTA
+endef
+
+# New line
+define n
+
+
+endef
+
 # Use this esp-idf commit in build
 CURRENT_IDF := 2e8441df9eb046b2436981dbaaa442b312f12101
 
 # Project name
 PROJECT_NAME := lua_rtos
 
-all_binaries: configure-idf-lua-rtos configure-idf-lua-rtos-tests
+# Get current config if is it missing
+ifeq ("$(SDKCONFIG_DEFAULTS)","")
+ifneq ("$(shell test -e .current_config && echo ex)","ex")
+$(error $nLua RTOS need to know the default configuration for your board. First execute:$n$nmake SDKCONFIG_DEFAULTS=board defconfig$n$nboard:$n$b$n)
+else
+SDKCONFIG_DEFAULTS := $(shell cat .current_config)
+ifneq ("$(shell test -e $(SDKCONFIG_DEFAULTS) && echo ex)","ex")
+$(error $(SDKCONFIG_DEFAULTS) does not exists)
+endif
+endif
+else
+# Store config
+ifneq ("$(shell test -e $(SDKCONFIG_DEFAULTS) && echo ex)","ex")
+$(error $(SDKCONFIG_DEFAULTS) does not exists)
+endif
+$(shell echo $(SDKCONFIG_DEFAULTS) > .current_config)
+endif
+
+all_binaries: configure-idf-lua-rtos configure-idf-lua-rtos-tests defconfig
 
 include $(IDF_PATH)/make/project.mk
 
@@ -88,12 +124,12 @@ configure-idf-lua-rtos-tests:
 	@echo "Configure esp-idf for Lua RTOS tests ..."
 	@touch $(PROJECT_PATH)/components/lua_rtos/sys/sys_init.c
 	@touch $(PROJECT_PATH)/components/lua_rtos/Lua/src/lbaselib.c
-ifeq ("$(wildcard $(IDF_PATH)/components/lua_rtos)","")
-	@ln -s $(PROJECT_PATH)/main/test/lua_rtos $(IDF_PATH)/components/lua_rtos
+ifneq ("$(shell test -e  $(IDF_PATH)/components/lua_rtos && echo ex)","ex")
+	@ln -s $(PROJECT_PATH)/main/test/lua_rtos $(IDF_PATH)/components/lua_rtos 2> /dev/null
 endif
 
 configure-idf-lua-rtos: $(LUA_RTOS_PATCHES)
-ifeq ("$(wildcard $(IDF_PATH)/lua_rtos_patches)","")
+ifneq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
 	@echo "Reverting previous Lua RTOS esp-idf patches ..."
 	@cd $(IDF_PATH) && git checkout .
 	@cd $(IDF_PATH) && git checkout $(CURRENT_IDF)
@@ -103,13 +139,14 @@ ifeq ("$(wildcard $(IDF_PATH)/lua_rtos_patches)","")
 endif
 
 restore-idf:
-	@echo "Revert previous Lua RTOS esp-idf patches ..."
+	@echo "Reverting previous Lua RTOS esp-idf patches ..."
+ifeq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
 	@cd $(IDF_PATH) && git checkout .
 	@cd $(IDF_PATH) && git checkout master
-ifneq ("$(wildcard $(IDF_PATH)/lua_rtos_patches)","")
 	@rm $(IDF_PATH)/lua_rtos_patches
+	@make SDKCONFIG_DEFAULTS=$(SDKCONFIG_DEFAULTS) defconfig
 endif
-	
+		
 flash-args:
 	@echo $(subst --port $(ESPPORT),, \
 			$(subst python /components/esptool_py/esptool/esptool.py,, \

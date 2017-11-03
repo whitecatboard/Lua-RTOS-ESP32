@@ -296,8 +296,6 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf, c
 	int n;
 	char *data;
 
-	assert(LL != NULL);
-
 	FILE *file = fopen(path, "r");
 
 	if (!file) {
@@ -677,9 +675,9 @@ static void *http_thread(void *arg) {
   SSL_CTX *ctx = NULL;
   SSL *ssl = NULL;
 
+  	net_init();
 	if(0 == *config->server) {
 		*config->server = socket(AF_INET6, SOCK_STREAM, 0);
-		LWIP_ASSERT("httpd_init: socket failed", *config->server >= 0);
 		if(0 > *config->server) {
 			syslog(LOG_ERR, "couldn't create server socket\n");
 			return NULL;
@@ -693,7 +691,6 @@ static void *http_thread(void *arg) {
 		memcpy(&sin.sin6_addr.un.u32_addr, &in6addr_any, sizeof(in6addr_any));
 		sin.sin6_port   = htons(config->port);
 		int rc = bind(*config->server, (struct sockaddr *) &sin, sizeof (sin));
-		LWIP_ASSERT("httpd_init: bind failed", rc == 0);
 		if(0 != rc) {
 			syslog(LOG_ERR, "couldn't bind to port %d\n", config->port);
 			return NULL;

@@ -116,18 +116,6 @@ driver_error_t *spi_eth_start() {
 		system_event_t evt;
 	    evt.event_id = SYSTEM_EVENT_SPI_ETH_START;
 	    esp_event_send(&evt);
-
-	    // Wait for connect
-	    EventBits_t uxBits = xEventGroupWaitBits(netEvent, evSPI_ETH_CONNECTED | evSPI_ETH_CANT_CONNECT, pdTRUE, pdFALSE, 4000 / portTICK_PERIOD_MS);
-	    if (uxBits & (evSPI_ETH_CONNECTED)) {
-		    status_set(STATUS_SPI_ETH_STARTED);
-	    } else if (uxBits & (evSPI_ETH_CANT_CONNECT)) {
-	    	status_clear(STATUS_SPI_ETH_STARTED);
-	    	return driver_error(SPI_ETH_DRIVER, SPI_ETH_ERR_CANT_CONNECT, NULL);
-	    } else {
-	    	status_clear(STATUS_SPI_ETH_STARTED);
-	    	return driver_error(SPI_ETH_DRIVER, SPI_ETH_ERR_CANT_CONNECT, NULL);
-	    }
 	}
 
 	return NULL;
