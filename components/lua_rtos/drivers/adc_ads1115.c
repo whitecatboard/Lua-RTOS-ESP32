@@ -66,7 +66,7 @@ driver_error_t *adc_ads1115_read_reg(uint8_t type, adc_ads1115_reg_t *reg, uint8
 	int transaction = I2C_TRANSACTION_INITIALIZER;
 	driver_error_t *error;
 	uint8_t buff[1];
-	uint16_t val;
+	uint8_t val[2];
 
 	// Point to register
 	buff[0] = type;
