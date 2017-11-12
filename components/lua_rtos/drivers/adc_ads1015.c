@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, ADC ADS1115 driver
+ * Lua RTOS, ADC ADS1015 driver
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
@@ -29,7 +29,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_ADC_ADS1115
+#if CONFIG_ADC_ADS1015
 
 #include <string.h>
 
@@ -38,14 +38,14 @@
 #include <drivers/gpio.h>
 #include <drivers/i2c.h>
 #include <drivers/adc.h>
-#include <drivers/adc_ads1115.h>
+#include <drivers/adc_ADS1015.h>
 
 static int i2cdevice;
 
 /*
  * Helper functions
  */
-driver_error_t *adc_ads1115_write_reg(uint8_t type, adc_ads1115_reg_t *reg, uint8_t address) {
+driver_error_t *adc_ADS1015_write_reg(uint8_t type, adc_ADS1015_reg_t *reg, uint8_t address) {
 	int transaction = I2C_TRANSACTION_INITIALIZER;
 	driver_error_t *error;
 	uint8_t buff[3];
@@ -62,11 +62,11 @@ driver_error_t *adc_ads1115_write_reg(uint8_t type, adc_ads1115_reg_t *reg, uint
 	return NULL;
 }
 
-driver_error_t *adc_ads1115_read_reg(uint8_t type, adc_ads1115_reg_t *reg, uint8_t address) {
+driver_error_t *adc_ADS1015_read_reg(uint8_t type, adc_ADS1015_reg_t *reg, uint8_t address) {
 	int transaction = I2C_TRANSACTION_INITIALIZER;
 	driver_error_t *error;
 	uint8_t buff[1];
-	uint16_t val;
+	uint8_t val[2];
 
 	// Point to register
 	buff[0] = type;
@@ -91,7 +91,7 @@ driver_error_t *adc_ads1115_read_reg(uint8_t type, adc_ads1115_reg_t *reg, uint8
 /*
  * Operation functions
  */
-driver_error_t *adc_ads1115_setup(adc_channel_t *chan) {
+driver_error_t *adc_ads1015_setup(adc_channel_t *chan) {
 	driver_error_t *error;
 
 	uint8_t i2c = CONFIG_ADC_I2C;
@@ -105,12 +105,12 @@ driver_error_t *adc_ads1115_setup(adc_channel_t *chan) {
 
 	// Apply default address
 	if (chan->devid == 0) {
-		chan->devid = ADS1115_ADDR1;
+		chan->devid = ADS1015_ADDR1;
 	}
 
 	// Apply default resolution if needed
 	if (chan->resolution == 0) {
-		chan->resolution = 15;
+		chan->resolution = 12;
 	}
 
 	// Sanity checks
@@ -118,7 +118,7 @@ driver_error_t *adc_ads1115_setup(adc_channel_t *chan) {
 		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_MAX, NULL);
 	}
 
-	if (chan->resolution != 15) {
+	if (chan->resolution != 12) {
 		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_RESOLUTION, NULL);
 	}
 
@@ -156,7 +156,7 @@ driver_error_t *adc_ads1115_setup(adc_channel_t *chan) {
 
 		syslog(
 				LOG_INFO,
-				"adc ADS1115 channel %d at i2c%d, PGA %s, address %x, %d bits of resolution",
+				"adc ADS1015 channel %d at i2c%d, PGA %s, address %x, %d bits of resolution",
 				channel, i2c, pgas, address, chan->resolution
 		);
 	}
@@ -164,59 +164,61 @@ driver_error_t *adc_ads1115_setup(adc_channel_t *chan) {
 	return NULL;
 }
 
-driver_error_t *adc_ads1115_read(adc_channel_t *chan, int *raw, double *mvolts) {
+driver_error_t *adc_ads1015_read(adc_channel_t *chan, int *raw, double *mvolts) {
 	driver_error_t *error;
 
 	int8_t channel = chan->channel;
 	uint8_t address = chan->devid;
 
 	// Configure channel, and start a conversion
-	adc_ads1115_reg_t reg;
+	adc_ADS1015_reg_t reg;
 
 	reg.word.val = 0;
 
 	// Get PGA
 	uint8_t pga = 0;
 	if (chan->max <= 256) {
-		pga = ADS1115_CONF_PGA_0256;
+		pga = ADS1015_CONF_PGA_0256;
 	} else if (chan->max <= 512) {
-		pga = ADS1115_CONF_PGA_0512;
+		pga = ADS1015_CONF_PGA_0512;
 	} else if (chan->max <= 1024) {
-		pga = ADS1115_CONF_PGA_1024;
+		pga = ADS1015_CONF_PGA_1024;
 	} else if (chan->max <= 2048) {
-		pga = ADS1115_CONF_PGA_2048;
+		pga = ADS1015_CONF_PGA_2048;
 	} else if (chan->max <= 4096) {
-		pga = ADS1115_CONF_PGA_4096;
+		pga = ADS1015_CONF_PGA_4096;
 	} else {
-		pga = ADS1115_CONF_PGA_6144;
+		pga = ADS1015_CONF_PGA_6144;
 	}
 
-	reg.config.mux = ADS1115_CONF_AIN0_GND + channel;
+	reg.config.mux = ADS1015_CONF_AIN0_GND + channel;
 	reg.config.pga = pga;
-	reg.config.dr = ADS1115_CONF_DR_128;
-	reg.config.mode = ADS1115_CONF_MODE_SINGLE;
-	reg.config.comp_queue = ADS1115_CONF_COMP_QUEUE_0;
-	reg.config.os = ADS1115_CONF_START_CONV;
+	reg.config.dr = ADS1015_CONF_DR_128;
+	reg.config.mode = ADS1015_CONF_MODE_SINGLE;
+	reg.config.comp_queue = ADS1015_CONF_COMP_QUEUE_0;
+	reg.config.os = ADS1015_CONF_START_CONV;
 
-	error = adc_ads1115_write_reg(ADS1115_CONFIG, &reg, address);if (error) return error;
+	error = adc_ADS1015_write_reg(ADS1015_CONF, &reg, address);if (error) return error;
 
 	// Wait for conversion
 	for(;;) {
-		error = adc_ads1115_read_reg(ADS1115_CONFIG, &reg, address);if (error) return error;
-		if (reg.config.os == ADS1115_CONF_STATUS_IDLE) {
+		error = adc_ADS1015_read_reg(ADS1015_CONF, &reg, address);if (error) return error;
+		if (reg.config.os == ADS1015_CONF_STATUS_IDLE) {
 			break;
 		}
 	}
 
 	// Read
-	error = adc_ads1115_read_reg(ADS1115_AP_CONV, &reg, address);if (error) return error;
+	error = adc_ADS1015_read_reg(ADS1015_CONV, &reg, address);if (error) return error;
+
+	reg.word.val = reg.word.val >> 3;
 
 	if (raw) {
 		*raw = reg.word.val;
 	}
 
 	if (mvolts) {
-		*mvolts = (double)(double)((reg.word.val) * (chan->max)) / (double)chan->max_val;
+		*mvolts = (double)(double)((reg.word.val) * (chan->max)) / (double)chan->max_val;;
 	}
 
 	return NULL;

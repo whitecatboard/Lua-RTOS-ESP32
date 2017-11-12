@@ -363,6 +363,11 @@ menu "Lua RTOS"
                 config EXTERNAL_ADC_NONE
                     bool "None"
                 
+                config ADC_ADS1015
+                    bool "Use I2C ADC ADS1015"
+                    help
+                        ADS1015 is an ADC converter with I2C interface. 4 channels, resolution of 12 bits.
+
                 config ADC_ADS1115
                     bool "Use I2C ADC ADS1115"
                     help
@@ -379,16 +384,16 @@ menu "Lua RTOS"
                         MCP3208 is an ADC converter with SPI interface. 8 channels, resolution of 12 bits.
             endchoice    
 
-         config ADC_ADS1115_I2C
-            depends on ADC_ADS1115
+         config ADC_I2C
+            depends on (ADC_ADS1115 || ADC_ADS1015)
                int "ADS1115 I2C port"
                range 0 1
                default 0
                help
                   I2C port where ADS1115 is attached
 
-         config ADC_ADS1115_I2C_SPEED
-            depends on ADC_ADS1115
+         config ADC_SPEED
+            depends on (ADC_ADS1115 || ADC_ADS1015)
                int "ADS1115 I2C port speed"
                range 100000 3400000
                default 400000
