@@ -38,14 +38,14 @@
 #include <drivers/gpio.h>
 #include <drivers/i2c.h>
 #include <drivers/adc.h>
-#include <drivers/adc_ADS1015.h>
+#include <drivers/adc_ads1015.h>
 
 static int i2cdevice;
 
 /*
  * Helper functions
  */
-driver_error_t *adc_ADS1015_write_reg(uint8_t type, adc_ADS1015_reg_t *reg, uint8_t address) {
+driver_error_t *adc_ads1015_write_reg(uint8_t type, adc_ADS1015_reg_t *reg, uint8_t address) {
 	int transaction = I2C_TRANSACTION_INITIALIZER;
 	driver_error_t *error;
 	uint8_t buff[3];
@@ -62,7 +62,7 @@ driver_error_t *adc_ADS1015_write_reg(uint8_t type, adc_ADS1015_reg_t *reg, uint
 	return NULL;
 }
 
-driver_error_t *adc_ADS1015_read_reg(uint8_t type, adc_ADS1015_reg_t *reg, uint8_t address) {
+driver_error_t *adc_ads1015_read_reg(uint8_t type, adc_ADS1015_reg_t *reg, uint8_t address) {
 	int transaction = I2C_TRANSACTION_INITIALIZER;
 	driver_error_t *error;
 	uint8_t buff[1];
@@ -198,18 +198,18 @@ driver_error_t *adc_ads1015_read(adc_channel_t *chan, int *raw, double *mvolts) 
 	reg.config.comp_queue = ADS1015_CONF_COMP_QUEUE_0;
 	reg.config.os = ADS1015_CONF_START_CONV;
 
-	error = adc_ADS1015_write_reg(ADS1015_CONF, &reg, address);if (error) return error;
+	error = adc_ads1015_write_reg(ADS1015_CONF, &reg, address);if (error) return error;
 
 	// Wait for conversion
 	for(;;) {
-		error = adc_ADS1015_read_reg(ADS1015_CONF, &reg, address);if (error) return error;
+		error = adc_ads1015_read_reg(ADS1015_CONF, &reg, address);if (error) return error;
 		if (reg.config.os == ADS1015_CONF_STATUS_IDLE) {
 			break;
 		}
 	}
 
 	// Read
-	error = adc_ADS1015_read_reg(ADS1015_CONV, &reg, address);if (error) return error;
+	error = adc_ads1015_read_reg(ADS1015_CONV, &reg, address);if (error) return error;
 
 	reg.word.val = reg.word.val >> 3;
 
