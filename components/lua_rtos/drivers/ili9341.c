@@ -238,7 +238,7 @@ driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation) {
 #endif
 
 	driver_unit_lock_error_t *lock_error = NULL;
-	if ((lock_error = driver_lock(GDISPLAY_DRIVER, 0, SPI_DRIVER, caps->spi_device, DRIVER_ALL_FLAGS, "gdisplay - ILI9341"))) {
+	if (spi_lock_bus_resources(CONFIG_LUA_RTOS_GDISPLAY_SPI, DRIVER_ALL_FLAGS)) {
 		return driver_lock_error(GDISPLAY_DRIVER, lock_error);
 	}
 

@@ -58,11 +58,6 @@ void vfs_fat_register() {
 		return;
 	}
 
-	if (driver_lock(SYSTEM_DRIVER, 0, SPI_DRIVER, (CONFIG_LUA_RTOS_SD_SPI << 8), DRIVER_ALL_FLAGS, "SD Card - SPI")) {
-		return;
-
-	}
-
 #if (CONFIG_LUA_RTOS_SD_SPI == 2)
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
 
@@ -104,6 +99,7 @@ void vfs_fat_register() {
     if (ret != ESP_OK) {
     	esp_vfs_fat_sdmmc_unmount();
     	syslog(LOG_INFO, "fat%d can't mounted", 0);
+    	driver_unlock_all(SYSTEM_DRIVER, 0);
     	return;
     }
 
