@@ -213,7 +213,10 @@ driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation) {
 	// Store chipset
 	chipset = chip;
 
-#if CONFIG_LUA_RTOS_GDISPLAY_TP_SPI != -1
+#if CONFIG_LUA_RTOS_GDISPLAY_TP_SPI
+	#if CONFIG_LUA_RTOS_GDISPLAY_TP_CS == -1
+	#error "If touch pannel support is enabled CONFIG_LUA_RTOS_GDISPLAY_TP_CS must be >= 0."
+	#endif
     // Init display SPI bus
 	if (caps->spi_device == -1) {
 		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 48000000, SPI_FLAG_WRITE | SPI_FLAG_READ | SPI_FLAG_NO_DMA, &caps->spi_device))) {

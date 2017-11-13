@@ -698,18 +698,18 @@ menu "Lua RTOS"
          config LUA_RTOS_GDISPLAY_TP_SPI
             depends on LUA_RTOS_LUA_USE_GDISPLAY
                int "Display touch pannel SPI port"
-               range 1 3
+               range 0 3
                default 3
             help
-               Select the SPI port number where display touch pannel is attached.
+               Select the SPI port number where display touch pannel is attached. Select 0 if you don't want spport for touch pannel.
 
          config LUA_RTOS_GDISPLAY_TP_CS
             depends on LUA_RTOS_LUA_USE_GDISPLAY
                int "Display touch pannel SPI CS GPIO number"
-               range 0 39
+               range -1 39
                default 21
             help
-               GPIO where display touch pannel CS signal is attached.
+               GPIO where display touch pannel CS signal is attached. Select -1 if you don't want spport for touch pannel.
             endmenu
       
          menu "Sensors"
