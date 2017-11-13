@@ -219,27 +219,27 @@ driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation) {
 	#endif
     // Init display SPI bus
 	if (caps->spi_device == -1) {
-		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 48000000, SPI_FLAG_WRITE | SPI_FLAG_READ | SPI_FLAG_NO_DMA, &caps->spi_device))) {
+		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 48000000, SPI_FLAG_WRITE | SPI_FLAG_READ, &caps->spi_device))) {
 			return error;
 		}
 	}
 	// Init touch SPI
-	if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_TP_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_TP_CS, 0, 2500000, SPI_FLAG_WRITE | SPI_FLAG_READ | SPI_FLAG_NO_DMA , &touch_spi))) {
+	if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_TP_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_TP_CS, 0, 2500000, SPI_FLAG_WRITE | SPI_FLAG_READ, &touch_spi))) {
 		return error;
 	}
 
 #else
     // Init display SPI bus
 	if (caps->spi_device == -1) {
-		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 48000000, SPI_FLAG_WRITE | SPI_FLAG_NO_DMA, &caps->spi_device))) {
+		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 48000000, SPI_FLAG_WRITE, &caps->spi_device))) {
 			return error;
 		}
 	}
 #endif
 
 	driver_unit_lock_error_t *lock_error = NULL;
-	if (spi_lock_bus_resources(CONFIG_LUA_RTOS_GDISPLAY_SPI, DRIVER_ALL_FLAGS)) {
-		return driver_lock_error(GDISPLAY_DRIVER, lock_error);
+	if ((error = spi_lock_bus_resources(CONFIG_LUA_RTOS_GDISPLAY_SPI, DRIVER_ALL_FLAGS))) {
+		return error;
 	}
 
 	if ((lock_error = driver_lock(GDISPLAY_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_GDISPLAY_CMD, DRIVER_ALL_FLAGS, "gdisplay - ILI9341"))) {

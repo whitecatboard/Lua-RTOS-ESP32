@@ -84,14 +84,14 @@ driver_error_t *pcd8544_init(uint8_t chipset, uint8_t orient) {
 
     // Init SPI bus
 	if (caps->spi_device == -1) {
-		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_TP_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 4000000, SPI_FLAG_WRITE | SPI_FLAG_READ | SPI_FLAG_NO_DMA, &caps->spi_device))) {
+		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_TP_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 4000000, SPI_FLAG_WRITE | SPI_FLAG_READ, &caps->spi_device))) {
 			return error;
 		}
 	}
 
     driver_unit_lock_error_t *lock_error = NULL;
-	if (spi_lock_bus_resources(CONFIG_LUA_RTOS_GDISPLAY_SPI, DRIVER_ALL_FLAGS)) {
-		return driver_lock_error(GDISPLAY_DRIVER, lock_error);
+	if ((error = spi_lock_bus_resources(CONFIG_LUA_RTOS_GDISPLAY_SPI, DRIVER_ALL_FLAGS))) {
+		return error;
 	}
 
 	if ((lock_error = driver_lock(GDISPLAY_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_GDISPLAY_CMD, DRIVER_ALL_FLAGS, "gdisplay - PCD8544"))) {

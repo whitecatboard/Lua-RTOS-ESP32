@@ -103,11 +103,11 @@ xQueueHandle lmicCommand;
 }
 
 driver_error_t *lmic_lock_resources(int unit, void *resources) {
+	driver_error_t *error;
     driver_unit_lock_error_t *lock_error = NULL;
 
-	if ((lock_error = driver_lock(LORA_DRIVER, unit, SPI_DRIVER, spi_device, DRIVER_ALL_FLAGS, NULL))) {
-			// Revoked lock on pin
-			return driver_lock_error(LORA_DRIVER, lock_error);
+	if ((error = spi_lock_bus_resources(CONFIG_LUA_RTOS_LORA_SPI, DRIVER_ALL_FLAGS))) {
+		return error;
 	}
 
 	#if !CONFIG_LUA_RTOS_USE_POWER_BUS && (CONFIG_LUA_RTOS_LORA_RST >= 0)
