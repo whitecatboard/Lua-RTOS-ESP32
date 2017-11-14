@@ -540,5 +540,5 @@ function tftdemo.thfullDemo()
 end
 
 if tftdemo.init() then
-	demo_th = thread.start(tftdemo.thfullDemo, 2048, 10)
+	demo_th = thread.start(tftdemo.thfullDemo, 8192, 10)
 end
