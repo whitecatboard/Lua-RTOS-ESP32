@@ -231,7 +231,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    Board type:
    ```
    
-   When the Lua RTOS build process finish the board will be flashed. It is possible that for certain operating systems, or boards, the flashing process fails, due to a not compatible device name for your board's USB-TO-SERIAL adapter. In this case change the default configuration for met your board or operating system requirements, as described above.
+   When the Lua RTOS build process finish, the board will be flashed. It is possible that for certain operating systems, or boards, the flashing process fails, due to a not compatible device name for your board's USB-TO-SERIAL adapter. In this case change the default configuration for met your board or operating system requirements, as described above.
    
 6. Change the default configuration:
 
@@ -248,9 +248,9 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 
    If you have already build Lua RTOS previously and want to build for other board type:
    
-   ```lua
+   ```lua
    $ make clean
-   ```
+   ```
    
    Go to step 5.
 
