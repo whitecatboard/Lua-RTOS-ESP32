@@ -240,7 +240,7 @@ void _sys_init() {
     	vfs_spiffs_register();
     #endif
 
-	#if CONFIG_LUA_RTOS_USE_FAT
+	#if CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI
     	vfs_fat_register();
 
     	if (mount_is_mounted("fat")) {

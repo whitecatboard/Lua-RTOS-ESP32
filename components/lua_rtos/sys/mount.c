@@ -61,7 +61,7 @@ struct mountp {
 // Primary file system is always mount to the / directory.
 static const struct mountp mountps[] = {
 #if CONFIG_LUA_RTOS_USE_SPIFFS
-#if CONFIG_LUA_RTOS_USE_FAT
+#if CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI
     {"/", "sd", "/sd", "spiffs", "fat"},
 #endif
 #endif
@@ -73,7 +73,7 @@ struct mountd mountds[] = {
 #if CONFIG_LUA_RTOS_USE_SPIFFS
     {"spiffs", 0},
 #endif
-#if CONFIG_LUA_RTOS_USE_FAT
+#if CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI
     {"fat", 0},
 #endif
     {NULL, 0}

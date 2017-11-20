@@ -80,6 +80,22 @@
 		"subtype": "OTA"
 	},
 	{
+		"id": "ESP32-EVB",
+		"description": "Olimex ESP32-EVB",
+		"manufacturer": "Olimex",
+		"brand": "",
+		"type": "ESP32-EVB",
+		"subtype": ""
+	},
+	{
+		"id": "ESP32-EBP-OTA",
+		"description": "Olimex ESP32-EVB with OTA",
+		"manufacturer": "Olimex",
+		"brand": "",
+		"type": "ESP32-EVB",
+		"subtype": "OTA"
+	},
+	{
 		"id": "GENERIC",
 		"description": "Generic ESP32 board",
 		"manufacturer": "Generic",

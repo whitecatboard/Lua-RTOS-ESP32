@@ -39,6 +39,9 @@ menu "Lua RTOS"
       config LUA_RTOS_BOARD_ESP32_GATEWAY
          bool "ESP32 GATEWAY"
 
+      config LUA_RTOS_BOARD_ESP32_EVB
+         bool "ESP32 EVB"
+
       config LUA_RTOS_BOARD_OTHER
          bool "GENERIC"
    endchoice
@@ -643,15 +646,23 @@ menu "Lua RTOS"
                    CPU affinity for LoRa WAN thread.      
        endmenu
             
-      menu "SPI SD Card"
-         config LUA_RTOS_USE_SPI_SD
-            bool "Use SD"
-            default n
-            help
-               Select for enable SD Card using SPI interface.   
-      
+      menu "SD Card"
+         choice LUA_RTOS_SD_CARD_INTERFACE
+            prompt "Interface"       
+                default SD_CARD_NONE
+        
+            config SD_CARD_NONE
+                bool "None"
+            
+            config SD_CARD_MMC
+                bool "MMC interface"
+        
+            config SD_CARD_SPI
+                bool "SPI interface"
+         endchoice      
+            
          config LUA_RTOS_SD_SPI
-            depends on LUA_RTOS_USE_SPI_SD
+            depends on SD_CARD_SPI
                int "SDCARD SPI port"
                range 1 3
                default 3
@@ -659,10 +670,39 @@ menu "Lua RTOS"
                Select the SPI port number where SD Card is attached.
       
          config LUA_RTOS_SD_CS
-            depends on LUA_RTOS_USE_SPI_SD
+            depends on SD_CARD_SPI
                int "SDCARD SPI CS GPIO number"
                range 0 39
                default 15
+               
+         choice LUA_RTOS_MCC_LINES
+            prompt "Protocol"   
+                depends on SD_CARD_MMC    
+                default LUA_RTOS_MCC_4_LINE
+        
+            config LUA_RTOS_MCC_1_LINE
+                bool "1-line"
+            
+            config LUA_RTOS_MCC_4_LINE
+                bool "4-line"        
+         endchoice
+
+         config LUA_RTOS_MCC_CD
+            depends on SD_CARD_MMC
+               int "CD signal GPIO number"
+               range -1 39
+               default -1
+             help
+                Select the GPIO number where CD (card detect) signal is attached. Set to -1 if no CD is used.
+                
+         config LUA_RTOS_MCC_WP
+            depends on SD_CARD_MMC
+               int "WP signal GPIO number"
+               range -1 39
+               default -1
+             help
+                Select the GPIO number where WP signal is attached. Set to -1 if no CD is used.
+                
       endmenu
       
       menu "Graphic Display"                           

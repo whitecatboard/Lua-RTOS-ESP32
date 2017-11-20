@@ -501,7 +501,7 @@ static int os_format(lua_State *L) {
 		return luaL_error(L, "device %s not exists for format", device);
 #endif
 	} else if (strcmp(device,"fat") == 0) {
-#if !CONFIG_LUA_RTOS_USE_FAT
+#if !(CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI)
 		return luaL_error(L, "device %s not exists for format", device);
 #endif
 	} else {
@@ -530,7 +530,7 @@ static int os_format(lua_State *L) {
 			vfs_spiffs_format();
 #endif
 		} else if (strcmp(device,"fat") == 0) {
-#if CONFIG_LUA_RTOS_USE_FAT
+#if CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI
 			 vfs_fat_format();
 #endif
 		}

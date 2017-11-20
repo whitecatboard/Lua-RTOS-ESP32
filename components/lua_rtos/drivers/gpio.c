@@ -337,6 +337,7 @@ driver_error_t *gpio_pin_pullup(uint8_t pin) {
 	// Sanity checks
 	if (pin < 40) {
 		if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
+			printf("eerorr\r\n");
 			return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
 		}
 
