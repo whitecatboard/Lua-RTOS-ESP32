@@ -17,6 +17,11 @@ ifeq ("$(SDKCONFIG_DEFAULTS)","sdkconfig.defaults")
   BOARD_TYPE_REQUIRED := 0
 endif
 
+ifneq ("$(SDKCONFIG_DEFAULTS)","")
+  BOARD_TYPE_REQUIRED := 0
+  override SDKCONFIG_DEFAULTS := boards/$(SDKCONFIG_DEFAULTS)
+endif
+
 ifneq (,$(findstring restore-idf,$(MAKECMDGOALS)))
   BOARD_TYPE_REQUIRED := 0
   MAKECMDGOALS += defconfig

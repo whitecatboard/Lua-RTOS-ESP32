@@ -39,6 +39,10 @@
 #include "lauxlib.h"
 #include "modules.h"
 
+#if 0
+#include "base64.h"
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -278,6 +282,29 @@ static int l_pack(lua_State *L) {
     return 1;
 }
 
+#if 0
+static int l_b64(lua_State *L) {
+	char *hex;         // Data in hex string format
+	uint8_t data[255]; // Data in binary data
+	int size;          // Data size
+	char b64[350];     // Data in base 64
+
+	// Get data coded in hex string format
+	hex = (char *)luaL_checkstring(L, 1);
+
+	size = strlen(hex) / 2;
+
+	// Convert data coded in hex string format to binary data
+	hex_string_to_val((char *)hex, (char *)data, size);
+
+	bin_to_b64(data, size, b64, sizeof(b64));
+
+    lua_pushstring(L, b64);
+
+    return 1;
+}
+#endif
+
 static int l_unpack(lua_State *L) {
     int total;                   // Number of packet values
     int i;                       // Current packet value
@@ -401,7 +428,8 @@ static int l_unpack(lua_State *L) {
 
 static const LUA_REG_TYPE pack_map[] = 
 {
-  { LSTRKEY( "pack" ),      LFUNCVAL( l_pack ) },
+  { LSTRKEY( "pack"   ),    LFUNCVAL( l_pack   ) },
+//  { LSTRKEY( "b64"    ),    LFUNCVAL( l_b64    ) },
   { LSTRKEY( "unpack" ),    LFUNCVAL( l_unpack ) },
   { LNILKEY, LNILVAL }
 };
