@@ -174,8 +174,8 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    otherwise, pull last esp-idf changes from your esp-idf folder:
    
    ```lua
-   git pull origin master
-   git pull --recurse-submodules
+   git pull
+   git submodule update --init --recursive
    ```
  
 3. Clone or pull Lua RTOS repository:
@@ -208,51 +208,52 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    source ./env
    ```
 
-5. Set the default configuration for your board, with or without OTA support:
+5. Build:
 
-   | Board                  | Run this command                                         |
-   |------------------------|----------------------------------------------------------|
-   | WHITECAT ESP32 N1      | make SDKCONFIG_DEFAULTS=WHITECAT-ESP32-N1 defconfig      |
-   | WHITECAT ESP32 N1 OTA  | make SDKCONFIG_DEFAULTS=WHITECAT-ESP32-N1-OTA defconfig  |
-   | ESP32 CORE             | make SDKCONFIG_DEFAULTS=ESP32-CORE-BOARD defconfig       |
-   | ESP32 CORE OTA         | make SDKCONFIG_DEFAULTS=ESP32-CORE-BOARD-OTA defconfig   |
-   | ESP32 THING            | make SDKCONFIG_DEFAULTS=ESP32-THING defconfig            |
-   | ESP32 THING OTA        | make SDKCONFIG_DEFAULTS=ESP32-THING-OTA defconfig        |
-   | GENERIC                | make SDKCONFIG_DEFAULTS=GENERIC defconfig                |
-   | GENERIC OTA            | make SDKCONFIG_DEFAULTS=GENERIC-OTA defconfig            |
+   ```lua
+   $ make flash
+   ```
+   
+   If you are building Lua RTOS for first time, select your board type, and press enter:
+   
+   ```lua
+   Please, enter your board type:
 
+    1: Whitecat N1 ESP32
+    2: Whitecat N1 ESP32 with OTA
+    3: Whitecat N1 ESP32 DEVKIT
+    4: Whitecat N1 ESP32 DEVKIT with OTA
+    5: Espressif Systems ESP32-CoreBoard
+    6: Espressif Systems ESP32-CoreBoard with OTA
+    7: SparkFun ESP32 Thing
+    8: SparkFun ESP32 Thing with OTA
+
+   Board type:
+   ```
+   
+   When the Lua RTOS build process finish the board will be flashed. It is possible that for certain operating systems, or boards, the flashing process fails, due to a not compatible device name for your board's USB-TO-SERIAL adapter. In this case change the default configuration for met your board or operating system requirements, as described above.
+   
 6. Change the default configuration:
 
-   You can change the default configuration doing:
+   You can change the default configuration:
    
    ```lua
-   make menuconfig
+   $ make menuconfig
    ```
   
-   Remember to check the device name for your board's USB-TO-SERIAL adapter under the "Serial flasher config / Default serial port" category.
+   Check the device name for your board's USB-TO-SERIAL adapter under the "Serial flasher config / Default serial port" category.
 
 
-7. Compile:
+7. Build for other board:
 
-   If you are building Lua RTOS due to an esp-idf or Lua RTOS update revert previous Lua RTOS patches for ensure that new patches will be applied to esp-idf.
-
-   ```lua
-   make restore-idf
-   ```
-
-   Build Lua RTOS, and flash it to your ESP32 board:
-
-   ```lua
-   make flash
-   ```
-
-   Flash the spiffs file system image to your ESP32 board:
-
-   ```lua
-   make flashfs
-   ```
-
+   If you have already build Lua RTOS previously and want to build for other board type:
    
+   ```lua
+   $ make clean
+   ```
+   
+   Go to step 5.
+
 # Connect to the console
 
 You can connect to the Lua RTOS console using your favorite terminal emulator program, such as picocom, minicom, hyperterminal, putty, etc ... The connection parameters are:
