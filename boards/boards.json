@@ -2,61 +2,85 @@
 	{
 		"id": "WHITECAT-ESP32-N1",
 		"description": "Whitecat N1 ESP32",
-		"manufacturer": "whitecatboard.org"
+		"manufacturer": "whitecatboard.org",
+		"model": "N1ESP32",
+		"subtype": ""
 	},
 	{
 		"id": "WHITECAT-ESP32-N1-OTA",
 		"description": "Whitecat N1 ESP32 with OTA",
-		"manufacturer": "whitecatboard.org"
+		"manufacturer": "whitecatboard.org",
+		"model": "N1ESP32",
+		"subtype": "OTA"
 	},
 	{
 		"id": "WHITECAT-ESP32-N1-DEVKIT",
 		"description": "Whitecat N1 ESP32 DEVKIT",
-		"manufacturer": "whitecatboard.org"
+		"manufacturer": "whitecatboard.org",
+		"model": "N1ESP32-DEVKIT",
+		"subtype": ""
 	},
 	{
 		"id": "WHITECAT-ESP32-N1-DEVKIT-OTA",
 		"description": "Whitecat N1 ESP32 DEVKIT with OTA",
-		"manufacturer": "whitecatboard.org"
+		"manufacturer": "whitecatboard.org",
+		"model": "N1ESP32-DEVKIT",
+		"subtype": "OTA"
 	},
 	{
 		"id": "ESP32-CORE-BOARD",
 		"description": "Espressif Systems ESP32-CoreBoard",
-		"manufacturer": "Espressif Systems"
+		"manufacturer": "Espressif Systems",
+		"model": "ESP32COREBOARD",
+		"subtype": ""
 	},
 	{
 		"id": "ESP32-CORE-BOARD-OTA",
 		"description": "Espressif Systems ESP32-CoreBoard with OTA",
-		"manufacturer": "Espressif Systems"
+		"manufacturer": "Espressif Systems",
+		"model": "ESP32COREBOARD",
+		"subtype": "OTA"
 	},
 	{
 		"id": "ESP32-THING",
 		"description": "SparkFun ESP32 Thing",
-		"manufacturer": "SparkFun"
+		"manufacturer": "SparkFun",
+		"model": "ESP32THING",
+		"subtype": ""
 	},
 	{
 		"id": "ESP32-THING-OTA",
 		"description": "SparkFun ESP32 Thing with OTA",
-		"manufacturer": "SparkFun"
+		"manufacturer": "SparkFun",
+		"model": "ESP32THING",
+		"subtype": "OTA"
 	},
 	{
 		"id": "ESP32-GATEWAY",
 		"description": "Olimex ESP32-Gateway",
-		"manufacturer": "Olimex"
+		"manufacturer": "Olimex",
+		"model": "ESP32-GATEWAY",
+		"subtype": ""
 	},
 	{
 		"id": "ESP32-GATEWAY-OTA",
 		"description": "Olimex ESP32-Gateway with OTA",
-		"manufacturer": "Olimex"
+		"manufacturer": "Olimex",
+		"model": "ESP32-GATEWAY",
+		"subtype": "OTA"
 	},
 	{
 		"id": "GENERIC",
 		"description": "Generic ESP32 board",
-		"manufacturer": "Generic"
+		"manufacturer": "Generic",
+		"model": "GENERIC",
+		"subtype": ""
 	},
 	{
 		"id": "GENERIC-OTA",
 		"description": "Generic ESP32 board with OTA",
-		"manufacturer": "Generic"
+		"manufacturer": "Generic",
+		"model": "GENERIC",
+		"subtype": "OTA"
 	}
 ]
