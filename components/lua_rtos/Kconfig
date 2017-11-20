@@ -36,6 +36,9 @@ menu "Lua RTOS"
       config LUA_RTOS_BOARD_ESP32_THING
          bool "ESP32 THING"
 
+      config LUA_RTOS_BOARD_ESP32_GATEWAY
+         bool "ESP32 GATEWAY"
+
       config LUA_RTOS_BOARD_OTHER
          bool "GENERIC"
    endchoice

@@ -3,19 +3,24 @@
 # project subdirectory.
 #
 
-# Supported boards
-define b
-   WHITECAT-ESP32-N1
-   WHITECAT-ESP32-N1-OTA
-   WHITECAT-ESP32-N1-DEVKIT
-   WHITECAT-ESP32-N1-DEVKIT-OTA
-   ESP32-CORE-BOARD
-   ESP32-CORE-BOARD-OTA
-   ESP32-THING
-   ESP32-THING-OTA
-   GENERIC
-   GENERIC-OTA
-endef
+BOARD_TYPE_REQUIRED := 1
+
+ifneq (,$(findstring clean,$(MAKECMDGOALS)))
+  BOARD_TYPE_REQUIRED := 0
+endif
+
+ifneq (,$(findstring menuconfig,$(MAKECMDGOALS)))
+  BOARD_TYPE_REQUIRED := 0
+endif
+
+ifeq ("$(SDKCONFIG_DEFAULTS)","sdkconfig.defaults")
+  BOARD_TYPE_REQUIRED := 0
+endif
+
+ifneq (,$(findstring restore-idf,$(MAKECMDGOALS)))
+  BOARD_TYPE_REQUIRED := 0
+  MAKECMDGOALS += defconfig
+endif
 
 # New line
 define n
@@ -29,94 +34,127 @@ CURRENT_IDF := 2e8441df9eb046b2436981dbaaa442b312f12101
 # Project name
 PROJECT_NAME := lua_rtos
 
-# Get current config if is it missing
-ifeq ("$(SDKCONFIG_DEFAULTS)","")
-ifneq ("$(shell test -e .current_config && echo ex)","ex")
-$(error $nLua RTOS need to know the default configuration for your board. First execute:$n$nmake SDKCONFIG_DEFAULTS=board defconfig$n$nboard:$n$b$n)
-else
-SDKCONFIG_DEFAULTS := $(shell cat .current_config)
-ifneq ("$(shell test -e $(SDKCONFIG_DEFAULTS) && echo ex)","ex")
-$(error $(SDKCONFIG_DEFAULTS) does not exists)
-endif
-endif
-else
-# Store config
-ifneq ("$(shell test -e $(SDKCONFIG_DEFAULTS) && echo ex)","ex")
-$(error $(SDKCONFIG_DEFAULTS) does not exists)
-endif
-$(shell echo $(SDKCONFIG_DEFAULTS) > .current_config)
+# Lua RTOS has support for a lot of ESP32-based boards, but each board
+# can have different configurations, such as the PIN MAP.
+#
+# This part ensures that the first time that Lua RTOS is build the user specifies
+# the board type with "make SDKCONFIG_DEFAULTS=board defconfig" or entering
+# the board type through a keyboard option
+ifeq ($(BOARD_TYPE_REQUIRED),1)
+  ifneq ("$(SDKCONFIG_DEFAULTS)","")
+    # If SDKCONFIG_DEFAULTS is specified check that the configuration exists
+    ifneq ("$(shell test -e boards/$(SDKCONFIG_DEFAULTS) && echo ex)","ex")
+      $(error "$(SDKCONFIG_DEFAULTS) does not exists")
+    endif
+  endif
+
+  # Check if sdkconfig file exists. If this file exists means that at some point the user
+  # has specified SDKCONFIG_DEFAULTS. It it don't exists we ask the the user to specify his board
+  # type
+  ifneq ("$(shell test -e sdkconfig && echo ex)","ex")
+    $(info Please, enter your board type:)
+    $(info )
+    BOARDS := $(subst \,$(n),$(shell python boards/boards.py))
+    $(info $(BOARDS))
+    BOARD := $(shell read -p "Board type: ";echo $$REPLY)    
+    BOARD := $(subst \,$(n),$(shell python boards/boards.py $(BOARD)))
+  
+    # Check if board exists
+    ifneq ("$(shell test -e boards/$(BOARD) && echo ex)","ex")
+      $(error "Invalid board type")
+    else
+      override SDKCONFIG_DEFAULTS := boards/$(BOARD)
+      MAKECMDGOALS += defconfig
+    endif      
+  else
+    ifneq ("$(SDKCONFIG_DEFAULTS)","")
+      override SDKCONFIG_DEFAULTS := boards/$(SDKCONFIG_DEFAULTS)
+    endif
+  endif
 endif
 
-all_binaries: configure-idf-lua-rtos configure-idf-lua-rtos-tests defconfig
+# Apply patches
+ifneq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
+  $(info Reverting previous Lua RTOS esp-idf patches ...)
+  TMP := $(shell cd $(IDF_PATH) && git checkout .)
+  TMP := $(shell cd $(IDF_PATH) && git checkout $(CURRENT_IDF))
+  TMP := $(info Applying Lua RTOS esp-idf patches ...)
+  TMP := $(shell )
+  $(foreach PATCH,$(abspath $(wildcard components/lua_rtos/patches/*.patch)),$(shell cd $(IDF_PATH) && git apply --whitespace=warn $(PATCH)))
+  TMP := $(shell touch $(IDF_PATH)/lua_rtos_patches)
+endif
 
 include $(IDF_PATH)/make/project.mk
 
-clean: restore-idf
+ifeq ($(BOARD_TYPE_REQUIRED),1)
+  #
+  # This part generates the esptool arguments required for erase the otadata region. This is required in case that
+  # an OTA firmware is build, so we want to update the factory partition when making "make flash".  
+  #
+  ifeq ("$(shell test -e $(PROJECT_PATH)/build/partitions.bin && echo ex)","ex")
+    $(shell $(IDF_PATH)/components/partition_table/gen_esp32part.py --verify $(PROJECT_PATH)/$(PARTITION_TABLE_CSV_NAME) $(PROJECT_PATH)/build/partitions.bin)
 
-# Get patches files
-LUA_RTOS_PATCHES := $(abspath $(wildcard components/lua_rtos/patches/*.patch))
+    comma := ,
 
-#
-# This part generates the esptool arguments required for erase the otadata region. This is required in case that
-# an OTA firmware is build, so we want to update the factory partition when making "make flash".
-#
-$(shell $(IDF_PATH)/components/partition_table/gen_esp32part.py --verify $(PROJECT_PATH)/$(PARTITION_TABLE_CSV_NAME) $(PROJECT_PATH)/build/partitions.bin)
+    ifeq ("$(PARTITION_TABLE_CSV_NAME)","partitions-ota.csv")
+      OTA_PARTITION_INFO := $(shell $(IDF_PATH)/components/partition_table/gen_esp32part.py --quiet $(PROJECT_PATH)/build/partitions.bin | grep "otadata")
 
-comma := ,
+      OTA_PARTITION_ADDR        := $(word 4, $(subst $(comma), , $(OTA_PARTITION_INFO)))
+      OTA_PARTITION_SIZE_INFO   := $(word 5, $(subst $(comma), , $(OTA_PARTITION_INFO)))
+      OTA_PARTITION_SIZE_UNITS  := $(word 1, $(subst M, M, $(subst K, K, $(word 5, $(subst $(comma), , $(OTA_PARTITION_INFO))))))
+      OTA_PARTITION_SIZE_UNIT   := $(word 2, $(subst M, M, $(subst K, K, $(word 5, $(subst $(comma), , $(OTA_PARTITION_INFO))))))
 
-ifeq ("$(PARTITION_TABLE_CSV_NAME)","partitions-ota.csv")
-OTA_PARTITION_INFO := $(shell $(IDF_PATH)/components/partition_table/gen_esp32part.py --quiet $(PROJECT_PATH)/build/partitions.bin | grep "otadata")
+      OTA_PARTITION_SIZE_FACTOR := 1
+      ifeq ($(OTA_PARTITION_SIZE_UNIT),K)
+        OTA_PARTITION_SIZE_FACTOR := 1024
+      endif
 
-OTA_PARTITION_ADDR        := $(word 4, $(subst $(comma), , $(OTA_PARTITION_INFO)))
-OTA_PARTITION_SIZE_INFO   := $(word 5, $(subst $(comma), , $(OTA_PARTITION_INFO)))
-OTA_PARTITION_SIZE_UNITS  := $(word 1, $(subst M, M, $(subst K, K, $(word 5, $(subst $(comma), , $(OTA_PARTITION_INFO))))))
-OTA_PARTITION_SIZE_UNIT   := $(word 2, $(subst M, M, $(subst K, K, $(word 5, $(subst $(comma), , $(OTA_PARTITION_INFO))))))
+      ifeq ($(OTA_PARTITION_SIZE_UNIT),M)
+        OTA_PARTITION_SIZE_FACTOR := 1048576
+      endif
 
-OTA_PARTITION_SIZE_FACTOR := 1
-ifeq ($(OTA_PARTITION_SIZE_UNIT),K)
-OTA_PARTITION_SIZE_FACTOR := 1024
+      OTA_PARTITION_SIZE := $(shell echo ${OTA_PARTITION_SIZE_UNITS}*${OTA_PARTITION_SIZE_FACTOR} | bc)
+
+      ESPTOOL_ERASE_OTA_ARGS := $(ESPTOOLPY) --chip esp32 --port $(ESPPORT) --baud $(ESPBAUD) erase_region $(OTA_PARTITION_ADDR) $(OTA_PARTITION_SIZE)
+    else
+      ESPTOOL_ERASE_OTA_ARGS :=
+    endif
+ endif
+ 
+  #
+  # This part gets the information for the spiffs partition 
+  #
+  ifeq ("$(shell test -e $(PROJECT_PATH)/build/partitions.bin && echo ex)","ex")
+    SPIFFS_PARTITION_INFO := $(shell $(IDF_PATH)/components/partition_table/gen_esp32part.py --quiet $(PROJECT_PATH)/build/partitions.bin | grep "spiffs")
+
+    SPIFFS_BASE_ADDR   := $(word 4, $(subst $(comma), , $(SPIFFS_PARTITION_INFO)))
+    SPIFFS_SIZE_INFO   := $(word 5, $(subst $(comma), , $(SPIFFS_PARTITION_INFO)))
+    SPIFFS_SIZE_UNITS  := $(word 1, $(subst M, M, $(subst K, K, $(word 5, $(subst $(comma), , $(SPIFFS_PARTITION_INFO))))))
+    SPIFFS_SIZE_UNIT   := $(word 2, $(subst M, M, $(subst K, K, $(word 5, $(subst $(comma), , $(SPIFFS_PARTITION_INFO))))))
+
+    SPIFFS_SIZE_FACTOR := 1
+    ifeq ($(SPIFFS_SIZE_UNIT),K)
+      SPIFFS_SIZE_FACTOR := 1024
+    endif
+
+    ifeq ($(SPIFFS_SIZE_UNIT),M)
+      SPIFFS_SIZE_FACTOR := 1048576
+    endif
+
+    ifeq ("foo$(SPIFFS_SIZE_UNIT)", "foo")
+      SPIFFS_SIZE_UNITS := 512
+      SPIFFS_SIZE_FACTOR := 1024
+    endif
+
+    SPIFFS_SIZE := $(shell echo ${SPIFFS_SIZE_UNITS}*${SPIFFS_SIZE_FACTOR} | bc)
+  endif
 endif
-
-ifeq ($(OTA_PARTITION_SIZE_UNIT),M)
-OTA_PARTITION_SIZE_FACTOR := 1048576
-endif
-
-OTA_PARTITION_SIZE := $(shell echo ${OTA_PARTITION_SIZE_UNITS}*${OTA_PARTITION_SIZE_FACTOR} | bc)
-
-ESPTOOL_ERASE_OTA_ARGS := $(ESPTOOLPY) --chip esp32 --port $(ESPPORT) --baud $(ESPBAUD) erase_region $(OTA_PARTITION_ADDR) $(OTA_PARTITION_SIZE)
-else
-ESPTOOL_ERASE_OTA_ARGS :=
-endif
-
-#
-# This part gets the information for the spiffs partition
-#
-SPIFFS_PARTITION_INFO := $(shell $(IDF_PATH)/components/partition_table/gen_esp32part.py --quiet $(PROJECT_PATH)/build/partitions.bin | grep "spiffs")
-
-SPIFFS_BASE_ADDR   := $(word 4, $(subst $(comma), , $(SPIFFS_PARTITION_INFO)))
-SPIFFS_SIZE_INFO   := $(word 5, $(subst $(comma), , $(SPIFFS_PARTITION_INFO)))
-SPIFFS_SIZE_UNITS  := $(word 1, $(subst M, M, $(subst K, K, $(word 5, $(subst $(comma), , $(SPIFFS_PARTITION_INFO))))))
-SPIFFS_SIZE_UNIT   := $(word 2, $(subst M, M, $(subst K, K, $(word 5, $(subst $(comma), , $(SPIFFS_PARTITION_INFO))))))
-
-SPIFFS_SIZE_FACTOR := 1
-ifeq ($(SPIFFS_SIZE_UNIT),K)
-SPIFFS_SIZE_FACTOR := 1024
-endif
-
-ifeq ($(SPIFFS_SIZE_UNIT),M)
-SPIFFS_SIZE_FACTOR := 1048576
-endif
-
-ifeq ("foo$(SPIFFS_SIZE_UNIT)", "foo")
-SPIFFS_SIZE_UNITS := 512
-SPIFFS_SIZE_FACTOR := 1024
-endif
-
-SPIFFS_SIZE := $(shell echo ${SPIFFS_SIZE_UNITS}*${SPIFFS_SIZE_FACTOR} | bc)
 
 #
 # Make rules
 #
+clean: restore-idf
+
 flash: erase-ota-data
 
 erase-ota-data: 
@@ -130,24 +168,16 @@ ifneq ("$(shell test -e  $(IDF_PATH)/components/lua_rtos && echo ex)","ex")
 	@ln -s $(PROJECT_PATH)/main/test/lua_rtos $(IDF_PATH)/components/lua_rtos 2> /dev/null
 endif
 
-configure-idf-lua-rtos: $(LUA_RTOS_PATCHES)
-ifneq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
-	@echo "Reverting previous Lua RTOS esp-idf patches ..."
-	@cd $(IDF_PATH) && git checkout .
-	@cd $(IDF_PATH) && git checkout $(CURRENT_IDF)
-	@echo "Applying Lua RTOS esp-idf patches ..."
-	@cd $(IDF_PATH) && git apply --whitespace=warn $^
-	@touch $(IDF_PATH)/lua_rtos_patches
-endif
-
 restore-idf:
 	@echo "Reverting previous Lua RTOS esp-idf patches ..."
 ifeq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
 	@cd $(IDF_PATH) && git checkout .
 	@cd $(IDF_PATH) && git checkout master
 	@rm $(IDF_PATH)/lua_rtos_patches
-	@make SDKCONFIG_DEFAULTS=$(SDKCONFIG_DEFAULTS) defconfig
 endif
+	@rm -f sdkconfig || true
+	@rm -f sdkconfig.old || true
+	@rm -f sdkconfig.defaults || true
 		
 flash-args:
 	@echo $(subst --port $(ESPPORT),, \

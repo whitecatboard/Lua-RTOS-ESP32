@@ -1,0 +1,62 @@
+[
+	{
+		"id": "WHITECAT-ESP32-N1",
+		"description": "Whitecat N1 ESP32",
+		"manufacturer": "whitecatboard.org"
+	},
+	{
+		"id": "WHITECAT-ESP32-N1-OTA",
+		"description": "Whitecat N1 ESP32 with OTA",
+		"manufacturer": "whitecatboard.org"
+	},
+	{
+		"id": "WHITECAT-ESP32-N1-DEVKIT",
+		"description": "Whitecat N1 ESP32 DEVKIT",
+		"manufacturer": "whitecatboard.org"
+	},
+	{
+		"id": "WHITECAT-ESP32-N1-DEVKIT-OTA",
+		"description": "Whitecat N1 ESP32 DEVKIT with OTA",
+		"manufacturer": "whitecatboard.org"
+	},
+	{
+		"id": "ESP32-CORE-BOARD",
+		"description": "Espressif Systems ESP32-CoreBoard",
+		"manufacturer": "Espressif Systems"
+	},
+	{
+		"id": "ESP32-CORE-BOARD-OTA",
+		"description": "Espressif Systems ESP32-CoreBoard with OTA",
+		"manufacturer": "Espressif Systems"
+	},
+	{
+		"id": "ESP32-THING",
+		"description": "SparkFun ESP32 Thing",
+		"manufacturer": "SparkFun"
+	},
+	{
+		"id": "ESP32-THING-OTA",
+		"description": "SparkFun ESP32 Thing with OTA",
+		"manufacturer": "SparkFun"
+	},
+	{
+		"id": "ESP32-GATEWAY",
+		"description": "Olimex ESP32-Gateway",
+		"manufacturer": "Olimex"
+	},
+	{
+		"id": "ESP32-GATEWAY-OTA",
+		"description": "Olimex ESP32-Gateway with OTA",
+		"manufacturer": "Olimex"
+	},
+	{
+		"id": "GENERIC",
+		"description": "Generic ESP32 board",
+		"manufacturer": "Generic"
+	},
+	{
+		"id": "GENERIC-OTA",
+		"description": "Generic ESP32 board with OTA",
+		"manufacturer": "Generic"
+	}
+]
