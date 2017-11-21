@@ -34,10 +34,18 @@
 
 #include <sys/driver.h>
 
-#define SPI_USE_IDF_DRIVER 1
-
 // Number of SPI devices per bus
 #define SPI_BUS_DEVICES 3
+
+// Get the index for a SPI unit in the spi_bus array
+#define spi_idx(unit) (unit - CPU_FIRST_SPI)
+
+// Check if SPI unit use the native pins
+#define spi_use_native_pins(unit) \
+	( \
+		(unit==2)?((spi_bus[spi_idx(unit)].miso == 12) && (spi_bus[spi_idx(unit)].mosi == 13) && (spi_bus[spi_idx(unit)].clk == 14)): \
+		((spi_bus[spi_idx(unit)].miso == 19) && (spi_bus[spi_idx(unit)].mosi == 23) && (spi_bus[spi_idx(unit)].clk == 18)) \
+	)
 
 // Native pins
 #define SPI_DEFAULT_MISO(unit) (unit==2?GPIO12:(unit==3?GPIO19:-1))
@@ -68,24 +76,19 @@ extern const int spi_error_map;
 typedef struct {
 	uint8_t  setup;
 	int8_t   cs;
-	uint32_t speed;
 	uint8_t  mode;
-	uint32_t divisor;
 	uint8_t  dma;
-	uint8_t  sio;
+	uint32_t regs[14];
 	spi_device_handle_t h;
 } spi_device_t;
 
 typedef struct {
 	SemaphoreHandle_t mtx; // Recursive mutex for access the bus
 	uint8_t setup;         // Bus is setup?
-	uint8_t last_dma;      // Last device uses dma?
 	int last_device;       // Last device that used the bus
 	int selected_device;   // Device that owns the bus
 
-	uint32_t prev[12];
-
-	// Current pin assignment
+    // Current pin assignment
 	int8_t miso;
 	int8_t mosi;
 	int8_t clk;
