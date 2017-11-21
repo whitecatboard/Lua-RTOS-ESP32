@@ -572,4 +572,25 @@ driver_error_t *wifi_smartconfig() {
 	return NULL;
 }
 
+
+driver_error_t *wifi_get_mac(uint8_t mac[6]) {
+	driver_error_t *error;
+
+	uint8_t interface = ESP_IF_WIFI_STA;
+	if (status_get(STATUS_WIFI_INITED)) {
+		uint8_t mode;
+		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
+
+		if (mode == WIFI_MODE_AP)
+			interface = ESP_IF_WIFI_AP;
+	}
+
+	// Get MAC info
+	if (status_get(STATUS_WIFI_STARTED)) {
+		if ((error = wifi_check_error(esp_wifi_get_mac(interface, mac)))) return error;
+	}
+
+	return NULL;
+}
+
 #endif

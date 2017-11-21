@@ -4,6 +4,9 @@
 
 #include <freertos/FreeRTOS.h>
 
+#include "esp_partition.h"
+#include "esp_ota_ops.h"
+
 #include <limits.h>
 
 #include <sys/dirent.h>
@@ -25,6 +28,7 @@
 #include <sys/mount.h>
 
 #include <drivers/uart.h>
+#include <drivers/net.h>
 
 extern const char *__progname;
 extern uint32_t boot_count;
@@ -441,9 +445,10 @@ static int os_cpu(lua_State *L) {
 }
 
 static int os_board(lua_State *L) {
-	//luaL_deprecated(L, "os.board", "cpu.board");
 	lua_pushstring(L, LUA_RTOS_BOARD);
-	return 1;
+	lua_pushstring(L, CONFIG_LUA_RTOS_BOARD_SUBTYPE);
+	lua_pushstring(L, CONFIG_LUA_RTOS_BOARD_BRAND);
+	return 3;
 }
 
 static int os_logcons(lua_State *L) { 
@@ -496,7 +501,7 @@ static int os_format(lua_State *L) {
 		return luaL_error(L, "device %s not exists for format", device);
 #endif
 	} else if (strcmp(device,"fat") == 0) {
-#if !CONFIG_LUA_RTOS_USE_FAT
+#if !(CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI)
 		return luaL_error(L, "device %s not exists for format", device);
 #endif
 	} else {
@@ -525,7 +530,7 @@ static int os_format(lua_State *L) {
 			vfs_spiffs_format();
 #endif
 		} else if (strcmp(device,"fat") == 0) {
-#if CONFIG_LUA_RTOS_USE_FAT
+#if CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI
 			 vfs_fat_format();
 #endif
 		}
@@ -820,4 +825,18 @@ static int os_locks(lua_State *L) {
 	}
 
 	return 0;
+}
+
+static int os_factory_reset(lua_State *L) {
+	// Find ota data partition
+    const esp_partition_t *partition =
+    	esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_OTA, NULL);
+
+    if (partition) {
+    	esp_partition_erase_range(partition, partition->address, partition->size);
+    }
+
+    esp_restart();
+
+    return 0;
 }

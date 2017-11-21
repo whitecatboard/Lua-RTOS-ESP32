@@ -15,7 +15,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
 
 #include <sys/driver.h>
 

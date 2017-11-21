@@ -35,6 +35,8 @@
 
 #include <gdisplay/gdisplay.h>
 
+#include <drivers/gpio.h>
+
 #include <pthread.h>
 
 static uint8_t init = 0;
@@ -204,6 +206,11 @@ driver_error_t *gdisplay_init(uint8_t chipset, uint8_t orient, uint8_t buffered)
 	driver_error_t *error;
 	gdisplay_t *display;
 
+	// Sanity checks
+	if ((orient != PORTRAIT) && (orient != PORTRAIT_FLIP) && (orient != LANDSCAPE) && (orient != LANDSCAPE_FLIP)) {
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_ORIENTATION, NULL);
+	}
+
 	if (init) {
 		// Flush all
 		if (nested > 0) {
@@ -212,13 +219,15 @@ driver_error_t *gdisplay_init(uint8_t chipset, uint8_t orient, uint8_t buffered)
 
 		nested = 0;
 
+		gdisplay_set_orientation(orient);
+
 		return NULL;
 	}
 
-	// Sanity checks
-	if ((orient != PORTRAIT) && (orient != PORTRAIT_FLIP) && (orient != LANDSCAPE) && (orient != LANDSCAPE_FLIP)) {
-		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_INVALID_ORIENTATION, NULL);
-	}
+#if CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT >= 0
+	gpio_pin_output(CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT);
+	gpio_pin_clr(CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT);
+#endif
 
 	// Get display data
 	display = (gdisplay_t *)gdisplay_get(chipset);
@@ -517,6 +526,10 @@ driver_error_t *gdisplay_on() {
 
 	gdisplay_ll_on();
 
+#if CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT >= 0
+	gpio_pin_clr(CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT);
+#endif
+
 	return NULL;
 }
 
@@ -527,6 +540,10 @@ driver_error_t *gdisplay_off() {
 	}
 
 	gdisplay_ll_off();
+
+#if CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT >= 0
+	gpio_pin_set(CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT);
+#endif
 
 	return NULL;
 }

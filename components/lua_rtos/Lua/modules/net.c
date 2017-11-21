@@ -39,6 +39,7 @@
 #include "modules.h"
 
 #include "net_wifi.inc"
+#include "net_eth.inc"
 #include "net_spi_eth.inc"
 #include "net_service_sntp.inc"
 #include "net_service_http.inc"
@@ -81,7 +82,7 @@ static int lnet_lookup(lua_State* L) {
 	}
 
 	// Resolve name
-	if ((error = net_lookup(name, &address))) {
+	if ((error = net_lookup(name, 0, &address))) {
 		return luaL_driver_error(L, error);
 	}
 
@@ -214,7 +215,7 @@ static int lnet_stat(lua_State* L) {
 	}
 #endif
 
-#if CONFIG_SPI_ETHERNET && CONFIG_LUA_RTOS_LUA_USE_NET
+#if CONFIG_LUA_RTOS_LUA_USE_NET && (CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI || CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII)
 	// Call wf.stat
 	lua_getglobal(L, "net");
 	lua_getfield(L, -1, "en");
@@ -242,6 +243,16 @@ static int lnet_connected(lua_State* L) {
   return 1;
 }
 
+static int lnet_ota(lua_State *L) {
+	driver_error_t *error;
+
+	if ((error = net_ota())) {
+    	return luaL_driver_error(L, error);
+	}
+
+	return 0;
+}
+
 static const LUA_REG_TYPE service_map[] = {
 	{ LSTRKEY( "sntp" ), LROVAL ( sntp_map ) },
 #if CONFIG_LUA_RTOS_USE_HTTP_SERVER
@@ -256,10 +267,11 @@ static const LUA_REG_TYPE service_map[] = {
 static const LUA_REG_TYPE net_map[] = {
 	{ LSTRKEY( "stat" ), LFUNCVAL ( lnet_stat ) },
 	{ LSTRKEY( "connected" ), LFUNCVAL ( lnet_connected ) },
-	{ LSTRKEY( "lookup" ), LFUNCVAL ( lnet_lookup ) },
-	{ LSTRKEY( "packip" ), LFUNCVAL ( lnet_packip ) },
-	{ LSTRKEY( "unpackip" ), LFUNCVAL ( lnet_unpackip ) },
-	{ LSTRKEY( "ping" ), LFUNCVAL ( lnet_ping ) },
+	{ LSTRKEY( "lookup" ),    LFUNCVAL ( lnet_lookup ) },
+	{ LSTRKEY( "packip" ),    LFUNCVAL ( lnet_packip ) },
+	{ LSTRKEY( "unpackip" ),  LFUNCVAL ( lnet_unpackip ) },
+	{ LSTRKEY( "ping" ),      LFUNCVAL ( lnet_ping ) },
+	{ LSTRKEY( "ota" ),       LFUNCVAL ( lnet_ota ) },
 
 #if CONFIG_LUA_RTOS_LUA_USE_SCP_NET
 	{ LSTRKEY( "scp" ), LROVAL ( scp_map ) },
@@ -268,8 +280,12 @@ static const LUA_REG_TYPE net_map[] = {
 
 	{ LSTRKEY( "wf" ), LROVAL ( wifi_map ) },
 
-	#if CONFIG_SPI_ETHERNET && CONFIG_LUA_RTOS_LUA_USE_NET
+#if CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI && CONFIG_LUA_RTOS_LUA_USE_NET
 	{ LSTRKEY( "en" ), LROVAL ( spi_eth_map ) },
+#endif
+
+#if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII && CONFIG_LUA_RTOS_LUA_USE_NET
+	{ LSTRKEY( "en" ), LROVAL ( eth_map ) },
 #endif
 
 #if CONFIG_LUA_RTOS_LUA_USE_CURL_NET

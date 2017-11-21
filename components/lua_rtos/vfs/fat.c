@@ -29,7 +29,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_USE_SPI_SD
+#if CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI
 
 #include <stdio.h>
 
@@ -49,6 +49,7 @@
 #include <drivers/spi.h>
 
 void vfs_fat_register() {
+#if CONFIG_SD_CARD_SPI
 	// Lock resources
 	if (spi_lock_bus_resources(CONFIG_LUA_RTOS_SD_SPI, DRIVER_ALL_FLAGS)) {
 		return;
@@ -58,12 +59,7 @@ void vfs_fat_register() {
 		return;
 	}
 
-	if (driver_lock(SYSTEM_DRIVER, 0, SPI_DRIVER, (CONFIG_LUA_RTOS_SD_SPI << 8), DRIVER_ALL_FLAGS, "SD Card - SPI")) {
-		return;
-
-	}
-
-#if (CONFIG_LUA_RTOS_SD_SPI == 2)
+	#if (CONFIG_LUA_RTOS_SD_SPI == 2)
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
 
     host.slot = HSPI_HOST;
@@ -74,9 +70,9 @@ void vfs_fat_register() {
     slot_config.gpio_mosi = CONFIG_LUA_RTOS_SPI2_MOSI;
     slot_config.gpio_sck  = CONFIG_LUA_RTOS_SPI2_CLK;
     slot_config.gpio_cs   = CONFIG_LUA_RTOS_SD_CS;
-#endif
+	#endif
 
-#if (CONFIG_LUA_RTOS_SD_SPI == 3)
+	#if (CONFIG_LUA_RTOS_SD_SPI == 3)
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
 
     host.slot = VSPI_HOST;
@@ -87,6 +83,21 @@ void vfs_fat_register() {
     slot_config.gpio_mosi = CONFIG_LUA_RTOS_SPI3_MOSI;
     slot_config.gpio_sck  = CONFIG_LUA_RTOS_SPI3_CLK;
     slot_config.gpio_cs   = CONFIG_LUA_RTOS_SD_CS;
+	#endif
+#endif
+
+#if CONFIG_SD_CARD_MMC
+    sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+    sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
+
+	#if CONFIG_LUA_RTOS_MCC_1_LINE
+    host.flags = SDMMC_HOST_FLAG_1BIT;
+	#endif
+
+    slot_config.gpio_cd = CONFIG_LUA_RTOS_MCC_CD;
+    slot_config.gpio_wp = CONFIG_LUA_RTOS_MCC_WP;
+
+    slot_config.width = 4;
 #endif
 
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
@@ -94,16 +105,24 @@ void vfs_fat_register() {
         .max_files = 5
     };
 
-	syslog(LOG_INFO, "sd%u is at spi%d, cs=%s%d", 0,
+#if CONFIG_SD_CARD_SPI
+    syslog(LOG_INFO, "sd%u is at spi%d, cs=%s%d", 0,
 			CONFIG_LUA_RTOS_SD_SPI,
 			gpio_portname(CONFIG_LUA_RTOS_SD_CS), gpio_name(CONFIG_LUA_RTOS_SD_CS)
 	);
+#endif
+
+#if CONFIG_SD_CARD_MMC
+    syslog(LOG_INFO, "sd%u is at mmc0", 0);
+#endif
+
 
     sdmmc_card_t* card;
     esp_err_t ret = esp_vfs_fat_sdmmc_mount("/fat", &host, &slot_config, &mount_config, &card);
     if (ret != ESP_OK) {
     	esp_vfs_fat_sdmmc_unmount();
     	syslog(LOG_INFO, "fat%d can't mounted", 0);
+    	driver_unlock_all(SYSTEM_DRIVER, 0);
     	return;
     }
 

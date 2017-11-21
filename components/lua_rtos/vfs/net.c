@@ -37,6 +37,7 @@
 #include "esp_vfs.h"
 #include "esp_attr.h"
 
+#include <stdarg.h>
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
@@ -59,6 +60,10 @@ static ssize_t IRAM_ATTR vfs_net_write(int fd, const void *data, size_t size) {
 	return (ssize_t)lwip_send(fd, data, size, 0);
 }
 
+static ssize_t IRAM_ATTR vfs_net_writev(int fd, const struct iovec *iov, int iovcnt) {
+	return lwip_writev(fd, iov, iovcnt);
+}
+
 static ssize_t IRAM_ATTR vfs_net_read(int fd, void * dst, size_t size) {
     return (ssize_t)lwip_recv(fd, dst, size, 0);
 }
@@ -67,9 +72,16 @@ static int IRAM_ATTR vfs_net_close(int fd) {
 	return closesocket(fd);
 }
 
+static int IRAM_ATTR vfs_net_fcntl(int fd, int cmd, va_list args) {
+    return lwip_fcntl_r(fd, cmd, va_arg(args, int));
+}
+
+static int IRAM_ATTR vfs_net_ioctl(int fd, int cmd, va_list args) {
+    return lwip_ioctl_r(fd, cmd, va_arg(args, void *));
+}
+
 void vfs_net_register() {
     esp_vfs_t vfs = {
-        .fd_offset = 0,
         .flags = ESP_VFS_FLAG_DEFAULT,
         .write = &vfs_net_write,
         .open = &vfs_net_open,
@@ -80,7 +92,10 @@ void vfs_net_register() {
         .stat = NULL,
         .link = NULL,
         .unlink = NULL,
-        .rename = NULL
+        .rename = NULL,
+        .fcntl = &vfs_net_fcntl,
+        .ioctl = &vfs_net_ioctl,
+		.writev = &vfs_net_writev
     };
 
     ESP_ERROR_CHECK(esp_vfs_register("/dev/socket", &vfs, NULL));

@@ -76,8 +76,8 @@ driver_error_t *adc_mcp3208_setup(adc_channel_t *chan) {
 	}
 
 	// Lock resources
-	if ((lock_error = driver_lock(ADC_DRIVER, chan->unit, SPI_DRIVER, spi_device, DRIVER_ALL_FLAGS, "MCP3208"))) {
-		return driver_lock_error(ADC_DRIVER, lock_error);
+	if ((error = spi_lock_bus_resources(CONFIG_ADC_MCP3208_SPI, DRIVER_ALL_FLAGS))) {
+		return error;
 	}
 
 	if (!chan->setup) {

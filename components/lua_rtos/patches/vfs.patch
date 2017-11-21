@@ -1,0 +1,46 @@
+diff --git a/components/vfs/include/esp_vfs.h b/components/vfs/include/esp_vfs.h
+index 9cd8e5e..aaf1f82 100644
+--- a/components/vfs/include/esp_vfs.h
++++ b/components/vfs/include/esp_vfs.h
+@@ -24,6 +24,8 @@
+ #include <sys/stat.h>
+ #include <dirent.h>
+ 
++#include "lwip/sockets.h"
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+@@ -166,6 +168,10 @@ typedef struct
+         int (*fsync_p)(void* ctx, int fd);
+         int (*fsync)(int fd);
+     };
++    union {
++        int (*writev_p)(void* ctx, int fd, const struct iovec *iov, int iovcnt);
++        int (*writev)(int fd, const struct iovec *iov, int iovcnt);
++    };
+ } esp_vfs_t;
+ 
+ 
+diff --git a/components/vfs/vfs.c b/components/vfs/vfs.c
+index 92f60b6..230c370 100644
+--- a/components/vfs/vfs.c
++++ b/components/vfs/vfs.c
+@@ -548,3 +548,17 @@ int fsync(int fd)
+     CHECK_AND_CALL(ret, r, vfs, fsync, local_fd);
+     return ret;
+ }
++
++ssize_t esp_vfs_writev(int fd, const struct iovec *iov, int iovcnt)
++{
++    const vfs_entry_t* vfs = get_vfs_for_fd(fd);
++    struct _reent* r = __getreent();
++    if (vfs == NULL) {
++        __errno_r(r) = EBADF;
++        return -1;
++    }
++    int local_fd = translate_fd(vfs, fd);
++    ssize_t ret;
++    CHECK_AND_CALL(ret, r, vfs, writev, local_fd, iov, iovcnt);
++    return ret;
++}

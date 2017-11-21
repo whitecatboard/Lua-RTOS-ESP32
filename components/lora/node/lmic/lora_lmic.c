@@ -29,7 +29,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -63,14 +63,15 @@ DRIVER_REGISTER_BEGIN(LORA,lora, NULL,_lora_init,NULL);
 	DRIVER_REGISTER_ERROR(LORA, lora, JoinDenied, "join denied", LORA_ERR_JOIN_DENIED);
 	DRIVER_REGISTER_ERROR(LORA, lora, UnexpectedResponse, "unexpected response", LORA_ERR_UNEXPECTED_RESPONSE);
 	DRIVER_REGISTER_ERROR(LORA, lora, NotJoined, "not joined", LORA_ERR_NOT_JOINED);
-	DRIVER_REGISTER_ERROR(LORA, lora, NotSetup, "lora is not setup, setup first", LORA_ERR_NOT_SETUP);
+	DRIVER_REGISTER_ERROR(LORA, lora, NotSetup, "not setup", LORA_ERR_NOT_SETUP);
 	DRIVER_REGISTER_ERROR(LORA, lora, NotEnoughtMemory, "not enough memory", LORA_ERR_NO_MEM);
 	DRIVER_REGISTER_ERROR(LORA, lora, ABPExpected, "ABP expected", LORA_ERR_ABP_EXPECTED);
 	DRIVER_REGISTER_ERROR(LORA, lora, CannotSetup, "can't setup", LORA_ERR_CANT_SETUP);
-	DRIVER_REGISTER_ERROR(LORA, lora, TransmissionFail, "transmission fail, ack not received", LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED);
+	DRIVER_REGISTER_ERROR(LORA, lora, TransmissionFail, "transmission fail ack not received", LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED);
 	DRIVER_REGISTER_ERROR(LORA, lora, InvalidArgument, "invalid argument", LORA_ERR_INVALID_ARGUMENT);
 	DRIVER_REGISTER_ERROR(LORA, lora, InvalidDataRate, "invalid data rate for your location", LORA_ERR_INVALID_DR);
 	DRIVER_REGISTER_ERROR(LORA, lora, InvalidBand, "invalid band for your location", LORA_ERR_INVALID_BAND);
+	DRIVER_REGISTER_ERROR(LORA, lora, NotAllowed, "not allowed", LORA_ERR_NOT_ALLOWED);
 DRIVER_REGISTER_END(LORA,lora, NULL,_lora_init,NULL);
 
 #define evLORA_INITED 	       	 ( 1 << 0 )
@@ -115,14 +116,14 @@ static u1_t setup = 0;
 static lora_rx *lora_rx_callback = NULL;
 
 // Table for translate numeric datarates to LMIC definitions
-#if CONFIG_LUA_RTOS_LORA_NODE_BAND_EU868
+#if CONFIG_LUA_RTOS_LORA_BAND_EU868
 static const u1_t data_rates[] = {
 	DR_SF12, DR_SF11, DR_SF10, DR_SF9, DR_SF8, DR_SF7, DR_SF7B, DR_FSK, DR_NONE,
 	DR_NONE, DR_NONE, DR_NONE, DR_NONE, DR_NONE, DR_NONE, DR_NONE
 };
 #endif
 
-#if CONFIG_LUA_RTOS_LORA_NODE_BAND_US915
+#if CONFIG_LUA_RTOS_LORA_BAND_US915
 static const u1_t data_rates[] = {
 	DR_SF10, DR_SF9, DR_SF8, DR_SF7, DR_SF8C, DR_NONE, DR_NONE, DR_NONE,
 	DR_SF12CR, DR_SF11CR, DR_SF10CR, DR_SF9CR, DR_SF8CR, DR_SF7CR, DR_NONE,
@@ -228,7 +229,7 @@ static void lora_init(osjob_t *j) {
     // Reset MAC state
     LMIC_reset();
 
-	#if CONFIG_LUA_RTOS_LORA_NODE_BAND_EU868
+	#if CONFIG_LUA_RTOS_LORA_BAND_EU868
     	LMIC_setupChannel(0, 868100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
 	    LMIC_setupChannel(1, 868300000, DR_RANGE_MAP(DR_SF12, DR_SF7B), BAND_CENTI);
 	    LMIC_setupChannel(2, 868500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
@@ -240,7 +241,7 @@ static void lora_init(osjob_t *j) {
 	    LMIC_setupChannel(8, 868800000, DR_RANGE_MAP(DR_FSK,  DR_FSK),  BAND_MILLI);	
 	#endif
 
-	#if CONFIG_LUA_RTOS_LORA_NODE_BAND_US915
+	#if CONFIG_LUA_RTOS_LORA_BAND_US915
 	    LMIC_selectSubBand(1);
 	#endif
 
@@ -284,13 +285,13 @@ static void lora_init(osjob_t *j) {
 
 // Setup driver
 driver_error_t *lora_setup(int band) {
-	#if CONFIG_LUA_RTOS_LORA_NODE_BAND_EU868
+	#if CONFIG_LUA_RTOS_LORA_BAND_EU868
 	if (band != 868) {
 		return driver_error(LORA_DRIVER, LORA_ERR_INVALID_BAND, NULL);
 	}
 	#endif
 
-	#if CONFIG_LUA_RTOS_LORA_NODE_BAND_US915
+	#if CONFIG_LUA_RTOS_LORA_BAND_US915
 	if (band != 915) {
 		return driver_error(LORA_DRIVER, LORA_ERR_INVALID_BAND, NULL);
 	}

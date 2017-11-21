@@ -2,7 +2,7 @@
  * Lua RTOS, PWM driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -36,6 +36,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <sys/syslog.h>
 #include <sys/driver.h>
@@ -394,6 +395,25 @@ driver_error_t *pwm_set_duty(int8_t unit, int8_t channel, double duty) {
 		ledc_set_duty(LEDC_HIGH_SPEED_MODE, channel, duty_val);
 		ledc_update_duty(LEDC_HIGH_SPEED_MODE, channel);
 	}
+
+	return NULL;
+}
+
+driver_error_t *pwm_unsetup(int8_t unit, int8_t channel) {
+	driver_error_t *error = NULL;
+
+	// Sanity checks
+	if ((error = pwm_check_unit(unit, 0))) return error;
+	if ((error = pwm_check_channel(unit, channel, 0))) return error;
+
+	// Stop PWM
+	pwm_stop(unit, channel);
+
+	// Clear data
+	memset(&pwm[unit][channel], 0, sizeof(pwm));
+
+	// Unlock resources
+	driver_unlock_all(PWM_DRIVER, channel);
 
 	return NULL;
 }

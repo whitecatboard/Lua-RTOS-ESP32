@@ -38,7 +38,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_SPI_ETHERNET
+#if CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
 
 #include "lwip/opt.h"
 

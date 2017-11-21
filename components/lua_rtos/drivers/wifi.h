@@ -43,7 +43,7 @@
 
 #include <sys/driver.h>
 
-#define WIFI_CONNECT_RETRIES 1
+#define WIFI_CONNECT_RETRIES 2
 
 // WIFI errors
 #define WIFI_ERR_CANT_INIT              (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  0)
@@ -74,6 +74,7 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_
 driver_error_t *wifi_start();
 driver_error_t *wifi_stop();
 driver_error_t *wifi_stat(ifconfig_t *info);
+driver_error_t *wifi_get_mac(uint8_t mac[6]);
 
 void wifi_wps_reconnect();
 void wifi_wps_disable();

@@ -9,12 +9,12 @@
 -- ----------------------------------------------------------------
 
 thread.start(function()
-  pio.pin.setdir(pio.OUTPUT, pio.GPIO14)
-  pio.pin.setpull(pio.NOPULL, pio.GPIO14)
+  pio.pin.setdir(pio.OUTPUT, pio.GPIO26)
+  pio.pin.setpull(pio.NOPULL, pio.GPIO26)
   while true do
-    pio.pin.setval(1, pio.GPIO14)
+    pio.pin.setval(1, pio.GPIO26)
     tmr.delayms(100)
-    pio.pin.setval(0, pio.GPIO14)
+    pio.pin.setval(0, pio.GPIO26)
     tmr.delayms(100)
   end
 end)

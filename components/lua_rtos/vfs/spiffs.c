@@ -31,6 +31,8 @@
 
 #if CONFIG_LUA_RTOS_USE_SPIFFS
 
+#include "esp_partition.h"
+
 #include <freertos/FreeRTOS.h>
 
 #include <string.h>
@@ -874,7 +876,6 @@ static int IRAM_ATTR vfs_spiffs_mkdir(const char *path, mode_t mode) {
 
 void vfs_spiffs_register() {
     esp_vfs_t vfs = {
-        .fd_offset = 0,
         .flags = ESP_VFS_FLAG_DEFAULT,
         .write = &vfs_spiffs_write,
         .open = &vfs_spiffs_open,
@@ -901,15 +902,31 @@ void vfs_spiffs_register() {
     int res = 0;
     int retries = 0;
 
-    cfg.phys_addr 		 = CONFIG_LUA_RTOS_SPIFFS_BASE_ADDR;
-    cfg.phys_size 		 = CONFIG_LUA_RTOS_SPIFFS_SIZE;
+    // Find partition
+    const esp_partition_t *partition =
+    	esp_partition_find_first(ESP_PARTITION_TYPE_DATA, 0xfe, "spiffs");
+
+    if (!partition) {
+    	syslog(LOG_ERR, "spiffs%d can't find spiffs partition", unit);
+    } else {
+		cfg.phys_addr 	 = partition->address;
+		cfg.phys_size 	 = partition->size;
+    }
+
     cfg.phys_erase_block = CONFIG_LUA_RTOS_SPIFFS_ERASE_SIZE;
     cfg.log_page_size    = CONFIG_LUA_RTOS_SPIFFS_LOG_PAGE_SIZE;
     cfg.log_block_size   = CONFIG_LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE;
 
-    syslog(LOG_INFO, "spiffs%d start address at 0x%x, size %d Kb",
-           unit, cfg.phys_addr, cfg.phys_size / 1024
-    );
+    if (partition) {
+        syslog(LOG_INFO, "spiffs%d start address at 0x%x, size %d Kb, partition %s",
+               unit, cfg.phys_addr, cfg.phys_size / 1024,
+			   partition->label
+        );
+    } else {
+        syslog(LOG_INFO, "spiffs%d start address at 0x%x, size %d Kb",
+               unit, cfg.phys_addr, cfg.phys_size / 1024
+        );
+    }
 
 	cfg.hal_read_f  = (spiffs_read)low_spiffs_read;
 	cfg.hal_write_f = (spiffs_write)low_spiffs_write;

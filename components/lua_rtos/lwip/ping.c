@@ -268,7 +268,7 @@ driver_error_t *ping(const char *name, int count, int interval, int size, int ti
   }
 
   // Resolve name
-  if ((error = net_lookup(name, &address))) {
+  if ((error = net_lookup(name, 0, &address))) {
 	  return driver_error(NET_DRIVER, NET_ERR_NAME_CANNOT_BE_RESOLVED,NULL);
   }
 

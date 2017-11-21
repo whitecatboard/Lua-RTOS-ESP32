@@ -2,7 +2,7 @@
  * Lua RTOS, PWM Lua module
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -70,30 +70,20 @@ static int lpwm_attach( lua_State* L ) {
     return 1;
 }
 
-static int lpwm_setupchan( lua_State* L ) {
+static int lpwm_detach( lua_State* L ) {
+    pwm_userdata *pwm = NULL;
 	driver_error_t *error;
-    int8_t pin;
-    int32_t freq;
-    double duty;
 
-	luaL_deprecated(L, "pwm.setupchan", "pwm.attach");
+    pwm = (pwm_userdata *)luaL_checkudata(L, 1, "pwm.inst");
+    luaL_argcheck(L, pwm, 1, "pwm expected");
 
-    pwm_userdata *pwm = (pwm_userdata *)lua_newuserdata(L, sizeof(pwm_userdata));
-
-    pwm->unit = luaL_checkinteger( L, 1 );
-    pin = luaL_checkinteger( L, 2 );
-    freq = luaL_checkinteger( L, 3 );
-    duty = luaL_checknumber(L, 4);
-
-    if ((error = pwm_setup(pwm->unit, -1, pin, freq, duty, &pwm->channel))) {
+    if ((error = pwm_unsetup(pwm->unit, pwm->channel))) {
     	return luaL_driver_error(L, error);
     }
 
-    luaL_getmetatable(L, "pwm.inst");
-    lua_setmetatable(L, -2);
-
-    return 1;
+    return 0;
 }
+
 
 static int lpwm_setfreq(lua_State* L) {
     pwm_userdata *pwm = NULL;
@@ -157,8 +147,14 @@ static int lpwm_stop(lua_State* L) {
     return 0;
 }
 
+// Destructor
+static int lpwm_gc (lua_State *L) {
+	lpwm_detach(L);
+
+	return 0;
+}
+
 static const LUA_REG_TYPE lpwm_map[] = {
-    { LSTRKEY("setupchan" ),LFUNCVAL(lpwm_setupchan) },
     { LSTRKEY("attach" ),	LFUNCVAL(lpwm_attach)    },
 	PWM_PWM0
 	PWM_PWM1
@@ -187,8 +183,10 @@ static const LUA_REG_TYPE lpwm_channel_map[] = {
   { LSTRKEY( "setfreq"        ),	 LFUNCVAL( lpwm_setfreq                ) },
   { LSTRKEY( "start"          ),	 LFUNCVAL( lpwm_start                  ) },
   { LSTRKEY( "stop"           ),	 LFUNCVAL( lpwm_stop                   ) },
+  { LSTRKEY( "detach"         ),	 LFUNCVAL( lpwm_detach                 ) },
   { LSTRKEY( "__metatable"    ),	 LROVAL  ( lpwm_channel_map            ) },
   { LSTRKEY( "__index"        ),   	 LROVAL  ( lpwm_channel_map            ) },
+  { LSTRKEY( "__gc"           ),	 LFUNCVAL( lpwm_gc 	                   ) },
   { LNILKEY, LNILVAL }
 };
 

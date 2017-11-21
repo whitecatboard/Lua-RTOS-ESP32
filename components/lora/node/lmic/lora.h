@@ -32,7 +32,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_NODE
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
 
 #include <sys/driver.h>
 
@@ -51,6 +51,7 @@
 #define LORA_ERR_INVALID_ARGUMENT                   (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  9)
 #define LORA_ERR_INVALID_DR							(DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) | 10)
 #define LORA_ERR_INVALID_BAND						(DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) | 11)
+#define LORA_ERR_NOT_ALLOWED						(DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) | 12)
 
 extern const int lora_errors;
 extern const int lora_error_map;

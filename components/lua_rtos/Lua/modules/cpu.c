@@ -82,7 +82,9 @@ static int lcpu_model(lua_State *L) {
 
 static int lcpu_board(lua_State *L) {
 	lua_pushstring(L, LUA_RTOS_BOARD);
-	return 1;
+	lua_pushstring(L, CONFIG_LUA_RTOS_BOARD_SUBTYPE);
+	lua_pushstring(L, CONFIG_LUA_RTOS_BOARD_BRAND);
+	return 3;
 }
 
 static int lcpu_sleep(lua_State *L) {
