@@ -231,7 +231,7 @@ driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation) {
 #else
     // Init display SPI bus
 	if (caps->spi_device == -1) {
-		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 48000000, SPI_FLAG_WRITE, &caps->spi_device))) {
+		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 26000000, SPI_FLAG_WRITE | SPI_FLAG_READ, &caps->spi_device))) {
 			return error;
 		}
 	}
@@ -305,32 +305,30 @@ void ili9341_set_orientation(uint8_t m) {
 	uint8_t orientation = m & 3; // can't be higher than 3
 	uint8_t madctl = 0;
 
-	if ((orientation & 1)) {
-		caps->width  = ILI9341_HEIGHT;
-		caps->height = ILI9341_WIDTH;
-		caps->ystart = 0;
-		caps->xstart = 0;
-	}
-	else {
-		caps->width  = ILI9341_WIDTH;
-		caps->height = ILI9341_HEIGHT;
-		caps->ystart = 0;
-		caps->xstart = 0;
-	}
+	caps->ystart = 0;
+	caps->xstart = 0;
 
 	switch (orientation) {
-		case PORTRAIT:
-			madctl = (ST7735_MADCTL_MX | ST7735_MADCTL_BGR);
-			break;
-		case LANDSCAPE:
-			madctl = (ST7735_MADCTL_MV | ST7735_MADCTL_BGR);
-			break;
-		case PORTRAIT_FLIP:
-			madctl = (ST7735_MADCTL_MY | ST7735_MADCTL_BGR);
-			break;
-		case LANDSCAPE_FLIP:
-			madctl = (ST7735_MADCTL_MX | ST7735_MADCTL_MY | ST7735_MADCTL_MV | ST7735_MADCTL_BGR);
-			break;
+	  case LANDSCAPE:
+		madctl = (ST7735_MADCTL_MX | ST7735_MADCTL_RGB);
+		caps->width  = ILI9341_HEIGHT;
+		caps->height = ILI9341_WIDTH;
+		break;
+	  case PORTRAIT:
+		madctl = (ST7735_MADCTL_MV | ST7735_MADCTL_RGB);
+		caps->width  = ILI9341_WIDTH;
+		caps->height = ILI9341_HEIGHT;
+		break;
+	  case LANDSCAPE_FLIP:
+		madctl = (ST7735_MADCTL_MY | ST7735_MADCTL_RGB);
+		caps->width  = ILI9341_HEIGHT;
+		caps->height = ILI9341_WIDTH;
+		break;
+	  case PORTRAIT_FLIP:
+		madctl = (ST7735_MADCTL_MX | ST7735_MADCTL_MY | ST7735_MADCTL_MV | ST7735_MADCTL_RGB);
+		caps->width  = ILI9341_WIDTH;
+		caps->height = ILI9341_HEIGHT;
+		break;
 	}
 
 	gdisplay_ll_command(ST7735_MADCTL);

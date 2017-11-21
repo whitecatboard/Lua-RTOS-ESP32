@@ -48,6 +48,22 @@
 		"subtype": "OTA"
 	},
 	{
+		"id": "ESP-WROVER-KIT",
+		"description": "Espressif Systems ESP-WROVER-KIT",
+		"manufacturer": "Espressif Systems",
+		"brand": "",
+		"type": "ESP-WROVER-KIT",
+		"subtype": ""
+	},
+	{
+		"id": "ESP-WROVER-KIT-OTA",
+		"description": "Espressif Systems ESP-WROVER-KIT with OTA",
+		"manufacturer": "Espressif Systems",
+		"brand": "",
+		"type": "ESP-WROVER-KIT",
+		"subtype": "OTA"
+	},
+	{
 		"id": "ESP32-THING",
 		"description": "SparkFun ESP32 Thing",
 		"manufacturer": "SparkFun",

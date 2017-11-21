@@ -33,6 +33,9 @@ menu "Lua RTOS"
       config LUA_RTOS_BOARD_ESP32_CORE_BOARD
          bool "ESP32 CORE BOARD"
 
+      config LUA_RTOS_BOARD_ESP32_WROVER_KIT
+         bool "ESP3 WROVER KIT"
+
       config LUA_RTOS_BOARD_ESP32_THING
          bool "ESP32 THING"
 
@@ -737,6 +740,14 @@ menu "Lua RTOS"
                default 26
             help
                GPIO where display CMD signal is attached.
+
+         config LUA_RTOS_GDISPLAY_BACKLIGHT
+            depends on LUA_RTOS_LUA_USE_GDISPLAY
+               int "Backlight CMD GPIO number"
+               range -1 39
+               default -1
+            help
+               GPIO where display BACKLIGHT signal is attached.
 
          config LUA_RTOS_GDISPLAY_TP_SPI
             depends on LUA_RTOS_LUA_USE_GDISPLAY

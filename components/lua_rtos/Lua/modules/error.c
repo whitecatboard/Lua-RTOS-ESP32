@@ -61,6 +61,12 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
 		target_unit = error->lock_error->target_unit;
 		owner_unit = error->lock_error->lock->unit;
 
+		if (strcmp(error->lock_error->lock->owner->name, "spi") == 0) {
+			owner_unit = (owner_unit & 0xff00) >> 8;
+		} else if (strcmp(error->lock_error->lock->owner->name, "i2c") == 0) {
+			owner_unit = (owner_unit & 0xff00) >> 8;
+		}
+
 		free(error->lock_error);
     } else if (error_type == OPERATION) {
     	msg = driver_get_err_msg(error);
