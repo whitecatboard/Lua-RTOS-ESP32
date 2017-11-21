@@ -937,6 +937,8 @@ int http_start(lua_State* L) {
 
 			pthread_setname_np(thread_normal, "ssl_http");
 		}
+
+		pthread_attr_destroy(&attr);
 	}
 
 	return 0;

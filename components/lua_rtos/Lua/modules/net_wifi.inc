@@ -36,6 +36,7 @@
 #include <esp_wps.h>
 
 static int wps_callback = LUA_NOREF;
+static int sc_callback = LUA_NOREF;
 static lua_State* LL;
 
 static int lwifi_setup(lua_State* L) {
@@ -266,13 +267,11 @@ static int lwifi_stat(lua_State* L) {
 
 static void lwifi_wps_pin(char* pin) {
 	if (wps_callback != LUA_NOREF) {
-		int len = strlen(pin);
 		lua_rawgeti(LL, LUA_REGISTRYINDEX, wps_callback);
-    lua_pushinteger(LL, len);
-    lua_pushlstring(LL, pin, len);
-		lua_call(LL, 2, 0);
-  }
-  free(pin);
+		lua_pushstring(LL, pin);
+		lua_call(LL, 1, 0);
+	}
+	free(pin);
 }
 
 static int lwifi_wps(lua_State* L) {
@@ -286,13 +285,12 @@ static int lwifi_wps(lua_State* L) {
 
 	int wpsmode = luaL_optinteger(L, 1, WPS_TYPE_PBC);
 	if (wpsmode != WPS_TYPE_PBC) {
-    luaL_checktype(L, 2, LUA_TFUNCTION);
 
-    // Copy argument (function) to the top of stack
-    lua_pushvalue(L, 2);
-
-    // Copy function reference
-    wps_callback = luaL_ref(L, LUA_REGISTRYINDEX);
+		luaL_checktype(L, 2, LUA_TFUNCTION);
+		// Copy argument (function) to the top of stack
+		lua_pushvalue(L, 2);
+		// Copy function reference
+		wps_callback = luaL_ref(L, LUA_REGISTRYINDEX);
 	}
 
 	if ((error = wifi_wps(wpsmode, lwifi_wps_pin))) {
@@ -302,10 +300,32 @@ static int lwifi_wps(lua_State* L) {
 	return 0;
 }
 
+static void lwifi_sc_config(char* ssid, char* password) {
+	if (sc_callback != LUA_NOREF) {
+		lua_rawgeti(LL, LUA_REGISTRYINDEX, sc_callback);
+		lua_pushstring(LL, ssid);
+		lua_pushstring(LL, password);
+		lua_call(LL, 2, 0);
+	}
+	/* ssid and password are allocated (and freed) by esp_smartconfig_... */
+}
+
 static int lwifi_smartconfig(lua_State* L) {
 	driver_error_t *error;
 
-	if ((error = wifi_smartconfig())) {
+	LL = L;
+	if (sc_callback != LUA_NOREF) {
+		luaL_unref(L, LUA_REGISTRYINDEX, sc_callback);
+		sc_callback = LUA_NOREF;
+	}
+
+	luaL_checktype(L, 1, LUA_TFUNCTION);
+	// Copy argument (function) to the top of stack
+	lua_pushvalue(L, 1);
+	// Copy function reference
+	sc_callback = luaL_ref(L, LUA_REGISTRYINDEX);
+
+	if ((error = wifi_smartconfig(lwifi_sc_config))) {
 		return luaL_driver_error(L, error);
 	}
 
