@@ -20,11 +20,17 @@ int IRAM_ATTR __wrap__calloc_r(struct _reent *r, size_t nmemb, size_t size) {
 	int res;
 
 	if (!(res = __real__calloc_r(r, nmemb,size))) {
-		luaC_fullgc(pvGetLuaState(), 0);
-		vTaskDelay(1 / portTICK_PERIOD_MS);
-		luaC_fullgc(pvGetLuaState(), 0);
-		vTaskDelay(1 / portTICK_PERIOD_MS);
-		res = __real__calloc_r(r, nmemb, size);
+		// Not enough memory
+		// Perform a garbage collector, and try to free some memory
+		lua_State *L = pvGetLuaState();
+
+		if (L) {
+			luaC_fullgc(L, 0);
+			vTaskDelay(1 / portTICK_PERIOD_MS);
+			luaC_fullgc(L, 0);
+			vTaskDelay(1 / portTICK_PERIOD_MS);
+			res = __real__calloc_r(r, nmemb, size);
+		}
 	}
 
 	return res;

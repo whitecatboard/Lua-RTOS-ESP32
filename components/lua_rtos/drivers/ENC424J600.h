@@ -51,7 +51,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_SPI_ETHERNET
+#if CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
 
 #ifndef __ENCX24J600_H
 #define __ENCX24J600_H

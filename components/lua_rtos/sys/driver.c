@@ -128,6 +128,9 @@ const char *driver_get_name(driver_error_t *error) {
 driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error_t *lock_error) {
 	driver_error_t *error;
 
+	// Unlock all resources locked by the driver
+    driver_unlock_all(driver, lock_error->owner_unit);
+
     error = (driver_error_t *)malloc(sizeof(driver_error_t));
     if (error) {
         error->type = LOCK;

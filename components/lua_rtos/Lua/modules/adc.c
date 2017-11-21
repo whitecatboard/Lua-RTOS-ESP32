@@ -150,6 +150,9 @@ static const LUA_REG_TYPE ladc_map[] = {
 #if CONFIG_ADC_ADS1115
     { LSTRKEY( "ADS1115" ),		  LINTVAL( CPU_LAST_ADC + 1 ) },
 #endif
+#if CONFIG_ADC_ADS1015
+    { LSTRKEY( "ADS1015" ),		  LINTVAL( CPU_LAST_ADC + 1 ) },
+#endif
 	ADC_ADC_CH0
 	ADC_ADC_CH1
 	ADC_ADC_CH2

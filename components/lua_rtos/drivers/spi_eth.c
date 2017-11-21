@@ -29,7 +29,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_SPI_ETHERNET
+#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
@@ -56,7 +56,7 @@ DRIVER_REGISTER_BEGIN(SPI_ETH,spi_eth,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, CannotSetup, "can't setup", SPI_ETH_ERR_CANT_INIT);
 	DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, NotSetup, "ethernet is not setup", SPI_ETH_ERR_NOT_INIT);
 	DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, NotStarted, "ethernet is not started", SPI_ETH_ERR_NOT_START);
-	DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, CannotConnect, "can't connect, check cable", SPI_ETH_ERR_CANT_CONNECT);
+	DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, CannotConnect, "can't connect check cable", SPI_ETH_ERR_CANT_CONNECT);
 DRIVER_REGISTER_END(SPI_ETH,spi_eth,NULL,NULL,NULL);
 
 extern EventGroupHandle_t netEvent;
@@ -116,18 +116,6 @@ driver_error_t *spi_eth_start() {
 		system_event_t evt;
 	    evt.event_id = SYSTEM_EVENT_SPI_ETH_START;
 	    esp_event_send(&evt);
-
-	    // Wait for connect
-	    EventBits_t uxBits = xEventGroupWaitBits(netEvent, evSPI_ETH_CONNECTED | evSPI_ETH_CANT_CONNECT, pdTRUE, pdFALSE, 4000 / portTICK_PERIOD_MS);
-	    if (uxBits & (evSPI_ETH_CONNECTED)) {
-		    status_set(STATUS_SPI_ETH_STARTED);
-	    } else if (uxBits & (evSPI_ETH_CANT_CONNECT)) {
-	    	status_clear(STATUS_SPI_ETH_STARTED);
-	    	return driver_error(SPI_ETH_DRIVER, SPI_ETH_ERR_CANT_CONNECT, NULL);
-	    } else {
-	    	status_clear(STATUS_SPI_ETH_STARTED);
-	    	return driver_error(SPI_ETH_DRIVER, SPI_ETH_ERR_CANT_CONNECT, NULL);
-	    }
 	}
 
 	return NULL;

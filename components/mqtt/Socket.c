@@ -101,7 +101,7 @@ int Socket_error(char* aString, int sock)
 {
 	FUNC_ENTRY;
 #if defined(WIN32) || defined(WIN64)
-	errno = WSAGetLastError();
+	int errno = WSAGetLastError();
 #endif
 	if (errno != EINTR && errno != EAGAIN && errno != EINPROGRESS && errno != EWOULDBLOCK)
 	{

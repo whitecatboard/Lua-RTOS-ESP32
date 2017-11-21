@@ -2,7 +2,7 @@
  * Lua RTOS, PWM driver
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -55,6 +55,7 @@ driver_error_t *pwm_start(int8_t unit, int8_t channel);
 driver_error_t *pwm_stop(int8_t unit, int8_t channel);
 driver_error_t *pwm_set_freq(int8_t unit, int8_t channel, int32_t freq);
 driver_error_t *pwm_set_duty(int8_t unit, int8_t channel, double duty);
+driver_error_t *pwm_unsetup(int8_t unit, int8_t channel);
 
 #endif	/* PWM_H */
 

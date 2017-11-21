@@ -71,7 +71,13 @@
  * ILI9341
  */
 
-#define CHIPSET_ILI9341 6
+#define CHIPSET_ILI9341    6
+
+/*
+ * PCD8544
+ */
+
+#define CHIPSET_PCD8544   7
 
 // Color definitions
 #define GDISPLAY_BLACK       0x0000      /*   0,   0,   0 */
@@ -117,12 +123,6 @@
 #define TOONEY32_FONT	6
 #define FONT_7SEG		7
 #define USER_FONT		8
-
-#define CHIPSET_ILI9341 6
-#define CHIPSET_PCD8544 7
-
-
-
 
 #define DEG_TO_RAD 0.01745329252
 #define RAD_TO_DEG 57.295779513

@@ -38,7 +38,7 @@
 
 #include <stdint.h>
 
-#define NETWORK_AVAILABLE() (status_get(STATUS_WIFI_CONNECTED) || status_get(STATUS_SPI_ETH_CONNECTED))
+#define NETWORK_AVAILABLE() (status_get(STATUS_WIFI_CONNECTED) || status_get(STATUS_SPI_ETH_CONNECTED) || status_get(STATUS_ETH_CONNECTED))
 
 #define STATUS_SYSCALLS_INITED	       0x0000
 #define STATUS_LUA_RUNNING			   0x0001
@@ -56,6 +56,9 @@
 #define STATUS_SPI_ETH_SETUP           0x000d
 #define STATUS_SPI_ETH_STARTED         0x000e
 #define STATUS_SPI_ETH_CONNECTED       0x000f
+#define STATUS_ETH_SETUP           	   0x0010
+#define STATUS_ETH_STARTED         	   0x0011
+#define STATUS_ETH_CONNECTED           0x0012
 
 extern uint32_t LuaRTOS_status[];
 

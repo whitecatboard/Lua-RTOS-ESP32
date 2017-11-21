@@ -66,7 +66,7 @@ driver_error_t *adc_ads1115_read_reg(uint8_t type, adc_ads1115_reg_t *reg, uint8
 	int transaction = I2C_TRANSACTION_INITIALIZER;
 	driver_error_t *error;
 	uint8_t buff[1];
-	uint16_t val;
+	uint8_t val[2];
 
 	// Point to register
 	buff[0] = type;
@@ -82,11 +82,8 @@ driver_error_t *adc_ads1115_read_reg(uint8_t type, adc_ads1115_reg_t *reg, uint8
 	error = i2c_read(i2cdevice, &transaction, (char *)&val, sizeof(val));if (error) return error;
 	error = i2c_stop(i2cdevice, &transaction);if (error) return error;
 
-	#if (BYTE_ORDER == LITTLE_ENDIAN)
-	reg->word.val = (uint16_t)(val >> 8) | ((uint16_t)(val & 0xff) << 8);
-	#else
-	reg->word.val = val;
-	#endif
+	reg->byte.h = val[0];
+	reg->byte.l = val[1];
 
 	return NULL;
 }
@@ -97,13 +94,13 @@ driver_error_t *adc_ads1115_read_reg(uint8_t type, adc_ads1115_reg_t *reg, uint8
 driver_error_t *adc_ads1115_setup(adc_channel_t *chan) {
 	driver_error_t *error;
 
-	uint8_t i2c = CONFIG_ADC_ADS1115_I2C;
+	uint8_t i2c = CONFIG_ADC_I2C;
 	int8_t channel = chan->channel;
 	uint8_t address = chan->devid;
 
 	// Apply default max value
 	if (chan->max == 0) {
-		chan->max = 6144;
+		chan->max = 4096;
 	}
 
 	// Apply default address
@@ -126,7 +123,7 @@ driver_error_t *adc_ads1115_setup(adc_channel_t *chan) {
 	}
 
 	// Setup
-	if ((error = i2c_setup(i2c, I2C_MASTER, CONFIG_ADC_ADS1115_I2C_SPEED, 0, 0, &i2cdevice))) {
+	if ((error = i2c_setup(i2c, I2C_MASTER, CONFIG_ADC_SPEED, 0, 0, &i2cdevice))) {
 		return error;
 	}
 
@@ -214,15 +211,12 @@ driver_error_t *adc_ads1115_read(adc_channel_t *chan, int *raw, double *mvolts) 
 	// Read
 	error = adc_ads1115_read_reg(ADS1115_AP_CONV, &reg, address);if (error) return error;
 
-	int traw = reg.word.val;
-	double tmvolts = (double)(double)((traw) * (chan->max)) / (double)chan->max_val;
-
 	if (raw) {
-		*raw = traw;
+		*raw = reg.word.val;
 	}
 
 	if (mvolts) {
-		*mvolts = tmvolts;
+		*mvolts = (double)(double)((reg.word.val) * (chan->max)) / (double)chan->max_val;
 	}
 
 	return NULL;

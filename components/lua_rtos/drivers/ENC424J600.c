@@ -29,7 +29,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_SPI_ETHERNET
+#if CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
@@ -410,7 +410,7 @@ int enc424j600_init(struct netif *netif) {
 	}
 
 	syslog(LOG_INFO, "enc424j600 is at spi%d, cs=%s%d, int=%s%d, speed %d Mhz",
-			CONFIG_SPI_ETHERNET_SPI,
+			CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI,
 			gpio_portname(CONFIG_SPI_ETHERNET_CS), gpio_name(CONFIG_SPI_ETHERNET_CS),
 			gpio_portname(CONFIG_SPI_ETHERNET_INT), gpio_name(CONFIG_SPI_ETHERNET_INT),
 			CONFIG_SPI_ETHERNET_SPEED / 1000000);

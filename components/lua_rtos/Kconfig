@@ -1,353 +1,374 @@
 menu "Lua RTOS"
-	config LUA_RTOS_VDD
-		int "CPU power voltage (VDDA)"
-		range 2300 3600
-		default 3332
-		help
-			This sets the CPU power voltage (VDDA). The ideal value of this voltage is generally 3300 mVolts,
-			but due to the manufacturing processes and components used that may not always be the same this
-			value may be different from the ideal one.
-			
-			For a correct operation of the ADC and some sensors it is necessary that you indicate the exact
-			value for your board. Please measure this value with a suitable equipment. A good and cheap
-			choice is using an external ADC as an ADS1115.
-			
-	choice LUA_RTOS_BOARD_TYPE
-		prompt "Board Type"
-		default LUA_RTOS_BOARD_WHITECAT_N1ESP32
-	
-		config LUA_RTOS_BOARD_WHITECAT_N1ESP32
-			bool "WHITECAT ESP32 N1"
-			select LUA_RTOS_USE_POWER_BUS if LUA_RTOS_BOARD_WHITECAT_N1ESP32
-		
-		config LUA_RTOS_BOARD_ESP32_CORE_BOARD
-			bool "ESP32 CORE BOARD"
+   config LUA_RTOS_VDD
+      int "CPU power voltage (VDDA)"
+      range 2300 3600
+      default 3332
+      help
+         This sets the CPU power voltage (VDDA). The ideal value of this voltage is generally 3300 mVolts,
+         but due to the manufacturing processes and components used that may not always be the same this
+         value may be different from the ideal one.
+         
+         For a correct operation of the ADC and some sensors it is necessary that you indicate the exact
+         value for your board. Please measure this value with a suitable equipment. A good and cheap
+         choice is using an external ADC as an ADS1115.
 
-		config LUA_RTOS_BOARD_ESP32_THING
-			bool "ESP32 THING"
+   config LUA_RTOS_BOARD_BRAND
+       string "Board Brand"
+       help
+         This is an additional information that may be blank. It is used, for example in the OTA update process
+         to determine the firmware to be used in the update.
 
-		config LUA_RTOS_BOARD_OTHER
-			bool "GENERIC"
-	endchoice
-	
-	menu "General"
-		menu "Deep Sleep"
-			config LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
-					bool "Mantain power for RTC IO, sensors and ULP co-processor by default"
-					default n
-	
-			config LUA_RTOS_DEEP_SLEEP_RTC_SLOW_MEM
-					bool "Mantain power for RTC slow memory by default"
-					default y
-	
-			config LUA_RTOS_DEEP_SLEEP_RTC_FAST_MEM
-					bool "Mantain power for RTC fast memory by default"
-					default n
-		endmenu
-		
-		config LUA_RTOS_READ_FLASH_UNIQUE_ID
-				bool "Read SPI flash EUI"
-			default n
-				help
-					Lua RTOS can get a EUI from the SPI Flash Memory. This is a 8-byte length identifier that can
-					be used for indentify your board. In the WHITECAT ESP32 N1 board this EUI is used in the LoRa WAN
-					stack to set the DevEUI.
-	
-			config LUA_RTOS_USE_POWER_BUS
-				bool "Use power bus"
-				default n
-				help
-				Power bus allows to provide power to sensors connected to the bus. This is useful in IOT deployments to
-				ensure that the sensors do not consume energy while the CPU is sleeping.
-	
-		config LUA_RTOS_POWER_BUS_PIN
-				int "Power bus GPIO number"
-				depends on LUA_RTOS_USE_POWER_BUS
-				range 0 39
-				default 27
-			
-			config LUA_RTOS_USE_LED_ACT
-				bool "Use activity led"
-				default n
-				help 
-				Select this to enable the Lua RTOS activity led.
-	
-		config LUA_RTOS_LED_ACT
-			depends on LUA_RTOS_USE_LED_ACT
-				int "Activity led GPIO number"
-				range 0 39
-				default 22
+   choice LUA_RTOS_BOARD_TYPE
+      prompt "Board Type"
+      default LUA_RTOS_BOARD_WHITECAT_N1ESP32
+   
+      config LUA_RTOS_BOARD_WHITECAT_N1ESP32
+         bool "WHITECAT ESP32 N1"
+         select LUA_RTOS_USE_POWER_BUS if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
 
-		menu "Console"
-			config LUA_RTOS_USE_CONSOLE
-				bool "Use console"
-				default y
-				help 
-				Select this to enable the Lua RTOS console.
-	
-		choice LUA_RTOS_CONSOLE_UART
-			depends on LUA_RTOS_USE_CONSOLE
-			prompt "UART"
-			default LUA_RTOS_CONSOLE_UART0
-			help
-				Select the uart number used by the Lua RTOS console.
-	
-		config LUA_RTOS_CONSOLE_UART0
-			bool "UART 0"
-			
-		config LUA_RTOS_CONSOLE_UART1
-			bool "UART 1"
-	
-		config LUA_RTOS_CONSOLE_UART2
-			bool "UART 2"
-	
-		endchoice
-		
-		choice LUA_RTOS_CONSOLE_BR
-			depends on LUA_RTOS_USE_CONSOLE
-			prompt "Baud rate"
-			default LUA_RTOS_CONSOLE_BR_115200
-			help
-				Baud rate to use by the Lua RTOS console.
-	
-		config LUA_RTOS_CONSOLE_BR_57200
-			bool "57200 baud"
-	
-		config LUA_RTOS_CONSOLE_BR_115200
-			bool "115200 baud"
-		endchoice
-	
-		config LUA_RTOS_CONSOLE_BUFFER_LEN
-			depends on LUA_RTOS_USE_CONSOLE
-				int "Buffer length"
-				range 32 2048
-				default 1024
-				help
-						Select the the buffer length used by the console, in bytes,				
-		endmenu
-		endmenu
+      config LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT
+         bool "WHITECAT ESP32 N1 DEVKIT"
+         select LUA_RTOS_USE_POWER_BUS if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+      
+      config LUA_RTOS_BOARD_ESP32_CORE_BOARD
+         bool "ESP32 CORE BOARD"
 
-		menu "File Systems"
-			menu "SPIFFS"
-					config LUA_RTOS_USE_SPIFFS
-						bool "Use spiffs"
-						default y
-						help
-							Select for enable SPIFFS file system support. SPIFFS uses the ESP32 board flash memory.
-		
-				config LUA_RTOS_SPIFFS_BASE_ADDR
-					depends on LUA_RTOS_USE_SPIFFS
-						hex "Base address"
-						range 100000 1FFE000
-						default 0x180000
+      config LUA_RTOS_BOARD_ESP32_WROVER_KIT
+         bool "ESP3 WROVER KIT"
 
-				config LUA_RTOS_SPIFFS_SIZE
-					depends on LUA_RTOS_USE_SPIFFS
-						int "Size"
-						range 262144 1048576
-						default 524288
+      config LUA_RTOS_BOARD_ESP32_THING
+         bool "ESP32 THING"
 
-				config LUA_RTOS_SPIFFS_LOG_PAGE_SIZE
-					depends on LUA_RTOS_USE_SPIFFS
-						int "Logical page size"
-						range 256 2048
-						default 256
+      config LUA_RTOS_BOARD_ESP32_GATEWAY
+         bool "ESP32 GATEWAY"
 
-				config LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE
-					depends on LUA_RTOS_USE_SPIFFS
-						int "Logical block size"
-						range 4098 65536
-						default 8192
-				
-				config LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE
-					depends on LUA_RTOS_USE_SPIFFS
-						int "Logical block size"
-						range 4098 65536
-						default 8192
+      config LUA_RTOS_BOARD_ESP32_EVB
+         bool "ESP32 EVB"
 
-				config LUA_RTOS_SPIFFS_ERASE_SIZE
-					depends on LUA_RTOS_USE_SPIFFS
-						int "Erase size"
-						range 4096 65536
-						default 4096
-			endmenu
-		endmenu
+      config LUA_RTOS_BOARD_OTHER
+         bool "GENERIC"
+   endchoice
 
-		menu "Hardware"
-		menu "CAN pin map"
-			choice LUA_RTOS_CAN_TX_CHOICE
-				prompt "TX"
-				default LUA_RTOS_CAN_TX_GPIO12
-		
-				config LUA_RTOS_CAN_TX_GPIO5
-					bool "GPIO5"
-				
-				config LUA_RTOS_CAN_TX_GPIO12
-					bool "GPIO12"
+   config LUA_RTOS_BOARD_SUBTYPE
+       string "Board Subtype"
+       help
+         This is an additional information that may be blank. It is used, for example in the OTA update process
+         to determine the firmware to be used in the update.
 
-				config LUA_RTOS_CAN_TX_GPIO25
-					bool "GPIO25"
-			endchoice
-			
-			choice LUA_RTOS_CAN_RX_CHOICE
-				prompt "RX"
-				default LUA_RTOS_CAN_RX_GPIO14
+   menu "OTA"
+      config LUA_RTOS_OTA_SERVER_NAME
+          string "OTA server name"
+          default "ota.whitecatboard.org"
+          help
+            OTA server name. Only OTA SSL servers are allowed.
+   endmenu
+   
+   menu "General"
+      menu "Deep Sleep"
+         config LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
+               bool "Mantain power for RTC IO, sensors and ULP co-processor by default"
+               default n
+   
+         config LUA_RTOS_DEEP_SLEEP_RTC_SLOW_MEM
+               bool "Mantain power for RTC slow memory by default"
+               default y
+   
+         config LUA_RTOS_DEEP_SLEEP_RTC_FAST_MEM
+               bool "Mantain power for RTC fast memory by default"
+               default n
+      endmenu
+      
+      config LUA_RTOS_READ_FLASH_UNIQUE_ID
+            bool "Read SPI flash EUI"
+         default n
+            help
+               Lua RTOS can get a EUI from the SPI Flash Memory. This is a 8-byte length identifier that can
+               be used for indentify your board. In the WHITECAT ESP32 N1 board this EUI is used in the LoRa WAN
+               stack to set the DevEUI.
+   
+         config LUA_RTOS_USE_POWER_BUS
+            bool "Use power bus"
+            default n
+            help
+            Power bus allows to provide power to sensors connected to the bus. This is useful in IOT deployments to
+            ensure that the sensors do not consume energy while the CPU is sleeping.
+   
+      config LUA_RTOS_POWER_BUS_PIN
+            int "Power bus GPIO number"
+            depends on LUA_RTOS_USE_POWER_BUS
+            range 0 39
+            default 27
+         
+         config LUA_RTOS_USE_LED_ACT
+            bool "Use activity led"
+            default n
+            help 
+            Select this to enable the Lua RTOS activity led.
+   
+      config LUA_RTOS_LED_ACT
+         depends on LUA_RTOS_USE_LED_ACT
+            int "Activity led GPIO number"
+            range 0 39
+            default 22
 
-				config LUA_RTOS_CAN_RX_GPIO4
-					bool "GPIO4"
-				
-				config LUA_RTOS_CAN_RX_GPIO14
-					bool "GPIO14"
+      menu "Console"
+         config LUA_RTOS_USE_CONSOLE
+            bool "Use console"
+            default y
+            help 
+            Select this to enable the Lua RTOS console.
+   
+      choice LUA_RTOS_CONSOLE_UART
+         depends on LUA_RTOS_USE_CONSOLE
+         prompt "UART"
+         default LUA_RTOS_CONSOLE_UART0
+         help
+            Select the uart number used by the Lua RTOS console.
+   
+      config LUA_RTOS_CONSOLE_UART0
+         bool "UART 0"
+         
+      config LUA_RTOS_CONSOLE_UART1
+         bool "UART 1"
+   
+      config LUA_RTOS_CONSOLE_UART2
+         bool "UART 2"
+   
+      endchoice
+      
+      choice LUA_RTOS_CONSOLE_BR
+         depends on LUA_RTOS_USE_CONSOLE
+         prompt "Baud rate"
+         default LUA_RTOS_CONSOLE_BR_115200
+         help
+            Baud rate to use by the Lua RTOS console.
+   
+      config LUA_RTOS_CONSOLE_BR_57200
+         bool "57200 baud"
+   
+      config LUA_RTOS_CONSOLE_BR_115200
+         bool "115200 baud"
+      endchoice
+   
+      config LUA_RTOS_CONSOLE_BUFFER_LEN
+         depends on LUA_RTOS_USE_CONSOLE
+            int "Buffer length"
+            range 32 2048
+            default 1024
+            help
+                  Select the the buffer length used by the console, in bytes,            
+      endmenu
+      endmenu
 
-				config LUA_RTOS_CAN_RX_GPIO35
-					bool "GPIO35"
-			endchoice
-		endmenu
-		
-		menu "I2C pin map"
-			config LUA_RTOS_I2C0_SCL
-				int "I2C0 SCL"
-				range 0 39
-				default 21
-		
-			config LUA_RTOS_I2C0_SDA
-				int "I2C0 SDA"
-				range 0 39
-				default 22
+      menu "File Systems"
+         menu "SPIFFS"
+               config LUA_RTOS_USE_SPIFFS
+                  bool "Use spiffs"
+                  default y
+                  help
+                     Select for enable SPIFFS file system support. SPIFFS uses the ESP32 board flash memory.
+      
+            config LUA_RTOS_SPIFFS_LOG_PAGE_SIZE
+               depends on LUA_RTOS_USE_SPIFFS
+                  int "Logical page size"
+                  range 256 2048
+                  default 256
 
-			config LUA_RTOS_I2C1_SCL
-				int "I2C1 SCL"
-				range 0 39
-				default 32
-		
-			config LUA_RTOS_I2C1_SDA
-				int "I2C1 SDA"
-				range 0 39
-				default 33
-		endmenu
-		
-		menu "SPI pin map"
-			config LUA_RTOS_SPI2_MISO
-				int "SPI2 MISO"
-				range 0 39
-				default 12
-		
-			config LUA_RTOS_SPI2_MOSI
-				int "SPI2 MOSI"
-				range 0 39
-				default 13
-	
-			config LUA_RTOS_SPI2_CLK
-				int "SPI2 CLK"
-				range 0 39
-				default 14
-							
-			config LUA_RTOS_SPI3_MISO
-				int "SPI3 MISO"
-				range 0 39
-				default 19
-		
-			config LUA_RTOS_SPI3_MOSI
-				int "SPI3 MOSI"
-				range 0 39
-				default 23
-	
-			config LUA_RTOS_SPI3_CLK
-				int "SPI3 CLK"
-				range 0 39
-				default 18
-		endmenu
-		
-		menu "UART pin map"
-			config LUA_RTOS_UART0_RX
-				int "UART0 RX"
-				range 0 39
-				default 3
+            config LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE
+               depends on LUA_RTOS_USE_SPIFFS
+                  int "Logical block size"
+                  range 4098 65536
+                  default 8192
+            
+            config LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE
+               depends on LUA_RTOS_USE_SPIFFS
+                  int "Logical block size"
+                  range 4098 65536
+                  default 8192
 
-			config LUA_RTOS_UART0_TX
-				int "UART0 TX"
-				range 0 39
-				default 1
+            config LUA_RTOS_SPIFFS_ERASE_SIZE
+               depends on LUA_RTOS_USE_SPIFFS
+                  int "Erase size"
+                  range 4096 65536
+                  default 4096
+         endmenu
+      endmenu
 
-			config LUA_RTOS_UART1_RX
-				int "UART1 RX"
-				range 0 39
-				default 9
+      menu "Hardware"
+      menu "CAN pin map"
+         choice LUA_RTOS_CAN_TX_CHOICE
+            prompt "TX"
+            default LUA_RTOS_CAN_TX_GPIO12
+      
+            config LUA_RTOS_CAN_TX_GPIO5
+               bool "GPIO5"
+            
+            config LUA_RTOS_CAN_TX_GPIO12
+               bool "GPIO12"
 
-			config LUA_RTOS_UART1_TX
-				int "UART1 TX"
-				range 0 39
-				default 10
+            config LUA_RTOS_CAN_TX_GPIO25
+               bool "GPIO25"
+         endchoice
+         
+         choice LUA_RTOS_CAN_RX_CHOICE
+            prompt "RX"
+            default LUA_RTOS_CAN_RX_GPIO14
 
-			config LUA_RTOS_UART2_RX
-				int "UART2 RX"
-				range 0 39
-				default 16
+            config LUA_RTOS_CAN_RX_GPIO4
+               bool "GPIO4"
+            
+            config LUA_RTOS_CAN_RX_GPIO14
+               bool "GPIO14"
 
-			config LUA_RTOS_UART2_TX
-				int "UART2 TX"
-				range 0 39
-				default 17
-		endmenu
-		
-		menu "Internal ADC"
-			config ADC_INTERNAL_VREF
-				int "vref"
-				range 1000 1200
-				default 1108
-				help
-					Voltage reference in mVolts.						
-		endmenu
+            config LUA_RTOS_CAN_RX_GPIO35
+               bool "GPIO35"
+         endchoice
+      endmenu
+      
+      menu "I2C pin map"
+         config LUA_RTOS_I2C0_SCL
+            int "I2C0 SCL"
+            range 0 39
+            default 21
+      
+         config LUA_RTOS_I2C0_SDA
+            int "I2C0 SDA"
+            range 0 39
+            default 22
 
-		menu "External GPIO"
-			choice EXTERNAL_GPIO_TYPE
-				prompt "External GPIO chip"
-				default EXTERNAL_GPIO_NONE
+         config LUA_RTOS_I2C1_SCL
+            int "I2C1 SCL"
+            range 0 39
+            default 32
+      
+         config LUA_RTOS_I2C1_SDA
+            int "I2C1 SDA"
+            range 0 39
+            default 33
+      endmenu
+      
+      menu "SPI pin map"
+         config LUA_RTOS_SPI2_MISO
+            int "SPI2 MISO"
+            range 0 39
+            default 12
+      
+         config LUA_RTOS_SPI2_MOSI
+            int "SPI2 MOSI"
+            range 0 39
+            default 13
+   
+         config LUA_RTOS_SPI2_CLK
+            int "SPI2 CLK"
+            range 0 39
+            default 14
+                     
+         config LUA_RTOS_SPI3_MISO
+            int "SPI3 MISO"
+            range 0 39
+            default 19
+      
+         config LUA_RTOS_SPI3_MOSI
+            int "SPI3 MOSI"
+            range 0 39
+            default 23
+   
+         config LUA_RTOS_SPI3_CLK
+            int "SPI3 CLK"
+            range 0 39
+            default 18
+      endmenu
+      
+      menu "UART pin map"
+         config LUA_RTOS_UART0_RX
+            int "UART0 RX"
+            range 0 39
+            default 3
 
-				config EXTERNAL_GPIO_NONE
-					bool "None"
-			
-				config GPIO_PCA9698
-					bool "PCA9698, 40 IO, no pull-up"
-				
-				config GPIO_PCA9505
-					bool "PCA9505, 40 IO, pull-up"
-			endchoice
-		
-			config PCA9xxx_I2C
-				depends on (GPIO_PCA9698 || GPIO_PCA9505)
-					int "PCA9xxx I2C port"
-					range 0 1
-					default 0
-					help
-						I2C port where PCA9xxx is attached
+         config LUA_RTOS_UART0_TX
+            int "UART0 TX"
+            range 0 39
+            default 1
 
-			config PCA9xxx_INT
-				depends on (GPIO_PCA9698 || GPIO_PCA9505)
-					int "PCA9xxx INT pint"
-					range 0 39
-					default 26
-					help
-						GPIO where PCA9xxx INT pin is attached.
+         config LUA_RTOS_UART1_RX
+            int "UART1 RX"
+            range 0 39
+            default 9
 
-			config PCA9xxx_I2C_SPEED
-				depends on (GPIO_PCA9698 || GPIO_PCA9505)
-					int "PCA9xxx I2C port speed"
-					range 100000 1000000
-					default 1000000
-					help
-						I2C PCA9xxx port speed in hertz
+         config LUA_RTOS_UART1_TX
+            int "UART1 TX"
+            range 0 39
+            default 10
 
-			config PCA9xxx_I2C_ADDRESS
-				depends on (GPIO_PCA9698 || GPIO_PCA9505)
-					int "PCA9xxx I2C port address"
-					range 0 255
-					default 32
-					help
-						I2C PCA9xxx port speed in hertz		
-		endmenu
-		
-		menu "External ADC"
+         config LUA_RTOS_UART2_RX
+            int "UART2 RX"
+            range 0 39
+            default 16
+
+         config LUA_RTOS_UART2_TX
+            int "UART2 TX"
+            range 0 39
+            default 17
+      endmenu
+      
+      menu "Internal ADC"
+         config ADC_INTERNAL_VREF
+            int "vref"
+            range 1000 1200
+            default 1108
+            help
+               Voltage reference in mVolts.                  
+      endmenu
+
+      menu "External GPIO"
+         choice EXTERNAL_GPIO_TYPE
+            prompt "External GPIO chip"
+            default EXTERNAL_GPIO_NONE
+
+            config EXTERNAL_GPIO_NONE
+               bool "None"
+         
+            config GPIO_PCA9698
+               bool "PCA9698, 40 IO, no pull-up"
+            
+            config GPIO_PCA9505
+               bool "PCA9505, 40 IO, pull-up"
+         endchoice
+      
+         config PCA9xxx_I2C
+            depends on (GPIO_PCA9698 || GPIO_PCA9505)
+               int "PCA9xxx I2C port"
+               range 0 1
+               default 0
+               help
+                  I2C port where PCA9xxx is attached
+
+         config PCA9xxx_INT
+            depends on (GPIO_PCA9698 || GPIO_PCA9505)
+               int "PCA9xxx INT pint"
+               range 0 39
+               default 26
+               help
+                  GPIO where PCA9xxx INT pin is attached.
+
+         config PCA9xxx_I2C_SPEED
+            depends on (GPIO_PCA9698 || GPIO_PCA9505)
+               int "PCA9xxx I2C port speed"
+               range 100000 1000000
+               default 1000000
+               help
+                  I2C PCA9xxx port speed in hertz
+
+         config PCA9xxx_I2C_ADDRESS
+            depends on (GPIO_PCA9698 || GPIO_PCA9505)
+               int "PCA9xxx I2C port address"
+               range 0 255
+               default 32
+               help
+                  I2C PCA9xxx port speed in hertz      
+      endmenu
+      
+      menu "External ADC"
             choice LUA_RTOS_EXTERNAL_ADC_TYPE
                 prompt "External ADC Type"       
                     default EXTERNAL_ADC_NONE
@@ -355,6 +376,11 @@ menu "Lua RTOS"
                 config EXTERNAL_ADC_NONE
                     bool "None"
                 
+                config ADC_ADS1015
+                    bool "Use I2C ADC ADS1015"
+                    help
+                        ADS1015 is an ADC converter with I2C interface. 4 channels, resolution of 12 bits.
+
                 config ADC_ADS1115
                     bool "Use I2C ADC ADS1115"
                     help
@@ -371,663 +397,755 @@ menu "Lua RTOS"
                         MCP3208 is an ADC converter with SPI interface. 8 channels, resolution of 12 bits.
             endchoice    
 
-			config ADC_ADS1115_I2C
-				depends on ADC_ADS1115
-					int "ADS1115 I2C port"
-					range 0 1
-					default 0
-					help
-						I2C port where ADS1115 is attached
+         config ADC_I2C
+            depends on (ADC_ADS1115 || ADC_ADS1015)
+               int "ADS1115 I2C port"
+               range 0 1
+               default 0
+               help
+                  I2C port where ADS1115 is attached
 
-			config ADC_ADS1115_I2C_SPEED
-				depends on ADC_ADS1115
-					int "ADS1115 I2C port speed"
-					range 100000 3400000
-					default 400000
-					help
-						I2C port speed in hertz
+         config ADC_SPEED
+            depends on (ADC_ADS1115 || ADC_ADS1015)
+               int "ADS1115 I2C port speed"
+               range 100000 3400000
+               default 400000
+               help
+                  I2C port speed in hertz
 
-			config ADC_MCP3008_SPI
-				depends on ADC_MCP3008
-					int "MCP3008 SPI port"
-					range 2 3
-					default 2
+         config ADC_MCP3008_SPI
+            depends on ADC_MCP3008
+               int "MCP3008 SPI port"
+               range 2 3
+               default 2
 
-			config ADC_MCP3008_CS
-				depends on ADC_MCP3008
-					int "MCP3008 CS GPIO number"
-						range 0 39
-						default 15
+         config ADC_MCP3008_CS
+            depends on ADC_MCP3008
+               int "MCP3008 CS GPIO number"
+                  range 0 39
+                  default 15
 
-			config ADC_MCP3008_SPEED
-				depends on ADC_MCP3008
-					int "MCP3008 speed in Hertz"
-					range 1000000 3600000
-					default 1000000						
+         config ADC_MCP3008_SPEED
+            depends on ADC_MCP3008
+               int "MCP3008 speed in Hertz"
+               range 1000000 3600000
+               default 1000000                  
 
-			config ADC_MCP3208_SPI
-				depends on ADC_MCP3208
-					int "MCP3208 SPI port"
-					range 2 3
-					default 2
+         config ADC_MCP3208_SPI
+            depends on ADC_MCP3208
+               int "MCP3208 SPI port"
+               range 2 3
+               default 2
 
-			config ADC_MCP3208_CS
-				depends on ADC_MCP3208
-					int "MCP3208 CS GPIO number"
-						range 0 39
-						default 15
+         config ADC_MCP3208_CS
+            depends on ADC_MCP3208
+               int "MCP3208 CS GPIO number"
+                  range 0 39
+                  default 15
 
-			config ADC_MCP3208_SPEED
-				depends on ADC_MCP3208
-					int "MCP3208 speed in Hertz"
-					range 1000000 3600000
-					default 1000000						
-		endmenu
+         config ADC_MCP3208_SPEED
+            depends on ADC_MCP3208
+               int "MCP3208 speed in Hertz"
+               range 1000000 3600000
+               default 1000000                  
+      endmenu
 
-		menu "SPI Ethernet"
-				config SPI_ETHERNET
-					bool "Use SPI Ethernet (ENC424J600)"
-					default n
-					help
-						Select for enable SPI Ethernet. SPI Ethernet needs only 5 pins, while RMII needs 8 pins plus 2
-						additional pins in some configurations (CRS_DV / PHY RESET).
+      menu "Ethernet"
+            choice LUA_RTOS_ETH_HW_TYPE
+                prompt "Ethernet hardware type"
+                default LUA_RTOS_ETH_NONE
+                help
+                    Select the ethernet hardware type.
+            
+                config LUA_RTOS_ETH_NONE
+                    bool "None"
+            
+                config LUA_RTOS_ETH_HW_TYPE_RMII
+                    bool "RMII interface"
+            
+                config LUA_RTOS_ETH_HW_TYPE_SPI
+                    bool "SPI interface"
+            endchoice
 
-			config SPI_ETHERNET_SPI
-				depends on SPI_ETHERNET
-					int "SPI Ethernet port"
-					range 2 3
-					default 3
-				help
-					Select the SPI port number SPI Ethernet is attached
-		
-			config SPI_ETHERNET_SPEED
-				depends on SPI_ETHERNET
-					int "SPI Ethernet speed in Hertz"
-					range 1000000 14000000
-					default 14000000						
+            choice LUA_RTOS_ETH_PHY_TYPE
+                depends on LUA_RTOS_ETH_HW_TYPE_RMII
+                prompt "PHY type"
+                default PHY_LAN8720
+                help
+                    Select the ethernet phy type.
+            
+                config PHY_LAN8720
+                    bool "LAN8720"
+            
+                config PHY_TLK110
+                    bool "TLK110"
+            endchoice
 
-			config SPI_ETHERNET_CS
-				depends on SPI_ETHERNET
-					int "SPI Ethernet CS GPIO number"
-						range 0 39
-						default 26
-						
-			config SPI_ETHERNET_INT
-				depends on SPI_ETHERNET
-					int "SPI Ethernet Interrupt GPIO number"
-						range 0 39
-						default 0
-						help
-							Select 0 if you want to use SPI Eternet poll instead of interrupt.
-		endmenu
+            config PHY_ADDRESS
+                depends on LUA_RTOS_ETH_HW_TYPE_RMII
+                int "PHY Address (0-31)"
+                default 1  if PHY_LAN8720
+                default 31 if PHY_TLK110
+                range 0 31
+                help
+                    Select the PHY Address (0-31) for the hardware configuration and PHY model.
+        
+            config PHY_POWER_PIN
+                depends on LUA_RTOS_ETH_HW_TYPE_RMII
+                int "PHY Power GPIO"
+                default 2
+                help
+                    GPIO number to use for powering on/off the PHY.
 
-		menu "LoRa Wan"
-			choice LUA_RTOS_LORA_DEVICE_TYPE
-				prompt "Device Type"
-				default LUA_RTOS_LORA_DEVICE_TYPE_NODE
-			
-				config LUA_RTOS_LORA_DEVICE_TYPE_NODE
-					bool "Node"
+            config PHY_SMI_MDC_PIN
+                depends on LUA_RTOS_ETH_HW_TYPE_RMII
+                int "SMI MDC Pin"
+                default 23
+                help
+                    GPIO number to use for SMI clock output MDC to PHY.
+            
+            config PHY_SMI_MDIO_PIN
+                depends on LUA_RTOS_ETH_HW_TYPE_RMII
+                int "SMI MDIO Pin"
+                default 18
+                help
+                   GPIO number to use for SMI data pin MDIO to/from PHY.
+                  
+            config SPI_ETHERNET_SPI
+               depends on LUA_RTOS_ETH_HW_TYPE_SPI
+                  int "SPI Ethernet port"
+                  range 2 3
+                  default 3
+               help
+                  Select the SPI port number SPI Ethernet is attached
+            
+            config SPI_ETHERNET_SPEED
+               depends on LUA_RTOS_ETH_HW_TYPE_SPI
+                  int "SPI Ethernet speed in Hertz"
+                  range 1000000 14000000
+                  default 14000000                  
+            
+            config SPI_ETHERNET_CS
+               depends on LUA_RTOS_ETH_HW_TYPE_SPI
+                  int "SPI Ethernet CS GPIO number"
+                     range 0 39
+                     default 26
+                     
+            config SPI_ETHERNET_INT
+               depends on LUA_RTOS_ETH_HW_TYPE_SPI
+                  int "SPI Ethernet Interrupt GPIO number"
+                     range 1 39
+                     default 35
+      endmenu
 
-				config LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
-					bool "Gateway"				
-			endchoice
+      menu "LoRa Wan"
+            choice LUA_RTOS_LORA_HW_TYPE
+                prompt "LoRa hardware type"
+                default LUA_RTOS_LORA_NONE
+                help
+                    Select the LoRa hardware type.
+        
+                config LUA_RTOS_LORA_NONE
+                    bool "None"
 
-			config LUA_RTOS_LORA_GATEWAY_SPI
-				depends on LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
-					int "Concentrator SPI port"
-					range 2 3
-					default 3
-				help
-					Select the SPI port number where concentrator is attached
-		
-			config LUA_RTOS_LORA_GATEWAY_CS
-				depends on LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
-					int "Concentrator SPI CS GPIO number"
-						range 0 39
-						default 14
-						
-			config LUA_RTOS_LORA_GATEWAY_RST
-				depends on LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
-					int "Concentrator RESET GPIO number"
-						range 0 39
-						default 26
-						
-			config LUA_RTOS_LORA_GATEWAY_SPEED
-				depends on LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
-					int "Concentrator SPI speed in Hertz"
-					range 1000000 10000000
-					default 8000000						
-						
-			config LUA_RTOS_LORA_NODE_DEBUG
-					bool "Enable machine-state debug"
-						depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE				
-					default n
-		
-			config LUA_RTOS_LORA_NODE_STACK_SIZE
-				int "LoRa WAN thread stack size"
-						depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE				
-				range 1024 4096
-				default 2048
-				help
-					Default stack size assigned to LoRa WAN thread.
-		
-			config LUA_RTOS_LORA_NODE_TASK_PRIORITY
-				int "LoRa WAN thread riority"
-						depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE				
-				range 3 25
-				default 21
-				help
-					Task priority assigned to LoRa WAN thread.
-				
-			config LUA_RTOS_LORA_NODE_TASK_CPU
-				depends on !FREERTOS_UNICORE && LUA_RTOS_LORA_DEVICE_TYPE_NODE
-				int "to LoRa WAN thread CPU affinity"
-				range 0 1
-				default 0
-				help
-					CPU affinity for LoRa WAN thread.
-		
-			choice LUA_RTOS_LORA_NODE_BAND
-				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE				
-				prompt "ISM band"
-				default LUA_RTOS_LORA_NODE_BAND_EU868
-				help
-					Select the ISM band to use. Please, select band allowed for your regions according to ISM regulations.
-		
-			config LUA_RTOS_LORA_NODE_BAND_EU868
-				bool "Europe - 868 Mhz"
-		
-			config LUA_RTOS_LORA_NODE_BAND_US915
-				bool "United States - 915 Mhz"
-			endchoice
-			
-			choice LUA_RTOS_LORA_NODE_RADIO
-				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE
-				prompt "PHY Type"
-				default LUA_RTOS_LORA_NODE_RADIO_SX1276
-				help
-					Select the phy radio type
-		
-			config LUA_RTOS_LORA_NODE_RADIO_SX1276
-				bool "sx1276"
-		
-			config LUA_RTOS_LORA_NODE_RADIO_SX1272
-				bool "sx1272"
-			endchoice
-		
-			config LUA_RTOS_LORA_NODE_SPI
-				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE
-					int "PHY SPI port"
-					range 2 3
-					default 3
-				help
-					Select the SPI port number where phy is attached
-		
-			config LUA_RTOS_LORA_NODE_CS
-				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE
-					int "PHY SPI CS GPIO number"
-						range 0 39
-						default 5
-		
-			config LUA_RTOS_LORA_NODE_RST
-				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE
-					int "PHY RST GPIO number"
-					range 0 39
-					default 0 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
-					default 27 if !LUA_RTOS_BOARD_WHITECAT_N1ESP32
-		
-			config LUA_RTOS_LORA_NODE_DIO0
-				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE
-					int "PHY DIO0 GPIO number"
-					range 0 39
-					default 4 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
-					default 26 if !LUA_RTOS_BOARD_WHITECAT_N1ESP32
-		
-			config LUA_RTOS_LORA_NODE_DIO1
-				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE
-					int "PHY DIO1 GPIO number"
-					range 0 39
-					default 16 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
-					default 25 if !LUA_RTOS_BOARD_WHITECAT_N1ESP32
-		
-			config LUA_RTOS_LORA_NODE_DIO2
-				depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE
-					int "PHY DIO2 GPIO number"
-					range 0 39
-					default 17 if LUA_RTOS_BOARD_WHITECAT_N1ESP32
-					default 33 if !LUA_RTOS_BOARD_WHITECAT_N1ESP32
- 		endmenu
-				
-		menu "SPI SD Card"
-			config LUA_RTOS_USE_SPI_SD
-				bool "Use SD"
-				default n
-				help
-					Select for enable SD Card using SPI interface.	
-		
-			config LUA_RTOS_SD_SPI
-				depends on LUA_RTOS_USE_SPI_SD
-					int "SDCARD SPI port"
-					range 1 3
-					default 3
-				help
-					Select the SPI port number where SD Card is attached.
-		
-			config LUA_RTOS_SD_CS
-				depends on LUA_RTOS_USE_SPI_SD
-					int "SDCARD SPI CS GPIO number"
-					range 0 39
-					default 15
-		endmenu
-		
-		menu "Graphic Display"									
-			config LUA_RTOS_GDISPLAY_SPI
-				depends on LUA_RTOS_LUA_USE_GDISPLAY
-					int "Display SPI port"
-					range 1 3
-					default 3
-				help
-					Select the SPI port number where display is attached.
+                config LUA_RTOS_LORA_HW_TYPE_SX1276
+                    bool "sx1276, used in nodes and single-channel gateways"
+            
+                config LUA_RTOS_LORA_HW_TYPE_SX1272
+                    bool "sx1272, used in nodes and single-channel gateways"
+    
+                config LUA_RTOS_LORA_HW_TYPE_SX1301
+                    bool "sx1301, used in multi-channel gateways"
+            endchoice
 
-			config LUA_RTOS_GDISPLAY_CS
-				depends on LUA_RTOS_LUA_USE_GDISPLAY
-					int "Display SPI CS GPIO number"
-					range 0 39
-					default 14
-				help
-					GPIO where display CS signal is attached.
+            choice LUA_RTOS_LORA_BAND
+                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272 
+                prompt "ISM band"
+                default LUA_RTOS_LORA_BAND_EU868
+                help
+                    Select the ISM band to use. Please, select band allowed in your region according to ISM regulations.
+        
+                config LUA_RTOS_LORA_BAND_EU868
+                    bool "Europe - 868 Mhz"
+            
+                config LUA_RTOS_LORA_BAND_US915
+                    bool "United States - 915 Mhz"
+            endchoice
 
-			config LUA_RTOS_GDISPLAY_RESET
-				depends on LUA_RTOS_LUA_USE_GDISPLAY
-					int "Display RESET GPIO number"
-					range -1 39
-					default -1
-				help
-					GPIO where display RESET signal is attached. Select -1 if no RESET is used.
+            config LUA_RTOS_LORA_SPI
+                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272 || LUA_RTOS_LORA_HW_TYPE_SX1301
+                int "LoRa SPI port"
+                    range 2 3
+                    default 3
+                    help
+                        The SPI port number where LoRa hardware is attached
+        
+            config LUA_RTOS_LORA_CS
+                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272 || LUA_RTOS_LORA_HW_TYPE_SX1301
+                int "LoRa SPI CS GPIO number"
+                    range 0 39
+                    default 5
+                    help
+                        The GPIO port number used to select the LoRa hardware
+        
+            config LUA_RTOS_LORA_RST
+                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272 || LUA_RTOS_LORA_HW_TYPE_SX1301
+                int "LoRa RST GPIO number"
+                    range -1 39
+                    default -1 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+                    default 27 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+                    help
+                        The GPIO port number used to select the LoRa hardware. Use -1 if RST pin is not used.
+                        
+            config LUA_RTOS_LORA_DIO0
+                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
+                int "LoRa DIO0 GPIO number"
+                    range -1 39
+                    default 4 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+                    default 26 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+                    help
+                        The GPIO port number used for the DIO0 signal. Use -1 if DIO0 pin is not used.
+        
+            config LUA_RTOS_LORA_DIO1
+                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
+                int "LoRa DIO1 GPIO number"
+                    range -1 39
+                    default 16 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+                    default 25 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+                    help
+                        The GPIO port number used for the DIO1 signal. Use -1 if DIO1 pin is not used.
 
-			config LUA_RTOS_GDISPLAY_CMD
-				depends on LUA_RTOS_LUA_USE_GDISPLAY
-					int "Display CMD GPIO number"
-					range 0 39
-					default 26
-				help
-					GPIO where display CMD signal is attached.
+            config LUA_RTOS_LORA_DIO2
+                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
+                int "LoRa DIO2 GPIO number"
+                    range -1 39
+                    default 17 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+                    default 33 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+                    help
+                        The GPIO port number used for the DIO2 signal. Use -1 if DIO2 pin is not used.
 
-			config LUA_RTOS_GDISPLAY_TP_SPI
-				depends on LUA_RTOS_LUA_USE_GDISPLAY
-					int "Display touch pannel SPI port"
-					range 1 3
-					default 3
-				help
-					Select the SPI port number where display touch pannel is attached.
+         config LUA_RTOS_LORA_STACK_SIZE
+            depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
+                int "LoRa WAN thread stack size"
+                range 1024 4096
+                default 2048
+                help
+                   Default stack size assigned to LoRa WAN thread.
 
-			config LUA_RTOS_GDISPLAY_TP_CS
-				depends on LUA_RTOS_LUA_USE_GDISPLAY
-					int "Display touch pannel SPI CS GPIO number"
-					range 0 39
-					default 21
-				help
-					GPIO where display touch pannel CS signal is attached.
-				endmenu
-		
-			menu "Sensors"
-				config LUA_RTOS_USE_SENSOR_2Y0A21
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "2Y0A21"
-					default y		
-				config LUA_RTOS_USE_SENSOR_KEY_MATRIX_4_4
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "4 x 4 key matrix"
-					default y		
-				config LUA_RTOS_USE_SENSOR_A49E
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "A49E"
-					default y	
-				config LUA_RTOS_USE_SENSOR_ANALOG_JOYSTICK
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "Analog Joystick"
-					default y	
-				config LUA_RTOS_USE_SENSOR_BH1620FVC
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "BH1620FVC"
-					default y		
-				config LUA_RTOS_USE_SENSOR_BH1721FVC
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "BH1721FVC"
-					default y							
-				config LUA_RTOS_USE_SENSOR_BDE0600G
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "BDE0600G"
-					default y		
-				config LUA_RTOS_USE_SENSOR_BME280
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "BME280"
-					default y		
-				config LUA_RTOS_USE_SENSOR_DHT11
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "DHT11"
-					default y		
-				config LUA_RTOS_USE_SENSOR_DHT22
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "DHT22"
-					default y		
-				config LUA_RTOS_USE_SENSOR_DHT23
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "DHT23"
-					default y		
-				config LUA_RTOS_USE_SENSOR_DS1820
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "DS1820"
-					default y		
-				config LUA_RTOS_USE_SENSOR_GPS
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "GPS"
-					default y		
-				config LUA_RTOS_USE_SENSOR_GUVA_S12SD
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "GUVA-S12SD"
-					default y							
-				config LUA_RTOS_USE_SENSOR_HALL_SWITCH
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "Hall effect switch"
-					default y		
-				config LUA_RTOS_USE_SENSOR_LDR
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "LDR"
-					default y		
+         config LUA_RTOS_LORA_TASK_PRIORITY
+            depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
+                int "LoRa WAN thread priority"
+                range 3 25
+                default 21
+                help
+                   Task priority assigned to LoRa WAN thread.
+            
+         config LUA_RTOS_LORA_TASK_CPU
+            depends on !FREERTOS_UNICORE && (LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272)
+            int "to LoRa WAN thread CPU affinity"
+                range 0 1
+                default 0
+                help
+                   CPU affinity for LoRa WAN thread.      
+       endmenu
+            
+      menu "SD Card"
+         choice LUA_RTOS_SD_CARD_INTERFACE
+            prompt "Interface"       
+                default SD_CARD_NONE
+        
+            config SD_CARD_NONE
+                bool "None"
+            
+            config SD_CARD_MMC
+                bool "MMC interface"
+        
+            config SD_CARD_SPI
+                bool "SPI interface"
+         endchoice      
+            
+         config LUA_RTOS_SD_SPI
+            depends on SD_CARD_SPI
+               int "SDCARD SPI port"
+               range 1 3
+               default 3
+            help
+               Select the SPI port number where SD Card is attached.
+      
+         config LUA_RTOS_SD_CS
+            depends on SD_CARD_SPI
+               int "SDCARD SPI CS GPIO number"
+               range 0 39
+               default 15
+               
+         choice LUA_RTOS_MCC_LINES
+            prompt "Protocol"   
+                depends on SD_CARD_MMC    
+                default LUA_RTOS_MCC_4_LINE
+        
+            config LUA_RTOS_MCC_1_LINE
+                bool "1-line"
+            
+            config LUA_RTOS_MCC_4_LINE
+                bool "4-line"        
+         endchoice
+
+         config LUA_RTOS_MCC_CD
+            depends on SD_CARD_MMC
+               int "CD signal GPIO number"
+               range -1 39
+               default -1
+             help
+                Select the GPIO number where CD (card detect) signal is attached. Set to -1 if no CD is used.
+                
+         config LUA_RTOS_MCC_WP
+            depends on SD_CARD_MMC
+               int "WP signal GPIO number"
+               range -1 39
+               default -1
+             help
+                Select the GPIO number where WP signal is attached. Set to -1 if no CD is used.
+                
+      endmenu
+      
+      menu "Graphic Display"                           
+         config LUA_RTOS_GDISPLAY_SPI
+            depends on LUA_RTOS_LUA_USE_GDISPLAY
+               int "Display SPI port"
+               range 1 3
+               default 3
+            help
+               Select the SPI port number where display is attached.
+
+         config LUA_RTOS_GDISPLAY_CS
+            depends on LUA_RTOS_LUA_USE_GDISPLAY
+               int "Display SPI CS GPIO number"
+               range 0 39
+               default 14
+            help
+               GPIO where display CS signal is attached.
+
+         config LUA_RTOS_GDISPLAY_RESET
+            depends on LUA_RTOS_LUA_USE_GDISPLAY
+               int "Display RESET GPIO number"
+               range -1 39
+               default -1
+            help
+               GPIO where display RESET signal is attached. Select -1 if no RESET is used.
+
+         config LUA_RTOS_GDISPLAY_CMD
+            depends on LUA_RTOS_LUA_USE_GDISPLAY
+               int "Display CMD GPIO number"
+               range 0 39
+               default 26
+            help
+               GPIO where display CMD signal is attached.
+
+         config LUA_RTOS_GDISPLAY_BACKLIGHT
+            depends on LUA_RTOS_LUA_USE_GDISPLAY
+               int "Backlight CMD GPIO number"
+               range -1 39
+               default -1
+            help
+               GPIO where display BACKLIGHT signal is attached.
+
+         config LUA_RTOS_GDISPLAY_TP_SPI
+            depends on LUA_RTOS_LUA_USE_GDISPLAY
+               int "Display touch pannel SPI port"
+               range 0 3
+               default 3
+            help
+               Select the SPI port number where display touch pannel is attached. Select 0 if you don't want spport for touch pannel.
+
+         config LUA_RTOS_GDISPLAY_TP_CS
+            depends on LUA_RTOS_LUA_USE_GDISPLAY
+               int "Display touch pannel SPI CS GPIO number"
+               range -1 39
+               default 21
+            help
+               GPIO where display touch pannel CS signal is attached. Select -1 if you don't want spport for touch pannel.
+            endmenu
+      
+         menu "Sensors"
+            config LUA_RTOS_USE_SENSOR_2Y0A21
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "2Y0A21"
+               default y      
+            config LUA_RTOS_USE_SENSOR_KEY_MATRIX_4_4
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "4 x 4 key matrix"
+               default y      
+            config LUA_RTOS_USE_SENSOR_A49E
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "A49E"
+               default y   
+            config LUA_RTOS_USE_SENSOR_ANALOG_JOYSTICK
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "Analog Joystick"
+               default y   
+            config LUA_RTOS_USE_SENSOR_BH1620FVC
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "BH1620FVC"
+               default y      
+            config LUA_RTOS_USE_SENSOR_BH1721FVC
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "BH1721FVC"
+               default y                     
+            config LUA_RTOS_USE_SENSOR_BDE0600G
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "BDE0600G"
+               default y      
+            config LUA_RTOS_USE_SENSOR_BME280
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "BME280"
+               default y      
+            config LUA_RTOS_USE_SENSOR_DHT11
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "DHT11"
+               default y      
+            config LUA_RTOS_USE_SENSOR_DHT22
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "DHT22"
+               default y      
+            config LUA_RTOS_USE_SENSOR_DHT23
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "DHT23"
+               default y      
+            config LUA_RTOS_USE_SENSOR_DS1820
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "DS1820"
+               default y      
+            config LUA_RTOS_USE_SENSOR_GPS
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "GPS"
+               default y      
+            config LUA_RTOS_USE_SENSOR_GUVA_S12SD
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "GUVA-S12SD"
+               default y                     
+            config LUA_RTOS_USE_SENSOR_HALL_SWITCH
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "Hall effect switch"
+               default y      
+            config LUA_RTOS_USE_SENSOR_LDR
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "LDR"
+               default y      
                 config LUA_RTOS_USE_SENSOR_ML8511
                     depends on LUA_RTOS_LUA_USE_SENSOR
                     bool "ML8511"
                     default y       
-				config LUA_RTOS_USE_SENSOR_PIR_AM412
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "AM412 based PIR sensor"
-					default y		
-				config LUA_RTOS_USE_SENSOR_POT
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "Potentiometer"
-					default y							
-				config LUA_RTOS_USE_SENSOR_PUSH_SWITCH
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "Push switch"
-					default y						
-				config LUA_RTOS_USE_SENSOR_RELATIVE_ROTARY_ENCODER
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "Relative rotary encoder"
-					default y	
-				config LUA_RTOS_USE_SENSOR_SDS011
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "SDS011"
-					default y		
-				config LUA_RTOS_USE_SENSOR_THERMISTOR
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "Thermistor"
-					default y		
-				config LUA_RTOS_USE_SENSOR_TILT_SWITCH
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "Tilt Switch"
-					default y	
-				config LUA_RTOS_USE_SENSOR_US015
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "US-015"
-					default y	
-				config LUA_RTOS_USE_SENSOR_2P_TOGGLE_SWITCH	
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "Toggle switch (2 positions)"
-					default y						
-				config LUA_RTOS_USE_SENSOR_3P_TOGGLE_SWITCH	
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "Toggle switch (3 positions)"
-					default y						
-				config LUA_RTOS_USE_SENSOR_TMP36
-					depends on LUA_RTOS_LUA_USE_SENSOR
-					bool "TMP36"
-					default y		
-			endmenu	
-		endmenu
-		
-		menu "HTTP server"
-			config LUA_RTOS_USE_HTTP_SERVER
-				depends on LUA_RTOS_LUA_USE_NET
-					bool "Enable HTTP server"
-					default y
+            config LUA_RTOS_USE_SENSOR_PIR_AM412
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "AM412 based PIR sensor"
+               default y      
+            config LUA_RTOS_USE_SENSOR_POT
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "Potentiometer"
+               default y                     
+            config LUA_RTOS_USE_SENSOR_PING28015
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "PING28015"
+               default y                     
+            config LUA_RTOS_USE_SENSOR_PUSH_SWITCH
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "Push switch"
+               default y                  
+            config LUA_RTOS_USE_SENSOR_RELATIVE_ROTARY_ENCODER
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "Relative rotary encoder"
+               default y   
+            config LUA_RTOS_USE_SENSOR_SDS011
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "SDS011"
+               default y      
+            config LUA_RTOS_USE_SENSOR_THERMISTOR
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "Thermistor"
+               default y      
+            config LUA_RTOS_USE_SENSOR_TILT_SWITCH
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "Tilt Switch"
+               default y   
+            config LUA_RTOS_USE_SENSOR_US015
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "US-015"
+               default y   
+            config LUA_RTOS_USE_SENSOR_2P_TOGGLE_SWITCH   
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "Toggle switch (2 positions)"
+               default y                  
+            config LUA_RTOS_USE_SENSOR_3P_TOGGLE_SWITCH   
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "Toggle switch (3 positions)"
+               default y                  
+            config LUA_RTOS_USE_SENSOR_TMP36
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "TMP36"
+               default y      
+         endmenu   
+      endmenu
+      
+      menu "HTTP server"
+         config LUA_RTOS_USE_HTTP_SERVER
+            depends on LUA_RTOS_LUA_USE_NET
+            bool "Enable HTTP server"
+            default y
 
-			config LUA_RTOS_HTTP_SERVER_PORT
-				depends on LUA_RTOS_USE_HTTP_SERVER
-					int "HTTP server port"
-					range 0 65536
-					default 80
-				help
-					TCP port where HTTP server listens
+         config LUA_RTOS_HTTP_SERVER_PORT
+            depends on LUA_RTOS_USE_HTTP_SERVER
+               int "HTTP server port"
+               range 0 65536
+               default 80
+            help
+               TCP port where HTTP server listens
 
-			config LUA_RTOS_HTTP_SERVER_PORT_SSL
-				depends on LUA_RTOS_USE_HTTP_SERVER
-					int "HTTPS server port"
-					range 0 65536
-					default 443
-				help
-					TCP port where HTTPS server listens
+         config LUA_RTOS_HTTP_SERVER_PORT_SSL
+            depends on LUA_RTOS_USE_HTTP_SERVER
+               int "HTTPS server port"
+               range 0 65536
+               default 443
+            help
+               TCP port where HTTPS server listens
 
-			config LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT
-				depends on LUA_RTOS_USE_HTTP_SERVER
-					string "HTTP document root"
-					default /				
-				help
-					base folder where HTTP server looks for files
-		endmenu
-		
-		menu "Lua"
-			menu "Tuning"
-			config LUA_RTOS_LUA_STACK_SIZE
-				int "Lua interpreter stack size"
-				range 1024 40960
-				default 20480
-				help
-					Default stack size assigned to the Lua interpreter.
-	
-			config LUA_RTOS_LUA_TASK_PRIORITY
-				int "Lua interpreter task priority"
-				range 3 25
-				default 3
-				help
-					Task priority assigned to the Lua interpreter. Lua RTOS has a thread-oriented programming model and
-					basically the Lua interpreter is used only for launch new threads and configure the system, so
-					it's not necessary to assing a high piority to the interpreter.
-				
-			config LUA_RTOS_LUA_TASK_CPU
-				depends on !FREERTOS_UNICORE
-				int "Lua interpreter task CPU affinity"
-				range 0 1
-				default 0
-				help
-					CPU affinity for the task assigned to the Lua interpreter.
-					
-			config LUA_RTOS_LUA_THREAD_STACK_SIZE
-				int "Default Lua thread stack size"
-				range 1024 40960
-				default 10240
-				help
-					Default Stack size assigned to Lua threads.
-	
-			config LUA_RTOS_LUA_THREAD_PRIORITY
-				int "Default Lua thread priority"
-				range 3 25
-				default 20
-				help
-					Default priority assigned to Lua threads.
-				
-			config LUA_RTOS_LUA_THREAD_CPU
-				depends on !FREERTOS_UNICORE
-				int "Default Lua thread CPU affinity"
-				range 0 1
-				default 1
-				help
-					Default CPU affinity for Lua threads.
-	
-			config LUA_RTOS_LUA_USE_ROTABLE_CACHE
-				bool "Use cache for readonly tables access (experimental)"
-				default n
-				help
-					This is an experimental feature. When accessing to readonly tables,
-					Lua RTOS can get the key/value pair from a cache. This can speedup
-					the execution of Lua scripts. 
-			endmenu
-			
-			menu "Lua Modules"
-				config LUA_RTOS_LUA_USE__G
-					bool "Include base module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_OS
-					bool "Include os module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_MATH
-					bool "Include math module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_TABLE
-					bool "Include table module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_IO
-					bool "Include io module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_STRING
-					bool "Include string module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_COROUTINE
-					bool "Include coroutine module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_DEBUG
-					bool "Include debug module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_UTF8
-					bool "Include utf8 module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_PACKAGE
-					bool "Include package module in build"
-					default y
-			endmenu
-			menu "Lua RTOS Modules"			
-				config LUA_RTOS_LUA_USE_THREAD
-					bool "Include thread module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_SENSOR
-					bool "Include sensor module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_SERVO
-					bool "Include servo module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_NEOPIXEL
-					bool "Include neopixel module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_STEPPER
-					bool "Include stepper module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_GDISPLAY
-					bool "Include gdisplay module in build"
-					default y
+         config LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT
+            depends on LUA_RTOS_USE_HTTP_SERVER
+               string "HTTP document root"
+               default /            
+            help
+               base folder where HTTP server looks for files
 
-				config LUA_RTOS_LUA_USE_SDISPLAY
-					bool "Include Segment Display module in build"
-					default n
+            config LUA_RTOS_HTTP_SERVER_STACK_SIZE
+                depends on LUA_RTOS_USE_HTTP_SERVER
+                int "HTTP thread stack size"
+                range 10240 20480
+                default 10240
+                help
+                    Default stack size assigned to HTTP thread.
 
-				config LUA_RTOS_LUA_USE_EVENT
-					bool "Include event module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_NVS
-					bool "Include nvs module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_PACK
-					bool "Include pack module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_ADC
-					bool "Include adc module in build"
-					default y	
-		
-				config LUA_RTOS_LUA_USE_I2C
-					bool "Include i2c module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_PIO
-					bool "Include pio (gpio) module in build"
-					default y
+            config LUA_RTOS_HTTP_SERVER_TASK_PRIORITY
+                depends on LUA_RTOS_USE_HTTP_SERVER
+                int "HTTP thread priority"
+                range 3 25
+                default 18
+                help
+                    Task priority assigned to HTTP thread.
 
-				config LUA_RTOS_LUA_USE_PWM
-					bool "Include pwm module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_SPI
-					bool "Include spi module in build"
-					default y
-	
-				config LUA_RTOS_LUA_USE_TMR
-					bool "Include tmr (timer) module in build"
-					default y
+            config LUA_RTOS_HTTP_SERVER_TASK_CPU
+                depends on !FREERTOS_UNICORE
+                int "HTTP task CPU affinity"
+                range 0 1
+                default 1
+                help
+                    CPU affinity for the task assigned to the HTTP server.              
+        endmenu
+      
+      menu "Lua"
+         menu "Tuning"
+         config LUA_RTOS_LUA_STACK_SIZE
+            int "Lua interpreter stack size"
+            range 1024 40960
+            default 20480
+            help
+               Default stack size assigned to the Lua interpreter.
+   
+         config LUA_RTOS_LUA_TASK_PRIORITY
+            int "Lua interpreter task priority"
+            range 3 25
+            default 3
+            help
+               Task priority assigned to the Lua interpreter. Lua RTOS has a thread-oriented programming model and
+               basically the Lua interpreter is used only for launch new threads and configure the system, so
+               it's not necessary to assing a high piority to the interpreter.
+            
+         config LUA_RTOS_LUA_TASK_CPU
+            depends on !FREERTOS_UNICORE
+            int "Lua interpreter task CPU affinity"
+            range 0 1
+            default 0
+            help
+               CPU affinity for the task assigned to the Lua interpreter.
+               
+         config LUA_RTOS_LUA_THREAD_STACK_SIZE
+            int "Default Lua thread stack size"
+            range 1024 40960
+            default 10240
+            help
+               Default Stack size assigned to Lua threads.
+   
+         config LUA_RTOS_LUA_THREAD_PRIORITY
+            int "Default Lua thread priority"
+            range 3 25
+            default 20
+            help
+               Default priority assigned to Lua threads.
+            
+         config LUA_RTOS_LUA_THREAD_CPU
+            depends on !FREERTOS_UNICORE
+            int "Default Lua thread CPU affinity"
+            range 0 1
+            default 1
+            help
+               Default CPU affinity for Lua threads.
+   
+         config LUA_RTOS_LUA_USE_ROTABLE_CACHE
+            bool "Use cache for readonly tables access (experimental)"
+            default n
+            help
+               This is an experimental feature. When accessing to readonly tables,
+               Lua RTOS can get the key/value pair from a cache. This can speedup
+               the execution of Lua scripts. 
+         endmenu
+         
+         menu "Lua Modules"
+            config LUA_RTOS_LUA_USE__G
+               bool "Include base module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_OS
+               bool "Include os module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_MATH
+               bool "Include math module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_TABLE
+               bool "Include table module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_IO
+               bool "Include io module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_STRING
+               bool "Include string module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_COROUTINE
+               bool "Include coroutine module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_DEBUG
+               bool "Include debug module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_UTF8
+               bool "Include utf8 module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_PACKAGE
+               bool "Include package module in build"
+               default y
+         endmenu
+         menu "Lua RTOS Modules"         
+            config LUA_RTOS_LUA_USE_THREAD
+               bool "Include thread module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_SENSOR
+               bool "Include sensor module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_SERVO
+               bool "Include servo module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_NEOPIXEL
+               bool "Include neopixel module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_STEPPER
+               bool "Include stepper module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_GDISPLAY
+               bool "Include gdisplay module in build"
+               default y
 
-				config LUA_RTOS_LUA_USE_UART
-					bool "Include uart module in build"
-					default y
+            config LUA_RTOS_LUA_USE_SDISPLAY
+               bool "Include Segment Display module in build"
+               default n
 
-				config LUA_RTOS_LUA_USE_ENCODER
-					bool "Include encoder module in build"
-					default y
+            config LUA_RTOS_LUA_USE_EVENT
+               bool "Include event module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_NVS
+               bool "Include nvs module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_PACK
+               bool "Include pack module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_ADC
+               bool "Include adc module in build"
+               default y   
+      
+            config LUA_RTOS_LUA_USE_I2C
+               bool "Include i2c module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_PIO
+               bool "Include pio (gpio) module in build"
+               default y
 
-				config LUA_RTOS_LUA_USE_NET
-					bool "Include net module in build"
-					default y
+            config LUA_RTOS_LUA_USE_PWM
+               bool "Include pwm module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_SPI
+               bool "Include spi module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_TMR
+               bool "Include tmr (timer) module in build"
+               default y
 
-				config LUA_RTOS_LUA_USE_CURL_NET
-					depends on LUA_RTOS_LUA_USE_NET
-					bool "Include curl support in net module"
-					default y
-				
-				config LUA_RTOS_LUA_USE_SCP_NET
-					depends on LUA_RTOS_LUA_USE_NET
-					bool "Include scp support in net module"
-					default y
+            config LUA_RTOS_LUA_USE_UART
+               bool "Include uart module in build"
+               default y
 
-				config LUA_RTOS_LUA_USE_LORA
-					depends on LUA_RTOS_LORA_DEVICE_TYPE_NODE || LUA_RTOS_LORA_DEVICE_TYPE_GATEWAY
-					bool "Include lora module in build"
-					default n
+            config LUA_RTOS_LUA_USE_ENCODER
+               bool "Include encoder module in build"
+               default y
 
-				config LUA_RTOS_LUA_USE_MQTT
-					depends on LUA_RTOS_LUA_USE_NET
-					bool "Include MQTT module in build"
-					default y
+            config LUA_RTOS_LUA_USE_NET
+               bool "Include net module in build"
+               default y
 
-				config LUA_RTOS_LUA_USE_MDNS
-					depends on LUA_RTOS_LUA_USE_NET
-					bool "Include MDNS module in build"
-					default n
+            config LUA_RTOS_LUA_USE_CURL_NET
+               depends on LUA_RTOS_LUA_USE_NET
+               bool "Include curl support in net module"
+               default y
+            
+            config LUA_RTOS_LUA_USE_SCP_NET
+               depends on LUA_RTOS_LUA_USE_NET
+               bool "Include scp support in net module"
+               default y
 
-				config LUA_RTOS_LUA_USE_CAN
-					bool "Include CAN module in build"
-					default y
+            config LUA_RTOS_LUA_USE_MQTT
+               depends on LUA_RTOS_LUA_USE_NET
+               bool "Include MQTT module in build"
+               default y
 
-				config LUA_RTOS_LUA_USE_CPU
-					bool "Include CPU module in build"
-					default y
+            config LUA_RTOS_LUA_USE_MDNS
+               depends on LUA_RTOS_LUA_USE_NET
+               bool "Include MDNS module in build"
+               default n
 
-				config LUA_RTOS_LUA_USE_ULP
-					bool "Include ULP module in build"
-					default y
-			endmenu
-		endmenu
+            config LUA_RTOS_LUA_USE_CAN
+               bool "Include CAN module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_CPU
+               bool "Include CPU module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_ULP
+               bool "Include ULP module in build"
+               default y
+         endmenu
+      endmenu
 endmenu

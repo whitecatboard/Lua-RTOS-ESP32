@@ -43,6 +43,7 @@
 #include <drivers/adc_internal.h>
 #include "adc_mcp3008.h"
 #include "adc_mcp3208.h"
+#include "adc_ads1015.h"
 #include "adc_ads1115.h"
 
 // Valid ADC devices
@@ -53,6 +54,9 @@ static const adc_dev_t adc_devs[] = {
 #endif
 #if CONFIG_ADC_MCP3208
 	{"MCP3208", adc_mcp3208_setup, adc_mcp3208_read},
+#endif
+#if CONFIG_ADC_ADS1015
+	{"ADS1015", adc_ads1015_setup, adc_ads1015_read},
 #endif
 #if CONFIG_ADC_ADS1115
 	{"ADS1115", adc_ads1115_setup, adc_ads1115_read},
@@ -174,7 +178,6 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t vr
 	chan->max_val = ~(0xffff << chan->resolution);
 
 	// At this point the channel is configured without errors
-	
 	if (!index) {
 		// Store channel in channel list
 		if (list_add(&channels, chan, &index)) {

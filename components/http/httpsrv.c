@@ -42,6 +42,7 @@
 #include <sys/delay.h>
 
 #include "esp_wifi_types.h"
+#include "esp_log.h"
 #include <pthread.h>
 #include <esp_wifi.h>
 
@@ -293,7 +294,7 @@ int http_print(lua_State* L) {
 
 void send_file(http_request_handle *request, char *path, struct stat *statbuf, char *requestdata) {
 	int n;
-	char data[HTTP_BUFF_SIZE];
+	char *data;
 
 	FILE *file = fopen(path, "r");
 
@@ -337,10 +338,15 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf, c
 		lua_setglobal(LL, "http_stream_handle");
 
 	} else {
-		int length = S_ISREG(statbuf->st_mode) ? statbuf->st_size : -1;
-		send_headers(request, 200, "OK", NULL, get_mime_type(path), length);
-		while ((n = fread(data, 1, sizeof (data), file)) > 0) request_write(request, data, n);
-		fclose(file);
+		data = calloc(1, HTTP_BUFF_SIZE);
+		if (data) {
+			int length = S_ISREG(statbuf->st_mode) ? statbuf->st_size : -1;
+			send_headers(request, 200, "OK", NULL, get_mime_type(path), length);
+			while ((n = fread(data, 1, sizeof (data), file)) > 0) request_write(request, data, n);
+			fclose(file);
+
+			free(data);
+		}
 	}
 }
 
@@ -468,7 +474,6 @@ int process(http_request_handle *request) {
 	int len;
 
 	if (!do_gets(buf, sizeof (buf), request) || 0 == strlen(buf) ) {
-		syslog(LOG_WARNING, "http: got empty buffer\r");
 		send_error(request, 400, "Bad Request", NULL, "Got empty request buffer.");
 		return 0;
 	}
@@ -505,8 +510,7 @@ int process(http_request_handle *request) {
 	}
 
 	//only in AP mode we redirect arbitrary host names to our own host name
-	if (wifi_mode != WIFI_MODE_STA) {
-
+	if (wifi_mode == WIFI_MODE_AP) {
 		//find the Host: header and check if it matches our IP or captive server name
 		while (do_gets(pathbuf, sizeof (pathbuf), request) && strlen(pathbuf)>0 ) {
 
@@ -542,6 +546,7 @@ int process(http_request_handle *request) {
 	if (!request->config->secure) fseek(request->file, 0, SEEK_CUR); // force change of stream direction
 
 	if (strcasecmp(method, "GET") != 0) {
+		syslog(LOG_DEBUG, "http: %s not supported\r", method);
 		send_error(request, 501, "Not supported", NULL, "Method is not supported.");
 	} else if (!filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL)) {
 		send_error(request, 404, "Not Found", NULL, "File not found.");
@@ -560,7 +565,7 @@ int process(http_request_handle *request) {
 			if (stat(pathbuf, &statbuf) >= 0) {
 				send_file(request, pathbuf, &statbuf, data);
 			} else {
-					filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.html");
+			      filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.html");
 				  if (stat(pathbuf, &statbuf) >= 0) {
 					  send_file(request, pathbuf, &statbuf, data);
 				  } else {
@@ -636,7 +641,7 @@ static void http_net_callback(system_event_t *event){
 			break;
 
 		case SYSTEM_EVENT_AP_START:                 /**< ESP32 soft-AP start */
-			if (wifi_mode != WIFI_MODE_AP) {
+			if (wifi_mode != WIFI_MODE_STA) {
 				driver_error_t *error;
 				ifconfig_t info;
 
@@ -670,9 +675,9 @@ static void *http_thread(void *arg) {
   SSL_CTX *ctx = NULL;
   SSL *ssl = NULL;
 
+  	net_init();
 	if(0 == *config->server) {
 		*config->server = socket(AF_INET6, SOCK_STREAM, 0);
-		LWIP_ASSERT("httpd_init: socket failed", *config->server >= 0);
 		if(0 > *config->server) {
 			syslog(LOG_ERR, "couldn't create server socket\n");
 			return NULL;
@@ -686,7 +691,6 @@ static void *http_thread(void *arg) {
 		memcpy(&sin.sin6_addr.un.u32_addr, &in6addr_any, sizeof(in6addr_any));
 		sin.sin6_port   = htons(config->port);
 		int rc = bind(*config->server, (struct sockaddr *) &sin, sizeof (sin));
-		LWIP_ASSERT("httpd_init: bind failed", rc == 0);
 		if(0 != rc) {
 			syslog(LOG_ERR, "couldn't bind to port %d\n", config->port);
 			return NULL;
@@ -870,22 +874,20 @@ int http_start(lua_State* L) {
 		LL=L;
 		strcpy(ip4addr, "0.0.0.0");
 
+		esp_log_level_set("wifi", ESP_LOG_NONE);
+
 		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&wifi_mode)))) {
-			return luaL_error(L, "couldn't get wifi mode");
-		}
-		if (wifi_mode != WIFI_MODE_STA) {
+			esp_log_level_set("wifi", ESP_LOG_ERROR);
+			free(error);
+		} else {
 			if ((error = wifi_stat(&info))) {
-				return luaL_error(L, "couldn't get wifi IP");
+				esp_log_level_set("wifi", ESP_LOG_ERROR);
+				free(error);
 			}
 			strcpy(ip4addr, inet_ntoa(info.ip));
 		}
 
-		#if CONFIG_SPI_ETHERNET && 0
-		if ((error = spi_eth_stat(&info))) {
-			return luaL_error(L, "couldn't get spi eth IP");
-		}
-		strcpy(ip4addr, inet_ntoa(info.ip));
-		#endif
+		esp_log_level_set("wifi", ESP_LOG_ERROR);
 
 		if ((error = net_event_register_callback(http_net_callback))) {
 			syslog(LOG_WARNING, "couldn't register net callback, please restart http service from lua after changing connectivity\n");
@@ -895,14 +897,17 @@ int http_start(lua_State* L) {
 		pthread_attr_init(&attr);
 
 		// Set stack size
-		pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE);
+		pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_HTTP_SERVER_STACK_SIZE);
 
 		// Set priority
-		sched.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
+		sched.sched_priority = CONFIG_LUA_RTOS_HTTP_SERVER_TASK_PRIORITY;
 		pthread_attr_setschedparam(&attr, &sched);
 
 		// Set CPU
-		cpu_set_t cpu_set = CONFIG_LUA_RTOS_LUA_TASK_CPU;
+		cpu_set_t cpu_set = CPU_INITIALIZER;
+
+		CPU_SET(CONFIG_LUA_RTOS_HTTP_SERVER_TASK_CPU, &cpu_set);
+
 		pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
 
 		// Create threads
@@ -914,6 +919,8 @@ int http_start(lua_State* L) {
 			if (res) {
 				return luaL_error(L, "couldn't start http_thread");
 			}
+
+			pthread_setname_np(thread_normal, "http");
 		}
 
 		http_secure.port = luaL_optinteger( L, 2, CONFIG_LUA_RTOS_HTTP_SERVER_PORT_SSL );
@@ -927,6 +934,8 @@ int http_start(lua_State* L) {
 			if (res) {
 				return luaL_error(L, "couldn't start secure http_thread");
 			}
+
+			pthread_setname_np(thread_normal, "ssl_http");
 		}
 	}
 

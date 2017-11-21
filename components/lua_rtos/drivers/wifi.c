@@ -63,7 +63,7 @@
 
 DRIVER_REGISTER_BEGIN(WIFI,wifi,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, CannotSetup, "can't setup", WIFI_ERR_CANT_INIT);
-	DRIVER_REGISTER_ERROR(WIFI, wifi, CannotConnect, "can't connect, review your SSID / password", WIFI_ERR_CANT_CONNECT);
+	DRIVER_REGISTER_ERROR(WIFI, wifi, CannotConnect, "can't connect review your SSID / password", WIFI_ERR_CANT_CONNECT);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, GeneralFail, "general fail", WIFI_ERR_WIFI_FAIL);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, NotEnoughtMemory, "not enough memory", WIFI_ERR_WIFI_NO_MEM);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, NotSetup, "wifi is not setup", WIFI_ERR_WIFI_NOT_INIT);
@@ -411,6 +411,26 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 	info->ip6 = adr;
 
 	memcpy(info->mac, mac, sizeof(mac));
+
+	return NULL;
+}
+
+driver_error_t *wifi_get_mac(uint8_t mac[6]) {
+	driver_error_t *error;
+
+	uint8_t interface = ESP_IF_WIFI_STA;
+	if (status_get(STATUS_WIFI_INITED)) {
+		uint8_t mode;
+		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
+
+		if (mode == WIFI_MODE_AP)
+			interface = ESP_IF_WIFI_AP;
+	}
+
+	// Get MAC info
+	if (status_get(STATUS_WIFI_STARTED)) {
+		if ((error = wifi_check_error(esp_wifi_get_mac(interface, mac)))) return error;
+	}
 
 	return NULL;
 }

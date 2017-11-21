@@ -2,7 +2,7 @@
  * Lua RTOS, http lua page preprocessor
  *
  * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -33,11 +33,15 @@
 
 #include <stdio.h>
 
+#include <sys/syslog.h>
+
 int http_process_lua_page(const char *ipath, const char *opath) {
     FILE *ifp; // Input file
     FILE *ofp; // Output file
 
     int c;
+    int nested = 0;
+    int print = 0;
     char string;
     char lua = 0;
     char delim;
@@ -93,23 +97,42 @@ int http_process_lua_page(const char *ipath, const char *opath) {
     		}
     	}
 
-		if ((c == *cbt) && (!string)) {
+		if (c == *cbt) {
+			nested++;
+
 			cbt++;
 			if (!*cbt) {
 				lua = 1;
 				add_cr = 1;
 				cbuff = buff;
+
+				if (nested > 1) {
+					if (print) {
+						fprintf(ofp, "\")\n");
+						io_write = 1;
+					}
+				}
 			} else {
 				*cbuff++ = c;
 			}
 
 			*cbuff = '\0';
 			continue;
-		} else if ((c == *cet) && (!string)) {
+		} else if (c == *cet) {
+			nested--;
+
 			cet++;
 			if (!*cet) {
 				lua = 0;
 				add_cr = 1;
+
+				if (nested > 0) {
+					if (print) {
+						fprintf(ofp, "\nprint(\"");
+						io_write = 1;
+					}
+				}
+
 				cbuff = buff;
 			} else {
 				*cbuff++ = c;
@@ -128,6 +151,7 @@ int http_process_lua_page(const char *ipath, const char *opath) {
 					if (io_write) {
 						fprintf(ofp, "\")\n");
 						io_write = 0;
+						print = 0;
 					}
 				} else if (c == '\r') {
 					continue;
@@ -141,6 +165,7 @@ int http_process_lua_page(const char *ipath, const char *opath) {
 						}
 						fprintf(ofp, "print(\"");
 						io_write = 1;
+						print = 1;
 					}
 					fprintf(ofp, "%c",*cbuff);
 				}
@@ -153,6 +178,7 @@ int http_process_lua_page(const char *ipath, const char *opath) {
 					if (io_write) {
 						fprintf(ofp, "\")\n");
 						io_write = 0;
+						print = 0;
 					}
 				} else if (c == '\r') {
 					continue;
@@ -166,6 +192,7 @@ int http_process_lua_page(const char *ipath, const char *opath) {
 						}
 						fprintf(ofp, "print(\"");
 						io_write = 1;
+						print = 1;
 					}
 					fprintf(ofp, "%c",c);
 				}
