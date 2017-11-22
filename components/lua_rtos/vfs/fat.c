@@ -97,7 +97,42 @@ void vfs_fat_register() {
     slot_config.gpio_cd = CONFIG_LUA_RTOS_MCC_CD;
     slot_config.gpio_wp = CONFIG_LUA_RTOS_MCC_WP;
 
-    slot_config.width = 4;
+    // Lock resources
+	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 15, DRIVER_ALL_FLAGS, "SD Card - CMD")) {
+		return;
+	}
+
+	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 14, DRIVER_ALL_FLAGS, "SD Card - CLK")) {
+		return;
+	}
+
+	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 2, DRIVER_ALL_FLAGS, "SD Card - DAT0")) {
+		return;
+	}
+
+#if !CONFIG_LUA_RTOS_MCC_1_LINE
+	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 14, DRIVER_ALL_FLAGS, "SD Card - DAT1")) {
+		return;
+	}
+
+	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 12, DRIVER_ALL_FLAGS, "SD Card - DAT2")) {
+		return;
+	}
+#endif
+
+#if CONFIG_LUA_RTOS_MCC_CD != -1
+	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_MCC_CD, DRIVER_ALL_FLAGS, "SD Card - CD")) {
+		return;
+	}
+#endif
+
+#if CONFIG_LUA_RTOS_MCC_WP != -1
+	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_MCC_WP, DRIVER_ALL_FLAGS, "SD Card - WP")) {
+		return;
+	}
+#endif
+
+	slot_config.width = 4;
 #endif
 
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
