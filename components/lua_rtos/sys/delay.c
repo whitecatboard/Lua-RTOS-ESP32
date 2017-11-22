@@ -32,18 +32,43 @@
 #include "freertos/FreeRTOS.h"
 #include "esp_attr.h"
 
+#include <sys/time.h>
 #include <sys/delay.h>
  
 void IRAM_ATTR delay(unsigned int msec) {
-    unsigned int tWait, tStart;
-    tWait = (CPU_HZ / (1000 * (CPU_HZ / CORE_TIMER_HZ))) * msec;
-    tStart = xthal_get_ccount();
-    while((xthal_get_ccount() - tStart) < tWait);
+	unsigned int tWait, tStart;
+	unsigned int loop;
+
+	while (msec) {
+		if (msec <= 1000) {
+			loop = msec;
+		} else {
+			loop = 1000;
+		}
+
+		tWait = (CPU_HZ / (1000 * (CPU_HZ / CORE_TIMER_HZ))) * loop;
+		tStart = xthal_get_ccount();
+		while((xthal_get_ccount() - tStart) < tWait);
+
+		msec = msec - loop;
+	}
 }
 
 void IRAM_ATTR udelay(unsigned int usec) {
-    unsigned int tWait, tStart;
-    tWait = (CPU_HZ / (1000000 * (CPU_HZ / CORE_TIMER_HZ))) * usec;
-    tStart = xthal_get_ccount();
-    while((xthal_get_ccount() - tStart) < tWait);
+	unsigned int tWait, tStart;
+	unsigned int loop;
+
+	while (usec) {
+		if (usec <= 1000000) {
+			loop = usec;
+		} else {
+			loop = 1000000;
+		}
+
+	    tWait = (CPU_HZ / (1000000 * (CPU_HZ / CORE_TIMER_HZ))) * loop;
+	    tStart = xthal_get_ccount();
+	    while((xthal_get_ccount() - tStart) < tWait);
+
+		usec = usec - loop;
+	}
 }
