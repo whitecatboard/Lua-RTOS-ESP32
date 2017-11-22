@@ -248,6 +248,13 @@ menu "Lua RTOS"
       endmenu
       
       menu "SPI pin map"
+         config LUA_RTOS_SPI2_CS
+            int "SPI2 default CS"
+            range -1 39
+            default -1
+            help
+               Default GPIO attached to the CS signal. Set to -1 if no default CS signal is used.
+
          config LUA_RTOS_SPI2_MISO
             int "SPI2 MISO"
             range 0 39
@@ -263,6 +270,13 @@ menu "Lua RTOS"
             range 0 39
             default 14
                      
+         config LUA_RTOS_SPI3_CS
+            int "SPI3 default CS"
+            range -1 39
+            default -1
+            help
+               Default GPIO attached to the CS signal. Set -1 if no default CS signal is used.
+
          config LUA_RTOS_SPI3_MISO
             int "SPI3 MISO"
             range 0 39
@@ -422,8 +436,10 @@ menu "Lua RTOS"
          config ADC_MCP3008_CS
             depends on ADC_MCP3008
                int "MCP3008 CS GPIO number"
-                  range 0 39
+                  range -1 39
                   default 15
+                  help
+                     GPIO attached to the CS signal. Set to -1 to use the default CS assigned to the SPI port.
 
          config ADC_MCP3008_SPEED
             depends on ADC_MCP3008
@@ -440,8 +456,10 @@ menu "Lua RTOS"
          config ADC_MCP3208_CS
             depends on ADC_MCP3208
                int "MCP3208 CS GPIO number"
-                  range 0 39
+                  range -1 39
                   default 15
+                  help
+                     GPIO attached to the CS signal. Set to -1 to use the default CS assigned to the SPI port.
 
          config ADC_MCP3208_SPEED
             depends on ADC_MCP3208
@@ -528,8 +546,10 @@ menu "Lua RTOS"
             config SPI_ETHERNET_CS
                depends on LUA_RTOS_ETH_HW_TYPE_SPI
                   int "SPI Ethernet CS GPIO number"
-                     range 0 39
+                     range -1 39
                      default 26
+                     help
+                        GPIO attached to the CS signal. Set -1 to use the default CS assigned to the SPI port.
                      
             config SPI_ETHERNET_INT
                depends on LUA_RTOS_ETH_HW_TYPE_SPI
@@ -583,10 +603,10 @@ menu "Lua RTOS"
             config LUA_RTOS_LORA_CS
                 depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272 || LUA_RTOS_LORA_HW_TYPE_SX1301
                 int "LoRa SPI CS GPIO number"
-                    range 0 39
+                    range -1 39
                     default 5
                     help
-                        The GPIO port number used to select the LoRa hardware
+                        The GPIO port number used to select the LoRa hardware. Set -1 to use the default CS assigned to the SPI port.
         
             config LUA_RTOS_LORA_RST
                 depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272 || LUA_RTOS_LORA_HW_TYPE_SX1301
@@ -675,8 +695,10 @@ menu "Lua RTOS"
          config LUA_RTOS_SD_CS
             depends on SD_CARD_SPI
                int "SDCARD SPI CS GPIO number"
-               range 0 39
+               range -1 39
                default 15
+               help
+                  GPIO attached to the CS signal. Set -1 to use the default CS assigned to the SPI port.
                
          choice LUA_RTOS_MCC_LINES
             prompt "Protocol"   
@@ -720,10 +742,10 @@ menu "Lua RTOS"
          config LUA_RTOS_GDISPLAY_CS
             depends on LUA_RTOS_LUA_USE_GDISPLAY
                int "Display SPI CS GPIO number"
-               range 0 39
+               range -1 39
                default 14
             help
-               GPIO where display CS signal is attached.
+               GPIO where display CS signal is attached. Set -1 to use the default CS assigned to the SPI port.
 
          config LUA_RTOS_GDISPLAY_RESET
             depends on LUA_RTOS_LUA_USE_GDISPLAY
@@ -760,10 +782,11 @@ menu "Lua RTOS"
          config LUA_RTOS_GDISPLAY_TP_CS
             depends on LUA_RTOS_LUA_USE_GDISPLAY
                int "Display touch pannel SPI CS GPIO number"
-               range -1 39
+               range -2 39
                default 21
             help
-               GPIO where display touch pannel CS signal is attached. Select -1 if you don't want spport for touch pannel.
+               GPIO where display touch pannel CS signal is attached. Select -2 if you don't want spport for touch pannel. Set -1
+               to use the default CS assigned to the SPI port.
             endmenu
       
          menu "Sensors"

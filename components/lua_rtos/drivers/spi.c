@@ -859,6 +859,19 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode,
 		return driver_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "clk, selected pin cannot be output");
     }
 
+	if (cs == -1) {
+		if (unit == 2) {
+			cs = CONFIG_LUA_RTOS_SPI2_CS;
+		} else if (unit == 3) {
+			cs = CONFIG_LUA_RTOS_SPI3_CS;
+		}
+
+		if (cs == -1) {
+			return driver_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "default cs is not set");
+		}
+	}
+
+
     if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << cs))) {
 		return driver_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "cs, selected pin cannot be output");
     }

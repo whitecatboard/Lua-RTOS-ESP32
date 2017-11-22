@@ -213,8 +213,8 @@ driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation) {
 	// Store chipset
 	chipset = chip;
 
-#if CONFIG_LUA_RTOS_GDISPLAY_TP_SPI
-	#if CONFIG_LUA_RTOS_GDISPLAY_TP_CS == -1
+#if CONFIG_LUA_RTOS_GDISPLAY_TP_SPI > 0
+	#if CONFIG_LUA_RTOS_GDISPLAY_TP_CS < 0
 	#error "If touch pannel support is enabled CONFIG_LUA_RTOS_GDISPLAY_TP_CS must be >= 0."
 	#endif
     // Init display SPI bus
@@ -259,7 +259,7 @@ driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation) {
 	gpio_ll_pin_clr(CONFIG_LUA_RTOS_GDISPLAY_RESET);
 #endif
 
-#if CONFIG_LUA_RTOS_GDISPLAY_TP_SPI != -1
+#if CONFIG_LUA_RTOS_GDISPLAY_TP_SPI > 0
 	if ((lock_error = driver_lock(GDISPLAY_DRIVER, 0, SPI_DRIVER, touch_spi, DRIVER_ALL_FLAGS, "gdisplay - ILI9341 TOUCH PANNEL"))) {
 		return driver_lock_error(GDISPLAY_DRIVER, lock_error);
 	}
