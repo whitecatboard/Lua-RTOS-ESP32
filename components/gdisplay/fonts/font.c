@@ -556,6 +556,8 @@ driver_error_t *gdisplay_print(int x, int y, char *st, int color, int fill) {
 
 	int offset = gdisplay_get_offset();
 
+	printf("%d\r\n",cfont.bitmap);
+
 	tmph = cfont.y_size; // font height
 	// for non-proportional fonts, char width is the same for all chars
 	if (cfont.x_size != 0) {

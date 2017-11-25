@@ -505,10 +505,10 @@ driver_error_t *gdisplay_clear(uint32_t color) {
 	cursorx = 0;
 	cursory = 0;
 
-	rotation = 0;
-	wrap = 0;
-	transparent = 1;
-	force_fixed = 0;
+	//rotation = 0;
+	//wrap = 0;
+	//transparent = 1;
+	//force_fixed = 0;
 
 	dispWin.x1 = 0;
 	dispWin.y1 = 0;
