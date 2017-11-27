@@ -84,6 +84,7 @@ https://github.com/avishorp/TM1637/blob/master/TM1637Display.cpp
 #include "freertos/FreeRTOS.h"
 
 #include <sys/driver.h>
+#include <sys/delay.h>
 
 #include <drivers/tm1637.h>
 #include <drivers/gpio.h>
@@ -149,11 +150,13 @@ static int tm1637_write_byte(int deviceid, uint8_t wr_data) {
 			gpio_pin_clr(sda_pin);
 		wr_data >>= 1;
 		gpio_pin_set(scl_pin);
+		udelay(1);
 	}
 
 	//wait for the ACK
 	gpio_pin_clr(scl_pin);
 	gpio_pin_set(sda_pin);
+	udelay(1);
 	gpio_pin_set(scl_pin);
 	gpio_pin_input(sda_pin);
 
@@ -192,8 +195,10 @@ static void tm1637_start(int deviceid) {
 
 	gpio_pin_set(scl_pin);
 	gpio_pin_set(sda_pin);
+	udelay(1);
 	gpio_pin_clr(sda_pin);
 	gpio_pin_clr(scl_pin);
+	udelay(1);
 }
 
 //End of transmission
@@ -203,8 +208,10 @@ static void tm1637_stop(int deviceid) {
 
 	gpio_pin_clr(scl_pin);
 	gpio_pin_clr(sda_pin);
+	udelay(1);
 	gpio_pin_set(scl_pin);
 	gpio_pin_set(sda_pin);
+	udelay(1);
 
 	portENABLE_INTERRUPTS();
 }

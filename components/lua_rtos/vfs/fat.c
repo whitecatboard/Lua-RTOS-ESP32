@@ -158,6 +158,16 @@ void vfs_fat_register() {
     	esp_vfs_fat_sdmmc_unmount();
     	syslog(LOG_INFO, "fat%d can't mounted", 0);
     	driver_unlock_all(SYSTEM_DRIVER, 0);
+
+#if CONFIG_SD_CARD_SPI
+	#if (CONFIG_LUA_RTOS_SD_SPI == 2)
+    spi_unlock_bus_resources(2);
+	#endif
+
+	#if (CONFIG_LUA_RTOS_SD_SPI == 3)
+	spi_unlock_bus_resources(3);
+	#endif
+#endif
     	return;
     }
 

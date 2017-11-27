@@ -116,6 +116,8 @@ void spi_ll_select(int deviceid);
  */
 void spi_ll_deselect(int deviceid);
 
+void spi_ll_unsetup(int deviceid);
+
 /**
  * @brief Get SPI device speed in Hertz. This function is thread safe.
  *        No sanity checks are done (use only in driver develop).
@@ -303,6 +305,8 @@ driver_error_t *spi_pin_map(int unit, int miso, int mosi, int clk);
  *     	 SPI_ERR_NO_MORE_DEVICES_ALLOWED
  */
 driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid);
+
+driver_error_t *spi_unsetup(int deviceid);
 
 /**
  * @brief Select SPI device for start a transaction over the SPI bus to the device. This function is thread safe.
@@ -555,5 +559,6 @@ driver_error_t *spi_bulk_read32(int deviceid, uint32_t nelements, uint32_t *data
 driver_error_t *spi_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data);
 
 driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags);
+void spi_unlock_bus_resources(int unit);
 
 #endif

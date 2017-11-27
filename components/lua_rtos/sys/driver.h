@@ -215,6 +215,7 @@ driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error
 driver_error_t *driver_error(const driver_t *driver, unsigned int code, const char *msg);
 driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit, uint8_t flags, const char *tag);
 void driver_unlock_all(const driver_t *owner_driver, int owner_unit);
+void driver_unlock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit);
 
 void _driver_init();
 char *driver_target_name(const driver_t *target_driver, int target_unit, const char *tag);

@@ -484,6 +484,7 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
  * Low-level functions
  *
  */
+
 int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid) {
 	// If SPI unit PIN map are not the native pins the max speed must be 26 Mhz
 	if (!spi_use_native_pins(unit)) {
@@ -772,7 +773,6 @@ void IRAM_ATTR spi_ll_deselect(int deviceid) {
 
 	spi_unlock(unit);
 }
-
 
 /*
  * Operation functions
@@ -1287,4 +1287,81 @@ driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
     }
 
     return NULL;
+}
+
+void spi_unlock_bus_resources(int unit) {
+	int num_devices = 0;
+	int i;
+
+	spi_lock(unit);
+
+	// Count active devices
+	for(i=0;i < SPI_BUS_DEVICES;i++) {
+		if (spi_bus[spi_idx(unit)].device[i].setup) {
+			num_devices++;
+		}
+	}
+
+	if (num_devices == 0) {
+		// There are not devices in bus
+		// Remove bus locks
+	    if (spi_bus[spi_idx(unit)].miso >= 0) {
+			driver_unlock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[spi_idx(unit)].miso);
+	    }
+
+	    if (spi_bus[spi_idx(unit)].mosi >= 0) {
+			driver_unlock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[spi_idx(unit)].mosi);
+	    }
+
+	    if (spi_bus[spi_idx(unit)].clk >= 0){
+			driver_unlock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[spi_idx(unit)].clk);
+	    }
+	}
+
+	spi_unlock(unit);
+}
+
+void spi_ll_unsetup(int deviceid) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	spi_lock(unit);
+
+	if (spi_bus[spi_idx(unit)].device[device].setup) {
+		// Remove device fom bus
+		if (spi_bus[spi_idx(unit)].device[device].dma) {
+			spi_bus_remove_device(spi_bus[spi_idx(unit)].device[device].h);
+		}
+
+		// Unlock device CS
+		driver_unlock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[spi_idx(unit)].device[device].cs);
+
+		spi_bus[spi_idx(unit)].device[unit].setup = 0;
+	}
+
+	spi_unlock_bus_resources(unit);
+
+	spi_unlock(unit);
+}
+
+driver_error_t *spi_unsetup(int deviceid) {
+	int unit = (deviceid & 0xff00) >> 8;
+	int device = (deviceid & 0x00ff);
+
+	// Sanity checks
+	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
+		return driver_error(SPI_DRIVER, SPI_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((device < 0) || (device > SPI_BUS_DEVICES)) {
+		return driver_error(SPI_DRIVER, SPI_ERR_INVALID_DEVICE, NULL);
+	}
+
+	if (!spi_bus[spi_idx(unit)].device[device].setup) {
+		return driver_error(SPI_DRIVER, SPI_ERR_DEVICE_NOT_SETUP, NULL);
+	}
+
+	spi_ll_unsetup(deviceid);
+
+	return NULL;
 }
