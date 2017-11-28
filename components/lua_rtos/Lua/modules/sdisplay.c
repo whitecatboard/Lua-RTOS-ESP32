@@ -42,38 +42,35 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <drivers/tm1637.h>
+#include <sdisplay/sdisplay.h>
 
 static int lsdisplay_attach( lua_State* L ) {
+	sdisplay_userdata *udata;
 	driver_error_t *error;
 
-    const char *type = luaL_checkstring(L, 1);
-    if (strcmp(type,"TM1637") != 0) {
-    	luaL_error(L, "type is not supported");
+	// Get display chipset
+    int chipset = luaL_checkinteger(L, 1);
+
+    // Get display type from chipset
+    sdisplay_type_t type = sdisplay_type(chipset);
+    if (type != SDisplayNoType) {
+    	if (type == SDisplayTwoWire) {
+    		// CLK / DIO
+    	    int clk = luaL_checkinteger(L, 2);
+    	    int dio = luaL_checkinteger(L, 3);
+    	    uint8_t digits = luaL_optinteger(L, 4, 4);
+
+    	    // Create user data
+    	    udata = (sdisplay_userdata *)lua_newuserdata(L, sizeof(sdisplay_userdata));
+    	    if (!udata) {
+    	    	return 0;
+    	    }
+
+    	    if ((error = sdisplay_setup(chipset, &udata->device, digits, clk, dio))) {
+    	    	return luaL_driver_error(L, error);
+    	    }
+    	}
     }
-
-    int8_t scl = luaL_checkinteger(L, 2);
-    int8_t sda = luaL_checkinteger(L, 3);
-    int8_t segments = luaL_optinteger(L, 4, 4);
-    int8_t brightness = luaL_optinteger(L, 5, TM1637_BRIGHT_TYPICAL);
-
-    UNUSED(segments);
-
-    if ((brightness < 0) || (brightness > 7)) {
-    	luaL_error(L, "invalid brightness");
-    }
-
-	// Create user data
-	sdisplay_userdata *udata = (sdisplay_userdata *)lua_newuserdata(L, sizeof(sdisplay_userdata));
-    if (!udata) {
-    	return 0;
-    }
-
-    if ((error = tm1637_setup(scl, sda, &udata->device))) {
-    	return luaL_driver_error(L, error);
-    }
-
-    udata->brightness = brightness;
 
     luaL_getmetatable(L, "sdisplay.ins");
     lua_setmetatable(L, -2);
@@ -91,7 +88,7 @@ static int lsdisplay_write( lua_State* L ) {
 
     const char *value = luaL_checkstring(L, 2);
 
-    if ((error = tm1637_write(udata->device, value, udata->brightness))) {
+    if ((error = sdisplay_write(&udata->device, value))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -106,7 +103,7 @@ static int lsdisplay_clear( lua_State* L ) {
 	udata = (sdisplay_userdata *)luaL_checkudata(L, 1, "sdisplay.ins");
 	luaL_argcheck(L, udata, 1, "segment display expected");
 
-    if ((error = tm1637_clear(udata->device))) {
+    if ((error = sdisplay_clear(&udata->device))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -114,6 +111,7 @@ static int lsdisplay_clear( lua_State* L ) {
 }
 
 static int lsdisplay_set_brightness( lua_State* L ) {
+	driver_error_t *error;
 	sdisplay_userdata *udata;
 
 	// Get user data
@@ -122,11 +120,9 @@ static int lsdisplay_set_brightness( lua_State* L ) {
 
 	int8_t brightness = luaL_checkinteger(L, 2);
 
-    if ((brightness < 0) || (brightness > 7)) {
-    	luaL_error(L, "invalid brightness");
+    if ((error = sdisplay_brightness(&udata->device, brightness))) {
+    	return luaL_driver_error(L, error);
     }
-
-	udata->brightness = brightness;
 
 	return 0;
 }
@@ -144,8 +140,10 @@ static int lsdisplay_ins_gc (lua_State *L) {
 
 static const LUA_REG_TYPE lsdisplay_map[] = {
     { LSTRKEY( "attach"  ),			LFUNCVAL( lsdisplay_attach ) },
-	DRIVER_REGISTER_LUA_ERRORS(tm1637)
-    { LNILKEY, LNILVAL }
+	DRIVER_REGISTER_LUA_ERRORS(sdisplay)
+
+	{ LSTRKEY( "TM1637" ),         LINTVAL( CHIPSET_TM1637     ) },
+{ LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE lsdisplay_ins_map[] = {
@@ -170,9 +168,10 @@ MODULE_REGISTER_MAPPED(SDISPLAY, sdisplay, lsdisplay_map, luaopen_sdisplay);
 
 /*
 
-thread.start(function()
-	display = sdisplay.attach("TM1637", pio.GPIO26, pio.GPIO14)
+display = sdisplay.attach(sdisplay.TM1637, pio.GPIO26, pio.GPIO14)
+display:setBrightness(7)
 
+thread.start(function()
 	time = 0
 	while true do
 		display:write(time)
@@ -181,7 +180,5 @@ thread.start(function()
 		time = time + 1
 	end
 end)
-
-display:setBrightness(7)
 
 */

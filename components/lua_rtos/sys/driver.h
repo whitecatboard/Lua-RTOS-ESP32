@@ -58,7 +58,7 @@
 #define NZR_DRIVER_ID      16
 #define NEOPIXEL_DRIVER_ID 17
 #define STEPPER_DRIVER_ID  18
-#define TM1637_DRIVER_ID   19
+#define SDISPLAY_DRIVER_ID 19
 #define EVENT_DRIVER_ID    20
 #define SPI_ETH_DRIVER_ID  21
 #define CAN_DRIVER_ID      22
@@ -102,6 +102,7 @@
 #define CPU_DRIVER driver_get_by_name("cpu")
 #define ULP_DRIVER driver_get_by_name("ulp")
 #define ETH_DRIVER driver_get_by_name("eth")
+#define SDISPLAY_DRIVER driver_get_by_name("sdisplay")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 

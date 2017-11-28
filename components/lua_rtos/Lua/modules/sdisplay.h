@@ -34,11 +34,11 @@
 
 #if CONFIG_LUA_RTOS_LUA_USE_SDISPLAY
 
+#include <sdisplay/sdisplay.h>
 
 // User data for this module
 typedef struct {
-	int device;
-	uint8_t brightness;
+	sdisplay_device_t device;
 } sdisplay_userdata;
 
 #endif

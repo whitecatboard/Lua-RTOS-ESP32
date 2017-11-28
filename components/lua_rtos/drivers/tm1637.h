@@ -57,11 +57,12 @@ https://github.com/avishorp/TM1637/blob/master/TM1637Display.cpp
 
 #if CONFIG_LUA_RTOS_LUA_USE_SDISPLAY
 
-#include <stdint.h>
+#include <sdisplay/sdisplay.h>
 
-driver_error_t *tm1637_setup(uint8_t scl, uint8_t sda, int *deviceid);
-driver_error_t *tm1637_clear(int deviceid);
-driver_error_t *tm1637_write(int deviceid, const char *data, uint8_t brightness);
+driver_error_t *tm1637_setup(struct sdisplay *device);
+driver_error_t *tm1637_clear(struct sdisplay *device);
+driver_error_t *tm1637_write(struct sdisplay *device, const char *data);
+driver_error_t *tm1637_brightness(struct sdisplay *device, uint8_t brightness);
 
 //************definitions for TM1637*********************
 #define TM1637_ADDR_AUTO  0x40
@@ -77,13 +78,6 @@ driver_error_t *tm1637_write(int deviceid, const char *data, uint8_t brightness)
 #define  TM1637_BRIGHT_DARKEST 0
 #define  TM1637_BRIGHT_TYPICAL 2
 #define  TM1637_BRIGHTEST      7
-
-
-// M1637 errors
-#define TM1637_ERR_TIMEOUT             (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  1)
-
-extern const int tm1637_errors;
-extern const int tm1637_error_map;
 
 #endif
 
