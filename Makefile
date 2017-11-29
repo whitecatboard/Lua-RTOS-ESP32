@@ -66,7 +66,7 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
   
     # Check if board exists
     ifneq ("$(shell test -e boards/$(BOARD) && echo ex)","ex")
-      $(error "Invalid board type")
+      $(error "Invalid board type boards/$(BOARD)")
     else
       override SDKCONFIG_DEFAULTS := boards/$(BOARD)
       MAKECMDGOALS += defconfig

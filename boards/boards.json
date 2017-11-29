@@ -104,7 +104,7 @@
 		"subtype": ""
 	},
 	{
-		"id": "ESP32-EBP-OTA",
+		"id": "ESP32-EVB-OTA",
 		"description": "Olimex ESP32-EVB with OTA",
 		"manufacturer": "Olimex",
 		"brand": "",
