@@ -83,6 +83,7 @@ ifneq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
   $(info Reverting previous Lua RTOS esp-idf patches ...)
   TMP := $(shell cd $(IDF_PATH) && git checkout .)
   TMP := $(shell cd $(IDF_PATH) && git checkout $(CURRENT_IDF))
+  TMP := $(shell cd $(IDF_PATH) && git submodule update --recursive)
   TMP := $(info Applying Lua RTOS esp-idf patches ...)
   TMP := $(shell )
   $(foreach PATCH,$(abspath $(wildcard components/lua_rtos/patches/*.patch)),$(shell cd $(IDF_PATH) && git apply --whitespace=warn $(PATCH)))
@@ -178,6 +179,7 @@ restore-idf:
 ifeq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
 	@cd $(IDF_PATH) && git checkout .
 	@cd $(IDF_PATH) && git checkout master
+	@cd $(IDF_PATH) && git submodule update --recursive
 	@rm $(IDF_PATH)/lua_rtos_patches
 endif
 	@rm -f sdkconfig || true
