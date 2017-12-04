@@ -67,6 +67,9 @@
 extern const int spi_errors;
 extern const int spi_error_map;
 
+#define SPI_DMA_SETUP    (1 << 0)
+#define SPI_NO_DMA_SETUP (1 << 1)
+
 // Flags
 #define SPI_FLAG_WRITE  (1 << 0)
 #define SPI_FLAG_READ   (1 << 1)

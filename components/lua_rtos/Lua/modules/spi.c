@@ -43,7 +43,7 @@
 #include <drivers/cpu.h>
 #include <drivers/spi.h>
 
-extern spi_bus_t spi_bus[CPU_LAST_SPI + 1];
+extern spi_bus_t spi_bus[CPU_LAST_SPI - CPU_FIRST_SPI + 1];
 
 static int lspi_pins(lua_State* L) {
 	uint8_t table = 0;
@@ -68,22 +68,22 @@ static int lspi_pins(lua_State* L) {
 			printf("SPI%d: ", unit);
 
 			printf("miso=");
-			if (spi_bus[unit].miso >= 0) {
-				printf("%s%d ", gpio_portname(spi_bus[unit].miso), gpio_name(spi_bus[unit].miso));
+			if (spi_bus[spi_idx(unit)].miso >= 0) {
+				printf("%s%d ", gpio_portname(spi_bus[spi_idx(unit)].miso), gpio_name(spi_bus[spi_idx(unit)].miso));
 			} else {
 				printf("unused");
 			}
 
 			printf("mosi=");
-			if (spi_bus[unit].mosi >= 0) {
-				printf("%s%d ", gpio_portname(spi_bus[unit].mosi), gpio_name(spi_bus[unit].mosi));
+			if (spi_bus[spi_idx(unit)].mosi >= 0) {
+				printf("%s%d ", gpio_portname(spi_bus[spi_idx(unit)].mosi), gpio_name(spi_bus[spi_idx(unit)].mosi));
 			} else {
 				printf("unused");
 			}
 
 			printf("clk=");
-			if (spi_bus[unit].clk >= 0) {
-				printf("%s%d ", gpio_portname(spi_bus[unit].clk), gpio_name(spi_bus[unit].clk));
+			if (spi_bus[spi_idx(unit)].clk >= 0) {
+				printf("%s%d ", gpio_portname(spi_bus[spi_idx(unit)].clk), gpio_name(spi_bus[spi_idx(unit)].clk));
 			} else {
 				printf("unused");
 			}
@@ -97,13 +97,13 @@ static int lspi_pins(lua_State* L) {
 			lua_pushinteger(L, unit);
 	        lua_setfield (L, -2, "id");
 
-	        lua_pushinteger(L, spi_bus[unit].miso);
+	        lua_pushinteger(L, spi_bus[spi_idx(unit)].miso);
 			lua_setfield (L, -2, "miso");
 
-			lua_pushinteger(L, spi_bus[unit].mosi);
+			lua_pushinteger(L, spi_bus[spi_idx(unit)].mosi);
 	        lua_setfield (L, -2, "mosi");
 
-	        lua_pushinteger(L, spi_bus[unit].clk);
+	        lua_pushinteger(L, spi_bus[spi_idx(unit)].clk);
 			lua_setfield (L, -2, "clk");
 
 			 lua_settable(L,-3);

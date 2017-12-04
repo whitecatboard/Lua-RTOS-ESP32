@@ -48,6 +48,8 @@
 #include <drivers/gpio.h>
 #include <drivers/spi.h>
 
+extern spi_bus_t spi_bus[CPU_LAST_SPI - CPU_FIRST_SPI + 1];
+
 void vfs_fat_register() {
 #if CONFIG_SD_CARD_SPI
 	// Lock resources
@@ -84,6 +86,8 @@ void vfs_fat_register() {
     slot_config.gpio_sck  = CONFIG_LUA_RTOS_SPI3_CLK;
     slot_config.gpio_cs   = CONFIG_LUA_RTOS_SD_CS;
 	#endif
+
+    spi_bus[spi_idx(CONFIG_LUA_RTOS_SD_SPI)].setup |= SPI_DMA_SETUP;
 #endif
 
 #if CONFIG_SD_CARD_MMC

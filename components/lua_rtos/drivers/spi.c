@@ -80,9 +80,6 @@
 #define PIN_FUNC_SPI 1
 #define SPI_MAX_SIZE (4096 - 4)
 
-#define SPI_DMA_SETUP    (1 << 0)
-#define SPI_NO_DMA_SETUP (1 << 1)
-
 extern uint32_t _rodata_start;
 extern uint32_t _lit4_end;
 
