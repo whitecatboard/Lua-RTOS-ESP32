@@ -101,14 +101,7 @@
 #define ILI9341_PRC	0xF7
 #define ILI9341_3GAMMA_EN	0xF2
 
-//  ILI9341 errors
-#define ILI9341_CANNOT_SETUP             (DRIVER_EXCEPTION_BASE(ILI9341_DRIVER_ID) |  0)
-#define ILI9341_ERR_NOT_ENOUGH_MEMORY    (DRIVER_EXCEPTION_BASE(ILI9341_DRIVER_ID) |  1)
-
-extern const int ili9341_errors;
-extern const int ili9341_error_map;
-
-driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation);
+driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation, uint8_t address);
 void ili9341_set_orientation(uint8_t m);
 
 void ili9341_tp_get(int *x, int *y, int *z, uint8_t raw);

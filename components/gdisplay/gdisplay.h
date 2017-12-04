@@ -44,6 +44,7 @@
 #include <drivers/ili9341.h>
 #include <drivers/st7735.h>
 #include <drivers/pcd8544.h>
+#include <drivers/ssd1306.h>
 
 /*
  * ST7735
@@ -78,6 +79,16 @@
  */
 
 #define CHIPSET_PCD8544   7
+
+/*
+ * SSDS1306
+ */
+
+#define CHIPSET_SSD1306_128_32  8
+#define CHIPSET_SSD1306_128_64  9
+#define CHIPSET_SSD1306_96_16   10
+
+#define CHIPSET_SSD1306_VARIANT_OFFSET CHIPSET_SSD1306_128_32
 
 // Color definitions
 #define GDISPLAY_BLACK       0x0000      /*   0,   0,   0 */
@@ -146,7 +157,7 @@
 
 typedef struct {
 	uint8_t chipset; // Chipset
-	driver_error_t *(*init)(uint8_t, uint8_t);
+	driver_error_t *(*init)(uint8_t, uint8_t, uint8_t);
 } gdisplay_t;
 
 //  Driver errors
@@ -165,8 +176,12 @@ typedef struct {
 #define  GDISPLAY_ERR_IMG_PROCESSING_ERROR        (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  12)
 #define  GDISPLAY_ERR_BOOLEAN_REQUIRED            (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  13)
 #define  GDISPLAY_ERR_TOUCH_NOT_SUPPORTED         (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  14)
+#define  GDISPLAY_ERR_CANNOT_SETUP				  (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  15)
 
-driver_error_t *gdisplay_init(uint8_t chipset, uint8_t orientation, uint8_t buffered);
+extern const int gdisplay_errors;
+extern const int gdisplay_error_map;
+
+driver_error_t *gdisplay_init(uint8_t chipset, uint8_t orientation, uint8_t buffered, uint8_t address);
 uint8_t gdisplay_is_init();
 void gdisplay_begin();
 void gdisplay_end();
@@ -222,5 +237,7 @@ driver_error_t *gdisplay_touch_set_cal(int x, int y);
 
 driver_error_t *gdisplay_lock();
 driver_error_t *gdisplay_unlock();
+
+const gdisplay_t *gdisplay_get(uint8_t chipset);
 
 #endif	/* GDISPLAY_H */

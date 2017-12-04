@@ -47,12 +47,6 @@
 
 #include <drivers/gdisplay.h>
 
-// Register drivers and errors
-DRIVER_REGISTER_BEGIN(PCD8544,pcd8544,NULL,NULL,NULL);
-	DRIVER_REGISTER_ERROR(PCD8544, pcd8544, CannotSetup, "cannot setup", PCD8544_CANNOT_SETUP);
-	DRIVER_REGISTER_ERROR(PCD8544, pcd8544, NotEnoughtMemory, "not enough memory", PCD8544_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_END(PCD8544,pcd8544,NULL,NULL,NULL);
-
 /*
  * Operation functions
  */
@@ -64,7 +58,7 @@ void pcd8544_ll_clear() {
 	pcd8544_update(0,0,LCDWIDTH-1,LCDHEIGHT-1, buff);
 }
 
-driver_error_t *pcd8544_init(uint8_t chipset, uint8_t orient) {
+driver_error_t *pcd8544_init(uint8_t chipset, uint8_t orient, uint8_t address) {
 	driver_error_t *error;
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
 
@@ -81,10 +75,12 @@ driver_error_t *pcd8544_init(uint8_t chipset, uint8_t orient) {
 	caps->bdepth = 0;
 	caps->phys_width = LCDWIDTH;
 	caps->phys_height = LCDHEIGHT;
+	caps->interface = GDisplaySPIInterface;
+	caps->monochrome_white = 0;
 
     // Init SPI bus
-	if (caps->spi_device == -1) {
-		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_TP_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 4000000, SPI_FLAG_WRITE | SPI_FLAG_READ, &caps->spi_device))) {
+	if (caps->device == -1) {
+		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_TP_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 4000000, SPI_FLAG_WRITE | SPI_FLAG_READ, &caps->device))) {
 			return error;
 		}
 	}
@@ -131,7 +127,7 @@ driver_error_t *pcd8544_init(uint8_t chipset, uint8_t orient) {
 
 	// Allocate buffer
 	if (!gdisplay_ll_allocate_buffer((LCDWIDTH * LCDHEIGHT) / 8)) {
-		return driver_error(PCD8544_DRIVER, PCD8544_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	pcd8544_ll_clear();
@@ -149,53 +145,6 @@ driver_error_t *pcd8544_init(uint8_t chipset, uint8_t orient) {
 	return NULL;
 }
 
-/*
-void pcd8544_set_pixel(int x, int y, uint32_t color, uint8_t *buffer, int buffw, int buffh) {
-	uint8_t *dst = (buffer?buffer:buff);
-
-	// Rotate x,y according to current orientation
-	// In pcd8544 this only can be done by software
-	if (orientation == LANDSCAPE_FLIP) {
-		x = (buffw!=-1?buffw:LCDWIDTH) - 1 - x;
-		y = (buffh!=-1?buffw:LCDHEIGHT) - 1 - y;
-	} else if (orientation == PORTRAIT) {
-		x = (buffh!=-1?buffw:LCDHEIGHT) - 1 - x;
-		swap(x,y);
-	} else if (orientation == PORTRAIT_FLIP) {
-		y = (buffw!=-1?buffw:LCDWIDTH) - 1 - y;
-		swap(x,y);
-	}
-
-	if (color) {
-		dst[x + (y/8) * (buffw!=-1?buffw:LCDWIDTH)] &= ~(1 << (y % 8));
-	} else {
-		dst[x + (y/8) * (buffw!=-1?buffw:LCDWIDTH)] |= (1 << (y % 8));
-	}
-}
-
-uint32_t pcd8544_get_pixel(int x, int y, uint8_t *buffer, int buffw, int buffh) {
-	uint8_t *src = (buffer?buffer:buff);
-
-	// Rotate x,y according to current orientation
-	// In pcd8544 this only can be done by software
-	if (orientation == LANDSCAPE_FLIP) {
-		x = (buffw!=-1?buffw:LCDWIDTH) - 1 - x;
-		y = (buffh!=-1?buffw:LCDHEIGHT) - 1 - y;
-	} else if (orientation == PORTRAIT) {
-		x = (buffh!=-1?buffw:LCDHEIGHT) - 1 - x;
-		swap(x,y);
-	} else if (orientation == PORTRAIT_FLIP) {
-		y = (buffw!=-1?buffw:LCDWIDTH) - 1 - y;
-		swap(x,y);
-	}
-
-	if (src[x + (y/8) * (buffw!=-1?buffw:LCDWIDTH)] & (1 << (y % 8))) {
-		return GDISPLAY_BLACK;
-	} else {
-		return GDISPLAY_WHITE;
-	}
-}
-*/
 
 void pcd8544_addr_window(uint8_t write, int x0, int y0, int x1, int y1) {
 	gdisplay_ll_command(PCD8544_SETYADDR);
@@ -209,9 +158,9 @@ void pcd8544_update(int x0, int y0, int x1, int y1, uint8_t *buffer) {
 	pcd8544_addr_window(1, x0, y0, x1, y1);
 
 	gpio_ll_pin_set(CONFIG_LUA_RTOS_GDISPLAY_CMD);
-	spi_ll_select(caps->spi_device);
-	spi_ll_bulk_write(caps->spi_device, sizeof(uint8_t) * ((LCDWIDTH * LCDHEIGHT) / 8), dst);
-	spi_ll_deselect(caps->spi_device);
+	spi_ll_select(caps->device);
+	spi_ll_bulk_write(caps->device, sizeof(uint8_t) * ((LCDWIDTH * LCDHEIGHT) / 8), dst);
+	spi_ll_deselect(caps->device);
 }
 
 void pcd8544_set_orientation(uint8_t orientation) {

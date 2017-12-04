@@ -167,11 +167,7 @@
 
 #endif
 
-//  ST7735 errors
-#define ST7735_CANNOT_SETUP             (DRIVER_EXCEPTION_BASE(ST7735_DRIVER_ID) |  0)
-#define ST7735_ERR_NOT_ENOUGH_MEMORY    (DRIVER_EXCEPTION_BASE(ST7735_DRIVER_ID) |  1)
-
-driver_error_t *st7735_init(uint8_t chipset, uint8_t orientation);
+driver_error_t *st7735_init(uint8_t chipset, uint8_t orientation, uint8_t address);
 void st7735_set_orientation(uint8_t m);
 uint32_t st7735_width();
 uint32_t st7735_height();

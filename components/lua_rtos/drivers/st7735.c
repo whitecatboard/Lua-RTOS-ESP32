@@ -246,12 +246,6 @@ static const uint8_t Rcmd2green160x80[] = {              // Init for 7735R, part
     0x00, 0x00,             //     XSTART = 0
     0x00, 0x9F };           //     XEND = 159
 
-// Register drivers and errors
-DRIVER_REGISTER_BEGIN(ST7735,st7735,NULL,NULL,NULL);
-	DRIVER_REGISTER_ERROR(ST7735, st7735, CannotSetup, "cannot setup", ST7735_CANNOT_SETUP);
-	DRIVER_REGISTER_ERROR(ST7735, st7735, NotEnoughtMemory, "not enough memory", ST7735_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_END(ST7735,st7735,NULL,NULL,NULL);
-
 /*
  * Helper functions
  */
@@ -284,7 +278,7 @@ static void ST7735_initB(void) {
  * Operation functions
  */
 
-driver_error_t *st7735_init(uint8_t chip, uint8_t orientation) {
+driver_error_t *st7735_init(uint8_t chip, uint8_t orientation, uint8_t address) {
 	driver_error_t *error;
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
 
@@ -301,13 +295,14 @@ driver_error_t *st7735_init(uint8_t chip, uint8_t orientation) {
 	caps->bdepth = 5;
 	caps->phys_width  = variant[chipset - CHIPSET_ST7735_VARIANT_OFFSET].height;
 	caps->phys_height = variant[chipset - CHIPSET_ST7735_VARIANT_OFFSET].width;
+	caps->interface = GDisplaySPIInterface;
 
 	// Store chipset
 	chipset = chip;
 
     // Init SPI bus
-	if (caps->spi_device == -1) {
-		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 30000000, SPI_FLAG_WRITE | SPI_FLAG_NO_DMA, &caps->spi_device))) {
+	if (caps->device == -1) {
+		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 30000000, SPI_FLAG_WRITE | SPI_FLAG_NO_DMA, &caps->device))) {
 			return error;
 		}
 	}
@@ -371,7 +366,7 @@ driver_error_t *st7735_init(uint8_t chip, uint8_t orientation) {
 
 	// Allocate buffer
 	if (!gdisplay_ll_allocate_buffer(ST7735_BUFFER)) {
-		return driver_error(ST7735_DRIVER, ST7735_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	// Clear screen (black)
@@ -487,18 +482,18 @@ void st7735_color(uint16_t *color, uint32_t len) {
 
     // Set DC to 1 (data mode);
 	gpio_ll_pin_set(CONFIG_LUA_RTOS_GDISPLAY_CMD);
-	spi_ll_select(caps->spi_device);
+	spi_ll_select(caps->device);
 	if (len > 0) {
 		int clen;
 		while (len) {
 			clen = (len > buff_size?buff_size:len);
-			spi_ll_bulk_write16(caps->spi_device, clen, buffer);
+			spi_ll_bulk_write16(caps->device, clen, buffer);
 			len = len - clen;
 		}
 	} else {
-		spi_ll_bulk_write16(caps->spi_device, 1, buffer);
+		spi_ll_bulk_write16(caps->device, 1, buffer);
 	}
-	spi_ll_deselect(caps->spi_device);
+	spi_ll_deselect(caps->device);
 
 	gdisplay_ll_invalidate_buffer();
 }

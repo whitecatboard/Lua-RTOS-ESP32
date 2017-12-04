@@ -192,26 +192,14 @@ static int lgdisplay_setorient( lua_State* L ) {
 static int lgdisplay_clear( lua_State* L ) {
 	driver_error_t *error;
 
-	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
-	if (caps->bytes_per_pixel == 0) {
-		error = gdisplay_clear(lgdisplay_get_color(L, 1, 0, 0, GDISPLAY_WHITE));
-	} else {
-		error = gdisplay_clear(lgdisplay_get_color(L, 1, 0, 0, GDISPLAY_BLACK));
-	}
-
+	error = gdisplay_clear(lgdisplay_get_color(L, 1, 0, 0, GDISPLAY_BLACK));
 	if (error) {
 		return luaL_driver_error(L, error);
 	}
 
-    if (caps->bytes_per_pixel == 0) {
-        stroke = GDISPLAY_BLACK;
-        foreground = GDISPLAY_BLACK;;
-        background = GDISPLAY_WHITE;
-    } else {
-        stroke = GDISPLAY_WHITE;
-        foreground = GDISPLAY_WHITE;;
-        background = GDISPLAY_BLACK;
-    }
+	stroke = GDISPLAY_WHITE;
+	foreground = GDISPLAY_WHITE;;
+	background = GDISPLAY_BLACK;
 
     return 0;
 }
@@ -1123,9 +1111,12 @@ static int lgdisplay_touch_set_cal(lua_State *L) {
 static int lgdisplay_init( lua_State* L ) {
 	driver_error_t *error;
 	uint8_t buffered = 0;
+	uint8_t address = 0;
 
 	uint8_t chipset = luaL_checkinteger( L, 1);
     uint8_t orient = luaL_optinteger( L, 2, LANDSCAPE);
+
+    const gdisplay_t *display = gdisplay_get(chipset);
 
 	if (lua_gettop(L) >= 3) {
 		luaL_checktype(L, 3, LUA_TBOOLEAN);
@@ -1134,23 +1125,25 @@ static int lgdisplay_init( lua_State* L ) {
 		}
 	}
 
-	error = gdisplay_init(chipset, orient, buffered);
+	if (
+			(display->chipset == CHIPSET_SSD1306_128_32) ||
+			(display->chipset == CHIPSET_SSD1306_128_64) ||
+			(display->chipset == CHIPSET_SSD1306_96_16)
+	) {
+		if (lua_gettop(L) == 4) {
+			address = luaL_checkinteger(L, 4);
+		}
+	}
+
+	error = gdisplay_init(chipset, orient, buffered, address);
     if (error) {
         return luaL_driver_error(L, error);
     }
 
     // Set the default stroke, foreground and background colors
-	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
-
-	if (caps->bytes_per_pixel == 0) {
-        stroke = GDISPLAY_BLACK;
-        foreground = GDISPLAY_BLACK;;
-        background = GDISPLAY_WHITE;
-    } else {
-        stroke = GDISPLAY_WHITE;
-        foreground = GDISPLAY_WHITE;;
-        background = GDISPLAY_BLACK;
-    }
+	stroke = GDISPLAY_WHITE;
+	foreground = GDISPLAY_WHITE;;
+	background = GDISPLAY_BLACK;
 
     return 0;
 }
@@ -1262,8 +1255,14 @@ static const LUA_REG_TYPE gdisplay_map[] = {
 	{ LSTRKEY( "ST7735G_144" ),    LINTVAL( CHIPSET_ST7735G_144) },
 	{ LSTRKEY( "ST7735_096" ),     LINTVAL( CHIPSET_ST7735_096 ) },
 
-	{ LSTRKEY( "ILI9341" ),        LINTVAL( CHIPSET_ILI9341    ) },
-	{ LSTRKEY( "PCD8544" ),        LINTVAL( CHIPSET_PCD8544    ) },
+	{ LSTRKEY( "ILI9341" ),        LINTVAL( CHIPSET_ILI9341 ) },
+	{ LSTRKEY( "PCD8544" ),        LINTVAL( CHIPSET_PCD8544 ) },
+
+	{ LSTRKEY( "SSD1306_128_32" ), LINTVAL( CHIPSET_SSD1306_128_32 ) },
+	{ LSTRKEY( "SSD1306_128_64" ), LINTVAL( CHIPSET_SSD1306_128_64 ) },
+	{ LSTRKEY( "SSD1306_96_16" ),  LINTVAL( CHIPSET_SSD1306_96_16  ) },
+
+	DRIVER_REGISTER_LUA_ERRORS(gdisplay)
 
 	{ LNILKEY, LNILVAL }
 };

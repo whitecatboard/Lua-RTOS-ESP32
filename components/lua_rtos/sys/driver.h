@@ -63,16 +63,13 @@
 #define SPI_ETH_DRIVER_ID  21
 #define CAN_DRIVER_ID      22
 #define SYSTEM_DRIVER_ID   23
-#define PCD8544_DRIVER_ID  24
-#define GDISPLAY_DRIVER_ID 25
-#define ST7735_DRIVER_ID   26
-#define ILI9341_DRIVER_ID  27
-#define TIMER_DRIVER_ID    28
-#define ENCODER_DRIVER_ID  29
-#define MDNS_DRIVER_ID     30
-#define CPU_DRIVER_ID      31
-#define ULP_DRIVER_ID      32
-#define ETH_DRIVER_ID  	   33
+#define GDISPLAY_DRIVER_ID 24
+#define TIMER_DRIVER_ID    25
+#define ENCODER_DRIVER_ID  26
+#define MDNS_DRIVER_ID     27
+#define CPU_DRIVER_ID      28
+#define ULP_DRIVER_ID      29
+#define ETH_DRIVER_ID  	   30
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
