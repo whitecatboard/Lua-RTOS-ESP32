@@ -42,7 +42,7 @@ typedef struct {
 } adc_resources_t;
 
 driver_error_t * adc_internal_pin_to_channel(uint8_t pin, uint8_t *chan);
-driver_error_t *adc_internal_setup(adc_channel_t *chan);
-driver_error_t *adc_internal_read(adc_channel_t *chan, int *raw, double *mvolts);
+driver_error_t *adc_internal_setup(adc_chann_t *chan);
+driver_error_t *adc_internal_read(adc_chann_t *chan, int *raw, double *mvolts);
 
 #endif	/* _ADC_INTERNAL_H */

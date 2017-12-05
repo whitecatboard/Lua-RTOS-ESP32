@@ -95,8 +95,8 @@ static void sensor_task(void *arg) {
 	sensor_init_data(unit);
 
 	// Get channel info
-	adc_channel_t *chanx;
-	adc_channel_t *chany;
+	adc_chann_t *chanx;
+	adc_chann_t *chany;
 
 	adc_get_channel(&unit->setup[0].adc.h, &chanx);
 	adc_get_channel(&unit->setup[1].adc.h, &chany);

@@ -68,7 +68,7 @@ driver_error_t *potentiometer_acquire(sensor_instance_t *unit, sensor_value_t *v
 	}
 
 	// Get channel info
-	adc_channel_t *chan;
+	adc_chann_t *chan;
 
 	adc_get_channel(&unit->setup[0].adc.h, &chan);
 

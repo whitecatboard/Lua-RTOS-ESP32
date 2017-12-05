@@ -132,7 +132,7 @@ typedef union {
 	} byte;
 } adc_ADS1015_reg_t;
 
-driver_error_t *adc_ads1015_setup(adc_channel_t *chan);
-driver_error_t *adc_ads1015_read(adc_channel_t *chan, int *raw, double *mvolts);
+driver_error_t *adc_ads1015_setup(adc_chann_t *chan);
+driver_error_t *adc_ads1015_read(adc_chann_t *chan, int *raw, double *mvolts);
 
 #endif /* _ADC_ADS1015_H */

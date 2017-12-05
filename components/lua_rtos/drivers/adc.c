@@ -91,8 +91,8 @@ static void _adc_init() {
     list_init(&channels, 1);
 }
 
-static adc_channel_t *get_channel(int8_t unit, int8_t channel, int *item_index) {
-	adc_channel_t *chan;
+static adc_chann_t *get_channel(int8_t unit, int8_t channel, int *item_index) {
+	adc_chann_t *chan;
 	int index;
 
     index = list_first(&channels);
@@ -149,13 +149,13 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t vr
 
 	// Test if channel is setup
 	int index = 0;
-	adc_channel_t *chan = get_channel(unit, channel, &index);
+	adc_chann_t *chan = get_channel(unit, channel, &index);
 	if (chan) {
 		// Channel is setup, reuse the handle and reconfigure the adc
 	}
 	else {
 		// Create space for the channel
-		chan = calloc(1, sizeof(adc_channel_t));
+		chan = calloc(1, sizeof(adc_chann_t));
 		if (!chan) {
 			return driver_error(ADC_DRIVER, ADC_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
@@ -193,7 +193,7 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t vr
 
 driver_error_t *adc_read(adc_channel_h_t *h, int *raw, double *mvolts) {
 	driver_error_t *error = NULL;
-	adc_channel_t *chan;
+	adc_chann_t *chan;
 
 	// Get channel
 	if (list_get(&channels, (int)*h, (void **)&chan)) {
@@ -207,8 +207,8 @@ driver_error_t *adc_read(adc_channel_h_t *h, int *raw, double *mvolts) {
 	return NULL;
 }
 
-driver_error_t *adc_get_channel(adc_channel_h_t *h, adc_channel_t **chan) {
-	adc_channel_t *channel;
+driver_error_t *adc_get_channel(adc_channel_h_t *h, adc_chann_t **chan) {
+	adc_chann_t *channel;
 
     // Get channel
 	if (list_get(&channels, (int)*h, (void **)&channel)) {

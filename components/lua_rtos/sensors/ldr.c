@@ -116,7 +116,7 @@ driver_error_t *ldr_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	}
 
 	// Get channel info
-	adc_channel_t *chan;
+	adc_chann_t *chan;
 
 	adc_get_channel(&unit->setup[0].adc.h, &chan);
 

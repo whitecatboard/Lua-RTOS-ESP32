@@ -63,27 +63,44 @@ int pthread_key_create(pthread_key_t *k, void (*destructor)(void*)) {
 
 int pthread_setspecific(pthread_key_t k, const void *value) {
     struct pthread_key_specific *specific;
-    struct pthread_key *key;    
+    struct pthread_key *key;
+    pthread_t thread;
     int res;
-    
+	int index;
+
     // Get key
     res = list_get(&key_list, k, (void **)&key);
     if (res) {
         return res;
     }
 
-    // Allocate space for specific
-    specific = (struct pthread_key_specific *)malloc(sizeof(struct pthread_key_specific));
-    if (!specific) {
-        errno = ENOMEM;
-        return ENOMEM;
-    }
-    
-    specific->thread = pthread_self();
-    specific->value = value;
+    if (value) {
+        // Allocate space for specific
+        specific = (struct pthread_key_specific *)malloc(sizeof(struct pthread_key_specific));
+        if (!specific) {
+            errno = ENOMEM;
+            return ENOMEM;
+        }
 
-		int index;
-    list_add(&key->specific, (void **)&specific, &index);
+        specific->thread = pthread_self();
+        specific->value = value;
+
+        list_add(&key->specific, (void **)specific, &index);
+    } else {
+        thread = pthread_self();
+
+        index = list_first(&key->specific);
+        while (index >= 0) {
+            list_get(&key->specific, index, (void **)&specific);
+
+            if (specific->thread == thread) {
+            	list_remove(&key->specific, k, 1);
+            	break;
+            }
+
+            index = list_next(&key->specific, index);
+        }
+    }
 
     return 0;
 }

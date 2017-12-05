@@ -73,7 +73,7 @@ driver_error_t *thermistor_setup(sensor_instance_t *unit) {
 }
 
 driver_error_t *thermistor_acquire(sensor_instance_t *unit, sensor_value_t *values) {
-	adc_channel_t *adc;
+	adc_chann_t *adc;
 	driver_error_t *error;
 
 	// Get ADC channel from handle

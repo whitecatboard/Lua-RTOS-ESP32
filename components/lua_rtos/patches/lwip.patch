@@ -1,13 +1,13 @@
 diff --git a/components/lwip/port/freertos/sys_arch.c b/components/lwip/port/freertos/sys_arch.c
-index 6f14a3a..ec07c15 100755
+index aa58f9bb..97ee4216 100755
 --- a/components/lwip/port/freertos/sys_arch.c
 +++ b/components/lwip/port/freertos/sys_arch.c
-@@ -433,7 +433,7 @@ sys_init(void)
-     if (ERR_OK != sys_mutex_new(&g_lwip_protect_mutex)) {
-         ESP_LOGE(TAG, "sys_init: failed to init lwip protect mutex\n");
-     }
+@@ -441,7 +441,7 @@ sys_init(void)
+     // Create the pthreads key for the per-thread semaphore storage
+     pthread_key_create(&sys_thread_sem_key, sys_thread_sem_free);
+ 
 -    esp_vfs_lwip_sockets_register();
-+    //esp_vfs_lwip_sockets_register();
++    // esp_vfs_lwip_sockets_register();
  }
  
  /*-----------------------------------------------------------------------------------*/
