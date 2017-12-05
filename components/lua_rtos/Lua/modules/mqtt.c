@@ -51,6 +51,7 @@
 #include <sys/delay.h>
 #include <sys/status.h>
 #include <sys/syslog.h>
+#include <sys/mount.h>
 
 #define MQTT_MAX_RECONNECT_RETRIES 10
 
@@ -207,7 +208,14 @@ static int lmqtt_client( lua_State* L ){
     const char *host = luaL_checklstring( L, 2, &lenHost ); //url is being strdup'd in MQTTClient_connectURI
     int port = luaL_checkinteger( L, 3 );
 
-    int persistence = luaL_optinteger( L, 4, MQTTCLIENT_PERSISTENCE_DEFAULT );
+    int persistence = MQTTCLIENT_PERSISTENCE_NONE;
+    if (mount_is_mounted("fat")) {
+	    persistence = luaL_optinteger( L, 4, MQTTCLIENT_PERSISTENCE_DEFAULT );
+    }
+    else {
+	    persistence = luaL_optinteger( L, 4, MQTTCLIENT_PERSISTENCE_NONE );
+    }
+
     const char *persistence_folder = luaL_optstring( L, 5, NULL );
 
     luaL_checktype(L, 6, LUA_TBOOLEAN);
