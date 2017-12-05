@@ -3,11 +3,11 @@
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution. 
+ * and Eclipse Distribution License v1.0 which accompany this distribution.
  *
- * The Eclipse Public License is available at 
+ * The Eclipse Public License is available at
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at 
+ * and the Eclipse Distribution License is available at
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
@@ -37,13 +37,11 @@
 #define socklen_t int
 #else
 #define INVALID_SOCKET SOCKET_ERROR
-#include "lwip/sockets.h"
-#include "lwip/netdb.h"
 //#include <sys/socket.h>
 //#include <sys/param.h>
-#include <limits.h>
 #include <sys/time.h>
 //#include <sys/select.h>
+//#include <sys/uio.h>
 //#include <netinet/in.h>
 //#include <netinet/tcp.h>
 //#include <arpa/inet.h>
@@ -53,9 +51,12 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
-//#include <sys/uio.h>
 #define ULONG size_t
 #endif
+
+#include "lwip/sockets.h"
+#include "lwip/netdb.h"
+#include <limits.h>
 
 /** socket operation completed successfully */
 #define TCPSOCKET_COMPLETE 0
