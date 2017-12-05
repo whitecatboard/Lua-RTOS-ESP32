@@ -5,7 +5,8 @@
 
 typedef enum {
 	SDisplayNoType = 0,
-	SDisplayTwoWire = 1
+	SDisplayTwoWire = 1,
+	SDisplayI2C = 2
 } sdisplay_type_t;
 
 struct sdisplay;
@@ -30,10 +31,16 @@ typedef struct sdisplay{
 			int clk;
 			int dio;
 		} wire;
+
+		struct {
+			int device;
+			int address;
+		} i2c;
 	} config;
 } sdisplay_device_t;
 
 #define CHIPSET_TM1637 1
+#define CHIPSET_HT16K3 2
 
 sdisplay_type_t sdisplay_type(uint8_t chipset);
 driver_error_t *sdisplay_setup(uint8_t chipset, sdisplay_device_t *device, uint8_t digits, ...) ;
@@ -45,6 +52,8 @@ driver_error_t *sdisplay_brightness(sdisplay_device_t *device, uint8_t brightnes
 #define  SDISPLAY_ERR_INVALID_CHIPSET     (DRIVER_EXCEPTION_BASE(SDISPLAY_DRIVER_ID) |  0)
 #define  SDISPLAY_ERR_TIMEOUT             (DRIVER_EXCEPTION_BASE(SDISPLAY_DRIVER_ID) |  1)
 #define  SDISPLAY_ERR_INVALID_BRIGHTNESS  (DRIVER_EXCEPTION_BASE(SDISPLAY_DRIVER_ID) |  2)
+#define  SDISPLAY_ERR_NOT_ENOUGH_MEMORY   (DRIVER_EXCEPTION_BASE(SDISPLAY_DRIVER_ID) |  3)
+#define  SDISPLAY_ERR_INVALID_DIGITS      (DRIVER_EXCEPTION_BASE(SDISPLAY_DRIVER_ID) |  4)
 
 extern const int sdisplay_errors;
 extern const int sdisplay_error_map;

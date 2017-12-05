@@ -69,6 +69,19 @@ static int lsdisplay_attach( lua_State* L ) {
     	    if ((error = sdisplay_setup(chipset, &udata->device, digits, clk, dio))) {
     	    	return luaL_driver_error(L, error);
     	    }
+    	} else if (type == SDisplayI2C) {
+    	    uint8_t digits = luaL_optinteger(L, 2, 6);
+    		int addr = luaL_optinteger(L, 3, 0);
+
+    	    // Create user data
+    	    udata = (sdisplay_userdata *)lua_newuserdata(L, sizeof(sdisplay_userdata));
+    	    if (!udata) {
+    	    	return 0;
+    	    }
+
+    	    if ((error = sdisplay_setup(chipset, &udata->device, digits, addr))) {
+    	    	return luaL_driver_error(L, error);
+    	    }
     	}
     }
 
@@ -143,6 +156,7 @@ static const LUA_REG_TYPE lsdisplay_map[] = {
 	DRIVER_REGISTER_LUA_ERRORS(sdisplay)
 
 	{ LSTRKEY( "TM1637" ),         LINTVAL( CHIPSET_TM1637     ) },
+	{ LSTRKEY( "HT16K3" ),         LINTVAL( CHIPSET_HT16K3     ) },
 { LNILKEY, LNILVAL }
 };
 
@@ -169,6 +183,20 @@ MODULE_REGISTER_MAPPED(SDISPLAY, sdisplay, lsdisplay_map, luaopen_sdisplay);
 /*
 
 display = sdisplay.attach(sdisplay.TM1637, pio.GPIO26, pio.GPIO14)
+display:setBrightness(7)
+
+thread.start(function()
+	time = 0
+	while true do
+		display:write(time)
+
+		tmr.delay(1)
+		time = time + 1
+	end
+end)
+
+
+display = sdisplay.attach(sdisplay.HT16K3)
 display:setBrightness(7)
 
 thread.start(function()
