@@ -207,12 +207,13 @@ static int lmqtt_client( lua_State* L ){
     const char *host = luaL_checklstring( L, 2, &lenHost ); //url is being strdup'd in MQTTClient_connectURI
     int port = luaL_checkinteger( L, 3 );
 
-    int persistence = luaL_optinteger( L, 4, MQTTCLIENT_PERSISTENCE_NONE );
+    int persistence = luaL_optinteger( L, 4, MQTTCLIENT_PERSISTENCE_DEFAULT );
+    const char *persistence_folder = luaL_optstring( L, 5, NULL );
 
-    luaL_checktype(L, 5, LUA_TBOOLEAN);
-    int secure = lua_toboolean( L, 5 );
+    luaL_checktype(L, 6, LUA_TBOOLEAN);
+    int secure = lua_toboolean( L, 6 );
 
-    const char *ca_file = luaL_optstring( L, 6, NULL );
+    const char *ca_file = luaL_optstring( L, 7, NULL );
 
     // Allocate mqtt structure and initialize
     mqtt = (mqtt_userdata *)lua_newuserdata(L, sizeof(mqtt_userdata));
@@ -236,7 +237,7 @@ static int lmqtt_client( lua_State* L ){
     }
 
     //url is being strdup'd in MQTTClient_connectURI
-    rc = MQTTClient_create(&mqtt->client, url, clientId, persistence, NULL);
+    rc = MQTTClient_create(&mqtt->client, url, clientId, persistence, (char*)persistence_folder);
     if (rc < 0){
       return luaL_exception(L, LUA_MQTT_ERR_CANT_CREATE_CLIENT);
     }
