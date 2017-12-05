@@ -3,11 +3,11 @@
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution. 
+ * and Eclipse Distribution License v1.0 which accompany this distribution.
  *
- * The Eclipse Public License is available at 
+ * The Eclipse Public License is available at
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at 
+ * and the Eclipse Distribution License is available at
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
@@ -21,7 +21,7 @@
  *
  * See page 104 of the Unicode Standard 5.0 for the list of well formed
  * UTF-8 byte sequences.
- * 
+ *
  */
 
 #include <stdlib.h>
@@ -49,7 +49,7 @@ struct
 		char upper; /**< upper limit of valid range */
 	} bytes[4];   /**< up to 4 bytes can be used per character */
 }
-valid_ranges[] = 
+valid_ranges[] =
 {
 		{1, { {00, 0x7F} } },
 		{2, { {0xC2, 0xDF}, {0x80, 0xBF} } },
@@ -63,13 +63,16 @@ valid_ranges[] =
 };
 
 
+static const char* UTF8_char_validate(int len, const char* data);
+
+
 /**
  * Validate a single UTF-8 character
  * @param len the length of the string in "data"
  * @param data the bytes to check for a valid UTF-8 char
  * @return pointer to the start of the next UTF-8 character in "data"
  */
-const char* UTF8_char_validate(int len, const char* data)
+static const char* UTF8_char_validate(int len, const char* data)
 {
 	int good = 0;
 	int charlen = 2;

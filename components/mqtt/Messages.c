@@ -3,11 +3,11 @@
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution. 
+ * and Eclipse Distribution License v1.0 which accompany this distribution.
  *
- * The Eclipse Public License is available at 
+ * The Eclipse Public License is available at
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at 
+ * and the Eclipse Distribution License is available at
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
@@ -28,11 +28,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+//#include "Heap.h"
+
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 #define max_msg_len 120
 
-static char* protocol_message_list[] =
+static const char *protocol_message_list[] =
 {
 	"%d %s -> CONNECT cleansession: %d (%d)", /* 0, was 131, 68 and 69 */
 	"%d %s <- CONNACK rc: %d", /* 1, was 132 */
@@ -66,7 +68,7 @@ static char* protocol_message_list[] =
 	"Socket error for client identifier %s, socket %d, peer address %s; ending connection", /* 29 */
 };
 
-static char* trace_message_list[] =
+static const char *trace_message_list[] =
 {
 	"Failed to remove client from bstate->clients", /* 0 */
 	"Removed client %s from bstate->clients, socket %d", /* 1 */
@@ -89,15 +91,14 @@ static char* trace_message_list[] =
  * @param log_level the log level, used to determine which message list to use
  * @return the message format string
  */
-char* Messages_get(int index, int log_level)
+const char* Messages_get(int index, int log_level)
 {
-	char* msg = NULL;
+	const char *msg = NULL;
 
 	if (log_level == TRACE_PROTOCOL)
 		msg = (index >= 0 && index < ARRAY_SIZE(protocol_message_list)) ? protocol_message_list[index] : NULL;
 	else
 		msg = (index >= 0 && index < ARRAY_SIZE(trace_message_list)) ? trace_message_list[index] : NULL;
-
 	return msg;
 }
 

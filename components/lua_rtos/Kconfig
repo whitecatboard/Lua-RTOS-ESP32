@@ -579,7 +579,7 @@ menu "Lua RTOS"
             endchoice
 
             choice LUA_RTOS_LORA_BAND
-                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272             
+                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272 
                 prompt "ISM band"
                 default LUA_RTOS_LORA_BAND_EU868
                 help
@@ -643,18 +643,18 @@ menu "Lua RTOS"
                     default 33 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
                     help
                         The GPIO port number used for the DIO2 signal. Use -1 if DIO2 pin is not used.
-                           
+
          config LUA_RTOS_LORA_STACK_SIZE
-            depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272            
+            depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
                 int "LoRa WAN thread stack size"
                 range 1024 4096
                 default 2048
                 help
                    Default stack size assigned to LoRa WAN thread.
-      
+
          config LUA_RTOS_LORA_TASK_PRIORITY
-            depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272            
-                int "LoRa WAN thread riority"
+            depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
+                int "LoRa WAN thread priority"
                 range 3 25
                 default 21
                 help
@@ -949,7 +949,7 @@ menu "Lua RTOS"
                base folder where HTTP server looks for files
 
             config LUA_RTOS_HTTP_SERVER_STACK_SIZE
-                depends on LUA_RTOS_USE_HTTP_SERVER               
+                depends on LUA_RTOS_USE_HTTP_SERVER
                 int "HTTP thread stack size"
                 range 10240 20480
                 default 10240
@@ -957,8 +957,8 @@ menu "Lua RTOS"
                     Default stack size assigned to HTTP thread.
 
             config LUA_RTOS_HTTP_SERVER_TASK_PRIORITY
-                depends on LUA_RTOS_USE_HTTP_SERVER               
-                int "HTTP thread riority"
+                depends on LUA_RTOS_USE_HTTP_SERVER
+                int "HTTP thread priority"
                 range 3 25
                 default 18
                 help

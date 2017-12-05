@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2013 IBM Corp.
+ * Copyright (c) 2016, 2017 logi.cals GmbH
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -11,12 +11,18 @@
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
- *    Ian Craggs - initial API and implementation and/or initial documentation
+ *    Gunter Raidl - timer support for VxWorks
+ *    Rainer Poisel - reusability
  *******************************************************************************/
 
-#if !defined(MESSAGES_H)
-#define MESSAGES_H
+#include "OsWrapper.h"
 
-const char* Messages_get(int, int);
-
-#endif
+#if defined(_WRS_KERNEL)
+void usleep(useconds_t useconds)
+{
+	struct timespec tv;
+	tv.tv_sec = useconds / 1000000;
+	tv.tv_nsec = (useconds % 1000000) * 1000;
+	nanosleep(&tv, NULL);
+}
+#endif /* defined(_WRS_KERNEL) */
