@@ -27,6 +27,11 @@ ifneq (,$(findstring restore-idf,$(MAKECMDGOALS)))
   MAKECMDGOALS += defconfig
 endif
 
+ifneq (,$(findstring upgrade-idf,$(MAKECMDGOALS)))
+  BOARD_TYPE_REQUIRED := 0
+  MAKECMDGOALS += defconfig
+endif
+
 # New line
 define n
 
@@ -174,6 +179,10 @@ ifneq ("$(shell test -e  $(IDF_PATH)/components/lua_rtos && echo ex)","ex")
 	@ln -s $(PROJECT_PATH)/main/test/lua_rtos $(IDF_PATH)/components/lua_rtos 2> /dev/null
 endif
 
+upgrade-idf: restore-idf
+	@cd $(IDF_PATH) && git pull
+	@cd $(IDF_PATH) && git submodule update --init --recursive
+	
 restore-idf:
 	@echo "Reverting previous Lua RTOS esp-idf patches ..."
 ifeq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
