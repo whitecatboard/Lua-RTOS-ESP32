@@ -97,6 +97,7 @@ typedef struct {
     const char *ca_file;
 
     int secure;
+    int persistence;
 } mqtt_userdata;
 
 static int add_subs_callback(mqtt_userdata *mqtt, const char *topic, int call) {
@@ -208,14 +209,8 @@ static int lmqtt_client( lua_State* L ){
     const char *host = luaL_checklstring( L, 2, &lenHost ); //url is being strdup'd in MQTTClient_connectURI
     int port = luaL_checkinteger( L, 3 );
 
-    int persistence = MQTTCLIENT_PERSISTENCE_NONE;
-    if (mount_is_mounted("fat")) {
-      persistence = luaL_optinteger( L, 4, MQTTCLIENT_PERSISTENCE_DEFAULT );
-    }
-    else {
-      persistence = luaL_optinteger( L, 4, MQTTCLIENT_PERSISTENCE_NONE );
-    }
-
+    luaL_checktype(L, 4, LUA_TBOOLEAN);
+    int persistence = lua_toboolean( L, 4 ) ? MQTTCLIENT_PERSISTENCE_DEFAULT : MQTTCLIENT_PERSISTENCE_NONE;
     const char *persistence_folder = luaL_optstring( L, 5, NULL );
 
     luaL_checktype(L, 6, LUA_TBOOLEAN);
@@ -229,6 +224,7 @@ static int lmqtt_client( lua_State* L ){
     mqtt->client = NULL;
     mqtt->callbacks = NULL;
     mqtt->secure = secure;
+    mqtt->persistence = persistence;
     mqtt->ca_file = (ca_file ? strdup(ca_file):NULL); //save for use during mqtt_connect
     mtx_init(&mqtt->callback_mtx, NULL, NULL, 0);
 
@@ -331,11 +327,13 @@ static int lmqtt_subscribe( lua_State* L ) {
     topic = luaL_checkstring( L, 2 );
     qos = luaL_checkinteger( L, 3 );
 
-    luaL_checktype(L, 4, LUA_TFUNCTION);
+    if (qos > 0 && mqtt->persistence == MQTTCLIENT_PERSISTENCE_NONE) {
+      syslog(LOG_WARNING, "mqtt: please enable persistence for a qos > 0\n");
+    }
 
+    luaL_checktype(L, 4, LUA_TFUNCTION);
     // Copy argument (function) to the top of stack
     lua_pushvalue(L, 4);
-
     // Copy function reference
     callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
@@ -364,6 +362,10 @@ static int lmqtt_publish( lua_State* L ) {
     topic = luaL_checkstring( L, 2 );
     payload = (char *)luaL_checklstring( L, 3, &payload_len );
     qos = luaL_checkinteger( L, 4 );
+
+    if (qos > 0 && mqtt->persistence == MQTTCLIENT_PERSISTENCE_NONE) {
+      syslog(LOG_WARNING, "mqtt: please enable persistence for a qos > 0\n");
+    }
 
     rc = MQTTClient_publish(mqtt->client, topic, payload_len, payload,
             qos, 0, NULL);
