@@ -1,12 +1,12 @@
 /*
- * Lua RTOS, delay functions
+ * Lua RTOS, HT16K33 segment display driver
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
- * 
+ *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- * 
- * All rights reserved.  
+ *
+ * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -27,48 +27,40 @@
  * this software.
  */
 
+#ifndef HT16K33_H_
+#define HT16K33_H_
+
 #include "luartos.h"
 
-#include "freertos/FreeRTOS.h"
-#include "esp_attr.h"
+#if CONFIG_LUA_RTOS_LUA_USE_SDISPLAY
 
-#include <sys/time.h>
-#include <sys/delay.h>
- 
-void IRAM_ATTR delay(unsigned int msec) {
-	unsigned int tWait, tStart;
-	unsigned int loop;
+#include <sdisplay/sdisplay.h>
 
-	while (msec) {
-		if (msec <= 1000) {
-			loop = msec;
-		} else {
-			loop = 1000;
-		}
+#define HT16K33_COM0            0x00
+#define HT16K33_COM1            0x02
+#define HT16K33_COM2            0x04
+#define HT16K33_COM3            0x06
+#define HT16K33_COM4            0x08
+#define HT16K33_COM5            0x0A
+#define HT16K33_COM6            0x0C
+#define HT16K33_COM7            0x0E
 
-		tWait = (CPU_HZ / (1000 * (CPU_HZ / CORE_TIMER_HZ))) * loop;
-		tStart = xthal_get_ccount();
-		while((xthal_get_ccount() - tStart) < tWait);
+#define HT16K33_BLINK_OFF       0x00
+#define HT16K33_BLINK_2HZ       0x01
+#define HT16K33_BLINK_1HZ       0x02
+#define HT16K33_BLINK_HALFHZ    0x03
+#define HT16K33_BLINK_CMD       0x80
+#define HT16K33_CMD_BRIGHTNESS  0xE0
+#define HT16K33_BLINK_DISPLAYON 0x01
 
-		msec = msec - loop;
-	}
-}
+/* I2C addressing 0b01110_A2_A1_A0 */
+#define HT16K33_ADDR 0b01110001
 
-void IRAM_ATTR udelay(unsigned int usec) {
-	unsigned int tWait, tStart;
-	unsigned int loop;
+driver_error_t *ht16k33_setup(struct sdisplay *device);
+driver_error_t *ht16k33_clear(struct sdisplay *device);
+driver_error_t *ht16k33_write(struct sdisplay *device, const char *data);
+driver_error_t *ht16k33_brightness(struct sdisplay *device, uint8_t brightness);
 
-	while (usec) {
-		if (usec <= 1000000) {
-			loop = usec;
-		} else {
-			loop = 1000000;
-		}
+#endif
 
-	    tWait = (CPU_HZ / (1000000 * (CPU_HZ / CORE_TIMER_HZ))) * loop;
-	    tStart = xthal_get_ccount();
-	    while((xthal_get_ccount() - tStart) < tWait);
-
-		usec = usec - loop;
-	}
-}
+#endif /* HT16K33_H_ */

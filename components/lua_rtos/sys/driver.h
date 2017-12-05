@@ -58,21 +58,18 @@
 #define NZR_DRIVER_ID      16
 #define NEOPIXEL_DRIVER_ID 17
 #define STEPPER_DRIVER_ID  18
-#define TM1637_DRIVER_ID   19
+#define SDISPLAY_DRIVER_ID 19
 #define EVENT_DRIVER_ID    20
 #define SPI_ETH_DRIVER_ID  21
 #define CAN_DRIVER_ID      22
 #define SYSTEM_DRIVER_ID   23
-#define PCD8544_DRIVER_ID  24
-#define GDISPLAY_DRIVER_ID 25
-#define ST7735_DRIVER_ID   26
-#define ILI9341_DRIVER_ID  27
-#define TIMER_DRIVER_ID    28
-#define ENCODER_DRIVER_ID  29
-#define MDNS_DRIVER_ID     30
-#define CPU_DRIVER_ID      31
-#define ULP_DRIVER_ID      32
-#define ETH_DRIVER_ID  	   33
+#define GDISPLAY_DRIVER_ID 24
+#define TIMER_DRIVER_ID    25
+#define ENCODER_DRIVER_ID  26
+#define MDNS_DRIVER_ID     27
+#define CPU_DRIVER_ID      28
+#define ULP_DRIVER_ID      29
+#define ETH_DRIVER_ID  	   30
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -102,6 +99,7 @@
 #define CPU_DRIVER driver_get_by_name("cpu")
 #define ULP_DRIVER driver_get_by_name("ulp")
 #define ETH_DRIVER driver_get_by_name("eth")
+#define SDISPLAY_DRIVER driver_get_by_name("sdisplay")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 
@@ -215,6 +213,7 @@ driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error
 driver_error_t *driver_error(const driver_t *driver, unsigned int code, const char *msg);
 driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit, uint8_t flags, const char *tag);
 void driver_unlock_all(const driver_t *owner_driver, int owner_unit);
+void driver_unlock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit);
 
 void _driver_init();
 char *driver_target_name(const driver_t *target_driver, int target_unit, const char *tag);

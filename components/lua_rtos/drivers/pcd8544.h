@@ -61,11 +61,7 @@
 #define PCD8544_SETBIAS 0x10
 #define PCD8544_SETVOP 0x80
 
-//  PCD854 errors
-#define PCD8544_CANNOT_SETUP             (DRIVER_EXCEPTION_BASE(PCD8544_DRIVER_ID) |  0)
-#define PCD8544_NOT_ENOUGH_MEMORY		 (DRIVER_EXCEPTION_BASE(PCD8544_DRIVER_ID) |  1)
-
-driver_error_t *pcd8544_init(uint8_t chipset, uint8_t orientation);
+driver_error_t *pcd8544_init(uint8_t chipset, uint8_t orientation, uint8_t address);
 void pcd8544_addr_window(uint8_t write, int x0, int y0, int x1, int y1);
 void pcd8544_update(int x0, int y0, int x1, int y1, uint8_t *buffer);
 void pcd8544_set_orientation(uint8_t m);

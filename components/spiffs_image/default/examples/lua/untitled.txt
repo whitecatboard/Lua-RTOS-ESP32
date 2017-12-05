@@ -1,0 +1,36 @@
+require("xitanium")
+require("bus")
+
+print("Initializing DALI ...")
+
+-- Instantiate the dali bus
+bus = daliBus()
+
+-- Turn off all lights
+bus:OffAll()
+
+print("Discovering slaves ...")
+
+-- Discover all slaves in bus
+slaves = bus:Discover()
+
+print("Initializing slaves ...")
+
+-- Instantiate all the slaves
+for k in pairs(slaves) do
+   Xitanium(bus, slaves[k])
+end
+
+thread.start(function()
+  while true do
+     lamp = math.random(3) - 1
+	 while lamp == last do
+       lamp = math.random(3) - 1
+	 end
+	 
+	 bus:OnOne(lamp)
+	 tmr.delay(1)
+	 bus:OffOne(lamp)
+	 last = lamp	 
+  end
+end)

@@ -64,13 +64,16 @@ static uint8_t nested = 0;		   // Display is only updated when nested == 0
 
 // Supported display devices
 static const gdisplay_t displaydevs[] = {
-	{CHIPSET_PCD8544,     pcd8544_init},
-	{CHIPSET_ST7735,      st7735_init },
-	{CHIPSET_ST7735B,     st7735_init },
-	{CHIPSET_ST7735G,     st7735_init },
-	{CHIPSET_ST7735G_144, st7735_init },
-	{CHIPSET_ST7735_096 , st7735_init },
-	{CHIPSET_ILI9341,     ili9341_init},
+	{CHIPSET_PCD8544,        pcd8544_init},
+	{CHIPSET_ST7735,         st7735_init },
+	{CHIPSET_ST7735B,        st7735_init },
+	{CHIPSET_ST7735G,        st7735_init },
+	{CHIPSET_ST7735G_144,    st7735_init },
+	{CHIPSET_ST7735_096 ,    st7735_init },
+	{CHIPSET_ILI9341,        ili9341_init},
+	{CHIPSET_SSD1306_128_32, ssd1306_init},
+	{CHIPSET_SSD1306_128_64, ssd1306_init},
+	{CHIPSET_SSD1306_96_16,  ssd1306_init},
 	{NULL}
 };
 
@@ -106,6 +109,7 @@ DRIVER_REGISTER_BEGIN(GDISPLAY,gdisplay,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, ProcessingError, "image processing error", GDISPLAY_ERR_IMG_PROCESSING_ERROR);
 	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, BooleanRequired, "boolean required", GDISPLAY_ERR_BOOLEAN_REQUIRED);
 	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, TouchNotSupported, "touch pad not supported in this display", GDISPLAY_ERR_TOUCH_NOT_SUPPORTED);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, CannotSetup, "can't setup", GDISPLAY_ERR_TOUCH_NOT_SUPPORTED);
 DRIVER_REGISTER_END(GDISPLAY,gdisplay,NULL,NULL,NULL);
 
 /*
@@ -184,7 +188,7 @@ driver_error_t *gdisplay_get_pixel(int x, int y, uint32_t *color) {
 	return NULL;
 }
 
-static const gdisplay_t *gdisplay_get(uint8_t chipset) {
+const gdisplay_t *gdisplay_get(uint8_t chipset) {
 	const gdisplay_t *cdisplay;
 	int i = 0;
 
@@ -202,7 +206,7 @@ static const gdisplay_t *gdisplay_get(uint8_t chipset) {
 }
 
 // Init display
-driver_error_t *gdisplay_init(uint8_t chipset, uint8_t orient, uint8_t buffered) {
+driver_error_t *gdisplay_init(uint8_t chipset, uint8_t orient, uint8_t buffered, uint8_t address) {
 	driver_error_t *error;
 	gdisplay_t *display;
 
@@ -238,7 +242,7 @@ driver_error_t *gdisplay_init(uint8_t chipset, uint8_t orient, uint8_t buffered)
 	cursorx = 0;
 	cursory = 0;
 
-	error = (display->init)(chipset, orient);
+	error = (display->init)(chipset, orient, address);
 	if (error) {
 		return error;
 	}
@@ -246,7 +250,7 @@ driver_error_t *gdisplay_init(uint8_t chipset, uint8_t orient, uint8_t buffered)
 	// Create frame buffer
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
 
-	if (buffered) {
+	if (buffered || (caps->bytes_per_pixel == 0)) {
 		if (caps->bytes_per_pixel > 0) {
 			buffer = calloc(caps->width * caps->height, caps->bytes_per_pixel);
 		} else {
@@ -505,10 +509,10 @@ driver_error_t *gdisplay_clear(uint32_t color) {
 	cursorx = 0;
 	cursory = 0;
 
-	rotation = 0;
-	wrap = 0;
-	transparent = 1;
-	force_fixed = 0;
+	//rotation = 0;
+	//wrap = 0;
+	//transparent = 1;
+	//force_fixed = 0;
 
 	dispWin.x1 = 0;
 	dispWin.y1 = 0;

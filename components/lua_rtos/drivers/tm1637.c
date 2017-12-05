@@ -83,15 +83,17 @@ https://github.com/avishorp/TM1637/blob/master/TM1637Display.cpp
 
 #include "freertos/FreeRTOS.h"
 
+#include <sdisplay/sdisplay.h>
+
 #include <sys/driver.h>
+#include <sys/delay.h>
 
 #include <drivers/tm1637.h>
 #include <drivers/gpio.h>
 
-static int tm1637_write_byte(int deviceid, uint8_t wr_data);
-static void tm1637_start(int deviceid);
-static void tm1637_stop(int deviceid);
-
+static int tm1637_write_byte(sdisplay_device_t *device, uint8_t wr_data);
+static void tm1637_start(sdisplay_device_t *device);
+static void tm1637_stop(sdisplay_device_t *device);
 static uint8_t tm1637_map(uint8_t data, uint8_t point);
 
 //
@@ -124,40 +126,34 @@ const uint8_t map[] = {
 		0b01110001     // F
 };
 
-// Register drivers and errors
-DRIVER_REGISTER_BEGIN(TM1637,tm1637,NULL,NULL,NULL);
-	DRIVER_REGISTER_ERROR(TM1637, tm1637, TimeOut, "timeout", TM1637_ERR_TIMEOUT);
-DRIVER_REGISTER_END(TM1637,tm1637,NULL,NULL,NULL);
-
 /*
  * Helper functions
  */
-static int tm1637_write_byte(int deviceid, uint8_t wr_data) {
-	uint8_t scl_pin = (deviceid >> 8) & 0xff;
-	uint8_t sda_pin = deviceid & 0xff;
-
+static int tm1637_write_byte(sdisplay_device_t *device, uint8_t wr_data) {
 	uint8_t i,count1 = 0, count2 = 0;
 	uint8_t val;
 
 	//sent 8bit data
 	for(i=0;i<8;i++) {
-		gpio_pin_clr(scl_pin);
+		gpio_pin_clr(device->config.wire.clk);
 		//LSB first
 		if (wr_data & 0x01)
-			gpio_pin_set(sda_pin);
+			gpio_pin_set(device->config.wire.dio);
 		else
-			gpio_pin_clr(sda_pin);
+			gpio_pin_clr(device->config.wire.dio);
 		wr_data >>= 1;
-		gpio_pin_set(scl_pin);
+		gpio_pin_set(device->config.wire.clk);
+		udelay(1);
 	}
 
 	//wait for the ACK
-	gpio_pin_clr(scl_pin);
-	gpio_pin_set(sda_pin);
-	gpio_pin_set(scl_pin);
-	gpio_pin_input(sda_pin);
+	gpio_pin_clr(device->config.wire.clk);
+	gpio_pin_set(device->config.wire.dio);
+	udelay(1);
+	gpio_pin_set(device->config.wire.clk);
+	gpio_pin_input(device->config.wire.dio);
 
-	gpio_pin_get(sda_pin, &val);
+	gpio_pin_get(device->config.wire.dio, &val);
 	while (val) {
 		count1 +=1;
 		count2 +=1;
@@ -166,45 +162,43 @@ static int tm1637_write_byte(int deviceid, uint8_t wr_data) {
 			count2 +=1;
 
 			if (count2 == 200) {
-				tm1637_stop(deviceid);
-				gpio_pin_output(sda_pin);
+				tm1637_stop(device);
+				gpio_pin_output(device->config.wire.dio);
 				return -1; // Timeout
 			}
-			gpio_pin_output(sda_pin);
-			gpio_pin_clr(sda_pin);
+			gpio_pin_output(device->config.wire.dio);
+			gpio_pin_clr(device->config.wire.dio);
 			count1 =0;
 		}
-		gpio_pin_input(sda_pin);
-		gpio_pin_get(sda_pin, &val);
+		gpio_pin_input(device->config.wire.dio);
+		gpio_pin_get(device->config.wire.dio, &val);
 	}
 
-	gpio_pin_output(sda_pin);
+	gpio_pin_output(device->config.wire.dio);
 
 	return 0;
 }
 
 //send start signal to TM1637
-static void tm1637_start(int deviceid) {
-	uint8_t scl_pin = (deviceid >> 8) & 0xff;
-	uint8_t sda_pin = deviceid & 0xff;
-
+static void tm1637_start(sdisplay_device_t *device) {
 	portDISABLE_INTERRUPTS();
 
-	gpio_pin_set(scl_pin);
-	gpio_pin_set(sda_pin);
-	gpio_pin_clr(sda_pin);
-	gpio_pin_clr(scl_pin);
+	gpio_pin_set(device->config.wire.clk);
+	gpio_pin_set(device->config.wire.dio);
+	udelay(1);
+	gpio_pin_clr(device->config.wire.dio);
+	gpio_pin_clr(device->config.wire.clk);
+	udelay(1);
 }
 
 //End of transmission
-static void tm1637_stop(int deviceid) {
-	uint8_t scl_pin = (deviceid >> 8) & 0xff;
-	uint8_t sda_pin = deviceid & 0xff;
-
-	gpio_pin_clr(scl_pin);
-	gpio_pin_clr(sda_pin);
-	gpio_pin_set(scl_pin);
-	gpio_pin_set(sda_pin);
+static void tm1637_stop(sdisplay_device_t *device) {
+	gpio_pin_clr(device->config.wire.clk);
+	gpio_pin_clr(device->config.wire.dio);
+	udelay(1);
+	gpio_pin_set(device->config.wire.clk);
+	gpio_pin_set(device->config.wire.dio);
+	udelay(1);
 
 	portENABLE_INTERRUPTS();
 }
@@ -233,20 +227,20 @@ static uint8_t tm1637_map(uint8_t data,  uint8_t point) {
 	return data;
 }
 
-static int tm1637_display(int deviceid, uint8_t addr,uint8_t data, uint8_t point, uint8_t brightness) {
+static int tm1637_display(sdisplay_device_t *device, uint8_t addr,uint8_t data, uint8_t point, uint8_t brightness) {
 	uint8_t map_data;
 
 	map_data = tm1637_map(data, point);
-	tm1637_start(deviceid);
-	if (tm1637_write_byte(deviceid,TM1637_ADDR_FIXED) < 0) return -1;
-	tm1637_stop(deviceid);
-	tm1637_start(deviceid);
-	if (tm1637_write_byte(deviceid,addr|0xc0) < 0) return -1;
-	if (tm1637_write_byte(deviceid,map_data) < 0) return -1;
-	tm1637_stop(deviceid);
-	tm1637_start(deviceid);
-	if (tm1637_write_byte(deviceid,0x88 + brightness) < 0) return -1;
-	tm1637_stop(deviceid);
+	tm1637_start(device);
+	if (tm1637_write_byte(device,TM1637_ADDR_FIXED) < 0) return -1;
+	tm1637_stop(device);
+	tm1637_start(device);
+	if (tm1637_write_byte(device,addr|0xc0) < 0) return -1;
+	if (tm1637_write_byte(device,map_data) < 0) return -1;
+	tm1637_stop(device);
+	tm1637_start(device);
+	if (tm1637_write_byte(device,0x88 + brightness) < 0) return -1;
+	tm1637_stop(device);
 
 	return 0;
 }
@@ -255,69 +249,71 @@ static int tm1637_display(int deviceid, uint8_t addr,uint8_t data, uint8_t point
  * Operation functions
  *
  */
-driver_error_t *tm1637_setup(uint8_t scl, uint8_t sda, int *deviceid) {
+driver_error_t *tm1637_setup(struct sdisplay *device) {
 	driver_unit_lock_error_t *lock_error = NULL;
 
-	*deviceid = (scl << 8) | sda;
+	int clk = device->config.wire.clk;
+	int dio = device->config.wire.dio;
 
-	// Lock scl
-    if ((lock_error = driver_lock(TM1637_DRIVER, *deviceid, GPIO_DRIVER, scl, DRIVER_ALL_FLAGS, "SCL"))) {
+	// Lock clk
+    if ((lock_error = driver_lock(SDISPLAY_DRIVER, device->id, GPIO_DRIVER, clk, DRIVER_ALL_FLAGS, "CLK"))) {
     	// Revoked lock on ADC channel
-    	return driver_lock_error(TM1637_DRIVER, lock_error);
+    	return driver_lock_error(SDISPLAY_DRIVER, lock_error);
     }
 
-	// Lock sda
-    if ((lock_error = driver_lock(TM1637_DRIVER, *deviceid, GPIO_DRIVER, sda, DRIVER_ALL_FLAGS, "SDA"))) {
+	// Lock dio
+    if ((lock_error = driver_lock(SDISPLAY_DRIVER, device->id, GPIO_DRIVER, dio, DRIVER_ALL_FLAGS, "DIO"))) {
     	// Revoked lock on ADC channel
-    	return driver_lock_error(TM1637_DRIVER, lock_error);
+    	return driver_lock_error(SDISPLAY_DRIVER, lock_error);
     }
 
-    gpio_pin_output(scl);
-	gpio_pin_output(sda);
+    gpio_pin_output(clk);
+	gpio_pin_output(dio);
 
+	device->brightness = 7;
 
-	tm1637_clear(*deviceid);
+	tm1637_clear(device);
 
 	return NULL;
 }
 
-driver_error_t *tm1637_clear(int deviceid) {
-	if (tm1637_display(deviceid, 0x00,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
-		return driver_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
+driver_error_t *tm1637_clear(struct sdisplay *device) {
+	if (tm1637_display(device, 0x00,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
+		return driver_error(SDISPLAY_DRIVER, SDISPLAY_ERR_TIMEOUT, NULL);
 	}
 
-	if (tm1637_display(deviceid, 0x01,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
-		return driver_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
+	if (tm1637_display(device, 0x01,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
+		return driver_error(SDISPLAY_DRIVER, SDISPLAY_ERR_TIMEOUT, NULL);
 	}
 
-	if (tm1637_display(deviceid, 0x02,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
-		return driver_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
+	if (tm1637_display(device, 0x02,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
+		return driver_error(SDISPLAY_DRIVER, SDISPLAY_ERR_TIMEOUT, NULL);
 	}
 
-	if (tm1637_display(deviceid, 0x03,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
-		return driver_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
+	if (tm1637_display(device, 0x03,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
+		return driver_error(SDISPLAY_DRIVER, SDISPLAY_ERR_TIMEOUT, NULL);
 	}
 
-	if (tm1637_display(deviceid, 0x04,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
-		return driver_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
+	if (tm1637_display(device, 0x04,0x7f,TM1637_POINT_OFF,TM1637_BRIGHT_TYPICAL) < 0) {
+		return driver_error(SDISPLAY_DRIVER, SDISPLAY_ERR_TIMEOUT, NULL);
 	}
 
 	return NULL;
 }
 
-driver_error_t *tm1637_write(int deviceid, const char *data, uint8_t brightness) {
+driver_error_t *tm1637_write(struct sdisplay *device, const char *data) {
 	const char *cdata = data;
 	uint8_t pos = 0;
 
 	while (*cdata) {
 		if (*(cdata + 1) == '.') {
-			if (tm1637_display(deviceid, pos,(uint8_t)*cdata,TM1637_POINT_ON,brightness) < 0) {
-				return driver_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
+			if (tm1637_display(device, pos,(uint8_t)*cdata,TM1637_POINT_ON,device->brightness) < 0) {
+				return driver_error(SDISPLAY_DRIVER, SDISPLAY_ERR_TIMEOUT, NULL);
 			}
 			cdata++;
 		} else {
-			if (tm1637_display(deviceid, pos,(uint8_t)*cdata,TM1637_POINT_OFF,brightness) < 0) {
-				return driver_error(TM1637_DRIVER, TM1637_ERR_TIMEOUT, NULL);
+			if (tm1637_display(device, pos,(uint8_t)*cdata,TM1637_POINT_OFF,device->brightness) < 0) {
+				return driver_error(SDISPLAY_DRIVER, SDISPLAY_ERR_TIMEOUT, NULL);
 			}
 		}
 
@@ -328,4 +324,14 @@ driver_error_t *tm1637_write(int deviceid, const char *data, uint8_t brightness)
 	return NULL;
 }
 
+driver_error_t *tm1637_brightness(struct sdisplay *device, uint8_t brightness) {
+	// Sanity checks
+	if (brightness > 7) {
+		return driver_error(SDISPLAY_DRIVER, SDISPLAY_ERR_INVALID_BRIGHTNESS, NULL);
+	}
+
+	device->brightness = brightness;
+
+	return NULL;
+}
 #endif

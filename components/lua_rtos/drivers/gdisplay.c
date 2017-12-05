@@ -19,7 +19,7 @@
 // Display capabilities
 static gdisplay_caps_t caps = {
 	0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	-1, 0, 0, 0, 0, 0, 0, 0
+	-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
 /*
@@ -45,25 +45,25 @@ static int buff_pixels  = 0;
 
 void IRAM_ATTR gdisplay_ll_command(uint8_t command) {
 	gpio_ll_pin_clr(CONFIG_LUA_RTOS_GDISPLAY_CMD);
-	spi_ll_select(caps.spi_device);
-	spi_ll_transfer(caps.spi_device, command, NULL);
-	spi_ll_deselect(caps.spi_device);
+	spi_ll_select(caps.device);
+	spi_ll_transfer(caps.device, command, NULL);
+	spi_ll_deselect(caps.device);
 }
 
 void gdisplay_ll_data(uint8_t *data, int len) {
     if (len == 0) return;
 
 	gpio_ll_pin_set(CONFIG_LUA_RTOS_GDISPLAY_CMD);
-	spi_ll_select(caps.spi_device);
-	spi_ll_bulk_write(caps.spi_device, len, data);
-	spi_ll_deselect(caps.spi_device);
+	spi_ll_select(caps.device);
+	spi_ll_bulk_write(caps.device, len, data);
+	spi_ll_deselect(caps.device);
 }
 
 void gdisplay_ll_data32(uint32_t data) {
 	gpio_ll_pin_set(CONFIG_LUA_RTOS_GDISPLAY_CMD);
-	spi_ll_select(caps.spi_device);
-	spi_ll_bulk_write32(caps.spi_device, 1, &data);
-	spi_ll_deselect(caps.spi_device);
+	spi_ll_select(caps.device);
+	spi_ll_bulk_write32(caps.device, 1, &data);
+	spi_ll_deselect(caps.device);
 }
 
 void gdisplay_ll_command_list(const uint8_t *addr) {
@@ -136,31 +136,49 @@ void gdisplay_ll_update(int x0, int y0, int x1, int y1, uint8_t *buffer) {
 				caps.addr_window(1, x0, y0, x1, y1);
 			} else {
 				caps.addr_window(1, buff_x0, buff_y0, buff_x1, buff_y1);
-
 			}
 
-		    // Set DC to 1 (data mode)
-			gpio_ll_pin_set(CONFIG_LUA_RTOS_GDISPLAY_CMD);
-			spi_ll_select(caps.spi_device);
+			if (caps.interface == GDisplaySPIInterface) {
+				// Set DC to 1 (data mode)
+				gpio_ll_pin_set(CONFIG_LUA_RTOS_GDISPLAY_CMD);
+				spi_ll_select(caps.device);
+			}
 
 			if (caps.bytes_per_pixel == 0) {
-				spi_ll_bulk_write(caps.spi_device, buff_size, (uint8_t *)buff);
+				if (caps.interface == GDisplaySPIInterface) {
+					spi_ll_bulk_write(caps.device, buff_size, (uint8_t *)buff);
+				} else{
+					ssd1306_update(x0, y0, x1, y1, buff);
+				}
 			} else {
-				spi_ll_bulk_write16(caps.spi_device, buff_pixels, (uint16_t *)buff);
+				if (caps.interface == GDisplaySPIInterface) {
+					spi_ll_bulk_write16(caps.device, buff_pixels, (uint16_t *)buff);
+				} else {
+					ssd1306_update(x0, y0, x1, y1, buff);
+				}
 			}
 
-			spi_ll_deselect(caps.spi_device);
+			if (caps.interface == GDisplaySPIInterface) {
+				spi_ll_deselect(caps.device);
+			}
 		}
 	} else {
 		caps.addr_window(1, x0, y0, x1, y1);
 
-	    // Set DC to 1 (data mode)
-		gpio_ll_pin_set(CONFIG_LUA_RTOS_GDISPLAY_CMD);
-		spi_ll_select(caps.spi_device);
+		if (caps.interface == GDisplaySPIInterface) {
+		    // Set DC to 1 (data mode)
+			gpio_ll_pin_set(CONFIG_LUA_RTOS_GDISPLAY_CMD);
+			spi_ll_select(caps.device);
+		}
 
 		if (caps.bytes_per_pixel == 0) {
 			memcpy(buff, buffer, buff_size);
-			spi_ll_bulk_write(caps.spi_device, buff_size, (uint8_t *)buff);
+
+			if (caps.interface == GDisplaySPIInterface) {
+				spi_ll_bulk_write(caps.device, buff_size, (uint8_t *)buff);
+			} else {
+				ssd1306_update(x0, y0, x1, y1, buff);
+			}
 		} else {
 			uint16_t *origin = (uint16_t *)buffer;
 			uint16_t *destination =(uint16_t *) buff;
@@ -170,7 +188,11 @@ void gdisplay_ll_update(int x0, int y0, int x1, int y1, uint8_t *buffer) {
 			for(y = y0;y <= y1;y++) {
 				for(x = x0;x <= x1;x++) {
 					if (len == buff_size) {
-						spi_ll_bulk_write16(caps.spi_device, len, (uint16_t *)buff);
+						if (caps.interface == GDisplaySPIInterface) {
+							spi_ll_bulk_write16(caps.device, len, (uint16_t *)buff);
+						} else {
+							ssd1306_update(x0, y0, x1, y1, buff);
+						}
 
 						len = 0;
 						destination = (uint16_t *)buff;
@@ -182,13 +204,19 @@ void gdisplay_ll_update(int x0, int y0, int x1, int y1, uint8_t *buffer) {
 			}
 
 			if (len > 0) {
-				spi_ll_bulk_write16(caps.spi_device, len, (uint16_t *)buff);
+				if (caps.interface == GDisplaySPIInterface) {
+					spi_ll_bulk_write16(caps.device, len, (uint16_t *)buff);
+				} else{
+					ssd1306_update(x0, y0, x1, y1, buff);
+				}
 
 				len = 0;
 			}
 		}
 
-		spi_ll_deselect(caps.spi_device);
+		if (caps.interface == GDisplaySPIInterface) {
+			spi_ll_deselect(caps.device);
+		}
 	}
 
 	gdisplay_ll_invalidate_buffer();
@@ -223,9 +251,17 @@ void IRAM_ATTR gdisplay_ll_set_pixel(int x, int y, uint32_t color, uint8_t *buff
 	if (buffer) {
 		if (caps.bytes_per_pixel == 0) {
 			if (color) {
-				buffer[x + (y/8) * (buffw!=-1?buffw:caps.phys_width)] &= ~(1 << (y % 8));
+				if (caps.monochrome_white) {
+					buffer[x + (y/8) * (buffw!=-1?buffw:caps.phys_width)] |= (1 << (y % 8));
+				} else {
+					buffer[x + (y/8) * (buffw!=-1?buffw:caps.phys_width)] &= ~(1 << (y % 8));
+				}
 			} else {
-				buffer[x + (y/8) * (buffw!=-1?buffw:caps.phys_width)] |= (1 << (y % 8));
+				if (caps.monochrome_white) {
+					buffer[x + (y/8) * (buffw!=-1?buffw:caps.phys_width)] &= ~(1 << (y % 8));
+				} else {
+					buffer[x + (y/8) * (buffw!=-1?buffw:caps.phys_width)] |= (1 << (y % 8));
+				}
 			}
 		} else {
 			((uint16_t *)buffer)[y * (buffw!=-1?buffw:caps.width) + x] = (uint16_t)wd;

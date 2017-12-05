@@ -375,6 +375,21 @@ driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_un
 	}
 }
 
+void driver_unlock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit) {
+	mtx_lock(&driver_mtx);
+
+    // Get the target driver lock array
+	driver_unit_lock_t *target_lock = (driver_unit_lock_t *)target_driver->lock;
+
+	if (target_lock) {
+		target_lock[lock_index(target_driver, target_unit)].owner = NULL;
+		target_lock[lock_index(target_driver, target_unit)].unit = 0;
+		target_lock[lock_index(target_driver, target_unit)].tag = NULL;
+	}
+
+	mtx_unlock(&driver_mtx);
+}
+
 void _driver_init() {
     // Create driver mutex
     mtx_init(&driver_mtx, NULL, NULL, 0);

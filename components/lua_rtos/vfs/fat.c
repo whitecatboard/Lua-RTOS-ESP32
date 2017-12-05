@@ -48,6 +48,8 @@
 #include <drivers/gpio.h>
 #include <drivers/spi.h>
 
+extern spi_bus_t spi_bus[CPU_LAST_SPI - CPU_FIRST_SPI + 1];
+
 void vfs_fat_register() {
 #if CONFIG_SD_CARD_SPI
 	// Lock resources
@@ -84,6 +86,8 @@ void vfs_fat_register() {
     slot_config.gpio_sck  = CONFIG_LUA_RTOS_SPI3_CLK;
     slot_config.gpio_cs   = CONFIG_LUA_RTOS_SD_CS;
 	#endif
+
+    spi_bus[spi_idx(CONFIG_LUA_RTOS_SD_SPI)].setup |= SPI_DMA_SETUP;
 #endif
 
 #if CONFIG_SD_CARD_MMC
@@ -97,7 +101,42 @@ void vfs_fat_register() {
     slot_config.gpio_cd = CONFIG_LUA_RTOS_MCC_CD;
     slot_config.gpio_wp = CONFIG_LUA_RTOS_MCC_WP;
 
-    slot_config.width = 4;
+    // Lock resources
+	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 15, DRIVER_ALL_FLAGS, "SD Card - CMD")) {
+		return;
+	}
+
+	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 14, DRIVER_ALL_FLAGS, "SD Card - CLK")) {
+		return;
+	}
+
+	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 2, DRIVER_ALL_FLAGS, "SD Card - DAT0")) {
+		return;
+	}
+
+#if !CONFIG_LUA_RTOS_MCC_1_LINE
+	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 14, DRIVER_ALL_FLAGS, "SD Card - DAT1")) {
+		return;
+	}
+
+	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 12, DRIVER_ALL_FLAGS, "SD Card - DAT2")) {
+		return;
+	}
+#endif
+
+#if CONFIG_LUA_RTOS_MCC_CD != -1
+	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_MCC_CD, DRIVER_ALL_FLAGS, "SD Card - CD")) {
+		return;
+	}
+#endif
+
+#if CONFIG_LUA_RTOS_MCC_WP != -1
+	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_MCC_WP, DRIVER_ALL_FLAGS, "SD Card - WP")) {
+		return;
+	}
+#endif
+
+	slot_config.width = 4;
 #endif
 
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
@@ -123,6 +162,16 @@ void vfs_fat_register() {
     	esp_vfs_fat_sdmmc_unmount();
     	syslog(LOG_INFO, "fat%d can't mounted", 0);
     	driver_unlock_all(SYSTEM_DRIVER, 0);
+
+#if CONFIG_SD_CARD_SPI
+	#if (CONFIG_LUA_RTOS_SD_SPI == 2)
+    spi_unlock_bus_resources(2);
+	#endif
+
+	#if (CONFIG_LUA_RTOS_SD_SPI == 3)
+	spi_unlock_bus_resources(3);
+	#endif
+#endif
     	return;
     }
 

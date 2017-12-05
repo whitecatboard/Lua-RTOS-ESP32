@@ -68,6 +68,9 @@
  */
 static struct mtx lmic_hal_mtx;
 
+// Start time
+static struct timeval start_tv;
+
 static int spi_device;
 
 #if LMIC_HAL_INTERRUPTS
@@ -198,7 +201,10 @@ driver_error_t *hal_init (void) {
 	// Create mutex
     mtx_init(&lmic_hal_mtx, NULL, NULL, 0);
 
-    return NULL;
+    // Get start time
+	gettimeofday(&start_tv, NULL);
+
+	return NULL;
 }
 
 /*
@@ -320,14 +326,14 @@ void hal_sleep (void) {
  */
 u8_t IRAM_ATTR hal_ticks () {
 	struct timeval tv;
-	u8_t microseconds;
+	u8_t ticks;
 
 	gettimeofday(&tv, NULL);
 
-	microseconds  = tv.tv_sec * 1000000;
-	microseconds += tv.tv_usec;
+	ticks  = (tv.tv_sec - start_tv.tv_sec) * (1000000 / US_PER_OSTICK);
+	ticks += (tv.tv_usec - start_tv.tv_usec) / US_PER_OSTICK;
 
-	return (microseconds / US_PER_OSTICK);
+	return ticks;
 }
 
 /*

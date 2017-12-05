@@ -64,12 +64,6 @@ static int tp_caly = 0;
 // Current chipset
 static uint8_t chipset;
 
-// Register drivers and errors
-DRIVER_REGISTER_BEGIN(ILI9341,ili9341,NULL,NULL,NULL);
-	DRIVER_REGISTER_ERROR(ILI9341, ili9341, CannotSetup, "cannot setup", ILI9341_CANNOT_SETUP);
-	DRIVER_REGISTER_ERROR(ILI9341, ili9341, NotEnoughtMemory, "not enough memory", ILI9341_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_END(ILI9341,ili9341,NULL,NULL,NULL);
-
 static const uint8_t ILI9341_init[] = {
   23,                   					        // 23 commands in list
   ILI9341_SWRESET, DELAY,   						//  1: Software reset, no args, w/delay
@@ -192,7 +186,7 @@ static int ili9341_tp_read(uint8_t type, int samples) {
 /*
  * Operation functions
  */
-driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation) {
+driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation, uint8_t address) {
 	driver_error_t *error;
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
 
@@ -209,29 +203,30 @@ driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation) {
 	caps->bdepth = 5;
 	caps->phys_width  = ILI9341_HEIGHT;
 	caps->phys_height = ILI9341_WIDTH;
+	caps->interface = GDisplaySPIInterface;
 
 	// Store chipset
 	chipset = chip;
 
-#if CONFIG_LUA_RTOS_GDISPLAY_TP_SPI
-	#if CONFIG_LUA_RTOS_GDISPLAY_TP_CS == -1
+#if CONFIG_LUA_RTOS_GDISPLAY_TP_SPI > 0
+	#if CONFIG_LUA_RTOS_GDISPLAY_TP_CS < 0
 	#error "If touch pannel support is enabled CONFIG_LUA_RTOS_GDISPLAY_TP_CS must be >= 0."
 	#endif
     // Init display SPI bus
-	if (caps->spi_device == -1) {
-		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 48000000, SPI_FLAG_WRITE | SPI_FLAG_READ, &caps->spi_device))) {
+	if (caps->device == -1) {
+		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 48000000, SPI_FLAG_WRITE | SPI_FLAG_READ | SPI_FLAG_NO_DMA, &caps->device))) {
 			return error;
 		}
 	}
 	// Init touch SPI
-	if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_TP_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_TP_CS, 0, 2500000, SPI_FLAG_WRITE | SPI_FLAG_READ, &touch_spi))) {
+	if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_TP_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_TP_CS, 0, 2500000, SPI_FLAG_WRITE | SPI_FLAG_READ | SPI_FLAG_NO_DMA, &touch_spi))) {
 		return error;
 	}
 
 #else
     // Init display SPI bus
-	if (caps->spi_device == -1) {
-		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 26000000, SPI_FLAG_WRITE | SPI_FLAG_READ, &caps->spi_device))) {
+	if (caps->device == -1) {
+		if ((error = spi_setup(CONFIG_LUA_RTOS_GDISPLAY_SPI, 1, CONFIG_LUA_RTOS_GDISPLAY_CS, 0, 48000000, SPI_FLAG_WRITE | SPI_FLAG_READ | SPI_FLAG_NO_DMA, &caps->device))) {
 			return error;
 		}
 	}
@@ -259,7 +254,7 @@ driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation) {
 	gpio_ll_pin_clr(CONFIG_LUA_RTOS_GDISPLAY_RESET);
 #endif
 
-#if CONFIG_LUA_RTOS_GDISPLAY_TP_SPI != -1
+#if CONFIG_LUA_RTOS_GDISPLAY_TP_SPI > 0
 	if ((lock_error = driver_lock(GDISPLAY_DRIVER, 0, SPI_DRIVER, touch_spi, DRIVER_ALL_FLAGS, "gdisplay - ILI9341 TOUCH PANNEL"))) {
 		return driver_lock_error(GDISPLAY_DRIVER, lock_error);
 	}
@@ -289,7 +284,7 @@ driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation) {
 
 	// Allocate buffer
 	if (!gdisplay_ll_allocate_buffer(ST7735_BUFFER)) {
-		return driver_error(ST7735_DRIVER, ST7735_ERR_NOT_ENOUGH_MEMORY, NULL);
+		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
     // Clear screen (black)

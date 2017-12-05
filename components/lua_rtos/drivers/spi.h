@@ -34,10 +34,18 @@
 
 #include <sys/driver.h>
 
-#define SPI_USE_IDF_DRIVER 1
-
 // Number of SPI devices per bus
 #define SPI_BUS_DEVICES 3
+
+// Get the index for a SPI unit in the spi_bus array
+#define spi_idx(unit) (unit - CPU_FIRST_SPI)
+
+// Check if SPI unit use the native pins
+#define spi_use_native_pins(unit) \
+	( \
+		(unit==2)?((spi_bus[spi_idx(unit)].miso == 12) && (spi_bus[spi_idx(unit)].mosi == 13) && (spi_bus[spi_idx(unit)].clk == 14)): \
+		((spi_bus[spi_idx(unit)].miso == 19) && (spi_bus[spi_idx(unit)].mosi == 23) && (spi_bus[spi_idx(unit)].clk == 18)) \
+	)
 
 // Native pins
 #define SPI_DEFAULT_MISO(unit) (unit==2?GPIO12:(unit==3?GPIO19:-1))
@@ -59,6 +67,9 @@
 extern const int spi_errors;
 extern const int spi_error_map;
 
+#define SPI_DMA_SETUP    (1 << 0)
+#define SPI_NO_DMA_SETUP (1 << 1)
+
 // Flags
 #define SPI_FLAG_WRITE  (1 << 0)
 #define SPI_FLAG_READ   (1 << 1)
@@ -68,24 +79,19 @@ extern const int spi_error_map;
 typedef struct {
 	uint8_t  setup;
 	int8_t   cs;
-	uint32_t speed;
 	uint8_t  mode;
-	uint32_t divisor;
 	uint8_t  dma;
-	uint8_t  sio;
+	uint32_t regs[14];
 	spi_device_handle_t h;
 } spi_device_t;
 
 typedef struct {
 	SemaphoreHandle_t mtx; // Recursive mutex for access the bus
 	uint8_t setup;         // Bus is setup?
-	uint8_t last_dma;      // Last device uses dma?
 	int last_device;       // Last device that used the bus
 	int selected_device;   // Device that owns the bus
 
-	uint32_t prev[12];
-
-	// Current pin assignment
+    // Current pin assignment
 	int8_t miso;
 	int8_t mosi;
 	int8_t clk;
@@ -112,6 +118,8 @@ void spi_ll_select(int deviceid);
  *
  */
 void spi_ll_deselect(int deviceid);
+
+void spi_ll_unsetup(int deviceid);
 
 /**
  * @brief Get SPI device speed in Hertz. This function is thread safe.
@@ -300,6 +308,8 @@ driver_error_t *spi_pin_map(int unit, int miso, int mosi, int clk);
  *     	 SPI_ERR_NO_MORE_DEVICES_ALLOWED
  */
 driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid);
+
+driver_error_t *spi_unsetup(int deviceid);
 
 /**
  * @brief Select SPI device for start a transaction over the SPI bus to the device. This function is thread safe.
@@ -552,5 +562,6 @@ driver_error_t *spi_bulk_read32(int deviceid, uint32_t nelements, uint32_t *data
 driver_error_t *spi_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data);
 
 driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags);
+void spi_unlock_bus_resources(int unit);
 
 #endif

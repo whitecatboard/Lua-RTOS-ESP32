@@ -6,7 +6,14 @@
 
 #if CONFIG_LUA_RTOS_LUA_USE_GDISPLAY
 
+#include <gdisplay/gdisplay.h>
+
 #define DELAY 0x80
+
+typedef enum {
+	GDisplaySPIInterface,
+	GDisplayI2CInterface
+} gdisplay_interface_t;
 
 typedef struct {
 	uint16_t width;
@@ -20,14 +27,17 @@ typedef struct {
     void (*orientation)(uint8_t);
     void (*touch_get)(int *, int *, int *, uint8_t);
     void (*touch_cal)(int, int);
-	int spi_device;
+	int device;
 	uint8_t bytes_per_pixel;
+	uint8_t monochrome_white;
 	uint8_t rdepth;
 	uint8_t gdepth;
 	uint8_t bdepth;
 	uint8_t orient;
 	uint16_t phys_width;
 	uint16_t phys_height;
+	gdisplay_interface_t interface;
+	uint8_t address;
 } gdisplay_caps_t;
 
 /**
