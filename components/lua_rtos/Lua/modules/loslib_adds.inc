@@ -339,14 +339,18 @@ static int os_ls (lua_State *L) {
 			}
 			//string given is not a valid path
 			//so try to find a matching file
+			if (*filename == '/') {
+				*filename = 0; //will cut off the filename from the path
+				filename++;
+				if(strlen(path)==0) {
+					path = "/";
+				}
+			}
+			//try to find a matching file
 			//in the current folder
 			if (filename==path) {
 				filename = (char*)path;
 				path = NULL;
-			}
-			else if (*filename == '/') {
-				*filename = 0; //will cut off the filename from the path
-				filename++;
 			}
 		}
 		else {
