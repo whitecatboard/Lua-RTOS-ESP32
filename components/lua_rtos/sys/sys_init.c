@@ -137,7 +137,7 @@ void _sys_init() {
 	// Increment bootcount
 	boot_count++;
 
-	//esp_log_level_set("*", ESP_LOG_ERROR);
+	esp_log_level_set("*", ESP_LOG_ERROR);
 
 	// Disable hardware modules modules
 	periph_module_disable(PERIPH_LEDC_MODULE);
