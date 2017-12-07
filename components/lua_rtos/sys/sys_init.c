@@ -137,7 +137,7 @@ void _sys_init() {
 	// Increment bootcount
 	boot_count++;
 
-	esp_log_level_set("*", ESP_LOG_ERROR);
+	//esp_log_level_set("*", ESP_LOG_ERROR);
 
 	// Disable hardware modules modules
 	periph_module_disable(PERIPH_LEDC_MODULE);
@@ -232,10 +232,6 @@ void _sys_init() {
     cpu_show_flash_info();
 
     //Init filesystems
-	#if CONFIG_LUA_RTOS_LUA_USE_NET
-    	vfs_net_register();
-	#endif
-
     #if CONFIG_LUA_RTOS_USE_SPIFFS
     	vfs_spiffs_register();
     #endif

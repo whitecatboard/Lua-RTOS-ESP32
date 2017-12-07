@@ -164,37 +164,30 @@ static int messageArrived(void *context, char * topicName, int topicLen, MQTTCli
 
 static void connectionLost(void* context, char* cause) {
     mqtt_userdata *mqtt = (mqtt_userdata *)context;
-    if (mqtt && mqtt->callback_mtx.sem) {
-      mtx_lock(&mqtt->callback_mtx); //protect from being deleted by our own module
 
-      int rc = -1;
-      if (NETWORK_AVAILABLE()) {
+    if (!mqtt) return;
 
-        syslog(LOG_DEBUG, "mqtt: trying to reconnect\n");
-        usleep(500 * 1000); //wait before trying to reconnect (this does only sleep the THREAD, NOT the cpu)
-        for(int retries = 1; mqtt->client && rc < 0 && retries <= MQTT_MAX_RECONNECT_RETRIES; retries++) {
-          rc = MQTTClient_connect(mqtt->client, &mqtt->conn_opts);
-          if (rc < 0) {
-            syslog(LOG_DEBUG, "mqtt: reconnect attempt %i: %i\n", retries, rc);
-            usleep(500 * 1000); //wait before retrying (this does only sleep the THREAD, NOT the cpu)
-          }
-        }
+    int rc = 0;
 
-      }
+    for(;;) {
+    	if (mqtt->callback_mtx.sem) {
+    		mtx_lock(&mqtt->callback_mtx);
 
-      if (rc < 0) {
-        if (NETWORK_AVAILABLE()) {
-          syslog(LOG_DEBUG, "mqtt: connection lost\n"); //reconnect didn't succeed
-        }
-        else {
-          syslog(LOG_DEBUG, "mqtt: connection lost - no network available\n"); //reconnect not possible at all
-        }
-      }
-      else {
-        syslog(LOG_DEBUG, "mqtt: reconnected\n");
-      }
-
-      mtx_unlock(&mqtt->callback_mtx);
+        	if (NETWORK_AVAILABLE()) {
+            	rc = MQTTClient_connect(mqtt->client, &mqtt->conn_opts);
+            	if (rc == 0) {
+            		mtx_unlock(&mqtt->callback_mtx);
+            		break;
+            	} else {
+            		mtx_unlock(&mqtt->callback_mtx);
+            	}
+            } else {
+            	mtx_unlock(&mqtt->callback_mtx);
+            	usleep(500 * 1000);
+            }
+    	} else {
+    		break;
+    	}
     }
 }
 
@@ -205,7 +198,7 @@ static int lmqtt_client( lua_State* L ){
     mqtt_userdata *mqtt;
     char url[250];
     const char *persistence_folder = NULL;
-    int persistence = 0;
+    int persistence = MQTTCLIENT_PERSISTENCE_NONE;
 
     const char *clientId = luaL_checklstring( L, 1, &lenClientId ); //is being strdup'd in MQTTClient_create
     const char *host = luaL_checklstring( L, 2, &lenHost ); //url is being strdup'd in MQTTClient_connectURI
@@ -295,7 +288,7 @@ static int lmqtt_connect( lua_State* L ) {
     bcopy(&ssl_opts, &mqtt->ssl_opts, sizeof(MQTTClient_SSLOptions));
 
     MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
-    conn_opts.connectTimeout = 4;
+    conn_opts.connectTimeout = 10;
     conn_opts.keepAliveInterval = 60;
     conn_opts.reliable = 0;
     conn_opts.cleansession = 0;
@@ -333,7 +326,7 @@ static int lmqtt_subscribe( lua_State* L ) {
     qos = luaL_checkinteger( L, 3 );
 
     if (qos > 0 && mqtt->persistence == MQTTCLIENT_PERSISTENCE_NONE) {
-      syslog(LOG_WARNING, "mqtt: please enable persistence for a qos > 0\n");
+        return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_PUBLISH, "enable persistence for a qos > 0");
     }
 
     luaL_checktype(L, 4, LUA_TFUNCTION);
@@ -369,7 +362,7 @@ static int lmqtt_publish( lua_State* L ) {
     qos = luaL_checkinteger( L, 4 );
 
     if (qos > 0 && mqtt->persistence == MQTTCLIENT_PERSISTENCE_NONE) {
-      syslog(LOG_WARNING, "mqtt: please enable persistence for a qos > 0\n");
+        return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_PUBLISH, "enable persistence for a qos > 0");
     }
 
     rc = MQTTClient_publish(mqtt->client, topic, payload_len, payload,

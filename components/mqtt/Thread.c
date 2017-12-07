@@ -193,14 +193,13 @@ thread_id_type Thread_getid(void)
 sem_type Thread_create_sem(void)
 {
 	sem_type sem = NULL;
-	int rc = 0;
 
 	FUNC_ENTRY;
 
-	rc = sys_sem_new((sys_sem_t *)&sem, 0);
+	sem = xSemaphoreCreateCounting(10,0);
 
-	FUNC_EXIT_RC(rc);
-	(void) rc;
+	FUNC_EXIT_RC(sem?0:-1);
+
 	return sem;
 }
 
@@ -217,17 +216,12 @@ int Thread_wait_sem(sem_type sem, int timeout)
 
     FUNC_ENTRY;
 
-    rc = sys_arch_sem_wait(sem, timeout);
-
-    if (rc == 0xffffffffUL) {
-        rc = -1;
-    } else {
-        rc = 0;
+    if (xSemaphoreTake(sem, timeout / portTICK_PERIOD_MS) == pdTRUE) {
+    	rc = 0;
     }
 
     FUNC_EXIT_RC((int)rc);
     return (int)rc;
-
 }
 
 
@@ -238,14 +232,7 @@ int Thread_wait_sem(sem_type sem, int timeout)
  */
 int Thread_check_sem(sem_type sem)
 {
-    if (xSemaphoreTake(sem,0) == pdTRUE) {
-        xSemaphoreGive(sem);
-
-        return 1;
-    } else {
-        return 0;
-    }
-    return 0;
+	return (uxSemaphoreGetCount(sem) > 0);
 }
 
 
@@ -260,7 +247,7 @@ int Thread_post_sem(sem_type sem)
 
     FUNC_ENTRY;
 
-    sys_sem_signal(sem);
+    xSemaphoreGive(sem);
 
     FUNC_EXIT_RC(rc);
 
@@ -278,7 +265,7 @@ int Thread_destroy_sem(sem_type sem)
 
     FUNC_ENTRY;
 
-    sys_sem_free(sem);
+    vSemaphoreDelete(sem);
 
     FUNC_EXIT_RC(rc);
 

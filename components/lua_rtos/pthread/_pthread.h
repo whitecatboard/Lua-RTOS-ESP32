@@ -72,7 +72,7 @@
 #define PTHREAD_MTX_DEBUG_LOCK() printf("phread can't lock\n");
 #else
 #define PTHREAD_MTX_LOCK_TIMEOUT portMAX_DELAY
-#define PTHREAD_MTX_DEBUG_LOCK() 
+#define PTHREAD_MTX_DEBUG_LOCK()
 #endif
 
 // Minimal stack size per thread

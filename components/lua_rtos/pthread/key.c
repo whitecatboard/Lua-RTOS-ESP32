@@ -37,7 +37,7 @@ extern struct list key_list;
 int pthread_key_create(pthread_key_t *k, void (*destructor)(void*)) {
     struct pthread_key *key;
     int res;
-    
+
     // Allocate space for the key
     key = (struct pthread_key *)malloc(sizeof(struct pthread_key));
     if (!key) {
@@ -111,7 +111,7 @@ void *pthread_getspecific(pthread_key_t k) {
     pthread_t thread;
     int res;
     int index;
-    
+
     // Get key
     res = list_get(&key_list, k, (void **)&key);
     if (res) {
