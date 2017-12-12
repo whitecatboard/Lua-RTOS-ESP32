@@ -44,6 +44,9 @@ CURRENT_IDF := 7e3ac34704b53473c42b148a9edc578c51630064
 # Project name
 PROJECT_NAME := lua_rtos
 
+# Detect OS
+UNAME := $(shell uname)
+
 # Lua RTOS has support for a lot of ESP32-based boards, but each board
 # can have different configurations, such as the PIN MAP.
 #
@@ -66,7 +69,14 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
     $(info )
     BOARDS := $(subst \,$(n),$(shell python boards/boards.py))
     $(info $(BOARDS))
-    BOARD := $(shell read -p "Board type: ";echo $$REPLY)    
+    ifeq ("$(UNAME)", "Linux")
+      BOARD := $(shell read -p "Board type: " REPLY;echo $$REPLY)
+    endif
+
+    ifeq ("$(UNAME)", "Darwin")
+      BOARD := $(shell read -p "Board type: ";echo $$REPLY)
+    endif
+
     BOARD := $(subst \,$(n),$(shell python boards/boards.py $(BOARD)))
   
     # Check if board exists
