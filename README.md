@@ -37,10 +37,10 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    | [ESP32 THING](http://www.ftdichip.com/Drivers/VCP.htm)  | 
 
 2. For Linux, the currently logged user should have read and write access the sUSB-TO-SERIAL device. On most Linux distributions, this is done by adding the user to dialout group with the following command:
- 
-  ```lua
+
+   ```lua
   sudo usermod -a -G dialout $USER
-  ```
+   ```
    
 ## Method 1: get a precompiled firmware
 
