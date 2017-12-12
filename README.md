@@ -39,9 +39,9 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
 2. For Linux, the currently logged user should have read and write access the sUSB-TO-SERIAL device. On most Linux distributions, this is done by adding the user to dialout group with the following command:
 
    ```lua
-  sudo usermod -a -G dialout $USER
+   $ sudo usermod -a -G dialout $USER
    ```
-   
+      
 ## Method 1: get a precompiled firmware
 
 1. Install The Whitecat Console. The Whitecat Console is a command line tool that allows the programmer to flash a Lua RTOS compatible board with the last available firmware.
