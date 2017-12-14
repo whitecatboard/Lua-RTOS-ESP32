@@ -391,7 +391,7 @@ static int l_ssh_exec(lua_State* L) {
 	}
 
 	int bytecount = 0;
-	char buffer[0x4000];
+	char buffer[1024];
 
 	for( ;; ) {
 		/* loop until we block */
