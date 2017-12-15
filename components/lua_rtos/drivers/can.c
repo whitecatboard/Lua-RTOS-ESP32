@@ -318,6 +318,7 @@ driver_error_t *can_tx(int32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t 
 	// Populate frame
 	frame.MsgID = msg_id;
 	frame.FIR.B.DLC = len;
+	frame.FIR.B.FF = (msg_type == 1);
 	memcpy(&frame.data, data, len);
 
 	can_ll_tx(&frame);
@@ -340,7 +341,7 @@ driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_
 	can_ll_rx(&frame);
 
 	*msg_id = frame.MsgID;
-	*msg_type = 0;
+	*msg_type = frame.FIR.B.FF;
 	*len = frame.FIR.B.DLC;
 	memcpy(data, &frame.data, *len);
 
