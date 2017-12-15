@@ -209,11 +209,13 @@ static void *gw_thread(void *arg) {
 
 			pthread_attr_init(&attr);
 
+		    pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
 			if (pthread_create(&thread_up, &attr, gw_thread_up, NULL)) {
 				syslog(LOG_ERR, "can%d gateway: can't start up thread", gw_config->unit);
 				return NULL;
 			}
 
+		    pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
 			if (pthread_create(&thread_down, &attr, gw_thread_down, NULL)) {
 				syslog(LOG_ERR, "can%d gateway: can't start down thread", gw_config->unit);
 				return NULL;
@@ -471,6 +473,7 @@ driver_error_t *can_gateway_start(int32_t unit, uint16_t speed, int32_t port) {
 
 	pthread_attr_init(&attr);
 
+    pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
 	if (pthread_create(&gw_config->thread, &attr, gw_thread, NULL)) {
 		free(gw_config);
 

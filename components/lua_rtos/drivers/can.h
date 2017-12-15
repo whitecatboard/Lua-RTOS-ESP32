@@ -55,6 +55,14 @@ typedef struct {
 
 #define CAN_MAX_DLEN 8
 
+/*
+ * Controller Area Network Identifier structure
+ *
+ * bit 0-28	: CAN identifier (11/29 bit)
+ * bit 29	: error message frame flag (0 = data frame, 1 = error message)
+ * bit 30	: remote transmission request flag (1 = rtr frame)
+ * bit 31	: frame format flag (0 = standard 11 bit, 1 = extended 29 bit)
+ */
 typedef uint32_t canid_t;
 
 struct can_frame {
