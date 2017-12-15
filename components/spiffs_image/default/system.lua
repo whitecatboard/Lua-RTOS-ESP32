@@ -17,6 +17,9 @@ config = {
 	ethernet = false,
 	sntp = false,
 	http = false,
+	can = {
+		gw = false
+	},
 	net = {
 		wifi = nil,
 		ethernet = nil
@@ -52,6 +55,14 @@ config.data.http = {
 	httpsPort = 0, 
 	caFile = "",
 	keyFile = ""
+}
+
+-- CAN gateway default config
+config.data.can = {
+	gw = {
+		port = 1333,
+		speed = 1000
+	}
 }
 
 -- Load configution
@@ -97,6 +108,10 @@ if (config.http) then
 		config.data.http.httpPort, config.data.http.httpsPort,
 		config.data.http.caFile, config.data.http.keyFile
 	)
+end
+
+if (config.can.gw) then
+	net.service.can.start(can.CAN0, config.data.can.gw.speed, config.data.can.gw.port)
 end
 
 -- Main setups

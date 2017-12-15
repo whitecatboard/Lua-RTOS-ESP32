@@ -46,6 +46,7 @@
 #include "net_service_curl.inc"
 #include "net_service_captivedns.inc"
 #include "net_service_mdns.inc"
+#include "net_service_can.inc"
 #include "net_ssh.inc"
 
 #include <stdint.h>
@@ -258,6 +259,7 @@ static const LUA_REG_TYPE service_map[] = {
 #if CONFIG_LUA_RTOS_USE_HTTP_SERVER
 	{ LSTRKEY( "http" ), LROVAL ( http_map ) },
 	{ LSTRKEY( "captivedns" ), LROVAL ( captivedns_map ) },
+	{ LSTRKEY( "can" ), LROVAL ( can_map ) },
 #endif
 #if CONFIG_LUA_RTOS_LUA_USE_MDNS
 	{ LSTRKEY( "mdns" ), LROVAL ( mdns_map ) },

@@ -31,6 +31,13 @@
 
 #if CONFIG_LUA_RTOS_LUA_USE_CAN
 
+#include "lwip/err.h"
+#include "lwip/sockets.h"
+#include "lwip/sys.h"
+#include "lwip/netdb.h"
+#include "lwip/dns.h"
+#include "lwip/ip_addr.h"
+
 #include <stdint.h>
 #include <string.h>
 
@@ -43,12 +50,16 @@
 #include <drivers/can.h>
 #include <drivers/gpio.h>
 
-static uint8_t setup = 0;
+#include <pthread.h>
 
+static uint8_t setup = 0;
 struct mtx mtx;
 
 // CAN configuration
 CAN_device_t CAN_cfg;
+
+// CAN gateway configuration
+can_gw_config_t *gw_config = NULL;
 
 // CAN filters
 static uint8_t filters = 0;
@@ -62,11 +73,164 @@ DRIVER_REGISTER_BEGIN(CAN,can,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(CAN, can, NoMoreFiltersAllowed, "no more filters allowed", CAN_ERR_NO_MORE_FILTERS_ALLOWED);
 	DRIVER_REGISTER_ERROR(CAN, can, InvalidFilter, "invalid filter", CAN_ERR_INVALID_FILTER);
 	DRIVER_REGISTER_ERROR(CAN, can, NotSetup, "is not setup", CAN_ERR_IS_NOT_SETUP);
+	DRIVER_REGISTER_ERROR(CAN, can, CannotStart, "can't start", CAN_ERR_CANT_START);
+	DRIVER_REGISTER_ERROR(CAN, can, GatewayNotStarted, "gateway not started", CAN_ERR_GW_NOT_STARTED);
 DRIVER_REGISTER_END(CAN,can,NULL,NULL,NULL);
 
 /*
  * Helper functions
  */
+
+static void can_ll_tx(CAN_frame_t *frame) {
+	mtx_lock(&mtx);
+	CAN_write_frame(frame);
+	mtx_unlock(&mtx);
+}
+
+static void can_ll_rx(CAN_frame_t *frame) {
+	// Read next frame
+    // Check filter
+	uint8_t i;
+    uint8_t pass = 0;
+
+    while (!pass) {
+    	xQueueReceive(CAN_cfg.rx_queue, frame, portMAX_DELAY);
+        if (filters > 0) {
+            for(i=0;((i < CAN_NUM_FILTERS) && (!pass));i++) {
+            	if ((can_filter[i].fromID >= 0) && (can_filter[i].toID >= 0) && (frame->FIR.B.DLC > 0) && (frame->FIR.B.DLC < 9)) {
+            		pass = ((frame->MsgID >= can_filter[i].fromID) && (frame->MsgID <= can_filter[i].toID));
+            	}
+            }
+        } else {
+        	pass = 1;
+        }
+    }
+}
+
+static void *gw_thread_up(void *arg) {
+	CAN_frame_t frame;
+	struct can_frame packet;
+
+	// Set a timeout for send
+	struct timeval tout;
+	tout.tv_sec = 4;
+	tout.tv_usec = 0;
+	setsockopt(gw_config->client, SOL_SOCKET, SO_SNDTIMEO, &tout, sizeof(tout));
+
+	while(!gw_config->stop) {
+		// Wait for a CAN packet
+		can_ll_rx(&frame);
+		if (frame.FIR.B.DLC != 0) {
+			// Fill packet
+			memset(&packet, 0, sizeof(packet));
+
+			packet.can_id = (frame.FIR.B.FF << 31) | (frame.FIR.B.RTR << 30) | frame.MsgID;
+			packet.can_dlc = frame.FIR.B.DLC;
+
+			memcpy(packet.data, frame.data.u8, sizeof(frame.data));
+
+			// Write frame to socket
+			if (write(gw_config->client, &packet, sizeof(packet)) != sizeof(packet)) {
+				close(gw_config->client);
+
+				syslog(LOG_ERR, "can%d gateway: can't write to socket", gw_config->unit);
+
+				return NULL;
+			}
+		}
+	}
+
+	close(gw_config->client);
+
+	return NULL;
+}
+
+static void *gw_thread_down(void *arg) {
+	struct can_frame packet;
+	CAN_frame_t frame;
+
+	while(!gw_config->stop) {
+		if (read(gw_config->client, &packet, sizeof(packet)) == sizeof(packet)) {
+			// Fill frame
+			frame.MsgID = (packet.can_id & 0b11111111111111111111111111111);
+			frame.FIR.B.FF = (packet.can_id & 0b10000000000000000000000000000000?1:0);
+			frame.FIR.B.RTR = (packet.can_id & 0b01000000000000000000000000000000?1:0);
+			frame.FIR.B.DLC = packet.can_dlc;
+
+			memcpy(frame.data.u8, packet.data, sizeof(packet.data));
+
+			can_ll_tx(&frame);
+		}
+	}
+
+	close(gw_config->client);
+
+	return NULL;
+}
+
+static void *gw_thread(void *arg) {
+	// Create an setup socket
+	struct sockaddr_in6 sin;
+
+	gw_config->socket = socket(AF_INET6, SOCK_STREAM, 0);
+	if (gw_config->socket < 0) {
+		syslog(LOG_ERR, "can%d gateway: can't create socket", gw_config->unit);
+		return NULL;
+	}
+
+	// Bind and listen
+	memset(&sin, 0, sizeof(sin));
+	sin.sin6_family = AF_INET6;
+	memcpy(&sin.sin6_addr.un.u32_addr, &in6addr_any, sizeof(in6addr_any));
+	sin.sin6_port = htons(gw_config->port);
+
+	if(bind(gw_config->socket, (struct sockaddr *) &sin, sizeof (sin))) {
+		syslog(LOG_ERR, "can%d gateway: can't bind to port %d",gw_config->unit, gw_config->port);
+		return NULL;
+	}
+
+	if (listen(gw_config->socket, 5)) {
+		syslog(LOG_ERR, "can%d gateway: can't listen on port %d",gw_config->unit, gw_config->port);
+		return NULL;
+	}
+
+	syslog(LOG_INFO, "can%d gateway: started at port %d", gw_config->unit, gw_config->port);
+
+	while (!gw_config->stop) {
+		// Wait for a connection
+		gw_config->client = accept(gw_config->socket, (struct sockaddr*) NULL, NULL);
+		if (gw_config->client > 0) {
+			syslog(LOG_INFO, "can%d gateway: client connected", gw_config->unit);
+
+			// Start threads for client
+			pthread_t thread_up;
+			pthread_t thread_down;
+			pthread_attr_t attr;
+
+			pthread_attr_init(&attr);
+
+			if (pthread_create(&thread_up, &attr, gw_thread_up, NULL)) {
+				syslog(LOG_ERR, "can%d gateway: can't start up thread", gw_config->unit);
+				return NULL;
+			}
+
+			if (pthread_create(&thread_down, &attr, gw_thread_down, NULL)) {
+				syslog(LOG_ERR, "can%d gateway: can't start down thread", gw_config->unit);
+				return NULL;
+			}
+
+			pthread_setname_np(thread_up, "can gw up");
+			pthread_setname_np(thread_down, "can gw down");
+
+			pthread_join(thread_up, NULL);
+			pthread_join(thread_down, NULL);
+		}
+	}
+
+	close(gw_config->socket);
+
+	return NULL;
+}
 
 /*
  * Operation functions
@@ -154,10 +318,7 @@ driver_error_t *can_tx(int32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t 
 	frame.FIR.B.DLC = len;
 	memcpy(&frame.data, data, len);
 
-	// TX
-	mtx_lock(&mtx);
-	CAN_write_frame(&frame);
-	mtx_unlock(&mtx);
+	can_ll_tx(&frame);
 
 	return NULL;
 }
@@ -174,23 +335,7 @@ driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_
 		return driver_error(CAN_DRIVER, CAN_ERR_IS_NOT_SETUP, NULL);
 	}
 
-	// Read next frame
-    // Check filter
-	uint8_t i;
-    uint8_t pass = 0;
-
-    while (!pass) {
-    	xQueueReceive(CAN_cfg.rx_queue, &frame, portMAX_DELAY);
-        if (filters > 0) {
-            for(i=0;((i < CAN_NUM_FILTERS) && (!pass));i++) {
-            	if ((can_filter[i].fromID >= 0) && (can_filter[i].toID >= 0) && (frame.FIR.B.DLC > 0) && (frame.FIR.B.DLC < 9)) {
-            		pass = ((frame.MsgID >= can_filter[i].fromID) && (frame.MsgID <= can_filter[i].toID));
-            	}
-            }
-        } else {
-        	pass = 1;
-        }
-    }
+	can_ll_rx(&frame);
 
 	*msg_id = frame.MsgID;
 	*msg_type = 0;
@@ -295,6 +440,79 @@ driver_error_t *can_remove_filter(int32_t unit, int32_t fromId, int32_t toId) {
 	xQueueReset(CAN_cfg.rx_queue);
 	portENABLE_INTERRUPTS();
 
+	mtx_unlock(&mtx);
+
+	return NULL;
+}
+
+driver_error_t *can_gateway_start(int32_t unit, uint16_t speed, int32_t port) {
+	driver_error_t *error;
+
+	// Sanity checks
+	if ((unit < CPU_FIRST_CAN) || (unit > CPU_LAST_CAN)) {
+		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_UNIT, NULL);
+	}
+
+	if ((error = can_setup(unit, speed))) {
+		return error;
+	}
+
+	// Allocate space for configuration
+	gw_config = calloc(1, sizeof(can_gw_config_t));
+	if (!gw_config) {
+		return driver_error(CAN_DRIVER, CAN_ERR_NOT_ENOUGH_MEMORY, NULL);
+	}
+
+	gw_config->port = port;
+	gw_config->stop = 0;
+
+	// Start main thread
+	pthread_attr_t attr;
+
+	pthread_attr_init(&attr);
+
+	if (pthread_create(&gw_config->thread, &attr, gw_thread, NULL)) {
+		free(gw_config);
+
+		return driver_error(CAN_DRIVER, CAN_ERR_NOT_ENOUGH_MEMORY, "can't start main thread");
+	}
+
+	pthread_setname_np(gw_config->thread, "can gw");
+
+	return NULL;
+}
+
+driver_error_t *can_gateway_stop(int32_t unit) {
+	// Sanity checks
+	if ((unit < CPU_FIRST_CAN) || (unit > CPU_LAST_CAN)) {
+		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_UNIT, NULL);
+	}
+
+	if (!gw_config) {
+		return driver_error(CAN_DRIVER, CAN_ERR_GW_NOT_STARTED, NULL);
+	}
+
+	// Set stop flag
+	gw_config->stop = 1;
+
+	// Send an empty frame to the queue to unblock gw_thread_up
+	CAN_frame_t frame;
+	memset(&frame, 0, sizeof(frame));
+	xQueueSend(CAN_cfg.rx_queue,&frame,0);
+
+	// Close socket to unblock gw_thread
+	close(gw_config->socket);
+
+	pthread_join(gw_config->thread, NULL);
+
+	free(gw_config);
+	gw_config = NULL;
+
+	// Reset queue
+	mtx_lock(&mtx);
+	portDISABLE_INTERRUPTS();
+	xQueueReset(CAN_cfg.rx_queue);
+	portENABLE_INTERRUPTS();
 	mtx_unlock(&mtx);
 
 	return NULL;

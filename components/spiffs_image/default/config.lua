@@ -23,6 +23,8 @@
 -- config.sntp = true -- Uncomment to enable sntp client / comment to disable it
 -- config.http = true -- Uncomment to enable http server / comment to disable it
 
+-- config.can.gw = true -- Uncomment to enable can gateway
+
 -- Wifi configuration in station mode
 config.data.wifi = {
 	-- Put the ssid / password needed to connect to the network
@@ -53,11 +55,21 @@ config.data.ethernet = {
 
 -- HTTP server configuration
 config.data.http = {
-	-- Put httpPort to 0 to disable http
+	-- Put the http port for unsecured connections. Use 0 to disable unsecured
+	-- http connectiond
 	httpPort = 80,
-	
-	-- Put httpsPort to 443 and caFile / keyFole to enable https
-	httpsPort = 0,  -- Uncomment to enable https / comment to disable it
+
+	-- Put the http port for secured connections. Use 0 to disable secured
+	-- http connectiond
+	--
+	-- If secured connections are enabled fill caFile / keyFile
+	httpsPort = 0, 
 	caFile = "",
 	keyFile = "",
+}
+
+-- CAN gateway configuration
+config.data.can.gw = {
+	port = 1333,
+	speed = 1000
 }
