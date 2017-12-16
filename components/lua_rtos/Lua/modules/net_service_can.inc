@@ -33,6 +33,7 @@
 
 #include <drivers/can.h>
 
+#if CONFIG_LUA_RTOS_LUA_USE_CAN
 static int lcan_service_start(lua_State* L) {
 	driver_error_t *error;
 
@@ -56,9 +57,13 @@ static int lcan_service_stop(lua_State* L) {
 
 	return 0;
 }
+#endif
 
 static const LUA_REG_TYPE can_map[] = {
+#if CONFIG_LUA_RTOS_LUA_USE_CAN
 	{ LSTRKEY("start"), LFUNCVAL(lcan_service_start) },
 	{ LSTRKEY("stop") , LFUNCVAL(lcan_service_stop ) },
+#endif
 	{ LNILKEY,LNILVAL }
 };
+
