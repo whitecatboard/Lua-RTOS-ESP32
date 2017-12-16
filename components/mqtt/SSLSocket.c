@@ -115,10 +115,8 @@ int SSLSocket_error(char* aString, SSL* ssl, int sock, int rc)
     FUNC_ENTRY;
     if (ssl)
         error = SSL_get_error(ssl, rc);
-	/*
-	else
-        error = ERR_get_error();
-	*/
+	//else
+    //    error = ERR_get_error();
 
     if (error == SSL_ERROR_WANT_READ)
 			Log(TRACE_MIN, -1, "SSLSocket WANT_READ in %s for socket %d", aString, sock);
@@ -311,9 +309,9 @@ void SSLSocket_terminate(void)
 		}
 	}
 	*/
-	if(sslCoreMutex) {
+	if(sslCoreMutex != PTHREAD_MUTEX_INITIALIZER) {
 		SSL_destroy_mutex(&sslCoreMutex);
-		sslCoreMutex = 0;
+		sslCoreMutex = PTHREAD_MUTEX_INITIALIZER;
 	}
 	FUNC_EXIT;
 }
@@ -369,12 +367,8 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 
 	if (opts->trustStore)
 	{
-		if ((rc = SSL_CTX_load_verify_locations(net->ctx, opts->trustStore, NULL)) != 1)
-		{
-			SSLSocket_error("SSL_CTX_load_verify_locations", NULL, net->socket, rc);
-			goto free_ctx;
-		}
-		Log(TRACE_MAX, -1, "SSLSocket_createContext: Loaded server certificate from %s", opts->trustStore);
+		SSLSocket_error("trustStore not supported!", NULL, net->socket, rc);
+		goto free_ctx;
 	}
 
 	if (opts->enabledCipherSuites != NULL)
@@ -440,6 +434,7 @@ int SSLSocket_connect(SSL* ssl, int sock)
 
 	FUNC_ENTRY;
 
+retry:
 	rc = SSL_connect(ssl);
 	if (rc != 1)
 	{
@@ -450,11 +445,19 @@ int SSLSocket_connect(SSL* ssl, int sock)
 			rc = error;
 		}
 		else {
-			error = SSLSocket_error("SSL_connect", ssl, sock, rc);
-			if (error == SSL_FATAL)
+			error = SSL_get_error(ssl, rc);
+			if (error == SSL_FATAL) {
+				SSLSocket_error("SSL_connect", ssl, sock, rc);
 				rc = error;
-			if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
+			}
+			if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
+				if (NETWORK_AVAILABLE()) {
+					goto retry;
+				}
+
+				SSLSocket_error("SSL_connect", ssl, sock, rc);
 				rc = TCPSOCKET_INTERRUPTED;
+			}
 		}
 	}
 
@@ -478,20 +481,23 @@ int SSLSocket_getch(SSL* ssl, int socket, char* c)
 	if ((rc = SocketBuffer_getQueuedChar(socket, c)) != SOCKETBUFFER_INTERRUPTED)
 		goto exit;
 
+retry:
 	if ((rc = SSL_read(ssl, c, (size_t)1)) < 0)
 	{
-		int err = SSLSocket_error("SSL_read - getch", ssl, socket, rc);
+		int err = SSL_get_error(ssl, rc);
 		if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
 		{
-			rc = TCPSOCKET_INTERRUPTED;
-			if(!NETWORK_AVAILABLE()) {
+			if (NETWORK_AVAILABLE()) {
+				goto retry;
+			} else {
+				SSLSocket_error("SSL_read - getch", ssl, socket, rc);
+
 				//we should discard 'half-received' data when the socket (wifi) is gone...
 				//so we basically call connectionLost here...
 				rc = TCPSOCKET_INTERRUPTED_FINAL;
 			}
-			else {
-				SocketBuffer_interrupted(socket, 0);
-			}
+		} else {
+			SSLSocket_error("SSL_read - getch", ssl, socket, rc);
 		}
 	}
 	else if (rc == 0)
@@ -530,13 +536,21 @@ char *SSLSocket_getdata(SSL* ssl, int socket, size_t bytes, size_t* actual_len)
 
 	buf = SocketBuffer_getQueuedData(socket, bytes, actual_len);
 
+retry:
 	if ((rc = SSL_read(ssl, buf + (*actual_len), (int)(bytes - (*actual_len)))) < 0)
 	{
-		rc = SSLSocket_error("SSL_read - getdata", ssl, socket, rc);
+		rc = SSL_get_error(ssl, rc);
 		if (rc != SSL_ERROR_WANT_READ && rc != SSL_ERROR_WANT_WRITE)
 		{
+			SSLSocket_error("SSL_read - getdata", ssl, socket, rc);
 			buf = NULL;
 			goto exit;
+		} else {
+			if (NETWORK_AVAILABLE()) {
+				goto retry;
+			}
+
+			SSLSocket_error("SSL_read - getdata", ssl, socket, rc);
 		}
 	}
 	else if (rc == 0) /* rc 0 means the other end closed the socket */
@@ -628,16 +642,20 @@ int SSLSocket_putdatas(SSL* ssl, int socket, char* buf0, size_t buf0len, int cou
 
 		if (sslerror == SSL_ERROR_WANT_WRITE)
 		{
-			int* sockmem = (int*)malloc(sizeof(int));
-			int free = 1;
+			if (NETWORK_AVAILABLE()) {
+				int* sockmem = (int*)malloc(sizeof(int));
+				int free = 1;
 
-			Log(TRACE_MIN, -1, "Partial write: incomplete write of %d bytes on SSL socket %d",
-				iovec.iov_len, socket);
-			SocketBuffer_pendingWrite(socket, ssl, 1, &iovec, &free, iovec.iov_len, 0);
-			*sockmem = socket;
-			ListAppend(s.write_pending, sockmem, sizeof(int));
-			FD_SET(socket, &(s.pending_wset));
-			rc = TCPSOCKET_INTERRUPTED;
+				Log(TRACE_MIN, -1, "Partial write: incomplete write of %d bytes on SSL socket %d",
+					iovec.iov_len, socket);
+				SocketBuffer_pendingWrite(socket, ssl, 1, &iovec, &free, iovec.iov_len, 0);
+				*sockmem = socket;
+				ListAppend(s.write_pending, sockmem, sizeof(int));
+				FD_SET(socket, &(s.pending_wset));
+				rc = TCPSOCKET_INTERRUPTED;
+			} else {
+				rc = SOCKET_ERROR;
+			}
 		}
 		else
 			rc = SOCKET_ERROR;

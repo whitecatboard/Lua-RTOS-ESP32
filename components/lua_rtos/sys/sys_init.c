@@ -232,10 +232,6 @@ void _sys_init() {
     cpu_show_flash_info();
 
     //Init filesystems
-	#if CONFIG_LUA_RTOS_LUA_USE_NET
-    	vfs_net_register();
-	#endif
-
     #if CONFIG_LUA_RTOS_USE_SPIFFS
     	vfs_spiffs_register();
     #endif

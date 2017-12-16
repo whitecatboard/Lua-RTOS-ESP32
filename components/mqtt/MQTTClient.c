@@ -73,6 +73,8 @@
 #define BUILD_TIMESTAMP "##MQTTCLIENT_BUILD_TAG##"
 #define CLIENT_VERSION  "##MQTTCLIENT_VERSION_TAG##"
 
+#include <drivers/net.h>
+
 void MQTTClient_global_init(MQTTClient_init_options* inits)
 {
 #if defined(OPENSSL)

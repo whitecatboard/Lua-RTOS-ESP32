@@ -27,6 +27,11 @@ ifneq (,$(findstring restore-idf,$(MAKECMDGOALS)))
   MAKECMDGOALS += defconfig
 endif
 
+ifneq (,$(findstring upgrade-idf,$(MAKECMDGOALS)))
+  BOARD_TYPE_REQUIRED := 0
+  MAKECMDGOALS += defconfig
+endif
+
 # New line
 define n
 
@@ -34,10 +39,13 @@ define n
 endef
 
 # Use this esp-idf commit in build
-CURRENT_IDF := 2e8441df9eb046b2436981dbaaa442b312f12101
+CURRENT_IDF := 661686b8408d9f9a46fd6a2566a077edf70656b7
 
 # Project name
 PROJECT_NAME := lua_rtos
+
+# Detect OS
+UNAME := $(shell uname)
 
 # Lua RTOS has support for a lot of ESP32-based boards, but each board
 # can have different configurations, such as the PIN MAP.
@@ -61,7 +69,14 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
     $(info )
     BOARDS := $(subst \,$(n),$(shell python boards/boards.py))
     $(info $(BOARDS))
-    BOARD := $(shell read -p "Board type: ";echo $$REPLY)    
+    ifeq ("$(UNAME)", "Linux")
+      BOARD := $(shell read -p "Board type: " REPLY;echo $$REPLY)
+    endif
+
+    ifeq ("$(UNAME)", "Darwin")
+      BOARD := $(shell read -p "Board type: ";echo $$REPLY)
+    endif
+
     BOARD := $(subst \,$(n),$(shell python boards/boards.py $(BOARD)))
   
     # Check if board exists
@@ -174,6 +189,10 @@ ifneq ("$(shell test -e  $(IDF_PATH)/components/lua_rtos && echo ex)","ex")
 	@ln -s $(PROJECT_PATH)/main/test/lua_rtos $(IDF_PATH)/components/lua_rtos 2> /dev/null
 endif
 
+upgrade-idf: restore-idf
+	@cd $(IDF_PATH) && git pull
+	@cd $(IDF_PATH) && git submodule update --init --recursive
+	
 restore-idf:
 	@echo "Reverting previous Lua RTOS esp-idf patches ..."
 ifeq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")

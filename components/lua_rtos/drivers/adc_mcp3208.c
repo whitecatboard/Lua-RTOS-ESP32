@@ -40,7 +40,7 @@
 
 static int spi_device = -1;
 
-driver_error_t *adc_mcp3208_setup(adc_channel_t *chan) {
+driver_error_t *adc_mcp3208_setup(adc_chann_t *chan) {
 	driver_unit_lock_error_t *lock_error = NULL;
 	driver_error_t *error;
 
@@ -93,7 +93,7 @@ driver_error_t *adc_mcp3208_setup(adc_channel_t *chan) {
 	return NULL;
 }
 
-driver_error_t *adc_mcp3208_read(adc_channel_t *chan, int *raw, double *mvolts) {
+driver_error_t *adc_mcp3208_read(adc_chann_t *chan, int *raw, double *mvolts) {
 	uint8_t buff[3];
 
 	int channel = chan->channel;

@@ -91,7 +91,7 @@ driver_error_t *adc_ads1115_read_reg(uint8_t type, adc_ads1115_reg_t *reg, uint8
 /*
  * Operation functions
  */
-driver_error_t *adc_ads1115_setup(adc_channel_t *chan) {
+driver_error_t *adc_ads1115_setup(adc_chann_t *chan) {
 	driver_error_t *error;
 
 	uint8_t i2c = CONFIG_ADC_I2C;
@@ -164,7 +164,7 @@ driver_error_t *adc_ads1115_setup(adc_channel_t *chan) {
 	return NULL;
 }
 
-driver_error_t *adc_ads1115_read(adc_channel_t *chan, int *raw, double *mvolts) {
+driver_error_t *adc_ads1115_read(adc_chann_t *chan, int *raw, double *mvolts) {
 	driver_error_t *error;
 
 	int8_t channel = chan->channel;

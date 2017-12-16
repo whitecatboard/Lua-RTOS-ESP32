@@ -1,7 +1,0 @@
-#
-# Component Makefile
-#
-
-COMPONENT_SRCDIRS := . ./netif
-COMPONENT_ADD_INCLUDEDIRS := .
-COMPONENT_PRIV_INCLUDEDIRS := 

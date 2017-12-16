@@ -102,7 +102,7 @@ driver_error_t * adc_internal_pin_to_channel(uint8_t pin, uint8_t *chan) {
 	return NULL;
 }
 
-driver_error_t *adc_internal_setup(adc_channel_t *chan) {
+driver_error_t *adc_internal_setup(adc_chann_t *chan) {
 	driver_error_t *error;
 	adc_resources_t resources = {0};
 	adc_atten_t atten;
@@ -175,7 +175,7 @@ driver_error_t *adc_internal_setup(adc_channel_t *chan) {
 	return NULL;
 }
 
-driver_error_t *adc_internal_read(adc_channel_t *chan, int *raw, double *mvolts) {
+driver_error_t *adc_internal_read(adc_chann_t *chan, int *raw, double *mvolts) {
 	uint8_t channel = chan->channel;
 
 	int traw = adc1_get_raw(channel);

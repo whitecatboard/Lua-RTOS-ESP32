@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, Potentiometer sensor
+ * Lua RTOS, LM35 sensor (temperature)
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
@@ -27,12 +27,12 @@
  * this software.
  */
 
-#include "sdkconfig.h"
+#include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
-#if CONFIG_LUA_RTOS_USE_SENSOR_POT
+#if CONFIG_LUA_RTOS_USE_SENSOR_LM35
 
-#define POTENTIOMETER_SAMPLES 10
+#define lm35_SAMPLES 10
 
 #include <math.h>
 
@@ -41,43 +41,43 @@
 #include <drivers/sensor.h>
 #include <drivers/adc.h>
 
-driver_error_t *potentiometer_acquire(sensor_instance_t *unit, sensor_value_t *values);
+driver_error_t *lm35_presetup(sensor_instance_t *unit);
+driver_error_t *lm35_acquire(sensor_instance_t *unit, sensor_value_t *values);
 
 // Sensor specification and registration
-static const sensor_t __attribute__((used,unused,section(".sensors"))) potentiometer_sensor = {
-	.id = "LINEAR_POT",
+static const sensor_t __attribute__((used,unused,section(".sensors"))) lm35_sensor = {
+	.id = "LM35",
 	.interface = {
 		{.type = ADC_INTERFACE},
 	},
 	.data = {
-		{.id = "val", .type = SENSOR_DATA_FLOAT},
+		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
 	},
-	.acquire = potentiometer_acquire
+	.presetup = lm35_presetup,
+	.acquire = lm35_acquire
 };
 
 /*
  * Operation functions
  */
-driver_error_t *potentiometer_acquire(sensor_instance_t *unit, sensor_value_t *values) {
+driver_error_t *lm35_presetup(sensor_instance_t *unit) {
+	unit->setup[0].adc.max = 1500;
+
+	return NULL;
+}
+
+driver_error_t *lm35_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	driver_error_t *error;
 	double mvolts = 0;
 
 	// Read average for some samples
-	if ((error = adc_read_avg(&unit->setup[0].adc.h, POTENTIOMETER_SAMPLES, NULL, &mvolts))) {
+	if ((error = adc_read_avg(&unit->setup[0].adc.h, lm35_SAMPLES, NULL, &mvolts))) {
 		return error;
 	}
 
-	// Get channel info
-	adc_chann_t *chan;
-
-	adc_get_channel(&unit->setup[0].adc.h, &chan);
-
-	// Estimate POT value (2 decimals)
-	values[0].floatd.value = roundf(100 * (mvolts / CONFIG_LUA_RTOS_VDD)) / 100;
-
-	if (values[0].floatd.value > 1.0) {
-		values[0].floatd.value = 1.0;
-	}
+	// Calculate temperature
+	// Round to 1 decimal place
+	values->floatd.value = floor((float)10.0 * (((float)mvolts) / (float)10.0)) / (float)10.0;
 
 	return NULL;
 }

@@ -31,7 +31,7 @@ index 92f60b6..230c370 100644
      return ret;
  }
 +
-+ssize_t esp_vfs_writev(int fd, const struct iovec *iov, int iovcnt)
++ssize_t writev(int fd, const struct iovec *iov, int iovcnt)
 +{
 +    const vfs_entry_t* vfs = get_vfs_for_fd(fd);
 +    struct _reent* r = __getreent();
@@ -44,3 +44,15 @@ index 92f60b6..230c370 100644
 +    CHECK_AND_CALL(ret, r, vfs, writev, local_fd, iov, iovcnt);
 +    return ret;
 +}
+diff --git a/components/lwip/port/vfs_lwip.c b/components/lwip/port/vfs_lwip.c
+index aa623f01..0357057a 100644
+--- a/components/lwip/port/vfs_lwip.c
++++ b/components/lwip/port/vfs_lwip.c
+@@ -53,6 +53,7 @@ void esp_vfs_lwip_sockets_register()
+         .read = &lwip_read_r,
+         .fcntl = &lwip_fcntl_r_wrapper,
+         .ioctl = &lwip_ioctl_r_wrapper,
++       .writev = &lwip_writev,
+     };
+     int max_fd;
+ 

@@ -1,5 +1,5 @@
 /*
- * Lua RTOS, ADC MCP3008 driver
+ * Lua RTOS, lua CAN module
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
@@ -26,13 +26,39 @@
  * arising out of or in connection with the use or performance of
  * this software.
  */
-#ifndef _ADC_MCP3008_H
-#define _ADC_MCP3008_H
 
-#include <drivers/adc.h>
+#include "net.h"
+
 #include <sys/driver.h>
 
-driver_error_t *adc_mcp3008_setup(adc_chann_t *chan);
-driver_error_t *adc_mcp3008_read(adc_chann_t *chan, int *raw, double *mvolts);
+#include <drivers/can.h>
 
-#endif /* _ADC_MCP3008_H */
+static int lcan_service_start(lua_State* L) {
+	driver_error_t *error;
+
+	int id = luaL_checkinteger(L, 1);
+	uint32_t speed = luaL_checkinteger(L, 2);
+	uint32_t port = luaL_checkinteger(L, 3);
+
+	if ((error = can_gateway_start(id, speed, port))) {
+		return luaL_driver_error(L, error);
+	}
+
+	return 0;
+}
+
+static int lcan_service_stop(lua_State* L) {
+	driver_error_t *error;
+
+	if ((error = can_gateway_stop(0))) {
+		return luaL_driver_error(L, error);
+	}
+
+	return 0;
+}
+
+static const LUA_REG_TYPE can_map[] = {
+	{ LSTRKEY("start"), LFUNCVAL(lcan_service_start) },
+	{ LSTRKEY("stop") , LFUNCVAL(lcan_service_stop ) },
+	{ LNILKEY,LNILVAL }
+};

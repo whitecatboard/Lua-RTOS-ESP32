@@ -239,7 +239,7 @@ driver_error_t *pwm_setup(int8_t unit, int8_t channel, int8_t pin, int32_t freq,
 
     for(bits = 15;bits >= 10;bits--) {
         ledc_timer_config_t timer_conf = {
-    		.bit_num = bits,
+    		.duty_resolution = bits,
     		.freq_hz = freq,
     		.speed_mode = LEDC_HIGH_SPEED_MODE,
     		.timer_num = resources.timer,
@@ -348,7 +348,7 @@ driver_error_t *pwm_set_freq(int8_t unit, int8_t channel, int32_t freq) {
 
 	    for(bits = 15;bits >= 10;bits--) {
 	        ledc_timer_config_t timer_conf = {
-	    		.bit_num = bits,
+	    		.duty_resolution = bits,
 	    		.freq_hz = freq,
 	    		.speed_mode = LEDC_HIGH_SPEED_MODE,
 	    		.timer_num = pwm[unit][channel].timer,

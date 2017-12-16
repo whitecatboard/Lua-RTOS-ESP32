@@ -50,13 +50,13 @@ typedef struct {
 	uint16_t max_val;        ///< Max value, depends on resolution
 	int16_t vref;             ///< VREF voltage attached in mvolts
 	int16_t max;             ///< Max voltage attached in mvolts
-} adc_channel_t;
+} adc_chann_t;
 
 // Adc devices
 typedef struct {
 	const char *name;
-	driver_error_t *(*setup)(adc_channel_t *);
-	driver_error_t *(*read)(adc_channel_t *, int *, double *);
+	driver_error_t *(*setup)(adc_chann_t *);
+	driver_error_t *(*read)(adc_chann_t *, int *, double *);
 } adc_dev_t;
 
 // ADC errors
@@ -130,6 +130,6 @@ driver_error_t *adc_read_avg(adc_channel_h_t *h, int samples, double *avgr, doub
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs. Error can be an operation error or a lock error.
  */
-driver_error_t *adc_get_channel(adc_channel_h_t *h, adc_channel_t **chan);
+driver_error_t *adc_get_channel(adc_channel_h_t *h, adc_chann_t **chan);
 
 #endif	/* ADC_H */

@@ -257,7 +257,7 @@ int MQTTPersistence_restore(Clients *c)
 		if (msgkeys)
 			free(msgkeys);
 	}
-	Log(TRACE_MINIMUM, -1, "%d sent messages and %d received messages restored for client %s\n",
+	Log(TRACE_MINIMUM, -1, "%d sent messages and %d received messages restored for client %s",
 		msgs_sent, msgs_rcvd, c->clientID);
 	MQTTPersistence_wrapMsgID(c);
 
