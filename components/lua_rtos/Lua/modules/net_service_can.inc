@@ -29,6 +29,8 @@
 
 #include "net.h"
 
+#if CONFIG_LUA_RTOS_LUA_USE_CAN
+
 #include <sys/driver.h>
 
 #include <drivers/can.h>
@@ -62,3 +64,5 @@ static const LUA_REG_TYPE can_map[] = {
 	{ LSTRKEY("stop") , LFUNCVAL(lcan_service_stop ) },
 	{ LNILKEY,LNILVAL }
 };
+
+#endif
