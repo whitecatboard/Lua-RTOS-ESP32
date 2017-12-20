@@ -146,4 +146,6 @@
 	#endif
 #endif
 
+#include "luartos_custom.h"
+
 #endif

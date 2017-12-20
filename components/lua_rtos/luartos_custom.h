@@ -1,0 +1,16 @@
+#include "sdkconfig.h"
+
+#ifndef LUA_RTOS_LUARTOS_CUSTOM_H_
+#define LUA_RTOS_LUARTOS_CUSTOM_H_
+
+#if !CONFIG_LUA_RTOS_CUSTOM_BOARD_NONE
+
+#undef LUA_RTOS_BOARD
+
+#if CONFIG_LUA_RTOS_CUSTOM_BOARD_ESP32MICROTEC
+#define LUA_RTOS_BOARD "ESP32MICROTEC"
+#endif
+
+#endif
+
+#endif

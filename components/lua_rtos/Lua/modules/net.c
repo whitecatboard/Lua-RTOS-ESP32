@@ -259,7 +259,9 @@ static const LUA_REG_TYPE service_map[] = {
 #if CONFIG_LUA_RTOS_USE_HTTP_SERVER
 	{ LSTRKEY( "http" ), LROVAL ( http_map ) },
 	{ LSTRKEY( "captivedns" ), LROVAL ( captivedns_map ) },
+#if CONFIG_LUA_RTOS_LUA_USE_CAN
 	{ LSTRKEY( "can" ), LROVAL ( can_map ) },
+#endif
 #endif
 #if CONFIG_LUA_RTOS_LUA_USE_MDNS
 	{ LSTRKEY( "mdns" ), LROVAL ( mdns_map ) },
