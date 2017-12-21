@@ -18,7 +18,7 @@
 -- config.logcons = false  -- Uncomment to disable syslog messages on the console
 
 -- config.wifi = true      -- Uncomment to enable wifi / comment to disable it
--- config.ethernet = true  -- Uncomment to enable ethernet / comment to disable it
+config.ethernet = true  -- Uncomment to enable ethernet / comment to disable it
 
 -- config.sntp = true -- Uncomment to enable sntp client / comment to disable it
 -- config.http = true -- Uncomment to enable http server / comment to disable it
