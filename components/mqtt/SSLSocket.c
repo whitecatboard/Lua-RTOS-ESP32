@@ -367,8 +367,11 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 
 	if (opts->trustStore)
 	{
-		SSLSocket_error("trustStore not supported!", NULL, net->socket, rc);
-		goto free_ctx;
+		if ((rc = SSL_CTX_load_verify_locations(net->ctx, opts->trustStore, NULL)) != 1)
+		{
+			SSLSocket_error("SSL_CTX_load_verify_locations", NULL, net->socket, rc);
+			goto free_ctx;
+		}
 	}
 
 	if (opts->enabledCipherSuites != NULL)
