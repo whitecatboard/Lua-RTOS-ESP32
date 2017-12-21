@@ -19,7 +19,7 @@ Maintainer: Sylvain Miermont
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_MULTI_CHAN_GATEWAY
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
 
 #define SPI_DELAY() delay(1)
 

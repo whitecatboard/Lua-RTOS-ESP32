@@ -17,7 +17,7 @@ Maintainer: Michael Coracin
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_MULTI_CHAN_GATEWAY
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
 
 #include "common.h"
 
@@ -57,6 +57,9 @@ Maintainer: Michael Coracin
 
 #include <sys/stat.h>
 #include <pthread.h>
+
+#define exit(reason) return;
+
 // Lua RTOS end
 
 #include "trace.h"
@@ -1034,19 +1037,6 @@ int lora_pkt_fwd(void)
     float rx_nocrc_ratio;
     float up_ack_ratio;
     float dw_ack_ratio;
-
-    /* display version informations */
-    MSG("*** Beacon Packet Forwarder for Lora Gateway ***\nVersion: " VERSION_STRING "\n");
-    MSG("*** Lora concentrator HAL library version info ***\n%s\n***\n", lgw_version_info());
-
-    /* display host endianness */
-    #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        MSG("INFO: Little endian host\n");
-    #elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-        MSG("INFO: Big endian host\n");
-    #else
-        MSG("INFO: Host endianness unknown\n");
-    #endif
 
     /* load configuration files */
     if (access(debug_cfg_path, R_OK) == 0) { /* if there is a debug conf, parse only the debug conf */
@@ -2641,7 +2631,6 @@ void thread_gps(void) {
 /* --- THREAD 5: CHECK TIME REFERENCE AND CALCULATE XTAL CORRECTION --------- */
 
 void thread_valid(void) {
-
     /* GPS reference validation variables */
     long gps_ref_age = 0;
     bool ref_valid_local = false;

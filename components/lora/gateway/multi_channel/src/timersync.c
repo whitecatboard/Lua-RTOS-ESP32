@@ -16,7 +16,7 @@ Maintainer: Michael Coracin
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_DEVICE_TYPE_MULTI_CHAN_GATEWAY
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
 
 /* -------------------------------------------------------------------------- */
 /* --- DEPENDANCIES --------------------------------------------------------- */

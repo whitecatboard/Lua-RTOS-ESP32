@@ -14,6 +14,11 @@
 #define LUA_RTOS_BOARD "N1ESP32-DEVKIT"
 #endif
 
+
+#if CONFIG_LUA_RTOS_BOARD_WHITECAT_ESP32_LORA_GW
+#define LUA_RTOS_BOARD "WHITECAT-ESP32-LORA-GW"
+#endif
+
 #if CONFIG_LUA_RTOS_BOARD_ESP32_CORE_BOARD
 #define LUA_RTOS_BOARD "ESP32COREBOARD"
 #endif
@@ -91,7 +96,11 @@
 #if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
 #define CONFIG_LUA_RTOS_LUA_USE_LORA 1
 #else
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
+#define CONFIG_LUA_RTOS_LUA_USE_LORA 1
+#else
 #define CONFIG_LUA_RTOS_LUA_USE_LORA 0
+#endif
 #endif
 #endif
 
@@ -146,6 +155,8 @@
 	#endif
 #endif
 
+#if __has_include("luartos_custom.h")
 #include "luartos_custom.h"
+#endif
 
 #endif

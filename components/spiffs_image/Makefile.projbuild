@@ -2,9 +2,10 @@ SPIFFS_IMAGE_COMPONENT_PATH := $(COMPONENT_PATH)
 
 .PHONY: flashfs
 
-SPIFFS_IMAGE := default
 ifneq (foo$(SPIFFS_IMAGE), foo)
 SPIFFS_IMAGE := $(SPIFFS_IMAGE)
+else
+SPIFFS_IMAGE := default
 endif
 
 # This part gets the information for the spiffs partition
