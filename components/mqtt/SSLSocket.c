@@ -419,11 +419,8 @@ int SSLSocket_setSocketForSSL(networkHandles* net, MQTTClient_SSLOptions* opts, 
 		if ((rc = SSL_set_fd(net->ssl, net->socket)) != 1)
 			SSLSocket_error("SSL_set_fd", net->ssl, net->socket, rc);
 
-		/*
-		struct ssl_pm *ssl_pm = (struct ssl_pm *)net->ssl->ssl_pm;
-		if ((rc = mbedtls_ssl_set_hostname(&(ssl_pm->ssl), hostname)))
-			SSLSocket_error("SSL_set_tlsext_host_name", NULL, net->socket, rc);
-		//*/
+		//SNI - server name indication
+		ssl_pm_set_hostname(net->ssl, hostname);
 	}
 
 	FUNC_EXIT_RC(rc);
