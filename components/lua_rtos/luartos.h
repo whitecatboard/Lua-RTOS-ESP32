@@ -146,6 +146,8 @@
 	#endif
 #endif
 
+#if __has_include("luartos_custom.h")
 #include "luartos_custom.h"
+#endif
 
 #endif
