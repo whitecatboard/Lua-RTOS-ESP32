@@ -47,6 +47,9 @@ PROJECT_NAME := lua_rtos
 # Detect OS
 UNAME := $(shell uname)
 
+# Default filesystem
+SPIFFS_IMAGE := default
+
 # Lua RTOS has support for a lot of ESP32-based boards, but each board
 # can have different configurations, such as the PIN MAP.
 #
@@ -70,15 +73,15 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
     BOARDS := $(subst \,$(n),$(shell python boards/boards.py))
     $(info $(BOARDS))
     ifeq ("$(UNAME)", "Linux")
-      BOARD := $(shell read -p "Board type: " REPLY;echo $$REPLY)
+      BOARDN := $(shell read -p "Board type: " REPLY;echo $$REPLY)
     endif
 
     ifeq ("$(UNAME)", "Darwin")
-      BOARD := $(shell read -p "Board type: ";echo $$REPLY)
+      BOARDN := $(shell read -p "Board type: ";echo $$REPLY)
     endif
 
-    BOARD := $(subst \,$(n),$(shell python boards/boards.py $(BOARD)))
-  
+    BOARD := $(subst \,$(n),$(shell python boards/boards.py $(BOARDN)))
+    $(info $(BOARD))
     # Check if board exists
     ifneq ("$(shell test -e boards/$(BOARD) && echo ex)","ex")
       $(error "Invalid board type boards/$(BOARD)")
@@ -86,11 +89,15 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
       override SDKCONFIG_DEFAULTS := boards/$(BOARD)
       MAKECMDGOALS += defconfig
     endif      
+    SPIFFS_IMAGE := $(shell python boards/boards.py $(BOARDN) filesystem)
+    TMP := $(shell echo $(BOARDN) > .board)
   else
     ifneq ("$(SDKCONFIG_DEFAULTS)","")
       override SDKCONFIG_DEFAULTS := boards/$(SDKCONFIG_DEFAULTS)
     endif
-  endif
+    BOARDN := $(shell cat .board)
+    SPIFFS_IMAGE := $(shell python boards/boards.py $(BOARDN) filesystem)
+  endif  
 endif
 
 # Apply patches
@@ -204,6 +211,7 @@ endif
 	@rm -f sdkconfig || true
 	@rm -f sdkconfig.old || true
 	@rm -f sdkconfig.defaults || true
+	@rm -f .board || true
 		
 flash-args:
 	@echo $(subst --port $(ESPPORT),, \
