@@ -29,7 +29,7 @@
 
 #include "luartos.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
 
 #include "lua.h"
 #include "lualib.h"
@@ -40,6 +40,11 @@
 #include <string.h>
 #include <stdlib.h>
 
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
+void lora_gw_start();
+#endif
+
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
 #include <lora/node/lmic/lora.h>
 #include <lora/gateway/single_channel/gateway.h>
 
@@ -109,8 +114,10 @@ static char *hex_str_pad(lua_State* L, const char  *str, int len) {
 
     return tmp;
 }
+#endif
 
 static int llora_attach(lua_State* L) {
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
 	driver_error_t *error;
     int type;
     const char *host;
@@ -141,10 +148,14 @@ static int llora_attach(lua_State* L) {
 	} else {
 		luaL_exception_extended(L, LORA_ERR_CANT_SETUP, "invalid type");
 	}
-
+#endif
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
+	lora_gw_start();
+#endif
     return 0;
 }
 
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
 static int llora_set_setDevAddr(lua_State* L) {
 	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
 
@@ -446,10 +457,12 @@ static int llora_rx(lua_State* L) {
 
     return 0;
 }
+#endif
 
 static const LUA_REG_TYPE lora_map[] = {
     { LSTRKEY( "attach" ),       LFUNCVAL( llora_attach ) },
-    { LSTRKEY( "setDevAddr" ),   LFUNCVAL( llora_set_setDevAddr ) },
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
+	{ LSTRKEY( "setDevAddr" ),   LFUNCVAL( llora_set_setDevAddr ) },
     { LSTRKEY( "setDevEui" ),    LFUNCVAL( llora_set_DevEui ) },
     { LSTRKEY( "setAppEui" ),    LFUNCVAL( llora_set_AppEui ) },
     { LSTRKEY( "setAppKey" ),    LFUNCVAL( llora_set_AppKey ) },
@@ -477,6 +490,7 @@ static const LUA_REG_TYPE lora_map[] = {
     { LSTRKEY( "GATEWAY"  ), 	 LINTVAL( 1 ) },
 
 	DRIVER_REGISTER_LUA_ERRORS(lora)
+#endif
 
 	{LNILKEY, LNILVAL}
 };

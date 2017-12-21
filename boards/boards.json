@@ -32,6 +32,22 @@
 		"subtype": "OTA"
 	},
 	{
+		"id": "WHITECAT-ESP32-LORA-GW",
+		"description": "Whitecat ESP32 LORA GW",
+		"manufacturer": "whitecatboard.org",
+		"brand": "",
+		"type": "",
+		"subtype": ""
+	},
+	{
+		"id": "WHITECAT-ESP32-LORA-GW-OTA",
+		"description": "Whitecat ESP32 LORA GW With OTA",
+		"manufacturer": "whitecatboard.org",
+		"brand": "",
+		"type": "ESP32-LORA-GW-OTA",
+		"subtype": "OTA"
+	},
+	{
 		"id": "ESP32-CORE-BOARD",
 		"description": "Espressif Systems ESP32-CoreBoard",
 		"manufacturer": "Espressif Systems",
