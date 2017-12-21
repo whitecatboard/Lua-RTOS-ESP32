@@ -84,7 +84,7 @@ extern void captivedns_stop();
 extern int captivedns_running();
 
 static lua_State *LL=NULL;
-static u8_t wifi_mode = WIFI_MODE_STA;
+static wifi_mode_t wifi_mode = WIFI_MODE_STA;
 static u8_t http_refcount = 0;
 static u8_t volatile http_shutdown = 0;
 static u8_t http_captiverun = 0;

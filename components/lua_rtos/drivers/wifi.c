@@ -166,7 +166,7 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 	driver_error_t *error;
 
 	if (status_get(STATUS_WIFI_INITED)) {
-		uint8_t mode;
+		wifi_mode_t mode;
 		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
 
 		if (WIFI_MODE_AP == mode) {
@@ -258,7 +258,7 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_
 	}
 
 	if (status_get(STATUS_WIFI_INITED)) {
-		uint8_t curmode;
+		wifi_mode_t curmode;
 		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&curmode)))) return error;
 		if (curmode != mode) {
 			//in case of switching mode AP<->STA Stop wifi
@@ -340,7 +340,7 @@ driver_error_t *wifi_start() {
 	if (!status_get(STATUS_WIFI_STARTED)) {
 		if ((error = wifi_check_error(esp_wifi_start()))) return error;
 
-		uint8_t mode;
+		wifi_mode_t mode;
 		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
 
 		if (WIFI_MODE_AP == mode) {
@@ -387,7 +387,7 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 
 	uint8_t interface = ESP_IF_WIFI_STA;
 	if (status_get(STATUS_WIFI_INITED)) {
-		uint8_t mode;
+		wifi_mode_t mode;
 		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
 
 		if (mode == WIFI_MODE_AP)
@@ -420,7 +420,7 @@ driver_error_t *wifi_get_mac(uint8_t mac[6]) {
 
 	uint8_t interface = ESP_IF_WIFI_STA;
 	if (status_get(STATUS_WIFI_INITED)) {
-		uint8_t mode;
+		wifi_mode_t mode;
 		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
 
 		if (mode == WIFI_MODE_AP)

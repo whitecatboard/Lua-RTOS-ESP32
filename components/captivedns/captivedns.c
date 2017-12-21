@@ -175,7 +175,7 @@ captivedns_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t 
 int captivedns_start(lua_State* L) {
 	driver_error_t *error;
 
-	uint8_t mode;
+	wifi_mode_t mode;
 	if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) {
 		return luaL_error(L, "couldn't get wifi mode");
 	}
