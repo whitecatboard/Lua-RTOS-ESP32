@@ -115,6 +115,13 @@ void __attribute__((weak)) firmware_copyright_notice() {
 void _sys_init() {
 	nvs_flash_init();
 
+	#if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
+	#if CONFIG_PHY_POWER_PIN > 0
+		//gpio_pin_output(CONFIG_PHY_POWER_PIN);
+		//gpio_pin_clr(CONFIG_PHY_POWER_PIN);
+	#endif
+	#endif
+
 	// Set default power down mode for all RTC power domains in deep sleep
 	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
 	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);

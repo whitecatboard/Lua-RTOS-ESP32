@@ -86,6 +86,7 @@ static void eth_gpio_config_rmii(void) {
     phy_rmii_smi_configure_pins(CONFIG_PHY_SMI_MDC_PIN, CONFIG_PHY_SMI_MDIO_PIN);
 }
 
+#if CONFIG_PHY_POWER_PIN >= 0
 static void phy_device_power_enable_via_gpio(bool enable)
 {
     if (!enable) {
@@ -108,6 +109,7 @@ static void phy_device_power_enable_via_gpio(bool enable)
     	DEFAULT_ETHERNET_PHY_CONFIG.phy_power_enable(true);
     }
 }
+#endif
 
 /*
  * Operation functions
@@ -171,12 +173,18 @@ driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1
 
 	eth_config_t config = DEFAULT_ETHERNET_PHY_CONFIG;
 
+#if CONFIG_LUA_RTOS_ETH_EMAC_CLOCK_SOURCE_INTERNAL_GPIO17
+	config.clock_mode = ETH_CLOCK_GPIO17_OUT;
+#endif
+
     // Set the PHY address in the example configuration */
     config.phy_addr = CONFIG_PHY_ADDRESS;
     config.gpio_config = eth_gpio_config_rmii;
     config.tcpip_input = tcpip_adapter_eth_input;
 
+#if CONFIG_PHY_POWER_PIN >= 0
     config.phy_power_enable = phy_device_power_enable_via_gpio;
+#endif
 
     ret = esp_eth_init(&config);
     if (ret != ESP_OK) {

@@ -80,7 +80,7 @@ int lgw_spi_open(void **spi_target_ptr) {
     /* open SPI device */
     driver_error_t *error;
 
-    if ((error = spi_setup(CONFIG_LUA_RTOS_LORA_SPI, 1, CONFIG_LUA_RTOS_LORA_CS, 0, 8000000, SPI_FLAG_WRITE | SPI_FLAG_READ, &dev))) {
+    if ((error = spi_setup(CONFIG_LUA_RTOS_LORA_SPI, 1, CONFIG_LUA_RTOS_LORA_CS, 0, 1000000, SPI_FLAG_WRITE | SPI_FLAG_READ, &dev))) {
         DEBUG_PRINTF("ERROR: failed to open SPI device SPI%d\n", CONFIG_LUA_RTOS_LORA_SPI);
         free(spi_device);
         return LGW_SPI_ERROR;
