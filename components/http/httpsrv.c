@@ -303,39 +303,60 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf, c
 	} else if (is_lua(path)) {
 		fclose(file);
 
-		send_headers(request, 200, "OK", NULL, "text/html", -1);
-		if (!request->config->secure) fflush(request->file);
-
-		lua_pushstring(LL, (requestdata && *requestdata) ? requestdata:"");
-		lua_setglobal(LL, "http_request");
-
-		lua_pushlightuserdata(LL, (void*)request);
-		lua_setglobal(LL, "http_stream_handle");
-
-		lua_pushinteger(LL, request->config->port);
-		lua_setglobal(LL, "http_port");
-
-		lua_pushinteger(LL, request->config->secure);
-		lua_setglobal(LL, "http_secure");
-
 		char ppath[PATH_MAX];
 
 		strcpy(ppath, path);
 		if (strlen(ppath) < PATH_MAX - 1) {
 			strcat(ppath, "p");
+
+			// after modifying a .lua file, the developer
+			// is responsible for deleting the preprocessed
+			// file as there is no "date" in the file system
+			if (stat(ppath, statbuf) < 0) {
+				http_preprocess_lua_page(path,ppath);
+			}
+
+			if (S_ISDIR(statbuf->st_mode)) {
+				send_error(request, 500, "Internal Server Error", NULL, "Folder found where a precompiled file is expected.");
+			}
+			else {
+				send_headers(request, 200, "OK", NULL, "text/html", -1);
+				if (!request->config->secure) fflush(request->file);
+
+				lua_pushstring(LL, (requestdata && *requestdata) ? requestdata:"");
+				lua_setglobal(LL, "http_request");
+
+				lua_pushlightuserdata(LL, (void*)request);
+				lua_setglobal(LL, "http_stream_handle");
+
+				lua_pushinteger(LL, request->config->port);
+				lua_setglobal(LL, "http_port");
+
+				lua_pushinteger(LL, request->config->secure);
+				lua_setglobal(LL, "http_secure");
+
+				int rc = luaL_dofile(LL, ppath);
+				(void) rc;
+
+				lua_pushnil(LL);
+				lua_setglobal(LL, "http_request");
+
+				lua_pushnil(LL);
+				lua_setglobal(LL, "http_port");
+
+				lua_pushnil(LL);
+				lua_setglobal(LL, "http_secure");
+
+				lua_pushnil(LL);
+				lua_setglobal(LL, "http_stream_handle");
+
+				if (!request->config->secure) fflush(request->file);
+				do_printf(request, "0\r\n\r\n");
+			}
 		}
-
-		http_process_lua_page(path,ppath);
-
-		int rc = luaL_dofile(LL, ppath);
-		(void) rc;
-
-		if (!request->config->secure) fflush(request->file);
-
-		do_printf(request, "0\r\n\r\n");
-
-		lua_pushlightuserdata(LL, (void*)0);
-		lua_setglobal(LL, "http_stream_handle");
+		else {
+			send_error(request, 500, "Internal Server Error", NULL, "Path too long.");
+		}
 
 	} else {
 		data = calloc(1, HTTP_BUFF_SIZE);
