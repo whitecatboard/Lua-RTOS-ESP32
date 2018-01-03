@@ -92,7 +92,7 @@ extern EventGroupHandle_t netEvent;
 #define evWIFI_CONNECTED 	       	 ( 1 << 1 )
 #define evWIFI_CANT_CONNECT          ( 1 << 2 )
 
-static int wps_mode = WPS_TYPE_PBC;
+static int wps_mode = WPS_TYPE_DISABLE;
 static esp_wps_config_t wps_config_pbc = WPS_CONFIG_INIT_DEFAULT(WPS_TYPE_PBC);
 static esp_wps_config_t wps_config_pin = WPS_CONFIG_INIT_DEFAULT(WPS_TYPE_PIN);
 static wifi_wps_pin_cb* wps_pin_callback = NULL;
@@ -506,6 +506,12 @@ static void wifi_smartconfig_callback(smartconfig_status_t status, void *pdata)
 			break;
 		case SC_STATUS_GETTING_SSID_PSWD:
 			//printf("SC_STATUS_GETTING_SSID_PSWD\n");
+			smartconfig_type_t *type = pdata;
+			if (*type == SC_TYPE_ESPTOUCH) {
+				//printf("SC_TYPE: ESPTOUCH\n");
+			} else {
+				//printf("SC_TYPE: AIRKISS\n");
+			}
 			break;
 		case SC_STATUS_LINK:
 			//printf("SC_STATUS_LINK\n");
@@ -521,7 +527,7 @@ static void wifi_smartconfig_callback(smartconfig_status_t status, void *pdata)
 					(*(wps_sc_callback))((char*)wifi_config->sta.ssid, (char*)wifi_config->sta.password);
 				}
 
-				/* may connect to the new AP here
+				/* may connect to the new AP here but should be done from lua
 				esp_wifi_set_config(ESP_IF_WIFI_STA, wifi_config);
 				esp_wifi_connect();
 				*/
@@ -536,6 +542,7 @@ static void wifi_smartconfig_callback(smartconfig_status_t status, void *pdata)
 				printf("Phone ip: %d.%d.%d.%d\n", phone_ip[0], phone_ip[1], phone_ip[2], phone_ip[3]);
 			}
 			*/
+			esp_smartconfig_stop();
 			break;
 		default:
 			break;
@@ -561,11 +568,20 @@ driver_error_t *wifi_smartconfig(wifi_sc_cb* callback) {
 	if ((error = wifi_init(WIFI_MODE_STA))) return error;
 	status_set(STATUS_WIFI_SETUP);
 
+	// make smartconfig restartable
+	esp_smartconfig_stop();
+
 	if ((error = wifi_check_error(esp_wifi_start()))) return error;
 	status_set(STATUS_WIFI_STARTED);
 
+	//delay until wifi has been started...
+	delay(10);
+
+	//make sure we're not connected
+	esp_wifi_disconnect();
+
 	if ((error = wifi_check_error(esp_smartconfig_set_type(SC_TYPE_ESPTOUCH_AIRKISS)))) return error;
-	if ((error = wifi_check_error(esp_smartconfig_start(wifi_smartconfig_callback)))) return error;
+	if ((error = wifi_check_error(esp_smartconfig_start(wifi_smartconfig_callback, 0)))) return error;
 
 	return NULL;
 }
