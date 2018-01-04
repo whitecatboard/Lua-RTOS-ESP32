@@ -51,6 +51,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/syslog.h>
+#include <sys/mount.h>
 
 #include <openssl/ssl.h>
 #include "mbedtls/platform.h"
@@ -350,7 +351,6 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf, c
 								if (0==strcmp(filename, ent->d_name)) {
 									//syslog(LOG_WARNING, "re-preprocessing %s due file system order, found %s first\n", path, filename);
 									*dirsep = '/'; //fix ppath before using it
-									//unlink(ppath);
 									http_preprocess_lua_page(path,ppath);
 									break;
 								}
