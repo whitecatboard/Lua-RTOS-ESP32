@@ -364,7 +364,11 @@ static const LUA_REG_TYPE wifi_map[] = {
 	{ LSTRKEY( "start"     ),	 LFUNCVAL( lwifi_start        ) },
 	{ LSTRKEY( "stop"      ),	 LFUNCVAL( lwifi_stop         ) },
 	{ LSTRKEY( "stat"      ),	 LFUNCVAL( lwifi_stat         ) },
+#if CONFIG_ESP32_WIFI_NVS_ENABLED
+	// wps ssid+auth can only be stored to nvs
+	// so if nvs is disabled, wps would have to be repeated on every boot
 	{ LSTRKEY( "startwps"  ),	 LFUNCVAL( lwifi_wps          ) },
+#endif
 	{ LSTRKEY( "startsc"   ),	 LFUNCVAL( lwifi_smartconfig  ) },
 	{ LSTRKEY( "auth"      ),	 LROVAL  ( wifi_auth_map      ) },
 	{ LSTRKEY( "mode"      ),	 LROVAL  ( wifi_mode_map      ) },
