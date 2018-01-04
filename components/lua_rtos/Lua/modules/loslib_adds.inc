@@ -582,19 +582,26 @@ static int os_cp(lua_State *L) {
 	char c;
 	int res1, res2;
 	struct stat sb;
-  dev_t src_dev;
-  ino_t src_ino;
 
-	if (stat(src, &sb) != 0) {
-		return luaL_fileresult(L, 0, src);
-	}
-	src_dev = sb.st_dev;
-	src_ino = sb.st_ino;
+	//make sure not to damage files if src file is dst file
+	//currently only works on fat...
+	if (strcmp((const char *)mount_device(src),"fat") == 0 || 
+	    strcmp((const char *)mount_device(dst),"fat") == 0) {
+		dev_t src_dev;
+		ino_t src_ino;
 
-	if (stat(dst, &sb) == 0) {
-		if (sb.st_dev == src_dev && sb.st_ino == src_ino) {
-			lua_pushboolean(L, 1);
-			return 1;
+		if (stat(src, &sb) != 0) {
+			return luaL_fileresult(L, 0, src);
+		}
+		src_dev = sb.st_dev;
+		src_ino = sb.st_ino;
+
+		if (stat(dst, &sb) == 0) {
+			if (sb.st_dev == src_dev && sb.st_ino == src_ino) {
+				//if src file is dst file just exit successful
+				lua_pushboolean(L, 1);
+				return 1;
+			}
 		}
 	}
 
