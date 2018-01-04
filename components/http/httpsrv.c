@@ -312,7 +312,9 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf, c
 			// after modifying a .lua file, the developer
 			// is responsible for deleting the preprocessed
 			// file as there is no "date" in the file system
-			if (stat(ppath, statbuf) < 0) {
+			time_t src_mtime = statbuf->st_mtime;
+
+			if (stat(ppath, statbuf) < 0 || src_mtime < statbuf->st_mtime) {
 				http_preprocess_lua_page(path,ppath);
 			}
 
