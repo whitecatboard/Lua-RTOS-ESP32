@@ -506,11 +506,13 @@ static void wifi_smartconfig_callback(smartconfig_status_t status, void *pdata)
 			break;
 		case SC_STATUS_GETTING_SSID_PSWD:
 			//printf("SC_STATUS_GETTING_SSID_PSWD\n");
-			smartconfig_type_t *type = pdata;
-			if (*type == SC_TYPE_ESPTOUCH) {
-				//printf("SC_TYPE: ESPTOUCH\n");
-			} else {
-				//printf("SC_TYPE: AIRKISS\n");
+			{
+				smartconfig_type_t *type = pdata;
+				if (*type == SC_TYPE_ESPTOUCH) {
+					//printf("SC_TYPE: ESPTOUCH\n");
+				} else {
+					//printf("SC_TYPE: AIRKISS\n");
+				}
 			}
 			break;
 		case SC_STATUS_LINK:
