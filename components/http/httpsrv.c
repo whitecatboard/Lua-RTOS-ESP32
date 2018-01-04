@@ -947,7 +947,7 @@ int http_start(lua_State* L) {
 
 		esp_log_level_set("wifi", ESP_LOG_NONE);
 
-		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&wifi_mode)))) {
+		if ((error = wifi_check_error(esp_wifi_get_mode(&wifi_mode)))) {
 			esp_log_level_set("wifi", ESP_LOG_ERROR);
 			free(error);
 		} else {
