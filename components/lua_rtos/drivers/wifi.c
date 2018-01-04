@@ -454,7 +454,7 @@ driver_error_t *wifi_wps(int wpsmode, wifi_wps_pin_cb* callback) {
 	wps_pin_callback = callback;
 
 	// Attach wifi driver
-	if ((error = wifi_init(WIFI_MODE_APSTA))) return error; //XXX
+	if ((error = wifi_init(WIFI_MODE_STA))) return error; //does NOT work with APSTA
 	status_set(STATUS_WIFI_SETUP);
 
 	if ((error = wifi_check_error(esp_wifi_start()))) return error;
