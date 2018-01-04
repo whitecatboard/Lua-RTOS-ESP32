@@ -65,7 +65,7 @@ static int lwifi_setup(lua_State* L) {
 		dns2 = luaL_optinteger(L, 8, 0);
 		powersave = luaL_optinteger(L, 9, 0);
 		channel = luaL_optinteger(L, 10, 0);
-	} else if (mode == WIFI_MODE_AP) {
+	} else if (mode == WIFI_MODE_AP || mode == WIFI_MODE_APSTA) {
 		powersave = luaL_optinteger(L, 4, 0);
 		channel = luaL_optinteger(L, 5, 0);
 

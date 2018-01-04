@@ -581,7 +581,7 @@ int process(http_request_handle *request) {
 	}
 
 	//only in AP mode we redirect arbitrary host names to our own host name
-	if (wifi_mode == WIFI_MODE_AP) {
+	if (wifi_mode == WIFI_MODE_AP || wifi_mode == WIFI_MODE_APSTA) {
 		//find the Host: header and check if it matches our IP or captive server name
 		while (do_gets(pathbuf, sizeof (pathbuf), request) && strlen(pathbuf)>0 ) {
 
@@ -699,8 +699,9 @@ static void http_net_callback(system_event_t *event){
 
 	switch (event->event_id) {
 		case SYSTEM_EVENT_STA_START:                /**< ESP32 station start */
-			if (wifi_mode != WIFI_MODE_STA) {
-				wifi_mode = WIFI_MODE_STA;
+			//only if we have previously been in AP mode
+			if (wifi_mode == WIFI_MODE_AP) {
+				esp_wifi_get_mode(&wifi_mode);
 
 				syslog(LOG_DEBUG, "http: switched to non-captive mode\n");
 				http_captiverun = captivedns_running();
@@ -712,11 +713,12 @@ static void http_net_callback(system_event_t *event){
 			break;
 
 		case SYSTEM_EVENT_AP_START:                 /**< ESP32 soft-AP start */
-			if (wifi_mode != WIFI_MODE_STA) {
+			//only if we have previously been in STA mode
+			if (wifi_mode == WIFI_MODE_STA) {
 				driver_error_t *error;
 				ifconfig_t info;
 
-				wifi_mode = WIFI_MODE_AP;
+				esp_wifi_get_mode(&wifi_mode);
 				if ((error = wifi_stat(&info))) {
 					strcpy(ip4addr, "0.0.0.0");
 				}
