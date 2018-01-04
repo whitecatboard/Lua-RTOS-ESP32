@@ -400,7 +400,7 @@ static int os_ls (lua_State *L) {
 			strcpy(size, "       -");
 		}
 
-		if (filename==NULL || 0==fnmatch(filename, ent->d_name, 0)) { //our implementation above does support only a subset
+		if (filename==NULL || 0==strcmp(filename, ent->d_name) || 0==fnmatch(filename, ent->d_name, 0)) { //our implementation above does support only a subset
 			printf("%c\t%s\t%s\t%s\n", type, size, tbuffer, ent->d_name);
 		}
 	}
@@ -581,6 +581,22 @@ static int os_cp(lua_State *L) {
 	FILE *fsrc, *fdst;
 	char c;
 	int res1, res2;
+	struct stat sb;
+  dev_t src_dev;
+  ino_t src_ino;
+
+	if (stat(src, &sb) != 0) {
+		return luaL_fileresult(L, 0, src);
+	}
+	src_dev = sb.st_dev;
+	src_ino = sb.st_ino;
+
+	if (stat(dst, &sb) == 0) {
+		if (sb.st_dev == src_dev && sb.st_ino == src_ino) {
+			lua_pushboolean(L, 1);
+			return 1;
+		}
+	}
 
 	fsrc = fopen(src,"r");
 	if (!fsrc) {
