@@ -149,8 +149,16 @@ static driver_error_t *wifi_init(wifi_mode_t mode) {
 	if (!status_get(STATUS_WIFI_INITED)) {
 		wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 		if ((error = wifi_check_error(esp_wifi_init(&cfg)))) return error;
-		if ((error = wifi_check_error(esp_wifi_set_storage(WIFI_STORAGE_RAM)))) return error;
+
+		wifi_storage_t storage = WIFI_STORAGE_RAM;
+#if CONFIG_ESP32_WIFI_NVS_ENABLED
+		storage = WIFI_STORAGE_FLASH;
+#endif
+		if ((error = wifi_check_error(esp_wifi_set_storage(storage)))) return error;
+
 		if ((error = wifi_check_error(esp_wifi_set_mode(mode)))) return error;
+		wifi_country_t country = { "EU", 1, 13, WIFI_COUNTRY_POLICY_AUTO };
+		if ((error = wifi_check_error(esp_wifi_set_country(&country)))) return error;
 
 		status_set(STATUS_WIFI_INITED);
 	}
@@ -454,7 +462,7 @@ driver_error_t *wifi_wps(int wpsmode, wifi_wps_pin_cb* callback) {
 	wps_pin_callback = callback;
 
 	// Attach wifi driver
-	if ((error = wifi_init(WIFI_MODE_APSTA))) return error; //XXX
+	if ((error = wifi_init(WIFI_MODE_STA))) return error; //does NOT work with APSTA
 	status_set(STATUS_WIFI_SETUP);
 
 	if ((error = wifi_check_error(esp_wifi_start()))) return error;
@@ -566,6 +574,11 @@ driver_error_t *wifi_smartconfig(wifi_sc_cb* callback) {
 	}
 
 	wps_sc_callback = callback;
+
+	// cannot use smartconfig in AP-only mode
+	if (mode == WIFI_MODE_AP) {
+		mode = WIFI_MODE_APSTA;
+	}
 
 	// Attach wifi driver
 	if ((error = wifi_init(mode))) return error; //APSTA confirmed to work
