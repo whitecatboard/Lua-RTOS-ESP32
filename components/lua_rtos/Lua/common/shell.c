@@ -307,11 +307,18 @@ void lua_shell(lua_State* L, char *buffer) {
 			get_args_from_shell_command(buffer, arg, argbuf);
 
 			*buffer = 0x00;
-			strlcat(buffer,"loadfile(\"",256);
-			strlcat(buffer,arg, 256); //script name
-			strlcat(buffer,"\")(", 256);
-			strlcat(buffer,argbuf, 256); //script params
-			strlcat(buffer,")", 256);
+			if (strlen(argbuf)) {
+				strlcat(buffer,"loadfile(\"",256);
+				strlcat(buffer,arg, 256); //script name
+				strlcat(buffer,"\")(", 256);
+				strlcat(buffer,argbuf, 256); //script params
+				strlcat(buffer,")", 256);
+			}
+			else {
+				strlcat(buffer,"dofile(\"",256);
+				strlcat(buffer,arg, 256); //script name
+				strlcat(buffer,"\")", 256);
+			}
 			return;
 		}
 	}
