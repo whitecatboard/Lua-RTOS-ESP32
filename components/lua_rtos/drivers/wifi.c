@@ -575,6 +575,11 @@ driver_error_t *wifi_smartconfig(wifi_sc_cb* callback) {
 
 	wps_sc_callback = callback;
 
+	// cannot use smartconfig in AP-only mode
+	if (mode == WIFI_MODE_AP) {
+		mode = WIFI_MODE_APSTA;
+	}
+
 	// Attach wifi driver
 	if ((error = wifi_init(mode))) return error; //APSTA confirmed to work
 	status_set(STATUS_WIFI_SETUP);

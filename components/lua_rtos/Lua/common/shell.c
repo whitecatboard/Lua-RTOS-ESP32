@@ -121,6 +121,53 @@ static int get_command(char *tb, char *te) {
 	return -1;
 }
 
+static void get_args_from_shell_command(char *buffer, char *filename, char *args) {
+	char* pos = args;
+
+	//cut off trailing any spaces
+	for(char* trimbuf = buffer + strlen(buffer) - 1; trimbuf > buffer && *trimbuf==' '; trimbuf--)
+		*trimbuf=0;
+
+	char* param = buffer + strlen(filename);
+	//skip leading spaces
+	while(*param==' ') param++;
+
+	bool found = false;
+	while((pos - args) < 250 && *param != 0) {
+		if (!found) {
+			*pos = '"';
+			pos++;
+			found = true;
+		}
+
+		if (*param==' ') {
+			*pos = '"';
+
+			if (*(param+1) != 0) {
+				pos++;
+				*pos = ',';
+				pos++;
+				*pos = '"';
+			}
+
+			while(*param==' ') param++;
+		}
+		else {
+			*pos = *param;
+			param++;
+		}
+		pos++;
+	}
+
+	if (found) {
+		*pos = '"';
+		pos++;
+	}
+
+	*pos = 0;
+	return;
+}
+
 void lua_shell(lua_State* L, char *buffer) {
 	char *cbuffer = buffer;
 	int itoken = 0;
@@ -254,12 +301,24 @@ void lua_shell(lua_State* L, char *buffer) {
 			return;
 		}
 		else if (s.st_mode == S_IFREG) {
-			*buffer = 0x00;
-
 			// It's a file
-			strlcat(buffer,"dofile(\"",256);
-			strlcat(buffer,arg, 256);
-			strlcat(buffer,"\")", 256);
+
+			char argbuf[256];
+			get_args_from_shell_command(buffer, arg, argbuf);
+
+			*buffer = 0x00;
+			if (strlen(argbuf)) {
+				strlcat(buffer,"loadfile(\"",256);
+				strlcat(buffer,arg, 256); //script name
+				strlcat(buffer,"\")(", 256);
+				strlcat(buffer,argbuf, 256); //script params
+				strlcat(buffer,")", 256);
+			}
+			else {
+				strlcat(buffer,"dofile(\"",256);
+				strlcat(buffer,arg, 256); //script name
+				strlcat(buffer,"\")", 256);
+			}
 			return;
 		}
 	}
