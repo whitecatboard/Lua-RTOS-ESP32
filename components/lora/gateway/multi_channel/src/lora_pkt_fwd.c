@@ -925,40 +925,6 @@ static int send_tx_ack(uint8_t token_h, uint8_t token_l, enum jit_error_e error)
 /* -------------------------------------------------------------------------- */
 /* --- MAIN FUNCTION -------------------------------------------------------- */
 
-int
-getnameinfo(const struct sockaddr *sa, socklen_t salen,
-		    char *host, size_t hostlen,
-			char *serv, size_t servlen, int flags)
-{
-
-	switch (sa->sa_family) {
-	case AF_INET: {
-		struct sockaddr_in	*sain = (struct sockaddr_in *) sa;
-
-		return 0;
-
-//		return(gn_ipv46(host, hostlen, serv, servlen,
-	//					&sain->sin_addr, sizeof(struct in_addr),
-				//		AF_INET, sain->sin_port, flags));
-	}
-
-	default:
-		return(1);
-	}
-}
-
-const char *gai_strerror(int ecode) {
-	switch (ecode) {
-		case EAI_FAIL: return "Non-recoverable failure in name resolution";
-		case EAI_FAMILY: return "ai_family not supported";
-		case EAI_MEMORY: return "Memory allocation failure";
-		case EAI_NONAME: return "Name or service not known";
-		case EAI_SERVICE: return "Servname not supported for ai_socktype";
-	}
-
-	return "Other error";
-}
-
 int access(const char *path, int amode) {
     struct stat s;
 

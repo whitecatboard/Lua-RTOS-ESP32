@@ -155,6 +155,13 @@
 	#endif
 #endif
 
+// OpenVPN
+#if CONFIG_LUA_RTOS_USE_OPENVPN
+#if !CONFIG_MBEDTLS_BLOWFISH_C
+#error "OpenVPM requires CONFIG_MBEDTLS_BLOWFISH_C = 1. Please activate it with make menuconfig, enabling option in mbedTLS -> Symmetric Ciphers -> Blowfish block cipher."
+#endif
+#endif
+
 #if __has_include("luartos_custom.h")
 #include "luartos_custom.h"
 #endif

@@ -50,6 +50,14 @@
 void luaos_main();
 void _sys_init();
 
+#include "lwip/sockets.h"
+#include "lwip/netdb.h"
+
+#include "linux/in6.h"
+#include "linux/netdb.h"
+
+#include "tcpip_adapter.h"
+
 void *lua_start(void *arg) {
 	for(;;) {
 		luaos_main();

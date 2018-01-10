@@ -197,6 +197,18 @@ menu "Lua RTOS"
          endmenu
       endmenu
 
+      menu "Network services"
+         menu "OpenVPN"
+            config LUA_RTOS_USE_OPENVPN
+               bool "Enable OpenVPN client support"
+               default n
+               
+           config LUA_RTOS_OPENVPN_CONFIG_FILE
+               string "Config file"
+                  default "/etc/openvpn/client.conf"
+         endmenu
+      endmenu
+
       menu "Hardware"
       menu "CAN pin map"
          choice LUA_RTOS_CAN_TX_CHOICE
