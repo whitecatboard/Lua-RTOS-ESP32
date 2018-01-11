@@ -34,6 +34,7 @@ Maintainer: Sylvain Miermont
 /* -------------------------------------------------------------------------- */
 /* --- PRIVATE MACROS ------------------------------------------------------- */
 
+#define DEBUG_REG 1
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 #if DEBUG_REG == 1
     #define DEBUG_MSG(str)              fprintf(stderr, str)

@@ -197,6 +197,18 @@ menu "Lua RTOS"
          endmenu
       endmenu
 
+      menu "Network services"
+         menu "OpenVPN"
+            config LUA_RTOS_USE_OPENVPN
+               bool "Enable OpenVPN client support"
+               default n
+               
+           config LUA_RTOS_OPENVPN_CONFIG_FILE
+               string "Config file"
+                  default "/etc/openvpn/client.conf"
+         endmenu
+      endmenu
+
       menu "Hardware"
       menu "CAN pin map"
          choice LUA_RTOS_CAN_TX_CHOICE
@@ -510,6 +522,24 @@ menu "Lua RTOS"
                 range 0 31
                 help
                     Select the PHY Address (0-31) for the hardware configuration and PHY model.
+        
+             choice LUA_RTOS_ETH_EMAC_CLOCK_SOURCE
+                depends on LUA_RTOS_ETH_HW_TYPE_RMII
+                prompt "EMAC clock source"
+                default LUA_RTOS_ETH_EMAC_CLOCK_SOURCE_EXTERNAL
+          
+                config LUA_RTOS_ETH_EMAC_CLOCK_SOURCE_EXTERNAL
+                   bool "External - GPIO0"
+                
+                config LUA_RTOS_ETH_EMAC_CLOCK_SOURCE_INTERNAL_GPIO17
+                   bool "Internal - GPIO17"
+                   
+                help
+                    The MAC reference clock can be obtained from the ESP32 using the APLL, or from
+                    an external 50 Mhz oscillator.When using internal clock the reference clock is
+                    put out on a GPIO that must be connected to the PHY's clock input pin.
+                    
+             endchoice
         
             config PHY_POWER_PIN
                 depends on LUA_RTOS_ETH_HW_TYPE_RMII

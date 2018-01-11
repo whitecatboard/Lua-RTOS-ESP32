@@ -97,9 +97,14 @@ if (config.ethernet) then
 end
 
 -- Start network services
-if (config.sntp) then
+if (config.sntp or config.openvpn) then
 	print("Starting sntp client ...")
 	net.service.sntp.start()
+end
+
+if (config.openvpn) then
+	print("Starting openvpn client ...")
+	net.service.openvpn.start()
 end
 
 if (config.http) then

@@ -925,40 +925,6 @@ static int send_tx_ack(uint8_t token_h, uint8_t token_l, enum jit_error_e error)
 /* -------------------------------------------------------------------------- */
 /* --- MAIN FUNCTION -------------------------------------------------------- */
 
-int
-getnameinfo(const struct sockaddr *sa, socklen_t salen,
-		    char *host, size_t hostlen,
-			char *serv, size_t servlen, int flags)
-{
-
-	switch (sa->sa_family) {
-	case AF_INET: {
-		struct sockaddr_in	*sain = (struct sockaddr_in *) sa;
-
-		return 0;
-
-//		return(gn_ipv46(host, hostlen, serv, servlen,
-	//					&sain->sin_addr, sizeof(struct in_addr),
-				//		AF_INET, sain->sin_port, flags));
-	}
-
-	default:
-		return(1);
-	}
-}
-
-const char *gai_strerror(int ecode) {
-	switch (ecode) {
-		case EAI_FAIL: return "Non-recoverable failure in name resolution";
-		case EAI_FAMILY: return "ai_family not supported";
-		case EAI_MEMORY: return "Memory allocation failure";
-		case EAI_NONAME: return "Name or service not known";
-		case EAI_SERVICE: return "Servname not supported for ai_socktype";
-	}
-
-	return "Other error";
-}
-
 int access(const char *path, int amode) {
     struct stat s;
 
@@ -1183,26 +1149,30 @@ int lora_pkt_fwd(void)
         exit(EXIT_FAILURE);
     }
 
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    // Set stack size
+    pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE * 2);
+
     /* spawn threads to manage upstream and downstream */
-    i = pthread_create( &thrid_up, NULL, (void * (*)(void *))thread_up, NULL);
+    i = pthread_create( &thrid_up, &attr, (void * (*)(void *))thread_up, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create upstream thread\n");
         exit(EXIT_FAILURE);
     }
-    pthread_setname_np(thrid_up, "lora_upstream");
-    i = pthread_create( &thrid_down, NULL, (void * (*)(void *))thread_down, NULL);
+    i = pthread_create( &thrid_down, &attr, (void * (*)(void *))thread_down, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create downstream thread\n");
         exit(EXIT_FAILURE);
     }
     pthread_setname_np(thrid_down, "lora_downstream");
-    i = pthread_create( &thrid_jit, NULL, (void * (*)(void *))thread_jit, NULL);
+    i = pthread_create( &thrid_jit, &attr, (void * (*)(void *))thread_jit, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create JIT thread\n");
         exit(EXIT_FAILURE);
     }
     pthread_setname_np(thrid_jit, "lora_jit");
-    i = pthread_create( &thrid_timersync, NULL, (void * (*)(void *))thread_timersync, NULL);
+    i = pthread_create( &thrid_timersync, &attr, (void * (*)(void *))thread_timersync, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create Timer Sync thread\n");
         exit(EXIT_FAILURE);
@@ -1211,13 +1181,13 @@ int lora_pkt_fwd(void)
 
     /* spawn thread to manage GPS */
     if (gps_enabled == true) {
-        i = pthread_create( &thrid_gps, NULL, (void * (*)(void *))thread_gps, NULL);
+        i = pthread_create( &thrid_gps, &attr, (void * (*)(void *))thread_gps, NULL);
         if (i != 0) {
             MSG("ERROR: [main] impossible to create GPS thread\n");
             exit(EXIT_FAILURE);
         }
         pthread_setname_np(thrid_gps, "lora_gps");
-        i = pthread_create( &thrid_valid, NULL, (void * (*)(void *))thread_valid, NULL);
+        i = pthread_create( &thrid_valid, &attr, (void * (*)(void *))thread_valid, NULL);
         if (i != 0) {
             MSG("ERROR: [main] impossible to create validation thread\n");
             exit(EXIT_FAILURE);
