@@ -27,10 +27,10 @@ index ab645fcc..61d75ac3 100644
  
  
 diff --git a/components/vfs/vfs.c b/components/vfs/vfs.c
-index 5dbd462c..754915fe 100644
+index 5dbd462c..6cd31f14 100644
 --- a/components/vfs/vfs.c
 +++ b/components/vfs/vfs.c
-@@ -552,3 +552,139 @@ int fsync(int fd)
+@@ -552,3 +552,136 @@ int fsync(int fd)
      CHECK_AND_CALL(ret, r, vfs, fsync, local_fd);
      return ret;
  }
@@ -134,9 +134,6 @@ index 5dbd462c..754915fe 100644
 +
 +   int ret;
 +   int num = 0;
-+
-+   timeout->tv_sec = 0;
-+   timeout->tv_usec = 1000;
 +
 +   for(i = 0;i < VFS_FD_SET_NUM;i++) {
 +       if (vfs_fd_set[i].vfs) {
