@@ -323,10 +323,17 @@ monitor_loop:
 	}
 
 	if (!table) {
+#ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+		printf("-----------------------------------------------------------------------------------------------\n");
+		printf("     |        |                  |        |        CPU        |            STACK               \n");
+		printf("THID | TYPE   | NAME             | STATUS | CORE   PRIO     %% |   SIZE     FREE     USED       \n");
+		printf("-----------------------------------------------------------------------------------------------\n");
+#else
 		printf("-----------------------------------------------------------------------------------------\n");
 		printf("     |        |                  |        |      |      |            STACK               \n");
 		printf("THID | TYPE   | NAME             | STATUS | CORE | PRIO |   SIZE     FREE     USED       \n");
 		printf("-----------------------------------------------------------------------------------------\n");
+#endif
 	} else {
 		lua_createtable(L, 0, 0);
 	}
@@ -357,13 +364,20 @@ monitor_loop:
 
 		if (!table) {
 			printf(
+#ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+					"%4d   %-6s   %-16s   %-6s   % 4d   % 4d   % 3d   % 6d   % 6d   % 6d (% 3d%%)   \n",
+#else
 					"%4d   %-6s   %-16s   %-6s   % 4d   % 4d   % 6d   % 6d   % 6d (% 3d%%)   \n",
+#endif
 					cinfo->thid,
 					type,
 					cinfo->name,
 					status,
 					cinfo->core,
 					cinfo->prio,
+#ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+					cinfo->cpu_usage,
+#endif
 					cinfo->stack_size,
 					cinfo->free_stack,
 					cinfo->stack_size - cinfo->free_stack,
@@ -391,6 +405,11 @@ monitor_loop:
 
 	        lua_pushinteger(L, cinfo->prio);
 	        lua_setfield (L, -2, "prio");
+
+#ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+	        lua_pushinteger(L, cinfo->cpu_usage);
+	        lua_setfield (L, -2, "usage");
+#endif
 
 	        lua_pushinteger(L, cinfo->stack_size);
 	        lua_setfield (L, -2, "stack_size");
