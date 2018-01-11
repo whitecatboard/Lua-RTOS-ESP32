@@ -474,7 +474,7 @@ int enc424j600_init(struct netif *netif) {
 	}
 
 	// ISR related task must run on the same core that ISR handler is added
-    xTaskCreatePinnedToCore(ether_task, "eth", 1024 * 4, NULL, configMAX_PRIORITIES - 2, NULL, xPortGetCoreID());
+    xTaskCreatePinnedToCore(ether_task, "eth", 1536, NULL, configMAX_PRIORITIES - 2, NULL, xPortGetCoreID());
 
 	if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
 		gpio_install_isr_service(0);
