@@ -439,7 +439,7 @@ static int new_thread(lua_State* L, int run) {
     int stack = luaL_optinteger(L, 2, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE);
     int priority = luaL_optinteger(L, 3, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY);
     int affinity = luaL_optinteger(L, 4, CONFIG_LUA_RTOS_LUA_THREAD_CPU);
-    const char *name = luaL_optstring(L, 5, "lthread");
+    const char *name = luaL_optstring(L, 5, "lua_thread");
 
     // Sanity checks
     if (stack < PTHREAD_STACK_MIN) {

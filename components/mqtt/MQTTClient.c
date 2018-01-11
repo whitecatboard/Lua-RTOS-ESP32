@@ -892,7 +892,7 @@ static int MQTTClient_connectURIVersion(MQTTClient handle, MQTTClient_connectOpt
 	FUNC_ENTRY;
 	if (m->ma && !running)
 	{
-		Thread_start(MQTTClient_run, handle);
+		Thread_start(MQTTClient_run, handle, "mqtt_client");
 		if (MQTTClient_elapsed(start) >= millisecsTimeout)
 		{
 			rc = SOCKET_ERROR;
@@ -1338,7 +1338,7 @@ exit:
 	if (call_connection_lost && m->cl && was_connected)
 	{
 		Log(TRACE_MIN, -1, "Calling connectionLost for client %s", m->c->clientID);
-		Thread_start(connectionLost_call, m);
+		Thread_start(connectionLost_call, m, "mqtt_connection_lost");
 	}
 	FUNC_EXIT_RC(rc);
 	return rc;

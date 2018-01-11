@@ -55,7 +55,7 @@
  * @param parameter pointer to the function parameter, can be NULL
  * @return the new thread
  */
-thread_type Thread_start(thread_fn fn, void* parameter)
+thread_type Thread_start(thread_fn fn, void* parameter, char* name)
 {
 #if defined(WIN32) || defined(WIN64)
 	thread_type thread = NULL;
@@ -394,7 +394,7 @@ int main(int argc, char *argv[])
 	printf("check sem %d\n", Thread_check_sem(sem));
 
 	printf("Starting secondary thread\n");
-	Thread_start(secondary, (void*)sem);
+	Thread_start(secondary, (void*)sem, "test");
 
 	sleep(3);
 	printf("check sem %d\n", Thread_check_sem(sem));

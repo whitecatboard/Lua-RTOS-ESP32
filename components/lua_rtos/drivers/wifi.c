@@ -507,6 +507,7 @@ void wifi_wps_pin(uint8_t *pin_code) {
 		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 		if (pthread_create(&thread, &attr, wifi_wps_pin_call, pin) != 0)
 			thread = 0;
+		pthread_setname_np(thread, "wifi_wps_pin");
 		pthread_attr_destroy(&attr);
 	}
 }

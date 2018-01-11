@@ -14,7 +14,8 @@ void lora_gw_start() {
 
 	pthread_attr_init(&attr);
 
-    if (pthread_create(&thread, &attr, lora_gw, NULL)) {
-    	return;
+	if (pthread_create(&thread, &attr, lora_gw, NULL)) {
+		return;
 	}
+	pthread_setname_np(thread, "lora_gw");
 }

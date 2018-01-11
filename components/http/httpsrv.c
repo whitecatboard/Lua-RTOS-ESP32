@@ -1008,7 +1008,7 @@ int http_start(lua_State* L) {
 				return luaL_error(L, "couldn't start secure http_thread");
 			}
 
-			pthread_setname_np(thread_secure, "ssl_http");
+			pthread_setname_np(thread_secure, "https");
 		}
 
 		pthread_attr_destroy(&attr);

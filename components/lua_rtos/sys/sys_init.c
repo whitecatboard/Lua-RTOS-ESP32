@@ -222,6 +222,7 @@ void _sys_init() {
 		if (res) {
 			panic("Cannot start tests");
 		}
+		pthread_setname_np(thread, "sys_tests");
 
 		vTaskDelete(NULL);
 	#endif

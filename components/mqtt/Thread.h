@@ -55,7 +55,7 @@
 	int Thread_destroy_cond(cond_type);
 #endif
 
-DLLExport thread_type Thread_start(thread_fn, void*);
+DLLExport thread_type Thread_start(thread_fn, void*, char* name);
 
 DLLExport mutex_type Thread_create_mutex();
 DLLExport int Thread_lock_mutex(mutex_type);
