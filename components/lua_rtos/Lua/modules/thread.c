@@ -292,7 +292,7 @@ static int lthread_list(lua_State *L) {
 
 	// Check if user wants result as a table, or wants result
 	// on the console
-	if (lua_gettop(L) == 1) {
+	if (lua_gettop(L) > 0) {
 		luaL_checktype(L, 1, LUA_TBOOLEAN);
 		if (lua_toboolean(L, 1)) {
 			table = 1;
