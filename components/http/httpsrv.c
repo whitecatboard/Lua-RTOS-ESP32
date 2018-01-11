@@ -463,18 +463,34 @@ int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, con
 }
 
 int process(http_request_handle *request) {
-	char buf[HTTP_BUFF_SIZE];
+	char *buf;
 	char *method;
 	char *path;
 	char *data = NULL;
 	char *host = NULL;
 	char *protocol;
 	struct stat statbuf;
-	char pathbuf[HTTP_BUFF_SIZE];
+	char *pathbuf;
 	int len;
 
-	if (!do_gets(buf, sizeof (buf), request) || 0 == strlen(buf) ) {
+	// Allocate space for buffers
+	buf = calloc(1, HTTP_BUFF_SIZE);
+	if (!buf) {
+		// TO DO out of memory
+		return 0;
+	}
+
+	pathbuf = calloc(1, HTTP_BUFF_SIZE);
+	if (!pathbuf) {
+		// TO DO out of memory
+		free(buf);
+		return 0;
+	}
+
+	if (!do_gets(buf, HTTP_BUFF_SIZE, request) || 0 == strlen(buf) ) {
 		send_error(request, 400, "Bad Request", NULL, "Got empty request buffer.");
+		free(buf);
+		free(pathbuf);
 		return 0;
 	}
 
@@ -512,7 +528,7 @@ int process(http_request_handle *request) {
 	//only in AP mode we redirect arbitrary host names to our own host name
 	if (wifi_mode == WIFI_MODE_AP) {
 		//find the Host: header and check if it matches our IP or captive server name
-		while (do_gets(pathbuf, sizeof (pathbuf), request) && strlen(pathbuf)>0 ) {
+		while (do_gets(pathbuf, HTTP_BUFF_SIZE, request) && strlen(pathbuf)>0 ) {
 
 			//quick check if the first char matches, only then do strcasestr
 			if(pathbuf[0]=='h' || pathbuf[0]=='H') {
@@ -530,8 +546,10 @@ int process(http_request_handle *request) {
 					}
 					else {
 						//redirect
-						snprintf(pathbuf, sizeof (pathbuf), "Location: http://%s/", CAPTIVE_SERVER_NAME);
+						snprintf(pathbuf, HTTP_BUFF_SIZE, "Location: http://%s/", CAPTIVE_SERVER_NAME);
 						send_headers(request, 302, "Found", pathbuf, NULL, 0);
+						free(buf);
+						free(pathbuf);
 						return 0;
 					}
 				}
@@ -540,7 +558,12 @@ int process(http_request_handle *request) {
 		} // while
 	} // AP mode
 
-	if (!method || !path) return -1; //protocol may be omitted
+	if (!method || !path) {
+		free(buf);
+		free(pathbuf);
+		return -1; //protocol may be omitted
+	}
+
 	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol ? protocol:"");
 
 	if (!request->config->secure) fseek(request->file, 0, SEEK_CUR); // force change of stream direction
@@ -558,7 +581,7 @@ int process(http_request_handle *request) {
 		len = strlen(path);
 		if (len == 0 || path[len - 1] != '/') {
 			//send a redirect
-			snprintf(pathbuf, sizeof (pathbuf), "Location: %s/", path);
+			snprintf(pathbuf, HTTP_BUFF_SIZE, "Location: %s/", path);
 			send_error(request, 302, "Found", pathbuf, "Directories must end with a slash.");
 		} else {
 			filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.lua");
@@ -619,6 +642,9 @@ int process(http_request_handle *request) {
 	} else {
 		send_file(request, pathbuf, &statbuf, data);
 	}
+
+	free(buf);
+	free(pathbuf);
 
 	return 0;
 }
