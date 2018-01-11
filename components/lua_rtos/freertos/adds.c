@@ -205,6 +205,10 @@ task_info_t *GetTaskInfo() {
 		return NULL;
 	}
 
+#ifndef CONFIG_FREERTOS_USE_TRACE_FACILITY
+#warning Please enable CONFIG_FREERTOS_USE_TRACE_FACILITY to support thread.list
+	return NULL;
+#else
 	task_num = uxTaskGetSystemState(status_array, (start_task_num), &total_runtime);
 	// For percentage calculations.
 	total_runtime /= 100UL;
@@ -214,6 +218,7 @@ task_info_t *GetTaskInfo() {
 		free(status_array);
 		return NULL;
 	}
+#endif
 
 	for(int i = 0; i <task_num; i++){
 		// Get the task TCB

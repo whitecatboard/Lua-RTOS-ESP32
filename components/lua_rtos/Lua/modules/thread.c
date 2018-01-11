@@ -61,7 +61,8 @@
 #define LUA_THREAD_ERR_INVALID_PRIORITY     	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  5)
 #define LUA_THREAD_ERR_INVALID_CPU_AFFINITY 	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  6)
 #define LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE 	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  7)
-#define LUA_THREAD_ERR_INVALID_THREAD_ID	    (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  7)
+#define LUA_THREAD_ERR_INVALID_THREAD_ID	    (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  8)
+#define LUA_THREAD_ERR_GET_TASKLIST	          (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  9)
 
 // Register driver and messages
 DRIVER_REGISTER_BEGIN(THREAD,thread,NULL,NULL,NULL);
@@ -74,6 +75,7 @@ DRIVER_REGISTER_BEGIN(THREAD,thread,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(THREAD, thread, InvalidCPUAffinity, "invalid CPU affinity", LUA_THREAD_ERR_INVALID_CPU_AFFINITY);
 	DRIVER_REGISTER_ERROR(THREAD, thread, CannotMonitorAsTable, "you can't monitor thread as table", LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE);
 	DRIVER_REGISTER_ERROR(THREAD, thread, InvalidThreadId, "invalid thread id", LUA_THREAD_ERR_INVALID_THREAD_ID);
+	DRIVER_REGISTER_ERROR(THREAD, thread, GetTaskList, "cannot get tasklist", LUA_THREAD_ERR_GET_TASKLIST);
 DRIVER_REGISTER_END(THREAD,thread,NULL,NULL,NULL);
 
 void thread_terminated(void *args) {
@@ -141,8 +143,11 @@ static int lthread_suspend_pthreads(lua_State *L, int thid) {
 	}
 
 	info = GetTaskInfo();
-	cinfo = info;
+	if (!info) {
+		luaL_exception(L, LUA_THREAD_ERR_GET_TASKLIST);
+	}
 
+	cinfo = info;
 	while (cinfo->stack_size > 0) {
 		if ((cinfo->task_type == 2) && (cinfo->thid != 1)) {
 			if (thid && (cinfo->thid == thid)) {
@@ -187,8 +192,11 @@ static int lthread_resume_pthreads(lua_State *L, int thid) {
 	}
 
 	info = GetTaskInfo();
-	cinfo = info;
+	if (!info) {
+		luaL_exception(L, LUA_THREAD_ERR_GET_TASKLIST);
+	}
 
+	cinfo = info;
 	while (cinfo->stack_size > 0) {
 		if ((cinfo->task_type == 2) && (cinfo->thid != 1)) {
 			if (thid && (cinfo->thid == thid)) {
@@ -233,8 +241,11 @@ static int lthread_stop_pthreads(lua_State *L, int thid) {
 	}
 
 	info = GetTaskInfo();
-	cinfo = info;
+	if (!info) {
+		luaL_exception(L, LUA_THREAD_ERR_GET_TASKLIST);
+	}
 
+	cinfo = info;
 	while (cinfo->stack_size > 0) {
 		if ((cinfo->task_type == 2) && (cinfo->thid != 1)) {
 			if (thid && (cinfo->thid == thid)) {
@@ -316,6 +327,9 @@ static int lthread_list(lua_State *L) {
 
 monitor_loop:
 	info = GetTaskInfo();
+	if (!info) {
+		luaL_exception(L, LUA_THREAD_ERR_GET_TASKLIST);
+	}
 
 	if (monitor) {
 		console_gotoxy(0,0);
