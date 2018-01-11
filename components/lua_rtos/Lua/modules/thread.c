@@ -349,11 +349,11 @@ monitor_loop:
 		printf("-----------------------------------------------------------------------------------------\n");
 #endif
 	} else {
-		lua_createtable(L, 0, 0);
+		lua_newtable(L);
 	}
 
 	// For each Lua thread ...
-	int i = 0;
+	int table_row = 0;
 
 	cinfo = info;
 	while (cinfo->stack_size > 0) {
@@ -398,43 +398,43 @@ monitor_loop:
 					(int)(100 * ((float)(cinfo->stack_size - cinfo->free_stack) / (float)cinfo->stack_size))
 			);
 		} else {
-			lua_pushinteger(L, i);
 
-			lua_createtable(L, 0, 9);
+			lua_pushnumber(L, ++table_row); //row index
+			lua_newtable(L);
 
 			lua_pushinteger(L, cinfo->thid);
-	        lua_setfield (L, -2, "thid");
+			lua_setfield (L, -2, "thid");
 
 			lua_pushstring(L, type);
-	        lua_setfield (L, -2, "type");
+			lua_setfield (L, -2, "type");
 
-	        lua_pushstring(L, cinfo->name);
-	        lua_setfield (L, -2, "name");
+			lua_pushstring(L, cinfo->name);
+			lua_setfield (L, -2, "name");
 
-	        lua_pushstring(L, status);
-	        lua_setfield (L, -2, "status");
+			lua_pushstring(L, status);
+			lua_setfield (L, -2, "status");
 
-	        lua_pushinteger(L, cinfo->core);
-	        lua_setfield (L, -2, "core");
+			lua_pushinteger(L, cinfo->core);
+			lua_setfield (L, -2, "core");
 
-	        lua_pushinteger(L, cinfo->prio);
-	        lua_setfield (L, -2, "prio");
+			lua_pushinteger(L, cinfo->prio);
+			lua_setfield (L, -2, "prio");
 
 #ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
-	        lua_pushinteger(L, cinfo->cpu_usage);
-	        lua_setfield (L, -2, "usage");
+			lua_pushinteger(L, cinfo->cpu_usage);
+			lua_setfield (L, -2, "usage");
 #endif
 
-	        lua_pushinteger(L, cinfo->stack_size);
-	        lua_setfield (L, -2, "stack_size");
+			lua_pushinteger(L, cinfo->stack_size);
+			lua_setfield (L, -2, "stack_size");
 
-	        lua_pushinteger(L, cinfo->free_stack);
-	        lua_setfield (L, -2, "free_stack");
+			lua_pushinteger(L, cinfo->free_stack);
+			lua_setfield (L, -2, "free_stack");
 
-	        lua_pushinteger(L, cinfo->stack_size - cinfo->free_stack);
-	        lua_setfield (L, -2, "used_stack");
+			lua_pushinteger(L, cinfo->stack_size - cinfo->free_stack);
+			lua_setfield (L, -2, "used_stack");
 
-	        lua_settable(L,-3);
+			lua_settable( L, -3 );
 		}
 
 		cinfo++;
