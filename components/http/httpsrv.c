@@ -533,8 +533,55 @@ int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, con
 	return 1;
 }
 
+static void list_dir(http_request_handle *request, char *pathbuf, struct stat *statbuf, char *path, int len) {
+  DIR *dir;
+  struct dirent *de;
+
+  send_headers(request, 200, "OK", NULL, "text/html", -1);
+  chunk(request, "<HTML><HEAD><TITLE>Index of %s</TITLE></HEAD><BODY>", path);
+  chunk(request, "<H4>Index of %s</H4>", path);
+
+  chunk(request, "<TABLE>");
+  chunk(request, "<TR>");
+  chunk(request, "<TH style=\"width: 250;text-align: left;\">Name</TH><TH style=\"width: 100px;text-align: right;\">Size</TH>");
+  chunk(request, "</TR>");
+
+  if (len > 1) {
+	  chunk(request, "<TR>");
+  	chunk(request, "<TD><A HREF=\"..\">..</A></TD><TD></TD>");
+	  chunk(request, "</TR>");
+  }
+
+  filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL); //restore folder pathbuf
+  dir = opendir(pathbuf);
+  while ((de = readdir(dir)) != NULL) {
+  	filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, de->d_name);
+	  stat(pathbuf, statbuf);
+
+	  chunk(request, "<TR>");
+	  chunk(request, "<TD>");
+	  chunk(request, "<A HREF=\"%s%s\">", de->d_name, S_ISDIR(statbuf->st_mode) ? "/" : "");
+	  chunk(request, "%s%s", de->d_name, S_ISDIR(statbuf->st_mode) ? "/</A>" : "</A> ");
+	  chunk(request, "</TD>");
+	  chunk(request, "<TD style=\"text-align: right;\">");
+	  if (!S_ISDIR(statbuf->st_mode)) {
+			chunk(request, "%d", (int)statbuf->st_size);
+	  }
+	  chunk(request, "</TD>");
+	  chunk(request, "</TR>");
+  }
+  closedir(dir);
+
+
+  chunk(request, "</TABLE>");
+
+  chunk(request, "</BODY></HTML>");
+
+  do_printf(request, "0\r\n\r\n");
+}
+
 int process(http_request_handle *request) {
-	char *buf;
+	char *reqbuf;
 	char *method;
 	char *path;
 	char *data = NULL;
@@ -545,27 +592,27 @@ int process(http_request_handle *request) {
 	int len;
 
 	// Allocate space for buffers
-	buf = calloc(1, HTTP_BUFF_SIZE);
-	if (!buf) {
-		// TO DO out of memory
+	reqbuf = calloc(1, HTTP_BUFF_SIZE);
+	if (!reqbuf) {
+		send_error(request, 500, "Internal Server Error", NULL, "Error allocating memory.");
 		return 0;
 	}
 
 	pathbuf = calloc(1, HTTP_BUFF_SIZE);
 	if (!pathbuf) {
-		// TO DO out of memory
-		free(buf);
+		send_error(request, 500, "Internal Server Error", NULL, "Error allocating memory.");
+		free(reqbuf);
 		return 0;
 	}
 
-	if (!do_gets(buf, HTTP_BUFF_SIZE, request) || 0 == strlen(buf) ) {
+	if (!do_gets(reqbuf, HTTP_BUFF_SIZE, request) || 0 == strlen(reqbuf) ) {
 		send_error(request, 400, "Bad Request", NULL, "Got empty request buffer.");
-		free(buf);
+		free(reqbuf);
 		free(pathbuf);
 		return 0;
 	}
 
-	method = strtok(buf, " ");
+	method = strtok(reqbuf, " ");
 	path = strtok(NULL, " ");
 	protocol = strtok(NULL, "\r");
 
@@ -619,7 +666,7 @@ int process(http_request_handle *request) {
 						//redirect
 						snprintf(pathbuf, HTTP_BUFF_SIZE, "Location: http://%s/", CAPTIVE_SERVER_NAME);
 						send_headers(request, 302, "Found", pathbuf, NULL, 0);
-						free(buf);
+						free(reqbuf);
 						free(pathbuf);
 						return 0;
 					}
@@ -630,7 +677,7 @@ int process(http_request_handle *request) {
 	} // AP mode
 
 	if (!method || !path) {
-		free(buf);
+		free(reqbuf);
 		free(pathbuf);
 		return -1; //protocol may be omitted
 	}
@@ -655,66 +702,26 @@ int process(http_request_handle *request) {
 			snprintf(pathbuf, HTTP_BUFF_SIZE, "Location: %s/", path);
 			send_error(request, 302, "Found", pathbuf, "Directories must end with a slash.");
 		} else {
+		
+			//try to find index.lua or index.html
 			filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.lua");
 			if (stat(pathbuf, &statbuf) >= 0) {
 				send_file(request, pathbuf, &statbuf, data);
 			} else {
-			      filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.html");
-				  if (stat(pathbuf, &statbuf) >= 0) {
-					  send_file(request, pathbuf, &statbuf, data);
-				  } else {
-					  DIR *dir;
-					  struct dirent *de;
-
-					  send_headers(request, 200, "OK", NULL, "text/html", -1);
-					  chunk(request, "<HTML><HEAD><TITLE>Index of %s</TITLE></HEAD><BODY>", path);
-					  chunk(request, "<H4>Index of %s</H4>", path);
-
-					  chunk(request, "<TABLE>");
-					  chunk(request, "<TR>");
-					  chunk(request, "<TH style=\"width: 250;text-align: left;\">Name</TH><TH style=\"width: 100px;text-align: right;\">Size</TH>");
-					  chunk(request, "</TR>");
-
-					  if (len > 1) {
-						  chunk(request, "<TR>");
-					  	chunk(request, "<TD><A HREF=\"..\">..</A></TD><TD></TD>");
-						  chunk(request, "</TR>");
-					  }
-
-					  filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL); //restore folder pathbuf
-					  dir = opendir(pathbuf);
-					  while ((de = readdir(dir)) != NULL) {
-					  	filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, de->d_name);
-						  stat(pathbuf, &statbuf);
-
-						  chunk(request, "<TR>");
-						  chunk(request, "<TD>");
-						  chunk(request, "<A HREF=\"%s%s\">", de->d_name, S_ISDIR(statbuf.st_mode) ? "/" : "");
-						  chunk(request, "%s%s", de->d_name, S_ISDIR(statbuf.st_mode) ? "/</A>" : "</A> ");
-						  chunk(request, "</TD>");
-						  chunk(request, "<TD style=\"text-align: right;\">");
-						  if (!S_ISDIR(statbuf.st_mode)) {
-								chunk(request, "%d", (int)statbuf.st_size);
-						  }
-						  chunk(request, "</TD>");
-						  chunk(request, "</TR>");
-					  }
-					  closedir(dir);
-
-
-					  chunk(request, "</TABLE>");
-
-					  chunk(request, "</BODY></HTML>");
-
-					  do_printf(request, "0\r\n\r\n");
-				  }
-			   }
+				filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.html");
+				if (stat(pathbuf, &statbuf) >= 0) {
+					send_file(request, pathbuf, &statbuf, data);
+				} else {
+					//if neither index.lua or index.html are found, generate a dirlisting
+					list_dir(request, pathbuf, &statbuf, path, len);
+				}
+			}
 		}
 	} else {
 		send_file(request, pathbuf, &statbuf, data);
 	}
 
-	free(buf);
+	free(reqbuf);
 	free(pathbuf);
 
 	return 0;
