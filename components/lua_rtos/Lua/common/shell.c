@@ -308,9 +308,9 @@ void lua_shell(lua_State* L, char *buffer) {
 
 			*buffer = 0x00;
 			if (strlen(argbuf)) {
-				strlcat(buffer,"loadfile(\"",256);
+				strlcat(buffer,"assert(loadfile(\"",256);
 				strlcat(buffer,arg, 256); //script name
-				strlcat(buffer,"\")(", 256);
+				strlcat(buffer,"\"))(", 256);
 				strlcat(buffer,argbuf, 256); //script params
 				strlcat(buffer,")", 256);
 			}
