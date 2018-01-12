@@ -52,15 +52,25 @@
 #include <drivers/timer.h>
 
 // Driver locks
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 static driver_unit_lock_t gpio_locks[CPU_LAST_GPIO + 1];
+#endif
 
 // Register drivers and errors
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 DRIVER_REGISTER_BEGIN(GPIO,gpio,gpio_locks,NULL,NULL);
+#else
+DRIVER_REGISTER_BEGIN(GPIO,gpio,NULL,NULL,NULL);
+#endif
 	DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPinDirection, "invalid pin direction", GPIO_ERR_INVALID_PIN_DIRECTION);
 	DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPin, "invalid pin", GPIO_ERR_INVALID_PIN);
 	DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPort, "invalid port", GPIO_ERR_INVALID_PORT);
 	DRIVER_REGISTER_ERROR(GPIO, gpio, NotEnoughtMemory, "not enough memory", GPIO_ERR_NOT_ENOUGH_MEMORY);
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 DRIVER_REGISTER_END(GPIO,gpio,gpio_locks,NULL,NULL);
+#else
+DRIVER_REGISTER_END(GPIO,gpio,NULL,NULL,NULL);
+#endif
 
 /*
  * Low level gpio operations

@@ -105,8 +105,11 @@
 
 struct driver;
 struct driver_error;
+
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 struct driver_unit_lock;
 struct driver_unit_lock_error;
+#endif
 
 typedef struct {
 	uint32_t exception;
@@ -114,7 +117,9 @@ typedef struct {
 } driver_message_t;
 
 typedef enum {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     LOCK,		// Someone needs a resource which is locked
+#endif
 	OPERATION   // Something fails during normal operation
 } driver_error_type;
 
@@ -125,8 +130,9 @@ typedef struct {
     int                     unit;      // Driver unit that caused error
     uint32_t                exception; // Exception code
     const char 			   *msg;       // Error message
-
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     struct driver_unit_lock_error *lock_error;
+#endif
 } driver_error_t;
 
 /**
@@ -138,14 +144,19 @@ typedef struct driver {
 	const char *name;           		  /*!< Driver name */
 	const uint32_t  exception_base;  	  /*!< The exception base number for this driver. When a exception is raised the exception number is exception_base + exception number */
 	const driver_message_t *error;        /*!< Array of exception error messages */
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	const struct driver_unit_lock *lock;  /*!< Array locks */
 	const int locks;					  /*!< Number of locks */
+#endif
 	void (*init)();             		  /*!< Driver initialization functions, called at system init */
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Driver lock function
 	driver_error_t *(*lock_resources)(int,uint8_t, void *);
+#endif
 } driver_t;
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 /**
  * @brief This structure maintains information about a lock. Drivers
  *        usually define an array of driver_unit_lock_t structures
@@ -182,6 +193,7 @@ typedef struct driver_unit_lock_error {
 	const driver_t *target_driver;
 	int target_unit;
 } driver_unit_lock_error_t;
+#endif
 
 /**
  * @brief Search for a driver into the driver's array by name and get
@@ -209,11 +221,14 @@ const char *driver_get_err_msg(driver_error_t *error);
 const char *driver_get_err_msg_by_exception(uint32_t exception);
 const char *driver_get_name(driver_error_t *error);
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error_t *lock_error);
-driver_error_t *driver_error(const driver_t *driver, unsigned int code, const char *msg);
 driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit, uint8_t flags, const char *tag);
 void driver_unlock_all(const driver_t *owner_driver, int owner_unit);
 void driver_unlock(const driver_t *owner_driver, int owner_unit, const driver_t *target_driver, int target_unit);
+#endif
+
+driver_error_t *driver_error(const driver_t *driver, unsigned int code, const char *msg);
 
 void _driver_init();
 char *driver_target_name(const driver_t *target_driver, int target_unit, const char *tag);
@@ -236,10 +251,17 @@ char *driver_target_name(const driver_t *target_driver, int target_unit, const c
 const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error)) int DRIVER_CONCAT_WITH_SEP(lname,_,errors_end) = 0; \
 const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error_map)) int DRIVER_CONCAT_WITH_SEP(lname,_,error_map_end) = 0;
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 #define DRIVER_REGISTER_END(name,lname,locka,initf,lockf) \
 const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error)) int DRIVER_CONCAT_WITH_SEP(lname,_,errors) = 0; \
 const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error_map)) int DRIVER_CONCAT_WITH_SEP(lname,_,error_map) = 0; \
 const DRIVER_SECTION(DRIVER_TOSTRING(.drivers)) driver_t DRIVER_CONCAT(driver_,lname) = {DRIVER_TOSTRING(lname),  DRIVER_EXCEPTION_BASE(DRIVER_CONCAT(name,_DRIVER_ID)),  (void *)((&(DRIVER_CONCAT(lname,_errors)))+1), locka, ((locka!=NULL)?(sizeof(locka)/sizeof(driver_unit_lock_t)):0), initf, lockf};
+#else
+#define DRIVER_REGISTER_END(name,lname,locka,initf,lockf) \
+const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error)) int DRIVER_CONCAT_WITH_SEP(lname,_,errors) = 0; \
+const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error_map)) int DRIVER_CONCAT_WITH_SEP(lname,_,error_map) = 0; \
+const DRIVER_SECTION(DRIVER_TOSTRING(.drivers)) driver_t DRIVER_CONCAT(driver_,lname) = {DRIVER_TOSTRING(lname),  DRIVER_EXCEPTION_BASE(DRIVER_CONCAT(name,_DRIVER_ID)),  (void *)((&(DRIVER_CONCAT(lname,_errors)))+1), initf};
+#endif
 
 #endif
 

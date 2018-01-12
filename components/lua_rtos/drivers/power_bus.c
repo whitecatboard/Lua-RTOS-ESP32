@@ -50,7 +50,9 @@ DRIVER_REGISTER_END(PWBUS,pwbus,NULL,_pwbus_init,NULL);
  * Helper functions
  */
 static void _pwbus_init() {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	driver_lock(PWBUS_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_POWER_BUS_PIN, DRIVER_ALL_FLAGS, NULL);
+#endif
 
 	gpio_pin_output(CONFIG_LUA_RTOS_POWER_BUS_PIN);
 	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);

@@ -777,6 +777,7 @@ static int os_exists(lua_State *L) {
 	return 1;
 }
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 static int os_locks(lua_State *L) {
 	const driver_t *cdriver = drivers;
 	int lock = 0;
@@ -826,6 +827,7 @@ static int os_locks(lua_State *L) {
 
 	return 0;
 }
+#endif
 
 static int os_factory_reset(lua_State *L) {
 	// Find ota data partition

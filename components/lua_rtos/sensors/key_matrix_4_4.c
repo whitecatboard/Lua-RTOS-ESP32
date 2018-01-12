@@ -149,9 +149,12 @@ static void key_matrix_4_4_task(void *arg) {
  * Operation functions
  */
 driver_error_t *key_matrix_4_4_setup(sensor_instance_t *unit) {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	driver_unit_lock_error_t *lock_error = NULL;
+#endif
 	int i;
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock all pins
 	for(i=0;i < 8;i++) {
 	    if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup[i].gpio.gpio, DRIVER_ALL_FLAGS, unit->sensor->id))) {
@@ -159,6 +162,7 @@ driver_error_t *key_matrix_4_4_setup(sensor_instance_t *unit) {
 	    	return driver_lock_error(SENSOR_DRIVER, lock_error);
 	    }
 	}
+#endif
 
 	// Configure column pins as output
 	for(i=0;i < 4;i++) {

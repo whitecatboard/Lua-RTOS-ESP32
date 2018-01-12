@@ -214,6 +214,7 @@ driver_error_t *pca9xxx_setup() {
 		pca9xxx_write_register(0xc, 0x00);
 
 		// Configure interrupts
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 		driver_unit_lock_error_t *lock_error = NULL;
 
 		// Lock resources
@@ -223,6 +224,7 @@ driver_error_t *pca9xxx_setup() {
 			// Revoked lock on pin
 			return driver_lock_error(GPIO_DRIVER, lock_error);
 		}
+#endif
 
 		BaseType_t xReturn = xTaskCreatePinnedToCore(pca_9xxx_task, "pca9xxx", CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE, NULL, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY, &pca_9xxx->task, xPortGetCoreID());
 		if (xReturn != pdPASS) {

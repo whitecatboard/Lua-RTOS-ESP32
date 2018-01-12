@@ -52,6 +52,8 @@ extern spi_bus_t spi_bus[CPU_LAST_SPI - CPU_FIRST_SPI + 1];
 
 void vfs_fat_register() {
 #if CONFIG_SD_CARD_SPI
+
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock resources
 	if (spi_lock_bus_resources(CONFIG_LUA_RTOS_SD_SPI, DRIVER_ALL_FLAGS)) {
 		return;
@@ -60,6 +62,7 @@ void vfs_fat_register() {
 	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_SD_CS, DRIVER_ALL_FLAGS, "SD Card - CS")) {
 		return;
 	}
+#endif
 
 	#if (CONFIG_LUA_RTOS_SD_SPI == 2)
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
@@ -161,16 +164,20 @@ void vfs_fat_register() {
     if (ret != ESP_OK) {
     	esp_vfs_fat_sdmmc_unmount();
     	syslog(LOG_INFO, "fat%d can't mounted", 0);
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     	driver_unlock_all(SYSTEM_DRIVER, 0);
+#endif
 
 #if CONFIG_SD_CARD_SPI
-	#if (CONFIG_LUA_RTOS_SD_SPI == 2)
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+   	#if (CONFIG_LUA_RTOS_SD_SPI == 2)
     spi_unlock_bus_resources(2);
 	#endif
 
 	#if (CONFIG_LUA_RTOS_SD_SPI == 3)
 	spi_unlock_bus_resources(3);
 	#endif
+#endif
 #endif
     	return;
     }

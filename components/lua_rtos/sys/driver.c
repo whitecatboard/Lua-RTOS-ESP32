@@ -124,6 +124,7 @@ const char *driver_get_name(driver_error_t *error) {
 	return error->driver->name;
 }
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 // Create a driver error of type lock from a lock structure
 driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error_t *lock_error) {
 	driver_error_t *error;
@@ -139,6 +140,7 @@ driver_error_t *driver_lock_error(const driver_t *driver, driver_unit_lock_error
 
     return error;
 }
+#endif
 
 // Create a driver error
 driver_error_t *driver_error(const driver_t *driver, uint32_t exception, const char *msg) {
@@ -185,6 +187,7 @@ char *driver_target_name(const driver_t *target_driver, int target_unit, const c
 	return buffer;
 }
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 static int lock_index(const driver_t *driver, int unit) {
 	int tunit;
 	int tdevice;
@@ -389,6 +392,7 @@ void driver_unlock(const driver_t *owner_driver, int owner_unit, const driver_t 
 
 	mtx_unlock(&driver_mtx);
 }
+#endif
 
 void _driver_init() {
     // Create driver mutex

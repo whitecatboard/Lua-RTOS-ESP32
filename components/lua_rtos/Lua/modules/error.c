@@ -47,14 +47,17 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     // executed.
     const char *msg = NULL;
     const char *ext_msg = NULL;
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     const char *target_name;
     const char *owner_name;
     int target_unit;
     int owner_unit;
+#endif
     int exception;
 
     int error_type = error->type;
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     if (error_type == LOCK) {
     	target_name = error->lock_error->target_driver->name;
 		owner_name = error->lock_error->lock->owner->name;
@@ -68,7 +71,9 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
 		}
 
 		free(error->lock_error);
-    } else if (error_type == OPERATION) {
+    } else
+#endif
+    if (error_type == OPERATION) {
     	msg = driver_get_err_msg(error);
 
     	if (error->msg) {
@@ -80,6 +85,7 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     
     free(error);
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     if (error_type == LOCK) {
         ret_val = luaL_error(L,
             "%s%d is used by %s%d",
@@ -90,7 +96,9 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
 		);
         
         return ret_val;
-    } else if (error_type == OPERATION) {
+    } else
+#endif
+    if (error_type == OPERATION) {
     	if (ext_msg) {
             ret_val = luaL_error(L,
                 "%d:%s (%s)",

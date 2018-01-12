@@ -50,17 +50,27 @@
 // This macro gets a reference for this driver into drivers array
 #define PWM_DRIVER driver_get_by_name("pwm")
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 // Driver locks
 driver_unit_lock_t pwm_locks[CPU_LAST_PWM_CH + 1];
+#endif
 
 // Register drivers and errors
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 DRIVER_REGISTER_BEGIN(PWM,pwm,pwm_locks,NULL,NULL);
+#else
+DRIVER_REGISTER_BEGIN(PWM,pwm,NULL,NULL,NULL);
+#endif
 	DRIVER_REGISTER_ERROR(PWM, pwm, CannotSetup, "can't setup", PWM_ERR_CANT_INIT);
 	DRIVER_REGISTER_ERROR(PWM, pwm, InvalidUnit, "invalid unit", PWM_ERR_INVALID_UNIT);
 	DRIVER_REGISTER_ERROR(PWM, pwm, InvalidChannel, "invalid channel", PWM_ERR_INVALID_CHANNEL);
 	DRIVER_REGISTER_ERROR(PWM, pwm, InvalidDuty, "invalid duty", PWM_ERR_INVALID_DUTY);
 	DRIVER_REGISTER_ERROR(PWM, pwm, InvalidFrequency, "invalid frequency", PWM_ERR_INVALID_FREQUENCY);
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 DRIVER_REGISTER_END(PWM,pwm,pwm_locks,NULL,NULL);
+#else
+DRIVER_REGISTER_END(PWM,pwm,NULL,NULL,NULL);
+#endif
 
 // PWM structures
 struct pwm {
@@ -165,8 +175,10 @@ driver_error_t *pwm_lock_resources(int8_t unit, int8_t channel, void *resources)
 		resources = &tmp_pwm_resources;
 	}
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	pwm_resources_t *pwm_resources = (pwm_resources_t *)resources;
-    driver_unit_lock_error_t *lock_error = NULL;
+
+	driver_unit_lock_error_t *lock_error = NULL;
 
     //adc_pins(channel, &adc_resources->pin);
 
@@ -177,6 +189,7 @@ driver_error_t *pwm_lock_resources(int8_t unit, int8_t channel, void *resources)
     	// Revoked lock on pin
     	return driver_lock_error(PWM_DRIVER, lock_error);
     }
+#endif
 
     return NULL;
 }
@@ -412,8 +425,10 @@ driver_error_t *pwm_unsetup(int8_t unit, int8_t channel) {
 	// Clear data
 	memset(&pwm[unit][channel], 0, sizeof(pwm));
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Unlock resources
 	driver_unlock_all(PWM_DRIVER, channel);
+#endif
 
 	return NULL;
 }

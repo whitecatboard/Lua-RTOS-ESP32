@@ -48,6 +48,7 @@ esp_adc_cal_characteristics_t characteristics;
  * Helper functions
  */
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 // Get the pins used by an ADC channel
 static void adc_pins(int8_t channel, uint8_t *pin) {
 	switch (channel) {
@@ -81,6 +82,7 @@ static driver_error_t *adc_lock_resources(int8_t channel, void *resources) {
 
     return NULL;
 }
+#endif
 
 /*
  * Operation functions
@@ -103,7 +105,10 @@ driver_error_t * adc_internal_pin_to_channel(uint8_t pin, uint8_t *chan) {
 }
 
 driver_error_t *adc_internal_setup(adc_chann_t *chan) {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	driver_error_t *error;
+#endif
+
 	adc_resources_t resources = {0};
 	adc_atten_t atten;
 	char attens[6];
@@ -136,10 +141,12 @@ driver_error_t *adc_internal_setup(adc_chann_t *chan) {
 
 	// Setup
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock the resources needed
 	if ((error = adc_lock_resources(channel, &resources))) {
 		return error;
 	}
+#endif
 
 	// Computes the required attenuation
 	if (chan->max <= 1100) {

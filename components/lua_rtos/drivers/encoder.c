@@ -241,7 +241,9 @@ static void IRAM_ATTR encoder_isr(void* arg) {
  * Operation functions
  */
 driver_error_t *encoder_setup(int8_t a, int8_t b, int8_t sw, encoder_h_t **h) {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	driver_unit_lock_error_t *lock_error = NULL;
+#endif
 
 	// Sanity checks
 	if ((a < 0) && (b < 0)) {
@@ -260,6 +262,7 @@ driver_error_t *encoder_setup(int8_t a, int8_t b, int8_t sw, encoder_h_t **h) {
 		return driver_error(ENCODER_DRIVER, ENCODER_ERR_INVALID_PIN, "SW, must be an input PIN");
 	}
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock resources
     if ((lock_error = driver_lock(ENCODER_DRIVER, 0, GPIO_DRIVER, a, 0, "A"))) {
     	// Revoked lock on pin
@@ -275,6 +278,7 @@ driver_error_t *encoder_setup(int8_t a, int8_t b, int8_t sw, encoder_h_t **h) {
     	// Revoked lock on pin
     	return driver_lock_error(ENCODER_DRIVER, lock_error);
     }
+#endif
 
     // Allocate space for the encoder
     encoder_h_t *encoder = calloc(1, sizeof(encoder_h_t));

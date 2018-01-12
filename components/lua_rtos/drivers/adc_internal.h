@@ -33,9 +33,11 @@
 #include <drivers/adc.h>
 #include <stdint.h>
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 typedef struct {
 	driver_unit_lock_t *lock;
 } adc_lock_t;
+#endif
 
 typedef struct {
 	uint8_t pin;

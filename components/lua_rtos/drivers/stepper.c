@@ -245,7 +245,9 @@ static void stepper_setup_timer(int timer_group, int timer_idx) {
  */
 driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, uint8_t *unit) {
 	driver_error_t *error;
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     driver_unit_lock_error_t *lock_error = NULL;
+#endif
 	int i;
 
 	// Sanity checks
@@ -273,6 +275,7 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, uint8_t *unit) 
 		return driver_error(STEPPER_DRIVER, STEPPER_ERR_NO_MORE_UNITS, NULL);
 	}
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock the step pin
     if ((lock_error = driver_lock(STEPPER_DRIVER, *unit, GPIO_DRIVER, step_pin, DRIVER_ALL_FLAGS, "STEP"))) {
     	// Revoked lock on pin
@@ -286,6 +289,7 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, uint8_t *unit) 
 		mtx_unlock(&stepper_mutex);
     	return driver_lock_error(STEPPER_DRIVER, lock_error);
     }
+#endif
 
     // Configure stepper pins, as output, initial low
     if ((error = gpio_pin_output(step_pin))) {

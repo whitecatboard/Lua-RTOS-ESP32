@@ -307,6 +307,7 @@ driver_error_t *st7735_init(uint8_t chip, uint8_t orientation, uint8_t address) 
 		}
 	}
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     driver_unit_lock_error_t *lock_error = NULL;
 	if ((error = spi_lock_bus_resources(CONFIG_LUA_RTOS_GDISPLAY_SPI, DRIVER_ALL_FLAGS))) {
 		return error;
@@ -315,14 +316,17 @@ driver_error_t *st7735_init(uint8_t chip, uint8_t orientation, uint8_t address) 
 	if ((lock_error = driver_lock(GDISPLAY_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_GDISPLAY_CMD, DRIVER_ALL_FLAGS, "gdisplay - ST7735"))) {
 		return driver_lock_error(GDISPLAY_DRIVER, lock_error);
 	}
+#endif
 
 	// setup command pin
 	gpio_pin_output(CONFIG_LUA_RTOS_GDISPLAY_CMD);
 
 #if CONFIG_LUA_RTOS_GDISPLAY_RESET != -1
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	if ((lock_error = driver_lock(GDISPLAY_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_GDISPLAY_RESET, DRIVER_ALL_FLAGS, "gdisplay - ST7735"))) {
 		return driver_lock_error(GDISPLAY_DRIVER, lock_error);
 	}
+#endif
 
 	// setup reset pin
 	gpio_pin_output(CONFIG_LUA_RTOS_GDISPLAY_RESET);

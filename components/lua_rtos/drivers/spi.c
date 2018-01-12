@@ -89,7 +89,7 @@ extern void spi_flash_enable_interrupts_caches_and_other_cpu();
 // Register driver and messages
 static void _spi_init();
 
-DRIVER_REGISTER_BEGIN(SPI,spi,spi_locks,_spi_init,NULL);
+DRIVER_REGISTER_BEGIN(SPI,spi,NULL,_spi_init,NULL);
 	DRIVER_REGISTER_ERROR(SPI, spi, InvalidMode, "invalid mode", SPI_ERR_INVALID_MODE);
 	DRIVER_REGISTER_ERROR(SPI, spi, InvalidUnit, "invalid unit", SPI_ERR_INVALID_UNIT);
 	DRIVER_REGISTER_ERROR(SPI, spi, SlaveNotAllowed, "slave mode not allowed", SPI_ERR_SLAVE_NOT_ALLOWED);
@@ -634,8 +634,8 @@ int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t
 }
 
 void spi_ll_get_speed(int deviceid, uint32_t *speed) {
-	int unit = (deviceid & 0xff00) >> 8;
-	int device = (deviceid & 0x00ff);
+	//int unit = (deviceid & 0xff00) >> 8;
+	//int device = (deviceid & 0x00ff);
 
 	//*speed = spi_bus[spi_idx(unit)].device[device].speed;
 }
@@ -829,7 +829,9 @@ driver_error_t *spi_pin_map(int unit, int miso, int mosi, int clk) {
 }
 
 driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid) {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	driver_error_t *error = NULL;
+#endif
 
     // Sanity checks
 	if ((unit > CPU_LAST_SPI) || (unit < CPU_FIRST_SPI)) {
@@ -877,6 +879,7 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode,
 		return driver_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "miso, mosi, clk and cs must be different");
     }
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     // Lock resources
     if (!spi_bus[spi_idx(unit)].setup) {
         if ((error = spi_lock_bus_resources(unit, flags))) {
@@ -888,6 +891,7 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode,
     if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, cs, flags, "CS"))) {
     	return driver_lock_error(SPI_DRIVER, lock_error);
     }
+#endif
 
     // Low-level setup
 	spi_lock(unit);
@@ -1258,6 +1262,7 @@ driver_error_t *spi_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data) 
 	return NULL;
 }
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
     driver_unit_lock_error_t *lock_error = NULL;
 
@@ -1317,6 +1322,7 @@ void spi_unlock_bus_resources(int unit) {
 
 	spi_unlock(unit);
 }
+#endif
 
 void spi_ll_unsetup(int deviceid) {
 	int unit = (deviceid & 0xff00) >> 8;
@@ -1330,13 +1336,17 @@ void spi_ll_unsetup(int deviceid) {
 			spi_bus_remove_device(spi_bus[spi_idx(unit)].device[device].h);
 		}
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 		// Unlock device CS
 		driver_unlock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[spi_idx(unit)].device[device].cs);
+#endif
 
 		spi_bus[spi_idx(unit)].device[unit].setup = 0;
 	}
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	spi_unlock_bus_resources(unit);
+#endif
 
 	spi_unlock(unit);
 }

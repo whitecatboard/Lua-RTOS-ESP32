@@ -1064,7 +1064,17 @@ menu "Lua RTOS"
             help
                This is an experimental feature. When accessing to readonly tables,
                Lua RTOS can get the key/value pair from a cache. This can speedup
-               the execution of Lua scripts. 
+               the execution of Lua scripts.
+               
+         config LUA_RTOS_USE_HARDWARE_LOCKS 
+            bool "Enable hardware locks"
+            default y
+            help
+                If this feature is enabled, Lua RTOS takes care about all the hardware
+                resources that your application use. This is useful in the developing
+                and debuging phase, because in case that your application try to use
+                a hardware resource that is used in other part of your application, an
+                exeption will be raised. This feature consumes arround 3 Kb of memory.
          endmenu
          
          menu "Lua Modules"
