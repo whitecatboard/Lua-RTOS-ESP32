@@ -172,7 +172,7 @@ void lua_shell(lua_State* L, char *buffer) {
 	char *cbuffer = buffer;
 	int itoken = 0;
 	int cindex = -1;
-	char arg[256];
+	char arg[LUA_MAXINPUT];
 
 	// Initialize an array for store tokens found in buffer
 	struct {
@@ -303,21 +303,21 @@ void lua_shell(lua_State* L, char *buffer) {
 		else if (s.st_mode == S_IFREG) {
 			// It's a file
 
-			char argbuf[256];
+			char argbuf[LUA_MAXINPUT];
 			get_args_from_shell_command(buffer, arg, argbuf);
 
 			*buffer = 0x00;
 			if (strlen(argbuf)) {
-				strlcat(buffer,"assert(loadfile(\"",256);
-				strlcat(buffer,arg, 256); //script name
-				strlcat(buffer,"\"))(", 256);
-				strlcat(buffer,argbuf, 256); //script params
-				strlcat(buffer,")", 256);
+				strlcat(buffer,"assert(loadfile(\"",LUA_MAXINPUT);
+				strlcat(buffer,arg, LUA_MAXINPUT); //script name
+				strlcat(buffer,"\"))(", LUA_MAXINPUT);
+				strlcat(buffer,argbuf, LUA_MAXINPUT); //script params
+				strlcat(buffer,")", LUA_MAXINPUT);
 			}
 			else {
-				strlcat(buffer,"dofile(\"",256);
-				strlcat(buffer,arg, 256); //script name
-				strlcat(buffer,"\")", 256);
+				strlcat(buffer,"dofile(\"",LUA_MAXINPUT);
+				strlcat(buffer,arg, LUA_MAXINPUT); //script name
+				strlcat(buffer,"\")", LUA_MAXINPUT);
 			}
 			return;
 		}
