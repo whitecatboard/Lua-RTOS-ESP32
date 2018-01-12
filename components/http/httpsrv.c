@@ -385,7 +385,15 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf, c
 				lua_pushinteger(LL, request->config->secure);
 				lua_setglobal(LL, "http_secure");
 
-				int rc = luaL_dofile(LL, ppath);
+				char command[LUA_MAXINPUT];
+				strlcpy(command,"assert(loadfile(\"",LUA_MAXINPUT);
+				strlcat(command,ppath, LUA_MAXINPUT); //script name
+				strlcat(command,"\"))()", LUA_MAXINPUT);
+
+				//syslog(LOG_WARNING, "now executing: %s\n", command);
+
+				int rc = luaL_dostring(LL, command);
+				//int rc = luaL_dofile(LL, ppath);
 				(void) rc;
 
 				lua_pushnil(LL);
