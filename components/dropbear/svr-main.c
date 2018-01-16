@@ -446,28 +446,30 @@ static void main_lua_rtos() {
 			// Start the session
 			svr_session(childsock, childpipe);
 
-			//printf("ppppppppp 1\r\n");
-			//m_close(childsock);
-			//printf("ppppppppp 2\r\n");
+			// Close all
+			int i;
+			struct Channel *channel;
 
-			//if (remote_host) {
-			//	printf("ppppppppp 3\r\n");
-			//	m_free(remote_host);
-			//	printf("ppppppppp 4\r\n");
-			//}
+			for (i = 0; i < ses.chansize; i++) {
+				channel = ses.channels[i];
 
-			//printf("ppppppppp 5\r\n");
-			//if (remote_port) {
-			//	printf("ppppppppp 6\r\n");
+				channel->type->closehandler(channel);
+			}
 
-			//	m_free(remote_port);
-			//	printf("ppppppppp 7\r\n");
-			//
-			//}
-			//printf("ppppppppp 8\r\n");
+			m_close(childsock);
 
-			//remote_host = NULL;
-			//remote_port = NULL;
+			if (remote_host) {
+				m_free(remote_host);
+			}
+
+			if (remote_port) {
+				m_free(remote_port);
+			}
+
+			remote_host = NULL;
+			remote_port = NULL;
+
+			exitflag = 0;
 		}
 	} /* for(;;) loop */
 }

@@ -169,6 +169,14 @@ static int vfs_ptm_open(const char *path, int flags, int mode) {
 }
 
 static int vfs_ptm_close(int fd) {
+	if (masters > 0) {
+		masters--;
+	}
+
+	if (master_q) {
+		xQueueReset(master_q);
+	}
+
 	return 0;
 }
 
@@ -229,6 +237,14 @@ static int vfs_pts_open(const char *path, int flags, int mode) {
 }
 
 static int vfs_pts_close(int fd) {
+	if (slaves > 0) {
+		slaves--;
+	}
+
+	if (slave_q) {
+		xQueueReset(slave_q);
+	}
+
 	return 0;
 }
 

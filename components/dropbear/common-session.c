@@ -193,19 +193,11 @@ void session_loop(void(*loophandler)()) {
 		val = select(ses.maxfd+1, &readfd, &writefd, NULL, &timeout);
 
 		if (exitflag) {
-#if !__XTENSA__
-			dropbear_exit("Terminated by signal");
-#else
 			break;
-#endif
 		}
 		
 		if (val < 0 && errno != EINTR) {
-#if !__XTENSA__
-			dropbear_exit("Error in select");
-#else
 			break;
-#endif
 		}
 
 		if (val <= 0) {
@@ -265,16 +257,11 @@ void session_loop(void(*loophandler)()) {
 			}
 		}
 
-
 		if (loophandler) {
 			loophandler();
 		}
 
 	} /* for(;;) */
-	
-
-	printf("exit loop\r\n");
-	/* Not reached */
 }
 
 static void cleanup_buf(buffer **buf) {

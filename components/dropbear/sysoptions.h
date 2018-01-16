@@ -20,7 +20,7 @@
 #endif
 /* Close connections to clients which haven't authorised after AUTH_TIMEOUT */
 #ifndef AUTH_TIMEOUT
-#define AUTH_TIMEOUT 60 /* we choose 1 minute */
+#define AUTH_TIMEOUT 300 /* we choose 5 minutes */
 #endif
 
 /* A client should try and send an initial key exchange packet guessing

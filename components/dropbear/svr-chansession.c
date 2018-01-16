@@ -311,7 +311,9 @@ static void closechansess(struct Channel *channel) {
 		login_logout(li);
 		login_free_entry(li);
 
-		pty_release(chansess->tty);
+		close(chansess->master);
+		close(chansess->slave);
+
 		m_free(chansess->tty);
 	}
 
@@ -794,7 +796,8 @@ static int ptycommand(struct Channel *channel, struct ChanSess *chansess) {
 		if (signal(SIGCHLD, SIG_DFL) == SIG_ERR) {
 			dropbear_exit("signal() error");
 		}
-		
+
+#if !__XTENSA__
 		/* redirect stdin/stdout/stderr */
 		close(chansess->master);
 
@@ -808,6 +811,7 @@ static int ptycommand(struct Channel *channel, struct ChanSess *chansess) {
 		}
 
 		close(chansess->slave);
+#endif
 
 		/* write the utmp/wtmp login record - must be after changing the
 		 * terminal used for stdout with the dup2 above */
@@ -854,7 +858,9 @@ static int ptycommand(struct Channel *channel, struct ChanSess *chansess) {
 		/* add a child pid */
 		addchildpid(chansess, pid);
 
+#if !__XTENSA__
 		close(chansess->slave);
+#endif
 		channel->writefd = chansess->master;
 		channel->readfd = chansess->master;
 		/* don't need to set stderr here */
@@ -883,8 +889,9 @@ static int ptycommand(struct Channel *channel, struct ChanSess *chansess) {
 
 	create_shell(&config);
 
+#if !__XTENSA__
 	close(chansess->slave);
-
+#endif
 	channel->writefd = chansess->master;
 	channel->readfd = chansess->master;
 

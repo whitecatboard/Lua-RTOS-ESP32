@@ -93,13 +93,6 @@ void svr_session(int sock, int childpipe) {
 	size_t len;
 
 	common_session_init(sock, sock);
-#if !__XTENSA__
-	/* Initialise server specific parts of the session */
-	svr_ses.childpipe = childpipe;
-#ifdef USE_VFORK
-	svr_ses.server_pid = getpid();
-#endif
-#endif
 
 	svr_authinitialise();
 	chaninitialise(svr_chantypes);
