@@ -149,9 +149,9 @@ int   _pthread_create(pthread_t *id, int priority, int stacksize, int cpu, int i
 int   _pthread_join(pthread_t id);
 int   _pthread_free(pthread_t id);
 sig_t _pthread_signal(int s, sig_t h);
-void  _pthread_queue_signal(int s);
+void  _pthread_exec_signal(int dst, int s);
 void  _pthread_process_signal();
-int   _pthread_has_signal(int s);
+int   _pthread_has_signal(int dst, int s);
 int   _pthread_stop(pthread_t id);
 int   _pthread_suspend(pthread_t id);
 int   _pthread_resume(pthread_t id);
@@ -195,6 +195,7 @@ int  pthread_setspecific(pthread_key_t k, const void *value);
 void *pthread_getspecific(pthread_key_t k);
 int  pthread_join(pthread_t thread, void **value_ptr);
 int pthread_cancel(pthread_t thread);
+int pthread_kill(pthread_t thread, int signal);
 
 int pthread_setname_np(pthread_t id, const char *name);
 int pthread_getname_np(pthread_t id, char *name, size_t len);

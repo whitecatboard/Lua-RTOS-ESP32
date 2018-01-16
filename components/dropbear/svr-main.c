@@ -338,6 +338,7 @@ out:
 #endif /* NON_INETD_MODE */
 
 
+#if __XTENSA__
 static void main_lua_rtos() {
 	fd_set fds;
 	unsigned int i, j;
@@ -393,9 +394,9 @@ static void main_lua_rtos() {
 
 		val = select(maxsock+1, &fds, NULL, NULL, NULL);
 
-		if (exitflag) {
-			dropbear_exit("Terminated by signal");
-		}
+		//if (exitflag) {
+		//	dropbear_exit("Terminated by signal");
+		//}
 
 		if (val == 0) {
 			/* timeout reached - shouldn't happen. eh */
@@ -421,11 +422,7 @@ static void main_lua_rtos() {
 
 		/* handle each socket which has something to say */
 		for (i = 0; i < listensockcount; i++) {
-			size_t num_unauthed_for_addr = 0;
-			size_t num_unauthed_total = 0;
 			char *remote_host = NULL, *remote_port = NULL;
-			pid_t fork_ret = 0;
-			size_t conn_idx = 0;
 			struct sockaddr_storage remoteaddr;
 			socklen_t remoteaddrlen;
 
@@ -441,76 +438,40 @@ static void main_lua_rtos() {
 				continue;
 			}
 
-			/* Limit the number of unauthenticated connections per IP */
-			getaddrstring(&remoteaddr, &remote_host, NULL, 0);
-
-			num_unauthed_for_addr = 0;
-			num_unauthed_total = 0;
-			for (j = 0; j < MAX_UNAUTH_CLIENTS; j++) {
-				if (childpipes[j] >= 0) {
-					num_unauthed_total++;
-					if (strcmp(remote_host, preauth_addrs[j]) == 0) {
-						num_unauthed_for_addr++;
-					}
-				} else {
-					/* a free slot */
-					conn_idx = j;
-				}
-			}
-
-			if (num_unauthed_total >= MAX_UNAUTH_CLIENTS
-					|| num_unauthed_for_addr >= MAX_UNAUTH_PER_IP) {
-				goto out;
-			}
+			getaddrstring(&remoteaddr, &remote_host, &remote_port, 0);
+			dropbear_log(LOG_INFO, "Child connection from %s:%s", remote_host, remote_port);
 
 			seedrandom();
-#if !__XTENSA__
-			if (pipe(childpipe) < 0) {
-				TRACE(("error creating child pipe"))
-				goto out;
-			}
 
-			//childpipes[conn_idx] = childpipe[0];
-			//m_close(childpipe[1]);
+			// Start the session
+			svr_session(childsock, childpipe);
 
-			preauth_addrs[conn_idx] = remote_host;
+			//printf("ppppppppp 1\r\n");
+			//m_close(childsock);
+			//printf("ppppppppp 2\r\n");
 
-			getaddrstring(&remoteaddr, NULL, &remote_port, 0);
-			dropbear_log(LOG_INFO, "Child connection from %s:%s", remote_host, remote_port);
-			m_free(remote_host);
-			m_free(remote_port);
+			//if (remote_host) {
+			//	printf("ppppppppp 3\r\n");
+			//	m_free(remote_host);
+			//	printf("ppppppppp 4\r\n");
+			//}
 
+			//printf("ppppppppp 5\r\n");
+			//if (remote_port) {
+			//	printf("ppppppppp 6\r\n");
 
-				/* parent */
-				childpipes[conn_idx] = childpipe[0];
-				m_close(childpipe[1]);
-				preauth_addrs[conn_idx] = remote_host;
-				remote_host = NULL;
+			//	m_free(remote_port);
+			//	printf("ppppppppp 7\r\n");
+			//
+			//}
+			//printf("ppppppppp 8\r\n");
 
-#endif
-#if !__XTENSA__
-				/* make sure we close sockets */
-				for (j = 0; j < listensockcount; j++) {
-					m_close(listensocks[j]);
-				}
-
-				m_close(childpipe[0]);
-#endif
-				/* start the session */
-				svr_session(childsock, childpipe[1]);
-
-out:
-			/* This section is important for the parent too */
-			m_close(childsock);
-			if (remote_host) {
-				m_free(remote_host);
-			}
+			//remote_host = NULL;
+			//remote_port = NULL;
 		}
 	} /* for(;;) loop */
-
-	/* don't reach here */
-	printf("Running ...\r\n");
 }
+#endif
 
 /* catch + reap zombie children */
 static void sigchld_handler(int UNUSED(unused)) {
@@ -538,7 +499,6 @@ static void sigsegv_handler(int UNUSED(unused)) {
 
 /* catch ctrl-c or sigterm */
 static void sigintterm_handler(int UNUSED(unused)) {
-
 	exitflag = 1;
 }
 

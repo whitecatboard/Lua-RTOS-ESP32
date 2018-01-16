@@ -59,9 +59,9 @@
 #include <drivers/uart.h>
 
 extern void _pthread_init();
-extern void _signal_init();
 extern void _cpu_init();
 extern void _clock_init();
+extern void _signal_init();
 
 extern const char *__progname;
 
@@ -172,12 +172,11 @@ void _sys_init() {
 	_cpu_init();
     _driver_init();
     _pthread_init();
+    _signal_init();
 
     status_set(STATUS_SYSCALLS_INITED);
     status_set(STATUS_LUA_SHELL);
     status_set(STATUS_LUA_HISTORY);
-
-    _signal_init();
 
     esp_vfs_lwip_sockets_register();
 

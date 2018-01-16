@@ -36,6 +36,7 @@
 
 #include "esp_ota_ops.h"
 
+#include <signal.h>
 #include <stdio.h>
 #include <errno.h>
 #include <pthread.h>
@@ -73,9 +74,12 @@ static void *shell(void *arg) {
 
     printf("board type %s\r\n\r\n", LUA_RTOS_BOARD);
 
-	for(;;) {
-		doREPL(pvGetLuaState());
-	}
+    // Run lua in interpreter mode
+    doREPL(pvGetLuaState());
+
+    // The lua interpreter exit when the user enters the Ctrl-C key
+    // This situation must be interpreted as a SIGINT signal
+    pthread_kill(2, SIGINT);
 
 	return NULL;
 }

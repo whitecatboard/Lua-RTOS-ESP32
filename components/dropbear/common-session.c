@@ -272,6 +272,8 @@ void session_loop(void(*loophandler)()) {
 
 	} /* for(;;) */
 	
+
+	printf("exit loop\r\n");
 	/* Not reached */
 }
 

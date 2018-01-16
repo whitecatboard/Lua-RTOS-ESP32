@@ -53,7 +53,7 @@
 #define MAX_HOST_LEN 254 /* max hostname len for tcp fwding */
 #define MAX_IP_LEN 15 /* strlen("255.255.255.255") == 15 */
 
-#define DROPBEAR_MAX_PORTS 10 /* max number of ports which can be specified,
+#define DROPBEAR_MAX_PORTS 1   /* max number of ports which can be specified,
 								 ipv4 and ipv6 don't count twice */
 
 /* Each port might have at least a v4 and a v6 address */

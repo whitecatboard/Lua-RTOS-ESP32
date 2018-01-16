@@ -263,11 +263,7 @@ sig_t _pthread_signal(int s, sig_t h) {
         return SIG_ERR;
     }
 
-    // Get thread
-    //
-    // Signals are send only to thread 1 (see _pthread_queue_signal)
-    // pthread_self cannot be use because is called from a system task (thread 0)
-    if (list_get(&thread_list, 1, (void **)&thread) == 0) {
+    if (list_get(&thread_list, pthread_self(), (void **)&thread) == 0) {
         // Add handler
         prev_h = thread->signals[s];
         thread->signals[s] = h;
@@ -278,36 +274,44 @@ sig_t _pthread_signal(int s, sig_t h) {
     return NULL;
 }
 
-void IRAM_ATTR _pthread_queue_signal(int s) {
+void _pthread_exec_signal(int dst, int s) {
     struct pthread *thread; // Current thread
     int index;
+
+    if (s > PTHREAD_NSIG) {
+    	return;
+    }
 
     index = list_first(&thread_list);
     while (index >= 0) {
         list_get(&thread_list, index, (void **)&thread);
-        
-        if (thread->thread == 1) {
-            if ((thread->signals[s] != SIG_DFL) && (thread->signals[s] != SIG_IGN)) {
-            	thread->signals[s](s);
-            }         
+
+        if (thread->thread == dst) {
+			if ((thread->signals[s] != SIG_DFL) && (thread->signals[s] != SIG_IGN)) {
+				thread->signals[s](s);
+			}
         }
-        
+
         index = list_next(&thread_list, index);
     }
 }
 
-int IRAM_ATTR _pthread_has_signal(int s) {
+int _pthread_has_signal(int dst, int s) {
     struct pthread *thread; // Current thread
     int index;
+
+    if (s > PTHREAD_NSIG) {
+    	return 0;
+    }
 
     index = list_first(&thread_list);
     while (index >= 0) {
         list_get(&thread_list, index, (void **)&thread);
         
-        if (thread->thread == 1) {
-            if ((thread->signals[s] != SIG_DFL) && (thread->signals[s] != SIG_IGN)) {
-                return 1;
-            }
+        if (thread->thread == dst) {
+			if ((thread->signals[s] != SIG_DFL) && (thread->signals[s] != SIG_IGN)) {
+				return 1;
+			}
         }
         
         index = list_next(&thread_list, index);

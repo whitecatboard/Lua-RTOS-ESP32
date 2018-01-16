@@ -78,6 +78,7 @@
 #include <sys/driver.h>
 #include <sys/syslog.h>
 #include <sys/delay.h>
+#include <sys/_signal.h>
 
 #include <pthread.h>
 #include <drivers/uart.h>
@@ -140,22 +141,22 @@ struct uart uart[NUART] = {
 /*
  * This is for process deferred process for CONSOLE interrupt handler
  */
-static xQueueHandle signal_q = NULL;
+static xQueueHandle deferred_q = NULL;
 
 static uint8_t console_raw = 0;
 
 typedef struct {
 	uint8_t type;
 	uint8_t data;
-} console_deferred_data;
+} uart_deferred_data;
 
-static void console_deferred_intr_handler(void *args) {
-	console_deferred_data data;
+static void uart_deferred_intr_handler(void *args) {
+	uart_deferred_data data;
 
 	for(;;) {
-		xQueueReceive(signal_q, &data, portMAX_DELAY);
+		xQueueReceive(deferred_q, &data, portMAX_DELAY);
 		if (data.type == 0) {
-			_pthread_queue_signal(data.data);
+			_signal_queue(1, data.data);
 		} else {
 			if (data.data == 1) {
 		    	uart_ll_lock(CONSOLE_UART);
@@ -248,7 +249,7 @@ static int IRAM_ATTR queue_byte(int8_t unit, uint8_t byte, uint8_t *status, int 
         } else if ((byte == 0x03) && (!console_raw)) {
         	if (status_get(STATUS_LUA_RUNNING)) {
 				*signal = SIGINT;
-				if (_pthread_has_signal(*signal)) {
+				if (_pthread_has_signal(1, *signal)) {
 					return 0;
 				}
 
@@ -315,7 +316,7 @@ void IRAM_ATTR uart_ll_set_raw(uint8_t raw) {
 void IRAM_ATTR uart_rx_intr_handler(void *args) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     uint32_t uart_intr_status = 0;
-    console_deferred_data data;
+    uart_deferred_data data;
 
 	uint8_t byte, status;
 	int signal = 0;
@@ -339,14 +340,14 @@ void IRAM_ATTR uart_rx_intr_handler(void *args) {
 						data.type = 0;
 						data.data = signal;
 
-						xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
+						xQueueSendFromISR(deferred_q, &data, &xHigherPriorityTaskWoken);
 					}
 
 					if (status) {
 						data.type = 1;
 						data.data = status;
 
-						xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
+						xQueueSendFromISR(deferred_q, &data, &xHigherPriorityTaskWoken);
 					}
 				}
 			}
@@ -363,14 +364,14 @@ void IRAM_ATTR uart_rx_intr_handler(void *args) {
 						data.type = 0;
 						data.data = signal;
 
-						xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
+						xQueueSendFromISR(deferred_q, &data, &xHigherPriorityTaskWoken);
 					}
 
 					if (status) {
 						data.type = 1;
 						data.data = status;
 
-						xQueueSendFromISR(signal_q, &data, &xHigherPriorityTaskWoken);
+						xQueueSendFromISR(deferred_q, &data, &xHigherPriorityTaskWoken);
 					}
 				}
 			}
@@ -536,9 +537,9 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
     // received from the console
 	#if CONFIG_LUA_RTOS_USE_CONSOLE
 		if (unit == CONSOLE_UART) {
-			if (!signal_q) {
-				signal_q = xQueueCreate(1, sizeof(console_deferred_data));
-				xTaskCreatePinnedToCore(console_deferred_intr_handler, "signal", configMINIMAL_STACK_SIZE, NULL, 21, NULL, 0);
+			if (!deferred_q) {
+				deferred_q = xQueueCreate(1, sizeof(uart_deferred_data));
+				xTaskCreatePinnedToCore(uart_deferred_intr_handler, "uart", configMINIMAL_STACK_SIZE, NULL, 21, NULL, 0);
 			}
 		}
 	#endif

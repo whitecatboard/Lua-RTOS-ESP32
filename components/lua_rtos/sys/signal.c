@@ -27,10 +27,41 @@
  * this software.
  */
 
-#include <signal.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+
 #include <pthread.h>
+#include <signal.h>
+#include <sys/_signal.h>
+
+static xQueueHandle queue = NULL;
+
+static void signal_task(void *args) {
+	signal_data_t data;
+
+	for(;;) {
+		xQueueReceive(queue, &data, portMAX_DELAY);
+		_pthread_exec_signal(data.dest, data.s);
+	}
+}
 
 void _signal_init() {
+	// Create queue to receive signals
+	queue = xQueueCreate(10, sizeof(signal_data_t));
+	assert(queue != NULL);
+
+	// Create signal task
+	BaseType_t ret = xTaskCreatePinnedToCore(signal_task, "signal", configMINIMAL_STACK_SIZE, NULL, 21, NULL, 0);
+	assert(ret == pdPASS);
+}
+
+void _signal_queue(int dest, int s) {
+	signal_data_t data;
+
+	data.dest = dest;
+	data.s = s;
+
+	xQueueSend(queue, &data, 0);
 }
 
 sig_t signal(int s, sig_t h) {

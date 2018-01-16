@@ -71,7 +71,7 @@ static int lssh_service_start(lua_State* L) {
 
 	pthread_attr_init(&attr);
 
-    pthread_attr_setstacksize(&attr, 10240*2);
+    pthread_attr_setstacksize(&attr, 12288);
 
     if (pthread_create(&thread, &attr, ssh_thread, NULL)) {
     	return 0;
