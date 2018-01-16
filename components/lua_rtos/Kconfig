@@ -201,11 +201,16 @@ menu "Lua RTOS"
          menu "OpenVPN"
             config LUA_RTOS_USE_OPENVPN
                bool "Enable OpenVPN client support"
-               default n
+               default y
                
            config LUA_RTOS_OPENVPN_CONFIG_FILE
                string "Config file"
                   default "/etc/openvpn/client.conf"
+         endmenu
+         menu "SSH server"
+            config LUA_RTOS_USE_SSH_SERVER
+               bool "Enable SSH server"
+               default y
          endmenu
       endmenu
 

@@ -33,6 +33,7 @@ CFLAGS += -DLWIP_DNS_API_DEFINE_ERRORS=1
 LDFLAGS += -Wl,--wrap=_realloc_r
 LDFLAGS += -Wl,--wrap=_malloc_r
 LDFLAGS += -Wl,--wrap=_calloc_r
+LDFLAGS += -Wl,--wrap=open
 LDFLAGS += -Wl,--wrap=_open_r
 LDFLAGS += -Wl,--wrap=_unlink_r
 LDFLAGS += -Wl,--wrap=_rename_r

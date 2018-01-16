@@ -52,13 +52,7 @@ char *getcwd(char *pt, size_t size) {
 }
 
 char *realpath(const char *path, char *resolved) {
-	char *fpath; // Full path
-
-	fpath = mount_resolve_to_physical(path);
-
-	strcpy(resolved,fpath);
-
-	free(fpath);
+	strcpy(resolved,path);
 
 	return resolved;
 }

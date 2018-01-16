@@ -27,10 +27,18 @@ index ab645fcc..61d75ac3 100644
  
  
 diff --git a/components/vfs/vfs.c b/components/vfs/vfs.c
-index 5dbd462c..6cd31f14 100644
+index 5dbd462c..b4b8e472 100644
 --- a/components/vfs/vfs.c
 +++ b/components/vfs/vfs.c
-@@ -552,3 +552,136 @@ int fsync(int fd)
+@@ -269,6 +269,7 @@ ssize_t esp_vfs_write(struct _reent *r, int fd, const void * data, size_t size)
+         __errno_r(r) = EBADF;
+         return -1;
+     }
++
+     int local_fd = translate_fd(vfs, fd);
+     ssize_t ret;
+     CHECK_AND_CALL(ret, r, vfs, write, local_fd, data, size);
+@@ -552,3 +553,179 @@ int fsync(int fd)
      CHECK_AND_CALL(ret, r, vfs, fsync, local_fd);
      return ret;
  }
@@ -49,12 +57,17 @@ index 5dbd462c..6cd31f14 100644
 +    return ret;
 +}
 +
-+#define VFS_FD_SET_NUM 2
++#define VFS_FD_SET_NUM 3
 +
 +typedef struct {
 +   fd_set readset;
 +   fd_set writeset;
 +   fd_set exceptset;
++
++   fd_set test_readset;
++   fd_set test_writeset;
++   fd_set test_exceptset;
++
 +   const vfs_entry_t *vfs;
 +} vfs_fd_set_t;
 +
@@ -89,14 +102,17 @@ index 5dbd462c..6cd31f14 100644
 +}
 +
 +int vfs_select (int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout) {
-+   struct _reent* r = __getreent();
-+   int min_fd;
-+   int max_fd;
++   // Convert the timeout to milliseconds
++   u32_t msectimeout = 0;
 +
-+   int i;
++   if (timeout && (timeout->tv_sec != 0) && (timeout->tv_usec != 0)) {
++      msectimeout = ((timeout->tv_sec * 1000) + ((timeout->tv_usec + 500)/1000));
++   }
 +
 +   // Initialize fd_set for each vfs
 +   vfs_fd_set_t vfs_fd_set[VFS_FD_SET_NUM];
++
++   int i;
 +
 +   for(i = 0;i < VFS_FD_SET_NUM;i++) {
 +       FD_ZERO(&vfs_fd_set[i].readset);
@@ -105,6 +121,8 @@ index 5dbd462c..6cd31f14 100644
 +       vfs_fd_set[i].vfs = NULL;
 +   }
 +
++   // Split readset / writeset / exceptset to individuals fd_set
++   // for each involved file system
 +   vfs_fd_set_t *fd_sets;
 +
 +   int fd;
@@ -132,37 +150,70 @@ index 5dbd462c..6cd31f14 100644
 +       }
 +   }
 +
++   // Call select for each involved file system
++   struct timeval fs_timeout = {0, 1000}; // Set a timeout of 1 millisecond for each fs
++   struct timeval start; // Start time
++   struct timeval now;   // Current time
++
++   int num = 0; // Number of set file descriptors
++   int min_fd;  // Min file descriptor in the current file system
++   int max_fd;  // Max file descriptor in the current file system
++
++   // Get start time
++   gettimeofday(&start, NULL);
++
++   // Scan file descriptors for each involved file system until a file descriptor is set or
++   // until timeout
++   struct _reent* r = __getreent();
 +   int ret;
-+   int num = 0;
 +
-+   for(i = 0;i < VFS_FD_SET_NUM;i++) {
-+       if (vfs_fd_set[i].vfs) {
-+           CHECK_AND_CALL(ret, r, vfs_fd_set[i].vfs, select, maxfdp1, &vfs_fd_set[i].readset, &vfs_fd_set[i].writeset, &vfs_fd_set[i].exceptset, timeout);
-+           if (ret < 0) {
-+               return ret;
-+           }
++   for(;;) {
++      for(i = 0;i < VFS_FD_SET_NUM;i++) {
++          if (vfs_fd_set[i].vfs) {
++              vfs_fd_set[i].test_readset   = vfs_fd_set[i].readset;
++              vfs_fd_set[i].test_writeset  = vfs_fd_set[i].writeset;
++              vfs_fd_set[i].test_exceptset = vfs_fd_set[i].exceptset;
 +
-+           if (ret >= 0) {
-+               num = num + ret;
++              CHECK_AND_CALL(ret, r, vfs_fd_set[i].vfs, select, maxfdp1, &vfs_fd_set[i].test_readset, &vfs_fd_set[i].test_writeset, &vfs_fd_set[i].test_exceptset, &fs_timeout);
++              if (ret < 0) {
++                  return ret;
++              }
 +
-+               min_fd = vfs_fd_set[i].vfs->offset << VFS_INDEX_S;
-+               max_fd = (vfs_fd_set[i].vfs->offset + 1) << VFS_INDEX_S;
++              if (ret >= 0) {
++                  num = num + ret;
 +
-+               for(fd = min_fd;fd < max_fd;fd++) {
-+                   if (readset && !FD_ISSET(fd, &vfs_fd_set[i].readset)) {
-+                       FD_CLR(fd, readset);
-+                   }
++                  min_fd = vfs_fd_set[i].vfs->offset << VFS_INDEX_S;
++                  max_fd = (vfs_fd_set[i].vfs->offset + 1) << VFS_INDEX_S;
 +
-+                   if (writeset && !FD_ISSET(fd, &vfs_fd_set[i].writeset)) {
-+                       FD_CLR(fd, writeset);
-+                   }
++                  for(fd = min_fd;fd < max_fd;fd++) {
++                      if (readset && !FD_ISSET(fd, &vfs_fd_set[i].test_readset)) {
++                          FD_CLR(fd, readset);
++                      }
 +
-+                   if (exceptset && !FD_ISSET(fd, &vfs_fd_set[i].exceptset)) {
-+                       FD_CLR(fd, exceptset);
-+                   }
-+               }
-+           }
-+       }
++                      if (writeset && !FD_ISSET(fd, &vfs_fd_set[i].test_writeset)) {
++                          FD_CLR(fd, writeset);
++                      }
++
++                      if (exceptset && !FD_ISSET(fd, &vfs_fd_set[i].test_exceptset)) {
++                          FD_CLR(fd, exceptset);
++                      }
++                  }
++              }
++          }
++     }
++
++      // If some file descriptor are set, terminate scan
++      if (num > 0) {
++          break;
++      }
++
++      // Check timeout
++      if (msectimeout != 0) {
++          gettimeofday(&now, NULL);
++          if ((now.tv_sec - start.tv_sec) * 1000 - (((now.tv_usec - start.tv_usec) + 500) / 1000) >= msectimeout) {
++              break;
++          }
++      }
 +   }
 +
 +   return num;

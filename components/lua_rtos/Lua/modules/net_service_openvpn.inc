@@ -54,6 +54,8 @@ static void *openvpn_thread(void *arg) {
 		delay(100);
 	}
 
+	delay(1000);
+
 	char* argv[] = {
 			"openvpn",
 			"--config", CONFIG_LUA_RTOS_OPENVPN_CONFIG_FILE,

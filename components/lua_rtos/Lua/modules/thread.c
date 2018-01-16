@@ -51,6 +51,7 @@
 
 #include <drivers/uart.h>
 #include <sys/console.h>
+#include <sys/fcntl.h>
 
 // Module errors
 #define LUA_THREAD_ERR_NOT_ENOUGH_MEMORY    	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  0)
@@ -414,14 +415,23 @@ monitor_loop:
 
 		char press;
 
-		uart_read(CONSOLE_UART, &press, 1);
-		if ((press != 'q') && (press != 'Q')) {
-			usleep(500 * 1000);
-			goto monitor_loop;
-		} else {
-			console_show_cursor();
-			printf("\r\n");
+		int flags = fcntl(fileno(stdin), F_GETFL, 0);
+		fcntl(fileno(stdin), F_SETFL, flags | O_NONBLOCK);
+
+		if (read(fileno(stdin), &press, 1) == 1) {
+			if ((press == 'q') || (press == 'Q')) {
+				fcntl(fileno(stdin), F_SETFL, flags);
+				console_show_cursor();
+				printf("\r\n");
+
+				return table;
+			}
 		}
+
+		fcntl(fileno(stdin), F_SETFL, flags);
+
+		usleep(500 * 1000);
+		goto monitor_loop;
 	}
     
     return table;
