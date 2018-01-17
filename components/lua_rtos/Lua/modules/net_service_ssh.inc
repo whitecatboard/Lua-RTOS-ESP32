@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015-2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015-2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -41,48 +41,17 @@
 #include <pthread.h>
 
 #include <sys/driver.h>
-#include <sys/delay.h>
 
-int dropbear_server_main(int argc, char ** argv);
-
-static void *ssh_thread(void *arg) {
-	driver_error_t *error;
-
-	// Wait for network
-	while ((error = net_check_connectivity())) {
-		free(error);
-		delay(100);
-	}
-
-	delay(1000);
-
-	char* argv[] = {
-			"dropbear"
-	};
-
-	dropbear_server_main(1, argv);
-
-	return NULL;
-}
+extern void dropbear_server_start();
+extern void dropbear_server_stop();
 
 static int lssh_service_start(lua_State* L) {
-	pthread_t thread;
-	pthread_attr_t attr;
-
-	pthread_attr_init(&attr);
-
-    pthread_attr_setstacksize(&attr, 12288);
-
-    if (pthread_create(&thread, &attr, ssh_thread, NULL)) {
-    	return 0;
-	}
-
-    pthread_setname_np(thread, "ssh");
-
+	dropbear_server_start();
 	return 0;
 }
 
 static int lssh_service_stop(lua_State* L) {
+	dropbear_server_stop();
 	return 0;
 }
 

@@ -1,9 +1,8 @@
-#if 0
 #include "options.h"
 #include "dbutil.h"
 #include "list.h"
 
-void list_append(m_list *list, void *item) {
+void db_list_append(m_list *list, void *item) {
 	m_list_elem *elem;
 	
 	elem = m_malloc(sizeof(*elem));
@@ -20,13 +19,13 @@ void list_append(m_list *list, void *item) {
 	list->last = elem;
 }
 
-m_list * list_new() {
+m_list * db_list_new() {
 	m_list *ret = m_malloc(sizeof(m_list));
 	ret->first = ret->last = NULL;
 	return ret;
 }
 
-void * list_remove(m_list_elem *elem) {
+void * db_list_remove(m_list_elem *elem) {
 	void *item = elem->item;
 	m_list *list = elem->list;
 	if (list->first == elem)
@@ -48,4 +47,3 @@ void * list_remove(m_list_elem *elem) {
 	m_free(elem);
 	return item;
 }
-#endif

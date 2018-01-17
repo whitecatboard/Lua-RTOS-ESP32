@@ -36,6 +36,8 @@
 #include "channel.h"
 #include "netio.h"
 
+#include <unistd.h>
+
 static int read_packet_init(void);
 static void make_mac(unsigned int seqno, const struct key_context_directional * key_state,
 		buffer * clear_buf, unsigned int clear_len, 
@@ -54,7 +56,7 @@ static void buf_compress(buffer * dest, buffer * src, unsigned int len);
 #endif
 
 /* non-blocking function writing out a current encrypted packet */
-void write_packet() {
+int write_packet() {
 
 	ssize_t written;
 #ifdef HAVE_WRITEV
@@ -80,9 +82,9 @@ void write_packet() {
 	if (written < 0) {
 		if (errno == EINTR || errno == EAGAIN) {
 			TRACE2(("leave write_packet: EINTR"))
-			return;
+			return 1;
 		} else {
-			dropbear_exit("Error writing: %s", strerror(errno));
+			return 0;
 		}
 	}
 
@@ -91,6 +93,7 @@ void write_packet() {
 
 	if (written == 0) {
 		ses.remoteclosed();
+		return 0;
 	}
 
 #else /* No writev () */
@@ -110,14 +113,15 @@ void write_packet() {
 	if (written < 0) {
 		if (errno == EINTR || errno == EAGAIN) {
 			TRACE2(("leave writepacket: EINTR"))
-			return;
+			return 1;
 		} else {
-			dropbear_exit("Error writing: %s", strerror(errno));
+			return 0;
 		}
 	} 
 
 	if (written == 0) {
 		ses.remoteclosed();
+		return 0;
 	}
 
 	ses.writequeue_len -= written;
@@ -134,12 +138,14 @@ void write_packet() {
 #endif /* writev */
 
 	TRACE2(("leave write_packet"))
+
+	return 1;
 }
 
 /* Non-blocking function reading available portion of a packet into the
  * ses's buffer, decrypting the length if encrypted, decrypting the
  * full portion if possible */
-void read_packet() {
+int read_packet() {
 
 	int len;
 	unsigned int maxlen;
@@ -159,7 +165,7 @@ void read_packet() {
 		if (ret == DROPBEAR_FAILURE) {
 			/* didn't read enough to determine the length */
 			TRACE2(("leave read_packet: packetinit done"))
-			return;
+			return 1;
 		}
 	}
 
@@ -176,14 +182,15 @@ void read_packet() {
 
 		if (len == 0) {
 			ses.remoteclosed();
+			return 0;
 		}
 
 		if (len < 0) {
 			if (errno == EINTR || errno == EAGAIN) {
 				TRACE2(("leave read_packet: EINTR or EAGAIN"))
-				return;
+				return 1;
 			} else {
-				dropbear_exit("Error reading: %s", strerror(errno));
+				return 0;
 			}
 		}
 
@@ -197,6 +204,8 @@ void read_packet() {
 		 * handle the packet contents... */
 	}
 	TRACE2(("leave read_packet"))
+
+	return 1;
 }
 
 /* Function used to read the initial portion of a packet, and determine the
@@ -227,13 +236,14 @@ static int read_packet_init() {
 			maxlen);
 	if (slen == 0) {
 		ses.remoteclosed();
+		return DROPBEAR_FAILURE;
 	}
 	if (slen < 0) {
 		if (errno == EINTR || errno == EAGAIN) {
 			TRACE2(("leave read_packet_init: EINTR"))
 			return DROPBEAR_FAILURE;
 		}
-		dropbear_exit("Error reading: %s", strerror(errno));
+		return 0;
 	}
 
 	buf_incrwritepos(ses.readbuf, slen);
@@ -250,7 +260,7 @@ static int read_packet_init() {
 				buf_getwriteptr(ses.readbuf, blocksize),
 				blocksize,
 				&ses.keys->recv.cipher_state) != CRYPT_OK) {
-		dropbear_exit("Error decrypting");
+		return 0;
 	}
 	len = buf_getint(ses.readbuf) + 4 + macsize;
 
@@ -261,7 +271,7 @@ static int read_packet_init() {
 	if ((len > RECV_MAX_PACKET_LEN) ||
 		(len < MIN_PACKET_LEN + macsize) ||
 		((len - macsize) % blocksize != 0)) {
-		dropbear_exit("Integrity error (bad packet size %u)", len);
+		return 0;
 	}
 
 	if (len > ses.readbuf->size) {

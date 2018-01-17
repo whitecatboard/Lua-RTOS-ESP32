@@ -388,17 +388,8 @@ void send_msg_userauth_failure(int partial, int incrfail) {
 	}
 
 	if (ses.authstate.failcount >= MAX_AUTH_TRIES) {
-		char * userstr;
 		/* XXX - send disconnect ? */
 		TRACE(("Max auth tries reached, exiting"))
-
-		if (ses.authstate.pw_name == NULL) {
-			userstr = "is invalid";
-		} else {
-			userstr = ses.authstate.pw_name;
-		}
-		dropbear_exit("Max auth tries reached - user '%s' from %s",
-				userstr, svr_ses.addrstring);
 	}
 	
 	TRACE(("leave send_msg_userauth_failure"))

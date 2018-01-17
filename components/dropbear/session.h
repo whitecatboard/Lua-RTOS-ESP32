@@ -35,20 +35,16 @@
 #include "queue.h"
 #include "listener.h"
 #include "packet.h"
-#include "tcpfwd.h"
 #include "chansession.h"
 #include "dbutil.h"
 #include "netio.h"
+#include "list.h"
 
 extern int sessinitdone; /* Is set to 0 somewhere */
 extern int exitflag;
 
 void common_session_init(int sock_in, int sock_out);
-#if !__XTENSA__
-void session_loop(void(*loophandler)()) ATTRIB_NORETURN;
-#else
 void session_loop(void(*loophandler)());
-#endif
 void session_cleanup(void);
 void send_session_identification(void);
 void send_msg_ignore(void);
@@ -60,18 +56,8 @@ const char* get_user_shell(void);
 void fill_passwd(const char* username);
 
 /* Server */
-#if !__XTENSA__
-void svr_session(int sock, int childpipe) ATTRIB_NORETURN;
-#else
-void svr_session(int sock, int childpipe);
-#endif
-
-#if !__XTENSA__
-void svr_dropbear_exit(int exitcode, const char* format, va_list param) ATTRIB_NORETURN;
-#else
+void svr_session(int sock);
 void svr_dropbear_exit(int exitcode, const char* format, va_list param);
-#endif
-
 void svr_dropbear_log(int priority, const char* format, va_list param);
 
 /* Client */
@@ -173,7 +159,7 @@ struct sshsession {
 						   race-free signal handling */
 
 	m_list conn_pending;
-						
+
 	/* time of the last packet send/receive, for keepalive. Not real-world clock */
 	time_t last_packet_time_keepalive_sent;
 	time_t last_packet_time_keepalive_recv;

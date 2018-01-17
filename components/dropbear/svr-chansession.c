@@ -652,6 +652,7 @@ static int sessioncommand(struct Channel *channel, struct ChanSess *chansess,
 	}
 
 	if (iscmd) {
+#if 0
 		/* "exec" */
 		if (chansess->cmd == NULL) {
 			chansess->cmd = buf_getstring(ses.payload, &cmdlen);
@@ -674,6 +675,9 @@ static int sessioncommand(struct Channel *channel, struct ChanSess *chansess,
 				return DROPBEAR_FAILURE;
 			}
 		}
+#endif
+		m_free(chansess->cmd);
+		return DROPBEAR_FAILURE;
 	}
 	
 	/* take public key option 'command' into account */

@@ -70,11 +70,11 @@
 #define MAX_FMT 100
 
 static void generic_dropbear_exit(int exitcode, const char* format, 
-		va_list param) ATTRIB_NORETURN;
+		va_list param);
 static void generic_dropbear_log(int priority, const char* format, 
 		va_list param);
 
-void (*_dropbear_exit)(int exitcode, const char* format, va_list param) ATTRIB_NORETURN
+void (*_dropbear_exit)(int exitcode, const char* format, va_list param)
 						= generic_dropbear_exit;
 void (*_dropbear_log)(int priority, const char* format, va_list param)
 						= generic_dropbear_log;
@@ -587,13 +587,6 @@ void setnonblocking(int fd) {
 		}
 	}
 	TRACE(("leave setnonblocking"))
-}
-
-void disallow_core() {
-// Lua RTOS
-//	struct rlimit lim;
-//	lim.rlim_cur = lim.rlim_max = 0;
-//	setrlimit(RLIMIT_CORE, &lim);
 }
 
 /* Returns DROPBEAR_SUCCESS or DROPBEAR_FAILURE, with the result in *val */

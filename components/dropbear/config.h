@@ -475,6 +475,7 @@
 
 #define DROPBEAR_SERVER
 #define DROPBEAR_CLIENT
-#define DEBUG_TRACE
+//#define DEBUG_TRACE
+//#define LOG_COMMANDS
 
 #define _PATH_DEVNULL "/dev/null"

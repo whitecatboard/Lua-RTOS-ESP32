@@ -36,10 +36,11 @@
 #include "runopts.h"
 #include "netio.h"
 
-static void checktimeouts(void);
+static int checktimeouts(void);
 static long select_timeout(void);
 static int ident_readln(int fd, char* buf, int count);
-static void read_session_identification(void);
+static int read_session_identification(void);
+extern int  __select_cancelled ;
 
 struct sshsession ses; /* GLOBAL */
 
@@ -220,16 +221,20 @@ void session_loop(void(*loophandler)()) {
 		}
 
 		/* check for auth timeout, rekeying required etc */
-		checktimeouts();
+		if (!checktimeouts()) break;
 
 		/* process session socket's incoming data */
 		if (ses.sock_in != -1) {
 			if (FD_ISSET(ses.sock_in, &readfd)) {
 				if (!ses.remoteident) {
 					/* blocking read of the version string */
-					read_session_identification();
+					if (!read_session_identification()) {
+						break;
+					}
 				} else {
-					read_packet();
+					if (!read_packet()) {
+						break;
+					}
 				}
 			}
 			
@@ -253,7 +258,9 @@ void session_loop(void(*loophandler)()) {
 		/* process session socket's outgoing data */
 		if (ses.sock_out != -1) {
 			if (!isempty(&ses.writequeue)) {
-				write_packet();
+				if (!write_packet()) {
+					break;
+				}
 			}
 		}
 
@@ -339,7 +346,7 @@ void send_session_identification() {
 	writebuf_enqueue(writebuf, 0);
 }
 
-static void read_session_identification() {
+static int read_session_identification() {
 	/* max length of 255 chars */
 	char linebuf[256];
 	int len = 0;
@@ -364,6 +371,7 @@ static void read_session_identification() {
 	if (!done) {
 		TRACE(("error reading remote ident: %s\n", strerror(errno)))
 		ses.remoteclosed();
+		return 0;
 	} else {
 		/* linebuf is already null terminated */
 		ses.remoteident = m_malloc(len);
@@ -378,6 +386,7 @@ static void read_session_identification() {
 
 	TRACE(("remoteident: %s", ses.remoteident))
 
+	return 1;
 }
 
 /* returns the length including null-terminating zero on success,
@@ -415,7 +424,7 @@ static int ident_readln(int fd, char* buf, int count) {
 			return -1;
 		}
 
-		checktimeouts();
+		if (!checktimeouts()) return -1;
 		
 		/* Have to go one byte at a time, since we don't want to read past
 		 * the end, and have to somehow shove bytes back into the normal
@@ -489,19 +498,19 @@ static void send_msg_keepalive() {
 
 /* Check all timeouts which are required. Currently these are the time for
  * user authentication, and the automatic rekeying. */
-static void checktimeouts() {
+static int checktimeouts() {
 
 	time_t now;
 	now = monotonic_now();
 	
 	if (IS_DROPBEAR_SERVER && ses.connect_time != 0
 		&& now - ses.connect_time >= AUTH_TIMEOUT) {
-			dropbear_close("Timeout before auth");
+			return 0;
 	}
 
 	/* we can't rekey if we haven't done remote ident exchange yet */
 	if (ses.remoteident == NULL) {
-		return;
+		return 1;
 	}
 
 	if (!ses.kexstate.sentkexinit
@@ -529,14 +538,16 @@ static void checktimeouts() {
 
 		if (now - ses.last_packet_time_keepalive_recv 
 			>= opts.keepalive_secs * DEFAULT_KEEPALIVE_LIMIT) {
-			dropbear_exit("Keepalive timeout");
+			return 0;
 		}
 	}
 
 	if (opts.idle_timeout_secs > 0 
 			&& now - ses.last_packet_time_idle >= opts.idle_timeout_secs) {
-		dropbear_close("Idle timeout");
+		return 0;
 	}
+
+	return 1;
 }
 
 static void update_timeout(long limit, long now, long last_event, long * timeout) {

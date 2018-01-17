@@ -30,8 +30,8 @@
 #include "queue.h"
 #include "buffer.h"
 
-void write_packet(void);
-void read_packet(void);
+int write_packet(void);
+int read_packet(void);
 void decrypt_packet(void);
 void encrypt_packet(void);
 

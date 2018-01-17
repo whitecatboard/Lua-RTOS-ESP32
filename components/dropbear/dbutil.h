@@ -35,10 +35,10 @@
 void startsyslog(const char *ident);
 #endif
 
-extern void (*_dropbear_exit)(int exitcode, const char* format, va_list param) ATTRIB_NORETURN;
+extern void (*_dropbear_exit)(int exitcode, const char* format, va_list param);
 extern void (*_dropbear_log)(int priority, const char* format, va_list param);
 
-void dropbear_exit(const char* format, ...) ATTRIB_PRINTF(1,2) ATTRIB_NORETURN;
+void dropbear_exit(const char* format, ...) ATTRIB_PRINTF(1,2);
 
 void dropbear_close(const char* format, ...) ATTRIB_PRINTF(1,2) ;
 void dropbear_log(int priority, const char* format, ...) ATTRIB_PRINTF(2,3) ;

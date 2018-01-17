@@ -1,8 +1,8 @@
 #include "netio.h"
-#include "list.h"
 #include "dbutil.h"
 #include "session.h"
 #include "debug.h"
+#include "list.h"
 
 struct dropbear_progress_connection {
 	struct addrinfo *res;
@@ -33,7 +33,7 @@ static void remove_connect(struct dropbear_progress_connection *c, m_list_elem *
 	m_free(c);
 
 	if (iter) {
-		list_remove(iter);
+		db_list_remove(iter);
 	}
 }
 
@@ -154,7 +154,7 @@ struct dropbear_progress_connection *connect_remote(const char* remotehost, cons
 		int len;
 		len = 100 + strlen(gai_strerror(err));
 		c->errstring = (char*)m_malloc(len);
-		snprintf(c->errstring, len, "Error resolving '%s' port '%s'. %s", 
+		snprintf(c->errstring, len, "Error resolving '%s' port '%s'. %s",
 				remotehost, remoteport, gai_strerror(err));
 		TRACE(("Error resolving: %s", gai_strerror(err)))
 	} else {
@@ -195,6 +195,7 @@ void set_connect_fds(fd_set *writefd) {
 		}
 		iter = next_iter;
 	}
+	TRACE(("leave set_connect_fds"))
 }
 
 void handle_connect_fds(fd_set *writefd) {
@@ -230,7 +231,7 @@ void handle_connect_fds(fd_set *writefd) {
 			remove_connect(c, iter);
 			TRACE(("leave handle_connect_fds - success"))
 			/* Must return here - remove_connect() invalidates iter */
-			return; 
+			return;
 		}
 	}
 	TRACE(("leave handle_connect_fds - end iter"))

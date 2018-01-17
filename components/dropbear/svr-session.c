@@ -22,6 +22,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE. */
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/timers.h"
+
 #include "includes.h"
 #include "session.h"
 #include "dbutil.h"
@@ -42,6 +46,9 @@
 #include "crypto_desc.h"
 
 static void svr_remoteclosed(void);
+void dropbear_server_resstart( void * pvParameter1, uint32_t ulParameter2 );
+extern void dropbear_server_main_clean();
+extern int __select_cancelled;
 
 struct serversession svr_ses; /* GLOBAL */
 
@@ -88,7 +95,7 @@ svr_session_cleanup(void) {
 	svr_ses.childpidsize = 0;
 }
 
-void svr_session(int sock, int childpipe) {
+void svr_session(int sock) {
 	char *host, *port;
 	size_t len;
 
@@ -138,43 +145,53 @@ void svr_session(int sock, int childpipe) {
 
 /* failure exit - format must be <= 100 chars */
 void svr_dropbear_exit(int exitcode, const char* format, va_list param) {
-	char exitmsg[150];
-	char fullmsg[300];
+	char *exitmsg;
+	char *fullmsg;
 	int i;
 
+	exitmsg = malloc(150);
+	if (!exitmsg) {
+		goto exit;
+	}
+
+	fullmsg = malloc(300);
+	if (!fullmsg) {
+		goto exit;
+	}
+
 	/* Render the formatted exit message */
-	vsnprintf(exitmsg, sizeof(exitmsg), format, param);
+	vsnprintf(exitmsg, 150, format, param);
 
 	/* Add the prefix depending on session/auth state */
 	if (!sessinitdone) {
 		/* before session init */
-		snprintf(fullmsg, sizeof(fullmsg), "Early exit: %s", exitmsg);
+		snprintf(fullmsg, 300, "Early exit: %s", exitmsg);
 	} else if (ses.authstate.authdone) {
 		/* user has authenticated */
-		snprintf(fullmsg, sizeof(fullmsg),
-				"Exit (%s): %s", 
+		snprintf(fullmsg, 300,
+				"Exit (%s). %s",
 				ses.authstate.pw_name, exitmsg);
 	} else if (ses.authstate.pw_name) {
 		/* we have a potential user */
-		snprintf(fullmsg, sizeof(fullmsg), 
-				"Exit before auth (user '%s', %u fails): %s",
+		snprintf(fullmsg, 300,
+				"Exit before auth (user '%s', %u fails). %s",
 				ses.authstate.pw_name, ses.authstate.failcount, exitmsg);
 	} else {
+		return;
 		/* before userauth */
-		snprintf(fullmsg, sizeof(fullmsg), "Exit before auth: %s", exitmsg);
+		snprintf(fullmsg, 300, "Exit before auth. %s", exitmsg);
 	}
 
 	dropbear_log(LOG_INFO, "%s", fullmsg);
 
-#ifdef USE_VFORK
-	/* For uclinux only the main server process should cleanup - we don't want
-	 * forked children doing that */
-	if (svr_ses.server_pid == getpid())
-#endif
-	{
-		/* must be after we've done with username etc */
-		session_cleanup();
-	}
+exit:
+	free(exitmsg);
+	free(fullmsg);
+
+	svr_session_cleanup();
+
+	m_close(ses.sock_in);
+	m_close(ses.sock_out);
 
 	if (svr_opts.hostkey) {
 		sign_key_free(svr_opts.hostkey);
@@ -185,25 +202,34 @@ void svr_dropbear_exit(int exitcode, const char* format, va_list param) {
 		m_free(svr_opts.ports[i]);
 	}
 
-	exit(exitcode);
+	dropbear_server_main_clean();
 
+	exit(exitcode);
 }
 
 /* priority is priority as with syslog() */
 void svr_dropbear_log(int priority, const char* format, va_list param) {
-#if !__XTENSA__
-	char printbuf[1024];
-	char datestr[20];
+	char*printbuf;
+	char *datestr;
 	time_t timesec;
 	int havetrace = 0;
 
-	vsnprintf(printbuf, sizeof(printbuf), format, param);
-
-#ifndef DISABLE_SYSLOG
-	if (opts.usingsyslog) {
-		syslog(priority, "%s", printbuf);
+	printbuf = malloc(1024);
+	if (!printbuf) {
+		vsyslog(priority, format, param);
+		return;
 	}
-#endif
+
+	datestr = malloc(20);
+	if (!datestr) {
+		free(printbuf);
+		vsyslog(priority, format, param);
+		return;
+	}
+
+	vsnprintf(printbuf, 1024, format, param);
+
+	syslog(priority, "dropbear: %s", printbuf);
 
 	/* if we are using DEBUG_TRACE, we want to print to stderr even if
 	 * syslog is used, so it is included in error reports */
@@ -216,26 +242,38 @@ void svr_dropbear_log(int priority, const char* format, va_list param) {
 		timesec = time(NULL);
 		local_tm = localtime(&timesec);
 		if (local_tm == NULL
-			|| strftime(datestr, sizeof(datestr), "%b %d %H:%M:%S", 
+			|| strftime(datestr, 20, "%b %d %H:%M:%S",
 						local_tm) == 0)
 		{
 			/* upon failure, just print the epoch-seconds time. */
-			snprintf(datestr, sizeof(datestr), "%d", (int)timesec);
+			snprintf(datestr, 20, "%d", (int)timesec);
 		}
-		fprintf(stderr, "[%d] %s %s\n", getpid(), datestr, printbuf);
+		fprintf(stderr, "dropbear: %s %s\n", datestr, printbuf);
 	}
-#else
-	vsyslog(priority, format, param);
-#endif
+
+	free(printbuf);
+	free(datestr);
 }
+
+struct dropbear_progress_connection {
+	struct addrinfo *res;
+	struct addrinfo *res_iter;
+
+	char *remotehost, *remoteport; /* For error reporting */
+
+	connect_callback cb;
+	void *cb_data;
+
+	struct Queue *writequeue; /* A queue of encrypted packets to send with TCP fastopen,
+								or NULL. */
+
+	int sock;
+
+	char* errstring;
+};
 
 /* called when the remote side closes the connection */
 static void svr_remoteclosed() {
-
-	m_close(ses.sock_in);
-	m_close(ses.sock_out);
-	ses.sock_in = -1;
-	ses.sock_out = -1;
-	dropbear_close("Exited normally");
-
+	__select_cancelled = 1;
+	exitflag = 1;
 }
