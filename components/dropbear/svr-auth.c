@@ -419,7 +419,7 @@ void send_msg_userauth_success() {
 
 	/* Remove from the list of pre-auth sockets. Should be m_close(), since if
 	 * we fail, we might end up leaking connection slots, and disallow new
-	 * logins - a nasty situation. */							
+	 * logins - a nasty situation. */
 	m_close(svr_ses.childpipe);
 
 	TRACE(("leave send_msg_userauth_success"))

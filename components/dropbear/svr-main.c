@@ -47,18 +47,6 @@ static void commonsetup(void);
 static int childsock;
 
 void dropbear_server_main_clean() {
-	struct Channel *channel;
-	int i;
-
-	ses.extra_session_cleanup();
-
-	for (i = 0; i < ses.chansize; i++) {
-		channel = ses.channels[i];
-		if (channel) {
-			channel->type->closehandler(channel);
-		}
-	}
-
 	m_close(childsock);
 }
 

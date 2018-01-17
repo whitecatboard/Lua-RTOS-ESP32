@@ -201,7 +201,7 @@ menu "Lua RTOS"
          menu "OpenVPN"
             config LUA_RTOS_USE_OPENVPN
                bool "Enable OpenVPN client support"
-               default y
+               default n
                
            config LUA_RTOS_OPENVPN_CONFIG_FILE
                string "Config file"

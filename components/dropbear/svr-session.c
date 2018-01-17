@@ -140,6 +140,8 @@ void svr_session(int sock) {
 	 * code makes use of it */
 	session_loop(NULL);
 
+	session_cleanup();
+
 	/* Not reached */
 }
 
@@ -172,14 +174,15 @@ void svr_dropbear_exit(int exitcode, const char* format, va_list param) {
 				"Exit (%s). %s",
 				ses.authstate.pw_name, exitmsg);
 	} else if (ses.authstate.pw_name) {
-		/* we have a potential user */
-		snprintf(fullmsg, 300,
-				"Exit before auth (user '%s', %u fails). %s",
-				ses.authstate.pw_name, ses.authstate.failcount, exitmsg);
-	} else {
+		free(exitmsg);
+		free(fullmsg);
+
 		return;
-		/* before userauth */
-		snprintf(fullmsg, 300, "Exit before auth. %s", exitmsg);
+	} else {
+		free(exitmsg);
+		free(fullmsg);
+
+		return;
 	}
 
 	dropbear_log(LOG_INFO, "%s", fullmsg);

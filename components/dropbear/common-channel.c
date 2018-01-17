@@ -94,9 +94,11 @@ void chancleanup() {
 		if (ses.channels[i] != NULL) {
 			TRACE(("channel %d closing", i))
 			remove_channel(ses.channels[i]);
+			ses.channels[i] = NULL;
 		}
 	}
 	m_free(ses.channels);
+	ses.chansize = 0;
 	TRACE(("leave chancleanup"))
 }
 
