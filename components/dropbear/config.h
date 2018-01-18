@@ -112,7 +112,7 @@
 #define HAVE_FREEADDRINFO 1
 
 /* Define to 1 if you have the `gai_strerror' function. */
-#define HAVE_GAI_STRERROR 1
+// #define HAVE_GAI_STRERROR 1
 
 /* Define to 1 if you have the `getaddrinfo' function. */
 #define HAVE_GETADDRINFO 1
