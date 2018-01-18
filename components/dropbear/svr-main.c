@@ -48,6 +48,7 @@ static void commonsetup(void);
 int dropbearkey_main(int argc, char ** argv);
 
 static int childsock;
+static u8_t volatile ssh_shutdown = 0;
 
 void dropbear_server_main_clean() {
 	m_close(childsock);
@@ -87,7 +88,7 @@ int dropbear_server_main(int argc, char ** argv)
 	}
 
 	/* incoming connection select loop */
-	for(;;) {
+	while(!ssh_shutdown) {
 		FD_ZERO(&fds);
 
 		/* listening sockets */
@@ -150,7 +151,7 @@ int dropbear_server_main(int argc, char ** argv)
 
 			exitflag = 0;
 		}
-	} /* for(;;) loop */
+	} /* while(!ssh_shutdown) loop */
 
 	return -1;
 }
@@ -252,20 +253,20 @@ void dropbear_server_start() {
 	pthread_t thread;
 	pthread_attr_t attr;
 
+	ssh_shutdown = 0;
 	syslog(LOG_INFO, "dropbear: starting ...");
 
 	// Start a new thread to launch the dropbear server
 	pthread_attr_init(&attr);
-
-    pthread_attr_setstacksize(&attr, 12288);
-
-    if (pthread_create(&thread, &attr, dropbear_thread, NULL)) {
-    	return;
+	pthread_attr_setstacksize(&attr, 12288);
+	if (pthread_create(&thread, &attr, dropbear_thread, NULL)) {
+		return;
 	}
 
-    pthread_setname_np(thread, "ssh");
+	pthread_setname_np(thread, "ssh");
 }
 
 void dropbear_server_stop() {
-
+	ssh_shutdown = 1;
 }
+
