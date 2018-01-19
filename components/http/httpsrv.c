@@ -560,15 +560,25 @@ int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, con
 
 	// add the additional path
 	if (addpath) {
-		// make sure the current path ends with a slash
-		if(*(pos-1) != '/') {
-			*pos = '/';
-			pos++;
+	
+		// check if the addpath is only a file extension:
+		if (*addpath == '.') {
+			// make sure the current path does NOT end with a slash
+			if(*(pos-1) == '/') {
+				pos--;
+			}
 		}
+		else {
+			// make sure the current path ends with a slash
+			if(*(pos-1) != '/') {
+				*pos = '/';
+				pos++;
+			}
 
-		// remove leading slashes from the request path
-		while (*addpath=='/') {
-			addpath++;
+			// remove leading slashes from the request path
+			while (*addpath=='/') {
+				addpath++;
+			}
 		}
 
 		seglen = strlen(addpath);
@@ -738,36 +748,48 @@ int process(http_request_handle *request) {
 	if (strcasecmp(method, "GET") != 0) {
 		syslog(LOG_DEBUG, "http: %s not supported\r", method);
 		send_error(request, 501, "Not supported", NULL, "Method is not supported.");
-	} else if (!filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL)) {
-		send_error(request, 404, "Not Found", NULL, "File not found.");
-		syslog(LOG_DEBUG, "http: invalid path requested: %s\r", path);
-	} else if (stat(pathbuf, &statbuf) < 0) {
-		send_error(request, 404, "Not Found", NULL, "File not found.");
-		syslog(LOG_DEBUG, "http: %s Not found\r", pathbuf);
-	} else if (S_ISDIR(statbuf.st_mode)) {
-		len = strlen(path);
-		if (len == 0 || path[len - 1] != '/') {
-			//send a redirect
-			snprintf(pathbuf, HTTP_BUFF_SIZE, "Location: %s/", path);
-			send_error(request, 302, "Found", pathbuf, "Directories must end with a slash.");
-		} else {
-		
-			//try to find index.lua or index.html
-			filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.lua");
-			if (stat(pathbuf, &statbuf) >= 0) {
-				send_file(request, pathbuf, &statbuf, data);
-			} else {
-				filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.html");
-				if (stat(pathbuf, &statbuf) >= 0) {
-					send_file(request, pathbuf, &statbuf, data);
-				} else {
-					//if neither index.lua or index.html are found, generate a dirlisting
+	}
+	else {
+		bool found = false;
+
+		//look for a file or folder with the exact name, .lua extension or .html extension
+		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL)    && stat(pathbuf, &statbuf) == 0) found = true;
+		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, ".lua")  && stat(pathbuf, &statbuf) == 0) found = true;
+		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, ".html") && stat(pathbuf, &statbuf) == 0) found = true;
+	
+		if (!found) {
+			send_error(request, 404, "Not Found", NULL, "File not found.");
+			syslog(LOG_DEBUG, "http: %s Not found\r", pathbuf);
+		}
+		else if (S_ISREG(statbuf.st_mode)) {
+			//send the found file
+			send_file(request, pathbuf, &statbuf, data);
+		}
+		else if (S_ISDIR(statbuf.st_mode)) {
+
+			len = strlen(path);
+			if (len == 0 || path[len - 1] != '/') {
+				//send a redirect
+				snprintf(pathbuf, HTTP_BUFF_SIZE, "Location: %s/", path);
+				send_error(request, 302, "Found", pathbuf, "Directories must end with a slash.");
+			} else {		
+				//try to find index.lua or index.html
+				found = false;
+
+				//look for a file named index.lua or index.html
+				if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.lua")  && stat(pathbuf, &statbuf) == 0) found = true;
+				if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.html") && stat(pathbuf, &statbuf) == 0) found = true;
+
+				if (!found || !S_ISREG(statbuf.st_mode)) {
+					//generate a dirlisting
 					list_dir(request, pathbuf, &statbuf, path, len);
 				}
+				else {
+					send_file(request, pathbuf, &statbuf, data);
+				}
 			}
-		}
-	} else {
-		send_file(request, pathbuf, &statbuf, data);
+
+		} // S_ISDIR
 	}
 
 	free(reqbuf);
