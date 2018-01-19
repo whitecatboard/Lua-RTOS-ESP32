@@ -370,46 +370,45 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf, c
 				send_error(request, 500, "Internal Server Error", NULL, "Folder found where a precompiled file is expected.");
 			}
 			else {
-				send_headers(request, 200, "OK", NULL, "text/html", -1);
-				if (!request->config->secure) fflush(request->file);
+				lua_State *L = pvGetLuaState();  /* get state */
+				if (L == NULL) {
+					send_error(request, 500, "Internal Server Error", NULL, "Cannot get state.");
+				}
+				else {
+					if (luaL_loadfile(L, ppath)) {
+						char* error = (char *)malloc(2048);
+						if (error) {
+							*error = '\0';
+							snprintf(error, 2048, "FATAL ERROR: %s", lua_tostring(L, -1));
+							send_error(request, 500, "Internal Server Error", NULL, error);
+							free(error);
+						}
+						else {
+							send_error(request, 500, "Internal Server Error", NULL, "FATAL ERROR occurred");
+						}
+					}
+					else {
+						send_headers(request, 200, "OK", NULL, "text/html", -1);
+						if (!request->config->secure) fflush(request->file);
 
-				lua_pushstring(LL, (requestdata && *requestdata) ? requestdata:"");
-				lua_setglobal(LL, "http_request");
+						lua_pushstring(L, (requestdata && *requestdata) ? requestdata:"");
+						lua_setglobal(L, "http_request");
 
-				lua_pushlightuserdata(LL, (void*)request);
-				lua_setglobal(LL, "http_stream_handle");
+						lua_pushlightuserdata(L, (void*)request);
+						lua_setglobal(L, "http_stream_handle");
 
-				lua_pushinteger(LL, request->config->port);
-				lua_setglobal(LL, "http_port");
+						lua_pushinteger(L, request->config->port);
+						lua_setglobal(L, "http_port");
 
-				lua_pushinteger(LL, request->config->secure);
-				lua_setglobal(LL, "http_secure");
+						lua_pushinteger(L, request->config->secure);
+						lua_setglobal(L, "http_secure");
 
-				char command[LUA_MAXINPUT];
-				strlcpy(command,"assert(loadfile(\"",LUA_MAXINPUT);
-				strlcat(command,ppath, LUA_MAXINPUT); //script name
-				strlcat(command,"\"))()", LUA_MAXINPUT);
+						lua_pcall(L, 0, 0, 0);
 
-				//syslog(LOG_WARNING, "now executing: %s\n", command);
-
-				int rc = luaL_dostring(LL, command);
-				//int rc = luaL_dofile(LL, ppath);
-				(void) rc;
-
-				lua_pushnil(LL);
-				lua_setglobal(LL, "http_request");
-
-				lua_pushnil(LL);
-				lua_setglobal(LL, "http_port");
-
-				lua_pushnil(LL);
-				lua_setglobal(LL, "http_secure");
-
-				lua_pushnil(LL);
-				lua_setglobal(LL, "http_stream_handle");
-
-				if (!request->config->secure) fflush(request->file);
-				do_printf(request, "0\r\n\r\n");
+						if (!request->config->secure) fflush(request->file);
+						do_printf(request, "0\r\n\r\n");
+					}
+				}
 			}
 		}
 		else {
@@ -780,16 +779,17 @@ static void http_net_callback(system_event_t *event){
 }
 
 static void mbedtls_zeroize( void *v, size_t n ) {
-    volatile unsigned char *p = v; while( n-- ) *p++ = 0;
+	volatile unsigned char *p = v; while( n-- ) *p++ = 0;
 }
 
 static void *http_thread(void *arg) {
 	http_server_config *config = (http_server_config*) arg;
 	struct sockaddr_in6 sin;
-  SSL_CTX *ctx = NULL;
-  SSL *ssl = NULL;
+	SSL_CTX *ctx = NULL;
+	SSL *ssl = NULL;
+	int rc = 0;
 
-  	net_init();
+	net_init();
 	if(0 == *config->server) {
 		*config->server = socket(AF_INET6, SOCK_STREAM, 0);
 		if(0 > *config->server) {
@@ -836,16 +836,16 @@ static void *http_thread(void *arg) {
 		unsigned char *certificate_buf;
 		if( mbedtls_pk_load_file( config->certificate, &certificate_buf, &certificate_bytes ) != 0 ) {
 			syslog(LOG_ERR, "couldn't load SSL certificate\n");
-		  SSL_CTX_free(ctx);
-		  ctx = NULL;
+			SSL_CTX_free(ctx);
+			ctx = NULL;
 			return NULL;
 		}
 		if (!SSL_CTX_use_certificate_ASN1(ctx, certificate_bytes, certificate_buf)) {
 			syslog(LOG_ERR, "couldn't set SSL certificate\n");
 			mbedtls_zeroize( certificate_buf, certificate_bytes );
 			mbedtls_free( certificate_buf );
-		  SSL_CTX_free(ctx);
-		  ctx = NULL;
+			SSL_CTX_free(ctx);
+			ctx = NULL;
 			return NULL;
 		}
 		mbedtls_zeroize( certificate_buf, certificate_bytes );
@@ -856,16 +856,16 @@ static void *http_thread(void *arg) {
 		unsigned char *private_key_buf;
 		if( mbedtls_pk_load_file( config->private_key, &private_key_buf, &private_key_bytes ) != 0 ) {
 			syslog(LOG_ERR, "couldn't load SSL certificate\n");
-		  SSL_CTX_free(ctx);
-		  ctx = NULL;
+			SSL_CTX_free(ctx);
+			ctx = NULL;
 			return NULL;
 		}
 		if (!SSL_CTX_use_PrivateKey_ASN1(0, ctx, private_key_buf, private_key_bytes)) {
 			syslog(LOG_ERR, "couldn't load SSL private key\n");
 			mbedtls_zeroize( private_key_buf, private_key_bytes );
 			mbedtls_free( private_key_buf );
-		  SSL_CTX_free(ctx);
-		  ctx = NULL;
+			SSL_CTX_free(ctx);
+			ctx = NULL;
 			return NULL;
 		}
 		mbedtls_zeroize( private_key_buf, private_key_bytes );
@@ -879,8 +879,8 @@ static void *http_thread(void *arg) {
 		int client;
 
 		if (config->secure) {
-		  ssl = SSL_new(ctx);
-		  if (!ssl) {
+			ssl = SSL_new(ctx);
+			if (!ssl) {
 				syslog(LOG_ERR, "couldn't create SSL session\n");
 				break; //exit the loop to shutdown the server
 			}
@@ -905,8 +905,15 @@ static void *http_thread(void *arg) {
 			if (config->secure) {
 				SSL_set_fd(ssl, client);
 
-				if (!SSL_accept(ssl)) {
-					syslog(LOG_ERR, "couldn't accept SSL connection\n");
+				if (!(rc = SSL_accept(ssl))) {
+					int err_SSL_get_error = SSL_get_error(ssl, rc);
+					if (err_SSL_get_error == SSL_ERROR_SYSCALL) {
+						if (errno != EAGAIN && errno != ECONNRESET) {
+							syslog(LOG_ERR, "couldn't accept SSL connection - RC %d errno %d %s\n", rc, errno, strerror(errno));
+						}
+					} else {
+						syslog(LOG_ERR, "couldn't accept SSL connection - SSL_get_error() returned: %i\n", err_SSL_get_error);
+					}
 				} else {
 					http_request_handle request = HTTP_Request_Secure_initializer;
 					process(&request);
