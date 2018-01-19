@@ -177,7 +177,7 @@ static int do_printf(http_request_handle *request, const char *fmt, ...) {
 
 char *do_gets(char *s, int size, http_request_handle *request) {
 
-	if (0 == request->config->secure)
+	if (!request->config->secure)
 		return fgets(s, size, request->file);
 
 	int rc;
@@ -644,6 +644,7 @@ int process(http_request_handle *request) {
 	char *method;
 	char *path;
 	char *data = NULL;
+	char *databuf = NULL;
 	char *host = NULL;
 	char *protocol;
 	struct stat statbuf;
@@ -694,7 +695,7 @@ int process(http_request_handle *request) {
 		if(!strlen(path)) path = "/";
 	}
 
-	if(path) {
+	if(strcasecmp(method, "GET") == 0 && path) {
 		data = strchr(path, '?');
 		if (data) {
 			*data = 0; //cut off the path
@@ -741,11 +742,47 @@ int process(http_request_handle *request) {
 		return -1; //protocol may be omitted
 	}
 
+	if(strcasecmp(method, "POST") == 0) {
+		char *skip;
+		//skip headers to the actual request data
+		while (do_gets(pathbuf, HTTP_BUFF_SIZE, request) && strlen(pathbuf)>0 ) {
+			if (pathbuf && strlen(pathbuf)<3) {
+				skip = pathbuf;
+				while (*skip=='\r' || *skip=='\n') skip++;
+				if (strlen(skip)==0) {
+					break;
+				}
+			}
+		} // while headers
+		//while empty lines
+		while (do_gets(pathbuf, HTTP_BUFF_SIZE, request) && strlen(pathbuf)>0 ) {
+			if (pathbuf && strlen(pathbuf)>0) {
+				skip = pathbuf;
+				while (*skip=='\r' || *skip=='\n') skip++;
+				if (strlen(skip)>0) {
+					break;
+				}
+			}
+		} // while empty lines
+		//preserve the data
+		if (pathbuf && strlen(pathbuf)>0 ) {
+			databuf = calloc(1, strlen(pathbuf)+1);
+			if (!databuf) {
+				send_error(request, 500, "Internal Server Error", NULL, "Error allocating POST data memory.");
+				free(reqbuf);
+				free(pathbuf);
+				return 0;
+			}
+			strcpy(databuf, pathbuf);
+			data = databuf;
+		} // while
+	}
+
 	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol ? protocol:"");
 
 	if (!request->config->secure) fseek(request->file, 0, SEEK_CUR); // force change of stream direction
 
-	if (strcasecmp(method, "GET") != 0) {
+	if (strcasecmp(method, "GET") != 0 && strcasecmp(method, "POST") != 0) {
 		syslog(LOG_DEBUG, "http: %s not supported\r", method);
 		send_error(request, 501, "Not supported", NULL, "Method is not supported.");
 	}
@@ -794,6 +831,7 @@ int process(http_request_handle *request) {
 
 	free(reqbuf);
 	free(pathbuf);
+	if (databuf) free(databuf);
 
 	return 0;
 }
