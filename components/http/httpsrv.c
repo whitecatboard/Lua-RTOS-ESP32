@@ -108,10 +108,11 @@ typedef struct {
   http_server_config *config;
   FILE *file;
   SSL *ssl;
+  int headers_sent;
 } http_request_handle;
 
-#define HTTP_Request_Normal_initializer { config, stream, NULL };
-#define HTTP_Request_Secure_initializer { config, NULL, ssl };
+#define HTTP_Request_Normal_initializer { config, stream, NULL, 0 };
+#define HTTP_Request_Secure_initializer { config, NULL, ssl, 0 };
 
 static http_server_config http_normal = HTTP_Normal_initializer;
 static http_server_config http_secure = HTTP_Secure_initializer;
@@ -183,21 +184,21 @@ char *do_gets(char *s, int size, http_request_handle *request) {
 	char *c = s;
 	int done = 0;
 	while (c < (s + size - 1) && !done) {
-  	rc = SSL_read(request->ssl, c, 1);
-  	if (rc>0) {
-  		if (*c == '\n') done=1;
-  		c++;
-  	}
-  	else if (rc==0) {
-  		//no data received or connection is closed
-  		done=1;
-  	}
-  	else {
-  		return NULL; //discard half-received data
-  	}
-  }
-  *c = 0;
-  return (c == s ? 0 : s);
+		rc = SSL_read(request->ssl, c, 1);
+		if (rc>0) {
+			if (*c == '\n') done=1;
+			c++;
+		}
+		else if (rc==0) {
+			//no data received or connection is closed
+			done=1;
+		}
+		else {
+			return NULL; //discard half-received data
+		}
+	}
+	*c = 0;
+	return (c == s ? 0 : s);
 }
 
 void send_headers(http_request_handle *request, int status, char *title, char *extra, char *mime, int length) {
@@ -268,29 +269,67 @@ static void chunk(http_request_handle *request, const char *fmt, ...) {
 	}
 }
 
+int http_status(lua_State* L) {
+
+	int code = luaL_optinteger( L, 1, 200 );
+	const char *title = luaL_optstring( L, 2, "OK" );
+	const char *extra_headers = luaL_optstring( L, 3, NULL );
+	const char *content_type = luaL_optstring( L, 4, "text/html" );
+	int content_length = luaL_optinteger( L, 5, -1 );
+
+	lua_getglobal(L, "http_stream_handle");
+	if (!lua_islightuserdata(L, -1)) {
+		return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
+	}
+	http_request_handle *request = (http_request_handle*)lua_touserdata(L, -1);
+
+	if (!request) {
+		return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
+	}
+
+	if (!request->headers_sent) {
+		send_headers(request, code, (char *)title, (char *)extra_headers, (char *)content_type, content_length);
+		if (!request->config->secure) fflush(request->file);
+		request->headers_sent = 1;
+
+		lua_pushinteger(L, 1);
+	}
+	else {
+		lua_pushinteger(L, 0);
+	}
+	
+	return 1;
+}
+
 int http_print(lua_State* L) {
 
-		lua_getglobal(L, "http_stream_handle");
-		if (!lua_islightuserdata(L, -1)) {
-        return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
-    }
-    http_request_handle *request = (http_request_handle*)lua_touserdata(L, -1);
+	lua_getglobal(L, "http_stream_handle");
+	if (!lua_islightuserdata(L, -1)) {
+		return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
+	}
+	http_request_handle *request = (http_request_handle*)lua_touserdata(L, -1);
 
-		if (!request) {
-        return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
-    }
+	if (!request) {
+		return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
+	}
 
-    int nargs = lua_gettop(L);
-    for (int i=1; i <= nargs; i++) {
-        if (lua_isstring(L, i)) {
-            chunk(request, "%s", lua_tostring(L, i));
-        }
-        else {
-        		/* non-strings handling not reqired */
-        }
-    }
+	if (!request->headers_sent) {
+			send_headers(request, 200, "OK", NULL, "text/html", -1);
+			if (!request->config->secure) fflush(request->file);
+			request->headers_sent = 1;
+	}
+	
+	int nargs = lua_gettop(L);
+	for (int i=1; i <= nargs; i++) {
+		if (lua_isstring(L, i)) {
+			chunk(request, "%s", lua_tostring(L, i));
+		}
+		else {
+			/* non-strings handling not reqired */
+		}
+	}
 
-    return 0;
+	return 0;
 }
 
 void send_file(http_request_handle *request, char *path, struct stat *statbuf, char *requestdata) {
@@ -388,22 +427,25 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf, c
 						}
 					}
 					else {
-						send_headers(request, 200, "OK", NULL, "text/html", -1);
-						if (!request->config->secure) fflush(request->file);
-
 						lua_pushstring(L, (requestdata && *requestdata) ? requestdata:"");
 						lua_setglobal(L, "http_request");
-
 						lua_pushlightuserdata(L, (void*)request);
 						lua_setglobal(L, "http_stream_handle");
-
 						lua_pushinteger(L, request->config->port);
 						lua_setglobal(L, "http_port");
-
 						lua_pushinteger(L, request->config->secure);
 						lua_setglobal(L, "http_secure");
 
 						lua_pcall(L, 0, 0, 0);
+
+						lua_pushnil(L);
+						lua_setglobal(L, "http_request");
+						lua_pushnil(L);
+						lua_setglobal(L, "http_stream_handle");
+						lua_pushnil(L);
+						lua_setglobal(L, "http_port");
+						lua_pushnil(L);
+						lua_setglobal(L, "http_secure");
 
 						if (!request->config->secure) fflush(request->file);
 						do_printf(request, "0\r\n\r\n");
@@ -439,9 +481,9 @@ int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, con
 	//newpath has a size of HTTP_BUFF_SIZE
 	memset(newpath, 0, HTTP_BUFF_SIZE);
 
-  // treat null as an empty path.
-  if (!reqpath)
-      reqpath = "";
+	// treat null as an empty path.
+	if (!reqpath)
+		reqpath = "";
 
 	// copy the root path
 	seglen = strlen(rootpath);
@@ -474,47 +516,47 @@ int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, con
 
 	// add the request path segment by segment
 	while (*reqpath) {
-      // finding the closing '/'
-      const char *next = reqpath;
-      while (*next && (*next != '/')) {
-          ++next;
-      }
-      seglen = next - reqpath;
+		// finding the closing '/'
+		const char *next = reqpath;
+		while (*next && (*next != '/')) {
+			++next;
+		}
+		seglen = next - reqpath;
 
-      if (seglen == 0 || (seglen == 1 && reqpath[0] == '.')) {
-          // noop segment (/ or ./) => skip
-      }
-      else if (seglen == 2 && reqpath[0] == '.' && reqpath[1] == '.') {
-          // backpath (../)
+		if (seglen == 0 || (seglen == 1 && reqpath[0] == '.')) {
+			// noop segment (/ or ./) => skip
+		}
+		else if (seglen == 2 && reqpath[0] == '.' && reqpath[1] == '.') {
+			// backpath (../)
 
-          // try to crop the prior segment
-          do {
-              --pathlen;
-          } while (pathlen && newpath[pathlen - 1] != '/');
+			// try to crop the prior segment
+			do {
+				--pathlen;
+			} while (pathlen && newpath[pathlen - 1] != '/');
 
-          // now test if we are above root path length and
-          // get back if necessary
-          if (pathlen < rootlen) {
-              pathlen = rootlen;
-          }
-      }
-      else {
-          // an actual segment, append to dest path
-          if (*next) {
-              seglen++;
-          }
-          memcpy(newpath + pathlen, reqpath, seglen);
-          pathlen += seglen;
-      }
+			// now test if we are above root path length and
+			// get back if necessary
+			if (pathlen < rootlen) {
+				pathlen = rootlen;
+			}
+		}
+		else {
+			// an actual segment, append to dest path
+			if (*next) {
+				seglen++;
+			}
+			memcpy(newpath + pathlen, reqpath, seglen);
+			pathlen += seglen;
+		}
 
-      // skip over trailing slash => next segment
-      if (*next) {
-          ++next;
-      }
+		// skip over trailing slash => next segment
+		if (*next) {
+			++next;
+		}
 
-      reqpath = next;
-  }
-  pos = newpath + pathlen;
+		reqpath = next;
+	}
+	pos = newpath + pathlen;
 
 	// add the additional path
 	if (addpath) {
@@ -541,50 +583,50 @@ int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, con
 }
 
 static void list_dir(http_request_handle *request, char *pathbuf, struct stat *statbuf, char *path, int len) {
-  DIR *dir;
-  struct dirent *de;
+	DIR *dir;
+	struct dirent *de;
 
-  send_headers(request, 200, "OK", NULL, "text/html", -1);
-  chunk(request, "<HTML><HEAD><TITLE>Index of %s</TITLE></HEAD><BODY>", path);
-  chunk(request, "<H4>Index of %s</H4>", path);
+	send_headers(request, 200, "OK", NULL, "text/html", -1);
+	chunk(request, "<HTML><HEAD><TITLE>Index of %s</TITLE></HEAD><BODY>", path);
+	chunk(request, "<H4>Index of %s</H4>", path);
 
-  chunk(request, "<TABLE>");
-  chunk(request, "<TR>");
-  chunk(request, "<TH style=\"width: 250;text-align: left;\">Name</TH><TH style=\"width: 100px;text-align: right;\">Size</TH>");
-  chunk(request, "</TR>");
+	chunk(request, "<TABLE>");
+	chunk(request, "<TR>");
+	chunk(request, "<TH style=\"width: 250;text-align: left;\">Name</TH><TH style=\"width: 100px;text-align: right;\">Size</TH>");
+	chunk(request, "</TR>");
 
-  if (len > 1) {
-	  chunk(request, "<TR>");
-  	chunk(request, "<TD><A HREF=\"..\">..</A></TD><TD></TD>");
-	  chunk(request, "</TR>");
-  }
+	if (len > 1) {
+		chunk(request, "<TR>");
+		chunk(request, "<TD><A HREF=\"..\">..</A></TD><TD></TD>");
+		chunk(request, "</TR>");
+	}
 
-  filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL); //restore folder pathbuf
-  dir = opendir(pathbuf);
-  while ((de = readdir(dir)) != NULL) {
-  	filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, de->d_name);
-	  stat(pathbuf, statbuf);
+	filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL); //restore folder pathbuf
+	dir = opendir(pathbuf);
+	while ((de = readdir(dir)) != NULL) {
+		filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, de->d_name);
+		stat(pathbuf, statbuf);
 
-	  chunk(request, "<TR>");
-	  chunk(request, "<TD>");
-	  chunk(request, "<A HREF=\"%s%s\">", de->d_name, S_ISDIR(statbuf->st_mode) ? "/" : "");
-	  chunk(request, "%s%s", de->d_name, S_ISDIR(statbuf->st_mode) ? "/</A>" : "</A> ");
-	  chunk(request, "</TD>");
-	  chunk(request, "<TD style=\"text-align: right;\">");
-	  if (!S_ISDIR(statbuf->st_mode)) {
+		chunk(request, "<TR>");
+		chunk(request, "<TD>");
+		chunk(request, "<A HREF=\"%s%s\">", de->d_name, S_ISDIR(statbuf->st_mode) ? "/" : "");
+		chunk(request, "%s%s", de->d_name, S_ISDIR(statbuf->st_mode) ? "/</A>" : "</A> ");
+		chunk(request, "</TD>");
+		chunk(request, "<TD style=\"text-align: right;\">");
+		if (!S_ISDIR(statbuf->st_mode)) {
 			chunk(request, "%d", (int)statbuf->st_size);
-	  }
-	  chunk(request, "</TD>");
-	  chunk(request, "</TR>");
-  }
-  closedir(dir);
+		}
+		chunk(request, "</TD>");
+		chunk(request, "</TR>");
+	}
+	closedir(dir);
 
 
-  chunk(request, "</TABLE>");
+	chunk(request, "</TABLE>");
 
-  chunk(request, "</BODY></HTML>");
+	chunk(request, "</BODY></HTML>");
 
-  do_printf(request, "0\r\n\r\n");
+	do_printf(request, "0\r\n\r\n");
 }
 
 int process(http_request_handle *request) {
@@ -644,10 +686,10 @@ int process(http_request_handle *request) {
 
 	if(path) {
 		data = strchr(path, '?');
-	  if (data) {
-	  	*data = 0; //cut off the path
-	  	data++; //point to start of params
-	  }
+		if (data) {
+			*data = 0; //cut off the path
+			data++; //point to start of params
+		}
 	}
 
 	//only in AP mode we redirect arbitrary host names to our own host name
