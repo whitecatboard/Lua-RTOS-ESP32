@@ -153,8 +153,8 @@ int dropbear_server_main(int argc, char ** argv)
 		}
 	} /* while(!ssh_shutdown) loop */
 
-	/* it's not ideal to keep the server_socket open as it is blocked
-	   but now at least the httpsrv can be restarted from lua scripts.
+	/* it's not ideal to keep the listensocks open as it is blocked
+	   but now at least the ssh server can be restarted from lua scripts.
 	   if we'd properly close the socket we would need to bind() again
 	   when restarting the httpsrv but bind() will succeed only after
 	   several (~4) minutes: http://lwip.wikia.com/wiki/Netconn_bind
