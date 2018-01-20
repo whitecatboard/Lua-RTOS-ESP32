@@ -1,6 +1,7 @@
 #include "lauxlib.h"
 #include "luartos.h"
 #include "error.h"
+#include "linenoise.h"
 
 #include <freertos/FreeRTOS.h>
 
@@ -9,6 +10,7 @@
 
 #include <limits.h>
 
+#include <crypt.h>
 #include <sys/dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -41,6 +43,7 @@ FILE *lua_stdout_file = NULL;
 
 void luaC_fullgc (lua_State *L, int isemergency) ;
 int edit_main(int argc, char *argv[]);
+extern int os_get_random(unsigned char *buf, size_t len);
 
 static int os_stdout(lua_State *L) {
 	int total = lua_gettop(L);
@@ -804,6 +807,7 @@ static int os_exists(lua_State *L) {
 	return 1;
 }
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 static int os_locks(lua_State *L) {
 	const driver_t *cdriver = drivers;
 	int lock = 0;
@@ -853,6 +857,7 @@ static int os_locks(lua_State *L) {
 
 	return 0;
 }
+#endif
 
 static int os_factory_reset(lua_State *L) {
 	// Find ota data partition
@@ -866,4 +871,111 @@ static int os_factory_reset(lua_State *L) {
     esp_restart();
 
     return 0;
+}
+
+static int os_passwd(lua_State *L) {
+	char buffer[LUA_MAXINPUT];
+	char pass[65];
+	char re_pass[65];
+	char hash_pass[120];
+	char *password;
+
+	// Check that /etc exists, and create it if not exists
+	struct stat sb;
+
+	if (stat("/etc", &sb) != 0 || !S_ISDIR(sb.st_mode)) {
+    	mkdir("/etc", 0755);
+    }
+
+	// If system password is set read the password hash
+	// from /etc/passwd
+	hash_pass[0] = 0x00;
+
+	FILE *fp = fopen("/etc/passwd", "r");
+	if (fp) {
+		fgets(hash_pass, sizeof(hash_pass), fp);
+		fclose(fp);
+	} else {
+		fp = fopen("/etc/passwd", "a+");
+		fclose(fp);
+	}
+
+	// If system password is set, answer the password to the
+	// user to check before change it
+	if (strlen(hash_pass) > 0) {
+		// Get password
+		linenoise(buffer, "Old Password: ");
+		if (strlen(buffer) > 64) {
+			printf("try again, password too long\r\n");
+			goto exit;
+		}
+		if (strlen(buffer) == 0) {
+			goto exit;
+		}
+
+		password = crypt(buffer, hash_pass);
+		if (!password || (strcmp(password, hash_pass) != 0)) {
+			printf("try again\r\n");
+			goto exit;
+		}
+	}
+
+	// Change password
+
+	// Get password
+	linenoise(buffer, "New Password: ");
+	if (strlen(buffer) > 64) {
+		printf("try again, password too long\r\n");
+		goto exit;
+	}
+	if (strlen(buffer) == 0) {
+		goto exit;
+	}
+	strcpy(pass, buffer);
+
+	// Retype password
+	linenoise(buffer, "Retype New Password: ");
+	if (strlen(buffer) > 64) {
+		printf("try again, password too long\r\n");
+		goto exit;
+	}
+	if (strlen(buffer) == 0) {
+		goto exit;
+	}
+	strcpy(re_pass, buffer);
+
+	// Check
+	if (strcmp(pass, re_pass) != 0) {
+		printf("try again\r\n");
+		goto exit;
+	}
+
+	// Generate the salt
+	char salt[] = "$1$........";
+	const char *const seedchars = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	unsigned char random;
+	int i;
+
+	for (i = 0; i < 8; i++) {
+		os_get_random(&random, sizeof(random));
+		salt[3+i] = seedchars[random % strlen(seedchars)];
+	}
+
+	password = crypt(pass, salt);
+
+	// Store password in file
+    fp = fopen("/etc/passwd", "wb");
+    if (fp) {
+        fputs(password, fp);
+        fclose(fp);
+    } else {
+    	printf("can't write to /etc/passwd (%s)\r\n", strerror(errno));
+    	goto exit;
+    }
+
+    return 0;
+
+ exit:
+ 	 fclose(fp);
+ 	 return 0;
 }

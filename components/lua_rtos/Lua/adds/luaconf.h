@@ -85,12 +85,15 @@
 
 #ifdef lua_c
 #undef lua_c
-
 static int  report (lua_State *L, int status);
 static void l_message (const char *pname, const char *msg);
 static int  runargs (lua_State *L, char **argv, int n);
 static void print_version (void);
+#if LUA_USE_ROTABLE
+void doREPL (lua_State *L);
+#else
 static void doREPL (lua_State *L);
+#endif
 static void print_usage (const char *badoption);
 static int  collectargs (char **argv, int *first);
 static void createargtable (lua_State *L, char **argv, int argc, int script);

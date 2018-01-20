@@ -1,30 +1,34 @@
 /*
- * Lua RTOS, FAT vfs operations
- *
- * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L.
- *
- * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for any purpose and without fee is hereby
- * granted, provided that the above copyright notice appear in all
- * copies and that both that the copyright notice and this
- * permission notice and warranty disclaimer appear in supporting
- * documentation, and that the name of the author not be used in
- * advertising or publicity pertaining to distribution of the
- * software without specific, written prior permission.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * The author disclaim all warranties with regard to this
- * software, including all implied warranties of merchantability
- * and fitness.  In no event shall the author be liable for any
- * special, indirect or consequential damages or any damages
- * whatsoever resulting from loss of use, data or profits, whether
- * in an action of contract, negligence or other tortious action,
- * arising out of or in connection with the use or performance of
- * this software.
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the <organization> nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Lua RTOS FAT VFS
+ *
  */
 
 #include "sdkconfig.h"
@@ -52,6 +56,8 @@ extern spi_bus_t spi_bus[CPU_LAST_SPI - CPU_FIRST_SPI + 1];
 
 void vfs_fat_register() {
 #if CONFIG_SD_CARD_SPI
+
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock resources
 	if (spi_lock_bus_resources(CONFIG_LUA_RTOS_SD_SPI, DRIVER_ALL_FLAGS)) {
 		return;
@@ -60,6 +66,7 @@ void vfs_fat_register() {
 	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_SD_CS, DRIVER_ALL_FLAGS, "SD Card - CS")) {
 		return;
 	}
+#endif
 
 	#if (CONFIG_LUA_RTOS_SD_SPI == 2)
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
@@ -161,16 +168,20 @@ void vfs_fat_register() {
     if (ret != ESP_OK) {
     	esp_vfs_fat_sdmmc_unmount();
     	syslog(LOG_INFO, "fat%d can't mounted", 0);
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     	driver_unlock_all(SYSTEM_DRIVER, 0);
+#endif
 
 #if CONFIG_SD_CARD_SPI
-	#if (CONFIG_LUA_RTOS_SD_SPI == 2)
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+   	#if (CONFIG_LUA_RTOS_SD_SPI == 2)
     spi_unlock_bus_resources(2);
 	#endif
 
 	#if (CONFIG_LUA_RTOS_SD_SPI == 3)
 	spi_unlock_bus_resources(3);
 	#endif
+#endif
 #endif
     	return;
     }

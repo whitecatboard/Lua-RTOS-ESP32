@@ -487,7 +487,10 @@ static const LUA_REG_TYPE syslib[] =
   { LSTRKEY( "setlocale" ),   LFUNCVAL( os_setlocale ) },
   { LSTRKEY( "getenv" ),  	  LFUNCVAL( os_getenv ) },
   { LSTRKEY( "factoryreset"), LFUNCVAL( os_factory_reset ) },
+  { LSTRKEY( "passwd"),       LFUNCVAL( os_passwd ) },
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
   { LSTRKEY( "locks" ),  	  LFUNCVAL( os_locks ) },
+#endif
   { LSTRKEY( "exists" ),  	  LFUNCVAL( os_exists ) },
   { LSTRKEY( "stdout" ),      LFUNCVAL( os_stdout ) },
   { LSTRKEY( "clear" ),       LFUNCVAL( os_clear ) },

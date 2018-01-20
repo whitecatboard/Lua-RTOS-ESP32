@@ -31,20 +31,16 @@
 
 #if CONFIG_LUA_RTOS_USE_CONSOLE
 
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <sys/console.h>
-#include <drivers/uart.h>
-
-void console_put(const char *c) {
-    while (*c) {
-        uart_write(CONSOLE_UART, *c++);
-    }
-}
+#include <sys/fcntl.h>
+#include <sys/time.h>
 
 void console_clear() {
-	console_put("\033[2J\033[1;1H");
+	printf("\033[2J\033[1;1H");
 }
 
 void console_hide_cursor() {
@@ -56,35 +52,76 @@ void console_show_cursor() {
 }
 
 void console_size(int *rows, int *cols) {
-    char buf[6];
+	struct timeval start; // Start time
+	struct timeval now;   // Current time
+	int msectimeout = 100;
+	char buf[6];
     char *cbuf;
     char c;
 
     // Save cursor position
-    console_put("\033[s");
+    printf("\033[s");
 
     // Set cursor out of the screen
-    console_put("\033[999;999H");
+    printf("\033[999;999H");
 
     // Get cursor position
-    console_put("\033[6n");
+    printf("\033[6n");
 
     // Return to saved cursor position
-    console_put("\033[u");
+    printf("\033[u");
+
+	int flags = fcntl(fileno(stdin), F_GETFL, 0);
+	fcntl(fileno(stdin), F_SETFL, flags | O_NONBLOCK);
 
     // Skip scape sequence
-    while (uart_read(CONSOLE_UART, &c, 100) && (c != '\033')) {
-	}
+    gettimeofday(&start, NULL);
+    for(;;) {
+    	if (read(fileno(stdin), &c, 1) == 1) {
+			if (c == '\033') {
+				break;
+			}
+    	}
 
-    while (uart_read(CONSOLE_UART, &c, 100) && (c != '[')) {
-	}
+		gettimeofday(&now, NULL);
+		if ((now.tv_sec - start.tv_sec) * 1000 - (((now.tv_usec - start.tv_usec) + 500) / 1000) >= msectimeout) {
+		   break;
+		}
+    }
+
+    gettimeofday(&start, NULL);
+    for(;;) {
+    	if (read(fileno(stdin), &c, 1) == 1) {
+			if (c == '[') {
+				break;
+			}
+    	}
+
+		gettimeofday(&now, NULL);
+		if ((now.tv_sec - start.tv_sec) * 1000 - (((now.tv_usec - start.tv_usec) + 500) / 1000) >= msectimeout) {
+		   break;
+		}
+    }
 
     // Read rows
     c = '\0';
     cbuf = buf;
-    while (uart_read(CONSOLE_UART, &c, 100) && (c != ';')) {
-	    *cbuf++ = c;
-	}
+
+    gettimeofday(&start, NULL);
+    for(;;) {
+    	if (read(fileno(stdin), &c, 1) == 1) {
+			if (c == ';') {
+				break;
+			}
+			*cbuf++ = c;
+    	}
+
+		gettimeofday(&now, NULL);
+		if ((now.tv_sec - start.tv_sec) * 1000 - (((now.tv_usec - start.tv_usec) + 500) / 1000) >= msectimeout) {
+		   break;
+		}
+    }
+
     *cbuf = '\0';
 
     if (*buf != '\0') {
@@ -94,9 +131,24 @@ void console_size(int *rows, int *cols) {
     // Read cols
     c = '\0';
     cbuf = buf;
-    while (uart_read(CONSOLE_UART, &c, 100) && (c != 'R')) {
-		*cbuf++ = c;
-	}
+
+    gettimeofday(&start, NULL);
+    for(;;) {
+    	if (read(fileno(stdin), &c, 1) == 1) {
+			if (c == 'R') {
+				break;
+			}
+			*cbuf++ = c;
+    	}
+
+		gettimeofday(&now, NULL);
+		if ((now.tv_sec - start.tv_sec) * 1000 - (((now.tv_usec - start.tv_usec) + 500) / 1000) >= msectimeout) {
+		   break;
+		}
+    }
+
+    fcntl(fileno(stdin), F_SETFL, flags);
+
     *cbuf = '\0';
 
     if (*buf != '\0') {
@@ -129,15 +181,15 @@ void console_clearstatusline() {
 }
 
 void console_erase_eol() {
-    console_put("\033[K");
+    printf("\033[K");
 }
 
 void console_erase_sol() {
-    console_put("\033[1K");
+	printf("\033[1K");
 }
 
 void console_erase_l() {
-    console_put("\033[2K");
+	printf("\033[2K");
 }
 
 #endif

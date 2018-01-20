@@ -50,13 +50,19 @@
 #define ACK_VAL        0x0     /*!< I2C ack value */
 #define NACK_VAL       0x1     /*!< I2C nack value */
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 // Driver locks
 driver_unit_lock_t i2c_locks[(CPU_LAST_I2C + 1) * I2C_BUS_DEVICES];
+#endif
 
 // Register driver and messages
 static void i2c_init();
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 DRIVER_REGISTER_BEGIN(I2C,i2c,i2c_locks,i2c_init,NULL);
+#else
+DRIVER_REGISTER_BEGIN(I2C,i2c,NULL,i2c_init,NULL);
+#endif
 	DRIVER_REGISTER_ERROR(I2C, i2c, CannotSetup, "can't setup", I2C_ERR_CANT_INIT);
 	DRIVER_REGISTER_ERROR(I2C, i2c, NotSetup, "is not setup", I2C_ERR_IS_NOT_SETUP);
 	DRIVER_REGISTER_ERROR(I2C, i2c, InvalidUnit, "invalid unit", I2C_ERR_INVALID_UNIT);
@@ -68,7 +74,11 @@ DRIVER_REGISTER_BEGIN(I2C,i2c,i2c_locks,i2c_init,NULL);
 	DRIVER_REGISTER_ERROR(I2C, i2c, PinNowAllowed, "pin not allowed", I2C_ERR_PIN_NOT_ALLOWED);
 	DRIVER_REGISTER_ERROR(I2C, i2c, CannotChangePinMap, "cannot change pin map once the I2C unit has an attached device", I2C_ERR_CANNOT_CHANGE_PINMAP);
 	DRIVER_REGISTER_ERROR(I2C, i2c, NoMoreDevicesAllowed, "no more devices allowed", I2C_ERR_NO_MORE_DEVICES_ALLOWED);
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 DRIVER_REGISTER_END(I2C,i2c,i2c_locks,i2c_init,NULL);
+#else
+DRIVER_REGISTER_END(I2C,i2c,NULL,i2c_init,NULL);
+#endif
 
 // i2c info needed by driver
 i2c_t i2c[CPU_LAST_I2C + 1];
@@ -129,6 +139,7 @@ static void i2c_init() {
     }
 }
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 static driver_error_t *i2c_lock_resources(int unit) {
 	driver_unit_lock_error_t *lock_error = NULL;
 
@@ -144,6 +155,7 @@ static driver_error_t *i2c_lock_resources(int unit) {
 
 	return NULL;
 }
+#endif
 
 static driver_error_t *i2c_check(int unit) {
     // Sanity checks
@@ -296,7 +308,9 @@ driver_error_t *i2c_pin_map(int unit, int sda, int scl) {
 }
 
 driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr, int *deviceid) {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	driver_error_t *error;
+#endif
 
     // Sanity checks
 	if (!((1 << unit) & CPU_I2C_ALL)) {
@@ -311,11 +325,13 @@ driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr
 
 	// Setup only once
 	if (!i2c[unit].setup) {
-	    if ((error = i2c_lock_resources(unit))) {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+		if ((error = i2c_lock_resources(unit))) {
 	    	i2c_unlock(unit);
 
 			return error;
 		}
+#endif
 
 	    // Enable module
 	    if (unit == 0) {

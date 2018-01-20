@@ -17,6 +17,8 @@ config = {
 	ethernet = false,
 	sntp = false,
 	http = false,
+	openvpn = false,
+	ssh = false,
 	can = {
 		gw = false
 	},
@@ -97,7 +99,7 @@ if (config.ethernet) then
 end
 
 -- Start network services
-if (config.sntp or config.openvpn) then
+if (config.sntp or config.openvpn or config.ssh) then
 	print("Starting sntp client ...")
 	net.service.sntp.start()
 end
@@ -105,6 +107,11 @@ end
 if (config.openvpn) then
 	print("Starting openvpn client ...")
 	net.service.openvpn.start()
+end
+
+if (config.ssh) then
+	print("Starting ssh server ...")
+	net.service.ssh.start()
 end
 
 if (config.http) then

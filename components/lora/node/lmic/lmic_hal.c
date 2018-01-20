@@ -105,6 +105,7 @@ xQueueHandle lmicCommand;
 	xQueueSendFromISR(lmicSleepEvent, &d, NULL);
 }
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 driver_error_t *lmic_lock_resources(int unit, void *resources) {
 	driver_error_t *error;
     driver_unit_lock_error_t *lock_error = NULL;
@@ -143,6 +144,7 @@ driver_error_t *lmic_lock_resources(int unit, void *resources) {
 
 	return NULL;
 }
+#endif
 
 driver_error_t *hal_init (void) {
 	driver_error_t *error;
@@ -153,10 +155,12 @@ driver_error_t *hal_init (void) {
         return error;
     }
 
-    // Lock pins
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+	// Lock pins
     if ((error = lmic_lock_resources(0, NULL))) {
     	return error;
     }
+#endif
 
 	syslog(LOG_INFO, "lmic is at spi%d, pin cs=%s%d", CONFIG_LUA_RTOS_LORA_SPI,
         gpio_portname(CONFIG_LUA_RTOS_LORA_CS), gpio_name(CONFIG_LUA_RTOS_LORA_CS)

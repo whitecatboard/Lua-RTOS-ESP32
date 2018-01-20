@@ -89,8 +89,6 @@ static void get_prompt (lua_State *L, int firstline, char *path) {
   }
 }
 
-
-
 static int luaos_pushline (lua_State *L, int firstline) {
   char buffer[LUA_MAXINPUT];
   char prmt[PATH_MAX + 21];

@@ -146,14 +146,18 @@ static void IRAM_ATTR isr(void* arg) {
 }
 
 static driver_error_t *sensor_adc_setup(uint8_t interface, sensor_instance_t *unit) {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	driver_unit_lock_error_t *lock_error = NULL;
+#endif
 	driver_error_t *error;
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock ADC channel
     if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, ADC_DRIVER, unit->setup[interface].adc.channel, DRIVER_ALL_FLAGS, unit->sensor->id))) {
     	// Revoked lock on ADC channel
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
+#endif
 
 	if (
 			(error = adc_setup(
@@ -170,7 +174,9 @@ static driver_error_t *sensor_adc_setup(uint8_t interface, sensor_instance_t *un
 }
 
 static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *unit) {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	driver_unit_lock_error_t *lock_error = NULL;
+#endif
 	driver_error_t *error;
 
 	// Sanity checks
@@ -189,11 +195,13 @@ static driver_error_t *sensor_gpio_setup(uint8_t interface, sensor_instance_t *u
 	}
 	#endif
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock gpio
     if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup[interface].gpio.gpio, DRIVER_ALL_FLAGS, unit->sensor->id))) {
     	// Revoked lock on gpio
     	return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
+#endif
 
     if (unit->sensor->interface[interface].flags & SENSOR_FLAG_ON_OFF) {
     	if (unit->sensor->interface[interface].flags & SENSOR_FLAG_DEBOUNCING) {
@@ -275,10 +283,12 @@ static driver_error_t *sensor_i2c_setup(uint8_t interface, sensor_instance_t *un
 
     unit->setup[interface].i2c.id = i2cdevice;
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     driver_unit_lock_error_t *lock_error = NULL;
 	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, I2C_DRIVER, unit->setup[interface].i2c.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
 		return driver_lock_error(SENSOR_DRIVER, lock_error);
 	}
+#endif
 
 	return NULL;
 }
@@ -286,10 +296,12 @@ static driver_error_t *sensor_i2c_setup(uint8_t interface, sensor_instance_t *un
 static driver_error_t *sensor_uart_setup(uint8_t interface, sensor_instance_t *unit) {
 	driver_error_t *error;
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     driver_unit_lock_error_t *lock_error = NULL;
 	if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, UART_DRIVER,unit->setup[interface].uart.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
 		return driver_lock_error(SENSOR_DRIVER, lock_error);
 	}
+#endif
 
 	if ((error = uart_init(
     		unit->setup[interface].uart.id, unit->setup[interface].uart.speed, unit->setup[interface].uart.data_bits,

@@ -365,6 +365,7 @@ static void ttn_timer_task(void *arg) {
 	}
 }
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 driver_error_t *lora_gw_lock_resources(int unit) {
     driver_unit_lock_error_t *lock_error = NULL;
 
@@ -403,6 +404,7 @@ driver_error_t *lora_gw_lock_resources(int unit) {
 
 	return NULL;
 }
+#endif
 
 driver_error_t *lora_gw_setup(int band, const char *host, int port) {
 	driver_error_t *error;
@@ -439,10 +441,12 @@ driver_error_t *lora_gw_setup(int band, const char *host, int port) {
         return error;
     }
 
-    // Lock pins
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+	// Lock pins
     if ((error = lora_gw_lock_resources(0))) {
     	return error;
     }
+#endif
 
 	syslog(LOG_INFO, "lora gw: single gateway is at spi%d, pin cs=%s%d", CONFIG_LUA_RTOS_LORA_SPI,
         gpio_portname(CONFIG_LUA_RTOS_LORA_CS), gpio_name(CONFIG_LUA_RTOS_LORA_CS)

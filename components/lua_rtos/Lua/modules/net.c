@@ -48,6 +48,7 @@
 #include "net_service_mdns.inc"
 #include "net_service_can.inc"
 #include "net_service_openvpn.inc"
+#include "net_service_ssh.inc"
 #include "net_ssh.inc"
 
 #include <stdint.h>
@@ -269,6 +270,9 @@ static const LUA_REG_TYPE service_map[] = {
 #endif
 #if CONFIG_LUA_RTOS_LUA_USE_MDNS
 	{ LSTRKEY( "mdns" ), LROVAL ( mdns_map ) },
+#endif
+#if CONFIG_LUA_RTOS_USE_SSH_SERVER
+	{ LSTRKEY( "ssh" ), LROVAL ( sshs_map ) },
 #endif
 };
 

@@ -64,6 +64,7 @@ static const struct mountp mountps[] = {
 #if CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI
     {"/", "sd", "/sd", "spiffs", "fat"},
 #endif
+    {"/", "dev", "/dev", "spiffs", "dev"},
 #endif
     {NULL, NULL, NULL, NULL, NULL}
 };

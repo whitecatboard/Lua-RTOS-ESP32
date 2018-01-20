@@ -75,7 +75,7 @@ static int vfs_tun_select (int maxfdp1, fd_set *readset, fd_set *writeset, fd_se
 void vfs_tun_register()
 {
     esp_vfs_t vfs = {
-        .flags = ESP_VFS_FLAG_DEFAULT | ESP_VFS_FLAG_SHARED_FD_SPACE,
+        .flags = ESP_VFS_FLAG_DEFAULT,
         .write = &vfs_tun_write,
         .open = &vfs_tun_open,
         .fstat = NULL,

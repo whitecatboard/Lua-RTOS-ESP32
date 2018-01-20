@@ -250,11 +250,14 @@ static int tm1637_display(sdisplay_device_t *device, uint8_t addr,uint8_t data, 
  *
  */
 driver_error_t *tm1637_setup(struct sdisplay *device) {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	driver_unit_lock_error_t *lock_error = NULL;
+#endif
 
 	int clk = device->config.wire.clk;
 	int dio = device->config.wire.dio;
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock clk
     if ((lock_error = driver_lock(SDISPLAY_DRIVER, device->id, GPIO_DRIVER, clk, DRIVER_ALL_FLAGS, "CLK"))) {
     	// Revoked lock on ADC channel
@@ -266,6 +269,7 @@ driver_error_t *tm1637_setup(struct sdisplay *device) {
     	// Revoked lock on ADC channel
     	return driver_lock_error(SDISPLAY_DRIVER, lock_error);
     }
+#endif
 
     gpio_pin_output(clk);
 	gpio_pin_output(dio);

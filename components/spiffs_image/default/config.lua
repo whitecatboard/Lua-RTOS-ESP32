@@ -23,6 +23,7 @@
 -- config.sntp = true -- Uncomment to enable sntp client / comment to disable it
 -- config.http = true -- Uncomment to enable http server / comment to disable it
 -- config.openvpn = true -- Uncomment to enable OpenVpn client / comment to disable it
+-- config.ssh = true -- Uncomment to enable the ssh server / comment to disable it
 
 -- config.can.gw = true -- Uncomment to enable can gateway
 

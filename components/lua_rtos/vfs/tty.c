@@ -1,50 +1,75 @@
 /*
- * Lua RTOS, tty vfs operations
- *
- * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
- *
- * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for any purpose and without fee is hereby
- * granted, provided that the above copyright notice appear in all
- * copies and that both that the copyright notice and this
- * permission notice and warranty disclaimer appear in supporting
- * documentation, and that the name of the author not be used in
- * advertising or publicity pertaining to distribution of the
- * software without specific, written prior permission.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * The author disclaim all warranties with regard to this
- * software, including all implied warranties of merchantability
- * and fitness.  In no event shall the author be liable for any
- * special, indirect or consequential damages or any damages
- * whatsoever resulting from loss of use, data or profits, whether
- * in an action of contract, negligence or other tortious action,
- * arising out of or in connection with the use or performance of
- * this software.
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the <organization> nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Lua RTOS TTY VFS
+ *
  */
 
 #include "sdkconfig.h"
-
-#include "esp_vfs.h"
-#include "esp_attr.h"
+#include "vfs.h"
 
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include <sys/stat.h>
-
-#include <pthread.h>
 
 #include <drivers/uart.h>
 
 extern FILE *lua_stdout_file;
 
-static int IRAM_ATTR vfs_tty_open(const char *path, int flags, int mode) {
+// Local storage for file descriptors
+static vfs_fd_local_storage_t *local_storage;
+
+static int has_bytes(int fd, int to) {
+	char c;
+
+	if (to != portMAX_DELAY) {
+		to = to / portTICK_PERIOD_MS;
+	}
+
+	return (xQueuePeek(uart_get_queue(fd), &c, (BaseType_t)to) == pdTRUE);
+}
+
+static int get(int fd, char *c) {
+	return uart_read(fd, c, portMAX_DELAY);
+}
+
+static void put(int fd, char *c) {
+    uart_write(fd, *c);
+    if (lua_stdout_file) {
+    	fwrite(c, 1, 1, lua_stdout_file);
+    }
+}
+
+static int  vfs_tty_open(const char *path, int flags, int mode) {
 	int unit = 0;
 
 	// Get UART unit
@@ -63,55 +88,47 @@ static int IRAM_ATTR vfs_tty_open(const char *path, int flags, int mode) {
     uart_init(unit, CONSOLE_BR, 8, 0, 1, UART_FLAG_READ | UART_FLAG_WRITE, CONSOLE_BUFFER_LEN);
     uart_setup_interrupts(unit);
 
+    // Store flags
+    local_storage[unit].flags = flags;
+
     return unit;
 }
 
-static ssize_t IRAM_ATTR vfs_tty_write(int fd, const void *data, size_t size) {
-    const char *data_c = (const char *)data;
-    int unit = fd;
+static ssize_t vfs_tty_write(int fd, const void *data, size_t size) {
+	int ret;
 
-    uart_ll_lock(unit);
+    uart_ll_lock(fd);
+	ret = vfs_generic_write(local_storage, put, fd, data, size);
+    uart_ll_unlock(fd);
 
-    for (size_t i = 0; i < size; i++) {
-#if CONFIG_NEWLIB_STDOUT_LINE_ENDING_LF
-        if (data_c[i]=='\n') {
-        	uart_write(unit, '\r');
-        }
-#endif
-        uart_write(unit, data_c[i]);
-        if (lua_stdout_file) {
-        	fwrite(&data_c[i], 1, 1, lua_stdout_file);
-        }
-    }
-
-	uart_ll_unlock(unit);
-
-    return size;
+    return ret;
 }
 
-static ssize_t IRAM_ATTR vfs_tty_read(int fd, void * dst, size_t size) {
-	ssize_t remain = (ssize_t)size;
-	int unit = fd;
-
-	while (remain) {
-        if (uart_read(unit, (char *)dst, portMAX_DELAY)) {
-			remain--;
-			dst++;
-        } else {
-            break;
-        } 
-    }	
-	
-	return size - remain;
+static ssize_t vfs_tty_read(int fd, void * dst, size_t size) {
+	return vfs_generic_read(local_storage, has_bytes, get, fd, dst, size);
 }
 
-static int IRAM_ATTR vfs_tty_fstat(int fd, struct stat * st) {
+static int vfs_tty_fstat(int fd, struct stat * st) {
     st->st_mode = S_IFCHR;
     return 0;
 }
 
-static int IRAM_ATTR vfs_tty_close(int fd) {
+static int vfs_tty_close(int fd) {
 	return 0;
+}
+
+static ssize_t vfs_tty_writev(int fd, const struct iovec *iov, int iovcnt) {
+	int ret;
+
+    uart_ll_lock(fd);
+	ret = vfs_generic_writev(local_storage, put, fd, iov, iovcnt);
+    uart_ll_unlock(fd);
+
+    return ret;
+}
+
+static int vfs_tty_fcntl(int fd, int cmd, va_list args) {
+	return vfs_generic_fcntl(local_storage, fd, cmd, args);
 }
 
 void vfs_tty_register() {
@@ -126,10 +143,15 @@ void vfs_tty_register() {
         .stat = NULL,
         .link = NULL,
         .unlink = NULL,
-        .rename = NULL
+        .rename = NULL,
+		.fcntl = &vfs_tty_fcntl,
+		.writev = &vfs_tty_writev,
     };
 	
     ESP_ERROR_CHECK(esp_vfs_register("/dev/tty", &vfs, NULL));
+
+	local_storage = vfs_create_fd_local_storage(3);
+	assert(local_storage != NULL);
 
     // Close previous standard streams
 	if (_GLOBAL_REENT->_stdin)

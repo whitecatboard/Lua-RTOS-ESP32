@@ -22,6 +22,8 @@ CFLAGS += -DPATH_MAX=64
 CFLAGS += -DMAXNAMLEN=64
 
 CFLAGS += -DCONFIG_MAX_FD_BITS=4
+CFLAGS += -DCONFIG_VFS_WITH_SELECT=4
+
 CFLAGS += -DLWIP_IPV6=1
 CFLAGS += -DLWIP_RAW=1
 CFLAGS += -DLWIP_SO_LINGER=1
@@ -33,6 +35,7 @@ CFLAGS += -DLWIP_DNS_API_DEFINE_ERRORS=1
 LDFLAGS += -Wl,--wrap=_realloc_r
 LDFLAGS += -Wl,--wrap=_malloc_r
 LDFLAGS += -Wl,--wrap=_calloc_r
+LDFLAGS += -Wl,--wrap=open
 LDFLAGS += -Wl,--wrap=_open_r
 LDFLAGS += -Wl,--wrap=_unlink_r
 LDFLAGS += -Wl,--wrap=_rename_r

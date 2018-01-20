@@ -1,30 +1,34 @@
 /*
- * Lua RTOS, spiffs vfs operations
- *
- * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
- *
- * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for any purpose and without fee is hereby
- * granted, provided that the above copyright notice appear in all
- * copies and that both that the copyright notice and this
- * permission notice and warranty disclaimer appear in supporting
- * documentation, and that the name of the author not be used in
- * advertising or publicity pertaining to distribution of the
- * software without specific, written prior permission.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * The author disclaim all warranties with regard to this
- * software, including all implied warranties of merchantability
- * and fitness.  In no event shall the author be liable for any
- * special, indirect or consequential damages or any damages
- * whatsoever resulting from loss of use, data or profits, whether
- * in an action of contract, negligence or other tortious action,
- * arising out of or in connection with the use or performance of
- * this software.
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the <organization> nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Lua RTOS SPIFFS VFS
+ *
  */
 
 #include "sdkconfig.h"
@@ -54,12 +58,12 @@
 #include <sys/fcntl.h>
 #include <dirent.h>
 
-static int IRAM_ATTR vfs_spiffs_open(const char *path, int flags, int mode);
-static ssize_t IRAM_ATTR vfs_spiffs_write(int fd, const void *data, size_t size);
-static ssize_t IRAM_ATTR vfs_spiffs_read(int fd, void * dst, size_t size);
-static int IRAM_ATTR vfs_spiffs_fstat(int fd, struct stat * st);
-static int IRAM_ATTR vfs_spiffs_close(int fd);
-static off_t IRAM_ATTR vfs_spiffs_lseek(int fd, off_t size, int mode);
+static int vfs_spiffs_open(const char *path, int flags, int mode);
+static ssize_t vfs_spiffs_write(int fd, const void *data, size_t size);
+static ssize_t vfs_spiffs_read(int fd, void * dst, size_t size);
+static int vfs_spiffs_fstat(int fd, struct stat * st);
+static int vfs_spiffs_close(int fd);
+static off_t vfs_spiffs_lseek(int fd, off_t size, int mode);
 
 #if !defined(max)
 #define max(A,B) ( (A) > (B) ? (A):(B))
@@ -206,7 +210,7 @@ static int spiffs_result(int res) {
     }
 }
 
-static int IRAM_ATTR vfs_spiffs_open(const char *path, int flags, int mode) {
+static int vfs_spiffs_open(const char *path, int flags, int mode) {
     char npath[PATH_MAX + 1];
 	int fd, result = 0;
 
@@ -303,7 +307,7 @@ static int IRAM_ATTR vfs_spiffs_open(const char *path, int flags, int mode) {
     return fd;
 }
 
-static ssize_t IRAM_ATTR vfs_spiffs_write(int fd, const void *data, size_t size) {
+static ssize_t vfs_spiffs_write(int fd, const void *data, size_t size) {
 	vfs_spiffs_file_t *file;
 	int res;
 
@@ -333,7 +337,7 @@ static ssize_t IRAM_ATTR vfs_spiffs_write(int fd, const void *data, size_t size)
 	return -1;
 }
 
-static ssize_t IRAM_ATTR vfs_spiffs_read(int fd, void * dst, size_t size) {
+static ssize_t vfs_spiffs_read(int fd, void * dst, size_t size) {
 	vfs_spiffs_file_t *file;
 	int res;
 
@@ -366,7 +370,7 @@ static ssize_t IRAM_ATTR vfs_spiffs_read(int fd, void * dst, size_t size) {
 	return -1;
 }
 
-static int IRAM_ATTR vfs_spiffs_fstat(int fd, struct stat * st) {
+static int vfs_spiffs_fstat(int fd, struct stat * st) {
 	vfs_spiffs_file_t *file;
     spiffs_stat stat;
 	int res;
@@ -406,7 +410,7 @@ static int IRAM_ATTR vfs_spiffs_fstat(int fd, struct stat * st) {
     return 0;
 }
 
-static int IRAM_ATTR vfs_spiffs_close(int fd) {
+static int vfs_spiffs_close(int fd) {
 	vfs_spiffs_file_t *file;
 	int res;
 
@@ -431,7 +435,7 @@ static int IRAM_ATTR vfs_spiffs_close(int fd) {
 	return 0;
 }
 
-static off_t IRAM_ATTR vfs_spiffs_lseek(int fd, off_t size, int mode) {
+static off_t vfs_spiffs_lseek(int fd, off_t size, int mode) {
 	vfs_spiffs_file_t *file;
 	int res;
 
@@ -464,7 +468,7 @@ static off_t IRAM_ATTR vfs_spiffs_lseek(int fd, off_t size, int mode) {
     return res;
 }
 
-static int IRAM_ATTR vfs_spiffs_stat(const char * path, struct stat * st) {
+static int vfs_spiffs_stat(const char * path, struct stat * st) {
 	int fd;
 	int res;
 
@@ -485,7 +489,7 @@ static int IRAM_ATTR vfs_spiffs_stat(const char * path, struct stat * st) {
 	return res;
 }
 
-static int IRAM_ATTR vfs_spiffs_unlink(const char *path) {
+static int vfs_spiffs_unlink(const char *path) {
     char npath[PATH_MAX + 1];
 
     // Check path
@@ -526,7 +530,7 @@ static int IRAM_ATTR vfs_spiffs_unlink(const char *path) {
 	return 0;
 }
 
-static int IRAM_ATTR vfs_spiffs_rename(const char *src, const char *dst) {
+static int vfs_spiffs_rename(const char *src, const char *dst) {
     char dpath[PATH_MAX + 1];
     char *csrc;
     char *cname;
@@ -798,7 +802,7 @@ static struct dirent* vfs_spiffs_readdir(DIR* pdir) {
     }
 }
 
-static int IRAM_ATTR vfs_piffs_closedir(DIR* pdir) {
+static int vfs_piffs_closedir(DIR* pdir) {
 	vfs_spiffs_dir_t* dir = (vfs_spiffs_dir_t*) pdir;
 	int res;
 
@@ -817,7 +821,7 @@ static int IRAM_ATTR vfs_piffs_closedir(DIR* pdir) {
     return 0;
 }
 
-static int IRAM_ATTR vfs_spiffs_mkdir(const char *path, mode_t mode) {
+static int vfs_spiffs_mkdir(const char *path, mode_t mode) {
     char npath[PATH_MAX + 1];
     //vfs_spiffs_meta_t meta;
     int res;
@@ -874,6 +878,44 @@ static int IRAM_ATTR vfs_spiffs_mkdir(const char *path, mode_t mode) {
     return 0;
 }
 
+static int vfs_spiffs_fsync(int fd) {
+	vfs_spiffs_file_t *file;
+	int res;
+
+	res = list_get(&files, fd, (void **)&file);
+    if (res) {
+		errno = EBADF;
+		printf("1\r\n");
+		return -1;
+    }
+
+    if (file->is_dir) {
+		errno = EBADF;
+		printf("2\r\n");
+		return -1;
+    }
+
+    res = SPIFFS_fflush(&fs, file->spiffs_file);
+	if (res >= 0) {
+		return res;
+	} else {
+		res = spiffs_result(fs.err_code);
+		if (res != 0) {
+			errno = res;
+			printf("3\r\n");
+
+			return -1;
+		}
+
+		errno = EIO;
+		printf("4\r\n");
+
+		return -1;
+	}
+
+	return 0;
+}
+
 void vfs_spiffs_register() {
     esp_vfs_t vfs = {
         .flags = ESP_VFS_FLAG_DEFAULT,
@@ -892,6 +934,7 @@ void vfs_spiffs_register() {
 		.readdir = &vfs_spiffs_readdir,
 		.closedir = &vfs_piffs_closedir,
 		.rmdir = &vfs_spiffs_rmdir,
+		.fsync = &vfs_spiffs_fsync,
     };
 	
     ESP_ERROR_CHECK(esp_vfs_register("/spiffs", &vfs, NULL));

@@ -60,7 +60,9 @@ void nzr_init() {
 driver_error_t *nzr_setup(nzr_timing_t *timing, uint8_t gpio, uint32_t *unit) {
 	driver_error_t *error;
 	nzr_instance_t *instance;
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     driver_unit_lock_error_t *lock_error = NULL;
+#endif
 
 	// Allocate space for instance
 	instance = (nzr_instance_t *)calloc(1, sizeof(nzr_instance_t));
@@ -79,12 +81,14 @@ driver_error_t *nzr_setup(nzr_timing_t *timing, uint8_t gpio, uint32_t *unit) {
 		return driver_error(NZR_DRIVER, NZR_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     // Lock the GPIO
     if ((lock_error = driver_lock(NZR_DRIVER, *unit, GPIO_DRIVER, gpio, DRIVER_ALL_FLAGS, NULL))) {
     	list_remove(&nzr_list, *unit, 1);
     	// Revoked lock on pin
     	return driver_lock_error(NZR_DRIVER, lock_error);
     }
+#endif
 
 	// Configure GPIO as output
 	if ((error = gpio_pin_output(gpio))) {
