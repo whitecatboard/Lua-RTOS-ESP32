@@ -59,9 +59,9 @@
 #include <drivers/uart.h>
 
 extern void _pthread_init();
-extern void _signal_init();
 extern void _cpu_init();
 extern void _clock_init();
+extern void _signal_init();
 
 extern const char *__progname;
 
@@ -172,17 +172,23 @@ void _sys_init() {
 	_cpu_init();
     _driver_init();
     _pthread_init();
+    _signal_init();
 
     status_set(STATUS_SYSCALLS_INITED);
     status_set(STATUS_LUA_SHELL);
     status_set(STATUS_LUA_HISTORY);
 
-    _signal_init();
+    esp_vfs_lwip_sockets_register();
 
 	esp_vfs_unregister("/dev/uart");
 	esp_vfs_unregister("/dev/uart");
 
 	vfs_tty_register();
+
+#if CONFIG_LUA_RTOS_USE_SSH_SERVER
+	vfs_pty_register();
+	vfs_urandom_register();
+#endif
 
 	printf("Booting Lua RTOS...\r\n");
 	delay(100);

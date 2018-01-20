@@ -207,6 +207,11 @@ menu "Lua RTOS"
                string "Config file"
                   default "/etc/openvpn/client.conf"
          endmenu
+         menu "SSH server"
+            config LUA_RTOS_USE_SSH_SERVER
+               bool "Enable SSH server"
+               default y
+         endmenu
       endmenu
 
       menu "Hardware"

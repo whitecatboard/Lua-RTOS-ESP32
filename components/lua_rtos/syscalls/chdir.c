@@ -63,7 +63,7 @@ int chdir(const char *path) {
 
     // Check for path existence
     if (strncmp(ppath, "/fat/", 5)) {
-        if ((fd = open(ppath, O_RDONLY)) == -1) {
+        if ((fd = open(path, O_RDONLY)) == -1) {
         	errno = ENOTDIR;
         	free(ppath);
             return -1;

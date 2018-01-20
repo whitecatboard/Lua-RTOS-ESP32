@@ -748,7 +748,7 @@ void get_console_size(struct env *env) {
 }
 
 void outch(char c) {
-  putchar(c);
+  fwrite(&c, 1, 1, stdout);
 }
 
 void outbuf(unsigned char *buf, int len) {
@@ -2083,11 +2083,7 @@ int edit_main(int argc, char *argv[]) {
   }
   if (env.current == NULL) {
     struct editor *ed = create_editor(&env);
-    if (isatty(fileno(stdin))) {
-      new_file(ed, "");
-    } else {
-      read_from_stdin(ed);
-    }    
+    read_from_stdin(ed);
   }
   env.current = env.current->next;
 
@@ -2095,13 +2091,9 @@ int edit_main(int argc, char *argv[]) {
   term = gettib()->proc->term;
   if (fdin != term->ttyin) dup2(term->ttyin, fdin);
   if (fdout != term->ttyout) dup2(term->ttyout, fdout);
-#else
-  if (!isatty(fileno(stdin))) {
-    if (!freopen("/dev/tty", "r", stdin)) perror("/dev/tty");
-  }
 #endif
 
-setvbuf(stdout, NULL, 0, 8192);
+//setvbuf(stdout, NULL, 0, 8192);
 
 #ifdef __linux__
   tcgetattr(0, &orig_tio);

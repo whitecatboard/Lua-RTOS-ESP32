@@ -413,7 +413,11 @@ static void l_print (lua_State *L) {
 ** Do the REPL: repeatedly read (load) a line, evaluate (call) it, and
 ** print any results.
 */
+#if LUA_USE_ROTABLE
+void doREPL (lua_State *L) {
+#else
 static void doREPL (lua_State *L) {
+#endif
   int status;
   const char *oldprogname = progname;
   progname = NULL;  /* no 'progname' on errors in interactive mode */

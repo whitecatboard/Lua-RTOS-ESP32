@@ -47,6 +47,11 @@ typedef struct {
 	const char *usage;
 } command_t;
 
+typedef struct {
+	char *tb;
+	char *te;
+} token_t;
+
 static const command_t command[] = {
 	{"luac", NULL, "compile", 1, 0, "luac source destination"},
 	{"cat", "os", "cat", 1, 0, "cat filename"},
@@ -64,6 +69,7 @@ static const command_t command[] = {
 	{"more", "os", "more", 1, 0, "more filename"},
 	{"mv", "os", "rename", 2, 0, "mv old new"},
 	{"netstat", "net", "stat", 0, 0, NULL},
+	{"passwd", "os", "passwd", 0, 0, NULL},
 	{"ping", "net", "ping", 1, 0, "ping destination"},
 	{"pwd", "os", "pwd", 0, 0, NULL},
 	{"remove", "os", "remove", 1, 0, "remove filename"},
@@ -125,15 +131,18 @@ void lua_shell(lua_State* L, char *buffer) {
 	char *cbuffer = buffer;
 	int itoken = 0;
 	int cindex = -1;
-	char arg[256];
+	char *arg;
+	token_t *tokens;
 
-	// Initialize an array for store tokens found in buffer
-	struct {
-		char *tb;
-		char *te;
-	} tokens[10];
+	arg = calloc(1, 256);
+	if (!arg) {
+		goto exit;
+	}
 
-	memset(tokens, 0, sizeof(tokens));
+	tokens = calloc(10, sizeof(token_t));
+	if (!tokens) {
+		goto exit;
+	}
 
 	// Search tokens in buffer ...
 	while (*cbuffer && (itoken < 10)) {
@@ -162,7 +171,7 @@ void lua_shell(lua_State* L, char *buffer) {
 	}
 
 	if (itoken >= 10) {
-		return;
+		goto exit;
 	}
 
 	// Process command
@@ -172,7 +181,8 @@ void lua_shell(lua_State* L, char *buffer) {
 			if (command[cindex].usage) {
 				printf("usage: %s\r\n", command[cindex].usage);
 				*buffer = 0x00;
-				return;
+
+				goto exit;
 			}
 		}
 
@@ -181,7 +191,7 @@ void lua_shell(lua_State* L, char *buffer) {
 			lua_getglobal(L, command[cindex].module);
 			lua_getfield(L, -1, command[cindex].function);
 		} else {
-				lua_getglobal(L, command[cindex].function);
+			lua_getglobal(L, command[cindex].function);
 		}
 
 		// Prepare arguments
@@ -191,8 +201,8 @@ void lua_shell(lua_State* L, char *buffer) {
 			memcpy(arg, tokens[i].tb, tokens[i].te - tokens[i].tb + 1);
 			arg[tokens[i].te - tokens[i].tb + 1] = 0x00;
 
-				lua_pushstring(L, arg);
-				args++;
+			lua_pushstring(L, arg);
+			args++;
 		}
 
 		// In the stack there are:
@@ -233,7 +243,7 @@ void lua_shell(lua_State* L, char *buffer) {
 
 		int tl = tokens[0].te - tokens[0].tb + 1;
 		if ((tl > sizeof(arg) - 1) || (tl > PATH_MAX)) {
-			return;
+			goto exit;
 		}
 
 		memcpy(arg, tokens[0].tb, tl);
@@ -241,17 +251,17 @@ void lua_shell(lua_State* L, char *buffer) {
 
 		// for execution without "do " the file extension must be ".lua"
 		if(arg[tl-4] != '.' || arg[tl-3] != 'l' || arg[tl-2] != 'u' || arg[tl-1] != 'a') {
-			return;
+			goto exit;
 		}
 
 		// check if a file system element with that name exists
 		struct stat s;
 		if (stat(arg, &s) < 0) {
-			return;
+			goto exit;
 		}
 
 		if (s.st_mode == S_IFDIR) {
-			return;
+			goto exit;
 		}
 		else if (s.st_mode == S_IFREG) {
 			*buffer = 0x00;
@@ -260,8 +270,15 @@ void lua_shell(lua_State* L, char *buffer) {
 			strlcat(buffer,"dofile(\"",256);
 			strlcat(buffer,arg, 256);
 			strlcat(buffer,"\")", 256);
-			return;
+
+			goto exit;
 		}
 	}
-	
+
+exit:
+	if (arg)
+		free(arg);
+
+	if (tokens)
+		free(tokens);
 }
