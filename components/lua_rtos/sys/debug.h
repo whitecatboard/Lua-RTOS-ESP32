@@ -33,7 +33,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-
 #if DEBUG_FREE_MEM
 #define debug_used_stack() printf("remaining stak %d bytes\r\n", uxTaskGetStackHighWaterMark(NULL) * 4)
 
