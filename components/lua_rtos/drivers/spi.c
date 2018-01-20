@@ -638,8 +638,6 @@ void spi_ll_get_speed(int deviceid, uint32_t *speed) {
 	//int device = (deviceid & 0x00ff);
 
 	//*speed = spi_bus[spi_idx(unit)].device[device].speed;
-	(void) unit;
-	(void) device;
 }
 
 void spi_ll_set_speed(int deviceid, uint32_t speed) {
