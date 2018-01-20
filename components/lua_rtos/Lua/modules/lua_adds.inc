@@ -3,10 +3,10 @@
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
- * 
+ *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- * 
- * All rights reserved.  
+ *
+ * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -70,7 +70,7 @@ inline void LuaUnlock(lua_State *L) {
 #define LuaUnlock(L)
 #endif
 
-static void get_prompt (lua_State *L, int firstline, char *path) {   
+static void get_prompt (lua_State *L, int firstline, char *path) {
   lua_getglobal(L, firstline ? "_PROMPT" : "_PROMPT2");
   char *p = (char *)lua_tostring(L, -1);
 
@@ -81,7 +81,7 @@ static void get_prompt (lua_State *L, int firstline, char *path) {
               path = strncat(path, LUA_PROMPT, PATH_MAX + 10);
           }
       } else {
-		  
+
 		  strncpy(path, LUA_PROMPT2, PATH_MAX + 10);
       }
   } else {
@@ -92,7 +92,7 @@ static void get_prompt (lua_State *L, int firstline, char *path) {
 static int luaos_pushline (lua_State *L, int firstline) {
   char buffer[LUA_MAXINPUT];
   char prmt[PATH_MAX + 21];
-  
+
   char *b = buffer;
   size_t l;
 
@@ -101,7 +101,7 @@ static int luaos_pushline (lua_State *L, int firstline) {
   int readstatus = lua_readline(L, b, prmt);
   if (readstatus == 0)
     return 0;  /* no input (prompt will be popped by caller) */
-  
+
   if (status_get(STATUS_LUA_SHELL)) {
 	  lua_shell(L, buffer);
   }
@@ -116,7 +116,7 @@ static int luaos_pushline (lua_State *L, int firstline) {
     lua_pushlstring(L, b, l);
 
   lua_freeline(L, b);
-  
+
   return 1;
 }
 
@@ -151,15 +151,15 @@ static void luaos_boot_scripts(lua_State *L) {
                 fclose(fp);
                 system = i;
                 break;
-            }            
+            }
         }
     }
-    
+
     if (system >=0) {
         printf("Executing %s ...\n", system_order[system]);
         dofile(L, system_order[system]);
     }
-    
+
     // Ecexute autorun script
     autorun = -1;
     for(i = 0; i < sizeof(autorun_order) / sizeof(*autorun_order); i++) {
@@ -168,7 +168,7 @@ static void luaos_boot_scripts(lua_State *L) {
                 fclose(fp);
                 autorun = i;
                 break;
-            }            
+            }
         }
     }
 
@@ -183,7 +183,7 @@ static void luaos_boot_scripts(lua_State *L) {
 // LuaOS version of pmain
 //
 // Changes from original source are:
-// 
+//
 // * LuaOS always starts in interactive mode, removed unnecessary code
 // * Run system.lua before executing the interpreter (in same state)
 // * Run autorun.lua before executing the interpreter (in same state)
@@ -205,14 +205,14 @@ static int luaos_pmain (lua_State *L) {
   } else {
 	  printf("Lua RTOS-boot-scripts-aborted-ESP32\r\n");
   }
-  
+
   status_set(STATUS_LUA_INTERPRETER);
 
   for(;;)
       doREPL(L);  /* do read-eval-print loop */
 
   lua_pushboolean(L, 1);  /* signal no errors */
-  return 1;    
+  return 1;
 }
 
 // LuaOS version of lua_main
@@ -225,7 +225,7 @@ int luaos_main (void) {
   int status, result;
 
   LuaLockInit(NULL);
-  
+
   debug_free_mem_begin(luaL_newstate);
   lua_State *L = luaL_newstate();  /* create state */
   debug_free_mem_end(luaL_newstate, NULL);
@@ -240,7 +240,7 @@ int luaos_main (void) {
 
   lua_pushcfunction(L, &luaos_pmain);  /* to call 'pmain' in protected mode */
   status = lua_pcall(L, 0, 1, 0);  /* do the call */
-    
+
   result = lua_toboolean(L, -1);  /* get result */
   report(L, status);
 
