@@ -111,9 +111,10 @@ typedef struct {
 	uint8_t prio;
 	size_t stack_size;
 	size_t free_stack;
-    int thid;
-    lthread_t *lthread;
-    pthread_status_t status;
+	uint32_t cpu_usage;
+	int thid;
+	lthread_t *lthread;
+	pthread_status_t status;
 } task_info_t;
 
 typedef struct {

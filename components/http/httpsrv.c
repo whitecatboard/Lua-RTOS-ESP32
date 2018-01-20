@@ -51,6 +51,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/syslog.h>
+#include <sys/mount.h>
 
 #include <openssl/ssl.h>
 #include "mbedtls/platform.h"
@@ -105,12 +106,13 @@ typedef struct {
 
 typedef struct {
   http_server_config *config;
-  FILE *file;
+  int socket;
   SSL *ssl;
+  int headers_sent;
 } http_request_handle;
 
-#define HTTP_Request_Normal_initializer { config, stream, NULL };
-#define HTTP_Request_Secure_initializer { config, NULL, ssl };
+#define HTTP_Request_Normal_initializer { config, client, NULL, 0 };
+#define HTTP_Request_Secure_initializer { config, client, ssl,  0 };
 
 static http_server_config http_normal = HTTP_Normal_initializer;
 static http_server_config http_secure = HTTP_Secure_initializer;
@@ -147,7 +149,7 @@ char *get_mime_type(char *name) {
 }
 
 static int request_write(http_request_handle *request, char *buffer, int length) {
-	return (request->config->secure) ? SSL_write(request->ssl, buffer, length) : fwrite(buffer, 1, length, request->file);
+	return (request->config->secure) ? SSL_write(request->ssl, buffer, length) : send(request->socket, buffer, length, MSG_DONTWAIT);
 }
 
 static int do_printf(http_request_handle *request, const char *fmt, ...) {
@@ -175,28 +177,73 @@ static int do_printf(http_request_handle *request, const char *fmt, ...) {
 
 char *do_gets(char *s, int size, http_request_handle *request) {
 
-	if (0 == request->config->secure)
-		return fgets(s, size, request->file);
+	int socket = request->config->secure ? SSL_get_fd(request->ssl) : request->socket;
+
+	fd_set set;
+	FD_ZERO(&set); /* clear the set */
+	FD_SET(socket, &set); /* add our file descriptor to the set */
+	struct timeval timeout = {2L, 0L}; //wait up to 2sec
 
 	int rc;
 	char *c = s;
-	int done = 0;
-	while (c < (s + size - 1) && !done) {
-  	rc = SSL_read(request->ssl, c, 1);
-  	if (rc>0) {
-  		if (*c == '\n') done=1;
-  		c++;
-  	}
-  	else if (rc==0) {
-  		//no data received or connection is closed
-  		done=1;
-  	}
-  	else {
-  		return NULL; //discard half-received data
-  	}
-  }
-  *c = 0;
-  return (c == s ? 0 : s);
+	while (c < (s + size - 1)) {
+
+		//only do this once for secure (or if nothing pending), each time for normal
+		if (!request->config->secure || (c == s && 0 == SSL_pending(request->ssl))) {
+			// select supports setting a timeout
+			// so *only* if select tells us data
+			// is ready we read the data using recv
+			rc = select(socket+1, &set, NULL, NULL, &timeout);
+			if (rc == -1) {
+				return NULL;
+			}
+			else if (rc == 0 && !FD_ISSET(socket, &set)) {
+				//no data received or connection is closed
+				break;
+			}
+		}
+
+		if (request->config->secure) {
+
+			//see http://www.past5.com/tutorials/2014/02/21/openssl-and-select/
+			int ssl_error;
+			rc = SSL_read(request->ssl, c, 1);
+
+			//check SSL errors
+			switch(ssl_error = SSL_get_error(request->ssl,rc)) {
+				case SSL_ERROR_NONE:
+					//do our stuff with the newly read character below
+					break;
+				case SSL_ERROR_ZERO_RETURN:	 	//connection closed by client, clean up
+				case SSL_ERROR_WANT_READ:			//the operation did not complete, block the read
+				case SSL_ERROR_WANT_WRITE:		//the operation did not complete
+				case SSL_ERROR_SYSCALL:				//some I/O error occured (could be caused by false start in Chrome for instance), disconnect the client and clean up
+				default:											//some other error, clean up
+					return NULL;
+					break;
+			}
+		}
+		else
+			rc = recv(socket, c, 1, 0);
+
+		if (rc>0) {
+			//syslog(LOG_DEBUG, "http: got %c\r", *c);
+			if (*c == '\n') {
+				c++;
+				break;
+			}
+			c++;
+		}
+		else if (rc==0) {
+			//no data received or connection is closed
+			break;
+		}
+		else {
+			return NULL; //discard half-received data
+		}
+	}
+	*c = 0;
+	return (c == s ? 0 : s);
 }
 
 void send_headers(http_request_handle *request, int status, char *title, char *extra, char *mime, int length) {
@@ -267,29 +314,67 @@ static void chunk(http_request_handle *request, const char *fmt, ...) {
 	}
 }
 
+int http_status(lua_State* L) {
+
+	int code = luaL_optinteger( L, 1, 200 );
+	const char *title = luaL_optstring( L, 2, "OK" );
+	const char *extra_headers = luaL_optstring( L, 3, NULL );
+	const char *content_type = luaL_optstring( L, 4, "text/html" );
+	int content_length = luaL_optinteger( L, 5, -1 );
+
+	lua_getglobal(L, "http_stream_handle");
+	if (!lua_islightuserdata(L, -1)) {
+		return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
+	}
+	http_request_handle *request = (http_request_handle*)lua_touserdata(L, -1);
+
+	if (!request) {
+		return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
+	}
+
+	if (!request->headers_sent) {
+		send_headers(request, code, (char *)title, (char *)extra_headers, (char *)content_type, content_length);
+		if (!request->config->secure) fsync(request->socket);
+		request->headers_sent = 1;
+
+		lua_pushinteger(L, 1);
+	}
+	else {
+		lua_pushinteger(L, 0);
+	}
+
+	return 1;
+}
+
 int http_print(lua_State* L) {
 
-		lua_getglobal(L, "http_stream_handle");
-		if (!lua_islightuserdata(L, -1)) {
-        return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
-    }
-    http_request_handle *request = (http_request_handle*)lua_touserdata(L, -1);
+	lua_getglobal(L, "http_stream_handle");
+	if (!lua_islightuserdata(L, -1)) {
+		return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
+	}
+	http_request_handle *request = (http_request_handle*)lua_touserdata(L, -1);
 
-		if (!request) {
-        return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
-    }
+	if (!request) {
+		return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
+	}
 
-    int nargs = lua_gettop(L);
-    for (int i=1; i <= nargs; i++) {
-        if (lua_isstring(L, i)) {
-            chunk(request, "%s", lua_tostring(L, i));
-        }
-        else {
-        		/* non-strings handling not reqired */
-        }
-    }
+	if (!request->headers_sent) {
+			send_headers(request, 200, "OK", NULL, "text/html", -1);
+			if (!request->config->secure) fsync(request->socket);
+			request->headers_sent = 1;
+	}
 
-    return 0;
+	int nargs = lua_gettop(L);
+	for (int i=1; i <= nargs; i++) {
+		if (lua_isstring(L, i)) {
+			chunk(request, "%s", lua_tostring(L, i));
+		}
+		else {
+			/* non-strings handling not reqired */
+		}
+	}
+
+	return 0;
 }
 
 void send_file(http_request_handle *request, char *path, struct stat *statbuf, char *requestdata) {
@@ -303,39 +388,119 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf, c
 	} else if (is_lua(path)) {
 		fclose(file);
 
-		send_headers(request, 200, "OK", NULL, "text/html", -1);
-		if (!request->config->secure) fflush(request->file);
-
-		lua_pushstring(LL, (requestdata && *requestdata) ? requestdata:"");
-		lua_setglobal(LL, "http_request");
-
-		lua_pushlightuserdata(LL, (void*)request);
-		lua_setglobal(LL, "http_stream_handle");
-
-		lua_pushinteger(LL, request->config->port);
-		lua_setglobal(LL, "http_port");
-
-		lua_pushinteger(LL, request->config->secure);
-		lua_setglobal(LL, "http_secure");
-
 		char ppath[PATH_MAX];
 
 		strcpy(ppath, path);
 		if (strlen(ppath) < PATH_MAX - 1) {
 			strcat(ppath, "p");
+
+			//on fat use the modification time
+			if (strcmp((const char *)mount_device(ppath),"fat") == 0) {
+				time_t src_mtime = statbuf->st_mtime;
+
+				if (stat(ppath, statbuf) == 0) {
+					if (src_mtime > statbuf->st_mtime) {
+						//syslog(LOG_WARNING, "re-preprocessing %s due to mtime %i > %i\n", path, src_mtime, statbuf->st_mtime);
+						http_preprocess_lua_page(path,ppath);
+					}
+				}
+				else {
+					http_preprocess_lua_page(path,ppath);
+				}
+			}
+			else {
+				// after modifying a .lua file, the developer
+				// is responsible for deleting the preprocessed
+				// file as there is no "date" in the file system
+
+				// we preprocess in case the preprocessed file does not exist
+				if (stat(ppath, statbuf) != 0) {
+					http_preprocess_lua_page(path,ppath);
+				}
+				else {
+					// but do our best to find out if the source file was modified
+					char *dirsep = (char*)ppath + strlen(ppath) - 1;
+					while (dirsep > ppath && *dirsep!=0 && *dirsep!='/') {
+						dirsep--;
+					}
+					if (*dirsep=='/') {
+						int filename_length = ppath + strlen(ppath) - (dirsep + 1);
+						char* filename = dirsep + 1;
+
+						*dirsep = 0;
+						DIR *dir = opendir(ppath);
+						if (dir) {
+							struct dirent *ent;
+							while ((ent = readdir(dir)) != NULL) {
+								if (0==strcmp(filename, ent->d_name)) {
+									//syslog(LOG_WARNING, "re-preprocessing %s due file system order, found %s first\n", path, filename);
+									*dirsep = '/'; //fix ppath before using it
+									http_preprocess_lua_page(path,ppath);
+									break;
+								}
+								if (0==strncmp(filename, ent->d_name, filename_length-1)) {
+									//syslog(LOG_WARNING, "not re-preprocessing %s due file system order\n", path);
+									break;
+								}
+							}
+						}
+						closedir(dir);
+						*dirsep = '/';
+					}
+				}
+			}
+
+			if (S_ISDIR(statbuf->st_mode)) {
+				send_error(request, 500, "Internal Server Error", NULL, "Folder found where a precompiled file is expected.");
+			}
+			else {
+				lua_State *L = pvGetLuaState();  /* get state */
+				if (L == NULL) {
+					send_error(request, 500, "Internal Server Error", NULL, "Cannot get state.");
+				}
+				else {
+					if (luaL_loadfile(L, ppath)) {
+						char* error = (char *)malloc(2048);
+						if (error) {
+							*error = '\0';
+							snprintf(error, 2048, "FATAL ERROR: %s", lua_tostring(L, -1));
+							send_error(request, 500, "Internal Server Error", NULL, error);
+							free(error);
+						}
+						else {
+							send_error(request, 500, "Internal Server Error", NULL, "FATAL ERROR occurred");
+						}
+					}
+					else {
+						lua_pushstring(L, (requestdata && *requestdata) ? requestdata:"");
+						lua_setglobal(L, "http_request");
+						lua_pushlightuserdata(L, (void*)request);
+						lua_setglobal(L, "http_stream_handle");
+						lua_pushinteger(L, request->config->port);
+						lua_setglobal(L, "http_port");
+						lua_pushinteger(L, request->config->secure);
+						lua_setglobal(L, "http_secure");
+
+						lua_pcall(L, 0, 0, 0);
+
+						lua_pushnil(L);
+						lua_setglobal(L, "http_request");
+						lua_pushnil(L);
+						lua_setglobal(L, "http_stream_handle");
+						lua_pushnil(L);
+						lua_setglobal(L, "http_port");
+						lua_pushnil(L);
+						lua_setglobal(L, "http_secure");
+
+						if (!request->config->secure) fsync(request->socket);
+						do_printf(request, "0\r\n\r\n");
+					}
+				}
+			}
 		}
-
-		http_process_lua_page(path,ppath);
-
-		int rc = luaL_dofile(LL, ppath);
-		(void) rc;
-
-		if (!request->config->secure) fflush(request->file);
-
-		do_printf(request, "0\r\n\r\n");
-
-		lua_pushlightuserdata(LL, (void*)0);
-		lua_setglobal(LL, "http_stream_handle");
+		else {
+			send_error(request, 500, "Internal Server Error", NULL, "Path too long.");
+		}
 
 	} else {
 		data = calloc(1, HTTP_BUFF_SIZE);
@@ -361,9 +526,9 @@ int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, con
 	//newpath has a size of HTTP_BUFF_SIZE
 	memset(newpath, 0, HTTP_BUFF_SIZE);
 
-  // treat null as an empty path.
-  if (!reqpath)
-      reqpath = "";
+	// treat null as an empty path.
+	if (!reqpath)
+		reqpath = "";
 
 	// copy the root path
 	seglen = strlen(rootpath);
@@ -396,59 +561,69 @@ int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, con
 
 	// add the request path segment by segment
 	while (*reqpath) {
-      // finding the closing '/'
-      const char *next = reqpath;
-      while (*next && (*next != '/')) {
-          ++next;
-      }
-      seglen = next - reqpath;
+		// finding the closing '/'
+		const char *next = reqpath;
+		while (*next && (*next != '/')) {
+			++next;
+		}
+		seglen = next - reqpath;
 
-      if (seglen == 0 || (seglen == 1 && reqpath[0] == '.')) {
-          // noop segment (/ or ./) => skip
-      }
-      else if (seglen == 2 && reqpath[0] == '.' && reqpath[1] == '.') {
-          // backpath (../)
+		if (seglen == 0 || (seglen == 1 && reqpath[0] == '.')) {
+			// noop segment (/ or ./) => skip
+		}
+		else if (seglen == 2 && reqpath[0] == '.' && reqpath[1] == '.') {
+			// backpath (../)
 
-          // try to crop the prior segment
-          do {
-              --pathlen;
-          } while (pathlen && newpath[pathlen - 1] != '/');
+			// try to crop the prior segment
+			do {
+				--pathlen;
+			} while (pathlen && newpath[pathlen - 1] != '/');
 
-          // now test if we are above root path length and
-          // get back if necessary
-          if (pathlen < rootlen) {
-              pathlen = rootlen;
-          }
-      }
-      else {
-          // an actual segment, append to dest path
-          if (*next) {
-              seglen++;
-          }
-          memcpy(newpath + pathlen, reqpath, seglen);
-          pathlen += seglen;
-      }
+			// now test if we are above root path length and
+			// get back if necessary
+			if (pathlen < rootlen) {
+				pathlen = rootlen;
+			}
+		}
+		else {
+			// an actual segment, append to dest path
+			if (*next) {
+				seglen++;
+			}
+			memcpy(newpath + pathlen, reqpath, seglen);
+			pathlen += seglen;
+		}
 
-      // skip over trailing slash => next segment
-      if (*next) {
-          ++next;
-      }
+		// skip over trailing slash => next segment
+		if (*next) {
+			++next;
+		}
 
-      reqpath = next;
-  }
-  pos = newpath + pathlen;
+		reqpath = next;
+	}
+	pos = newpath + pathlen;
 
 	// add the additional path
 	if (addpath) {
-		// make sure the current path ends with a slash
-		if(*(pos-1) != '/') {
-			*pos = '/';
-			pos++;
-		}
 
-		// remove leading slashes from the request path
-		while (*addpath=='/') {
-			addpath++;
+		// check if the addpath is only a file extension:
+		if (*addpath == '.') {
+			// make sure the current path does NOT end with a slash
+			if(*(pos-1) == '/') {
+				pos--;
+			}
+		}
+		else {
+			// make sure the current path ends with a slash
+			if(*(pos-1) != '/') {
+				*pos = '/';
+				pos++;
+			}
+
+			// remove leading slashes from the request path
+			while (*addpath=='/') {
+				addpath++;
+			}
 		}
 
 		seglen = strlen(addpath);
@@ -462,11 +637,59 @@ int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, con
 	return 1;
 }
 
+static void list_dir(http_request_handle *request, char *pathbuf, struct stat *statbuf, char *path, int len) {
+	DIR *dir;
+	struct dirent *de;
+
+	send_headers(request, 200, "OK", NULL, "text/html", -1);
+	chunk(request, "<HTML><HEAD><TITLE>Index of %s</TITLE></HEAD><BODY>", path);
+	chunk(request, "<H4>Index of %s</H4>", path);
+
+	chunk(request, "<TABLE>");
+	chunk(request, "<TR>");
+	chunk(request, "<TH style=\"width: 250;text-align: left;\">Name</TH><TH style=\"width: 100px;text-align: right;\">Size</TH>");
+	chunk(request, "</TR>");
+
+	if (len > 1) {
+		chunk(request, "<TR>");
+		chunk(request, "<TD><A HREF=\"..\">..</A></TD><TD></TD>");
+		chunk(request, "</TR>");
+	}
+
+	filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL); //restore folder pathbuf
+	dir = opendir(pathbuf);
+	while ((de = readdir(dir)) != NULL) {
+		filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, de->d_name);
+		stat(pathbuf, statbuf);
+
+		chunk(request, "<TR>");
+		chunk(request, "<TD>");
+		chunk(request, "<A HREF=\"%s%s\">", de->d_name, S_ISDIR(statbuf->st_mode) ? "/" : "");
+		chunk(request, "%s%s", de->d_name, S_ISDIR(statbuf->st_mode) ? "/</A>" : "</A> ");
+		chunk(request, "</TD>");
+		chunk(request, "<TD style=\"text-align: right;\">");
+		if (!S_ISDIR(statbuf->st_mode)) {
+			chunk(request, "%d", (int)statbuf->st_size);
+		}
+		chunk(request, "</TD>");
+		chunk(request, "</TR>");
+	}
+	closedir(dir);
+
+
+	chunk(request, "</TABLE>");
+
+	chunk(request, "</BODY></HTML>");
+
+	do_printf(request, "0\r\n\r\n");
+}
+
 int process(http_request_handle *request) {
-	char *buf;
+	char *reqbuf;
 	char *method;
 	char *path;
 	char *data = NULL;
+	char *databuf = NULL;
 	char *host = NULL;
 	char *protocol;
 	struct stat statbuf;
@@ -474,27 +697,27 @@ int process(http_request_handle *request) {
 	int len;
 
 	// Allocate space for buffers
-	buf = calloc(1, HTTP_BUFF_SIZE);
-	if (!buf) {
-		// TO DO out of memory
+	reqbuf = calloc(1, HTTP_BUFF_SIZE);
+	if (!reqbuf) {
+		send_error(request, 500, "Internal Server Error", NULL, "Error allocating memory.");
 		return 0;
 	}
 
 	pathbuf = calloc(1, HTTP_BUFF_SIZE);
 	if (!pathbuf) {
-		// TO DO out of memory
-		free(buf);
+		send_error(request, 500, "Internal Server Error", NULL, "Error allocating memory.");
+		free(reqbuf);
 		return 0;
 	}
 
-	if (!do_gets(buf, HTTP_BUFF_SIZE, request) || 0 == strlen(buf) ) {
+	if (!do_gets(reqbuf, HTTP_BUFF_SIZE, request) || 0 == strlen(reqbuf) ) {
 		send_error(request, 400, "Bad Request", NULL, "Got empty request buffer.");
-		free(buf);
+		free(reqbuf);
 		free(pathbuf);
 		return 0;
 	}
 
-	method = strtok(buf, " ");
+	method = strtok(reqbuf, " ");
 	path = strtok(NULL, " ");
 	protocol = strtok(NULL, "\r");
 
@@ -517,16 +740,16 @@ int process(http_request_handle *request) {
 		if(!strlen(path)) path = "/";
 	}
 
-	if(path) {
+	if(strcasecmp(method, "GET") == 0 && path) {
 		data = strchr(path, '?');
-	  if (data) {
-	  	*data = 0; //cut off the path
-	  	data++; //point to start of params
-	  }
+		if (data) {
+			*data = 0; //cut off the path
+			data++; //point to start of params
+		}
 	}
 
 	//only in AP mode we redirect arbitrary host names to our own host name
-	if (wifi_mode == WIFI_MODE_AP) {
+	if (wifi_mode == WIFI_MODE_AP || wifi_mode == WIFI_MODE_APSTA) {
 		//find the Host: header and check if it matches our IP or captive server name
 		while (do_gets(pathbuf, HTTP_BUFF_SIZE, request) && strlen(pathbuf)>0 ) {
 
@@ -548,7 +771,7 @@ int process(http_request_handle *request) {
 						//redirect
 						snprintf(pathbuf, HTTP_BUFF_SIZE, "Location: http://%s/", CAPTIVE_SERVER_NAME);
 						send_headers(request, 302, "Found", pathbuf, NULL, 0);
-						free(buf);
+						free(reqbuf);
 						free(pathbuf);
 						return 0;
 					}
@@ -559,92 +782,119 @@ int process(http_request_handle *request) {
 	} // AP mode
 
 	if (!method || !path) {
-		free(buf);
+		free(reqbuf);
 		free(pathbuf);
 		return -1; //protocol may be omitted
 	}
 
-	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol ? protocol:"");
+	if(strcasecmp(method, "POST") == 0) {
+		char *skip;
+		int contentlength = HTTP_BUFF_SIZE;
+		//skip headers to the actual request data
+		while (do_gets(pathbuf, HTTP_BUFF_SIZE, request) && strlen(pathbuf)>0 ) {
+			if (pathbuf && strlen(pathbuf)<3) {
+				skip = pathbuf;
+				while (*skip=='\r' || *skip=='\n') skip++;
+				if (strlen(skip)==0) {
+					break;
+				}
+			}
+			else {
+				//look for the content-length header to avoid
+				//a timeout later when reading the actual request data
 
-	if (!request->config->secure) fseek(request->file, 0, SEEK_CUR); // force change of stream direction
+				//quick check if the first char matches, only then do strcasestr
+				if(pathbuf[0]=='c' || pathbuf[0]=='C') {
+					char *contentlen = strcasestr(pathbuf, "Content-Length:");
 
-	if (strcasecmp(method, "GET") != 0) {
-		syslog(LOG_DEBUG, "http: %s not supported\r", method);
-		send_error(request, 501, "Not supported", NULL, "Method is not supported.");
-	} else if (!filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL)) {
-		send_error(request, 404, "Not Found", NULL, "File not found.");
-		syslog(LOG_DEBUG, "http: invalid path requested: %s\r", path);
-	} else if (stat(pathbuf, &statbuf) < 0) {
-		send_error(request, 404, "Not Found", NULL, "File not found.");
-		syslog(LOG_DEBUG, "http: %s Not found\r", pathbuf);
-	} else if (S_ISDIR(statbuf.st_mode)) {
-		len = strlen(path);
-		if (len == 0 || path[len - 1] != '/') {
-			//send a redirect
-			snprintf(pathbuf, HTTP_BUFF_SIZE, "Location: %s/", path);
-			send_error(request, 302, "Found", pathbuf, "Directories must end with a slash.");
-		} else {
-			filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.lua");
-			if (stat(pathbuf, &statbuf) >= 0) {
-				send_file(request, pathbuf, &statbuf, data);
-			} else {
-			      filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.html");
-				  if (stat(pathbuf, &statbuf) >= 0) {
-					  send_file(request, pathbuf, &statbuf, data);
-				  } else {
-					  DIR *dir;
-					  struct dirent *de;
-
-					  send_headers(request, 200, "OK", NULL, "text/html", -1);
-					  chunk(request, "<HTML><HEAD><TITLE>Index of %s</TITLE></HEAD><BODY>", path);
-					  chunk(request, "<H4>Index of %s</H4>", path);
-
-					  chunk(request, "<TABLE>");
-					  chunk(request, "<TR>");
-					  chunk(request, "<TH style=\"width: 250;text-align: left;\">Name</TH><TH style=\"width: 100px;text-align: right;\">Size</TH>");
-					  chunk(request, "</TR>");
-
-					  if (len > 1) {
-						  chunk(request, "<TR>");
-					  	chunk(request, "<TD><A HREF=\"..\">..</A></TD><TD></TD>");
-						  chunk(request, "</TR>");
-					  }
-
-					  filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL); //restore folder pathbuf
-					  dir = opendir(pathbuf);
-					  while ((de = readdir(dir)) != NULL) {
-					  	filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, de->d_name);
-						  stat(pathbuf, &statbuf);
-
-						  chunk(request, "<TR>");
-						  chunk(request, "<TD>");
-						  chunk(request, "<A HREF=\"%s%s\">", de->d_name, S_ISDIR(statbuf.st_mode) ? "/" : "");
-						  chunk(request, "%s%s", de->d_name, S_ISDIR(statbuf.st_mode) ? "/</A>" : "</A> ");
-						  chunk(request, "</TD>");
-						  chunk(request, "<TD style=\"text-align: right;\">");
-						  if (!S_ISDIR(statbuf.st_mode)) {
-								chunk(request, "%d", (int)statbuf.st_size);
-						  }
-						  chunk(request, "</TD>");
-						  chunk(request, "</TR>");
-					  }
-					  closedir(dir);
-
-
-					  chunk(request, "</TABLE>");
-
-					  chunk(request, "</BODY></HTML>");
-
-					  do_printf(request, "0\r\n\r\n");
-				  }
-			   }
-		}
-	} else {
-		send_file(request, pathbuf, &statbuf, data);
+					//check if the line begins with "Content-Length:"
+					if (contentlen==(char *)pathbuf) {
+						contentlen = strtok(contentlen, ":");  //Content-Length:
+						contentlen = strtok(NULL, "\r"); //the actual content length
+						while(*contentlen==' ') contentlen++;  //skip spaces after the :
+						contentlength = atoi(contentlen)+1;
+					}
+				}
+			}
+		} // while headers
+		//while empty lines
+		while (do_gets(pathbuf, contentlength, request) && strlen(pathbuf)>0 ) {
+			if (pathbuf && strlen(pathbuf)>0) {
+				skip = pathbuf;
+				while (*skip=='\r' || *skip=='\n') skip++;
+				if (strlen(skip)>0) {
+					break;
+				}
+			}
+		} // while empty lines
+		//preserve the data
+		if (pathbuf && strlen(pathbuf)>0 ) {
+			databuf = calloc(1, strlen(pathbuf)+1);
+			if (!databuf) {
+				send_error(request, 500, "Internal Server Error", NULL, "Error allocating POST data memory.");
+				free(reqbuf);
+				free(pathbuf);
+				return 0;
+			}
+			strcpy(databuf, pathbuf);
+			data = databuf;
+		} // while
 	}
 
-	free(buf);
+	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol ? protocol:"");
+
+	if (!request->config->secure) shutdown(request->socket, SHUT_RD);
+
+	if (strcasecmp(method, "GET") != 0 && strcasecmp(method, "POST") != 0) {
+		syslog(LOG_DEBUG, "http: %s not supported\r", method);
+		send_error(request, 501, "Not supported", NULL, "Method is not supported.");
+	}
+	else {
+		bool found = false;
+
+		//look for a file or folder with the exact name, .lua extension or .html extension
+		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL)    && stat(pathbuf, &statbuf) == 0) found = true;
+		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, ".lua")  && stat(pathbuf, &statbuf) == 0) found = true;
+		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, ".html") && stat(pathbuf, &statbuf) == 0) found = true;
+
+		if (!found) {
+			send_error(request, 404, "Not Found", NULL, "File not found.");
+			syslog(LOG_DEBUG, "http: %s Not found\r", pathbuf);
+		}
+		else if (S_ISREG(statbuf.st_mode)) {
+			//send the found file
+			send_file(request, pathbuf, &statbuf, data);
+		}
+		else if (S_ISDIR(statbuf.st_mode)) {
+
+			len = strlen(path);
+			if (len == 0 || path[len - 1] != '/') {
+				//send a redirect
+				snprintf(pathbuf, HTTP_BUFF_SIZE, "Location: %s/", path);
+				send_error(request, 302, "Found", pathbuf, "Directories must end with a slash.");
+			} else {
+				//try to find index.lua or index.html
+				found = false;
+
+				//look for a file named index.lua or index.html
+				if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.lua")  && stat(pathbuf, &statbuf) == 0) found = true;
+				if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.html") && stat(pathbuf, &statbuf) == 0) found = true;
+
+				if (!found || !S_ISREG(statbuf.st_mode)) {
+					//generate a dirlisting
+					list_dir(request, pathbuf, &statbuf, path, len);
+				}
+				else {
+					send_file(request, pathbuf, &statbuf, data);
+				}
+			}
+
+		} // S_ISDIR
+	}
+
+	free(reqbuf);
 	free(pathbuf);
+	if (databuf) free(databuf);
 
 	return 0;
 }
@@ -654,8 +904,9 @@ static void http_net_callback(system_event_t *event){
 
 	switch (event->event_id) {
 		case SYSTEM_EVENT_STA_START:                /**< ESP32 station start */
-			if (wifi_mode != WIFI_MODE_STA) {
-				wifi_mode = WIFI_MODE_STA;
+			//only if we have previously been in AP mode
+			if (wifi_mode == WIFI_MODE_AP) {
+				esp_wifi_get_mode(&wifi_mode);
 
 				syslog(LOG_DEBUG, "http: switched to non-captive mode\n");
 				http_captiverun = captivedns_running();
@@ -667,11 +918,12 @@ static void http_net_callback(system_event_t *event){
 			break;
 
 		case SYSTEM_EVENT_AP_START:                 /**< ESP32 soft-AP start */
-			if (wifi_mode != WIFI_MODE_STA) {
+			//only if we have previously been in STA mode
+			if (wifi_mode == WIFI_MODE_STA) {
 				driver_error_t *error;
 				ifconfig_t info;
 
-				wifi_mode = WIFI_MODE_AP;
+				esp_wifi_get_mode(&wifi_mode);
 				if ((error = wifi_stat(&info))) {
 					strcpy(ip4addr, "0.0.0.0");
 				}
@@ -692,16 +944,17 @@ static void http_net_callback(system_event_t *event){
 }
 
 static void mbedtls_zeroize( void *v, size_t n ) {
-    volatile unsigned char *p = v; while( n-- ) *p++ = 0;
+	volatile unsigned char *p = v; while( n-- ) *p++ = 0;
 }
 
 static void *http_thread(void *arg) {
 	http_server_config *config = (http_server_config*) arg;
 	struct sockaddr_in6 sin;
-  SSL_CTX *ctx = NULL;
-  SSL *ssl = NULL;
+	SSL_CTX *ctx = NULL;
+	SSL *ssl = NULL;
+	int rc = 0;
 
-  	net_init();
+	net_init();
 	if(0 == *config->server) {
 		*config->server = socket(AF_INET6, SOCK_STREAM, 0);
 		if(0 > *config->server) {
@@ -730,9 +983,7 @@ static void *http_thread(void *arg) {
 		}
 
 		// Set the timeout for accept
-		struct timeval timeout;
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
+		struct timeval timeout = {1L, 0L}; /* check for shutdown every second */
 		setsockopt(*config->server, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 	}
 
@@ -748,16 +999,16 @@ static void *http_thread(void *arg) {
 		unsigned char *certificate_buf;
 		if( mbedtls_pk_load_file( config->certificate, &certificate_buf, &certificate_bytes ) != 0 ) {
 			syslog(LOG_ERR, "couldn't load SSL certificate\n");
-		  SSL_CTX_free(ctx);
-		  ctx = NULL;
+			SSL_CTX_free(ctx);
+			ctx = NULL;
 			return NULL;
 		}
 		if (!SSL_CTX_use_certificate_ASN1(ctx, certificate_bytes, certificate_buf)) {
 			syslog(LOG_ERR, "couldn't set SSL certificate\n");
 			mbedtls_zeroize( certificate_buf, certificate_bytes );
 			mbedtls_free( certificate_buf );
-		  SSL_CTX_free(ctx);
-		  ctx = NULL;
+			SSL_CTX_free(ctx);
+			ctx = NULL;
 			return NULL;
 		}
 		mbedtls_zeroize( certificate_buf, certificate_bytes );
@@ -768,16 +1019,16 @@ static void *http_thread(void *arg) {
 		unsigned char *private_key_buf;
 		if( mbedtls_pk_load_file( config->private_key, &private_key_buf, &private_key_bytes ) != 0 ) {
 			syslog(LOG_ERR, "couldn't load SSL certificate\n");
-		  SSL_CTX_free(ctx);
-		  ctx = NULL;
+			SSL_CTX_free(ctx);
+			ctx = NULL;
 			return NULL;
 		}
 		if (!SSL_CTX_use_PrivateKey_ASN1(0, ctx, private_key_buf, private_key_bytes)) {
 			syslog(LOG_ERR, "couldn't load SSL private key\n");
 			mbedtls_zeroize( private_key_buf, private_key_bytes );
 			mbedtls_free( private_key_buf );
-		  SSL_CTX_free(ctx);
-		  ctx = NULL;
+			SSL_CTX_free(ctx);
+			ctx = NULL;
 			return NULL;
 		}
 		mbedtls_zeroize( private_key_buf, private_key_bytes );
@@ -791,8 +1042,8 @@ static void *http_thread(void *arg) {
 		int client;
 
 		if (config->secure) {
-		  ssl = SSL_new(ctx);
-		  if (!ssl) {
+			ssl = SSL_new(ctx);
+			if (!ssl) {
 				syslog(LOG_ERR, "couldn't create SSL session\n");
 				break; //exit the loop to shutdown the server
 			}
@@ -808,17 +1059,22 @@ static void *http_thread(void *arg) {
 			setsockopt(client, SOL_SOCKET, SO_LINGER, &so_linger, sizeof(so_linger));
 
 			// Set a timeout for send / receive
-			struct timeval tout;
-			tout.tv_sec = 10;
-			tout.tv_usec = 0;
-			setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &tout, sizeof(tout));
-			setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &tout, sizeof(tout));
+			struct timeval timeout = {60L, 0L}; /* 1 minute to send all data */
+			setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+			setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 
 			if (config->secure) {
 				SSL_set_fd(ssl, client);
 
-				if (!SSL_accept(ssl)) {
-					syslog(LOG_ERR, "couldn't accept SSL connection\n");
+				if (!(rc = SSL_accept(ssl))) {
+					int err_SSL_get_error = SSL_get_error(ssl, rc);
+					if (err_SSL_get_error == SSL_ERROR_SYSCALL) {
+						if (errno != EAGAIN && errno != ECONNRESET) {
+							syslog(LOG_ERR, "couldn't accept SSL connection - RC %d errno %d %s\n", rc, errno, strerror(errno));
+						}
+					} else {
+						syslog(LOG_ERR, "couldn't accept SSL connection - SSL_get_error() returned: %i\n", err_SSL_get_error);
+					}
 				} else {
 					http_request_handle request = HTTP_Request_Secure_initializer;
 					process(&request);
@@ -828,11 +1084,9 @@ static void *http_thread(void *arg) {
 			}
 			else
 			{
-				// Create the socket stream
-				FILE *stream = fdopen(client, "a+");
 				http_request_handle request = HTTP_Request_Normal_initializer;
 				process(&request);
-				fclose(stream);
+				shutdown(client, SHUT_RDWR);
 			}
 
 			close(client);
@@ -902,7 +1156,7 @@ int http_start(lua_State* L) {
 
 		esp_log_level_set("wifi", ESP_LOG_NONE);
 
-		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&wifi_mode)))) {
+		if ((error = wifi_check_error(esp_wifi_get_mode(&wifi_mode)))) {
 			esp_log_level_set("wifi", ESP_LOG_ERROR);
 			free(error);
 		} else {
@@ -961,8 +1215,10 @@ int http_start(lua_State* L) {
 				return luaL_error(L, "couldn't start secure http_thread");
 			}
 
-			pthread_setname_np(thread_normal, "ssl_http");
+			pthread_setname_np(thread_secure, "https");
 		}
+
+		pthread_attr_destroy(&attr);
 	}
 
 	return 0;

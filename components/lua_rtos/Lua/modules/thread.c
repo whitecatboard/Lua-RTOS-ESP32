@@ -62,7 +62,8 @@
 #define LUA_THREAD_ERR_INVALID_PRIORITY     	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  5)
 #define LUA_THREAD_ERR_INVALID_CPU_AFFINITY 	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  6)
 #define LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE 	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  7)
-#define LUA_THREAD_ERR_INVALID_THREAD_ID	    (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  7)
+#define LUA_THREAD_ERR_INVALID_THREAD_ID	    (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  8)
+#define LUA_THREAD_ERR_GET_TASKLIST	          (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  9)
 
 // Register driver and messages
 DRIVER_REGISTER_BEGIN(THREAD,thread,NULL,NULL,NULL);
@@ -75,6 +76,7 @@ DRIVER_REGISTER_BEGIN(THREAD,thread,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(THREAD, thread, InvalidCPUAffinity, "invalid CPU affinity", LUA_THREAD_ERR_INVALID_CPU_AFFINITY);
 	DRIVER_REGISTER_ERROR(THREAD, thread, CannotMonitorAsTable, "you can't monitor thread as table", LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE);
 	DRIVER_REGISTER_ERROR(THREAD, thread, InvalidThreadId, "invalid thread id", LUA_THREAD_ERR_INVALID_THREAD_ID);
+	DRIVER_REGISTER_ERROR(THREAD, thread, GetTaskList, "cannot get tasklist", LUA_THREAD_ERR_GET_TASKLIST);
 DRIVER_REGISTER_END(THREAD,thread,NULL,NULL,NULL);
 
 void thread_terminated(void *args) {
@@ -142,8 +144,11 @@ static int lthread_suspend_pthreads(lua_State *L, int thid) {
 	}
 
 	info = GetTaskInfo();
-	cinfo = info;
+	if (!info) {
+		luaL_exception(L, LUA_THREAD_ERR_GET_TASKLIST);
+	}
 
+	cinfo = info;
 	while (cinfo->stack_size > 0) {
 		if ((cinfo->task_type == 2) && (cinfo->thid != 1)) {
 			if (thid && (cinfo->thid == thid)) {
@@ -188,8 +193,11 @@ static int lthread_resume_pthreads(lua_State *L, int thid) {
 	}
 
 	info = GetTaskInfo();
-	cinfo = info;
+	if (!info) {
+		luaL_exception(L, LUA_THREAD_ERR_GET_TASKLIST);
+	}
 
+	cinfo = info;
 	while (cinfo->stack_size > 0) {
 		if ((cinfo->task_type == 2) && (cinfo->thid != 1)) {
 			if (thid && (cinfo->thid == thid)) {
@@ -234,8 +242,11 @@ static int lthread_stop_pthreads(lua_State *L, int thid) {
 	}
 
 	info = GetTaskInfo();
-	cinfo = info;
+	if (!info) {
+		luaL_exception(L, LUA_THREAD_ERR_GET_TASKLIST);
+	}
 
+	cinfo = info;
 	while (cinfo->stack_size > 0) {
 		if ((cinfo->task_type == 2) && (cinfo->thid != 1)) {
 			if (thid && (cinfo->thid == thid)) {
@@ -282,7 +293,7 @@ static int lthread_list(lua_State *L) {
 
 	// Check if user wants result as a table, or wants result
 	// on the console
-	if (lua_gettop(L) == 1) {
+	if (lua_gettop(L) > 0) {
 		luaL_checktype(L, 1, LUA_TBOOLEAN);
 		if (lua_toboolean(L, 1)) {
 			table = 1;
@@ -317,6 +328,9 @@ static int lthread_list(lua_State *L) {
 
 monitor_loop:
 	info = GetTaskInfo();
+	if (!info) {
+		luaL_exception(L, LUA_THREAD_ERR_GET_TASKLIST);
+	}
 
 	if (monitor) {
 		console_gotoxy(0,0);
@@ -324,16 +338,23 @@ monitor_loop:
 	}
 
 	if (!table) {
+#ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+		printf("-----------------------------------------------------------------------------------------------\n");
+		printf("     |        |                  |        |        CPU        |            STACK               \n");
+		printf("THID | TYPE   | NAME             | STATUS | CORE   PRIO     %% |   SIZE     FREE     USED       \n");
+		printf("-----------------------------------------------------------------------------------------------\n");
+#else
 		printf("-----------------------------------------------------------------------------------------\n");
 		printf("     |        |                  |        |      |      |            STACK               \n");
 		printf("THID | TYPE   | NAME             | STATUS | CORE | PRIO |   SIZE     FREE     USED       \n");
 		printf("-----------------------------------------------------------------------------------------\n");
+#endif
 	} else {
-		lua_createtable(L, 0, 0);
+		lua_newtable(L);
 	}
 
 	// For each Lua thread ...
-	int i = 0;
+	int table_row = 0;
 
 	cinfo = info;
 	while (cinfo->stack_size > 0) {
@@ -358,51 +379,63 @@ monitor_loop:
 
 		if (!table) {
 			printf(
+#ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+					"%4d   %-6s   %-16s   %-6s   % 4d   % 4d   % 3d   % 6d   % 6d   % 6d (% 3d%%)   \n",
+#else
 					"%4d   %-6s   %-16s   %-6s   % 4d   % 4d   % 6d   % 6d   % 6d (% 3d%%)   \n",
+#endif
 					cinfo->thid,
 					type,
 					cinfo->name,
 					status,
 					cinfo->core,
 					cinfo->prio,
+#ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+					cinfo->cpu_usage,
+#endif
 					cinfo->stack_size,
 					cinfo->free_stack,
 					cinfo->stack_size - cinfo->free_stack,
 					(int)(100 * ((float)(cinfo->stack_size - cinfo->free_stack) / (float)cinfo->stack_size))
 			);
 		} else {
-			lua_pushinteger(L, i);
 
-			lua_createtable(L, 0, 9);
+			lua_pushnumber(L, ++table_row); //row index
+			lua_newtable(L);
 
 			lua_pushinteger(L, cinfo->thid);
-	        lua_setfield (L, -2, "thid");
+			lua_setfield (L, -2, "thid");
 
 			lua_pushstring(L, type);
-	        lua_setfield (L, -2, "type");
+			lua_setfield (L, -2, "type");
 
-	        lua_pushstring(L, cinfo->name);
-	        lua_setfield (L, -2, "name");
+			lua_pushstring(L, cinfo->name);
+			lua_setfield (L, -2, "name");
 
-	        lua_pushstring(L, status);
-	        lua_setfield (L, -2, "status");
+			lua_pushstring(L, status);
+			lua_setfield (L, -2, "status");
 
-	        lua_pushinteger(L, cinfo->core);
-	        lua_setfield (L, -2, "core");
+			lua_pushinteger(L, cinfo->core);
+			lua_setfield (L, -2, "core");
 
-	        lua_pushinteger(L, cinfo->prio);
-	        lua_setfield (L, -2, "prio");
+			lua_pushinteger(L, cinfo->prio);
+			lua_setfield (L, -2, "prio");
 
-	        lua_pushinteger(L, cinfo->stack_size);
-	        lua_setfield (L, -2, "stack_size");
+#ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+			lua_pushinteger(L, cinfo->cpu_usage);
+			lua_setfield (L, -2, "usage");
+#endif
 
-	        lua_pushinteger(L, cinfo->free_stack);
-	        lua_setfield (L, -2, "free_stack");
+			lua_pushinteger(L, cinfo->stack_size);
+			lua_setfield (L, -2, "stack_size");
 
-	        lua_pushinteger(L, cinfo->stack_size - cinfo->free_stack);
-	        lua_setfield (L, -2, "used_stack");
+			lua_pushinteger(L, cinfo->free_stack);
+			lua_setfield (L, -2, "free_stack");
 
-	        lua_settable(L,-3);
+			lua_pushinteger(L, cinfo->stack_size - cinfo->free_stack);
+			lua_setfield (L, -2, "used_stack");
+
+			lua_settable( L, -3 );
 		}
 
 		cinfo++;
@@ -449,7 +482,7 @@ static int new_thread(lua_State* L, int run) {
     int stack = luaL_optinteger(L, 2, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE);
     int priority = luaL_optinteger(L, 3, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY);
     int affinity = luaL_optinteger(L, 4, CONFIG_LUA_RTOS_LUA_THREAD_CPU);
-    const char *name = luaL_optstring(L, 5, "lthread");
+    const char *name = luaL_optstring(L, 5, "lua_thread");
 
     // Sanity checks
     if (stack < PTHREAD_STACK_MIN) {

@@ -195,6 +195,7 @@ task_info_t *GetTaskInfo() {
 	TaskStatus_t *status_array;
 	UBaseType_t task_num = 0;
 	UBaseType_t start_task_num = 0;
+	uint32_t total_runtime = 0;
 
 	//Allocate status_array
 	start_task_num = uxTaskGetNumberOfTasks();
@@ -204,13 +205,20 @@ task_info_t *GetTaskInfo() {
 		return NULL;
 	}
 
-	task_num = uxTaskGetSystemState(status_array, (start_task_num), NULL);
+#ifndef CONFIG_FREERTOS_USE_TRACE_FACILITY
+#warning Please enable CONFIG_FREERTOS_USE_TRACE_FACILITY to support thread.list
+	return NULL;
+#else
+	task_num = uxTaskGetSystemState(status_array, (start_task_num), &total_runtime);
+	// For percentage calculations.
+	total_runtime /= 100UL;
 
 	info = (task_info_t *)calloc(task_num + 1, sizeof(task_info_t));
 	if (!info) {
 		free(status_array);
 		return NULL;
 	}
+#endif
 
 	for(int i = 0; i <task_num; i++){
 		// Get the task TCB
@@ -254,6 +262,15 @@ task_info_t *GetTaskInfo() {
 		info[i].free_stack = uxTaskGetStackHighWaterMark(status_array[i].xHandle);
 		info[i].stack_size = ctask->pxEndOfStack - ctask->pxStack + 4;
 		memcpy(info[i].name, status_array[i].pcTaskName, configMAX_TASK_NAME_LEN);
+
+		info[i].cpu_usage = 0;
+#ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+		if( total_runtime > 0 ) {
+			// only gives valid values if CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS is defined
+			info[i].cpu_usage = status_array[i].ulRunTimeCounter / total_runtime;
+		}
+#endif
+
 	}
 
 	free(status_array);

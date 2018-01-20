@@ -53,9 +53,9 @@ void _sys_init();
 void *lua_start(void *arg) {
 	for(;;) {
 		luaos_main();
-    }
+	}
 
-    return NULL;
+	return NULL;
 }
 
 int linenoise(char *buf, const char *prompt);
@@ -73,34 +73,33 @@ void app_main() {
 	pthread_attr_t attr;
 	struct sched_param sched;
 	pthread_t thread;
-    int res;
-	
+	int res;
+
 	debug_free_mem_begin(lua_main_thread);
-    
+
 	// Init thread attributes
 	pthread_attr_init(&attr);
 
 	// Set stack size
-    pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_STACK_SIZE);
+	pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_STACK_SIZE);
 
-    // Set priority
-    sched.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
-    pthread_attr_setschedparam(&attr, &sched);
+	// Set priority
+	sched.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
+	pthread_attr_setschedparam(&attr, &sched);
 
-    // Set CPU
-    cpu_set_t cpu_set = CPU_INITIALIZER;
+	// Set CPU
+	cpu_set_t cpu_set = CPU_INITIALIZER;
 
-    CPU_SET(CONFIG_LUA_RTOS_LUA_TASK_CPU, &cpu_set);
+	CPU_SET(CONFIG_LUA_RTOS_LUA_TASK_CPU, &cpu_set);
 
-    pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+	pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
 
-    // Create thread
-    res = pthread_create(&thread, &attr, lua_start, NULL);
-    if (res) {
+	// Create thread
+	res = pthread_create(&thread, &attr, lua_start, NULL);
+	if (res) {
 		panic("Cannot start lua");
 	}
 
-    pthread_setname_np(thread, "lua");
-	
-	debug_free_mem_end(lua_main_thread, NULL);	
+	pthread_setname_np(thread, "lua_main");
+	debug_free_mem_end(lua_main_thread, NULL);
 }

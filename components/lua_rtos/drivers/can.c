@@ -221,8 +221,8 @@ static void *gw_thread(void *arg) {
 				return NULL;
 			}
 
-			pthread_setname_np(thread_up, "can gw up");
-			pthread_setname_np(thread_down, "can gw down");
+			pthread_setname_np(thread_up, "can_gw_up");
+			pthread_setname_np(thread_down, "can_gw_down");
 
 			pthread_join(thread_up, NULL);
 			pthread_join(thread_down, NULL);
@@ -485,7 +485,7 @@ driver_error_t *can_gateway_start(int32_t unit, uint16_t speed, int32_t port) {
 		return driver_error(CAN_DRIVER, CAN_ERR_NOT_ENOUGH_MEMORY, "can't start main thread");
 	}
 
-	pthread_setname_np(gw_config->thread, "can gw");
+	pthread_setname_np(gw_config->thread, "can_gw");
 
 	return NULL;
 }

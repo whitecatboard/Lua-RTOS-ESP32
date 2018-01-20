@@ -179,7 +179,7 @@ static int l_nvs_read(lua_State *L) {
     void *val_val = NULL;
 
     // Sanity checks, and check arguments
-    if (total != 2 ) {
+    if (total < 2 ) {
     	return luaL_error(L, "missing arguments");
     }
 
@@ -203,6 +203,14 @@ static int l_nvs_read(lua_State *L) {
     size_t key_size = 0;
     err = nvs_get_blob(handle_to_settings, key,NULL, &key_size);
     if (err != ESP_OK) {
+
+			if (err == ESP_ERR_NVS_NOT_FOUND && total == 3) {
+				nvs_close(handle_to_settings);
+
+				lua_pushvalue(L, 3);
+		    return 1;
+			}
+
     	nvs_error(L, err);
     	nvs_close(handle_to_settings);
     	return 0;

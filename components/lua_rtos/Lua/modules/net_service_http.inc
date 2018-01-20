@@ -40,6 +40,7 @@
 extern int http_start(lua_State* L);
 extern void http_stop();
 extern int http_print(lua_State* L);
+extern int http_status(lua_State* L);
 
 static int lhttp_start(lua_State* L) {
 	return http_start(L);
@@ -54,10 +55,15 @@ static int lhttp_print(lua_State* L) {
 	return http_print(L);
 }
 
+static int lhttp_status(lua_State* L) {
+	return http_status(L);
+}
+
 static const LUA_REG_TYPE http_map[] = {
     { LSTRKEY( "start" ),	 LFUNCVAL( lhttp_start   ) },
     { LSTRKEY( "stop"  ),	 LFUNCVAL( lhttp_stop    ) },
     { LSTRKEY( "print_chunk"  ),	 LFUNCVAL( lhttp_print    ) },
+    { LSTRKEY( "set_headers"  ),	 LFUNCVAL( lhttp_status    ) },
 	{ LNILKEY, LNILVAL }
 };
 

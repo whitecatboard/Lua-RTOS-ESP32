@@ -127,6 +127,53 @@ static int get_command(char *tb, char *te) {
 	return -1;
 }
 
+static void get_args_from_shell_command(char *buffer, char *filename, char *args) {
+	char* pos = args;
+
+	//cut off trailing any spaces
+	for(char* trimbuf = buffer + strlen(buffer) - 1; trimbuf > buffer && *trimbuf==' '; trimbuf--)
+		*trimbuf=0;
+
+	char* param = buffer + strlen(filename);
+	//skip leading spaces
+	while(*param==' ') param++;
+
+	bool found = false;
+	while((pos - args) < 250 && *param != 0) {
+		if (!found) {
+			*pos = '"';
+			pos++;
+			found = true;
+		}
+
+		if (*param==' ') {
+			*pos = '"';
+
+			if (*(param+1) != 0) {
+				pos++;
+				*pos = ',';
+				pos++;
+				*pos = '"';
+			}
+
+			while(*param==' ') param++;
+		}
+		else {
+			*pos = *param;
+			param++;
+		}
+		pos++;
+	}
+
+	if (found) {
+		*pos = '"';
+		pos++;
+	}
+
+	*pos = 0;
+	return;
+}
+
 void lua_shell(lua_State* L, char *buffer) {
 	char *cbuffer = buffer;
 	int itoken = 0;
@@ -134,7 +181,7 @@ void lua_shell(lua_State* L, char *buffer) {
 	char *arg;
 	token_t *tokens;
 
-	arg = calloc(1, 256);
+	arg = calloc(1, LUA_MAXINPUT);
 	if (!arg) {
 		goto exit;
 	}
@@ -242,7 +289,7 @@ void lua_shell(lua_State* L, char *buffer) {
 		// Not a command - maybe it's a lua script?
 
 		int tl = tokens[0].te - tokens[0].tb + 1;
-		if ((tl > sizeof(arg) - 1) || (tl > PATH_MAX)) {
+		if ((tl > LUA_MAXINPUT - 1) || (tl > PATH_MAX)) {
 			goto exit;
 		}
 
@@ -264,14 +311,31 @@ void lua_shell(lua_State* L, char *buffer) {
 			goto exit;
 		}
 		else if (s.st_mode == S_IFREG) {
-			*buffer = 0x00;
-
 			// It's a file
-			strlcat(buffer,"dofile(\"",256);
-			strlcat(buffer,arg, 256);
-			strlcat(buffer,"\")", 256);
 
-			goto exit;
+			char *argbuf = calloc(1, LUA_MAXINPUT);
+			if (!argbuf) {
+				goto exit;
+			}
+
+			get_args_from_shell_command(buffer, arg, argbuf);
+
+			*buffer = 0x00;
+			if (strlen(argbuf)) {
+				strlcat(buffer,"assert(loadfile(\"",LUA_MAXINPUT);
+				strlcat(buffer,arg, LUA_MAXINPUT); //script name
+				strlcat(buffer,"\"))(", LUA_MAXINPUT);
+				strlcat(buffer,argbuf, LUA_MAXINPUT); //script params
+				strlcat(buffer,")", LUA_MAXINPUT);
+			}
+			else {
+				strlcat(buffer,"dofile(\"",LUA_MAXINPUT);
+				strlcat(buffer,arg, LUA_MAXINPUT); //script name
+				strlcat(buffer,"\")", LUA_MAXINPUT);
+			}
+
+			if (argbuf)
+				free(argbuf);
 		}
 	}
 

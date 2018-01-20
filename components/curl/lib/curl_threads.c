@@ -71,6 +71,7 @@ curl_thread_t Curl_thread_create(unsigned int (*func) (void *), void *arg)
 
   if(pthread_create(t, NULL, curl_thread_create_thunk, ac) != 0)
     goto err;
+  pthread_setname_np(t, "curl");
 
   return t;
 

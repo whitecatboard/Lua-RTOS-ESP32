@@ -342,14 +342,18 @@ static int os_ls (lua_State *L) {
 			}
 			//string given is not a valid path
 			//so try to find a matching file
+			if (*filename == '/') {
+				*filename = 0; //will cut off the filename from the path
+				filename++;
+				if(strlen(path)==0) {
+					path = "/";
+				}
+			}
+			//try to find a matching file
 			//in the current folder
 			if (filename==path) {
 				filename = (char*)path;
 				path = NULL;
-			}
-			else if (*filename == '/') {
-				*filename = 0; //will cut off the filename from the path
-				filename++;
 			}
 		}
 		else {
@@ -399,7 +403,7 @@ static int os_ls (lua_State *L) {
 			strcpy(size, "       -");
 		}
 
-		if (filename==NULL || 0==fnmatch(filename, ent->d_name, 0)) { //our implementation above does support only a subset
+		if (filename==NULL || 0==strcmp(filename, ent->d_name) || 0==fnmatch(filename, ent->d_name, 0)) { //our implementation above does support only a subset
 			printf("%c\t%s\t%s\t%s\n", type, size, tbuffer, ent->d_name);
 		}
 	}
@@ -580,6 +584,29 @@ static int os_cp(lua_State *L) {
 	FILE *fsrc, *fdst;
 	char c;
 	int res1, res2;
+	struct stat sb;
+
+	//make sure not to damage files if src file is dst file
+	//currently only works on fat...
+	if (strcmp((const char *)mount_device(src),"fat") == 0 || 
+	    strcmp((const char *)mount_device(dst),"fat") == 0) {
+		dev_t src_dev;
+		ino_t src_ino;
+
+		if (stat(src, &sb) != 0) {
+			return luaL_fileresult(L, 0, src);
+		}
+		src_dev = sb.st_dev;
+		src_ino = sb.st_ino;
+
+		if (stat(dst, &sb) == 0) {
+			if (sb.st_dev == src_dev && sb.st_ino == src_ino) {
+				//if src file is dst file just exit successful
+				lua_pushboolean(L, 1);
+				return 1;
+			}
+		}
+	}
 
 	fsrc = fopen(src,"r");
 	if (!fsrc) {
