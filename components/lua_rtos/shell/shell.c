@@ -77,9 +77,11 @@ static void *shell(void *arg) {
     // Run lua in interpreter mode
     doREPL(pvGetLuaState());
 
+	printf("thread %d\r\n", config->parent_thread);
+
     // The lua interpreter exit when the user enters the Ctrl-C key
     // This situation must be interpreted as a SIGINT signal
-    pthread_kill(2, SIGINT);
+    pthread_kill(config->parent_thread, SIGINT);
 
 	return NULL;
 }

@@ -38,6 +38,7 @@ typedef struct {
 	int fdin;
 	int fdout;
 	int fderr;
+	int parent_thread;
 } shell_config_t;
 
 int create_shell(shell_config_t *config);

@@ -885,13 +885,19 @@ static int ptycommand(struct Channel *channel, struct ChanSess *chansess) {
 		return DROPBEAR_FAILURE;
 	}
 
-	shell_config_t config;
+	shell_config_t *config;
 
-	config.fdin = chansess->slave;
-	config.fdout = chansess->slave;
-	config.fderr = chansess->slave;
+	config = malloc(sizeof(shell_config_t));
+	if (config) {
+		config->fdin = chansess->slave;
+		config->fdout = chansess->slave;
+		config->fderr = chansess->slave;
+		config->parent_thread = pthread_self();
 
-	create_shell(&config);
+		create_shell(config);
+	} else {
+		return DROPBEAR_FAILURE;
+	}
 
 #if !__XTENSA__
 	close(chansess->slave);
