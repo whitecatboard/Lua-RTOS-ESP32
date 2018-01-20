@@ -27,7 +27,7 @@ index ab645fcc..61d75ac3 100644
  
  
 diff --git a/components/vfs/vfs.c b/components/vfs/vfs.c
-index 5dbd462c..5f7e419f 100644
+index 5dbd462c..a54c4f42 100644
 --- a/components/vfs/vfs.c
 +++ b/components/vfs/vfs.c
 @@ -269,6 +269,7 @@ ssize_t esp_vfs_write(struct _reent *r, int fd, const void * data, size_t size)
@@ -38,7 +38,7 @@ index 5dbd462c..5f7e419f 100644
      int local_fd = translate_fd(vfs, fd);
      ssize_t ret;
      CHECK_AND_CALL(ret, r, vfs, write, local_fd, data, size);
-@@ -552,3 +553,187 @@ int fsync(int fd)
+@@ -552,3 +553,191 @@ int fsync(int fd)
      CHECK_AND_CALL(ret, r, vfs, fsync, local_fd);
      return ret;
  }
@@ -204,11 +204,12 @@ index 5dbd462c..5f7e419f 100644
 +          }
 +     }
 +
-+     if (__select_cancelled) {
-+         __select_cancelled = 0;
-+         __errno_r(r) = 4;
-+         return -1;
-+     }
++   // TODO: find a more elegat solution to stop select ....
++   if (__select_cancelled) {
++        __select_cancelled = 0;
++        __errno_r(r) = 4;
++        return -1;
++   }
 +
 +      // If some file descriptor are set, terminate scan
 +      if (num > 0) {
@@ -221,6 +222,9 @@ index 5dbd462c..5f7e419f 100644
 +          if ((now.tv_sec - start.tv_sec) * 1000 - (((now.tv_usec - start.tv_usec) + 500) / 1000) >= msectimeout) {
 +              break;
 +          }
++      } else {
++         // If not timeout, exit
++         break;
 +      }
 +   }
 +
