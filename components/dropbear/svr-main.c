@@ -224,13 +224,13 @@ static void create_server_keys() {
 static void *dropbear_thread(void *arg) {
 	driver_error_t *error;
 
-	// Create dropbear directory structure if not exists
+	// Create dropbear directory structure if not exist
 	mkpath("/etc/dropbear");
 
-	// Create the system passwd file if not exists
+	// Create the system passwd file if not exist
 	mkfile("/etc/passwd");
 
-	// Create the server keys if not exists
+	// Create the server keys if not exist
 	create_server_keys();
 
 	// Wait for network
@@ -254,7 +254,7 @@ void dropbear_server_start() {
 
 	syslog(LOG_INFO, "dropbear: starting ...");
 
-	// Start a new threat to launch the dropbear server
+	// Start a new thread to launch the dropbear server
 	pthread_attr_init(&attr);
 
     pthread_attr_setstacksize(&attr, 12288);
