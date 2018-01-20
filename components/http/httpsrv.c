@@ -106,13 +106,13 @@ typedef struct {
 
 typedef struct {
   http_server_config *config;
-  FILE *file;
+  int socket;
   SSL *ssl;
   int headers_sent;
 } http_request_handle;
 
-#define HTTP_Request_Normal_initializer { config, stream, NULL, 0 };
-#define HTTP_Request_Secure_initializer { config, NULL, ssl, 0 };
+#define HTTP_Request_Normal_initializer { config, client, NULL, 0 };
+#define HTTP_Request_Secure_initializer { config, client, ssl,  0 };
 
 static http_server_config http_normal = HTTP_Normal_initializer;
 static http_server_config http_secure = HTTP_Secure_initializer;
@@ -149,7 +149,7 @@ char *get_mime_type(char *name) {
 }
 
 static int request_write(http_request_handle *request, char *buffer, int length) {
-	return (request->config->secure) ? SSL_write(request->ssl, buffer, length) : fwrite(buffer, 1, length, request->file);
+	return (request->config->secure) ? SSL_write(request->ssl, buffer, length) : send(request->socket, buffer, length, MSG_DONTWAIT);
 }
 
 static int do_printf(http_request_handle *request, const char *fmt, ...) {
@@ -177,21 +177,66 @@ static int do_printf(http_request_handle *request, const char *fmt, ...) {
 
 char *do_gets(char *s, int size, http_request_handle *request) {
 
-	if (!request->config->secure)
-		return fgets(s, size, request->file);
+	int socket = request->config->secure ? SSL_get_fd(request->ssl) : request->socket;
+
+	fd_set set;
+	FD_ZERO(&set); /* clear the set */
+	FD_SET(socket, &set); /* add our file descriptor to the set */
+	struct timeval timeout = {0L, 100 * 1000L}; //100 ms
 
 	int rc;
 	char *c = s;
-	int done = 0;
-	while (c < (s + size - 1) && !done) {
-		rc = SSL_read(request->ssl, c, 1);
+	while (c < (s + size - 1)) {
+
+		//only do this once for secure (or if nothing pending), each time for normal
+		if (!request->config->secure || (c == s && 0 == SSL_pending(request->ssl))) {
+			// select supports setting a timeout
+			// so *only* if select tells us data
+			// is ready we read the data using recv
+			rc = select(socket+1, &set, NULL, NULL, &timeout);
+			if (rc == -1) {
+				return NULL;
+			}
+			else if (rc == 0 && !FD_ISSET(socket, &set)) {
+				//no data received or connection is closed
+				break;
+			}
+		}
+
+		if (request->config->secure) {
+
+			//see http://www.past5.com/tutorials/2014/02/21/openssl-and-select/
+			int ssl_error;
+			rc = SSL_read(request->ssl, c, 1);
+
+			//check SSL errors
+			switch(ssl_error = SSL_get_error(request->ssl,rc)) {
+				case SSL_ERROR_NONE:
+					//do our stuff with the newly read character below
+					break;
+				case SSL_ERROR_ZERO_RETURN:	 	//connection closed by client, clean up
+				case SSL_ERROR_WANT_READ:			//the operation did not complete, block the read
+				case SSL_ERROR_WANT_WRITE:		//the operation did not complete
+				case SSL_ERROR_SYSCALL:				//some I/O error occured (could be caused by false start in Chrome for instance), disconnect the client and clean up
+				default:											//some other error, clean up
+					return NULL;
+					break;
+			}
+		}
+		else
+			rc = recv(socket, c, 1, 0);
+
 		if (rc>0) {
-			if (*c == '\n') done=1;
+			//syslog(LOG_DEBUG, "http: got %c\r", *c);
+			if (*c == '\n') {
+				c++;
+				break;
+			}
 			c++;
 		}
 		else if (rc==0) {
 			//no data received or connection is closed
-			done=1;
+			break;
 		}
 		else {
 			return NULL; //discard half-received data
@@ -289,7 +334,7 @@ int http_status(lua_State* L) {
 
 	if (!request->headers_sent) {
 		send_headers(request, code, (char *)title, (char *)extra_headers, (char *)content_type, content_length);
-		if (!request->config->secure) fflush(request->file);
+		if (!request->config->secure) fsync(request->socket);
 		request->headers_sent = 1;
 
 		lua_pushinteger(L, 1);
@@ -297,7 +342,7 @@ int http_status(lua_State* L) {
 	else {
 		lua_pushinteger(L, 0);
 	}
-	
+
 	return 1;
 }
 
@@ -315,10 +360,10 @@ int http_print(lua_State* L) {
 
 	if (!request->headers_sent) {
 			send_headers(request, 200, "OK", NULL, "text/html", -1);
-			if (!request->config->secure) fflush(request->file);
+			if (!request->config->secure) fsync(request->socket);
 			request->headers_sent = 1;
 	}
-	
+
 	int nargs = lua_gettop(L);
 	for (int i=1; i <= nargs; i++) {
 		if (lua_isstring(L, i)) {
@@ -447,7 +492,7 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf, c
 						lua_pushnil(L);
 						lua_setglobal(L, "http_secure");
 
-						if (!request->config->secure) fflush(request->file);
+						if (!request->config->secure) fsync(request->socket);
 						do_printf(request, "0\r\n\r\n");
 					}
 				}
@@ -560,7 +605,7 @@ int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, con
 
 	// add the additional path
 	if (addpath) {
-	
+
 		// check if the addpath is only a file extension:
 		if (*addpath == '.') {
 			// make sure the current path does NOT end with a slash
@@ -744,6 +789,7 @@ int process(http_request_handle *request) {
 
 	if(strcasecmp(method, "POST") == 0) {
 		char *skip;
+		int contentlength = -1;
 		//skip headers to the actual request data
 		while (do_gets(pathbuf, HTTP_BUFF_SIZE, request) && strlen(pathbuf)>0 ) {
 			if (pathbuf && strlen(pathbuf)<3) {
@@ -753,9 +799,26 @@ int process(http_request_handle *request) {
 					break;
 				}
 			}
+			else {
+				//look for the content-length header to avoid
+				//a timeout later when reading the actual request data
+
+				//quick check if the first char matches, only then do strcasestr
+				if(pathbuf[0]=='c' || pathbuf[0]=='C') {
+					char *contentlen = strcasestr(pathbuf, "Content-Length:");
+
+					//check if the line begins with "Content-Length:"
+					if (contentlen==(char *)pathbuf) {
+						contentlen = strtok(contentlen, ":");  //Content-Length:
+						contentlen = strtok(NULL, "\r"); //the actual content length
+						while(*contentlen==' ') contentlen++;  //skip spaces after the :
+						contentlength = atoi(contentlen);
+					}
+				}
+			}
 		} // while headers
 		//while empty lines
-		while (do_gets(pathbuf, HTTP_BUFF_SIZE, request) && strlen(pathbuf)>0 ) {
+		while (do_gets(pathbuf, contentlength, request) && strlen(pathbuf)>0 ) {
 			if (pathbuf && strlen(pathbuf)>0) {
 				skip = pathbuf;
 				while (*skip=='\r' || *skip=='\n') skip++;
@@ -780,7 +843,7 @@ int process(http_request_handle *request) {
 
 	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol ? protocol:"");
 
-	if (!request->config->secure) fseek(request->file, 0, SEEK_CUR); // force change of stream direction
+	if (!request->config->secure) shutdown(request->socket, SHUT_RD);
 
 	if (strcasecmp(method, "GET") != 0 && strcasecmp(method, "POST") != 0) {
 		syslog(LOG_DEBUG, "http: %s not supported\r", method);
@@ -793,7 +856,7 @@ int process(http_request_handle *request) {
 		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL)    && stat(pathbuf, &statbuf) == 0) found = true;
 		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, ".lua")  && stat(pathbuf, &statbuf) == 0) found = true;
 		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, ".html") && stat(pathbuf, &statbuf) == 0) found = true;
-	
+
 		if (!found) {
 			send_error(request, 404, "Not Found", NULL, "File not found.");
 			syslog(LOG_DEBUG, "http: %s Not found\r", pathbuf);
@@ -809,7 +872,7 @@ int process(http_request_handle *request) {
 				//send a redirect
 				snprintf(pathbuf, HTTP_BUFF_SIZE, "Location: %s/", path);
 				send_error(request, 302, "Found", pathbuf, "Directories must end with a slash.");
-			} else {		
+			} else {
 				//try to find index.lua or index.html
 				found = false;
 
@@ -920,9 +983,7 @@ static void *http_thread(void *arg) {
 		}
 
 		// Set the timeout for accept
-		struct timeval timeout;
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
+		struct timeval timeout = {1L, 0L}; /* check for shutdown every second */
 		setsockopt(*config->server, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 	}
 
@@ -998,11 +1059,9 @@ static void *http_thread(void *arg) {
 			setsockopt(client, SOL_SOCKET, SO_LINGER, &so_linger, sizeof(so_linger));
 
 			// Set a timeout for send / receive
-			struct timeval tout;
-			tout.tv_sec = 10;
-			tout.tv_usec = 0;
-			setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &tout, sizeof(tout));
-			setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &tout, sizeof(tout));
+			struct timeval timeout = {60L, 0L}; /* 1 minute to send all data */
+			setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+			setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 
 			if (config->secure) {
 				SSL_set_fd(ssl, client);
@@ -1025,11 +1084,9 @@ static void *http_thread(void *arg) {
 			}
 			else
 			{
-				// Create the socket stream
-				FILE *stream = fdopen(client, "a+");
 				http_request_handle request = HTTP_Request_Normal_initializer;
 				process(&request);
-				fclose(stream);
+				shutdown(client, SHUT_RDWR);
 			}
 
 			close(client);
