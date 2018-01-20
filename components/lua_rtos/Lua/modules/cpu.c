@@ -197,7 +197,7 @@ static int lcpu_watchpoint(lua_State *L) {
 }
 
 static int lcpu_temperature(lua_State *L) {
-	lua_pushinteger(L, temprature_sens_read());
+	lua_pushnumber(L, ((float)temprature_sens_read() - 64.0) / 1.8 );
 	return 1;
 }
 
