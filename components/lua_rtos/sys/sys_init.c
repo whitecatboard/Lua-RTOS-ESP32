@@ -68,8 +68,10 @@ extern const char *__progname;
 // Boot count
 RTC_DATA_ATTR uint32_t boot_count = 0;
 
+#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
 // Flash unique id
 uint8_t flash_unique_id[8];
+#endif
 
 #ifdef RUN_TESTS
 #include <unity.h>

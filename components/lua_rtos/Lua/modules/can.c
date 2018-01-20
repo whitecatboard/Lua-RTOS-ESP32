@@ -44,7 +44,7 @@
 #include <drivers/can.h>
 #include <drivers/cpu.h>
 
-static int dump_stop = 0;
+static uint8_t dump_stop = 0;
 
 static int lcan_attach(lua_State* L) {
 	driver_error_t *error;

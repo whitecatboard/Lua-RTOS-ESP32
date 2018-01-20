@@ -45,7 +45,7 @@
 #include <drivers/sensor.h>
 #include <drivers/adc.h>
 
-static uint16_t uvIndexValue [12] = { 50, 227, 318, 408, 503, 606, 696, 795, 881, 976, 1079, 1170};
+static const uint16_t uvIndexValue [12] = { 50, 227, 318, 408, 503, 606, 696, 795, 881, 976, 1079, 1170};
 
 driver_error_t *guva_s12sd_presetup(sensor_instance_t *unit);
 driver_error_t *guva_s12sd_acquire(sensor_instance_t *unit, sensor_value_t *values);
