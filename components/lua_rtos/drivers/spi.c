@@ -52,6 +52,8 @@
 
 #include "luartos.h"
 
+#if CONFIG_LUA_RTOS_LUA_USE_SPI
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -1372,3 +1374,5 @@ driver_error_t *spi_unsetup(int deviceid) {
 
 	return NULL;
 }
+
+#endif

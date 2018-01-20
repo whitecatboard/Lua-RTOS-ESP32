@@ -29,6 +29,8 @@
 
 #include "luartos.h"
 
+#if CONFIG_LUA_RTOS_LUA_USE_PWM
+
 #include "esp_log.h"
 
 #include "driver/periph_ctrl.h"
@@ -432,3 +434,5 @@ driver_error_t *pwm_unsetup(int8_t unit, int8_t channel) {
 
 	return NULL;
 }
+
+#endif
