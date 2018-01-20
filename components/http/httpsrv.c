@@ -182,7 +182,7 @@ char *do_gets(char *s, int size, http_request_handle *request) {
 	fd_set set;
 	FD_ZERO(&set); /* clear the set */
 	FD_SET(socket, &set); /* add our file descriptor to the set */
-	struct timeval timeout = {0L, 100 * 1000L}; //100 ms
+	struct timeval timeout = {2L, 0L}; //wait up to 2sec
 
 	int rc;
 	char *c = s;
