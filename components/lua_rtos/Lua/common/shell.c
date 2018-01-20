@@ -289,7 +289,7 @@ void lua_shell(lua_State* L, char *buffer) {
 		// Not a command - maybe it's a lua script?
 
 		int tl = tokens[0].te - tokens[0].tb + 1;
-		if ((tl > sizeof(arg) - 1) || (tl > PATH_MAX)) {
+		if ((tl > LUA_MAXINPUT - 1) || (tl > PATH_MAX)) {
 			goto exit;
 		}
 
