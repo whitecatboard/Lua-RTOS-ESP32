@@ -127,23 +127,13 @@ void fail_assert(const char* expr, const char* file, int line) {
 	dropbear_exit("Failed assertion (%s:%d): `%s'", file, line, expr);
 }
 
-#if !__XTENSA__
-static void generic_dropbear_log(int UNUSED(priority), const char* format, 
-		va_list param) {
-#else
 static void generic_dropbear_log(int priority, const char* format,
 		va_list param) {
-#endif
-#if !__XTENSA__
 	char printbuf[1024];
 
 	vsnprintf(printbuf, sizeof(printbuf), format, param);
 
-	fprintf(stderr, "%s\n", printbuf);
-#else
-	syslog(priority, format, param);
-#endif
-
+	syslog(priority, "dropbear: %s", printbuf);
 }
 
 /* this is what can be called to write arbitrary log messages */

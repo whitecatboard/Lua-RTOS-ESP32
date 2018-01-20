@@ -33,9 +33,11 @@
 #include "runopts.h"
 #include "dbrandom.h"
 #include "crypto_desc.h"
+#include "gensignkey.h"
 
 #include <pthread.h>
 
+#include <sys/path.h>
 #include <sys/driver.h>
 #include <sys/delay.h>
 #include <drivers/net.h>
@@ -43,6 +45,7 @@
 static size_t listensockets(int *sock, size_t sockcount, int *maxfd);
 static void sigintterm_handler(int fish);
 static void commonsetup(void);
+int dropbearkey_main(int argc, char ** argv);
 
 static int childsock;
 
@@ -76,6 +79,8 @@ int dropbear_server_main(int argc, char ** argv)
 	{
 		dropbear_exit("No listening ports available.");
 	}
+
+	dropbear_log(LOG_INFO, "started");
 
 	for (i = 0; i < listensockcount; i++) {
 		FD_SET(listensocks[i], &fds);
@@ -208,8 +213,25 @@ static size_t listensockets(int *socks, size_t sockcount, int *maxfd) {
 	return sockpos;
 }
 
+static void create_server_keys() {
+	syslog(LOG_INFO, "dropbear: generating %s key file, this may take a while...", RSA_PRIV_FILENAME);
+	signkey_generate(DROPBEAR_SIGNKEY_RSA, 0, RSA_PRIV_FILENAME, 1);
+
+	syslog(LOG_INFO, "dropbear: generating %s key file, this may take a while...", DSS_PRIV_FILENAME);
+	signkey_generate(DROPBEAR_SIGNKEY_DSS, 0, DSS_PRIV_FILENAME, 1);
+}
+
 static void *dropbear_thread(void *arg) {
 	driver_error_t *error;
+
+	// Create dropbear directory structure if not exists
+	mkpath("/etc/dropbear");
+
+	// Create the system passwd file if not exists
+	mkfile("/etc/passwd");
+
+	// Create the server keys if not exists
+	create_server_keys();
 
 	// Wait for network
 	while ((error = net_check_connectivity())) {
@@ -232,6 +254,7 @@ void dropbear_server_start() {
 
 	syslog(LOG_INFO, "dropbear: starting ...");
 
+	// Start a new threat to launch the dropbear server
 	pthread_attr_init(&attr);
 
     pthread_attr_setstacksize(&attr, 12288);

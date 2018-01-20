@@ -4,7 +4,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include <pthread.h>
 #include <shell/shell.h>
+
+#define getpid() pthread_self()
 
 // dropbear is executed into a task, so when calling to exit function
 // simply delete current task

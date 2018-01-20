@@ -43,7 +43,7 @@ void dropbear_exit(const char* format, ...) ATTRIB_PRINTF(1,2);
 void dropbear_close(const char* format, ...) ATTRIB_PRINTF(1,2) ;
 void dropbear_log(int priority, const char* format, ...) ATTRIB_PRINTF(2,3) ;
 
-void fail_assert(const char* expr, const char* file, int line) ATTRIB_NORETURN;
+void fail_assert(const char* expr, const char* file, int line);
 
 #ifdef DEBUG_TRACE
 void dropbear_trace(const char* format, ...) ATTRIB_PRINTF(1,2);
