@@ -3,6 +3,7 @@
 #include "session.h"
 #include "debug.h"
 #include "list.h"
+#include "fake-rfc2553.h"
 
 struct dropbear_progress_connection {
 	struct addrinfo *res;

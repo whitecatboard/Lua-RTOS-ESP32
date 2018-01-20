@@ -1149,11 +1149,9 @@ int lora_pkt_fwd(void)
         exit(EXIT_FAILURE);
     }
 
-	pthread_attr_t attr;
-
-	pthread_attr_init(&attr);
-
-	// Set stack size
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    // Set stack size
     pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE * 2);
 
     /* spawn threads to manage upstream and downstream */
@@ -1167,16 +1165,19 @@ int lora_pkt_fwd(void)
         MSG("ERROR: [main] impossible to create downstream thread\n");
         exit(EXIT_FAILURE);
     }
+    pthread_setname_np(thrid_down, "lora_downstream");
     i = pthread_create( &thrid_jit, &attr, (void * (*)(void *))thread_jit, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create JIT thread\n");
         exit(EXIT_FAILURE);
     }
+    pthread_setname_np(thrid_jit, "lora_jit");
     i = pthread_create( &thrid_timersync, &attr, (void * (*)(void *))thread_timersync, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create Timer Sync thread\n");
         exit(EXIT_FAILURE);
     }
+    pthread_setname_np(thrid_timersync, "lora_timersync");
 
     /* spawn thread to manage GPS */
     if (gps_enabled == true) {
@@ -1185,11 +1186,13 @@ int lora_pkt_fwd(void)
             MSG("ERROR: [main] impossible to create GPS thread\n");
             exit(EXIT_FAILURE);
         }
-        i = pthread_create( &thrid_valid, NULL, (void * (*)(void *))thread_valid, NULL);
+        pthread_setname_np(thrid_gps, "lora_gps");
+        i = pthread_create( &thrid_valid, &attr, (void * (*)(void *))thread_valid, NULL);
         if (i != 0) {
             MSG("ERROR: [main] impossible to create validation thread\n");
             exit(EXIT_FAILURE);
         }
+        pthread_setname_np(thrid_valid, "lora_validation");
     }
 
     /* configure signal handling */

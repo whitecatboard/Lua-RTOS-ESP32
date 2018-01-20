@@ -76,6 +76,15 @@ driver_error_t *wifi_stop();
 driver_error_t *wifi_stat(ifconfig_t *info);
 driver_error_t *wifi_get_mac(uint8_t mac[6]);
 
+void wifi_wps_reconnect();
+void wifi_wps_disable();
+void wifi_wps_pin(uint8_t *pin_code);
+typedef void wifi_wps_pin_cb(char* pin);
+driver_error_t *wifi_wps(int wpsmode, wifi_wps_pin_cb* callback);
+
+typedef void wifi_sc_cb(char* ssid, char* password);
+driver_error_t *wifi_smartconfig(wifi_sc_cb* callback);
+
 #endif
 
 #endif

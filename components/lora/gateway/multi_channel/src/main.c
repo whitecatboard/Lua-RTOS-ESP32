@@ -15,11 +15,11 @@ void lora_gw_start() {
 	pthread_attr_init(&attr);
 
 	// Set stack size
-    pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_STACK_SIZE);
+	pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_STACK_SIZE);
 
-    if (pthread_create(&thread, &attr, lora_gw, NULL)) {
-    	return;
+	if (pthread_create(&thread, &attr, lora_gw, NULL)) {
+		return;
 	}
 
-    pthread_setname_np(thread, "lora");
+	pthread_setname_np(thread, "lora");
 }

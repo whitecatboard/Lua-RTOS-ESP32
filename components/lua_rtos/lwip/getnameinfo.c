@@ -1,4 +1,5 @@
 #include <netdb.h>
+#include "lwip/sys/netdb.h"
 #include "lwip/ip_addr.h"
 
 int

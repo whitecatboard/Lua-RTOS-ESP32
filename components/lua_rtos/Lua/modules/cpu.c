@@ -61,6 +61,8 @@ DRIVER_REGISTER_BEGIN(CPU,cpu,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(CPU, cpu, CannotSetWatchpoint, "can't set Watchpoint", LUA_CPU_ERR_CANT_SET_WATCHPOINT);
 DRIVER_REGISTER_END(CPU,cpu,NULL,NULL,NULL);
 
+int temprature_sens_read(void); //undocumented esp32 function
+
 static int lcpu_model(lua_State *L) {
 	int revision;
 
@@ -194,6 +196,11 @@ static int lcpu_watchpoint(lua_State *L) {
 	return 0;
 }
 
+static int lcpu_temperature(lua_State *L) {
+	lua_pushnumber(L, ((float)temprature_sens_read() - 64.0) / 1.8 );
+	return 1;
+}
+
 static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "model" ),                  LFUNCVAL( lcpu_model ) },
   { LSTRKEY( "board" ),                  LFUNCVAL( lcpu_board ) },
@@ -205,6 +212,7 @@ static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "wakeupext1pin" ),          LFUNCVAL( lcpu_wakeup_ext1_pin ) },
   { LSTRKEY( "wakeupext1mask" ),         LFUNCVAL( lcpu_wakeup_ext1_mask ) },
   { LSTRKEY( "watchpoint" ),             LFUNCVAL( lcpu_watchpoint ) },
+  { LSTRKEY( "temperature" ),            LFUNCVAL( lcpu_temperature ) },
 
   { LSTRKEY( "RESET_POWERON" ),          LINTVAL( POWERON_RESET          ) },
   { LSTRKEY( "RESET_SW" ),               LINTVAL( SW_RESET               ) },

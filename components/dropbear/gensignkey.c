@@ -93,7 +93,7 @@ int signkey_generate(enum signkey_type keytype, int bits, const char* filename, 
 		FILE * file;
 		file = fopen(filename, "r");
 		if (file) {
-			dropbear_log(LOG_INFO, "%s key file exists", filename);
+			dropbear_log(LOG_DEBUG, "%s key file exists", filename);
 
 			fclose(file);
 			return DROPBEAR_SUCCESS;
@@ -101,6 +101,8 @@ int signkey_generate(enum signkey_type keytype, int bits, const char* filename, 
 
 		fclose(file);
 	}
+
+	dropbear_log(LOG_INFO, "generating %s key file, this may take a while...", filename);
 
 	/* now we can generate the key */
 	key = new_sign_key();
@@ -146,12 +148,12 @@ int signkey_generate(enum signkey_type keytype, int bits, const char* filename, 
 	ret = buf_writefile(buf, filename);
 
 	if (ret == DROPBEAR_FAILURE) {
+		dropbear_log(LOG_ERR, "%s key file NOT generated", filename);
 		goto out;
 	}
-
-out:
 	dropbear_log(LOG_INFO, "%s key file generated", filename);
 
+out:
 	if (buf) {
 		buf_burn(buf);
 		buf_free(buf);

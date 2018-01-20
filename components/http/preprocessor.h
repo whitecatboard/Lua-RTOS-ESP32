@@ -34,7 +34,7 @@
 #ifndef HTTP_PREPROCESSOR_H_
 #define HTTP_PREPROCESSOR_H_
 
-int http_process_lua_page(const char *ipath, const char *opath);
+int http_preprocess_lua_page(const char *ipath, const char *opath);
 
 #endif
 

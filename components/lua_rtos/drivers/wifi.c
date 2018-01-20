@@ -55,6 +55,9 @@
 #include <sys/syslog.h>
 
 #include <drivers/wifi.h>
+#include <esp_wps.h>
+#include <esp_smartconfig.h>
+#include <pthread.h>
 
 #define WIFI_LOG(m) syslog(LOG_DEBUG, m);
 
@@ -63,7 +66,7 @@
 
 DRIVER_REGISTER_BEGIN(WIFI,wifi,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, CannotSetup, "can't setup", WIFI_ERR_CANT_INIT);
-	DRIVER_REGISTER_ERROR(WIFI, wifi, CannotConnect, "can't connect review your SSID / password", WIFI_ERR_CANT_CONNECT);
+	DRIVER_REGISTER_ERROR(WIFI, wifi, CannotConnect, "can't connect, review your SSID / password", WIFI_ERR_CANT_CONNECT);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, GeneralFail, "general fail", WIFI_ERR_WIFI_FAIL);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, NotEnoughtMemory, "not enough memory", WIFI_ERR_WIFI_NO_MEM);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, NotSetup, "wifi is not setup", WIFI_ERR_WIFI_NOT_INIT);
@@ -88,6 +91,14 @@ extern EventGroupHandle_t netEvent;
 #define evWIFI_SCAN_END 	       	 ( 1 << 0 )
 #define evWIFI_CONNECTED 	       	 ( 1 << 1 )
 #define evWIFI_CANT_CONNECT          ( 1 << 2 )
+
+static int wps_mode = WPS_TYPE_DISABLE;
+static esp_wps_config_t wps_config_pbc = WPS_CONFIG_INIT_DEFAULT(WPS_TYPE_PBC);
+static esp_wps_config_t wps_config_pin = WPS_CONFIG_INIT_DEFAULT(WPS_TYPE_PIN);
+static wifi_wps_pin_cb* wps_pin_callback = NULL;
+static wifi_sc_cb* wps_sc_callback = NULL;
+
+#define WPSPIN2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6], (a)[7]
 
 driver_error_t *wifi_check_error(esp_err_t error) {
 	if (error == ESP_ERR_WIFI_OK) return NULL;
@@ -138,8 +149,16 @@ static driver_error_t *wifi_init(wifi_mode_t mode) {
 	if (!status_get(STATUS_WIFI_INITED)) {
 		wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 		if ((error = wifi_check_error(esp_wifi_init(&cfg)))) return error;
-		if ((error = wifi_check_error(esp_wifi_set_storage(WIFI_STORAGE_RAM)))) return error;
+
+		wifi_storage_t storage = WIFI_STORAGE_RAM;
+#if CONFIG_ESP32_WIFI_NVS_ENABLED
+		storage = WIFI_STORAGE_FLASH;
+#endif
+		if ((error = wifi_check_error(esp_wifi_set_storage(storage)))) return error;
+
 		if ((error = wifi_check_error(esp_wifi_set_mode(mode)))) return error;
+		wifi_country_t country = { "EU", 1, 13, WIFI_COUNTRY_POLICY_AUTO };
+		if ((error = wifi_check_error(esp_wifi_set_country(&country)))) return error;
 
 		status_set(STATUS_WIFI_INITED);
 	}
@@ -167,7 +186,7 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 
 	if (status_get(STATUS_WIFI_INITED)) {
 		wifi_mode_t mode;
-		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
+		if ((error = wifi_check_error(esp_wifi_get_mode(&mode)))) return error;
 
 		if (WIFI_MODE_AP == mode) {
 			if(status_get(STATUS_WIFI_STARTED)) {
@@ -251,7 +270,7 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_
 	status_clear(STATUS_WIFI_SETUP);
 
 	// Sanity checks
-	if (mode == WIFI_MODE_AP) {
+	if (mode == WIFI_MODE_AP || mode == WIFI_MODE_APSTA) {
 		if (*password && strlen(password) < 8) {
 			return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_PASSWORD, "if provided the password must have more than 7 characters");
 		}
@@ -259,7 +278,7 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_
 
 	if (status_get(STATUS_WIFI_INITED)) {
 		wifi_mode_t curmode;
-		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&curmode)))) return error;
+		if ((error = wifi_check_error(esp_wifi_get_mode(&curmode)))) return error;
 		if (curmode != mode) {
 			//in case of switching mode AP<->STA Stop wifi
 			if(status_get(STATUS_WIFI_STARTED)) {
@@ -273,19 +292,26 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_
 	// Attach wifi driver
 	if ((error = wifi_init(mode))) return error;
 
-	// Setup mode and config related to desired mode
-	wifi_config_t wifi_config;
+	if (mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA) {
+		// Setup mode and config related to desired mode
+		wifi_config_t wifi_config;
+		memset(&wifi_config, 0, sizeof(wifi_config_t));
 
-	memset(&wifi_config, 0, sizeof(wifi_config_t));
-
-	if (mode == WIFI_MODE_STA) {
-		strncpy((char *)wifi_config.sta.ssid, ssid, 32);
-		strncpy((char *)wifi_config.sta.password, password, 64);
+		if (mode != WIFI_MODE_APSTA) {
+			strncpy((char *)wifi_config.sta.ssid, ssid, 32);
+			strncpy((char *)wifi_config.sta.password, password, 64);
+		}
 
 		wifi_config.sta.channel = (channel ? channel : 0);
 
 		interface = ESP_IF_WIFI_STA;
-	} else {
+		if ((error = wifi_check_error(esp_wifi_set_config(interface, &wifi_config)))) return error;
+	} 
+	if (mode == WIFI_MODE_AP || mode == WIFI_MODE_APSTA) {
+		// Setup mode and config related to desired mode
+		wifi_config_t wifi_config;
+		memset(&wifi_config, 0, sizeof(wifi_config_t));
+
 		strncpy((char *)wifi_config.ap.ssid, ssid, 32);
 		strncpy((char *)wifi_config.ap.password, password, 64);
 
@@ -297,9 +323,8 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_
 		wifi_config.ap.beacon_interval = 100;
 
 		interface = ESP_IF_WIFI_AP;
+		if ((error = wifi_check_error(esp_wifi_set_config(interface, &wifi_config)))) return error;
 	}
-
-	if ((error = wifi_check_error(esp_wifi_set_config(interface, &wifi_config)))) return error;
 
 	if (powersave)
 		if ((error = wifi_check_error(esp_wifi_set_ps(powersave)))) return error;
@@ -341,9 +366,9 @@ driver_error_t *wifi_start() {
 		if ((error = wifi_check_error(esp_wifi_start()))) return error;
 
 		wifi_mode_t mode;
-		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
+		if ((error = wifi_check_error(esp_wifi_get_mode(&mode)))) return error;
 
-		if (WIFI_MODE_AP == mode) {
+		if (mode == WIFI_MODE_AP || mode == WIFI_MODE_APSTA) {
 			status_set(STATUS_WIFI_STARTED);
 		} else {
 
@@ -356,7 +381,7 @@ driver_error_t *wifi_start() {
 				esp_wifi_stop();
 				return driver_error(WIFI_DRIVER, WIFI_ERR_CANT_CONNECT, NULL);
 			}
-		 }
+		}
 	}
 
 	return NULL;
@@ -368,6 +393,9 @@ driver_error_t *wifi_stop() {
 	if (!status_get(STATUS_WIFI_SETUP)) {
 		return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_INIT, NULL);
 	}
+
+	wifi_wps_disable();
+	esp_smartconfig_stop();
 
 	if (status_get(STATUS_WIFI_STARTED)) {
 		if ((error = wifi_check_error(esp_wifi_stop()))) return error;
@@ -388,12 +416,14 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 	uint8_t interface = ESP_IF_WIFI_STA;
 	if (status_get(STATUS_WIFI_INITED)) {
 		wifi_mode_t mode;
-		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
+		if ((error = wifi_check_error(esp_wifi_get_mode(&mode)))) return error;
 
 		if (mode == WIFI_MODE_AP)
 			interface = ESP_IF_WIFI_AP;
+
+		//TODO add stat for WIFI_MODE_APSTA
 	}
-	
+
 	// Get WIFI IF info
 	if ((error = wifi_check_error(tcpip_adapter_get_ip_info(interface, &esp_info)))) return error;
 
@@ -415,16 +445,176 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 	return NULL;
 }
 
+driver_error_t *wifi_wps(int wpsmode, wifi_wps_pin_cb* callback) {
+	driver_error_t *error;
+
+	status_clear(STATUS_WIFI_SETUP);
+
+	if (status_get(STATUS_WIFI_INITED)) {
+		if(status_get(STATUS_WIFI_STARTED)) {
+			if ((error = wifi_check_error(esp_wifi_stop()))) return error;
+			status_clear(STATUS_WIFI_STARTED);
+		}
+		status_clear(STATUS_WIFI_INITED);
+	}
+
+	wps_mode = wpsmode;
+	wps_pin_callback = callback;
+
+	// Attach wifi driver
+	if ((error = wifi_init(WIFI_MODE_STA))) return error; //does NOT work with APSTA
+	status_set(STATUS_WIFI_SETUP);
+
+	if ((error = wifi_check_error(esp_wifi_start()))) return error;
+	status_set(STATUS_WIFI_STARTED);
+
+	if (wps_mode != WPS_TYPE_DISABLE) {
+		if ((error = wifi_check_error(esp_wifi_wps_enable(wps_mode == WPS_TYPE_PIN ? &wps_config_pin : &wps_config_pbc)))) return error;
+		if ((error = wifi_check_error(esp_wifi_wps_start(0)))) return error;
+	}
+	return NULL;
+}
+
+void wifi_wps_reconnect() {
+	esp_wifi_wps_disable();
+	if (wps_mode != WPS_TYPE_DISABLE) {
+		esp_wifi_wps_enable(wps_mode == WPS_TYPE_PIN ? &wps_config_pin : &wps_config_pbc);
+		esp_wifi_wps_start(0);
+	}
+}
+
+void wifi_wps_disable() {
+	if (wps_mode != WPS_TYPE_DISABLE) {
+		esp_wifi_wps_disable();
+		wps_mode = WPS_TYPE_DISABLE;
+	}
+}
+
+static void* wifi_wps_pin_call(void* pin) {
+	(*(wps_pin_callback))((char*)pin);
+	return 0;
+}
+
+void wifi_wps_pin(uint8_t *pin_code) {
+	char *pin = (char*)malloc(9);
+	snprintf(pin, 9, "%c%c%c%c%c%c%c%c", WPSPIN2STR(pin_code));
+	pin[8] = '\0';
+	if (wps_pin_callback != NULL) {
+		pthread_t thread = 0;
+		pthread_attr_t attr;
+
+		pthread_attr_init(&attr);
+		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+		if (pthread_create(&thread, &attr, wifi_wps_pin_call, pin) != 0)
+			thread = 0;
+		pthread_setname_np(thread, "wifi_wps_pin");
+		pthread_attr_destroy(&attr);
+	}
+}
+
+static void wifi_smartconfig_callback(smartconfig_status_t status, void *pdata)
+{
+	switch (status) {
+		case SC_STATUS_WAIT:
+			break;
+		case SC_STATUS_FIND_CHANNEL:
+			break;
+		case SC_STATUS_GETTING_SSID_PSWD:
+			/* may check for the type of smartconfig here
+			{
+				smartconfig_type_t *type = pdata;
+				if (*type == SC_TYPE_ESPTOUCH) {
+					printf("SC_TYPE: ESPTOUCH\n");
+				} else {
+					printf("SC_TYPE: AIRKISS\n");
+				}
+			}
+			*/
+			break;
+		case SC_STATUS_LINK:
+			{
+				wifi_config_t *wifi_config = pdata;
+				esp_wifi_disconnect();
+
+				// must connect to the new AP here to finish smartconnect
+				esp_wifi_set_config(ESP_IF_WIFI_STA, wifi_config);
+				esp_wifi_connect();
+
+				if (wps_sc_callback != NULL) {
+					(*(wps_sc_callback))((char*)wifi_config->sta.ssid, (char*)wifi_config->sta.password);
+				}
+			}
+			break;
+		case SC_STATUS_LINK_OVER:
+			if (pdata != NULL) {
+				uint8_t phone_ip[4] = { 0 };
+				memcpy(phone_ip, (uint8_t* )pdata, 4);
+				printf("Remote IP: %d.%d.%d.%d\n", phone_ip[0], phone_ip[1], phone_ip[2], phone_ip[3]);
+			}
+			esp_smartconfig_stop();
+			break;
+		default:
+			break;
+	}
+}
+
+driver_error_t *wifi_smartconfig(wifi_sc_cb* callback) {
+	driver_error_t *error;
+	wifi_mode_t mode = WIFI_MODE_STA;
+
+	status_clear(STATUS_WIFI_SETUP);
+
+	if (status_get(STATUS_WIFI_INITED)) {
+		if ((error = wifi_check_error(esp_wifi_get_mode(&mode)))) return error;
+
+		if(status_get(STATUS_WIFI_STARTED)) {
+			if ((error = wifi_check_error(esp_wifi_stop()))) return error;
+			status_clear(STATUS_WIFI_STARTED);
+		}
+		status_clear(STATUS_WIFI_INITED);
+	}
+
+	wps_sc_callback = callback;
+
+	// cannot use smartconfig in AP-only mode
+	if (mode == WIFI_MODE_AP) {
+		mode = WIFI_MODE_APSTA;
+	}
+
+	// Attach wifi driver
+	if ((error = wifi_init(mode))) return error; //APSTA confirmed to work
+	status_set(STATUS_WIFI_SETUP);
+
+	// make smartconfig restartable
+	esp_smartconfig_stop();
+
+	if ((error = wifi_check_error(esp_wifi_start()))) return error;
+	status_set(STATUS_WIFI_STARTED);
+
+	//delay until wifi has been started...
+	delay(10);
+
+	//make sure we're not connected
+	esp_wifi_disconnect();
+
+	if ((error = wifi_check_error(esp_smartconfig_set_type(SC_TYPE_ESPTOUCH_AIRKISS)))) return error;
+	if ((error = wifi_check_error(esp_smartconfig_start(wifi_smartconfig_callback, 0)))) return error;
+
+	return NULL;
+}
+
 driver_error_t *wifi_get_mac(uint8_t mac[6]) {
 	driver_error_t *error;
 
 	uint8_t interface = ESP_IF_WIFI_STA;
 	if (status_get(STATUS_WIFI_INITED)) {
 		wifi_mode_t mode;
-		if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) return error;
+		if ((error = wifi_check_error(esp_wifi_get_mode(&mode)))) return error;
 
 		if (mode == WIFI_MODE_AP)
 			interface = ESP_IF_WIFI_AP;
+
+		//TODO add mac for WIFI_MODE_APSTA
 	}
 
 	// Get MAC info

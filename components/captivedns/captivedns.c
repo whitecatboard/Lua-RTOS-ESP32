@@ -176,7 +176,7 @@ int captivedns_start(lua_State* L) {
 	driver_error_t *error;
 
 	wifi_mode_t mode;
-	if ((error = wifi_check_error(esp_wifi_get_mode((wifi_mode_t*)&mode)))) {
+	if ((error = wifi_check_error(esp_wifi_get_mode(&mode)))) {
 		return luaL_error(L, "couldn't get wifi mode");
 	}
 	

@@ -50,22 +50,6 @@
 #include "mbedtls/error.h"
 #include "mbedtls/certs.h"
 
-struct ssl_pm
-{
-    /* local socket file description */
-    mbedtls_net_context fd;
-    /* remote client socket file description */
-    mbedtls_net_context cl_fd;
-
-    mbedtls_ssl_config conf;
-
-    mbedtls_ctr_drbg_context ctr_drbg;
-
-    mbedtls_ssl_context ssl;
-
-    mbedtls_entropy_context entropy;
-};
-
 
 extern Sockets s;
 
@@ -93,6 +77,7 @@ extern void SSLLocks_callback(int mode, int n, const char *file, int line);
 int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts);
 void SSLSocket_destroyContext(networkHandles* net);
 void SSLSocket_addPendingRead(int sock);
+void ssl_pm_set_hostname(SSL *ssl, const char *hostname);
 
 //static ssl_mutex_type* sslLocks = NULL;
 static ssl_mutex_type sslCoreMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -367,8 +352,11 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 
 	if (opts->trustStore)
 	{
-		SSLSocket_error("trustStore not supported!", NULL, net->socket, rc);
-		goto free_ctx;
+		if ((rc = SSL_CTX_load_verify_locations(net->ctx, opts->trustStore, NULL)) != 1)
+		{
+			SSLSocket_error("SSL_CTX_load_verify_locations", NULL, net->socket, rc);
+			goto free_ctx;
+		}
 	}
 
 	if (opts->enabledCipherSuites != NULL)
@@ -416,11 +404,8 @@ int SSLSocket_setSocketForSSL(networkHandles* net, MQTTClient_SSLOptions* opts, 
 		if ((rc = SSL_set_fd(net->ssl, net->socket)) != 1)
 			SSLSocket_error("SSL_set_fd", net->ssl, net->socket, rc);
 
-		/*
-		struct ssl_pm *ssl_pm = (struct ssl_pm *)net->ssl->ssl_pm;
-		if ((rc = mbedtls_ssl_set_hostname(&(ssl_pm->ssl), hostname)))
-			SSLSocket_error("SSL_set_tlsext_host_name", NULL, net->socket, rc);
-		//*/
+		//SNI - server name indication
+		ssl_pm_set_hostname(net->ssl, hostname);
 	}
 
 	FUNC_EXIT_RC(rc);
