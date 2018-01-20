@@ -61,7 +61,7 @@ int dropbear_server_main(int argc, char ** argv)
 	int val;
 	int maxsock = -1;
 	size_t listensockcount = 0;
-	int listensocks[MAX_LISTEN_ADDR];
+	static int listensocks[MAX_LISTEN_ADDR];
 
 	_dropbear_exit = svr_dropbear_exit;
 	_dropbear_log = svr_dropbear_log;
@@ -153,6 +153,19 @@ int dropbear_server_main(int argc, char ** argv)
 		}
 	} /* while(!ssh_shutdown) loop */
 
+	/* it's not ideal to keep the server_socket open as it is blocked
+	   but now at least the httpsrv can be restarted from lua scripts.
+	   if we'd properly close the socket we would need to bind() again
+	   when restarting the httpsrv but bind() will succeed only after
+	   several (~4) minutes: http://lwip.wikia.com/wiki/Netconn_bind
+	   "Note that if you try to bind the same address and/or port you
+	    might get an error (ERR_USE, address in use), even if you
+	    delete the netconn. Only after some time (minutes) the
+	    resources are completely cleared in the underlying stack due
+	    to the need to follow the TCP specification and go through
+	    the TCP timewait state."
+	*/
+
 	return -1;
 }
 
@@ -189,36 +202,35 @@ static size_t listensockets(int *socks, size_t sockcount, int *maxfd) {
 
 		TRACE(("listening on '%s:%s'", svr_opts.addresses[i], svr_opts.ports[i]))
 
-		nsock = dropbear_listen(svr_opts.addresses[i], svr_opts.ports[i], &socks[sockpos], 
-				sockcount - sockpos,
-				&errstring, maxfd);
+		if (0 == socks[sockpos]) {
+			nsock = dropbear_listen(svr_opts.addresses[i], svr_opts.ports[i], &socks[sockpos], 
+					sockcount - sockpos,
+					&errstring, maxfd);
 
-		if (nsock < 0) {
-			dropbear_log(LOG_WARNING, "Failed listening on '%s': %s", 
-							svr_opts.ports[i], errstring);
-			m_free(errstring);
-			continue;
-		}
+			if (nsock < 0) {
+				dropbear_log(LOG_WARNING, "Failed listening on '%s': %s", 
+								svr_opts.ports[i], errstring);
+				m_free(errstring);
+				continue;
+			}
 
-		for (n = 0; n < (unsigned int)nsock; n++) {
-			int sock = socks[sockpos + n];
-			set_sock_priority(sock, DROPBEAR_PRIO_LOWDELAY);
+			for (n = 0; n < (unsigned int)nsock; n++) {
+				int sock = socks[sockpos + n];
+				set_sock_priority(sock, DROPBEAR_PRIO_LOWDELAY);
 #ifdef DROPBEAR_SERVER_TCP_FAST_OPEN
-			set_listen_fast_open(sock);
+				set_listen_fast_open(sock);
 #endif
+			}
+			sockpos += nsock;
 		}
-
-		sockpos += nsock;
-
+		else
+			sockpos += 1; //NOTE: this might turn out to be wrong in the ipv6? future...
 	}
 	return sockpos;
 }
 
 static void create_server_keys() {
-	syslog(LOG_INFO, "dropbear: generating %s key file, this may take a while...", RSA_PRIV_FILENAME);
 	signkey_generate(DROPBEAR_SIGNKEY_RSA, 0, RSA_PRIV_FILENAME, 1);
-
-	syslog(LOG_INFO, "dropbear: generating %s key file, this may take a while...", DSS_PRIV_FILENAME);
 	signkey_generate(DROPBEAR_SIGNKEY_DSS, 0, DSS_PRIV_FILENAME, 1);
 }
 
