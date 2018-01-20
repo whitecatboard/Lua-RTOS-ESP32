@@ -789,7 +789,7 @@ int process(http_request_handle *request) {
 
 	if(strcasecmp(method, "POST") == 0) {
 		char *skip;
-		int contentlength = -1;
+		int contentlength = HTTP_BUFF_SIZE;
 		//skip headers to the actual request data
 		while (do_gets(pathbuf, HTTP_BUFF_SIZE, request) && strlen(pathbuf)>0 ) {
 			if (pathbuf && strlen(pathbuf)<3) {
@@ -812,7 +812,7 @@ int process(http_request_handle *request) {
 						contentlen = strtok(contentlen, ":");  //Content-Length:
 						contentlen = strtok(NULL, "\r"); //the actual content length
 						while(*contentlen==' ') contentlen++;  //skip spaces after the :
-						contentlength = atoi(contentlen);
+						contentlength = atoi(contentlen)+1;
 					}
 				}
 			}
