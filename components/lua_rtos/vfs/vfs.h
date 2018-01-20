@@ -62,8 +62,6 @@ void vfs_spiffs_register();
 void vfs_tty_register();
 void vfs_spiffs_format();
 void vfs_fat_format();
-void vfs_pty_register();
-void vfs_urandom_register();
 
 vfs_fd_local_storage_t *vfs_create_fd_local_storage(int num);
 void vfs_destroy_fd_local_storage(vfs_fd_local_storage_t *ptr);

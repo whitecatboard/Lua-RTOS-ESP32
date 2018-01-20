@@ -179,16 +179,9 @@ void _sys_init() {
     status_set(STATUS_LUA_HISTORY);
 
     esp_vfs_lwip_sockets_register();
-
-	esp_vfs_unregister("/dev/uart");
 	esp_vfs_unregister("/dev/uart");
 
 	vfs_tty_register();
-
-#if CONFIG_LUA_RTOS_USE_SSH_SERVER
-	vfs_pty_register();
-	vfs_urandom_register();
-#endif
 
 	printf("Booting Lua RTOS...\r\n");
 	delay(100);

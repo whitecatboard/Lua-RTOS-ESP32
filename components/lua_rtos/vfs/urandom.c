@@ -37,6 +37,8 @@
 
 #include "vfs.h"
 
+static int registered = 0;
+
 extern int os_get_random(unsigned char *buf, size_t len);
 
 static int vfs_urandom_open(const char *path, int flags, int mode) {
@@ -74,22 +76,26 @@ static int vfs_urandom_select (int maxfdp1, fd_set *readset, fd_set *writeset, f
 }
 
 void vfs_urandom_register() {
-    esp_vfs_t vfs = {
-    	.flags = ESP_VFS_FLAG_DEFAULT,
-        .write = NULL,
-        .open = &vfs_urandom_open,
-        .fstat = NULL,
-        .close = &vfs_urandom_close,
-        .read = &vfs_urandom_read,
-        .lseek = NULL,
-        .stat = NULL,
-        .link = NULL,
-        .unlink = NULL,
-        .rename = NULL,
-		.select = &vfs_urandom_select,
-    };
+	if (!registered) {
+	    esp_vfs_t vfs = {
+	    	.flags = ESP_VFS_FLAG_DEFAULT,
+	        .write = NULL,
+	        .open = &vfs_urandom_open,
+	        .fstat = NULL,
+	        .close = &vfs_urandom_close,
+	        .read = &vfs_urandom_read,
+	        .lseek = NULL,
+	        .stat = NULL,
+	        .link = NULL,
+	        .unlink = NULL,
+	        .rename = NULL,
+			.select = &vfs_urandom_select,
+	    };
 
-    ESP_ERROR_CHECK(esp_vfs_register("/dev/urandom", &vfs, NULL));
+	    ESP_ERROR_CHECK(esp_vfs_register("/dev/urandom", &vfs, NULL));
+
+	    registered = 1;
+	}
 }
 
 #endif
