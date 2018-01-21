@@ -211,7 +211,7 @@ void _sys_init() {
     const esp_partition_t *running = esp_ota_get_running_partition();
 
     printf(
-		"Lua RTOS %s. Copyright (C) 2015 - 2017 whitecatboard.org\r\n\r\nbuild %d\r\ncommit %s\r\nRunning from %s partition\r\n",
+		"Lua RTOS %s. Copyright (C) 2015 - 2018 whitecatboard.org\r\n\r\nbuild %d\r\ncommit %s\r\nRunning from %s partition\r\n",
 		LUA_OS_VER, BUILD_TIME, BUILD_COMMIT, running->label
 	);
 
