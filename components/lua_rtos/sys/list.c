@@ -149,7 +149,7 @@ int IRAM_ATTR list_get(struct list *list, int index, void **item) {
     return 0;
 }
 
-int list_remove(struct list *list, int index, int destroy) {
+int list_remove_compact(struct list *list, int index, int destroy, bool compact) {
     struct list_index *cindex = NULL;
     int iindex;
 
@@ -173,7 +173,13 @@ int list_remove(struct list *list, int index, int destroy) {
     cindex = &list->index[iindex];
     
     if (destroy) {
-    	free(cindex->item);
+        free(cindex->item);
+    }
+
+    if (compact) {
+        bcopy(&list->index[iindex+1], &list->index[iindex], sizeof(struct list_index) * (list->indexes - iindex - 1));
+        iindex = list->indexes-1;
+        cindex = &list->index[iindex];
     }
     
     cindex->next = list->free;
@@ -183,6 +189,10 @@ int list_remove(struct list *list, int index, int destroy) {
     mtx_unlock(&list->mutex);
     
     return 0;
+}
+
+int list_remove(struct list *list, int index, int destroy) {
+    return list_remove_compact(list, index, destroy, false);
 }
 
 int IRAM_ATTR list_first(struct list *list) {

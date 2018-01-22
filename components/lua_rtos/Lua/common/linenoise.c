@@ -384,7 +384,7 @@ void linenoiseEditDeletePrevWord(struct linenoiseState *l) {
  * when ctrl+d is typed.
  *
  * The function returns the length of the current buffer. */
-static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, const char *prompt)
+static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, const char *prompt, bool history)
 {
     struct linenoiseState *l;
 
@@ -434,7 +434,7 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
         switch(c) {
         case ENTER:    /* enter */
             if (l->len > 0) {
-                linenoiseHistoryAdd(l);
+                if(history) linenoiseHistoryAdd(l);
             }
             
         	free(l);
@@ -570,10 +570,10 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
 
 /* This function calls the line editing function linenoiseEdit() using
  * the STDIN file descriptor set in raw mode. */
-static int linenoiseRaw(char *buf, size_t buflen, const char *prompt) {
+static int linenoiseRaw(char *buf, size_t buflen, const char *prompt, bool history) {
     int count;
 
-    count = linenoiseEdit(fileno(__getreent()->_stdin), fileno(__getreent()->_stdout), buf, buflen, prompt);
+    count = linenoiseEdit(fileno(__getreent()->_stdin), fileno(__getreent()->_stdout), buf, buflen, prompt, history);
     printf("\n");
 
     return count;
@@ -592,32 +592,55 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
     		fname = "/history";
     	}
     } else {
-    	if(!ram_history_init) {
-    		list_init(&ram_history, 0);
-    		ram_history_init = 1;
-    	}
-    	
+			if(!ram_history_init) {
+				list_init(&ram_history, 0);
+				ram_history_init = 1;
+			}
+
+			int id = 0;
   		char *buf = 0;
-    	if(l->history_index>=0 && l->history_index <= (ram_history.indexes-1)) {
-			int err = list_get(&ram_history, l->history_index, (void **)&buf);
-			if (!err) {
-				if(0 == strcmp(l->buf, buf)) {
-					return;
+
+		 	if(l->history_index>=0 && l->history_index <= (ram_history.indexes-1)) {
+				// if we're at a known history index, check if the user
+				// modified the string or has just hit [Enter]
+				int err = list_get(&ram_history, l->history_index, (void **)&buf);
+				if (!err) {
+					if(0 == strcmp(l->buf, buf)) {
+						err = list_remove_compact(&ram_history, l->history_index, 0, true); //compact
+					}
 				}
 			}
-    	}
-    	
-    	int id = 0;
-    	char *dup = strndup(l->buf, l->len);
-    	if (dup) {
-		  	int err = list_add(&ram_history, dup, &id);
-			if (!err) {
-				l->history_index = id;
+			else {
+				// if the user manually entered the current command,
+				// search all the history if it had been entered before
+				int index = list_first(&ram_history);
+				while (index >= 0) {
+					int err = list_get(&ram_history, index, (void **)&buf);
+					if (!err) {
+						if(0 == strcmp(l->buf, buf)) {
+							err = list_remove_compact(&ram_history, index, 0, true); //compact
+							break;
+						}
+						buf = 0;
+					}
+					index = list_next(&ram_history, index);
+				}
+			}
+
+			if (!buf) {
+				buf = strndup(l->buf, l->len);
+			}
+
+		 	if (buf) {
+		  	int err = list_add(&ram_history, buf, &id);
+				if (!err) {
+					l->history_index = id;
 		  	}
-    	}
-    	l->history_index++;
-    	return;
-    }
+			}
+
+			l->history_index++;
+			return;
+		}
 
     fp = fopen(fname,"a");
     if (!fp) {
@@ -632,7 +655,7 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
 }
 
 static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
-    int pos, len, c;    
+    int pos, len, c;
     FILE *fp;
     const char *fname;
     
@@ -767,9 +790,13 @@ void linenoiseHistoryClear() {
  * for a blacklist of stupid terminals, and later either calls the line
  * editing function or uses dummy fgets() so that you will be able to type
  * something even in the most desperate of the conditions. */
-int linenoise(char *buf, const char *prompt) {
+int linenoiseHistory(char *buf, const char *prompt, bool history) {
     int count;
-    count = linenoiseRaw(buf,LINENOISE_MAX_LINE,prompt);
+    count = linenoiseRaw(buf,LINENOISE_MAX_LINE,prompt,history);
     if (count == -1) return -1;
     return count;
+}
+
+int linenoise(char *buf, const char *prompt) {
+    return linenoiseHistory(buf, prompt, true);
 }
