@@ -52,6 +52,7 @@
 #include <dirent.h>
 #include <sys/syslog.h>
 #include <sys/mount.h>
+#include <sys/path.h>
 
 #include <openssl/ssl.h>
 #include "mbedtls/platform.h"
@@ -1154,6 +1155,9 @@ int http_start(lua_State* L) {
 		ifconfig_t info;
 		int res;
 		driver_error_t *error;
+
+		// Create document root directory if not exist
+		mkpath(CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT);
 
 		LL=L;
 		strcpy(ip4addr, "0.0.0.0");
