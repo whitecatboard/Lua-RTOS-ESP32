@@ -15,6 +15,18 @@
  *     * Neither the name of the <organization> nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
+ *     * The WHITECAT logotype cannot be changed, you can remove it, but you
+ *       cannot change it in any way. The WHITECAT logotype is:
+ *
+ *          /\       /\
+ *         /  \_____/  \
+ *        /_____________\
+ *        W H I T E C A T
+ *
+ *     * Redistributions in binary form must retain all copyright notices printed
+ *       to any local or remote output device. This include any reference to
+ *       Lua RTOS, whitecatboard.org, Lua, and other copyright notices that may
+ *       appear in the future.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -68,7 +80,7 @@ static void *shell(void *arg) {
     const esp_partition_t *running = esp_ota_get_running_partition();
 
     printf(
-		"Lua RTOS %s. Copyright (C) 2015 - 2017 whitecatboard.org\r\n\r\nbuild %d\r\ncommit %s\r\nRunning from %s partition\r\n",
+		"Lua RTOS %s. Copyright (C) 2015 - 2018 whitecatboard.org\r\n\r\nbuild %d\r\ncommit %s\r\nRunning from %s partition\r\n",
 		LUA_OS_VER, BUILD_TIME, BUILD_COMMIT, running->label
 	);
 
@@ -77,9 +89,11 @@ static void *shell(void *arg) {
     // Run lua in interpreter mode
     doREPL(pvGetLuaState());
 
+	printf("thread %d\r\n", config->parent_thread);
+
     // The lua interpreter exit when the user enters the Ctrl-C key
     // This situation must be interpreted as a SIGINT signal
-    pthread_kill(2, SIGINT);
+    pthread_kill(config->parent_thread, SIGINT);
 
 	return NULL;
 }

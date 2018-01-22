@@ -144,8 +144,7 @@ struct linenoiseState {
     int history_index;  /* The history index we are currently editing. */
 };
 
-static uint8_t ram_history_init = 0;
-static struct list ram_history;
+static struct list *ram_history;
 
 enum KEY_ACTION{
 	KEY_NULL = 0,	    /* NULL */
@@ -580,11 +579,11 @@ static int linenoiseRaw(char *buf, size_t buflen, const char *prompt, bool histo
 }
 
 static void linenoiseHistoryAdd(struct linenoiseState *l) {
+    if (!status_get(STATUS_LUA_HISTORY)) return;
+
     FILE *fp;
     const char *fname;
     
-    if (!status_get(STATUS_LUA_HISTORY)) return;
-
     if (mount_is_mounted("fat")) {
     	if (mount_is_mounted("spiffs")) {
     		fname = "/sd/history";
@@ -592,38 +591,39 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
     		fname = "/history";
     	}
     } else {
-			if(!ram_history_init) {
-				list_init(&ram_history, 0);
-				ram_history_init = 1;
+			if(!ram_history) {
+				ram_history = malloc(sizeof(struct list));
+				assert(ram_history != NULL);
+				list_init(ram_history, 0);
 			}
 
 			int id = 0;
   		char *buf = 0;
 
-		 	if(l->history_index>=0 && l->history_index <= (ram_history.indexes-1)) {
+		 	if(l->history_index>=0 && l->history_index <= (ram_history->indexes-1)) {
 				// if we're at a known history index, check if the user
 				// modified the string or has just hit [Enter]
-				int err = list_get(&ram_history, l->history_index, (void **)&buf);
+				int err = list_get(ram_history, l->history_index, (void **)&buf);
 				if (!err) {
 					if(0 == strcmp(l->buf, buf)) {
-						err = list_remove_compact(&ram_history, l->history_index, 0, true); //compact
+						err = list_remove_compact(ram_history, l->history_index, 0, true); //compact
 					}
 				}
 			}
 			else {
 				// if the user manually entered the current command,
 				// search all the history if it had been entered before
-				int index = list_first(&ram_history);
+				int index = list_first(ram_history);
 				while (index >= 0) {
-					int err = list_get(&ram_history, index, (void **)&buf);
+					int err = list_get(ram_history, index, (void **)&buf);
 					if (!err) {
 						if(0 == strcmp(l->buf, buf)) {
-							err = list_remove_compact(&ram_history, index, 0, true); //compact
+							err = list_remove_compact(ram_history, index, 0, true); //compact
 							break;
 						}
 						buf = 0;
 					}
-					index = list_next(&ram_history, index);
+					index = list_next(ram_history, index);
 				}
 			}
 
@@ -632,7 +632,7 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
 			}
 
 		 	if (buf) {
-		  	int err = list_add(&ram_history, buf, &id);
+		  	int err = list_add(ram_history, buf, &id);
 				if (!err) {
 					l->history_index = id;
 		  	}
@@ -655,11 +655,11 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
 }
 
 static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
+    if (!status_get(STATUS_LUA_HISTORY)) return;
+
     int pos, len, c;
     FILE *fp;
     const char *fname;
-    
-    if (!status_get(STATUS_LUA_HISTORY)) return;
     
     if (mount_is_mounted("fat")) {
     	if (mount_is_mounted("spiffs")) {
@@ -668,11 +668,11 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
     		fname = "/history";
     	}
     } else {
-    	if(!ram_history_init) {
+    	if(!ram_history) {
     		return;
     	}
   		char *buf = 0;
-  		int lastcmd = ram_history.indexes - 1;
+  		int lastcmd = ram_history->indexes - 1;
 
   		if (l->history_index == -1) {
   			l->history_index = lastcmd + 1;
@@ -689,7 +689,7 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
 				return;
 			}
   		
-  		int err = list_get(&ram_history, l->history_index, (void **)&buf);
+  		int err = list_get(ram_history, l->history_index, (void **)&buf);
   		if (err) {
   			l->buf[0] = '\0';
   		}
@@ -763,9 +763,9 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
 }
 
 void linenoiseHistoryClear() {
-    const char *fname;
-    
     if (status_get(STATUS_LUA_HISTORY)) return;
+
+    const char *fname;
 
     if (mount_is_mounted("fat")) {
     	if (mount_is_mounted("spiffs")) {
@@ -774,9 +774,8 @@ void linenoiseHistoryClear() {
     		fname = "/history";
     	}
     } else {
-    	if(ram_history_init) {
-	    	list_destroy(&ram_history, 1);
-	    	ram_history_init = 0;
+    	if(ram_history) {
+	    	list_destroy(ram_history, 1);
     	}
     	
     	return;

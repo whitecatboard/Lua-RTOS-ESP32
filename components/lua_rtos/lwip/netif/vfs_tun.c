@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -15,6 +15,18 @@
  *     * Neither the name of the <organization> nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
+ *     * The WHITECAT logotype cannot be changed, you can remove it, but you
+ *       cannot change it in any way. The WHITECAT logotype is:
+ *
+ *          /\       /\
+ *         /  \_____/  \
+ *        /_____________\
+ *        W H I T E C A T
+ *
+ *     * Redistributions in binary form must retain all copyright notices printed
+ *       to any local or remote output device. This include any reference to
+ *       Lua RTOS, whitecatboard.org, Lua, and other copyright notices that may
+ *       appear in the future.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -27,7 +39,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS TUN VFS
+ * Lua RTOS TUN vfs
  *
  */
 

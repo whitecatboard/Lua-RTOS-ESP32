@@ -42,10 +42,11 @@
 #include <sys/delay.h>
 #include <drivers/net.h>
 
+void vfs_pty_register();
+void vfs_urandom_register();
+
 static size_t listensockets(int *sock, size_t sockcount, int *maxfd);
-static void sigintterm_handler(int fish);
 static void commonsetup(void);
-int dropbearkey_main(int argc, char ** argv);
 
 static int childsock;
 static u8_t volatile ssh_shutdown = 0;
@@ -242,6 +243,10 @@ static void *dropbear_thread(void *arg) {
 
 	// Create the system passwd file if not exist
 	mkfile("/etc/passwd");
+
+	// Register needed filesystems
+	vfs_pty_register();
+	vfs_urandom_register();
 
 	// Create the server keys if not exist
 	create_server_keys();

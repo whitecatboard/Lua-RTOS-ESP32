@@ -15,6 +15,18 @@
  *     * Neither the name of the <organization> nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
+ *     * The WHITECAT logotype cannot be changed, you can remove it, but you
+ *       cannot change it in any way. The WHITECAT logotype is:
+ *
+ *          /\       /\
+ *         /  \_____/  \
+ *        /_____________\
+ *        W H I T E C A T
+ *
+ *     * Redistributions in binary form must retain all copyright notices printed
+ *       to any local or remote output device. This include any reference to
+ *       Lua RTOS, whitecatboard.org, Lua, and other copyright notices that may
+ *       appear in the future.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -27,7 +39,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS /dev/urandom
+ * Lua RTOS urandom vfs
  *
  */
 
@@ -36,6 +48,8 @@
 #if CONFIG_LUA_RTOS_USE_SSH_SERVER
 
 #include "vfs.h"
+
+static int registered = 0;
 
 extern int os_get_random(unsigned char *buf, size_t len);
 
@@ -74,22 +88,26 @@ static int vfs_urandom_select (int maxfdp1, fd_set *readset, fd_set *writeset, f
 }
 
 void vfs_urandom_register() {
-    esp_vfs_t vfs = {
-    	.flags = ESP_VFS_FLAG_DEFAULT,
-        .write = NULL,
-        .open = &vfs_urandom_open,
-        .fstat = NULL,
-        .close = &vfs_urandom_close,
-        .read = &vfs_urandom_read,
-        .lseek = NULL,
-        .stat = NULL,
-        .link = NULL,
-        .unlink = NULL,
-        .rename = NULL,
-		.select = &vfs_urandom_select,
-    };
+	if (!registered) {
+	    esp_vfs_t vfs = {
+	    	.flags = ESP_VFS_FLAG_DEFAULT,
+	        .write = NULL,
+	        .open = &vfs_urandom_open,
+	        .fstat = NULL,
+	        .close = &vfs_urandom_close,
+	        .read = &vfs_urandom_read,
+	        .lseek = NULL,
+	        .stat = NULL,
+	        .link = NULL,
+	        .unlink = NULL,
+	        .rename = NULL,
+			.select = &vfs_urandom_select,
+	    };
 
-    ESP_ERROR_CHECK(esp_vfs_register("/dev/urandom", &vfs, NULL));
+	    ESP_ERROR_CHECK(esp_vfs_register("/dev/urandom", &vfs, NULL));
+
+	    registered = 1;
+	}
 }
 
 #endif
