@@ -142,6 +142,7 @@ struct linenoiseState {
     size_t cols;        /* Number of columns in terminal-> */
     size_t maxrows;     /* Maximum num of rows used so far (multiline mode) */
     int history_index;  /* The history index we are currently editing. */
+    bool password;      /* A password is being entered. */
 };
 
 static struct list *ram_history;
@@ -259,13 +260,17 @@ static void refreshSingleLine(struct linenoiseState *l) {
     abAppend(&ab,seq,strlen(seq));
     /* Write the prompt and the current buffer content */
     abAppend(&ab,l->prompt,strlen(l->prompt));
-    abAppend(&ab,buf,len);
+    if (!l->password) {
+        abAppend(&ab,buf,len);
+    }
     /* Erase to right */
     snprintf(seq,64,"\x1b[0K");
     abAppend(&ab,seq,strlen(seq));
     /* Move cursor to original position. */
-    snprintf(seq,64,"\r\x1b[%dC", (int)(pos+plen));
-    abAppend(&ab,seq,strlen(seq));
+    if (!l->password) {
+		  snprintf(seq,64,"\r\x1b[%dC", (int)(pos+plen));
+		  abAppend(&ab,seq,strlen(seq));
+		}
     if (write(fd,ab.b,ab.len) == -1) {} /* Can't recover from write error. */
     abFree(&ab);
 }
@@ -289,7 +294,9 @@ int linenoiseEditInsert(struct linenoiseState *l, char c) {
             if ((l->plen+l->len < l->cols)) {
                 /* Avoid a full update of the line in the
                  * trivial case. */
-                if (write(l->ofd,&c,1) == -1) return -1;
+                if (!l->password) {
+                    if (write(l->ofd,&c,1) == -1) return -1;
+                }
             } else {
                 refreshLine(l);
             }
@@ -383,7 +390,7 @@ void linenoiseEditDeletePrevWord(struct linenoiseState *l) {
  * when ctrl+d is typed.
  *
  * The function returns the length of the current buffer. */
-static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, const char *prompt, bool history)
+static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, const char *prompt, bool password)
 {
     struct linenoiseState *l;
 
@@ -405,6 +412,7 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
     l->cols = buflen;
     l->maxrows = 0;
     l->history_index = -1;
+    l->password = password;
 
     /* Buffer starts empty. */
     l->buf[0] = '\0';
@@ -433,7 +441,7 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
         switch(c) {
         case ENTER:    /* enter */
             if (l->len > 0) {
-                if(history) linenoiseHistoryAdd(l);
+                if(!l->password) linenoiseHistoryAdd(l);
             }
             
         	free(l);
@@ -569,10 +577,10 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
 
 /* This function calls the line editing function linenoiseEdit() using
  * the STDIN file descriptor set in raw mode. */
-static int linenoiseRaw(char *buf, size_t buflen, const char *prompt, bool history) {
+static int linenoiseRaw(char *buf, size_t buflen, const char *prompt, bool password) {
     int count;
 
-    count = linenoiseEdit(fileno(__getreent()->_stdin), fileno(__getreent()->_stdout), buf, buflen, prompt, history);
+    count = linenoiseEdit(fileno(__getreent()->_stdin), fileno(__getreent()->_stdout), buf, buflen, prompt, password);
     printf("\n");
 
     return count;
@@ -789,13 +797,13 @@ void linenoiseHistoryClear() {
  * for a blacklist of stupid terminals, and later either calls the line
  * editing function or uses dummy fgets() so that you will be able to type
  * something even in the most desperate of the conditions. */
-int linenoiseHistory(char *buf, const char *prompt, bool history) {
+int linenoisePassword(char *buf, const char *prompt, bool password) {
     int count;
-    count = linenoiseRaw(buf,LINENOISE_MAX_LINE,prompt,history);
+    count = linenoiseRaw(buf,LINENOISE_MAX_LINE,prompt,password);
     if (count == -1) return -1;
     return count;
 }
 
 int linenoise(char *buf, const char *prompt) {
-    return linenoiseHistory(buf, prompt, true);
+    return linenoisePassword(buf, prompt, false);
 }

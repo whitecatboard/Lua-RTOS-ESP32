@@ -864,7 +864,7 @@ int process(http_request_handle *request) {
 
 		if (!found) {
 			send_error(request, 404, "Not Found", NULL, "File not found.");
-			syslog(LOG_DEBUG, "http: %s Not found\r", pathbuf);
+			syslog(LOG_DEBUG, "http: %s Not found\r", path);
 		}
 		else if (S_ISREG(statbuf.st_mode)) {
 			//send the found file

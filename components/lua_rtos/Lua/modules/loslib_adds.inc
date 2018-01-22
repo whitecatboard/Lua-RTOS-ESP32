@@ -949,7 +949,7 @@ static int os_passwd(lua_State *L) {
 	// user to check before change it
 	if (strlen(hash_pass) > 0) {
 		// Get password
-		linenoiseHistory(buffer, "Old Password: ", false);
+		linenoisePassword(buffer, "Old Password: ", true);
 		if (strlen(buffer) > 64) {
 			printf("try again, password too long\r\n");
 			goto exit;
@@ -968,7 +968,7 @@ static int os_passwd(lua_State *L) {
 	// Change password
 
 	// Get password
-	linenoiseHistory(buffer, "New Password: ", false);
+	linenoisePassword(buffer, "New Password: ", true);
 	if (strlen(buffer) > 64) {
 		printf("try again, password too long\r\n");
 		goto exit;
@@ -979,7 +979,7 @@ static int os_passwd(lua_State *L) {
 	strcpy(pass, buffer);
 
 	// Retype password
-	linenoiseHistory(buffer, "Retype New Password: ", false);
+	linenoisePassword(buffer, "Retype New Password: ", true);
 	if (strlen(buffer) > 64) {
 		printf("try again, password too long\r\n");
 		goto exit;
