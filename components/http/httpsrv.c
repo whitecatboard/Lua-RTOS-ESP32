@@ -52,6 +52,7 @@
 #include <dirent.h>
 #include <sys/syslog.h>
 #include <sys/mount.h>
+#include <sys/path.h>
 
 #include <openssl/ssl.h>
 #include "mbedtls/platform.h"
@@ -182,28 +183,30 @@ char *do_gets(char *s, int size, http_request_handle *request) {
 	fd_set set;
 	FD_ZERO(&set); /* clear the set */
 	FD_SET(socket, &set); /* add our file descriptor to the set */
-	struct timeval timeout = {2L, 0L}; //wait up to 2sec
+	struct timeval timeout = {0L, 100L}; //wait up to 100ms
 
 	int rc;
 	char *c = s;
 	while (c < (s + size - 1)) {
 
-		//only do this once for secure (or if nothing pending), each time for normal
-		if (!request->config->secure || (c == s && 0 == SSL_pending(request->ssl))) {
-			// select supports setting a timeout
-			// so *only* if select tells us data
-			// is ready we read the data using recv
-			rc = select(socket+1, &set, NULL, NULL, &timeout);
-			if (rc == -1) {
-				return NULL;
-			}
-			else if (rc == 0 && !FD_ISSET(socket, &set)) {
-				//no data received or connection is closed
-				break;
-			}
-		}
-
 		if (request->config->secure) {
+
+			//only do this once for secure (or if nothing pending)
+			if (c == s && 0 == SSL_pending(request->ssl)) {
+				// select supports setting a timeout
+				// so *only* if select tells us data
+				// is ready we read the data using recv
+				rc = select(socket+1, &set, NULL, NULL, &timeout);
+				if (rc == -1) {
+					syslog(LOG_DEBUG, "http: select failed\r");
+					return NULL;
+				}
+				else if (rc == 0 && !FD_ISSET(socket, &set)) {
+					//no data received or connection is closed
+					syslog(LOG_DEBUG, "http: no data received\r");
+					break;
+				}
+			}
 
 			//see http://www.past5.com/tutorials/2014/02/21/openssl-and-select/
 			int ssl_error;
@@ -212,7 +215,7 @@ char *do_gets(char *s, int size, http_request_handle *request) {
 			//check SSL errors
 			switch(ssl_error = SSL_get_error(request->ssl,rc)) {
 				case SSL_ERROR_NONE:
-					//do our stuff with the newly read character below
+					//all good - we do our stuff with the newly read character below
 					break;
 				case SSL_ERROR_ZERO_RETURN:	 	//connection closed by client, clean up
 				case SSL_ERROR_WANT_READ:			//the operation did not complete, block the read
@@ -224,7 +227,7 @@ char *do_gets(char *s, int size, http_request_handle *request) {
 			}
 		}
 		else
-			rc = recv(socket, c, 1, 0);
+			rc = recv(socket, c, 1, MSG_WAITALL);
 
 		if (rc>0) {
 			//syslog(LOG_DEBUG, "http: got %c\r", *c);
@@ -236,9 +239,11 @@ char *do_gets(char *s, int size, http_request_handle *request) {
 		}
 		else if (rc==0) {
 			//no data received or connection is closed
+			syslog(LOG_DEBUG, "http: no data received or connection is closed\r");
 			break;
 		}
 		else {
+			syslog(LOG_DEBUG, "http: discarding half-received data\r");
 			return NULL; //discard half-received data
 		}
 	}
@@ -859,7 +864,7 @@ int process(http_request_handle *request) {
 
 		if (!found) {
 			send_error(request, 404, "Not Found", NULL, "File not found.");
-			syslog(LOG_DEBUG, "http: %s Not found\r", pathbuf);
+			syslog(LOG_DEBUG, "http: %s Not found\r", path);
 		}
 		else if (S_ISREG(statbuf.st_mode)) {
 			//send the found file
@@ -1150,6 +1155,9 @@ int http_start(lua_State* L) {
 		ifconfig_t info;
 		int res;
 		driver_error_t *error;
+
+		// Create document root directory if not exist
+		mkpath(CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT);
 
 		LL=L;
 		strcpy(ip4addr, "0.0.0.0");

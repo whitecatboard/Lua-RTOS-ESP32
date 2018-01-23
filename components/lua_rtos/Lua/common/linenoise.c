@@ -142,6 +142,7 @@ struct linenoiseState {
     size_t cols;        /* Number of columns in terminal-> */
     size_t maxrows;     /* Maximum num of rows used so far (multiline mode) */
     int history_index;  /* The history index we are currently editing. */
+    bool password;      /* A password is being entered. */
 };
 
 static struct list *ram_history;
@@ -259,13 +260,17 @@ static void refreshSingleLine(struct linenoiseState *l) {
     abAppend(&ab,seq,strlen(seq));
     /* Write the prompt and the current buffer content */
     abAppend(&ab,l->prompt,strlen(l->prompt));
-    abAppend(&ab,buf,len);
+    if (!l->password) {
+        abAppend(&ab,buf,len);
+    }
     /* Erase to right */
     snprintf(seq,64,"\x1b[0K");
     abAppend(&ab,seq,strlen(seq));
     /* Move cursor to original position. */
-    snprintf(seq,64,"\r\x1b[%dC", (int)(pos+plen));
-    abAppend(&ab,seq,strlen(seq));
+    if (!l->password) {
+		  snprintf(seq,64,"\r\x1b[%dC", (int)(pos+plen));
+		  abAppend(&ab,seq,strlen(seq));
+		}
     if (write(fd,ab.b,ab.len) == -1) {} /* Can't recover from write error. */
     abFree(&ab);
 }
@@ -289,7 +294,9 @@ int linenoiseEditInsert(struct linenoiseState *l, char c) {
             if ((l->plen+l->len < l->cols)) {
                 /* Avoid a full update of the line in the
                  * trivial case. */
-                if (write(l->ofd,&c,1) == -1) return -1;
+                if (!l->password) {
+                    if (write(l->ofd,&c,1) == -1) return -1;
+                }
             } else {
                 refreshLine(l);
             }
@@ -383,7 +390,7 @@ void linenoiseEditDeletePrevWord(struct linenoiseState *l) {
  * when ctrl+d is typed.
  *
  * The function returns the length of the current buffer. */
-static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, const char *prompt)
+static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, const char *prompt, bool password)
 {
     struct linenoiseState *l;
 
@@ -405,6 +412,7 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
     l->cols = buflen;
     l->maxrows = 0;
     l->history_index = -1;
+    l->password = password;
 
     /* Buffer starts empty. */
     l->buf[0] = '\0';
@@ -433,7 +441,7 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
         switch(c) {
         case ENTER:    /* enter */
             if (l->len > 0) {
-                linenoiseHistoryAdd(l);
+                if(!l->password) linenoiseHistoryAdd(l);
             }
             
         	free(l);
@@ -569,10 +577,10 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
 
 /* This function calls the line editing function linenoiseEdit() using
  * the STDIN file descriptor set in raw mode. */
-static int linenoiseRaw(char *buf, size_t buflen, const char *prompt) {
+static int linenoiseRaw(char *buf, size_t buflen, const char *prompt, bool password) {
     int count;
 
-    count = linenoiseEdit(fileno(__getreent()->_stdin), fileno(__getreent()->_stdout), buf, buflen, prompt);
+    count = linenoiseEdit(fileno(__getreent()->_stdin), fileno(__getreent()->_stdout), buf, buflen, prompt, password);
     printf("\n");
 
     return count;
@@ -583,7 +591,7 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
 
     FILE *fp;
     const char *fname;
-
+    
     if (mount_is_mounted("fat")) {
     	if (mount_is_mounted("spiffs")) {
     		fname = "/sd/history";
@@ -591,34 +599,56 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
     		fname = "/history";
     	}
     } else {
-    	if(!ram_history) {
-    		ram_history = malloc(sizeof(struct list));
-    		assert(ram_history != NULL);
+			if(!ram_history) {
+				ram_history = malloc(sizeof(struct list));
+				assert(ram_history != NULL);
+				list_init(ram_history, 0);
+			}
 
-    		list_init(ram_history, 0);
-    	}
-    	
+			int id = 0;
   		char *buf = 0;
-    	if(l->history_index>=0 && l->history_index <= (ram_history->indexes-1)) {
-			int err = list_get(ram_history, l->history_index, (void **)&buf);
-			if (!err) {
-				if(0 == strcmp(l->buf, buf)) {
-					return;
+
+		 	if(l->history_index>=0 && l->history_index <= (ram_history->indexes-1)) {
+				// if we're at a known history index, check if the user
+				// modified the string or has just hit [Enter]
+				int err = list_get(ram_history, l->history_index, (void **)&buf);
+				if (!err) {
+					if(0 == strcmp(l->buf, buf)) {
+						err = list_remove_compact(ram_history, l->history_index, 0, true); //compact
+					}
 				}
 			}
-    	}
-    	
-    	int id = 0;
-    	char *dup = strndup(l->buf, l->len);
-    	if (dup) {
-		  	int err = list_add(ram_history, dup, &id);
-			if (!err) {
-				l->history_index = id;
+			else {
+				// if the user manually entered the current command,
+				// search all the history if it had been entered before
+				int index = list_first(ram_history);
+				while (index >= 0) {
+					int err = list_get(ram_history, index, (void **)&buf);
+					if (!err) {
+						if(0 == strcmp(l->buf, buf)) {
+							err = list_remove_compact(ram_history, index, 0, true); //compact
+							break;
+						}
+						buf = 0;
+					}
+					index = list_next(ram_history, index);
+				}
+			}
+
+			if (!buf) {
+				buf = strndup(l->buf, l->len);
+			}
+
+		 	if (buf) {
+		  	int err = list_add(ram_history, buf, &id);
+				if (!err) {
+					l->history_index = id;
 		  	}
-    	}
-    	l->history_index++;
-    	return;
-    }
+			}
+
+			l->history_index++;
+			return;
+		}
 
     fp = fopen(fname,"a");
     if (!fp) {
@@ -635,10 +665,10 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
 static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
     if (!status_get(STATUS_LUA_HISTORY)) return;
 
-    int pos, len, c;    
+    int pos, len, c;
     FILE *fp;
     const char *fname;
-
+    
     if (mount_is_mounted("fat")) {
     	if (mount_is_mounted("spiffs")) {
     		fname = "/sd/history";
@@ -741,7 +771,7 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
 }
 
 void linenoiseHistoryClear() {
-    if (!status_get(STATUS_LUA_HISTORY)) return;
+    if (status_get(STATUS_LUA_HISTORY)) return;
 
     const char *fname;
 
@@ -767,9 +797,13 @@ void linenoiseHistoryClear() {
  * for a blacklist of stupid terminals, and later either calls the line
  * editing function or uses dummy fgets() so that you will be able to type
  * something even in the most desperate of the conditions. */
-int linenoise(char *buf, const char *prompt) {
+int linenoisePassword(char *buf, const char *prompt, bool password) {
     int count;
-    count = linenoiseRaw(buf,LINENOISE_MAX_LINE,prompt);
+    count = linenoiseRaw(buf,LINENOISE_MAX_LINE,prompt,password);
     if (count == -1) return -1;
     return count;
+}
+
+int linenoise(char *buf, const char *prompt) {
+    return linenoisePassword(buf, prompt, false);
 }

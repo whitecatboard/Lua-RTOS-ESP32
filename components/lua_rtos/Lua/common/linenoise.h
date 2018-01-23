@@ -44,6 +44,7 @@ extern "C" {
 #endif
 
 int linenoise(char *buf, const char *prompt);
+int linenoisePassword(char *buf, const char *prompt, bool password);
 void linenoiseClearScreen(void);
 void linenoiseSetMultiLine(int ml);
 void linenoisePrintKeyCodes(void);
