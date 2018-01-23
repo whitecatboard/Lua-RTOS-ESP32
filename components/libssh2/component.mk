@@ -3,4 +3,4 @@
 #
 
 COMPONENT_SRCDIRS := ./src ./cipher ./compat
-COMPONENT_ADD_INCLUDEDIRS := . ./src  ./random ./cipher 
+COMPONENT_ADD_INCLUDEDIRS := . ./src  ./random ./cipher ./include
