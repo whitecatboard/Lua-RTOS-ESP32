@@ -53,6 +53,9 @@
 #include <sys/syslog.h>
 #include <sys/mount.h>
 #include <sys/path.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <linux/in6.h>
 
 #include <openssl/ssl.h>
 #include "mbedtls/platform.h"
@@ -110,10 +113,15 @@ typedef struct {
   int socket;
   SSL *ssl;
   int headers_sent;
+  struct sockaddr_storage *client;
+  socklen_t client_len;
+  char *path;
+  char *method;
+  char *data;
 } http_request_handle;
 
-#define HTTP_Request_Normal_initializer { config, client, NULL, 0 };
-#define HTTP_Request_Secure_initializer { config, client, ssl,  0 };
+#define HTTP_Request_Normal_initializer { config, client, NULL, 0, NULL, 0, NULL, NULL, NULL };
+#define HTTP_Request_Secure_initializer { config, client, ssl,  0, NULL, 0, NULL, NULL, NULL };
 
 static http_server_config http_normal = HTTP_Normal_initializer;
 static http_server_config http_secure = HTTP_Secure_initializer;
@@ -327,7 +335,7 @@ int http_status(lua_State* L) {
 	const char *content_type = luaL_optstring( L, 4, "text/html" );
 	int content_length = luaL_optinteger( L, 5, -1 );
 
-	lua_getglobal(L, "http_stream_handle");
+	lua_getglobal(L, "http_internal_handle");
 	if (!lua_islightuserdata(L, -1)) {
 		return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
 	}
@@ -353,7 +361,7 @@ int http_status(lua_State* L) {
 
 int http_print(lua_State* L) {
 
-	lua_getglobal(L, "http_stream_handle");
+	lua_getglobal(L, "http_internal_handle");
 	if (!lua_islightuserdata(L, -1)) {
 		return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
 	}
@@ -382,7 +390,7 @@ int http_print(lua_State* L) {
 	return 0;
 }
 
-void send_file(http_request_handle *request, char *path, struct stat *statbuf, char *requestdata) {
+void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
 	int n;
 	char *data;
 
@@ -477,25 +485,71 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf, c
 						}
 					}
 					else {
-						lua_pushstring(L, (requestdata && *requestdata) ? requestdata:"");
+
+						//as we execute a lua script let's prepare the remote ip address
+						// -> first clean a possible IP4 addr from its leading '::ffff:'
+						if (request->client->ss_family==AF_INET6) {
+								struct sockaddr_in6* sa6=(struct sockaddr_in6*)request->client;
+								if (IN6_IS_ADDR_V4MAPPED(&sa6->sin6_addr)) {
+										struct sockaddr_in sa4;
+										memset(&sa4,0,sizeof(sa4));
+										sa4.sin_family=AF_INET;
+										sa4.sin_port=sa6->sin6_port;
+										memcpy(&sa4.sin_addr.s_addr,sa6->sin6_addr.s6_addr+12,4);
+										memcpy(request->client,&sa4,sizeof(sa4));
+										request->client_len=sizeof(sa4);
+								}
+						}
+						// -> now convert the address to human-readable form
+						char *buffer = (char *)malloc(INET6_ADDRSTRLEN);
+						if (buffer) {
+							int err=getnameinfo((struct sockaddr*)request->client,request->client_len,buffer,INET6_ADDRSTRLEN,0,0,NI_NUMERICHOST);
+							if (err!=0) {
+									snprintf(buffer,INET6_ADDRSTRLEN,"invalid address");
+							}
+						}
+
+						lua_pushstring(L, (strcasecmp(request->method, "GET") == 0) ? "GET":"POST");
+						lua_setglobal(L, "http_method");
+						lua_pushstring(L, request->path);
+						lua_setglobal(L, "http_uri");
+						lua_pushstring(L, (request->data && *request->data) ? request->data:"");
 						lua_setglobal(L, "http_request");
-						lua_pushlightuserdata(L, (void*)request);
-						lua_setglobal(L, "http_stream_handle");
 						lua_pushinteger(L, request->config->port);
 						lua_setglobal(L, "http_port");
 						lua_pushinteger(L, request->config->secure);
 						lua_setglobal(L, "http_secure");
+						lua_pushstring(L, buffer ? buffer:"");
+						lua_setglobal(L, "http_remote_addr");
+						lua_pushinteger(L, request->client->ss_family==AF_INET6 ? ((struct sockaddr_in6*)request->client)->sin6_port : ((struct sockaddr_in*)request->client)->sin_port);
+						lua_setglobal(L, "http_remote_port");
+						lua_pushstring(L, path);
+						lua_setglobal(L, "http_script_name");
+						lua_pushlightuserdata(L, (void*)request);
+						lua_setglobal(L, "http_internal_handle");
 
 						lua_pcall(L, 0, 0, 0);
 
 						lua_pushnil(L);
-						lua_setglobal(L, "http_request");
+						lua_setglobal(L, "http_method");
 						lua_pushnil(L);
-						lua_setglobal(L, "http_stream_handle");
+						lua_setglobal(L, "http_uri");
+						lua_pushnil(L);
+						lua_setglobal(L, "http_request");
 						lua_pushnil(L);
 						lua_setglobal(L, "http_port");
 						lua_pushnil(L);
 						lua_setglobal(L, "http_secure");
+						lua_pushnil(L);
+						lua_setglobal(L, "http_remote_addr");
+						lua_pushnil(L);
+						lua_setglobal(L, "http_remote_port");
+						lua_pushnil(L);
+						lua_setglobal(L, "http_script_name");
+						lua_pushnil(L);
+						lua_setglobal(L, "http_internal_handle");
+
+						free(buffer);
 
 						if (!request->config->secure) fsync(request->socket);
 						do_printf(request, "0\r\n\r\n");
@@ -642,13 +696,13 @@ int filepath_merge(char *newpath, const char *rootpath, const char *reqpath, con
 	return 1;
 }
 
-static void list_dir(http_request_handle *request, char *pathbuf, struct stat *statbuf, char *path, int len) {
+static void list_dir(http_request_handle *request, char *pathbuf, struct stat *statbuf, int len) {
 	DIR *dir;
 	struct dirent *de;
 
 	send_headers(request, 200, "OK", NULL, "text/html", -1);
-	chunk(request, "<HTML><HEAD><TITLE>Index of %s</TITLE></HEAD><BODY>", path);
-	chunk(request, "<H4>Index of %s</H4>", path);
+	chunk(request, "<HTML><HEAD><TITLE>Index of %s</TITLE></HEAD><BODY>", request->path);
+	chunk(request, "<H4>Index of %s</H4>", request->path);
 
 	chunk(request, "<TABLE>");
 	chunk(request, "<TR>");
@@ -661,10 +715,10 @@ static void list_dir(http_request_handle *request, char *pathbuf, struct stat *s
 		chunk(request, "</TR>");
 	}
 
-	filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL); //restore folder pathbuf
+	filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, request->path, NULL); //restore folder pathbuf
 	dir = opendir(pathbuf);
 	while ((de = readdir(dir)) != NULL) {
-		filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, de->d_name);
+		filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, request->path, de->d_name);
 		stat(pathbuf, statbuf);
 
 		chunk(request, "<TR>");
@@ -691,9 +745,6 @@ static void list_dir(http_request_handle *request, char *pathbuf, struct stat *s
 
 int process(http_request_handle *request) {
 	char *reqbuf;
-	char *method;
-	char *path;
-	char *data = NULL;
 	char *databuf = NULL;
 	char *host = NULL;
 	char *protocol;
@@ -722,34 +773,34 @@ int process(http_request_handle *request) {
 		return 0;
 	}
 
-	method = strtok(reqbuf, " ");
-	path = strtok(NULL, " ");
+	request->method = strtok(reqbuf, " ");
+	request->path = strtok(NULL, " ");
 	protocol = strtok(NULL, "\r");
 
-	if(!path) {
-		len = strlen(method)-1;
-		while(len>0 && (method[len]=='\r' || method[len]=='\n')) {
-			method[len] = 0;
+	if(!request->path) {
+		len = strlen(request->method)-1;
+		while(len>0 && (request->method[len]=='\r' || request->method[len]=='\n')) {
+			request->method[len] = 0;
 			len--;
 		}
-		path = "/";
+		request->path = "/";
 	}
 
 	//in case the protocol wasn't given we need to fix the path
 	if(!protocol) {
-		len = strlen(path)-1;
-		while(len>=0 && (path[len]=='\r' || path[len]=='\n')) {
-			path[len] = 0;
+		len = strlen(request->path)-1;
+		while(len>=0 && (request->path[len]=='\r' || request->path[len]=='\n')) {
+			request->path[len] = 0;
 			len--;
 		}
-		if(!strlen(path)) path = "/";
+		if(!strlen(request->path)) request->path = "/";
 	}
 
-	if(strcasecmp(method, "GET") == 0 && path) {
-		data = strchr(path, '?');
-		if (data) {
-			*data = 0; //cut off the path
-			data++; //point to start of params
+	if(strcasecmp(request->method, "GET") == 0 && request->path) {
+		request->data = strchr(request->path, '?');
+		if (request->data) {
+			*request->data = 0; //cut off the path
+			request->data++; //point to start of params
 		}
 	}
 
@@ -778,6 +829,8 @@ int process(http_request_handle *request) {
 						send_headers(request, 302, "Found", pathbuf, NULL, 0);
 						free(reqbuf);
 						free(pathbuf);
+						request->path = NULL;
+						request->data = NULL;
 						return 0;
 					}
 				}
@@ -786,13 +839,15 @@ int process(http_request_handle *request) {
 		} // while
 	} // AP mode
 
-	if (!method || !path) {
+	if (!request->method || !request->path) {
 		free(reqbuf);
 		free(pathbuf);
+		request->path = NULL;
+		request->data = NULL;
 		return -1; //protocol may be omitted
 	}
 
-	if(strcasecmp(method, "POST") == 0) {
+	if(strcasecmp(request->method, "POST") == 0) {
 		char *skip;
 		int contentlength = HTTP_BUFF_SIZE;
 		//skip headers to the actual request data
@@ -839,58 +894,60 @@ int process(http_request_handle *request) {
 				send_error(request, 500, "Internal Server Error", NULL, "Error allocating POST data memory.");
 				free(reqbuf);
 				free(pathbuf);
+				request->path = NULL;
+				request->data = NULL;
 				return 0;
 			}
 			strcpy(databuf, pathbuf);
-			data = databuf;
+			request->data = databuf;
 		} // while
 	}
 
-	syslog(LOG_DEBUG, "http: %s %s %s\r", method, path, protocol ? protocol:"");
+	syslog(LOG_DEBUG, "http: %s %s %s\r", request->method, request->path, protocol ? protocol:"");
 
 	if (!request->config->secure) shutdown(request->socket, SHUT_RD);
 
-	if (strcasecmp(method, "GET") != 0 && strcasecmp(method, "POST") != 0) {
-		syslog(LOG_DEBUG, "http: %s not supported\r", method);
+	if (strcasecmp(request->method, "GET") != 0 && strcasecmp(request->method, "POST") != 0) {
+		syslog(LOG_DEBUG, "http: %s not supported\r", request->method);
 		send_error(request, 501, "Not supported", NULL, "Method is not supported.");
 	}
 	else {
 		bool found = false;
 
 		//look for a file or folder with the exact name, .lua extension or .html extension
-		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, NULL)    && stat(pathbuf, &statbuf) == 0) found = true;
-		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, ".lua")  && stat(pathbuf, &statbuf) == 0) found = true;
-		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, ".html") && stat(pathbuf, &statbuf) == 0) found = true;
+		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, request->path, NULL)    && stat(pathbuf, &statbuf) == 0) found = true;
+		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, request->path, ".lua")  && stat(pathbuf, &statbuf) == 0) found = true;
+		if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, request->path, ".html") && stat(pathbuf, &statbuf) == 0) found = true;
 
 		if (!found) {
 			send_error(request, 404, "Not Found", NULL, "File not found.");
-			syslog(LOG_DEBUG, "http: %s Not found\r", path);
+			syslog(LOG_DEBUG, "http: %s Not found\r", request->path);
 		}
 		else if (S_ISREG(statbuf.st_mode)) {
 			//send the found file
-			send_file(request, pathbuf, &statbuf, data);
+			send_file(request, pathbuf, &statbuf);
 		}
 		else if (S_ISDIR(statbuf.st_mode)) {
 
-			len = strlen(path);
-			if (len == 0 || path[len - 1] != '/') {
+			len = strlen(request->path);
+			if (len == 0 || request->path[len - 1] != '/') {
 				//send a redirect
-				snprintf(pathbuf, HTTP_BUFF_SIZE, "Location: %s/", path);
+				snprintf(pathbuf, HTTP_BUFF_SIZE, "Location: %s/", request->path);
 				send_error(request, 302, "Found", pathbuf, "Directories must end with a slash.");
 			} else {
 				//try to find index.lua or index.html
 				found = false;
 
 				//look for a file named index.lua or index.html
-				if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.lua")  && stat(pathbuf, &statbuf) == 0) found = true;
-				if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, path, "index.html") && stat(pathbuf, &statbuf) == 0) found = true;
+				if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, request->path, "index.lua")  && stat(pathbuf, &statbuf) == 0) found = true;
+				if (!found && filepath_merge(pathbuf, CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT, request->path, "index.html") && stat(pathbuf, &statbuf) == 0) found = true;
 
 				if (!found || !S_ISREG(statbuf.st_mode)) {
 					//generate a dirlisting
-					list_dir(request, pathbuf, &statbuf, path, len);
+					list_dir(request, pathbuf, &statbuf, len);
 				}
 				else {
-					send_file(request, pathbuf, &statbuf, data);
+					send_file(request, pathbuf, &statbuf);
 				}
 			}
 
@@ -900,6 +957,8 @@ int process(http_request_handle *request) {
 	free(reqbuf);
 	free(pathbuf);
 	if (databuf) free(databuf);
+	request->path = NULL;
+	request->data = NULL;
 
 	return 0;
 }
@@ -1045,6 +1104,8 @@ static void *http_thread(void *arg) {
 	http_refcount++;
 	while (!http_shutdown) {
 		int client;
+		struct sockaddr_storage client_addr;
+		socklen_t client_addr_len = sizeof(client_addr);
 
 		if (config->secure) {
 			ssl = SSL_new(ctx);
@@ -1055,9 +1116,10 @@ static void *http_thread(void *arg) {
 		}
 
 		// Wait for a request ...
-		if ((client = accept(*config->server, NULL, NULL)) != -1) {
+		if ((client = accept(*config->server, (struct sockaddr *)&client_addr, &client_addr_len)) != -1) {
 
 			// We wait for send all data before close socket's stream
+			//XXX FIXME REMOVE SO_LINGER XXX
 			struct linger so_linger;
 			so_linger.l_onoff  = 1;
 			so_linger.l_linger = 2;
@@ -1082,6 +1144,7 @@ static void *http_thread(void *arg) {
 					}
 				} else {
 					http_request_handle request = HTTP_Request_Secure_initializer;
+					request.client = &client_addr;
 					process(&request);
 				}
 
@@ -1090,6 +1153,7 @@ static void *http_thread(void *arg) {
 			else
 			{
 				http_request_handle request = HTTP_Request_Normal_initializer;
+				request.client = &client_addr;
 				process(&request);
 				shutdown(client, SHUT_RDWR);
 			}
