@@ -41,7 +41,8 @@ typedef enum  {
 	CAN_SPEED_250KBPS=250, 				/**< \brief CAN Node runs at 250kBit/s. */
 	CAN_SPEED_500KBPS=500, 				/**< \brief CAN Node runs at 500kBit/s. */
 	CAN_SPEED_800KBPS=800, 				/**< \brief CAN Node runs at 800kBit/s. */
-	CAN_SPEED_1000KBPS=1000				/**< \brief CAN Node runs at 1000kBit/s. */
+	CAN_SPEED_1000KBPS=1000,			/**< \brief CAN Node runs at 1000kBit/s. */
+	CAN_SPEED_500000KBPS=500000			/**< \brief CAN Node runs at 500000/s. */
 }CAN_speed_t;
 
 /** \brief CAN configuration structure */

@@ -254,7 +254,7 @@ static void *gw_thread(void *arg) {
  * Operation functions
  */
 
-driver_error_t *can_setup(int32_t unit, uint16_t speed) {
+driver_error_t *can_setup(int32_t unit, uint32_t speed) {
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	driver_unit_lock_error_t *lock_error = NULL;
 #endif
@@ -468,7 +468,7 @@ driver_error_t *can_remove_filter(int32_t unit, int32_t fromId, int32_t toId) {
 	return NULL;
 }
 
-driver_error_t *can_gateway_start(int32_t unit, uint16_t speed, int32_t port) {
+driver_error_t *can_gateway_start(int32_t unit, uint32_t speed, int32_t port) {
 	driver_error_t *error;
 
 	// Sanity checks

@@ -202,7 +202,7 @@ int CAN_init(){
 			break;
 		default:
 			MODULE_CAN->BTR1.B.TSEG1	=0xc;
-			__tq = ((float)1000/CAN_cfg.speed) / 16;
+			__tq = (((float)1000/CAN_cfg.speed) / 16) * 1000;
 	}
 
 	//set baud rate prescaler

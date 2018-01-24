@@ -129,12 +129,12 @@ struct can_frame {
 extern const int can_errors;
 extern const int can_error_map;
 
-driver_error_t *can_setup(int32_t unit, uint16_t speed);
+driver_error_t *can_setup(int32_t unit, uint32_t speed);
 driver_error_t *can_tx(int32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t *data, uint8_t len);
 driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_t *data, uint8_t *len);
 driver_error_t *can_add_filter(int32_t unit, int32_t fromId, int32_t toId);
 driver_error_t *can_remove_filter(int32_t unit, int32_t fromId, int32_t toId);
-driver_error_t *can_gateway_start(int32_t unit, uint16_t speed, int32_t port);
+driver_error_t *can_gateway_start(int32_t unit, uint32_t speed, int32_t port);
 driver_error_t *can_gateway_stop(int32_t unit);
 
 #endif	/* CAN_H */
