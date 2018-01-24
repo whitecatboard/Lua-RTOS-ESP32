@@ -284,6 +284,7 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
 void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
                      StkId val, const TValue *slot) {
   int loop;  /* counter to avoid infinite loops */
+
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
     const TValue *tm;  /* '__newindex' metamethod */
     if (slot != NULL) {  /* is 't' a table? */
@@ -291,10 +292,10 @@ void luaV_finishset (lua_State *L, const TValue *t, TValue *key,
       lua_assert(ttisnil(slot));  /* old value must be nil */
       tm = fasttm(L, ttistable(t)?h->metatable:(Table*)luaL_rometatable(rvalue(t)), TM_NEWINDEX);  /* get metamethod */
       if (tm == NULL) {  /* no metamethod? */
-    	//if ((checktype(key, LUA_TSTRING)) && luaR_findglobal(svalue(key))) {
-    	//	luaG_runerror(L, "attempt to index a rotable value (global '%s')", svalue(key));
-    	//	return;
-    	//}
+    	if (ttype(slot) == LUA_TROTABLE) {
+    		luaG_runerror(L, "attempt to index a rotable value (global '%s')", svalue(key));
+    		return;
+    	}
         if (slot == luaO_nilobject)  /* no previous entry? */
           slot = luaH_newkey(L, h, key);  /* create one */
         /* no metamethod and (now) there is an entry with given key */
