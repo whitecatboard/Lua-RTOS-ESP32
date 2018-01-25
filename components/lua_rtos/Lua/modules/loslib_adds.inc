@@ -538,8 +538,9 @@ static int os_stats(lua_State *L) {
 		return 1;
 	} else {
 		printf("Free mem: %d\n",xPortGetFreeHeapSize());
+		printf("Free mem min: %d\n",xPortGetMinimumEverFreeHeapSize());
 	}
-	
+
 	return 0;
 }
 
