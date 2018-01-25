@@ -49,11 +49,15 @@
 
 #include <sys/driver.h>
 #include <sys/delay.h>
+#include <sys/path.h>
 
 int lora_pkt_fwd(void);
 
 static void *lora_gw(void *arg) {
 	driver_error_t *error;
+
+	// Create lora directory structure if not exist
+	mkpath("/etc/lora");
 
 	// Wait for network
 	while ((error = net_check_connectivity())) {
