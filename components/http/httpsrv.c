@@ -1119,7 +1119,6 @@ static void *http_thread(void *arg) {
 		if ((client = accept(*config->server, (struct sockaddr *)&client_addr, &client_addr_len)) != -1) {
 
 			// We wait for send all data before close socket's stream
-			//XXX FIXME REMOVE SO_LINGER XXX
 			struct linger so_linger;
 			so_linger.l_onoff  = 1;
 			so_linger.l_linger = 2;
