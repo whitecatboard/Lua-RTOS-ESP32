@@ -100,9 +100,13 @@ int Socket_setnonblocking(int sock)
  */
 int Socket_error(char* aString, int sock)
 {
+#if defined(WIN32) || defined(WIN64)
+	int errno;
+#endif
+
 	FUNC_ENTRY;
 #if defined(WIN32) || defined(WIN64)
-	int errno = WSAGetLastError();
+	errno = WSAGetLastError();
 #endif
 	if (errno != EINTR && errno != EAGAIN && errno != EINPROGRESS && errno != EWOULDBLOCK)
 	{

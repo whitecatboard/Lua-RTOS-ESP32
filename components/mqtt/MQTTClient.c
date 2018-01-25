@@ -160,7 +160,7 @@ static mutex_type connect_mutex = &connect_mutex_store;
 static pthread_mutex_t connectionlost_mutex_store = PTHREAD_MUTEX_INITIALIZER;
 static mutex_type connectionlost_mutex = &connectionlost_mutex_store;
 
-void MQTTClient_init()
+void MQTTClient_init(void)
 {
 	pthread_mutexattr_t attr;
 	int rc;
