@@ -39,28 +39,40 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS realloc wrapper
+ * Lua RTOS, syscalls common functions
  *
  */
 
+#include "freertos/adds.h"
+#include "freertos/task.h"
+
 #include "esp_attr.h"
 
-#include <stddef.h>
-#include <reent.h>
+#include <Lua/src/lgc.h>
 
-int __garbage_collector();
-extern int __real__realloc_r(struct _reent *r, void *ptr, size_t size);
-
-int IRAM_ATTR __wrap__realloc_r(struct _reent *r, void *ptr, size_t size) {
-	int res;
-
-	if (!(res = __real__realloc_r(r, ptr,size))) {
-		// If there is not enough memory, try to execute the garbage collector
-		// and try again
-		if (__garbage_collector() == 0) {
-			res = __real__realloc_r(r, ptr, size);
-		}
+int IRAM_ATTR __garbage_collector() {
+	if (xPortInIsrContext()) {
+		// We are in an interrupt, and we can't
+		// execute the garbage collector
+		return -1;
 	}
 
-	return res;
+	// Get the thread's Lua state
+	lua_State *L = pvGetLuaState();
+	if (L) {
+		// Lua thread
+		// Execute the garbage collector 2 times, and
+		// wait 1 msec to get time to the idle task to
+		// free memory
+		luaC_fullgc(L, 0);
+		vTaskDelay(1 / portTICK_PERIOD_MS);
+
+		luaC_fullgc(L, 0);
+		vTaskDelay(1 / portTICK_PERIOD_MS);
+	} else {
+		// Not a Lua thread
+		return -1;
+	}
+
+	return 0;
 }
