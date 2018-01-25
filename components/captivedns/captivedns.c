@@ -177,6 +177,7 @@ int captivedns_start(lua_State* L) {
 
 	wifi_mode_t mode;
 	if ((error = wifi_check_error(esp_wifi_get_mode(&mode)))) {
+		free(error);
 		return luaL_error(L, "couldn't get wifi mode");
 	}
 	
@@ -186,6 +187,7 @@ int captivedns_start(lua_State* L) {
 
 	// get WIFI IF info
 	if ((error = wifi_check_error(tcpip_adapter_get_ip_info(ESP_IF_WIFI_AP, &esp_info)))) {
+		free(error);
 		return luaL_error(L, "couldn't get interface information");
 	}
 	
