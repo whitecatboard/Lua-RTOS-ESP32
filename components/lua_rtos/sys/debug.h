@@ -50,7 +50,19 @@
 #include "freertos/task.h"
 
 #if DEBUG_FREE_MEM
-#define debug_used_stack() printf("remaining stak %d bytes\r\n", uxTaskGetStackHighWaterMark(NULL) * 4)
+#define debug_used_stack() printf("remaining stak %d bytes\r\n", uxTaskGetStackHighWaterMark(NULL))
+
+#define debug_free_stack_begin(var) \
+int elapsed_begin_stack_##var = uxTaskGetStackHighWaterMark(NULL);
+
+#define debug_free_stack_end(var,msg) \
+int elapsed_end_stack_##var = uxTaskGetStackHighWaterMark(NULL); \
+const char *elapsed_end_stack_##var_msg = msg; \
+if (elapsed_end_stack_##var_msg) { \
+	printf("%s (%s) stack consumption %d bytes (%d bytes free)\n", (char *)#var, elapsed_end_stack_##var_msg, elapsed_begin_stack_##var - elapsed_end_stack_##var, uxTaskGetStackHighWaterMark(NULL)); \
+} else { \
+	printf("%s stack consumption %d bytes (%d bytes free)\n", (char *)#var, elapsed_begin_stack_##var - elapsed_end_stack_##var, uxTaskGetStackHighWaterMark(NULL));	\
+}
 
 #define debug_free_mem_begin(var) \
 int elapsed_begin_##var = xPortGetFreeHeapSize(); 
@@ -64,6 +76,8 @@ if (elapsed_end_##var_msg) { \
 	printf("%s consumption %d bytes (%d bytes free)\n", (char *)#var, elapsed_begin_##var - elapsed_end_##var, xPortGetFreeHeapSize());	\
 }
 #else
+#define debug_free_stack_begin(var)
+#define debug_free_stack_end(var, msg)
 #define debug_free_mem_begin(var)
 #define debug_free_mem_end(var, msg)
 #define debug_used_stack()
