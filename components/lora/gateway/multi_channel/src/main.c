@@ -50,6 +50,7 @@
 #include <sys/driver.h>
 #include <sys/delay.h>
 #include <sys/path.h>
+#include <sys/param.h>
 
 int lora_pkt_fwd(void);
 
@@ -73,6 +74,7 @@ static void *lora_gw(void *arg) {
 void lora_gw_start() {
 	pthread_t thread;
 	pthread_attr_t attr;
+	struct sched_param sched;
 
 	pthread_attr_init(&attr);
 

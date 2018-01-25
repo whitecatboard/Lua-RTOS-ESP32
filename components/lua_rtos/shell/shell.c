@@ -121,6 +121,9 @@ int create_shell(shell_config_t *config) {
 
     pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
 
+	sched.sched_priority = MAX(CONFIG_LUA_RTOS_LUA_TASK_PRIORITY / 2, 10);
+	pthread_attr_setschedparam(&attr, &sched);
+
     // Create thread
     res = pthread_create(&thread, &attr, shell, (void *)config);
     if (res) {
