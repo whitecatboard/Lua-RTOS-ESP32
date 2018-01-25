@@ -1107,14 +1107,6 @@ static void *http_thread(void *arg) {
 		struct sockaddr_storage client_addr;
 		socklen_t client_addr_len = sizeof(client_addr);
 
-		if (config->secure) {
-			ssl = SSL_new(ctx);
-			if (!ssl) {
-				syslog(LOG_ERR, "couldn't create SSL session\n");
-				break; //exit the loop to shutdown the server
-			}
-		}
-
 		// Wait for a request ...
 		if ((client = accept(*config->server, (struct sockaddr *)&client_addr, &client_addr_len)) != -1) {
 
@@ -1130,6 +1122,12 @@ static void *http_thread(void *arg) {
 			setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 
 			if (config->secure) {
+				ssl = SSL_new(ctx);
+				if (!ssl) {
+					syslog(LOG_ERR, "couldn't create SSL session\n");
+					break; //exit the loop to shutdown the server
+				}
+
 				SSL_set_fd(ssl, client);
 
 				if (!(rc = SSL_accept(ssl))) {
@@ -1148,6 +1146,8 @@ static void *http_thread(void *arg) {
 				}
 
 				SSL_shutdown(ssl);
+				SSL_free(ssl);
+				ssl = NULL;
 			}
 			else
 			{
@@ -1159,11 +1159,6 @@ static void *http_thread(void *arg) {
 
 			close(client);
 			client = -1;
-		}
-
-		if (config->secure) {
-			SSL_free(ssl);
-			ssl = NULL;
 		}
 	}
 
