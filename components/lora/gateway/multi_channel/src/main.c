@@ -79,7 +79,7 @@ void lora_gw_start() {
 	// Set stack size
 	pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_STACK_SIZE);
 
-	if (pthread_create(&thread, &attr, lora_gw, NULL)) {
+	if (!pthread_create(&thread, &attr, lora_gw, NULL)) {
 		return;
 	}
 

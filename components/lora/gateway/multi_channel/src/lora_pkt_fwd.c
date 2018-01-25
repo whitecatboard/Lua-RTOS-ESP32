@@ -60,6 +60,9 @@ Maintainer: Michael Coracin
 
 #define exit(reason) return;
 
+#include <sys/socket.h>
+#include <netdb.h>
+
 // Lua RTOS end
 
 #include "trace.h"
@@ -1151,27 +1154,33 @@ int lora_pkt_fwd(void)
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    // Set stack size
-    pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE * 2);
 
     /* spawn threads to manage upstream and downstream */
+    pthread_attr_setstacksize(&attr, 10240);
     i = pthread_create( &thrid_up, &attr, (void * (*)(void *))thread_up, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create upstream thread\n");
         exit(EXIT_FAILURE);
     }
+    pthread_setname_np(thrid_up, "lora_upstream");
+
+    pthread_attr_setstacksize(&attr, 4096);
     i = pthread_create( &thrid_down, &attr, (void * (*)(void *))thread_down, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create downstream thread\n");
         exit(EXIT_FAILURE);
     }
     pthread_setname_np(thrid_down, "lora_downstream");
+
+    pthread_attr_setstacksize(&attr, 3072);
     i = pthread_create( &thrid_jit, &attr, (void * (*)(void *))thread_jit, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create JIT thread\n");
         exit(EXIT_FAILURE);
     }
     pthread_setname_np(thrid_jit, "lora_jit");
+
+    pthread_attr_setstacksize(&attr, 2048);
     i = pthread_create( &thrid_timersync, &attr, (void * (*)(void *))thread_timersync, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create Timer Sync thread\n");
@@ -1181,12 +1190,15 @@ int lora_pkt_fwd(void)
 
     /* spawn thread to manage GPS */
     if (gps_enabled == true) {
+        pthread_attr_setstacksize(&attr, 4096);
         i = pthread_create( &thrid_gps, &attr, (void * (*)(void *))thread_gps, NULL);
         if (i != 0) {
             MSG("ERROR: [main] impossible to create GPS thread\n");
             exit(EXIT_FAILURE);
         }
         pthread_setname_np(thrid_gps, "lora_gps");
+
+        pthread_attr_setstacksize(&attr, 4096);
         i = pthread_create( &thrid_valid, &attr, (void * (*)(void *))thread_valid, NULL);
         if (i != 0) {
             MSG("ERROR: [main] impossible to create validation thread\n");
