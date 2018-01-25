@@ -37,6 +37,7 @@
 #include "agentfwd.h"
 #include "runopts.h"
 #include "auth.h"
+#include <lwip/sockets.h>
 
 /* Handles sessions (either shells or programs) requested by the client */
 
@@ -1048,19 +1049,19 @@ static void execchild(void *user_data) {
  * handling */
 void svr_chansessinitialise() {
 
+#if 0
 	struct sigaction sa_chld;
 
 	/* single child process intially */
-#if 0
 	svr_ses.childpids = (struct ChildPid*)m_malloc(sizeof(struct ChildPid));
 	svr_ses.childpids[0].pid = -1; /* unused */
 	svr_ses.childpids[0].chansess = NULL;
 	svr_ses.childpidsize = 1;
 	svr_ses.lastexit.exitpid = -1; /* Nothing has exited yet */
-#endif
+
 	sa_chld.sa_handler = sesssigchild_handler;
 	sa_chld.sa_flags = SA_NOCLDSTOP;
-#if 0
+
 	sigemptyset(&sa_chld.sa_mask);
 	if (sigaction(SIGCHLD, &sa_chld, NULL) < 0) {
 		dropbear_exit("signal() error");
