@@ -106,6 +106,7 @@ static int l_scp_get(lua_State* L) {
 
 	rc = libssh2_session_handshake(session, sock);
 	if(rc) {
+		libssh2_session_free(session);
 		return luaL_error(L, "can't establish ssh session");
 	}
 
@@ -225,6 +226,7 @@ static int l_scp_put(lua_State* L) {
 
 	rc = libssh2_session_handshake(session, sock);
 	if(rc) {
+		libssh2_session_free(session);
 		return luaL_error(L, "can't establish ssh session");
 	}
 
@@ -371,6 +373,7 @@ static int l_ssh_exec(lua_State* L) {
 
 	rc = libssh2_session_handshake(session, sock);
 	if(rc) {
+		libssh2_session_free(session);
 		return luaL_error(L, "can't establish ssh session");
 	}
 
