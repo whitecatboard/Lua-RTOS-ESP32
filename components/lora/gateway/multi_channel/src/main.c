@@ -74,7 +74,6 @@ static void *lora_gw(void *arg) {
 void lora_gw_start() {
 	pthread_t thread;
 	pthread_attr_t attr;
-	struct sched_param sched;
 
 	pthread_attr_init(&attr);
 

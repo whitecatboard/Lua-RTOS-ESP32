@@ -56,6 +56,7 @@
 #include <sys/fcntl.h>
 #include <sys/delay.h>
 #include <sys/console.h>
+#include <sys/param.h>
 
 #include <reent.h>
 
