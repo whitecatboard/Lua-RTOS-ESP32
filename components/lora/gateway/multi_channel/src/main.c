@@ -43,16 +43,78 @@
  *
  */
 
+#include <string.h>
 #include <pthread.h>
 
 #include <drivers/net.h>
+#include <drivers/eth.h>
+#include <drivers/spi_eth.h>
+#include <drivers/wifi.h>
 
+#include <sys/syslog.h>
 #include <sys/driver.h>
 #include <sys/delay.h>
 #include <sys/path.h>
 #include <sys/param.h>
 
 int lora_pkt_fwd(void);
+
+static int gen_local_conf() {
+	uint8_t mac[6] = {0,0,0,0,0,0};
+	uint8_t have_mac = 0;
+	ifconfig_t info;
+
+	// Get the MAC address to build the gateway EUI
+#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
+	eth_stat(&info);
+	if (memcmp(info.mac, mac, 6) != 0) {
+		memcpy(mac, info.mac, 6);
+		have_mac = 1;
+	}
+#else
+#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
+	spi_eth_stat(&info);
+	if (memcmp(info.mac, mac, 6) != 0) {
+		memcpy(mac, info.mac, 6);
+		have_mac = 1;
+	}
+#endif
+#endif
+
+	if (!have_mac) {
+		wifi_stat(&info);
+		if (memcmp(info.mac, mac, 6) != 0) {
+			memcpy(mac, info.mac, 6);
+			have_mac = 1;
+		}
+	}
+
+	if (!have_mac) {
+		syslog(LOG_INFO, "INFO: can't get gateway ID. Check that you have configured a network connection.");
+
+		return -1;
+	}
+
+	FILE *conf = NULL;
+
+	conf = fopen("/etc/lora/local_conf.json", "a+");
+	if (conf) {
+		fprintf(conf, "{\r\n");
+		fprintf(conf, "\t\"gateway_conf\": {\r\n");
+		fprintf(conf, "\t\t\"gateway_ID\": \"%02X%02X%02XFFFE%02X%02X%02X\", \r\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+		fprintf(conf, "\t\t\"ref_latitude\": \"41.359875\", \r\n");
+		fprintf(conf, "\t\t\"ref_longitude\": \"2.061760\", \r\n");
+		fprintf(conf, "\t\t\"ref_altitude\": \"40\", \r\n");
+		fprintf(conf, "\t\t\"contact_email\": \"your@mail\", \r\n");
+		fprintf(conf, "\t\t\"description\": \"WHITECAT ESP32 LORA GW\" \r\n");
+		fprintf(conf, "\t}\r\n");
+		fprintf(conf, "}\r\n");
+
+		fclose(conf);
+	}
+
+	return 0;
+}
 
 static void *lora_gw(void *arg) {
 	driver_error_t *error;
@@ -64,6 +126,13 @@ static void *lora_gw(void *arg) {
 	while ((error = net_check_connectivity())) {
 		free(error);
 		delay(100);
+	}
+
+	// Create local configuration if not exist
+	if (mkfile("/etc/lora/local_conf.json") == 0) {
+		if (gen_local_conf() < 0) {
+			return NULL;
+		}
 	}
 
 	lora_pkt_fwd();

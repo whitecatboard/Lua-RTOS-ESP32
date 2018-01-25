@@ -59,8 +59,9 @@ int mkpath(const char *path);
  * @brief Make a file if not exists.
  *
  * @return
- *    Returns the value 0 if successful; otherwise the value -1 is returned,
- *    and the global variable errno	is set to indicate the error:
+ *    Returns the value 0 if file doesn't exist and is created successfully;
+ *    Otherwise the value -1 is returned, and the global variable errno	is
+ *    set to indicate the error:
  */
 int mkfile(const char *path);
 

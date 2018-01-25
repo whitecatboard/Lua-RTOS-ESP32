@@ -43,6 +43,7 @@
  *
  */
 
+#include <errno.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -102,6 +103,8 @@ int mkfile(const char *path) {
 
 	FILE *fp = fopen(npath, "r");
 	if (fp) {
+		errno = EEXIST;
+		return -1;
 	} else {
 		fp = fopen(npath, "a+");
 	}
