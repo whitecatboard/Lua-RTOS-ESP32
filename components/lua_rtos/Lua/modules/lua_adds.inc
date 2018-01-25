@@ -192,7 +192,7 @@ static void luaos_boot_scripts(lua_State *L) {
         printf("Executing %s ...\n", autorun_order[autorun]);
         dofile(L, autorun_order[autorun]);
     }
-    
+
     printf("\n");
 }
 

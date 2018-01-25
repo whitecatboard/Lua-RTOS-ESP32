@@ -1,8 +1,17 @@
 diff --git a/components/vfs/include/esp_vfs.h b/components/vfs/include/esp_vfs.h
-index ab645fcc..61d75ac3 100644
+index ab645fcc..c63f83cd 100644
 --- a/components/vfs/include/esp_vfs.h
 +++ b/components/vfs/include/esp_vfs.h
-@@ -24,6 +24,8 @@
+@@ -15,6 +15,8 @@
+ #ifndef __ESP_VFS_H__
+ #define __ESP_VFS_H__
+ 
++#include "luartos.h"
++
+ #include <stdint.h>
+ #include <stddef.h>
+ #include <stdarg.h>
+@@ -24,6 +26,8 @@
  #include <sys/stat.h>
  #include <dirent.h>
  
@@ -11,7 +20,7 @@ index ab645fcc..61d75ac3 100644
  #ifdef __cplusplus
  extern "C" {
  #endif
-@@ -166,6 +168,14 @@ typedef struct
+@@ -166,6 +170,14 @@ typedef struct
          int (*fsync_p)(void* ctx, int fd);
          int (*fsync)(int fd);
      };
@@ -27,9 +36,18 @@ index ab645fcc..61d75ac3 100644
  
  
 diff --git a/components/vfs/vfs.c b/components/vfs/vfs.c
-index 5dbd462c..a54c4f42 100644
+index 5dbd462c..28f9c96c 100644
 --- a/components/vfs/vfs.c
 +++ b/components/vfs/vfs.c
+@@ -40,7 +40,7 @@
+ // mask of actual file descriptor (e.g. 0x00000fff)
+ #define VFS_FD_MASK     ((1 << CONFIG_MAX_FD_BITS) - 1)
+ // max number of VFS entries
+-#define VFS_MAX_COUNT   ((1 << MAX_VFS_ID_BITS) - 1)
++// #define VFS_MAX_COUNT   ((1 << MAX_VFS_ID_BITS) - 1)
+ // mask of VFS id (e.g. 0x00007000)
+ #define VFS_INDEX_MASK  (VFS_MAX_COUNT << CONFIG_MAX_FD_BITS)
+ #define VFS_INDEX_S     CONFIG_MAX_FD_BITS
 @@ -269,6 +269,7 @@ ssize_t esp_vfs_write(struct _reent *r, int fd, const void * data, size_t size)
          __errno_r(r) = EBADF;
          return -1;
