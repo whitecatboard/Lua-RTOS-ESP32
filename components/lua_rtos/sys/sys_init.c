@@ -189,7 +189,6 @@ void _sys_init() {
 	_clock_init();
 	_cpu_init();
     _driver_init();
-    _pthread_init();
     _signal_init();
 
     status_set(STATUS_SYSCALLS_INITED);

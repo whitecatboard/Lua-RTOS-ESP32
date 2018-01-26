@@ -186,7 +186,7 @@ static void connectionLost(void* context, char* cause) {
     int rc = 0;
 
     for(;;) {
-    	if (mqtt->callback_mtx.sem) {
+    	if (mqtt->callback_mtx.lock) {
     		mtx_lock(&mqtt->callback_mtx);
 
         	if (NETWORK_AVAILABLE()) {
@@ -416,7 +416,7 @@ static int lmqtt_client_gc (lua_State *L) {
     mqtt_subs_callback *nextcallback;
 
     mqtt = (mqtt_userdata *)luaL_testudata(L, 1, "mqtt.cli");
-    if (mqtt && mqtt->callback_mtx.sem) {
+    if (mqtt && mqtt->callback_mtx.lock) {
         // Destroy callbacks
         mtx_lock(&mqtt->callback_mtx);
 
@@ -440,7 +440,7 @@ static int lmqtt_client_gc (lua_State *L) {
         mqtt->client = NULL;
 
         mtx_destroy(&mqtt->callback_mtx);
-        //mtx_destroy does mqtt->callback_mtx.sem = 0;
+        //mtx_destroy does mqtt->callback_mtx.lock = 0;
 
         if (mqtt->ca_file) {
           free((char*)mqtt->ca_file);

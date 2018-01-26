@@ -57,7 +57,7 @@ void list_init(struct list *list, int first_index) {
     mtx_init(&list->mutex, NULL, NULL, 0);
     
     mtx_lock(&list->mutex);
-    
+
     list->indexes =  0;
     list->free = NULL;
     list->index = NULL;

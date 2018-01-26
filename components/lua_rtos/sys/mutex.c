@@ -43,6 +43,7 @@
  *
  */
 
+#include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/adds.h"
 
@@ -51,15 +52,19 @@
 #include <sys/mutex.h>
 #include <sys/panic.h>
 
+#if !CONFIG_LUA_RTOS_USE_EVENT_GROUP_IN_MTX
+void _mtx_init() {
+}
+
 void mtx_init(struct mtx *mutex, const char *name, const char *type, int opts) {    
-    mutex->sem = xSemaphoreCreateBinary();
-    if (mutex->sem) {
+    mutex->lock = xSemaphoreCreateBinary();
+    if (mutex->lock) {
         if (xPortInIsrContext()) {
             BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-            xSemaphoreGiveFromISR( mutex->sem, &xHigherPriorityTaskWoken); 
+            xSemaphoreGiveFromISR( mutex->lock, &xHigherPriorityTaskWoken);
             portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
         } else {
-            xSemaphoreGive( mutex->sem );            
+            xSemaphoreGive( mutex->lock );
         }
     }    
 }
@@ -67,15 +72,15 @@ void mtx_init(struct mtx *mutex, const char *name, const char *type, int opts) {
 void IRAM_ATTR mtx_lock(struct mtx *mutex) {
 	if (xPortInIsrContext()) {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;        
-        xSemaphoreTakeFromISR( mutex->sem, &xHigherPriorityTaskWoken );
+        xSemaphoreTakeFromISR( mutex->lock, &xHigherPriorityTaskWoken );
         portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
     } else {
-        xSemaphoreTake( mutex->sem, portMAX_DELAY );
+        xSemaphoreTake( mutex->lock, portMAX_DELAY );
     }
 }
 
-int mtx_trylock(struct	mtx *mutex) {
-    if (xSemaphoreTake( mutex->sem, 0 ) == pdTRUE) {
+int mtx_trylock(struct mtx *mutex) {
+    if (xSemaphoreTake( mutex->lock, 0 ) == pdTRUE) {
         return 1;
     } else {
         return 0;
@@ -85,23 +90,145 @@ int mtx_trylock(struct	mtx *mutex) {
 void IRAM_ATTR mtx_unlock(struct mtx *mutex) {
 	if (xPortInIsrContext()) {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;  
-        xSemaphoreGiveFromISR( mutex->sem, &xHigherPriorityTaskWoken );  
+        xSemaphoreGiveFromISR( mutex->lock, &xHigherPriorityTaskWoken );
         portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
     } else {
-        xSemaphoreGive( mutex->sem );    
+        xSemaphoreGive( mutex->lock );
     }
 }
 
-void mtx_destroy(struct	mtx *mutex) {
+void mtx_destroy(struct mtx *mutex) {
 	if (xPortInIsrContext()) {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;  
-        xSemaphoreGiveFromISR( mutex->sem, &xHigherPriorityTaskWoken );  
+        xSemaphoreGiveFromISR( mutex->lock, &xHigherPriorityTaskWoken );
         portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
     } else {
-        xSemaphoreGive( mutex->sem );        
+        xSemaphoreGive( mutex->lock );
     }
     
-    vSemaphoreDelete( mutex->sem );
+    vSemaphoreDelete( mutex->lock );
     
-    mutex->sem = 0;
+    mutex->lock = 0;
 }
+#else
+// This array contains the requiered event group object for manage a
+// number of MTX_MAX mutexes
+static eventg_t eventg[MTX_EVENT_GROUPS];
+
+#define mtx_lock_internal() xEventGroupWaitBits(MTX_EVENTG(1).eg, MTX_EVENTG_BIT(1), pdTRUE, pdTRUE, portMAX_DELAY);
+#define mtx_unlock_internal() xEventGroupSetBits(MTX_EVENTG(1).eg, MTX_EVENTG_BIT(1));
+
+// Search for an unused bit in the event group array and mark as used.
+//
+// If an unused bit is found the function returns:
+//
+// bits 31 to 24 contains the event group identifier, and bits 23 to 0
+static uint32_t allocate_mtx() {
+	uint32_t used, allocated;
+	int eg, bit;
+
+	allocated = 0;
+
+	mtx_lock_internal();
+
+	// Search in each event group for an unused bit
+	for(eg=0;eg<MTX_EVENT_GROUPS;eg++) {
+		used = eventg[eg].used;
+
+		for(bit = 0;bit < BITS_PER_EVENT_GROUP;bit++) {
+			if (!(used & (1 << bit))) {
+				// Mark as used
+				eventg[eg].used |= (1 << bit);
+				allocated =  MTX_ID(eg, bit);
+				break;
+			}
+		}
+
+		if (allocated) {
+			break;
+		}
+	}
+
+	mtx_unlock_internal();
+
+	assert(allocated != 0);
+
+	return allocated;
+}
+
+// Init mtx control structures, it must be called prior to use any mtx function
+void _mtx_init() {
+	int eg;
+
+	for(eg=0;eg<MTX_EVENT_GROUPS;eg++) {
+		eventg[eg].used = 0;
+		if (eg == 0) {
+			// Reserve first mutext for internal protection
+			eventg[eg].used = 0x01;
+		}
+
+		eventg[eg].eg = xEventGroupCreate();
+	}
+}
+
+// Mark a mutex id as unused
+static void free_mtx(uint32_t mtxid) {
+	mtx_lock_internal();
+	MTX_EVENTG(mtxid).used &= ~MTX_EVENTG_BIT(mtxid);
+	mtx_unlock_internal();
+}
+
+void mtx_init(struct mtx *mutex, const char *name, const char *type, int opts) {
+	int32_t mtxid;
+
+	assert(mutex != NULL);
+
+	// Allocate the mutex
+	mtxid = allocate_mtx();
+
+	// Store the mutex id
+	mutex->lock = (uint32_t)mtxid;
+
+	if (xPortInIsrContext()) {
+		xEventGroupSetBitsFromISR(MTX_EVENTG(mtxid).eg, MTX_EVENTG_BIT(mtxid),NULL);
+	} else {
+		xEventGroupSetBits(MTX_EVENTG(mtxid).eg, MTX_EVENTG_BIT(mtxid));
+	}
+}
+
+void mtx_lock(struct mtx *mutex) {
+	assert(mutex != NULL);
+	if (xPortInIsrContext()) return;
+
+	xEventGroupWaitBits(MTX_EVENTG(mutex->lock).eg, MTX_EVENTG_BIT(mutex->lock), pdTRUE, pdTRUE, portMAX_DELAY);
+}
+
+int mtx_trylock(struct mtx *mutex) {
+	assert(mutex != NULL);
+	if (xPortInIsrContext()) return 1;
+
+	uint32_t mtxid = mutex->lock;
+
+  	EventBits_t uxBits = xEventGroupWaitBits(MTX_EVENTG(mtxid).eg, MTX_EVENTG_BIT(mtxid), pdTRUE, pdTRUE, 0);
+  	if (!(uxBits & MTX_EVENTG_BIT(mtxid))) {
+  		return 0;
+  	}
+
+  	return 1;
+}
+
+void mtx_unlock(struct mtx *mutex) {
+	assert(mutex != NULL);
+	if (xPortInIsrContext()) return;
+
+	uint32_t mtxid = mutex->lock;
+
+   	xEventGroupSetBits(MTX_EVENTG(mtxid).eg, MTX_EVENTG_BIT(mtxid));
+}
+
+void mtx_destroy(struct mtx *mutex) {
+	assert(mutex != NULL);
+
+	free_mtx(mutex->lock);
+}
+#endif

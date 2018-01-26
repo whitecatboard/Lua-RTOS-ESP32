@@ -81,6 +81,8 @@ struct pthreadTaskArg {
 void pthreadTask(void *task_arguments);
 
 void _pthread_init() {
+	_mtx_init();
+
 	if (!inited) {
 	    // Create mutexes
 	    mtx_init(&once_mtx, NULL, NULL, 0);

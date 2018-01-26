@@ -69,7 +69,7 @@ menu "Lua RTOS"
    menu "General"
       menu "Deep Sleep"
          config LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
-               bool "Mantain power for RTC IO, sensors and ULP co-processor by default"
+               bool "Mantain power for RTC IO, sensors and ULP co-processor by default (experimental)"
                default n
    
          config LUA_RTOS_DEEP_SLEEP_RTC_SLOW_MEM
@@ -80,6 +80,13 @@ menu "Lua RTOS"
                bool "Mantain power for RTC fast memory by default"
                default n
       endmenu
+
+      config LUA_RTOS_USE_EVENT_GROUP_IN_MTX
+            bool "Use event group in mtx implementation"
+         default n
+            help
+               This is experimental. Lua RTOS can use a binary semaphore to implement mtx (if disabled), or
+               event groups (if enabled). Enabling this option saves arround 2 Kb of RAM memory.
       
       config LUA_RTOS_READ_FLASH_UNIQUE_ID
             bool "Read SPI flash EUI"

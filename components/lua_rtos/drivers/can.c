@@ -69,7 +69,7 @@
 #include <pthread.h>
 
 static uint8_t setup = 0;
-struct mtx mtx;
+static struct mtx mtx;
 
 // CAN configuration
 CAN_device_t CAN_cfg;

@@ -53,7 +53,7 @@ int pthread_once(pthread_once_t *once_control, void (*init_routine)(void)) {
     // Init once_control, if not
     mtx_lock(&once_mtx);
 
-    if (((struct pthread_once *)once_control)->mutex.sem == NULL) {
+    if (((struct pthread_once *)once_control)->mutex.lock == NULL) {
         mtx_init(&((struct pthread_once *)once_control)->mutex, NULL, NULL, 0);
     }
 

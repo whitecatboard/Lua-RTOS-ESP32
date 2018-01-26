@@ -67,7 +67,7 @@ void _signal_init() {
 	assert(queue != NULL);
 
 	// Create signal task
-	BaseType_t ret = xTaskCreatePinnedToCore(signal_task, "signal", configMINIMAL_STACK_SIZE, NULL, 21, NULL, 0);
+	BaseType_t ret = xTaskCreatePinnedToCore(signal_task, "signal", configMINIMAL_STACK_SIZE, NULL, CONFIG_LUA_RTOS_LUA_TASK_PRIORITY + 1, NULL, 0);
 	assert(ret == pdPASS);
 }
 

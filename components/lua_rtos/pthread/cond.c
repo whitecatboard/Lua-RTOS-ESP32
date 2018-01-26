@@ -78,9 +78,9 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) {
 		return EBUSY;
 	}
 
-    if (!scond->mutex.sem) {
+    if (!scond->mutex.lock) {
         mtx_init(&scond->mutex, NULL, NULL, 0);
-        if (!scond->mutex.sem) {
+        if (!scond->mutex.lock) {
         	mtx_unlock(&cond_mtx);
         	if (*cond != PTHREAD_COND_INITIALIZER) free(scond);
         	return ENOMEM;
@@ -113,7 +113,7 @@ int pthread_cond_destroy(pthread_cond_t *cond) {
 		return EBUSY;
 	}
 
-    if (scond->mutex.sem) {
+    if (scond->mutex.lock) {
         mtx_destroy(&scond->mutex);
     } else {
     	mtx_unlock(&cond_mtx);
@@ -134,7 +134,7 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
 
 	struct pthread_cond *scond = (struct pthread_cond *)cond;
 
-	if (!scond->mutex.sem) {
+	if (!scond->mutex.lock) {
 		return EINVAL;
 	}
 
@@ -184,7 +184,7 @@ int pthread_cond_timedwait(pthread_cond_t *cond,
     }
 
     // Wait for condition
-    if (xSemaphoreTake(scond->mutex.sem, (1000 * abstime->tv_sec) / portTICK_PERIOD_MS ) != pdTRUE) {
+    if (xSemaphoreTake(scond->mutex.lock, (1000 * abstime->tv_sec) / portTICK_PERIOD_MS ) != pdTRUE) {
         return ETIMEDOUT;
     }
     
@@ -201,7 +201,7 @@ int pthread_cond_signal(pthread_cond_t *cond) {
 
 	struct pthread_cond *scond = (struct pthread_cond *)cond;
 
-	if (!scond->mutex.sem) {
+	if (!scond->mutex.lock) {
 		return EINVAL;
 	}
 
