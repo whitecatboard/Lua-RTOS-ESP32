@@ -61,7 +61,9 @@ static void send_msg_chansess_exitstatus(struct Channel * channel,
 		struct ChanSess * chansess);
 static void send_msg_chansess_exitsignal(struct Channel * channel,
 		struct ChanSess * chansess);
+#if !__XTENSA__
 static void get_termmodes(struct ChanSess *chansess);
+#endif
 
 const struct ChanType svrchansess = {
 	0, /* sepfds */
@@ -463,6 +465,7 @@ static int sessionwinchange(struct ChanSess *chansess) {
 	return DROPBEAR_SUCCESS;
 }
 
+#if !__XTENSA__
 static void get_termmodes(struct ChanSess *chansess) {
 
 	struct termios termio;
@@ -553,6 +556,7 @@ static void get_termmodes(struct ChanSess *chansess) {
 	}
 	TRACE(("leave get_termmodes"))
 }
+#endif
 
 /* Set up a session pty which will be used to execute the shell or program.
  * The pty is allocated now, and kept for when the shell/program executes.
