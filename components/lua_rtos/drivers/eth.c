@@ -131,7 +131,9 @@ static void phy_device_power_enable_via_gpio(bool enable)
  * Operation functions
  */
 driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1, uint32_t dns2) {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	driver_unit_lock_error_t *lock_error = NULL;
+#endif
 	driver_error_t *error;
 	tcpip_adapter_ip_info_t ip_info;
 	ip_addr_t dns;
@@ -148,6 +150,7 @@ driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1
 		return NULL;
 	}
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock resources
     if ((lock_error = driver_lock(ETH_DRIVER, 0, GPIO_DRIVER, 19, DRIVER_ALL_FLAGS, "TXD0"))) {
     	return driver_lock_error(ETH_DRIVER, lock_error);
@@ -184,6 +187,7 @@ driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1
     if ((lock_error = driver_lock(ETH_DRIVER, 0, GPIO_DRIVER, CONFIG_PHY_POWER_PIN, DRIVER_ALL_FLAGS, "POWER"))) {
     	return driver_lock_error(ETH_DRIVER, lock_error);
     }
+#endif
 
     esp_err_t ret = ESP_OK;
 

@@ -17,6 +17,11 @@ config = {
 	ethernet = false,
 	sntp = false,
 	http = false,
+	openvpn = false,
+	ssh = false,
+	lora = {
+		gw = false,
+	},
 	can = {
 		gw = false
 	},
@@ -97,14 +102,14 @@ if (config.ethernet) then
 end
 
 -- Start network services
-if (config.sntp or config.openvpn) then
+if (config.sntp or config.openvpn or config.ssh or config.lora.gw) then
 	print("Starting sntp client ...")
 	net.service.sntp.start()
 end
 
-if (config.openvpn) then
-	print("Starting openvpn client ...")
-	net.service.openvpn.start()
+if (config.lora.gw) then
+	print("Starting lora gateway ...")
+	lora.attach()
 end
 
 if (config.http) then
@@ -117,6 +122,16 @@ end
 
 if (config.can.gw) then
 	net.service.can.start(can.CAN0, config.data.can.gw.speed, config.data.can.gw.port)
+end
+
+if (config.openvpn) then
+	print("Starting openvpn client ...")
+	net.service.openvpn.start()
+end
+
+if (config.ssh) then
+	print("Starting ssh server ...")
+	net.service.ssh.start()
 end
 
 -- Main setups

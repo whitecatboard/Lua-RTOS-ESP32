@@ -56,6 +56,7 @@
 #include <sys/fcntl.h>
 #include <sys/delay.h>
 #include <sys/console.h>
+#include <sys/param.h>
 
 #include <reent.h>
 
@@ -120,6 +121,9 @@ int create_shell(shell_config_t *config) {
     CPU_SET(CONFIG_LUA_RTOS_LUA_TASK_CPU, &cpu_set);
 
     pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+
+	sched.sched_priority = MAX(CONFIG_LUA_RTOS_LUA_TASK_PRIORITY / 2, 10);
+	pthread_attr_setschedparam(&attr, &sched);
 
     // Create thread
     res = pthread_create(&thread, &attr, shell, (void *)config);

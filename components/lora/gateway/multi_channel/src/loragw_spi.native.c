@@ -24,6 +24,7 @@ Maintainer: Sylvain Miermont
 #define SPI_DELAY() delay(1)
 
 #include <drivers/spi.h>
+#include <sys/delay.h>
 
 /* -------------------------------------------------------------------------- */
 /* --- DEPENDANCIES --------------------------------------------------------- */

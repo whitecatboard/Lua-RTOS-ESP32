@@ -39,7 +39,6 @@ Maintainer: Sylvain Miermont
 
 /* -------------------------------------------------------------------------- */
 /* --- PRIVATE MACROS ------------------------------------------------------- */
-#define DEBUG_HAL 1
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 #if DEBUG_HAL == 1
     #define DEBUG_MSG(str)                fprintf(stderr, str)
@@ -788,7 +787,7 @@ int lgw_start(void) {
     cal_time = 2300; /* measured between 2.1 and 2.2 sec, because 1 TX only */
 
     /* Load the calibration firmware  */
-    load_firmware(MCU_AGC, cal_firmware, MCU_AGC_FW_BYTE);
+    load_firmware(MCU_AGC, (uint8_t *)cal_firmware, MCU_AGC_FW_BYTE);
     lgw_reg_w(LGW_FORCE_HOST_RADIO_CTRL, 0); /* gives to AGC MCU the control of the radios */
     lgw_reg_w(LGW_RADIO_SELECT, cal_cmd); /* send calibration configuration word */
     lgw_reg_w(LGW_MCU_RST_1, 0);
@@ -962,8 +961,8 @@ int lgw_start(void) {
     }
 
     /* Load firmware */
-    load_firmware(MCU_ARB, arb_firmware, MCU_ARB_FW_BYTE);
-    load_firmware(MCU_AGC, agc_firmware, MCU_AGC_FW_BYTE);
+    load_firmware(MCU_ARB, (uint8_t *)arb_firmware, MCU_ARB_FW_BYTE);
+    load_firmware(MCU_AGC, (uint8_t *)agc_firmware, MCU_AGC_FW_BYTE);
 
     /* gives the AGC MCU control over radio, RF front-end and filter gain */
     lgw_reg_w(LGW_FORCE_HOST_RADIO_CTRL, 0);

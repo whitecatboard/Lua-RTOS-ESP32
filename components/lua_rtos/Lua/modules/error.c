@@ -43,6 +43,7 @@
  *
  */
 
+#include "sdkconfig.h"
 #include "error.h"
 #include "lauxlib.h"
 
@@ -54,11 +55,11 @@
 int luaL_driver_error(lua_State* L, driver_error_t *error) {
     int ret_val;
     
-    // Copy relevant information about the error in the stack space.
+    // We must copy relevant information about the error in the stack space.
     //
     // This is needed because *error is created in the heap and must be
     // destroy, but relevant information is used when calling to the
-    // luaL_error interrupts the program flow and instructions after this
+    // luaL_error that interrupts the program flow and instructions after this
     // call are not executed, so any free call after this call is not
     // executed.
     const char *msg = NULL;
@@ -87,6 +88,15 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
 		}
 
 		free(error->lock_error);
+	    free(error);
+
+        ret_val = luaL_error(L,
+            "%s%d is used by %s%d",
+			target_name,
+			target_unit,
+			owner_name,
+			owner_unit
+		);
     } else
 #endif
     if (error_type == OPERATION) {
@@ -97,24 +107,7 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     	}
 
     	exception = error->exception;
-    }
-    
-    free(error);
 
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-    if (error_type == LOCK) {
-        ret_val = luaL_error(L,
-            "%s%d is used by %s%d",
-			target_name,
-			target_unit,
-			owner_name,
-			owner_unit
-		);
-        
-        return ret_val;
-    } else
-#endif
-    if (error_type == OPERATION) {
     	if (ext_msg) {
             ret_val = luaL_error(L,
                 "%d:%s (%s)",
@@ -129,9 +122,13 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
 				msg
             );
     	}
+    } else {
+    	msg = driver_get_err_msg(error);
+
+    	ret_val = luaL_error(L, msg);
     }
     
-    return luaL_error(L, driver_get_err_msg(error));
+    return ret_val;
 }
 
 int luaL_deprecated(lua_State* L, const char *old, const char *new) {

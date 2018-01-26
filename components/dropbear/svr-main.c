@@ -269,6 +269,7 @@ static void *dropbear_thread(void *arg) {
 void dropbear_server_start() {
 	pthread_t thread;
 	pthread_attr_t attr;
+	struct sched_param sched;
 
 	ssh_shutdown = 0;
 	syslog(LOG_INFO, "dropbear: starting ...");
@@ -276,6 +277,11 @@ void dropbear_server_start() {
 	// Start a new thread to launch the dropbear server
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, 12288);
+
+	// Set priority
+	sched.sched_priority = MAX(CONFIG_LUA_RTOS_LUA_TASK_PRIORITY / 2, 10);
+	pthread_attr_setschedparam(&attr, &sched);
+
 	if (pthread_create(&thread, &attr, dropbear_thread, NULL)) {
 		return;
 	}

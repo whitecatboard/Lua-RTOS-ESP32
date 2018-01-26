@@ -77,11 +77,11 @@ much traffic. */
 
 /* Allow using -J <proxycommand> to run the connection through a 
    pipe to a program, rather the normal TCP connection */
-#define ENABLE_CLI_PROXYCMD
+//#define ENABLE_CLI_PROXYCMD
 
 /* Enable "Netcat mode" option. This will forward standard input/output
  * to a remote TCP-forwarded connection */
-#define ENABLE_CLI_NETCAT
+//#define ENABLE_CLI_NETCAT
 
 /* Whether to support "-c" and "-m" flags to choose ciphers/MACs at runtime */
 // #define ENABLE_USER_ALGO_LIST
@@ -194,12 +194,12 @@ If you test it please contact the Dropbear author */
 
 /* Whether to print the message of the day (MOTD). This doesn't add much code
  * size */
-#define DO_MOTD
+//#define DO_MOTD
 
 /* The MOTD file path */
-#ifndef MOTD_FILENAME
-#define MOTD_FILENAME "/etc/motd"
-#endif
+//#ifndef MOTD_FILENAME
+//#define MOTD_FILENAME "/etc/motd"
+//#endif
 
 /* Authentication Types - at least one required.
    RFC Draft requires pubkey auth, and recommends password */
