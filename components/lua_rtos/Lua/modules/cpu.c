@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2018, Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.
  *
@@ -56,9 +57,12 @@
 #include <string.h>
 
 #include <drivers/cpu.h>
-#include "rom/rtc.h"
-#include "esp_sleep.h"
-#include "esp_panic.h"
+#include <rom/rtc.h>
+#include <esp_sleep.h>
+#include <esp_panic.h>
+#include <soc/rtc.h>
+#include <esp32/pm.h>
+#include <esp_pm.h>
 
 extern const int cpu_error_map;
 
@@ -69,6 +73,8 @@ extern const int cpu_error_map;
 #define LUA_CPU_ERR_CANT_WAKEON_TOUCH   (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  3)
 #define LUA_CPU_ERR_CANT_WAKEON_ULP     (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  4)
 #define LUA_CPU_ERR_CANT_SET_WATCHPOINT (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  5)
+#define LUA_CPU_ERR_INVALID_CPU_SPEED   (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  6)
+#define LUA_CPU_ERR_CANT_SET_CPU_SPEED  (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  7)
 
 // Register drivers and errors
 DRIVER_REGISTER_BEGIN(CPU,cpu,NULL,NULL,NULL);
@@ -78,6 +84,8 @@ DRIVER_REGISTER_BEGIN(CPU,cpu,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnTouch,   "can't wake on touch",  LUA_CPU_ERR_CANT_WAKEON_TOUCH);
 	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnULP,     "can't wake on ULP",    LUA_CPU_ERR_CANT_WAKEON_ULP);
 	DRIVER_REGISTER_ERROR(CPU, cpu, CannotSetWatchpoint, "can't set Watchpoint", LUA_CPU_ERR_CANT_SET_WATCHPOINT);
+	DRIVER_REGISTER_ERROR(CPU, cpu, CPUSpeedInvalid,     "invalid CPU speed",    LUA_CPU_ERR_INVALID_CPU_SPEED);
+	DRIVER_REGISTER_ERROR(CPU, cpu, CannotSetCPUSpeed,   "can't set CPU speed",  LUA_CPU_ERR_CANT_SET_CPU_SPEED);
 DRIVER_REGISTER_END(CPU,cpu,NULL,NULL,NULL);
 
 int temprature_sens_read(void); //undocumented esp32 function
@@ -220,6 +228,48 @@ static int lcpu_temperature(lua_State *L) {
 	return 1;
 }
 
+static int lcpu_speed(lua_State *L) {
+#ifdef CONFIG_PM_ENABLE
+	if (lua_gettop(L) > 0) {
+		esp_err_t error;
+		rtc_cpu_freq_t max_freq;
+
+		int speed = luaL_checkinteger(L, 1);
+		bool dynamic = false;
+		if (lua_gettop(L) > 1) {
+			luaL_checktype(L, 2, LUA_TBOOLEAN);
+			dynamic = lua_toboolean(L, 2);
+		}
+
+		if (speed > 10) {
+			//enable use of sdkconfig value via CPU_SPEED_DEFAULT
+			//speed is an actual mhz value so we need to convert it
+			if (!rtc_clk_cpu_freq_from_mhz(CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ, &max_freq)) {
+				return luaL_exception(L, LUA_CPU_ERR_INVALID_CPU_SPEED);
+			}
+		}
+		else {
+			max_freq = speed;
+		}
+
+		esp_pm_config_esp32_t pm_config = {
+				    .max_cpu_freq = max_freq,
+				    .min_cpu_freq = (dynamic ? RTC_CPU_FREQ_XTAL : max_freq)
+		};
+
+		if ((error = esp_pm_configure(&pm_config))) {
+			return luaL_exception(L, LUA_CPU_ERR_CANT_SET_CPU_SPEED);
+		}
+
+		//might need to usleep here for the return value to be correct
+	}
+#endif
+
+	rtc_cpu_freq_t current_frequency = rtc_clk_cpu_freq_get();
+	lua_pushinteger(L, rtc_clk_cpu_freq_value(current_frequency));
+	return 1;
+}
+
 static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "model" ),                  LFUNCVAL( lcpu_model ) },
   { LSTRKEY( "board" ),                  LFUNCVAL( lcpu_board ) },
@@ -232,6 +282,7 @@ static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "wakeupext1mask" ),         LFUNCVAL( lcpu_wakeup_ext1_mask ) },
   { LSTRKEY( "watchpoint" ),             LFUNCVAL( lcpu_watchpoint ) },
   { LSTRKEY( "temperature" ),            LFUNCVAL( lcpu_temperature ) },
+  { LSTRKEY( "speed" ),                  LFUNCVAL( lcpu_speed ) },
 
   { LSTRKEY( "RESET_POWERON" ),          LINTVAL( POWERON_RESET          ) },
   { LSTRKEY( "RESET_SW" ),               LINTVAL( SW_RESET               ) },
@@ -258,6 +309,11 @@ static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "WATCHPOINT_LOAD" ),        LINTVAL( ESP_WATCHPOINT_LOAD    ) },
   { LSTRKEY( "WATCHPOINT_STORE" ),       LINTVAL( ESP_WATCHPOINT_STORE   ) },
   { LSTRKEY( "WATCHPOINT_ACCESS" ),      LINTVAL( ESP_WATCHPOINT_ACCESS  ) },
+
+  { LSTRKEY( "SPEED_DEFAULT" ),          LINTVAL( CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ ) }, //e.g. 240
+  { LSTRKEY( "SPEED_FAST" ),             LINTVAL( RTC_CPU_FREQ_240M      ) }, //3
+  { LSTRKEY( "SPEED_MEDIUM" ),           LINTVAL( RTC_CPU_FREQ_160M      ) }, //2
+  { LSTRKEY( "SPEED_SLOW" ),             LINTVAL( RTC_CPU_FREQ_80M       ) }, //1
 
 	DRIVER_REGISTER_LUA_ERRORS(cpu)
 	{ LNILKEY, LNILVAL }
