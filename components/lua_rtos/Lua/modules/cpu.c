@@ -55,6 +55,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <drivers/cpu.h>
 #include <rom/rtc.h>
@@ -261,7 +262,8 @@ static int lcpu_speed(lua_State *L) {
 			return luaL_exception(L, LUA_CPU_ERR_CANT_SET_CPU_SPEED);
 		}
 
-		//might need to usleep here for the return value to be correct
+		//need to usleep here for the return value to be correct
+		usleep(1000);
 	}
 #endif
 
