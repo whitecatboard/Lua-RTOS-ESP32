@@ -201,7 +201,10 @@ static void uart_comm_param_config(int8_t unit, UartBautRate brg, UartBitsNum4Ch
                    ((parity == NONE_BITS) ? 0x0 : (UART_PARITY_EN | parity))
                    | (stop << UART_STOP_BIT_NUM_S)
                    | (data << UART_BIT_NUM_S
-                   | UART_TICK_REF_ALWAYS_ON_M));
+#ifndef CONFIG_PM_ENABLE
+                   | UART_TICK_REF_ALWAYS_ON_M
+#endif
+                     ));
 }
 
 // Configure the UART pins
