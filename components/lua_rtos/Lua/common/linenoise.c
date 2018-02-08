@@ -602,7 +602,7 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
 			if(!ram_history) {
 				ram_history = malloc(sizeof(struct list));
 				assert(ram_history != NULL);
-				list_init(ram_history, 0);
+				lstinit(ram_history, 0);
 			}
 
 			int id = 0;
@@ -611,27 +611,27 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
 		 	if(l->history_index>=0 && l->history_index <= (ram_history->indexes-1)) {
 				// if we're at a known history index, check if the user
 				// modified the string or has just hit [Enter]
-				int err = list_get(ram_history, l->history_index, (void **)&buf);
+				int err = lstget(ram_history, l->history_index, (void **)&buf);
 				if (!err) {
 					if(0 == strcmp(l->buf, buf)) {
-						err = list_remove_compact(ram_history, l->history_index, 0, true); //compact
+						err = lstremovec(ram_history, l->history_index, 0, true); //compact
 					}
 				}
 			}
 			else {
 				// if the user manually entered the current command,
 				// search all the history if it had been entered before
-				int index = list_first(ram_history);
+				int index = lstfirst(ram_history);
 				while (index >= 0) {
-					int err = list_get(ram_history, index, (void **)&buf);
+					int err = lstget(ram_history, index, (void **)&buf);
 					if (!err) {
 						if(0 == strcmp(l->buf, buf)) {
-							err = list_remove_compact(ram_history, index, 0, true); //compact
+							err = lstremovec(ram_history, index, 0, true); //compact
 							break;
 						}
 						buf = 0;
 					}
-					index = list_next(ram_history, index);
+					index = lstnext(ram_history, index);
 				}
 			}
 
@@ -640,7 +640,7 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
 			}
 
 		 	if (buf) {
-		  	int err = list_add(ram_history, buf, &id);
+		  	int err = lstadd(ram_history, buf, &id);
 				if (!err) {
 					l->history_index = id;
 		  	}
@@ -697,7 +697,7 @@ static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
 				return;
 			}
   		
-  		int err = list_get(ram_history, l->history_index, (void **)&buf);
+  		int err = lstget(ram_history, l->history_index, (void **)&buf);
   		if (err) {
   			l->buf[0] = '\0';
   		}
@@ -783,7 +783,7 @@ void linenoiseHistoryClear() {
     	}
     } else {
     	if(ram_history) {
-	    	list_destroy(ram_history, 1);
+	    	lstdestroy(ram_history, 1);
     	}
     	
     	return;

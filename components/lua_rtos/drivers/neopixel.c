@@ -79,14 +79,14 @@ struct list neopixel_list;
  */
 void neopixel_init() {
 	// Init  list
-    list_init(&neopixel_list, 0);
+	lstinit(&neopixel_list, 0);
 }
 
 driver_error_t *neopixel_rgb(uint32_t unit, uint32_t pixel, uint8_t r, uint8_t g, uint8_t b) {
 	neopixel_instance_t *instance;
 
 	// Get instance
-    if (list_get(&neopixel_list, (int)unit, (void **)&instance)) {
+    if (lstget(&neopixel_list, (int)unit, (void **)&instance)) {
 		return driver_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_UNIT, NULL);
     }
 
@@ -130,7 +130,7 @@ driver_error_t *neopixel_setup(neopixel_controller_t controller, uint8_t gpio, u
 	}
 
 	// Add instance
-	if (list_add(&neopixel_list, instance, (int *)unit)) {
+	if (lstadd(&neopixel_list, instance, (int *)unit)) {
 		free(instance->pixels);
 		free(instance);
 
@@ -145,7 +145,7 @@ driver_error_t *neopixel_update(uint32_t unit) {
 	driver_error_t *error;
 
 	// Get instance
-    if (list_get(&neopixel_list, (int)unit, (void **)&instance)) {
+    if (lstget(&neopixel_list, (int)unit, (void **)&instance)) {
 		return driver_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_UNIT, NULL);
     }
 

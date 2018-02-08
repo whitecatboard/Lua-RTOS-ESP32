@@ -52,6 +52,7 @@
 #include "lauxlib.h"
 #include "modules.h"
 #include "error.h"
+#include "hex.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -81,22 +82,9 @@ static void on_received(int port, char *payload) {
     free(payload);
 }
 
-// Checks if passed strings represents a valid hex number
-static int check_hex_str(const char *str) {
-    while (*str) {
-        if (((*str < '0') || (*str > '9')) && ((*str < 'A') || (*str > 'F'))) {
-            return 0;
-        }
-
-        str++;
-    }
-
-    return 1;
-}
-
 // Pads a hex number string representation at a specified length
 static char *hex_str_pad(lua_State* L, const char  *str, int len) {
-    if (!check_hex_str(str)) {
+    if (!lcheck_hex_str(str)) {
         luaL_error(L, "invalid hexadecimal number");
     }
 
@@ -448,7 +436,7 @@ static int llora_tx(lua_State* L) {
         return luaL_error(L, "%d:invalid port number", LORA_ERR_INVALID_ARGUMENT);
     }
 
-    if (!check_hex_str(data)) {
+    if (!lcheck_hex_str(data)) {
         luaL_error(L, "%d:invalid data", LORA_ERR_INVALID_ARGUMENT);
     }
 

@@ -1094,6 +1094,10 @@ menu "Lua RTOS"
                bool "Include base module in build"
                default y
    
+            config LUA_RTOS_LUA_USE_BT
+               bool "Include bt module in build"
+               default y
+
             config LUA_RTOS_LUA_USE_OS
                bool "Include os module in build"
                default y

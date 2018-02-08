@@ -234,7 +234,7 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
 	}
 
     // Add file to file list. List index is file descriptor.
-    int res = list_add(&files, file, &fd);
+    int res = lstadd(&files, file, &fd);
     if (res) {
     	free(file);
     	errno = res;
@@ -279,7 +279,7 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
     	// If in flags are set some write access mode this is an error, because we only
     	// can open a directory in read mode.
     	if (spiffs_mode & (SPIFFS_WRONLY | SPIFFS_CREAT | SPIFFS_TRUNC)) {
-        	list_remove(&files, fd, 1);
+    		lstremove(&files, fd, 1);
     		errno = EISDIR;
     		return -1;
     	}
@@ -298,7 +298,7 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
     } else {
     	if (!base_is_dir) {
     		// If base path is not a directory we return an error
-        	list_remove(&files, fd, 1);
+    		lstremove(&files, fd, 1);
     		errno = ENOENT;
     		return -1;
     	} else {
@@ -311,7 +311,7 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
     }
 
     if (result != 0) {
-    	list_remove(&files, fd, 1);
+    	lstremove(&files, fd, 1);
     	errno = result;
     	return -1;
     }
@@ -323,7 +323,7 @@ static ssize_t vfs_spiffs_write(int fd, const void *data, size_t size) {
 	vfs_spiffs_file_t *file;
 	int res;
 
-    res = list_get(&files, fd, (void **)&file);
+    res = lstget(&files, fd, (void **)&file);
     if (res) {
 		errno = EBADF;
 		return -1;
@@ -353,7 +353,7 @@ static ssize_t vfs_spiffs_read(int fd, void * dst, size_t size) {
 	vfs_spiffs_file_t *file;
 	int res;
 
-    res = list_get(&files, fd, (void **)&file);
+    res = lstget(&files, fd, (void **)&file);
     if (res) {
 		errno = EBADF;
 		return -1;
@@ -387,7 +387,7 @@ static int vfs_spiffs_fstat(int fd, struct stat * st) {
     spiffs_stat stat;
 	int res;
 
-    res = list_get(&files, fd, (void **)&file);
+    res = lstget(&files, fd, (void **)&file);
     if (res) {
 		errno = EBADF;
 		return -1;
@@ -426,7 +426,7 @@ static int vfs_spiffs_close(int fd) {
 	vfs_spiffs_file_t *file;
 	int res;
 
-	res = list_get(&files, fd, (void **)&file);
+	res = lstget(&files, fd, (void **)&file);
     if (res) {
 		errno = EBADF;
 		return -1;
@@ -442,7 +442,7 @@ static int vfs_spiffs_close(int fd) {
 		return -1;
 	}
 
-	list_remove(&files, fd, 1);
+	lstremove(&files, fd, 1);
 
 	return 0;
 }
@@ -451,7 +451,7 @@ static off_t vfs_spiffs_lseek(int fd, off_t size, int mode) {
 	vfs_spiffs_file_t *file;
 	int res;
 
-    res = list_get(&files, fd, (void **)&file);
+    res = lstget(&files, fd, (void **)&file);
     if (res) {
 		errno = EBADF;
 		return -1;
@@ -894,7 +894,7 @@ static int vfs_spiffs_fsync(int fd) {
 	vfs_spiffs_file_t *file;
 	int res;
 
-	res = list_get(&files, fd, (void **)&file);
+	res = lstget(&files, fd, (void **)&file);
     if (res) {
 		errno = EBADF;
 		printf("1\r\n");
@@ -1044,7 +1044,7 @@ void vfs_spiffs_register() {
 
     mount_set_mounted("spiffs", 1);
 
-    list_init(&files, 0);
+    lstinit(&files, 0);
 
     if (retries > 0) {
     	syslog(LOG_INFO, "spiffs%d creating root folder", unit);

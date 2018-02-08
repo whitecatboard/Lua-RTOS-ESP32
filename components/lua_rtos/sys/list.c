@@ -39,7 +39,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS list data structure
+ * Lua RTOS, list data structure
  *
  */
 
@@ -52,7 +52,7 @@
 #include <sys/list.h>
 #include <sys/mutex.h>
 
-void list_init(struct list *list, int first_index) {
+void lstinit(struct list *list, int first_index) {
     // Create the mutex
     mtx_init(&list->mutex, NULL, NULL, 0);
     
@@ -66,7 +66,7 @@ void list_init(struct list *list, int first_index) {
     mtx_unlock(&list->mutex);    
 }
 
-int list_add(struct list *list, void *item, int *item_index) {
+int lstadd(struct list *list, void *item, int *item_index) {
     struct list_index *index = NULL;
     struct list_index *indexa = NULL;
     int grow = 0;
@@ -125,7 +125,7 @@ int list_add(struct list *list, void *item, int *item_index) {
     return 0;
 }
 
-int IRAM_ATTR list_get(struct list *list, int index, void **item) {
+int IRAM_ATTR lstget(struct list *list, int index, void **item) {
     struct list_index *cindex = NULL;
     int iindex;
 
@@ -165,7 +165,7 @@ int IRAM_ATTR list_get(struct list *list, int index, void **item) {
     return 0;
 }
 
-int list_remove_compact(struct list *list, int index, int destroy, bool compact) {
+int lstremovec(struct list *list, int index, int destroy, bool compact) {
     struct list_index *cindex = NULL;
     int iindex;
 
@@ -207,11 +207,11 @@ int list_remove_compact(struct list *list, int index, int destroy, bool compact)
     return 0;
 }
 
-int list_remove(struct list *list, int index, int destroy) {
-    return list_remove_compact(list, index, destroy, false);
+int lstremove(struct list *list, int index, int destroy) {
+    return lstremovec(list, index, destroy, false);
 }
 
-int IRAM_ATTR list_first(struct list *list) {
+int IRAM_ATTR lstfirst(struct list *list) {
     int index;
     int res = -1;
     
@@ -229,7 +229,7 @@ int IRAM_ATTR list_first(struct list *list) {
     return res;
 }
 
-int IRAM_ATTR list_next(struct list *list, int index) {
+int IRAM_ATTR lstnext(struct list *list, int index) {
     int res = -1;
     int iindex;
     
@@ -257,7 +257,7 @@ int IRAM_ATTR list_next(struct list *list, int index) {
     return res;
 }
 
-void list_destroy(struct list *list, int items) {
+void lstdestroy(struct list *list, int items) {
     int index;
     
     mtx_lock(&list->mutex);

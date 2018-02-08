@@ -39,33 +39,42 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS pthread implementation for FreeRTOS
+ * Lua RTOS, BT driver
  *
  */
 
-#include "_pthread.h"
+#ifndef BT_H_
+#define BT_H_
 
-#include <errno.h>
-#include <stdlib.h>
+#include "bluetooth_hci.h"
+#include "esp_bt.h"
+#include "esp_gap_ble_api.h"
+#include "esp_bt_main.h"
 
-extern struct list thread_list;
+#include <stdint.h>
 
-void pthread_cleanup_push(void (*routine)(void *), void *arg) {
-    struct pthread *thread;
-    struct pthread_clean *clean;
-    int res, idx;
-    
-    // Get current thread
-    res = lstget(&thread_list, pthread_self(), (void **)&thread);
-    if (res == 0){
-        clean =(struct pthread_clean *) malloc(sizeof(struct pthread_clean));
-        if (!clean) {
-            return;
-        }
-        
-        clean->clean = routine;
-        clean->args = arg;
-        
-        lstadd(&thread->clean_list, clean, &idx);
-    }
-}
+#include <sys/driver.h>
+
+// BT modes
+typedef enum {
+	Idle = 0,
+	BLE = 1,
+	Classic = 2,
+	Dual = 3
+} bt_mode_t;
+
+// BT errors
+#define BT_ERR_CANT_INIT			 	 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  0)
+#define BT_ERR_INVALID_MODE   		 	 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  1)
+#define BT_ERR_IS_NOT_SETUP   		 	 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  2)
+#define BT_ERR_NOT_ENOUGH_MEMORY	 	 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  3)
+#define BT_ERR_INVALID_ARGUMENT	 		 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  4)
+
+driver_error_t *bt_setup(bt_mode_t mode);
+driver_error_t *bt_reset();
+driver_error_t *bt_adv(bte_advertise_params_t params, uint8_t *adv_data, uint16_t adv_data_len);
+
+extern const int bt_errors;
+extern const int bt_error_map;
+
+#endif /* BT_H_ */

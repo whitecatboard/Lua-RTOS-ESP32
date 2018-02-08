@@ -89,8 +89,8 @@ void _pthread_init() {
 	    mtx_init(&cond_mtx, NULL, NULL, 0);
 
 	    // Init lists
-	    list_init(&thread_list, 1);
-	    list_init(&key_list, 1);
+	    lstinit(&thread_list, 1);
+	    lstinit(&key_list, 1);
 
 	    inited = 1;
 	}
@@ -132,7 +132,7 @@ int _pthread_create(pthread_t *id, int priority, int stacksize, int cpu, int ini
     current_thread = pthread_self();
     if (current_thread > 0) {
         // Get parent thread
-        res = list_get(&thread_list, current_thread, (void **)&parent_thread);
+        res = lstget(&thread_list, current_thread, (void **)&parent_thread);
         if (res) {
             free(taskArgs);
             errno = EAGAIN;
@@ -143,13 +143,13 @@ int _pthread_create(pthread_t *id, int priority, int stacksize, int cpu, int ini
         bcopy(parent_thread->signals, thread->signals, sizeof(sig_t) * PTHREAD_NSIG);
     }
     
-    list_init(&thread->join_list, 1);
-    list_init(&thread->clean_list, 1);
+    lstinit(&thread->join_list, 1);
+    lstinit(&thread->clean_list, 1);
     
     mtx_init(&thread->init_mtx, NULL, NULL, 0);
 
     // Add to the thread list
-    res = list_add(&thread_list, (void *)thread, (int *)id);
+    res = lstadd(&thread_list, (void *)thread, (int *)id);
     if (res) {
         free(taskArgs);
         free(thread);
@@ -182,7 +182,7 @@ int _pthread_create(pthread_t *id, int priority, int stacksize, int cpu, int ini
 
     if(res != pdPASS) {
         // Remove from thread list
-        list_remove(&thread_list,*id, 1);
+    	lstremove(&thread_list,*id, 1);
         free(taskArgs);
         free(thread);
 
@@ -211,7 +211,7 @@ int _pthread_join(pthread_t id) {
     char c;
 
     // Get thread
-    res = list_get(&thread_list, id, (void **)&thread);
+    res = lstget(&thread_list, id, (void **)&thread);
     if (res) {
         errno = res;
         return res;
@@ -233,7 +233,7 @@ int _pthread_join(pthread_t id) {
     }
 
     // Add join to the join list
-    res = list_add(&thread->join_list, (void *)join, (int *)&idx);
+    res = lstadd(&thread->join_list, (void *)join, (int *)&idx);
     if (res) {
         vQueueDelete(join->queue);
         free(join);
@@ -252,22 +252,22 @@ int _pthread_free(pthread_t id) {
     int res;
 
     // Get thread
-    res = list_get(&thread_list, id, (void **)&thread);
+    res = lstget(&thread_list, id, (void **)&thread);
     if (res) {
         errno = res;
         return res;
     }
 
     // Free join list
-    list_destroy(&thread->join_list, 1);
+    lstdestroy(&thread->join_list, 1);
 
     // Free clean list
-    list_destroy(&thread->clean_list, 1);
+    lstdestroy(&thread->clean_list, 1);
     
     mtx_destroy(&thread->init_mtx);    
     
     // Remove thread
-    list_remove(&thread_list, id, 1);
+    lstremove(&thread_list, id, 1);
     
     return 0;
 }
@@ -281,7 +281,7 @@ sig_t _pthread_signal(int s, sig_t h) {
         return SIG_ERR;
     }
 
-    if (list_get(&thread_list, pthread_self(), (void **)&thread) == 0) {
+    if (lstget(&thread_list, pthread_self(), (void **)&thread) == 0) {
         // Add handler
         prev_h = thread->signals[s];
         thread->signals[s] = h;
@@ -300,9 +300,9 @@ void _pthread_exec_signal(int dst, int s) {
     	return;
     }
 
-    index = list_first(&thread_list);
+    index = lstfirst(&thread_list);
     while (index >= 0) {
-        list_get(&thread_list, index, (void **)&thread);
+        lstget(&thread_list, index, (void **)&thread);
 
         if (thread->thread == dst) {
 			if ((thread->signals[s] != SIG_DFL) && (thread->signals[s] != SIG_IGN)) {
@@ -310,7 +310,7 @@ void _pthread_exec_signal(int dst, int s) {
 			}
         }
 
-        index = list_next(&thread_list, index);
+        index = lstnext(&thread_list, index);
     }
 }
 
@@ -322,9 +322,9 @@ int _pthread_has_signal(int dst, int s) {
     	return 0;
     }
 
-    index = list_first(&thread_list);
+    index = lstfirst(&thread_list);
     while (index >= 0) {
-        list_get(&thread_list, index, (void **)&thread);
+        lstget(&thread_list, index, (void **)&thread);
         
         if (thread->thread == dst) {
 			if ((thread->signals[s] != SIG_DFL) && (thread->signals[s] != SIG_IGN)) {
@@ -332,7 +332,7 @@ int _pthread_has_signal(int dst, int s) {
 			}
         }
         
-        index = list_next(&thread_list, index);
+        index = lstnext(&thread_list, index);
     }    
 
     return 0;
@@ -343,7 +343,7 @@ int _pthread_stop(pthread_t id) {
     int res;
 
     // Get thread
-    res = list_get(&thread_list, id, (void **)&thread);
+    res = lstget(&thread_list, id, (void **)&thread);
     if (res) {
         errno = res;
         return res;
@@ -360,7 +360,7 @@ int _pthread_core(pthread_t id) {
     int res;
 
     // Get thread
-    res = list_get(&thread_list, id, (void **)&thread);
+    res = lstget(&thread_list, id, (void **)&thread);
     if (res) {
         errno = res;
         return res;
@@ -374,7 +374,7 @@ int _pthread_stack(pthread_t id) {
     int res;
 
     // Get thread
-    res = list_get(&thread_list, id, (void **)&thread);
+    res = lstget(&thread_list, id, (void **)&thread);
     if (res) {
         errno = res;
         return res;
@@ -388,7 +388,7 @@ int _pthread_stack_free(pthread_t id) {
     int res;
 
     // Get thread
-    res = list_get(&thread_list, id, (void **)&thread);
+    res = lstget(&thread_list, id, (void **)&thread);
     if (res) {
         errno = res;
         return res;
@@ -402,7 +402,7 @@ int _pthread_suspend(pthread_t id) {
     int res;
 
     // Get thread
-    res = list_get(&thread_list, id, (void **)&thread);
+    res = lstget(&thread_list, id, (void **)&thread);
     if (res) {
         errno = res;
         return res;
@@ -425,7 +425,7 @@ int _pthread_resume(pthread_t id) {
     int res;
 
     // Get thread
-    res = list_get(&thread_list, id, (void **)&thread);
+    res = lstget(&thread_list, id, (void **)&thread);
     if (res) {
         errno = res;
         return res;
@@ -443,7 +443,7 @@ struct pthread *_pthread_get(pthread_t id) {
     int res;
 
     // Get the thread
-    res = list_get(&thread_list, id, (void **)&thread);
+    res = lstget(&thread_list, id, (void **)&thread);
     if (res) {
     	return NULL;
     }
@@ -472,7 +472,7 @@ void pthreadTask(void *taskArgs) {
     args = (struct pthreadTaskArg *)taskArgs;
 	
     // Get thread
-    list_get(&thread_list, args->id, (void **)&thread);
+    lstget(&thread_list, args->id, (void **)&thread);
 
 	// Allocate and init Lua RTOS specific TCB parts, and store into a FreeRTOS
 	// local storage pointer
@@ -522,26 +522,26 @@ void pthreadTask(void *taskArgs) {
     }
 
     // Inform from thread end to joined threads
-    index = list_first(&thread->join_list);
+    index = lstfirst(&thread->join_list);
     while (index >= 0) {
-        list_get(&thread->join_list, index, (void **)&join);
+        lstget(&thread->join_list, index, (void **)&join);
                 
         xQueueSend(join->queue,&c, portMAX_DELAY);
         
-        index = list_next(&thread->join_list, index);
+        index = lstnext(&thread->join_list, index);
     }
 
     // Execute clean list
-    index = list_first(&thread->clean_list);
+    index = lstfirst(&thread->clean_list);
     while (index >= 0) {
-        list_get(&thread->clean_list, index, (void **)&clean);
+        lstget(&thread->clean_list, index, (void **)&clean);
          
         if (clean->clean) {
             (*clean->clean)(clean->args);
             free(clean->args);
         }
         
-        index = list_next(&thread->clean_list, index);
+        index = lstnext(&thread->clean_list, index);
     }
     
     // Free thread structures
@@ -574,7 +574,7 @@ int pthread_setname_np(pthread_t id, const char *name) {
 	}
 
     // Get the thread
-    res = list_get(&thread_list, id, (void **)&thread);
+    res = lstget(&thread_list, id, (void **)&thread);
     if (res) {
     	return EINVAL;
     }
@@ -593,7 +593,7 @@ int pthread_getname_np(pthread_t id, char *name, size_t len) {
     int res;
 
     // Get the thread
-    res = list_get(&thread_list, id, (void **)&thread);
+    res = lstget(&thread_list, id, (void **)&thread);
     if (res) {
     	return EINVAL;
     }

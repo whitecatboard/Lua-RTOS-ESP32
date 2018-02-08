@@ -137,7 +137,7 @@ static void i2c_init() {
 	memset(i2c, 0, sizeof(i2c_t) * (CPU_LAST_I2C + 1));
 
 	// Init transaction list
-    list_init(&transactions, 0);
+	lstinit(&transactions, 0);
 
     // Init mutexes and pin maps
     for(i=0;i < CPU_LAST_I2C + 1;i++) {
@@ -189,7 +189,7 @@ static driver_error_t *i2c_check(int unit) {
 }
 
 static driver_error_t *i2c_get_command(int unit, int *transaction, i2c_cmd_handle_t *cmd) {
-    if (list_get(&transactions, *transaction, (void **)cmd)) {
+    if (lstget(&transactions, *transaction, (void **)cmd)) {
     	i2c_unlock(unit);
 
 		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
@@ -215,7 +215,7 @@ static driver_error_t *i2c_create_or_get_command(int unit, int *transaction, i2c
 		}
 
 		// Add transaction to list
-		if (list_add(&transactions, *cmd, transaction)) {
+		if (lstadd(&transactions, *cmd, transaction)) {
 			*transaction = I2C_TRANSACTION_INITIALIZER;
 
 			i2c_cmd_link_delete(*cmd);
@@ -231,7 +231,7 @@ static driver_error_t *i2c_flush_internal(int unit, int *transaction, i2c_cmd_ha
 	// Flush
 	esp_err_t err = i2c_master_cmd_begin(unit, cmd, 1000 / portTICK_RATE_MS);
 	i2c_cmd_link_delete(cmd);
-	list_remove(&transactions, *transaction, 0);
+	lstremove(&transactions, *transaction, 0);
 
     *transaction = I2C_TRANSACTION_INITIALIZER;
 
@@ -479,7 +479,7 @@ driver_error_t *i2c_stop(int deviceid, int *transaction) {
 
 	// Get command
 	i2c_cmd_handle_t cmd;
-    if (list_get(&transactions, *transaction, (void **)&cmd)) {
+    if (lstget(&transactions, *transaction, (void **)&cmd)) {
     	i2c_unlock(unit);
 		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
     }
@@ -515,7 +515,7 @@ driver_error_t *i2c_write_address(int deviceid, int *transaction, char address, 
 
 	// Get command
 	i2c_cmd_handle_t cmd;
-    if (list_get(&transactions, *transaction, (void **)&cmd)) {
+    if (lstget(&transactions, *transaction, (void **)&cmd)) {
     	i2c_unlock(unit);
 
 		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
@@ -546,7 +546,7 @@ driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len) {
 
 	// Get command
 	i2c_cmd_handle_t cmd;
-    if (list_get(&transactions, *transaction, (void **)&cmd)) {
+    if (lstget(&transactions, *transaction, (void **)&cmd)) {
     	i2c_unlock(unit);
 
 		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
@@ -581,7 +581,7 @@ driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len) {
 
 	// Get command
 	i2c_cmd_handle_t cmd;
-    if (list_get(&transactions, *transaction, (void **)&cmd)) {
+    if (lstget(&transactions, *transaction, (void **)&cmd)) {
     	i2c_unlock(unit);
 
 		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
