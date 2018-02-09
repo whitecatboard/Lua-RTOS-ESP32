@@ -32,4 +32,17 @@ advData = "02".. -- Length	Flags. CSS v5, Part A, 1.3
 					"00".. -- RFU Reserved for future use, must be0x00
 					"00"   -- RFU Reserved for future use, must be0x00
 
+					advData =   "03".. -- Length of service list
+								"03".. -- Service list
+					  	  	  	"AA"..
+					  	  	  	"FE"..
+					  	  	    "10".. -- length of service data
+					  	  	  	"16".. -- service data
+								"AA"..
+								"FE"..
+								"10"..  -- frame type Eddyston-URL
+					  	  	  	"00"..	-- tx power
+					  	  	  	"00"..  -- http://www.
+					  	  	  	"73696C6162732E636F6D"
+
 bt.advertise(160, 160, bt.adv.ADV_IND, bt.ownaddr.Public, bt.peeraddr.Public, "808182838485", bt.chann.All, bt.filter.ConnAllScanAll, advData)

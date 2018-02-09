@@ -39,7 +39,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS, HCI wrapper
+ * Lua RTOS, HCI API
  *
  */
 
@@ -52,9 +52,8 @@
 #include <sys/delay.h>
 
 driver_error_t *HCI_Reset() {
-	uint8_t buf[128];
+	uint8_t buf[HCI_H4_CMD_PREAMBLE_SIZE];
 	uint8_t *pbuf;
-	uint16_t size;
 
 	// Build hci command to reset the controller
 	pbuf = buf;
@@ -62,11 +61,60 @@ driver_error_t *HCI_Reset() {
     UINT8_TO_STREAM 	(pbuf, H4_TYPE_COMMAND);
     UINT16_TO_STREAM 	(pbuf, HCI_RESET);
     UINT8_TO_STREAM 	(pbuf, 0);
-    size = HCI_H4_CMD_PREAMBLE_SIZE;
 
     // Send command to controller
     while (!esp_vhci_host_check_send_available()) delay(100);
-    esp_vhci_host_send_packet(buf, size);
+    esp_vhci_host_send_packet(buf, sizeof(buf));
+
+    return NULL;
+}
+
+driver_error_t *HCI_Set_Event_Mask(uint8_t *mask) {
+	// Send HCI command to set event mask
+	uint8_t buf[HCI_H4_CMD_PREAMBLE_SIZE + HCI_SET_EVENT_MASK_SIZE];
+	uint8_t *pbuf;
+
+	pbuf = buf;
+
+	UINT8_TO_STREAM 	(pbuf, H4_TYPE_COMMAND);
+    UINT16_TO_STREAM 	(pbuf, HCI_SET_EVENT_MASK);
+    UINT8_TO_STREAM  	(pbuf, HCI_SET_EVENT_MASK_SIZE);
+	UINT8_TO_STREAM 	(pbuf, mask[0]);
+	UINT8_TO_STREAM 	(pbuf, mask[1]);
+	UINT8_TO_STREAM 	(pbuf, mask[2]);
+	UINT8_TO_STREAM 	(pbuf, mask[3]);
+	UINT8_TO_STREAM 	(pbuf, mask[4]);
+	UINT8_TO_STREAM 	(pbuf, mask[5]);
+	UINT8_TO_STREAM 	(pbuf, mask[6]);
+	UINT8_TO_STREAM 	(pbuf, mask[7]);
+
+    while (!esp_vhci_host_check_send_available()) delay(100);
+    esp_vhci_host_send_packet(buf, sizeof(buf));
+
+    return NULL;
+}
+
+driver_error_t *HCI_LE_Set_Event_Mask(uint8_t *mask) {
+	// Send HCI command to set event mask
+	uint8_t buf[HCI_H4_CMD_PREAMBLE_SIZE + HCI_BLE_SET_EVENT_MASK_SIZE];
+	uint8_t *pbuf;
+
+	pbuf = buf;
+
+	UINT8_TO_STREAM 	(pbuf, H4_TYPE_COMMAND);
+    UINT16_TO_STREAM 	(pbuf, HCI_BLE_SET_EVENT_MASK);
+    UINT8_TO_STREAM  	(pbuf, HCI_BLE_SET_EVENT_MASK_SIZE);
+	UINT8_TO_STREAM 	(pbuf, mask[0]);
+	UINT8_TO_STREAM 	(pbuf, mask[1]);
+	UINT8_TO_STREAM 	(pbuf, mask[2]);
+	UINT8_TO_STREAM 	(pbuf, mask[3]);
+	UINT8_TO_STREAM 	(pbuf, mask[4]);
+	UINT8_TO_STREAM 	(pbuf, mask[5]);
+	UINT8_TO_STREAM 	(pbuf, mask[6]);
+	UINT8_TO_STREAM 	(pbuf, mask[7]);
+
+    while (!esp_vhci_host_check_send_available()) delay(100);
+    esp_vhci_host_send_packet(buf, sizeof(buf));
 
     return NULL;
 }
@@ -86,9 +134,8 @@ driver_error_t *HCI_LE_Set_Advertising_Parameters(bte_advertise_params_t params)
 	}
 
 	// Send HCI command to set the advertise params
-	uint8_t buf[128];
+	uint8_t buf[HCI_H4_CMD_PREAMBLE_SIZE + HCI_BLE_SET_ADV_PARAMS_SIZE];
 	uint8_t *pbuf;
-	uint16_t size;
 
 	pbuf = buf;
 
@@ -104,10 +151,8 @@ driver_error_t *HCI_LE_Set_Advertising_Parameters(bte_advertise_params_t params)
     UINT8_TO_STREAM 	(pbuf, params.chann_map);
     UINT8_TO_STREAM 	(pbuf, params.filter_policy);
 
-    size = HCI_H4_CMD_PREAMBLE_SIZE + HCI_BLE_SET_ADV_PARAMS_SIZE;
-
     while (!esp_vhci_host_check_send_available()) delay(100);
-    esp_vhci_host_send_packet(buf, size);
+    esp_vhci_host_send_packet(buf, sizeof(buf));
 
     return NULL;
 }
@@ -123,9 +168,8 @@ driver_error_t *HCI_LE_Set_Advertising_Data(uint8_t *adv_data, uint16_t adv_data
 	}
 
 	// Send HCI command to set advertise data
-	uint8_t buf[128];
+	uint8_t buf[HCI_H4_CMD_PREAMBLE_SIZE + HCI_BLE_SET_ADV_DATA_SIZE + 1];
 	uint8_t *pbuf;
-	uint16_t size;
 
 	pbuf = buf;
 
@@ -142,22 +186,18 @@ driver_error_t *HCI_LE_Set_Advertising_Data(uint8_t *adv_data, uint16_t adv_data
 
         UINT8_TO_STREAM (pbuf, adv_data_len);
         ARRAY_TO_STREAM (pbuf, adv_data, adv_data_len);
-
     }
-
-    size = HCI_H4_CMD_PREAMBLE_SIZE + HCI_BLE_SET_ADV_DATA_SIZE + 1;
 
     // Send command to controller
     while (!esp_vhci_host_check_send_available()) delay(100);
-    esp_vhci_host_send_packet(buf, size);
+    esp_vhci_host_send_packet(buf, sizeof(buf));
 
     return NULL;
 }
 
 driver_error_t *HCI_LE_Set_Advertise_Enable(uint8_t enable) {
-	uint8_t buf[128];
+	uint8_t buf[HCI_H4_CMD_PREAMBLE_SIZE + HCI_BLE_SET_ADV_ENABLE_SIZE];
 	uint8_t *pbuf;
-	uint16_t size;
 
     // Send HCI command to enable advertising
     pbuf = buf;
@@ -165,13 +205,11 @@ driver_error_t *HCI_LE_Set_Advertise_Enable(uint8_t enable) {
     UINT8_TO_STREAM 	(pbuf, H4_TYPE_COMMAND);
     UINT16_TO_STREAM 	(pbuf, HCI_BLE_SET_ADV_ENABLE);
     UINT8_TO_STREAM  	(pbuf, HCI_BLE_SET_ADV_ENABLE_SIZE);
-    UINT8_TO_STREAM 	(pbuf, 1);
-
-    size = HCI_H4_CMD_PREAMBLE_SIZE + HCI_BLE_SET_ADV_ENABLE_SIZE;
+    UINT8_TO_STREAM 	(pbuf, enable);
 
     // Send command to controller
     while (!esp_vhci_host_check_send_available()) delay(100);
-    esp_vhci_host_send_packet(buf, size);
+    esp_vhci_host_send_packet(buf, sizeof(buf));
 
     return NULL;
 }

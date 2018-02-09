@@ -61,6 +61,7 @@ DRIVER_REGISTER_BEGIN(BT,bt,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(BT, bt, NotSetup, "is not setup", BT_ERR_IS_NOT_SETUP);
 	DRIVER_REGISTER_ERROR(BT, bt, NotEnoughtMemory, "not enough memory", BT_ERR_NOT_ENOUGH_MEMORY);
 	DRIVER_REGISTER_ERROR(BT, bt, InvalidArgument, "invalid argument", BT_ERR_INVALID_ARGUMENT);
+	DRIVER_REGISTER_ERROR(BT, bt, InvalidBeacon, "invalid beacon", BT_ERR_INVALID_BEACON);
 DRIVER_REGISTER_END(BT,bt,NULL,NULL,NULL);
 
 // Is BT setup?
@@ -70,23 +71,36 @@ static uint8_t setup = 0;
  * Helper functions
  */
 
-static void gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param) {
-}
-
 static void controller_rcv_pkt_ready(void) {
 }
 
 static int host_rcv_pkt(uint8_t *data, uint16_t len) {
-    return 0;
+#if 0
+	  printf ("BT (%d):", len);
+	  for (int i = 0; i < len; ++i)
+	    printf (" %02x", data[i]);
+	  printf ("\n");
+
+	if (data[0] == H4_TYPE_EVENT) {
+		uint8_t len = data[2];
+
+		printf("event\r\n");
+	}
+#endif
+	return 0;
 }
+
+static const esp_vhci_host_callback_t vhci_host_cb = {
+    controller_rcv_pkt_ready,
+    host_rcv_pkt
+};
+
 
 /*
  * Operation functions
  */
 
 driver_error_t *bt_setup(bt_mode_t mode) {
-	esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-
 	// Sanity checks
 	if (setup) {
 		return NULL;
@@ -97,6 +111,7 @@ driver_error_t *bt_setup(bt_mode_t mode) {
 	}
 
 	// Initialize BT controller
+	esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
 	esp_bt_controller_init(&bt_cfg);
 
 	// Enable BT controller
@@ -104,20 +119,16 @@ driver_error_t *bt_setup(bt_mode_t mode) {
 		return driver_error(BT_DRIVER, BT_ERR_CANT_INIT, NULL);
 	}
 
-	// Register vhci callbaks
-	static esp_vhci_host_callback_t vhci_host_cb = {
-	    controller_rcv_pkt_ready,
-	    host_rcv_pkt
-	};
-
+	// Register callbacks
 	esp_vhci_host_register_callback(&vhci_host_cb);
 
 	// Reset controller
 	bt_reset();
 
-    esp_bluedroid_init();
-    esp_bluedroid_enable();
-	esp_ble_gap_register_callback(gap_cb);
+	// Set HCI event mask
+    uint8_t mask[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0x1f, 0x00, 0x20};
+    HCI_Set_Event_Mask(mask);
+    HCI_LE_Set_Event_Mask(mask);
 
 	setup = 1;
 
@@ -139,7 +150,7 @@ driver_error_t *bt_reset() {
 	return NULL;
 }
 
-driver_error_t *bt_adv(bte_advertise_params_t adv_params, uint8_t *adv_data, uint16_t adv_data_len) {
+driver_error_t *bt_adv_start(bte_advertise_params_t adv_params, uint8_t *adv_data, uint16_t adv_data_len) {
 	driver_error_t *error;
 
 	// Sanity checks
@@ -147,9 +158,23 @@ driver_error_t *bt_adv(bte_advertise_params_t adv_params, uint8_t *adv_data, uin
 		return driver_error(BT_DRIVER, BT_ERR_IS_NOT_SETUP, NULL);
 	}
 
+	if ((error = HCI_LE_Set_Advertise_Enable(0))) return error;
 	if ((error = HCI_LE_Set_Advertising_Parameters(adv_params))) return error;
 	if ((error = HCI_LE_Set_Advertising_Data(adv_data, adv_data_len))) return error;
 	if ((error = HCI_LE_Set_Advertise_Enable(1))) return error;
+
+	return NULL;
+}
+
+driver_error_t *bt_adv_stop() {
+	driver_error_t *error;
+
+	// Sanity checks
+	if (!setup) {
+		return driver_error(BT_DRIVER, BT_ERR_IS_NOT_SETUP, NULL);
+	}
+
+	if ((error = HCI_LE_Set_Advertise_Enable(0))) return error;
 
 	return NULL;
 }

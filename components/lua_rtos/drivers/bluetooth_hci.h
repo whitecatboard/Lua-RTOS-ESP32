@@ -39,7 +39,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS, HCI wrapper
+ * Lua RTOS, HCI API
  *
  */
 
@@ -132,10 +132,16 @@ enum {
 #define HCI_GRP_BLE_CMDS                   			(0x08 << 10)
 
 #define HCI_RESET                          			(0x0003 | HCI_GRP_HOST_CONT_BASEBAND_CMDS)
+#define HCI_SET_EVENT_MASK          				(0x0001 | HCI_GRP_HOST_CONT_BASEBAND_CMDS)
+
+#define HCI_BLE_SET_EVENT_MASK          			(0x0001 | HCI_GRP_BLE_CMDS)
 #define HCI_BLE_SET_ADV_ENABLE           			(0x000A | HCI_GRP_BLE_CMDS)
 #define HCI_BLE_SET_ADV_PARAMS           			(0x0006 | HCI_GRP_BLE_CMDS)
 #define HCI_BLE_SET_ADV_DATA             			(0x0008 | HCI_GRP_BLE_CMDS)
 
+#define HCI_SET_EVENT_MASK_SIZE						(8)
+
+#define HCI_BLE_SET_EVENT_MASK_SIZE					(8)
 #define HCI_BLE_SET_ADV_ENABLE_SIZE		        	(1)
 #define HCI_BLE_SET_ADV_PARAMS_SIZE			    	(15)
 #define HCI_BLE_SET_ADV_DATA_SIZE			      	(31)
@@ -149,6 +155,8 @@ typedef uint8_t bd_addr_t[BD_ADDR_LEN];         /* Device address */
 #define ARRAY_TO_STREAM(p, a, len) 					{int ijk; for (ijk = 0; ijk < len; ijk++) *(p)++ = (uint8_t) a[ijk];}
 
 driver_error_t *HCI_Reset();
+driver_error_t *HCI_Set_Event_Mask(uint8_t *mask);
+driver_error_t *HCI_LE_Set_Event_Mask(uint8_t *mask);
 driver_error_t *HCI_LE_Set_Advertising_Parameters(bte_advertise_params_t params);
 driver_error_t *HCI_LE_Set_Advertising_Data(uint8_t *adv_data, uint16_t adv_data_len);
 driver_error_t *HCI_LE_Set_Advertise_Enable(uint8_t enable);
