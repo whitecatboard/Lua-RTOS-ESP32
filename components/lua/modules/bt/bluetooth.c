@@ -81,7 +81,7 @@ static int lbt_reset( lua_State* L ) {
 	return 0;
 }
 
-static int lbt_advertise( lua_State* L ) {
+static int lbt_advertising_start( lua_State* L ) {
 	driver_error_t *error;
 	bte_advertise_params_t params;
 
@@ -125,6 +125,16 @@ static int lbt_advertise( lua_State* L ) {
     free(data);
 
 	return 0;
+}
+
+static int lbt_advertising_stop( lua_State* L ) {
+    driver_error_t *error;
+
+	if ((error = bt_adv_stop())) {
+    	return luaL_driver_error(L, error);
+    }
+
+    return 0;
 }
 
 static const LUA_REG_TYPE lbt_service[] = {
@@ -173,16 +183,17 @@ static const LUA_REG_TYPE lbt_adv_filter_policy[] = {
 };
 
 static const LUA_REG_TYPE lbt_map[] = {
-	{ LSTRKEY( "attach"     ), LFUNCVAL( lbt_attach            ) },
-	{ LSTRKEY( "reset"      ), LFUNCVAL( lbt_reset             ) },
-	{ LSTRKEY( "advertise"  ), LFUNCVAL( lbt_advertise         ) },
-	{ LSTRKEY( "mode"       ), LROVAL  ( lbt_mode              ) },
-	{ LSTRKEY( "adv"        ), LROVAL  ( lbt_adv_type          ) },
-	{ LSTRKEY( "ownaddr"    ), LROVAL  ( lbt_own_addr_type     ) },
-	{ LSTRKEY( "peeraddr"   ), LROVAL  ( lbt_peer_addr_type    ) },
-	{ LSTRKEY( "chann"      ), LROVAL  ( lbt_adv_channel_map   ) },
-	{ LSTRKEY( "filter"     ), LROVAL  ( lbt_adv_filter_policy ) },
-	{ LSTRKEY( "service"    ), LROVAL  ( lbt_service ) },
+	{ LSTRKEY( "attach"            ), LFUNCVAL( lbt_attach            ) },
+	{ LSTRKEY( "reset"             ), LFUNCVAL( lbt_reset             ) },
+	{ LSTRKEY( "advertisingStart"  ), LFUNCVAL( lbt_advertising_start ) },
+	{ LSTRKEY( "advertisingStop"   ), LFUNCVAL( lbt_advertising_stop  ) },
+	{ LSTRKEY( "mode"              ), LROVAL  ( lbt_mode              ) },
+	{ LSTRKEY( "adv"               ), LROVAL  ( lbt_adv_type          ) },
+	{ LSTRKEY( "ownaddr"           ), LROVAL  ( lbt_own_addr_type     ) },
+	{ LSTRKEY( "peeraddr"          ), LROVAL  ( lbt_peer_addr_type    ) },
+	{ LSTRKEY( "chann"             ), LROVAL  ( lbt_adv_channel_map   ) },
+	{ LSTRKEY( "filter"            ), LROVAL  ( lbt_adv_filter_policy ) },
+	{ LSTRKEY( "service"           ), LROVAL  ( lbt_service ) },
 	{ LNILKEY, LNILVAL }
 };
 
