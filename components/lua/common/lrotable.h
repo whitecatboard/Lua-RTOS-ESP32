@@ -6,10 +6,10 @@
 #include "lua.h"
 #include "llimits.h"
 #include "lobject.h"
-#include "luaconf.h"
 #include "lrodefs.h"
 
 #include <stdio.h>
+#include "luaconf_custom.h"
 
 // TO DO: ??
 #define luaS_newro(L, s)  (luaS_newlstr(L, s, strlen(s)))

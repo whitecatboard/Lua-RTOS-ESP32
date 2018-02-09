@@ -11,7 +11,6 @@
 #include "error.h"
 #include "lualib.h"
 #include "lauxlib.h"
-#include "auxmods.h"
 #include "pio.h"
 #include "modules.h"
 

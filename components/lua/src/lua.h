@@ -492,7 +492,7 @@ struct lua_Debug {
 ******************************************************************************/
 
 // LUA RTOS BEGIN
-#include <Lua/adds/luaconf.h>
+#include "luaconf_custom.h"
 // LUA RTOS END
 
 #endif

@@ -48,7 +48,6 @@
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
-#include "auxmods.h"
 #include "modules.h"
 #include "error.h"
 

@@ -108,7 +108,7 @@ ifneq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
   TMP := $(shell cd $(IDF_PATH) && git submodule update --recursive)
   TMP := $(info Applying Lua RTOS esp-idf patches ...)
   TMP := $(shell )
-  $(foreach PATCH,$(abspath $(wildcard components/lua_rtos/patches/*.patch)),$(shell cd $(IDF_PATH) && git apply --whitespace=warn $(PATCH)))
+  $(foreach PATCH,$(abspath $(wildcard components/core/patches/*.patch)),$(shell cd $(IDF_PATH) && git apply --whitespace=warn $(PATCH)))
   TMP := $(shell touch $(IDF_PATH)/lua_rtos_patches)
 endif
 
@@ -190,10 +190,10 @@ erase-ota-data:
 	
 configure-idf-lua-rtos-tests:
 	@echo "Configure esp-idf for Lua RTOS tests ..."
-	@touch $(PROJECT_PATH)/components/lua_rtos/sys/sys_init.c
-	@touch $(PROJECT_PATH)/components/lua_rtos/Lua/src/lbaselib.c
-ifneq ("$(shell test -e  $(IDF_PATH)/components/lua_rtos && echo ex)","ex")
-	@ln -s $(PROJECT_PATH)/main/test/lua_rtos $(IDF_PATH)/components/lua_rtos 2> /dev/null
+	@touch $(PROJECT_PATH)/components/core/sys/sys_init.c
+	@touch $(PROJECT_PATH)/components/core/Lua/src/lbaselib.c
+ifneq ("$(shell test -e  $(IDF_PATH)/components/core && echo ex)","ex")
+	@ln -s $(PROJECT_PATH)/main/test/lua_rtos $(IDF_PATH)/components/core 2> /dev/null
 endif
 
 upgrade-idf: restore-idf

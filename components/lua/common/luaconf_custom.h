@@ -75,12 +75,12 @@
 
 #ifdef liolib_c
 #undef liolib_c
-#include <Lua/modules/liolib_adds.inc>
+#include "Lua/modules/sys/liolib_adds.inc"
 #endif
 
 #ifdef loslib_c
 #undef loslib_c
-#include <Lua/modules/loslib_adds.inc>
+#include "lua/modules/sys/loslib_adds.inc"
 #endif
 
 #ifdef lua_c
@@ -102,7 +102,7 @@ static void createargtable (lua_State *L, char **argv, int argc, int script);
 #include "lualib.h"
 #include "modules.h"
 
-#include <Lua/modules/lua_adds.inc>
+#include "lua/modules/sys/lua_adds.inc"
 
 #endif
 			
