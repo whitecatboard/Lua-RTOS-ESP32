@@ -21,13 +21,13 @@
 #include "lualib.h"
 
 // LUA RTOS BEGIN
-#include <Lua/modules/lbaselib_adds.inc>
+#include "lua/modules/sys/lbaselib_adds.inc"
 
 LUALIB_API void luaL_checkanytable (lua_State *L, int arg);
 // LUA RTOS END
 
 #if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
-#include <Lua/common/cache.h>
+#include "lua/common/cache.h"
 #endif
 
 static int luaB_print (lua_State *L) {
