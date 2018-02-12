@@ -1,24 +1,25 @@
 diff --git a/components/driver/include/driver/rmt.h b/components/driver/include/driver/rmt.h
-index 56c5ed4..c58bb7e 100644
+index 13d97b91..c428515e 100644
 --- a/components/driver/include/driver/rmt.h
 +++ b/components/driver/include/driver/rmt.h
-@@ -702,6 +702,8 @@ esp_err_t rmt_wait_tx_done(rmt_channel_t channel, TickType_t wait_time);
+@@ -756,7 +756,7 @@ rmt_tx_end_callback_t rmt_register_tx_end_callback(rmt_tx_end_fn_t function, voi
+  *--------------------------END OF EXAMPLE --------------------------
   */
- esp_err_t rmt_get_ringbuf_handle(rmt_channel_t channel, RingbufHandle_t* buf_handle);
  
+-
 +esp_err_t rmt_config_one(const rmt_config_t* rmt_param, uint8_t *chan);
-+
- /***************************EXAMPLE**********************************
-  *
-  * @note
+ 
+ #ifdef __cplusplus
+ }
 diff --git a/components/driver/rmt.c b/components/driver/rmt.c
-index 7386aa2..a6a0fa6 100644
+index 8e7b2a1d..cd2140ca 100644
 --- a/components/driver/rmt.c
 +++ b/components/driver/rmt.c
-@@ -771,3 +771,111 @@ esp_err_t rmt_get_ringbuf_handle(rmt_channel_t channel, RingbufHandle_t* buf_han
-     return ESP_OK;
+@@ -784,3 +784,112 @@ rmt_tx_end_callback_t rmt_register_tx_end_callback(rmt_tx_end_fn_t function, voi
+     rmt_tx_end_callback.arg = arg;
+     return previous;
  }
- 
++
 +// Lua RTOS
 +esp_err_t rmt_config_one(const rmt_config_t* rmt_param, uint8_t *chan)
 +{
@@ -33,7 +34,7 @@ index 7386aa2..a6a0fa6 100644
 +    uint8_t i;
 +    uint8_t channel;
 +
-+    for(i=0;i < RMT_CHANNEL_MAX;i++) {
++    for(i=0;i < RMT_CHANNEL_MAX;i) {
 +        if(p_rmt_obj[i] == NULL) {
 +           channel = i;
 +           break;
