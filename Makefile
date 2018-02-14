@@ -3,6 +3,17 @@
 # project subdirectory.
 #
 
+COMPONENT_ADD_FS ?=
+COMPONENT_FS ?=
+
+EXTRA_COMPONENT_DIRS := $(abspath $(dir $(firstword $(MAKEFILE_LIST))))/components/lua/modules
+
+EXTRA_COMPONENTS := $(dir $(foreach cd,$(EXTRA_COMPONENT_DIRS),                           \
+					$(wildcard $(cd)/*/component.mk) $(wildcard $(cd)/component.mk) \
+				))
+EXTRA_COMPONENTS := $(sort $(foreach comp,$(EXTRA_COMPONENTS),$(lastword $(subst /, ,$(comp)))))
+EXTRA_COMPONENT_PATHS := $(foreach comp,$(EXTRA_COMPONENTS),$(firstword $(foreach cd,$(EXTRA_COMPONENT_DIRS),$(wildcard $(dir $(cd))$(comp) $(cd)/$(comp)))))
+
 BOARD_TYPE_REQUIRED := 1
 
 ifneq (,$(findstring clean,$(MAKECMDGOALS)))
@@ -220,3 +231,26 @@ flash-args:
 			)\
 	 	  ) \
 	 $(subst /build/, , $(subst /build/bootloader/,, $(subst $(PROJECT_PATH), , $(ESPTOOL_ALL_FLASH_ARGS))))
+
+#
+# This part prepare the file system content into the build/tmp-fs folder. The file system content
+# comes from the SPIFFS_IMAGE variable, that contains the main folder to use, and the COMPONENT_ADD_FS
+# variable, that contains individual folders to add by component
+#
+define includeComponentFS
+ifeq ("$(shell test -e $(1)/component.mk && echo ex)","ex")
+include $(1)/component.mk
+endif
+endef
+
+define addComponentFS
+COMPONENT_FS += $(addprefix $(1)/, $(COMPONENT_ADD_FS))
+endef
+
+fs-prepare:
+	$(foreach componentpath,$(EXTRA_COMPONENT_PATHS), \
+		$(eval $(call addComponentFS, $(componentpath), $(eval $(call includeComponentFS,$(componentpath))))))
+	@rm -f -r $(PROJECT_PATH)/build/tmp-fs
+	@mkdir -p $(PROJECT_PATH)/build/tmp-fs
+	@cp -f -r $(COMPONENT_FS)/* $(PROJECT_PATH)/build/tmp-fs
+	@cp -f -r $(PROJECT_PATH)/components/spiffs_image/$(SPIFFS_IMAGE)/* $(PROJECT_PATH)/build/tmp-fs

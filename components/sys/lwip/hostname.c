@@ -39,21 +39,62 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS minimal signal implementation
+ * Lua RTOS gethostname / sethostname implementation
  *
  */
 
-#ifndef COMPONENTS_LUA_RTOS_SYS___SIGNAL_H_
-#define COMPONENTS_LUA_RTOS_SYS___SIGNAL_H_
+#include <errno.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
 
-#include <pthread.h>
+// Current host name
+static char *host_name = NULL;
 
-typedef struct {
-	int s;    // Signal number
-	int dest; // Signal destination
-} signal_data_t;
+int gethostname(char *name, size_t len) {
+	if (name == NULL) {
+		errno = EFAULT;
+		return -1;
+	}
 
-void _signal_queue(int dest, int s);
-void _signal_init();
+	if ((int)len < 0) {
+		errno = EINVAL;
+		return -1;
+	}
 
-#endif /* COMPONENTS_LUA_RTOS_SYS___SIGNAL_H_ */
+	if (strlen(host_name) > len - 1) {
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+
+	// If hostname is not set, create the default hostname
+	if (host_name == NULL) {
+		host_name = strdup("lua-rtos-esp32.local");
+	}
+
+	strncpy(name, host_name, len - 1);
+
+	return 0;
+}
+
+int sethostname(const char *name, size_t namelen) {
+	if (name == NULL) {
+		errno = EFAULT;
+		return -1;
+	}
+
+	if ((int)namelen < 0) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	// Free previous hostname
+	if (host_name != NULL) {
+		free(host_name);
+	}
+
+	// Assign new host name
+	host_name = strndup(name, namelen);
+
+	return 0;
+}

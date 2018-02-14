@@ -43,6 +43,15 @@
  *
  */
 
+/*
+ * IMPORTANT NOTICE:
+ *
+ * In Lua RTOS the getnameinfo function implementation is incomplete.
+ * We must found a method to do a reverse DNS query in LWIP to full
+ * implement this function.
+ *
+ */
+
 #include <netdb.h>
 #include "lwip/sys/netdb.h"
 #include "lwip/ip_addr.h"

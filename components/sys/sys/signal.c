@@ -48,6 +48,7 @@
 
 #include <pthread.h>
 #include <signal.h>
+#include <sys/list.h>
 #include <sys/_signal.h>
 
 static xQueueHandle queue = NULL;

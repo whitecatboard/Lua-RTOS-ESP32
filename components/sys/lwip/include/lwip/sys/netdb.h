@@ -61,6 +61,17 @@
    };
 
 /*
+ * Error return codes from getaddrinfo()
+ */
+ #define EAI_ADDRFAMILY   1      /* address family for hostname not supported */
+ #define EAI_NODATA       7      /* no address associated with hostname */
+ #define EAI_SOCKTYPE    10      /* ai_socktype not supported */
+ #define EAI_SYSTEM      11      /* system error returned in errno */
+ #define EAI_BADHINTS    12
+ #define EAI_PROTOCOL    13
+ #define EAI_MAX         14
+
+/*
  * Constants for getnameinfo()
  */
 #define	NI_MAXHOST	1025

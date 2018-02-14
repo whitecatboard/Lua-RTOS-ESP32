@@ -145,6 +145,8 @@ struct pthread {
     sig_t signals[PTHREAD_NSIG];
     pthread_t thread;
     xTaskHandle task;
+    uint8_t is_delayed;
+    uint8_t delay_interrupted;
 };
 
 struct pthread_attr {
@@ -177,6 +179,7 @@ int   _pthread_get_prio();
 int   _pthread_stack_free(pthread_t id);
 int   _pthread_stack(pthread_t id);
 struct pthread *_pthread_get(pthread_t id);
+int _pthread_sleep(uint32_t msecs);
 
 // API functions
 int  pthread_attr_init(pthread_attr_t *attr);

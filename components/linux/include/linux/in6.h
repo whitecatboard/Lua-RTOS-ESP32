@@ -5,6 +5,16 @@
  *      Author: jolive
  */
 
+#define IPV6_UNICAST_HOPS 16
+
+struct ipv6_mreq {
+	/* IPv6 multicast address of group */
+	struct in6_addr ipv6mr_multiaddr;
+
+	/* local IPv6 address of interface */
+	int		ipv6mr_ifindex;
+};
+
 #ifndef COMPONENTS_LINUX_INCLUDE_IN6_H_
 #define COMPONENTS_LINUX_INCLUDE_IN6_H_
 

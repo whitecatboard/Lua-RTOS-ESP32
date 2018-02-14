@@ -11,6 +11,7 @@ CFLAGS += -Wno-error=implicit-function-declaration -Wno-error=pointer-sign -Wno-
 #
 # Lua RTOS configuration
 # 
+CFLAGS += -DINCLUDE_xTaskAbortDelay=1
 CFLAGS += -DNEWLIB_HAVE_SLEEP=1
 CFLAGS += -DNEWLIB_HAVE_USLEEP=1
 

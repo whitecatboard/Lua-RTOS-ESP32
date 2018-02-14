@@ -39,21 +39,27 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS minimal signal implementation
+ * Lua RTOS gethostbyaddr implementation
  *
  */
 
-#ifndef COMPONENTS_LUA_RTOS_SYS___SIGNAL_H_
-#define COMPONENTS_LUA_RTOS_SYS___SIGNAL_H_
+/*
+ * IMPORTANT NOTICE:
+ *
+ * In Lua RTOS the gethostbyaddr function implementation is empty, and is
+ * provided only to allow the build of some Lua RTOS parts, such as the luasocket
+ * module. We must found a method to do a reverse DNS query in LWIP to implement
+ * this function.
+ *
+ */
 
-#include <pthread.h>
+#include <unistd.h>
+#include <netdb.h>
 
-typedef struct {
-	int s;    // Signal number
-	int dest; // Signal destination
-} signal_data_t;
+extern int h_errno;
 
-void _signal_queue(int dest, int s);
-void _signal_init();
+struct hostent *gethostbyaddr(const void *addr, socklen_t len, int type) {
+	h_errno = HOST_NOT_FOUND;
 
-#endif /* COMPONENTS_LUA_RTOS_SYS___SIGNAL_H_ */
+	return NULL;
+}

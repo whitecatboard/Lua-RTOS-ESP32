@@ -39,21 +39,61 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS minimal signal implementation
+ * Lua RTOS nanosleep implementation.
+ * The time granularity is 1 millisecond.
  *
  */
 
-#ifndef COMPONENTS_LUA_RTOS_SYS___SIGNAL_H_
-#define COMPONENTS_LUA_RTOS_SYS___SIGNAL_H_
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include <pthread.h>
+#include <errno.h>
+#include <time.h>
 
-typedef struct {
-	int s;    // Signal number
-	int dest; // Signal destination
-} signal_data_t;
+#include <sys/time.h>
+#include <sys/signal.h>
 
-void _signal_queue(int dest, int s);
-void _signal_init();
+int nanosleep(const struct timespec *req, struct timespec *rem) {
+	struct timeval start, end;
+	int res = 0;
 
-#endif /* COMPONENTS_LUA_RTOS_SYS___SIGNAL_H_ */
+	if ((req->tv_nsec < 0) || (req->tv_nsec > 999999999)) {
+		errno = EINVAL;
+
+		return -1;
+	}
+
+	// Get time in msecs
+	uint32_t msecs;
+
+	msecs  = req->tv_sec * 1000;
+	msecs += (req->tv_nsec + 999999) / 1000000;
+
+	if (rem != NULL) {
+		gettimeofday(&start, NULL);
+	}
+
+	if ((res = _pthread_sleep(msecs)) != 0) {
+		if (rem != NULL) {
+			rem->tv_sec = 0;
+			rem->tv_nsec = 0;
+
+			gettimeofday(&end, NULL);
+
+			uint32_t elapsed = (end.tv_sec - start.tv_sec) * 1000
+							 + ((end.tv_usec - start.tv_usec) / 1000000);
+
+			if (elapsed < msecs) {
+				if (elapsed > 1000) {
+					rem->tv_sec = elapsed / 1000;
+					elapsed -= rem->tv_sec * 1000;
+					rem->tv_nsec = elapsed * 1000000;
+				}
+			}
+		}
+		errno = EINTR;
+	}
+
+	return res;
+}

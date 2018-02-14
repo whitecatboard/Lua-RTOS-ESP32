@@ -306,6 +306,10 @@ void _pthread_exec_signal(int dst, int s) {
 
         if (thread->thread == dst) {
 			if ((thread->signals[s] != SIG_DFL) && (thread->signals[s] != SIG_IGN)) {
+				if (thread->is_delayed && ((s == (SIGINT) || (s == SIGABRT)))) {
+					xTaskAbortDelay(thread->task);
+				}
+
 				thread->signals[s](s);
 			}
         }
@@ -336,6 +340,34 @@ int _pthread_has_signal(int dst, int s) {
     }    
 
     return 0;
+}
+
+int _pthread_sleep(uint32_t msecs) {
+    struct pthread *thread;
+    int res;
+
+    // Get the current thread
+    res = list_get(&thread_list, pthread_self(), (void **)&thread);
+    if (res) {
+    	// Its not a thread, simply delay task
+    	vTaskDelay(msecs / portTICK_PERIOD_MS);
+    	return 0;
+    }
+
+    // Is a thread. Mark it as delayed.
+    thread->is_delayed = 1;
+    thread->delay_interrupted = 0;
+
+	vTaskDelay(msecs / portTICK_PERIOD_MS);
+
+	thread->is_delayed = 0;
+
+	if (thread->delay_interrupted) {
+		thread->delay_interrupted = 0;
+		return -1;
+	} else {
+		return 0;
+	}
 }
 
 int _pthread_stop(pthread_t id) {
