@@ -60,15 +60,14 @@ UNAME := $(shell uname)
 
 # Set the OS environment variable to build mkspiffs in windows
 ifeq ("$(UNAME)", "Linux")
-OS := LINUX
+export OS = LINUX
 else
 ifeq ("$(UNAME)", "Darwin")
-OS := OSX
+export OS = OSX
 else
-OS := Windows_NT
+export OS = Windows_NT
 endif
 endif
-export OS
 
 # Default filesystem
 SPIFFS_IMAGE := default
@@ -162,7 +161,7 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
         OTA_PARTITION_SIZE_FACTOR := 1048576
       endif
 
-      OTA_PARTITION_SIZE := $(shell echo ${OTA_PARTITION_SIZE_UNITS}*${OTA_PARTITION_SIZE_FACTOR} | bc)
+      OTA_PARTITION_SIZE := $(shell expr $(OTA_PARTITION_SIZE_UNITS) \* $(OTA_PARTITION_SIZE_FACTOR))
 
       ESPTOOL_ERASE_OTA_ARGS := $(ESPTOOLPY) --chip esp32 --port $(ESPPORT) --baud $(ESPBAUD) erase_region $(OTA_PARTITION_ADDR) $(OTA_PARTITION_SIZE)
     else
@@ -195,7 +194,7 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
       SPIFFS_SIZE_FACTOR := 1024
     endif
 
-    SPIFFS_SIZE := $(shell echo ${SPIFFS_SIZE_UNITS}*${SPIFFS_SIZE_FACTOR} | bc)
+	SPIFFS_SIZE := $(shell expr $(SPIFFS_SIZE_UNITS) \* $(SPIFFS_SIZE_FACTOR))
   endif
 endif
 

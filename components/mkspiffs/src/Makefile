@@ -1,15 +1,19 @@
 CFLAGS		?= -std=gnu99 -Os -Wall
 CXXFLAGS	?= -std=gnu++11 -Os -Wall
 
+VERSION ?= $(shell git describe --always)
+
 ifeq ($(OS),Windows_NT)
 	TARGET_OS := WINDOWS
 	DIST_SUFFIX := windows
 	ARCHIVE_CMD := 7z a
 	ARCHIVE_EXTENSION := zip
 	TARGET := mkspiffs.exe
-	TARGET_CFLAGS := -mno-ms-bitfields
+	TARGET_CFLAGS := -mno-ms-bitfields -Itclap -Ispiffs -I. -DVERSION=\"$(VERSION)\" -D__NO_INLINE__
 	TARGET_LDFLAGS := -Wl,-static -static-libgcc
-
+	TARGET_CXXFLAGS := -Itclap -Ispiffs -I. -DVERSION=\"$(VERSION)\" -D__NO_INLINE__
+	CC=gcc
+	CXX=g++
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Linux)

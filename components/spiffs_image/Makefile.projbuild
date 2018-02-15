@@ -33,7 +33,7 @@ SPIFFS_SIZE_UNITS := 512
 SPIFFS_SIZE_FACTOR := 1024
 endif
 
-SPIFFS_SIZE := $(shell echo ${SPIFFS_SIZE_UNITS}*${SPIFFS_SIZE_FACTOR} | bc)
+SPIFFS_SIZE := $(shell expr $(SPIFFS_SIZE_UNITS) \* $(SPIFFS_SIZE_FACTOR))
 endif
 
 fs: $(SDKCONFIG_MAKEFILE) mkspiffs fs-prepare
