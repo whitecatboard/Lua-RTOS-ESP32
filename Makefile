@@ -58,6 +58,18 @@ PROJECT_NAME := lua_rtos
 # Detect OS
 UNAME := $(shell uname)
 
+# Set the OS environment variable to build mkspiffs in windows
+ifeq ("$(UNAME)", "Linux")
+OS := LINUX
+else
+ifeq ("$(UNAME)", "Darwin")
+OS := OSX
+else
+OS := Windows_NT
+endif
+endif
+export OS
+
 # Default filesystem
 SPIFFS_IMAGE := default
 
@@ -85,9 +97,7 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
     $(info $(BOARDS))
     ifeq ("$(UNAME)", "Linux")
       BOARDN := $(shell read -p "Board type: " REPLY;echo $$REPLY)
-    endif
-
-    ifeq ("$(UNAME)", "Darwin")
+    else
       BOARDN := $(shell read -p "Board type: ";echo $$REPLY)
     endif
 
