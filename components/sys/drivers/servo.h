@@ -75,6 +75,7 @@ extern const int servo_error_map;
 // Driver functions
 driver_error_t *servo_setup(int8_t pin, servo_instance_t **instance);
 driver_error_t *servo_write(servo_instance_t *instance, double value);
+driver_error_t *servo_unsetup(servo_instance_t *instance);
 
 #endif
 

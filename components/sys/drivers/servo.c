@@ -129,4 +129,11 @@ driver_error_t *servo_write(servo_instance_t *instance, double value) {
 	return NULL;
 }
 
+driver_error_t *servo_unsetup(servo_instance_t *instance) {
+	pwm_unsetup(0, instance->pwm_channel);
+	free(instance);
+
+	return NULL;
+}
+
 #endif

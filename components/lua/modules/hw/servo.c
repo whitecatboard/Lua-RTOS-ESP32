@@ -77,6 +77,17 @@ static int lservo_attach( lua_State* L ) {
     return 1;
 }
 
+static int lservo_detach (lua_State *L) {
+	servo_userdata *udata = (servo_userdata *)luaL_checkudata(L, 1, "servo.ins");
+	driver_error_t *error;
+
+    if ((error = servo_unsetup(udata->instance))) {
+    	return luaL_driver_error(L, error);
+    }
+
+	return 0;
+}
+
 static int lservo_write( lua_State* L ) {
 	driver_error_t *error;
 	servo_userdata *udata;
@@ -96,12 +107,7 @@ static int lservo_write( lua_State* L ) {
 
 // Destructor
 static int lservo_ins_gc (lua_State *L) {
-    servo_userdata *udata = NULL;
-
-    udata = (servo_userdata *)luaL_checkudata(L, 1, "servo.ins");
-	if (udata) {
-		free(udata->instance);
-	}
+	lservo_detach(L);
 
 	return 0;
 }
@@ -113,10 +119,11 @@ static const LUA_REG_TYPE lservo_map[] = {
 };
 
 static const LUA_REG_TYPE lservo_ins_map[] = {
+    { LSTRKEY( "detach"       ),	LFUNCVAL( lservo_detach  ) },
     { LSTRKEY( "write"        ),	LFUNCVAL( lservo_write   ) },
 	{ LSTRKEY( "__metatable"  ),    LROVAL  ( lservo_ins_map ) },
 	{ LSTRKEY( "__index"      ),   	LROVAL  ( lservo_ins_map ) },
-	{ LSTRKEY( "__gc"         ),   	LFUNCVAL( lservo_ins_gc ) },
+	{ LSTRKEY( "__gc"         ),   	LFUNCVAL( lservo_ins_gc  ) },
     { LNILKEY, LNILVAL }
 };
 
@@ -128,10 +135,3 @@ LUALIB_API int luaopen_servo( lua_State *L ) {
 MODULE_REGISTER_MAPPED(SERVO, servo, lservo_map, luaopen_servo);
 
 #endif
-
-/*
-
-s1 = servo.attach(pio.GPIO4)
-s1:move(45)
-
-*/
