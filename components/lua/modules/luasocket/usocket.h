@@ -31,7 +31,6 @@
 #include "lwip/sys.h"
 #include "lwip/netdb.h"
 #include "lwip/dns.h"
-#include "lwip/sys/netdb.h"
 
 #ifndef SO_REUSEPORT
 #define SO_REUSEPORT SO_REUSEADDR

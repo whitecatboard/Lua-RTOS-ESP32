@@ -44,7 +44,6 @@
  */
 
 #include <netdb.h>
-#include "lwip/sys/netdb.h"
 
 const char *
 gai_strerror(int errnum)

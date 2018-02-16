@@ -75,7 +75,7 @@
 
 #ifdef liolib_c
 #undef liolib_c
-#include "Lua/modules/sys/liolib_adds.inc"
+#include "lua/modules/sys/liolib_adds.inc"
 #endif
 
 #ifdef loslib_c

@@ -48,7 +48,7 @@
 
 #include "esp_attr.h"
 
-#include <Lua/src/lgc.h>
+#include <lua/src/lgc.h>
 
 int IRAM_ATTR __garbage_collector() {
 	if (xPortInIsrContext()) {
