@@ -24,8 +24,9 @@
 #include <netdb.h>
 /* sigpipe handling */
 #include <signal.h>
+
+#include "../../../compat/include/linux/in6.h"
 /* LWIP */
-#include <linux/in6.h>
 #include "lwip/err.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"

@@ -36,10 +36,10 @@
 
 #include <string.h>
 
+#include "../compat/include/linux/in6.h"
 #include "lwip/sockets.h"
 #include "lwip/netdb.h"
 
-#include "linux/in6.h"
 #include "linux/netdb.h"
 
 #include "tcpip_adapter.h"
