@@ -134,6 +134,11 @@ endif
 
 include $(IDF_PATH)/make/project.mk
 
+# Check if esp-idf installation contains the required version to build Lua RTOS
+ifeq ("$(shell cd $(IDF_PATH) && git log --pretty="%H" | grep $(CURRENT_IDF))","")
+$(error Please, run "make upgrade-idf" before, to upgrade esp-idf to the version required by Lua RTOS)
+endif
+
 ifeq ($(BOARD_TYPE_REQUIRED),1)
   #
   # This part generates the esptool arguments required for erase the otadata region. This is required in case that
