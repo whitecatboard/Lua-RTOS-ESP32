@@ -40,7 +40,7 @@ static const char *unixdgram_tryconnect(p_unix un, const char *path);
 static const char *unixdgram_trybind(p_unix un, const char *path);
 
 /* unixdgram object methods */
-static luaL_Reg unixdgram_methods[] = {
+static const luaL_Reg unixdgram_methods[] = {
     {"__gc",        meth_close},
     {"__tostring",  auxiliar_tostring},
     {"bind",        meth_bind},
@@ -63,13 +63,13 @@ static luaL_Reg unixdgram_methods[] = {
 };
 
 /* socket option handlers */
-static t_opt optset[] = {
+static const t_opt optset[] = {
     {"reuseaddr",   opt_set_reuseaddr},
     {NULL,          NULL}
 };
 
 /* functions in library namespace */
-static luaL_Reg func[] = {
+static const luaL_Reg func[] = {
     {"dgram", global_create},
     {NULL, NULL}
 };
@@ -229,7 +229,7 @@ static int meth_receivefrom(lua_State *L) {
 \*-------------------------------------------------------------------------*/
 static int meth_setoption(lua_State *L) {
     p_unix un = (p_unix) auxiliar_checkgroup(L, "unixdgram{any}", 1);
-    return opt_meth_setoption(L, optset, &un->sock);
+    return opt_meth_setoption(L, (p_opt)optset, &un->sock);
 }
 
 /*-------------------------------------------------------------------------*\

@@ -197,6 +197,8 @@ static const char *char2escape[256] = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 };
 
+static int lua_cjson_new(lua_State *l);
+
 /* ===== CONFIGURATION ===== */
 
 static json_config_t *json_fetch_config(lua_State *l)
@@ -1356,23 +1358,23 @@ static int json_protect_conversion(lua_State *l)
     return luaL_error(l, "Memory allocation error in CJSON protected call");
 }
 
+static const luaL_Reg reg[] = {
+    { "encode", json_encode },
+    { "decode", json_decode },
+    { "encode_sparse_array", json_cfg_encode_sparse_array },
+    { "encode_max_depth", json_cfg_encode_max_depth },
+    { "decode_max_depth", json_cfg_decode_max_depth },
+    { "encode_number_precision", json_cfg_encode_number_precision },
+    { "encode_keep_buffer", json_cfg_encode_keep_buffer },
+    { "encode_invalid_numbers", json_cfg_encode_invalid_numbers },
+    { "decode_invalid_numbers", json_cfg_decode_invalid_numbers },
+    { "new", lua_cjson_new },
+    { NULL, NULL }
+};
+
 /* Return cjson module table */
 static int lua_cjson_new(lua_State *l)
 {
-    luaL_Reg reg[] = {
-        { "encode", json_encode },
-        { "decode", json_decode },
-        { "encode_sparse_array", json_cfg_encode_sparse_array },
-        { "encode_max_depth", json_cfg_encode_max_depth },
-        { "decode_max_depth", json_cfg_decode_max_depth },
-        { "encode_number_precision", json_cfg_encode_number_precision },
-        { "encode_keep_buffer", json_cfg_encode_keep_buffer },
-        { "encode_invalid_numbers", json_cfg_encode_invalid_numbers },
-        { "decode_invalid_numbers", json_cfg_decode_invalid_numbers },
-        { "new", lua_cjson_new },
-        { NULL, NULL }
-    };
-
     /* Initialise number conversions */
     fpconv_init();
 

@@ -39,7 +39,7 @@ static const char *unixstream_tryconnect(p_unix un, const char *path);
 static const char *unixstream_trybind(p_unix un, const char *path);
 
 /* unixstream object methods */
-static luaL_Reg unixstream_methods[] = {
+static const luaL_Reg unixstream_methods[] = {
     {"__gc",        meth_close},
     {"__tostring",  auxiliar_tostring},
     {"accept",      meth_accept},
@@ -64,7 +64,7 @@ static luaL_Reg unixstream_methods[] = {
 };
 
 /* socket option handlers */
-static t_opt optset[] = {
+static const t_opt optset[] = {
     {"keepalive",   opt_set_keepalive},
     {"reuseaddr",   opt_set_reuseaddr},
     {"linger",      opt_set_linger},
@@ -72,7 +72,7 @@ static t_opt optset[] = {
 };
 
 /* functions in library namespace */
-static luaL_Reg func[] = {
+static const luaL_Reg func[] = {
     {"stream", global_create},
     {NULL, NULL}
 };
@@ -127,7 +127,7 @@ static int meth_setstats(lua_State *L) {
 \*-------------------------------------------------------------------------*/
 static int meth_setoption(lua_State *L) {
     p_unix un = (p_unix) auxiliar_checkgroup(L, "unixstream{any}", 1);
-    return opt_meth_setoption(L, optset, &un->sock);
+    return opt_meth_setoption(L, (p_opt)optset, &un->sock);
 }
 
 /*-------------------------------------------------------------------------*\

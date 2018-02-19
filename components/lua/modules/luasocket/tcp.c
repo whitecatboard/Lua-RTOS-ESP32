@@ -43,7 +43,7 @@ static int meth_setfd(lua_State *L);
 static int meth_dirty(lua_State *L);
 
 /* tcp object methods */
-static luaL_Reg tcp_methods[] = {
+static const luaL_Reg tcp_methods[] = {
     {"__gc",        meth_close},
     {"__tostring",  auxiliar_tostring},
     {"accept",      meth_accept},
@@ -72,7 +72,7 @@ static luaL_Reg tcp_methods[] = {
 };
 
 /* socket option handlers */
-static t_opt optget[] = {
+static const t_opt optget[] = {
     {"keepalive",   opt_get_keepalive},
     {"reuseaddr",   opt_get_reuseaddr},
     {"reuseport",   opt_get_reuseport},
@@ -82,7 +82,7 @@ static t_opt optget[] = {
     {NULL,          NULL}
 };
 
-static t_opt optset[] = {
+static const t_opt optset[] = {
     {"keepalive",   opt_set_keepalive},
     {"reuseaddr",   opt_set_reuseaddr},
     {"reuseport",   opt_set_reuseport},
@@ -93,7 +93,7 @@ static t_opt optset[] = {
 };
 
 /* functions in library namespace */
-static luaL_Reg func[] = {
+static const luaL_Reg func[] = {
     {"tcp", global_create},
     {"tcp4", global_create4},
     {"tcp6", global_create6},
@@ -151,13 +151,13 @@ static int meth_setstats(lua_State *L) {
 static int meth_getoption(lua_State *L)
 {
     p_tcp tcp = (p_tcp) auxiliar_checkgroup(L, "tcp{any}", 1);
-    return opt_meth_getoption(L, optget, &tcp->sock);
+    return opt_meth_getoption(L, (p_opt)optget, &tcp->sock);
 }
 
 static int meth_setoption(lua_State *L)
 {
     p_tcp tcp = (p_tcp) auxiliar_checkgroup(L, "tcp{any}", 1);
-    return opt_meth_setoption(L, optset, &tcp->sock);
+    return opt_meth_setoption(L, (p_opt)optset, &tcp->sock);
 }
 
 /*-------------------------------------------------------------------------*\

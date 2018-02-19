@@ -48,7 +48,7 @@ static int meth_setfd(lua_State *L);
 static int meth_dirty(lua_State *L);
 
 /* udp object methods */
-static luaL_Reg udp_methods[] = {
+static const luaL_Reg udp_methods[] = {
     {"__gc",        meth_close},
     {"__tostring",  auxiliar_tostring},
     {"close",       meth_close},
@@ -72,7 +72,7 @@ static luaL_Reg udp_methods[] = {
 };
 
 /* socket options for setoption */
-static t_opt optset[] = {
+static const t_opt optset[] = {
     {"dontroute",            opt_set_dontroute},
     {"broadcast",            opt_set_broadcast},
     {"reuseaddr",            opt_set_reuseaddr},
@@ -92,7 +92,7 @@ static t_opt optset[] = {
 };
 
 /* socket options for getoption */
-static t_opt optget[] = {
+static const t_opt optget[] = {
     {"dontroute",            opt_get_dontroute},
     {"broadcast",            opt_get_broadcast},
     {"reuseaddr",            opt_get_reuseaddr},
@@ -108,7 +108,7 @@ static t_opt optget[] = {
 };
 
 /* functions in library namespace */
-static luaL_Reg func[] = {
+static const luaL_Reg func[] = {
     {"udp", global_create},
     {"udp4", global_create4},
     {"udp6", global_create6},
@@ -351,7 +351,7 @@ static int meth_getsockname(lua_State *L) {
 \*-------------------------------------------------------------------------*/
 static int meth_setoption(lua_State *L) {
     p_udp udp = (p_udp) auxiliar_checkgroup(L, "udp{any}", 1);
-    return opt_meth_setoption(L, optset, &udp->sock);
+    return opt_meth_setoption(L, (p_opt)optset, &udp->sock);
 }
 
 /*-------------------------------------------------------------------------*\
@@ -359,7 +359,7 @@ static int meth_setoption(lua_State *L) {
 \*-------------------------------------------------------------------------*/
 static int meth_getoption(lua_State *L) {
     p_udp udp = (p_udp) auxiliar_checkgroup(L, "udp{any}", 1);
-    return opt_meth_getoption(L, optget, &udp->sock);
+    return opt_meth_getoption(L, (p_opt)optget, &udp->sock);
 }
 
 /*-------------------------------------------------------------------------*\

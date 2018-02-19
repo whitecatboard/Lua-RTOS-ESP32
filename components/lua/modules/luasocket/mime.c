@@ -45,7 +45,7 @@ static size_t qpencode(UC c, UC *input, size_t size,
 static size_t qppad(UC *input, size_t size, luaL_Buffer *buffer);
 
 /* code support functions */
-static luaL_Reg func[] = {
+static const luaL_Reg func[] = {
     { "dot", mime_global_dot },
     { "b64", mime_global_b64 },
     { "eol", mime_global_eol },

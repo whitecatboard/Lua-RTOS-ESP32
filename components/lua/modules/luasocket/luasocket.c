@@ -56,7 +56,7 @@ static const luaL_Reg mod[] = {
     {NULL, NULL}
 };
 
-static luaL_Reg func[] = {
+static const luaL_Reg func[] = {
     {"skip",      global_skip},
     {"__unload",  global_unload},
     {NULL,        NULL}

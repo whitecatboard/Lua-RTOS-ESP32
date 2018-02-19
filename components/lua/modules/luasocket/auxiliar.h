@@ -34,7 +34,7 @@
 #include "compat.h"
 
 int auxiliar_open(lua_State *L);
-void auxiliar_newclass(lua_State *L, const char *classname, luaL_Reg *func);
+void auxiliar_newclass(lua_State *L, const char *classname, const luaL_Reg *func);
 void auxiliar_add2group(lua_State *L, const char *classname, const char *group);
 void auxiliar_setclass(lua_State *L, const char *classname, int objidx);
 void *auxiliar_checkclass(lua_State *L, const char *classname, int objidx);

@@ -39,7 +39,7 @@ static int meth_getstats(lua_State *L);
 static int meth_setstats(lua_State *L);
 
 /* serial object methods */
-static luaL_Reg serial_methods[] = {
+static const luaL_Reg serial_methods[] = {
     {"__gc",        meth_close},
     {"__tostring",  auxiliar_tostring},
     {"close",       meth_close},
