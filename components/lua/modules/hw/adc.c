@@ -192,6 +192,6 @@ LUALIB_API int luaopen_adc( lua_State *L ) {
     return 0;
 }
 
-MODULE_REGISTER_MAPPED(ADC, adc, ladc_map, luaopen_adc);
+MODULE_REGISTER_ROM(ADC, adc, ladc_map, luaopen_adc);
 
 #endif

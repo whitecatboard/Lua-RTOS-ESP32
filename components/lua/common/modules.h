@@ -18,15 +18,15 @@
 #define LIB_SECTION(fname, section) LIB_CONCAT(section,LIB_USED(fname))
 
 #if LUA_USE_ROTABLE
-#define MODULE_REGISTER_MAPPED(fname, lname, map, func) \
+#define MODULE_REGISTER_ROM(fname, lname, map, func) \
 const PUT_IN_SECTION(LIB_TOSTRING(LIB_SECTION(fname,.lua_libs))) luaL_Reg LIB_CONCAT(lua_libs,LIB_CONCAT(_,LIB_CONCAT(lname,LIB_USED(fname)))) = {LIB_TOSTRING(lname), func}; \
 const PUT_IN_SECTION(LIB_TOSTRING(LIB_SECTION(fname,.lua_rotable))) luaR_entry LIB_CONCAT(lua_rotable,LIB_CONCAT(_,LIB_CONCAT(lname,LIB_USED(fname)))) = {LSTRKEY(LIB_TOSTRING(lname)), LROVAL(map)};
 
-#define MODULE_REGISTER_UNMAPPED(fname, lname, func) \
+#define MODULE_REGISTER_RAM(fname, lname, func) \
 const PUT_IN_SECTION(LIB_TOSTRING(LIB_SECTION(fname,.lua_libs))) luaL_Reg LIB_CONCAT(lua_libs,LIB_CONCAT(_,LIB_CONCAT(fname,LIB_USED(fname)))) = {LIB_TOSTRING(lname), func};
 #else
-#define MODULE_REGISTER(fname, lname, map)
-#define MODULE_REGISTER_UNMAPPED(fname, lname, func)
+#define MODULE_REGISTER_ROM(fname, lname, map)
+#define MODULE_REGISTER_RAM(fname, lname, func)
 #endif
 
 #endif

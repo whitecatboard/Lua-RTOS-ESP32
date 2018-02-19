@@ -757,6 +757,6 @@ int luaopen_thread(lua_State* L) {
 	return 0;
 } 
  
-MODULE_REGISTER_MAPPED(THREAD, thread, thread, luaopen_thread);
+MODULE_REGISTER_ROM(THREAD, thread, thread, luaopen_thread);
 
 #endif

@@ -132,6 +132,6 @@ LUALIB_API int luaopen_servo( lua_State *L ) {
     return 0;
 }
 
-MODULE_REGISTER_MAPPED(SERVO, servo, lservo_map, luaopen_servo);
+MODULE_REGISTER_ROM(SERVO, servo, lservo_map, luaopen_servo);
 
 #endif

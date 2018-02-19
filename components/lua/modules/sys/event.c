@@ -344,7 +344,7 @@ LUALIB_API int luaopen_event( lua_State *L ) {
     return 0;
 }
 
-MODULE_REGISTER_MAPPED(EVENT, event, levent_map, luaopen_event);
+MODULE_REGISTER_ROM(EVENT, event, levent_map, luaopen_event);
 
 #endif
 

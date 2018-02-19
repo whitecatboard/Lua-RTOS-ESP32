@@ -171,6 +171,6 @@ LUALIB_API int luaopen_neopixel( lua_State *L ) {
     return 0;
 }
 
-MODULE_REGISTER_MAPPED(NEOPIXEL, neopixel, lneopixel_map, luaopen_neopixel);
+MODULE_REGISTER_ROM(NEOPIXEL, neopixel, lneopixel_map, luaopen_neopixel);
 
 #endif

@@ -201,6 +201,6 @@ LUALIB_API int luaopen_stepper( lua_State *L ) {
     return 0;
 }
 
-MODULE_REGISTER_MAPPED(STEPPER, stepper, lstepper_map, luaopen_stepper);
+MODULE_REGISTER_ROM(STEPPER, stepper, lstepper_map, luaopen_stepper);
 
 #endif

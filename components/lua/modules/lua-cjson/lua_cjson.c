@@ -1444,5 +1444,5 @@ CJSON_EXPORT int luaopen_cjson_safe(lua_State *l)
 /* vi:ai et sw=4 ts=4:
  */
 
-MODULE_REGISTER_UNMAPPED(CJSON, cjson, luaopen_cjson);
-MODULE_REGISTER_UNMAPPED(CJSON_SAFE, cjson.safe, luaopen_cjson);
+MODULE_REGISTER_RAM(CJSON, cjson, luaopen_cjson);
+MODULE_REGISTER_RAM(CJSON_SAFE, cjson.safe, luaopen_cjson);

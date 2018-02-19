@@ -1270,6 +1270,6 @@ int luaopen_gdisplay(lua_State* L) {
     return 0;
 }
 
-MODULE_REGISTER_MAPPED(GDISPLAY, gdisplay, gdisplay_map, luaopen_gdisplay);
+MODULE_REGISTER_ROM(GDISPLAY, gdisplay, gdisplay_map, luaopen_gdisplay);
 
 #endif
