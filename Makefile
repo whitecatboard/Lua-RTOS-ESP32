@@ -15,9 +15,11 @@ EXTRA_COMPONENTS := $(sort $(foreach comp,$(EXTRA_COMPONENTS),$(lastword $(subst
 EXTRA_COMPONENT_PATHS := $(foreach comp,$(EXTRA_COMPONENTS),$(firstword $(foreach cd,$(EXTRA_COMPONENT_DIRS),$(wildcard $(dir $(cd))$(comp) $(cd)/$(comp)))))
 
 BOARD_TYPE_REQUIRED := 1
+VERSION_CHECK_REQUIRED := 1
 
 ifneq (,$(findstring clean,$(MAKECMDGOALS)))
   BOARD_TYPE_REQUIRED := 0
+  VERSION_CHECK_REQUIRED := 0
 endif
 
 ifneq (,$(findstring menuconfig,$(MAKECMDGOALS)))
@@ -35,11 +37,13 @@ endif
 
 ifneq (,$(findstring restore-idf,$(MAKECMDGOALS)))
   BOARD_TYPE_REQUIRED := 0
+  VERSION_CHECK_REQUIRED := 0
   MAKECMDGOALS += defconfig
 endif
 
 ifneq (,$(findstring upgrade-idf,$(MAKECMDGOALS)))
   BOARD_TYPE_REQUIRED := 0
+  VERSION_CHECK_REQUIRED := 0
   MAKECMDGOALS += defconfig
 endif
 
@@ -50,7 +54,7 @@ define n
 endef
 
 # Use this esp-idf commit in build
-CURRENT_IDF := ca3faa6186b47b546e560943224abab4cfdd01af
+CURRENT_IDF := c3bec5b103888217d53527924e5185d49f9636ea
 
 # Project name
 PROJECT_NAME := lua_rtos
@@ -119,48 +123,50 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
   endif  
 endif
 
-# Check if esp-idf installation contains the required version to build Lua RTOS
-ifeq ("$(shell cd $(IDF_PATH) && git log --pretty="%H" | grep $(CURRENT_IDF))","")
-$(error Please, run "make upgrade-idf" before, to upgrade esp-idf to the version required by Lua RTOS)
-endif
-
-# Apply Lua RTOS patches
-ifneq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
-  APPLY_PATCHES := 1
-else
-  # Get previous hash of applyied patches
-  PREV_HASH := $(shell cat $(IDF_PATH)/lua_rtos_patches)
-  
-  # Get current hash
-  ifeq ("$(UNAME)", "Linux")
-    CURR_HASH := $(shell cat components/sys/patches/*.patch | sha256sum)
-  else
-    CURR_HASH := $(shell cat components/sys/patches/*.patch | shasum -a 256 -p)
+ifeq ("$(VERSION_CHECK_REQUIRED)","1")
+  # Check if esp-idf installation contains the required version to build Lua RTOS
+  ifeq ("$(shell cd $(IDF_PATH) && git log --pretty="%H" | grep $(CURRENT_IDF))","")
+  $(error Please, run "make upgrade-idf" before, to upgrade esp-idf to the version required by Lua RTOS)
   endif
-  
-  ifneq ("$(PREV_HASH)","$(CURR_HASH)")
+
+  # Apply Lua RTOS patches
+  ifneq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
     APPLY_PATCHES := 1
   else
-    APPLY_PATCHES := 0
-  endif
-endif
-
-ifeq ("$(APPLY_PATCHES)","1")
-  $(info Reverting previous Lua RTOS esp-idf patches ...)
-  TMP := $(shell cd $(IDF_PATH) && git checkout .)
-  TMP := $(shell cd $(IDF_PATH) && git checkout $(CURRENT_IDF))
-  TMP := $(info Applying Lua RTOS esp-idf patches ...)
-  $(foreach PATCH,$(abspath $(wildcard components/sys/patches/*.patch)), \
-    $(info Applying patch $(PATCH)...); \
-    $(shell cd $(IDF_PATH) && git apply --whitespace=warn $(PATCH)) \
-  )
-  $(info Patches applied)
+    # Get previous hash of applyied patches
+    PREV_HASH := $(shell cat $(IDF_PATH)/lua_rtos_patches)
   
-  # Compute and save new hash
-  ifeq ("$(UNAME)", "Linux")
-    TMP := $(shell cat components/sys/patches/*.patch | sha256sum > $(IDF_PATH)/lua_rtos_patches)
-  else
-    TMP := $(shell cat components/sys/patches/*.patch | shasum -a 256 -p > $(IDF_PATH)/lua_rtos_patches)
+    # Get current hash
+    ifeq ("$(UNAME)", "Linux")
+      CURR_HASH := $(shell cat components/sys/patches/*.patch | sha256sum)
+    else
+      CURR_HASH := $(shell cat components/sys/patches/*.patch | shasum -a 256 -p)
+    endif
+  
+    ifneq ("$(PREV_HASH)","$(CURR_HASH)")
+      APPLY_PATCHES := 1
+    else
+      APPLY_PATCHES := 0
+    endif
+  endif
+
+  ifeq ("$(APPLY_PATCHES)","1")
+    $(info Reverting previous Lua RTOS esp-idf patches ...)
+    TMP := $(shell cd $(IDF_PATH) && git checkout .)
+    TMP := $(shell cd $(IDF_PATH) && git checkout $(CURRENT_IDF))
+    TMP := $(info Applying Lua RTOS esp-idf patches ...)
+    $(foreach PATCH,$(abspath $(wildcard components/sys/patches/*.patch)), \
+      $(info Applying patch $(PATCH)...); \
+      $(shell cd $(IDF_PATH) && git apply --whitespace=warn $(PATCH)) \
+    )
+    $(info Patches applied)
+  
+    # Compute and save new hash
+    ifeq ("$(UNAME)", "Linux")
+      TMP := $(shell cat components/sys/patches/*.patch | sha256sum > $(IDF_PATH)/lua_rtos_patches)
+    else
+      TMP := $(shell cat components/sys/patches/*.patch | shasum -a 256 -p > $(IDF_PATH)/lua_rtos_patches)
+    endif
   endif
 endif
 
