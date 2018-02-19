@@ -101,7 +101,6 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
     endif
 
     BOARD := $(subst \,$(n),$(shell python boards/boards.py $(BOARDN)))
-    $(info $(BOARD))
     # Check if board exists
     ifneq ("$(shell test -e boards/$(BOARD) && echo ex)","ex")
       $(error "Invalid board type boards/$(BOARD)")
@@ -120,24 +119,52 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
   endif  
 endif
 
-# Apply patches
-ifneq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
-  $(info Reverting previous Lua RTOS esp-idf patches ...)
-  TMP := $(shell cd $(IDF_PATH) && git checkout .)
-  TMP := $(shell cd $(IDF_PATH) && git checkout $(CURRENT_IDF))
-  TMP := $(shell cd $(IDF_PATH) && git submodule update --recursive)
-  TMP := $(info Applying Lua RTOS esp-idf patches ...)
-  TMP := $(shell )
-  $(foreach PATCH,$(abspath $(wildcard components/sys/patches/*.patch)),$(shell cd $(IDF_PATH) && git apply --whitespace=warn $(PATCH)))
-  TMP := $(shell touch $(IDF_PATH)/lua_rtos_patches)
-endif
-
-include $(IDF_PATH)/make/project.mk
-
 # Check if esp-idf installation contains the required version to build Lua RTOS
 ifeq ("$(shell cd $(IDF_PATH) && git log --pretty="%H" | grep $(CURRENT_IDF))","")
 $(error Please, run "make upgrade-idf" before, to upgrade esp-idf to the version required by Lua RTOS)
 endif
+
+# Apply Lua RTOS patches
+ifneq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
+  APPLY_PATCHES := 1
+else
+  # Get previous hash of applyied patches
+  PREV_HASH := $(shell cat $(IDF_PATH)/lua_rtos_patches)
+  
+  # Get current hash
+  ifeq ("$(UNAME)", "Linux")
+    CURR_HASH := $(shell cat components/sys/patches/*.patch | sha256sum)
+  else
+    CURR_HASH := $(shell cat components/sys/patches/*.patch | shasum -a 256 -p)
+  endif
+  
+  ifneq ("$(PREV_HASH)","$(CURR_HASH)")
+    APPLY_PATCHES := 1
+  else
+    APPLY_PATCHES := 0
+  endif
+endif
+
+ifeq ("$(APPLY_PATCHES)","1")
+  $(info Reverting previous Lua RTOS esp-idf patches ...)
+  TMP := $(shell cd $(IDF_PATH) && git checkout .)
+  TMP := $(shell cd $(IDF_PATH) && git checkout $(CURRENT_IDF))
+  TMP := $(info Applying Lua RTOS esp-idf patches ...)
+  $(foreach PATCH,$(abspath $(wildcard components/sys/patches/*.patch)), \
+    $(info Applying patch $(PATCH)...); \
+    $(shell cd $(IDF_PATH) && git apply --whitespace=warn $(PATCH)) \
+  )
+  $(info Patches applied)
+  
+  # Compute and save new hash
+  ifeq ("$(UNAME)", "Linux")
+    TMP := $(shell cat components/sys/patches/*.patch | sha256sum > $(IDF_PATH)/lua_rtos_patches)
+  else
+    TMP := $(shell cat components/sys/patches/*.patch | shasum -a 256 -p > $(IDF_PATH)/lua_rtos_patches)
+  endif
+endif
+
+include $(IDF_PATH)/make/project.mk
 
 ifeq ($(BOARD_TYPE_REQUIRED),1)
   #
