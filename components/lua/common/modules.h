@@ -26,6 +26,7 @@ const PUT_IN_SECTION(LIB_TOSTRING(LIB_SECTION(fname,.lua_rotable))) luaR_entry L
 const PUT_IN_SECTION(LIB_TOSTRING(LIB_SECTION(fname,.lua_libs))) luaL_Reg LIB_CONCAT(lua_libs,LIB_CONCAT(_,LIB_CONCAT(fname,LIB_USED(fname)))) = {LIB_TOSTRING(lname), func};
 #else
 #define MODULE_REGISTER(fname, lname, map)
+#define MODULE_REGISTER_UNMAPPED(fname, lname, func)
 #endif
 
 #endif

@@ -1152,6 +1152,10 @@ menu "Lua RTOS"
                bool "Include encoder module in build"
                default y
 
+            config LUA_RTOS_LUA_USE_CJSON
+               bool "Include cjson module in build"
+               default y
+
             config LUA_RTOS_LUA_USE_EVENT
                bool "Include event module in build"
                default y

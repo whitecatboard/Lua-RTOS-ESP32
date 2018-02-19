@@ -284,20 +284,20 @@ flash-args:
 # comes from the SPIFFS_IMAGE variable, that contains the main folder to use, and the COMPONENT_ADD_FS
 # variable, that contains individual folders to add by component
 #
+COMPONENT_FS := 
+
 define includeComponentFS
 ifeq ("$(shell test -e $(1)/component.mk && echo ex)","ex")
-include $(1)/component.mk
+$(eval include $(1)/component.mk)
+COMPONENT_FS += $(addsuffix /*,$(addprefix $(1)/, $(COMPONENT_ADD_FS)))
 endif
-endef
-
-define addComponentFS
-COMPONENT_FS += $(addprefix $(1)/, $(COMPONENT_ADD_FS))
 endef
 
 fs-prepare:
 	$(foreach componentpath,$(EXTRA_COMPONENT_PATHS), \
-		$(eval $(call addComponentFS, $(componentpath), $(eval $(call includeComponentFS,$(componentpath))))))
+		$(eval $(call includeComponentFS,$(componentpath))))
+	$(info  $(COMPONENT_FS))
 	@rm -f -r $(PROJECT_PATH)/build/tmp-fs
 	@mkdir -p $(PROJECT_PATH)/build/tmp-fs
-	@cp -f -r $(COMPONENT_FS)/* $(PROJECT_PATH)/build/tmp-fs
+	@cp -f -r $(COMPONENT_FS) $(PROJECT_PATH)/build/tmp-fs
 	@cp -f -r $(PROJECT_PATH)/components/spiffs_image/$(SPIFFS_IMAGE)/* $(PROJECT_PATH)/build/tmp-fs
