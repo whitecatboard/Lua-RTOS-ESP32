@@ -290,5 +290,5 @@ LUALIB_API int luaopen_ulp( lua_State *L ) {
 #endif
 }
 
-MODULE_REGISTER_ROM(ULP, ulp, lulp_map, luaopen_ulp);
+MODULE_REGISTER_ROM(ULP, ulp, lulp_map, luaopen_ulp, 1);
 

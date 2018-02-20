@@ -271,4 +271,4 @@ LUAMOD_API int luaopen_utf8 (lua_State *L) {
 #endif
 }
 
-MODULE_REGISTER_ROM(UTF8, utf8, funcs, luaopen_utf8);
+MODULE_REGISTER_ROM(UTF8, utf8, funcs, luaopen_utf8, 1);

@@ -585,7 +585,7 @@ LUALIB_API int luaopen_pio(lua_State *L) {
 	return 0;
 }
 
-MODULE_REGISTER_ROM(PIO, pio, pio_map, luaopen_pio);
+MODULE_REGISTER_ROM(PIO, pio, pio_map, luaopen_pio, 1);
 
 #endif
 

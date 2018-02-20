@@ -809,7 +809,7 @@ LUALIB_API int luaopen_sensor( lua_State *L ) {
     return 0;
 }
 
-MODULE_REGISTER_ROM(SENSOR, sensor, lsensor_map, luaopen_sensor);
+MODULE_REGISTER_ROM(SENSOR, sensor, lsensor_map, luaopen_sensor, 1);
 
 #endif
 

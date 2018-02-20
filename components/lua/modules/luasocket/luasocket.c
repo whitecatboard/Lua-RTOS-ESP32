@@ -115,4 +115,4 @@ LUASOCKET_API int luaopen_socket_core(lua_State *L) {
     return 1;
 }
 
-MODULE_REGISTER_RAM(SOCKET, __socket, luaopen_socket_core);
+MODULE_REGISTER_RAM(SOCKET, __socket, luaopen_socket_core, 0);

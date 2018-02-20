@@ -332,7 +332,7 @@ int luaopen_net(lua_State* L) {
 	return 0;
 }
 
-MODULE_REGISTER_ROM(NET, net, net_map, luaopen_net);
+MODULE_REGISTER_ROM(NET, net, net_map, luaopen_net, 1);
 
 /*
 

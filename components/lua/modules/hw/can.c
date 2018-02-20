@@ -217,7 +217,7 @@ LUALIB_API int luaopen_can( lua_State *L ) {
     return 0;
 }
 
-MODULE_REGISTER_ROM(CAN, can, lcan_map, luaopen_can);
+MODULE_REGISTER_ROM(CAN, can, lcan_map, luaopen_can, 1);
 
 #endif
 

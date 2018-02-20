@@ -271,5 +271,5 @@ LUALIB_API int luaopen_cpu( lua_State *L ) {
 #endif
 }
 
-MODULE_REGISTER_ROM(CPU, cpu, lcpu_map, luaopen_cpu);
+MODULE_REGISTER_ROM(CPU, cpu, lcpu_map, luaopen_cpu, 1);
 

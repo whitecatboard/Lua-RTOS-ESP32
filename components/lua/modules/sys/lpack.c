@@ -451,6 +451,6 @@ int luaopen_pack(lua_State *L) {
 	#endif		   
 }
 	   
-MODULE_REGISTER_ROM(PACK, pack, pack_map, luaopen_pack);
+MODULE_REGISTER_ROM(PACK, pack, pack_map, luaopen_pack, 1);
 
 #endif

@@ -339,6 +339,6 @@ LUALIB_API int luaopen_i2c( lua_State *L ) {
     return 0;
 }
 
-MODULE_REGISTER_ROM(I2C, i2c, li2c_map, luaopen_i2c);
+MODULE_REGISTER_ROM(I2C, i2c, li2c_map, luaopen_i2c, 1);
 
 #endif

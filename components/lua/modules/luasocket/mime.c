@@ -723,4 +723,4 @@ static int mime_global_dot(lua_State *L)
 
 #define CONFIG_LUA_RTOS_LUA_USE_MIME CONFIG_LUA_RTOS_LUA_USE_SOCKET
 
-MODULE_REGISTER_RAM(MIME, __mime, luaopen_mime_core);
+MODULE_REGISTER_RAM(MIME, __mime, luaopen_mime_core, 0);

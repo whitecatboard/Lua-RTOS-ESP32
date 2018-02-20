@@ -422,4 +422,4 @@ LUAMOD_API int luaopen_math (lua_State *L) {
 	#endif
 }
 
-MODULE_REGISTER_ROM(MATH, math, mathlib, luaopen_math);
+MODULE_REGISTER_ROM(MATH, math, mathlib, luaopen_math, 1);

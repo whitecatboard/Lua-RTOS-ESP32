@@ -191,7 +191,7 @@ LUALIB_API int luaopen_sdisplay( lua_State *L ) {
     return 0;
 }
 
-MODULE_REGISTER_ROM(SDISPLAY, sdisplay, lsdisplay_map, luaopen_sdisplay);
+MODULE_REGISTER_ROM(SDISPLAY, sdisplay, lsdisplay_map, luaopen_sdisplay, 1);
 
 #endif
 

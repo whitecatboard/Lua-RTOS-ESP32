@@ -515,7 +515,7 @@ int luaopen_lora(lua_State* L) {
 	return 0;
 }
 
-MODULE_REGISTER_ROM(LORA, lora, lora_map, luaopen_lora);
+MODULE_REGISTER_ROM(LORA, lora, lora_map, luaopen_lora, 1);
 
 #endif
 

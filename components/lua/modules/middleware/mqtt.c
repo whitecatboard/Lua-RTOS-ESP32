@@ -498,6 +498,6 @@ LUALIB_API int luaopen_mqtt( lua_State *L ) {
 #endif
 }
 
-MODULE_REGISTER_ROM(MQTT, mqtt, lmqtt_map, luaopen_mqtt);
+MODULE_REGISTER_ROM(MQTT, mqtt, lmqtt_map, luaopen_mqtt, 1);
 
 #endif

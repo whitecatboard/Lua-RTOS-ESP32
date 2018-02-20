@@ -203,7 +203,7 @@ LUALIB_API int luaopen_encoder( lua_State *L ) {
 	return 0;
 }
 
-MODULE_REGISTER_ROM(ENCODER, encoder, encoder_map, luaopen_encoder);
+MODULE_REGISTER_ROM(ENCODER, encoder, encoder_map, luaopen_encoder, 1);
 
 /*
 
