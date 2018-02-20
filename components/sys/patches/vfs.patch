@@ -36,18 +36,21 @@ index ab645fcc..c63f83cd 100644
  
  
 diff --git a/components/vfs/vfs.c b/components/vfs/vfs.c
-index 5dbd462c..28f9c96c 100644
+index 5dbd462c..117312ab 100644
 --- a/components/vfs/vfs.c
 +++ b/components/vfs/vfs.c
-@@ -40,7 +40,7 @@
+@@ -40,9 +40,9 @@
  // mask of actual file descriptor (e.g. 0x00000fff)
  #define VFS_FD_MASK     ((1 << CONFIG_MAX_FD_BITS) - 1)
  // max number of VFS entries
 -#define VFS_MAX_COUNT   ((1 << MAX_VFS_ID_BITS) - 1)
 +// #define VFS_MAX_COUNT   ((1 << MAX_VFS_ID_BITS) - 1)
  // mask of VFS id (e.g. 0x00007000)
- #define VFS_INDEX_MASK  (VFS_MAX_COUNT << CONFIG_MAX_FD_BITS)
+-#define VFS_INDEX_MASK  (VFS_MAX_COUNT << CONFIG_MAX_FD_BITS)
++#define VFS_INDEX_MASK  (0xffffffff << CONFIG_MAX_FD_BITS)
  #define VFS_INDEX_S     CONFIG_MAX_FD_BITS
+ 
+ #define LEN_PATH_PREFIX_IGNORED SIZE_MAX /* special length value for VFS which is never recognised by open() */
 @@ -269,6 +269,7 @@ ssize_t esp_vfs_write(struct _reent *r, int fd, const void * data, size_t size)
          __errno_r(r) = EBADF;
          return -1;
@@ -56,7 +59,7 @@ index 5dbd462c..28f9c96c 100644
      int local_fd = translate_fd(vfs, fd);
      ssize_t ret;
      CHECK_AND_CALL(ret, r, vfs, write, local_fd, data, size);
-@@ -552,3 +553,191 @@ int fsync(int fd)
+@@ -552,3 +553,193 @@ int fsync(int fd)
      CHECK_AND_CALL(ret, r, vfs, fsync, local_fd);
      return ret;
  }
@@ -125,7 +128,7 @@ index 5dbd462c..28f9c96c 100644
 +   // Convert the timeout to milliseconds
 +   u32_t msectimeout = 0;
 +
-+   if (timeout && (timeout->tv_sec != 0) && (timeout->tv_usec != 0)) {
++   if (timeout && ((timeout->tv_sec != 0) || (timeout->tv_usec != 0))) {
 +      msectimeout = ((timeout->tv_sec * 1000) + ((timeout->tv_usec + 500)/1000));
 +   }
 +
@@ -241,8 +244,10 @@ index 5dbd462c..28f9c96c 100644
 +              break;
 +          }
 +      } else {
-+         // If not timeout, exit
-+         break;
++          if (!timeout) {
++             // If not timeout, exit
++             break;
++          }
 +      }
 +   }
 +
