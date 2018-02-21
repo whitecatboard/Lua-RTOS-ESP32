@@ -196,7 +196,8 @@ static int lnet_ping(lua_State* L) {
 }
 
 static int lnet_stat(lua_State* L) {
-	u8_t table = 0;
+	uint8_t table = 0;
+	uint8_t interfaces = 0;
 
 	// Check if user wants result as a table, or wants scan's result
 	// on the console
@@ -209,7 +210,7 @@ static int lnet_stat(lua_State* L) {
 
 	if (table) {
 		lua_createtable(L, 1, 0);
-		lua_pushinteger(L, 0);
+		lua_pushinteger(L, interfaces++);
 	}
 
 	// This should be done in a more elegant way in future versions ...
@@ -235,6 +236,8 @@ static int lnet_stat(lua_State* L) {
 #endif
 
 #if CONFIG_LUA_RTOS_LUA_USE_NET && (CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI || CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII)
+	lua_pushinteger(L, interfaces++);
+
 	// Call wf.stat
 	lua_getglobal(L, "net");
 	lua_getfield(L, -1, "en");
