@@ -146,7 +146,6 @@ typedef struct lthread {
     int function_ref;
     int thread_ref;
     int status;
-    pthread_t thread;
 } lthread_t;
 
 typedef struct {

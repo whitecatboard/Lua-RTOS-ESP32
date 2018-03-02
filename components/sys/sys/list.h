@@ -53,8 +53,11 @@ struct list {
     struct mtx mutex;
     struct list_index *index;
     struct list_index *free;
+    struct list_index *last;
     uint8_t indexes;
     uint8_t first_index;
+    uint8_t flags;
+    uint8_t init;
 };
 
 struct list_index {
@@ -62,14 +65,19 @@ struct list_index {
     uint8_t index;
     uint8_t deleted;
     struct list_index *next;
+    struct list_index *previous;
 };
 
-void list_init(struct list *list, int first_index);
+#define LIST_DEFAULT 	(1 << 0)
+#define LIST_NOT_INDEXED (1 << 1)
+
+void list_init(struct list *list, int first_index, uint8_t flags);
 int list_add(struct list *list, void *item, int *item_index);
 int list_get(struct list *list, int index, void **item);
 int list_remove(struct list *list, int index, int destroy);
 int list_remove_compact(struct list *list, int index, int destroy, bool compact);
 int list_first(struct list *list);
+int list_last(struct list *list);
 int list_next(struct list *list, int index);
 void list_destroy(struct list *list, int items);
 

@@ -46,55 +46,10 @@
 #include "luartos.h"
 #include "_pthread.h"
 
-#include <errno.h>
 #include <pthread.h>
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
-                          void *(*start_routine) (void *), void *args) {
-    
-	int priority;      // Priority
-    int stacksize;     // Stack size
-    int initial_state; // Initial state
+		void *(*start_routine)(void *), void *args) {
 
-    cpu_set_t cpu_set = CPU_INITIALIZER;
-
-    int res;
-
-    // Get some arguments need for the thread creation
-    if (attr) {
-        stacksize = attr->stacksize;
-        if (stacksize < PTHREAD_STACK_MIN) {
-            errno = EINVAL;
-            return EINVAL;
-        }
-        priority = attr->schedparam.sched_priority;
-        cpu_set = attr->schedparam.affinityset;
-        initial_state = attr->schedparam.initial_state;
-    } else {
-        stacksize = CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE;
-        initial_state = PTHREAD_INITIAL_STATE_RUN;
-        priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
-    }
-
-    // CPU affinity
-    int cpu = 0;
-
-    if (cpu_set != CPU_INITIALIZER) {
-    	if (CPU_ISSET(0, &cpu_set)) {
-    		cpu = 0;
-    	} else if (CPU_ISSET(1, &cpu_set)) {
-    		cpu = 1;
-    	}
-    } else {
-    	cpu = tskNO_AFFINITY;
-    }
-
-    // Create a new pthread
-    res = _pthread_create(thread, priority, stacksize, cpu, initial_state, start_routine, args);
-    if (res) {
-        errno = res;
-        return res;
-    }
-       
-    return 0;
+	return _pthread_create(thread, attr, start_routine, args);
 }

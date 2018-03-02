@@ -1044,7 +1044,7 @@ void vfs_spiffs_register() {
 
     mount_set_mounted("spiffs", 1);
 
-    list_init(&files, 0);
+    list_init(&files, 0, LIST_DEFAULT);
 
     if (retries > 0) {
     	syslog(LOG_INFO, "spiffs%d creating root folder", unit);

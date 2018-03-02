@@ -124,12 +124,13 @@ int create_shell(shell_config_t *config) {
 
 	sched.sched_priority = MAX(CONFIG_LUA_RTOS_LUA_TASK_PRIORITY / 2, 10);
 	pthread_attr_setschedparam(&attr, &sched);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
     // Create thread
     res = pthread_create(&thread, &attr, shell, (void *)config);
     if (res) {
-    	errno = ENOMEM;
-    	return -1;
+    		errno = ENOMEM;
+    		return -1;
 	}
 
     pthread_setname_np(thread, "shell");

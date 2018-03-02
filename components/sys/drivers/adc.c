@@ -104,7 +104,7 @@ DRIVER_REGISTER_END(ADC,adc,NULL,_adc_init,NULL);
  */
 
 static void _adc_init() {
-    list_init(&channels, 1);
+    list_init(&channels, 1, LIST_DEFAULT);
 }
 
 static adc_chann_t *get_channel(int8_t unit, int8_t channel, int *item_index) {

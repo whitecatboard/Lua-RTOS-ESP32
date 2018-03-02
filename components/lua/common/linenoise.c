@@ -602,7 +602,7 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
 			if(!ram_history) {
 				ram_history = malloc(sizeof(struct list));
 				assert(ram_history != NULL);
-				list_init(ram_history, 0);
+				list_init(ram_history, 0, LIST_DEFAULT);
 			}
 
 			int id = 0;

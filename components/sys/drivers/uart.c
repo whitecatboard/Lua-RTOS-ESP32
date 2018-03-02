@@ -106,6 +106,9 @@
 static driver_unit_lock_t uart_locks[NUART];
 #endif
 
+ // Reference to lua_thread, which is created in app_main
+ extern pthread_t lua_thread;
+
 // Register drivers and errors
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 DRIVER_REGISTER_BEGIN(UART,uart,uart_locks,NULL,uart_lock_resources);
@@ -169,19 +172,19 @@ typedef struct {
 static void uart_deferred_intr_handler(void *args) {
 	uart_deferred_data data;
 
-	for(;;) {
+	for (;;) {
 		xQueueReceive(deferred_q, &data, portMAX_DELAY);
 		if (data.type == 0) {
-			_signal_queue(1, data.data);
+			_signal_queue(lua_thread, data.data);
 		} else {
 			if (data.data == 1) {
-		    	uart_ll_lock(CONSOLE_UART);
-		        uart_writes(CONSOLE_UART, "Lua RTOS-booting-ESP32\r\n");
-		    	uart_ll_unlock(CONSOLE_UART);
+				uart_ll_lock(CONSOLE_UART);
+				uart_writes(CONSOLE_UART, "Lua RTOS-booting-ESP32\r\n");
+				uart_ll_unlock(CONSOLE_UART);
 			} else if (data.data == 2) {
-		    	uart_ll_lock(CONSOLE_UART);
-		        uart_writes(CONSOLE_UART, "Lua RTOS-running-ESP32\r\n");
-		    	uart_ll_unlock(CONSOLE_UART);
+				uart_ll_lock(CONSOLE_UART);
+				uart_writes(CONSOLE_UART, "Lua RTOS-running-ESP32\r\n");
+				uart_ll_unlock(CONSOLE_UART);
 			}
 		}
 	}
@@ -265,7 +268,7 @@ static int IRAM_ATTR queue_byte(int8_t unit, uint8_t byte, uint8_t *status, int 
         } else if ((byte == 0x03) && (!console_raw)) {
         	if (status_get(STATUS_LUA_RUNNING)) {
 				*signal = SIGINT;
-				if (_pthread_has_signal(1, *signal)) {
+				if (_pthread_has_signal(lua_thread, *signal)) {
 					return 0;
 				}
 

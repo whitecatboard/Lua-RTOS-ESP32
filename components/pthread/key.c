@@ -45,7 +45,6 @@
 
 #include "_pthread.h"
 
-#include <errno.h>
 #include <stdlib.h>
 
 extern struct list key_list;
@@ -57,20 +56,18 @@ int pthread_key_create(pthread_key_t *k, void (*destructor)(void*)) {
     // Allocate space for the key
     key = (struct pthread_key *)malloc(sizeof(struct pthread_key));
     if (!key) {
-        errno = ENOMEM;
         return ENOMEM;
     }
     
     // Init key
     key->destructor = destructor;
     
-    list_init(&key->specific,1);
+    list_init(&key->specific, 1, LIST_DEFAULT);
     
     // Add key to key list
     res = list_add(&key_list, (void *)key, (int*)k);
     if (res) {
         free(key);
-        errno = res;
         return res;
     }
 
@@ -94,7 +91,6 @@ int pthread_setspecific(pthread_key_t k, const void *value) {
         // Allocate space for specific
         specific = (struct pthread_key_specific *)malloc(sizeof(struct pthread_key_specific));
         if (!specific) {
-            errno = ENOMEM;
             return ENOMEM;
         }
 
@@ -158,7 +154,6 @@ int pthread_key_delete(pthread_key_t k) {
     // Get key
     res = list_get(&key_list, k, (void **)&key);
     if (res) {
-        errno = res;
         return res;
     }
     

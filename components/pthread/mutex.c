@@ -47,14 +47,12 @@
 
 #include "esp_attr.h"
 
-#include <errno.h>
 #include <stdlib.h>
 
 static int _check_attr(const pthread_mutexattr_t *attr) {
     int type = attr->type;
         
     if ((type < PTHREAD_MUTEX_NORMAL) || (type > PTHREAD_MUTEX_DEFAULT)) {
-        errno = EINVAL;
         return EINVAL;
     }
    
@@ -73,21 +71,18 @@ int pthread_mutex_init(pthread_mutex_t *mut, const pthread_mutexattr_t *attr) {
     if (attr) {
         res = _check_attr(attr);
         if (res) {
-            errno = res;
             return res;
         }
     }
 
     // Test if it's init yet
     if (*mut != PTHREAD_MUTEX_INITIALIZER) {
-        errno = EBUSY;
         return EBUSY;
     }
 
     // Create mutex structure
     mutex = (struct pthread_mutex *)malloc(sizeof(struct pthread_mutex));
     if (!mutex) {
-        errno = EINVAL;
         return EINVAL;
     }
 
@@ -106,7 +101,6 @@ int pthread_mutex_init(pthread_mutex_t *mut, const pthread_mutexattr_t *attr) {
         *mut = PTHREAD_MUTEX_INITIALIZER;
         free(mutex->sem);
         free(mutex);
-        errno = ENOMEM;
         return ENOMEM;
     }
 
@@ -137,13 +131,11 @@ int IRAM_ATTR pthread_mutex_lock(pthread_mutex_t *mut) {
     if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
         if (xSemaphoreTakeRecursive(mutex->sem, PTHREAD_MTX_LOCK_TIMEOUT) != pdPASS) {
             PTHREAD_MTX_DEBUG_LOCK();
-            errno = EINVAL;
             return EINVAL;
         }
     } else {
         if (xSemaphoreTake(mutex->sem, PTHREAD_MTX_LOCK_TIMEOUT) != pdPASS) {
             PTHREAD_MTX_DEBUG_LOCK();
-            errno = EINVAL;
             return EINVAL;
         }        
     }
@@ -187,12 +179,10 @@ int pthread_mutex_trylock(pthread_mutex_t *mut) {
     // Try lock
     if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
         if (xSemaphoreTakeRecursive(mutex->sem,0 ) != pdTRUE) {
-            errno = EBUSY;
             return EBUSY;
         }
     } else {
         if (xSemaphoreTake(mutex->sem,0 ) != pdTRUE) {
-            errno = EBUSY;
             return EBUSY;
         }
     }
@@ -224,7 +214,6 @@ int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type) {
 
     // Check attr
     if (!attr) {
-        errno = EINVAL;
         return EINVAL;
     }
 
@@ -232,7 +221,6 @@ int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type) {
     
     res = _check_attr(&temp_attr);
     if (res) {
-        errno = res;
         return res;
     }
 

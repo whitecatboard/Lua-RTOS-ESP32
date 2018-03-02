@@ -45,55 +45,79 @@
 
 #include "_pthread.h"
 
-#include <errno.h>
-
 int pthread_attr_init(pthread_attr_t *attr) {
-    attr->stacksize = CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE;
+	if (!attr) {
+		return EINVAL;
+	}
+
+	attr->is_initialized = 1;
+
+	attr->stacksize = (CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE >= PTHREAD_STACK_MIN?CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE:PTHREAD_STACK_MIN);
 
     attr->schedparam.initial_state = PTHREAD_INITIAL_STATE_RUN;
     attr->schedparam.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
-	attr->schedparam.affinityset = 0; // No affinity
+	attr->schedparam.affinityset = CPU_INITIALIZER; // No affinity
+	attr->init_func = NULL;
+	attr->detachstate = PTHREAD_CREATE_JOINABLE;
 
     return 0;
 }
 
 int pthread_attr_destroy(pthread_attr_t *attr) {
-    return 0;
-    
+	if (!attr) {
+		return EINVAL;
+	}
+
+	if (!attr->is_initialized) {
+		return EINVAL;
+	}
+
+	return 0;
 }
 
 int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize) {
+	if (!attr) {
+		return EINVAL;
+	}
+
     if (stacksize < PTHREAD_STACK_MIN) {
-        errno = EINVAL;
-        return errno;
+        return EINVAL;
     }
-    
+
+	if (!attr->is_initialized) {
+		return EINVAL;
+	}
+
     attr->stacksize = stacksize;
     
     return 0;
 }
 
-int pthread_attr_setinitialstate(pthread_attr_t *attr, int initial_state) {
-    if ((initial_state != PTHREAD_INITIAL_STATE_RUN) && (initial_state != PTHREAD_INITIAL_STATE_SUSPEND)) {
-        errno = EINVAL;
-        return errno;
-    }
-    
-    attr->schedparam.initial_state = initial_state;
-
-    return 0;
-}
-
 int pthread_attr_getstacksize(const pthread_attr_t *attr, size_t *stacksize) {
+	if (!attr || !stacksize) {
+		return EINVAL;
+	}
+
+	if (!attr->is_initialized) {
+		return EINVAL;
+	}
+
     *stacksize = attr->stacksize;
     
     return 0;
 }
 
 int pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *param) {
-    if ((param->sched_priority > configMAX_PRIORITIES - 1) || (param->sched_priority < 1)) {
-        errno = EINVAL;
-        return errno;
+	if (!attr || !param) {
+		return EINVAL;
+	}
+
+	if (!attr->is_initialized) {
+		return EINVAL;
+	}
+
+	if ((param->sched_priority > configMAX_PRIORITIES - 1) || (param->sched_priority < 1)) {
+        return EINVAL;
     }
 
     attr->schedparam.sched_priority = param->sched_priority;
@@ -102,13 +126,49 @@ int pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *p
 }
 
 int pthread_attr_getschedparam(const pthread_attr_t *attr, struct sched_param *param) {
+	if (!attr || !param) {
+		return EINVAL;
+	}
+
+	if (!attr->is_initialized) {
+		return EINVAL;
+	}
+
 	param->sched_priority = attr->schedparam.sched_priority;
 
 	return 0;
 }
 
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate) {
+	if (!attr) {
+		return EINVAL;
+	}
+
+	if (!attr->is_initialized) {
+		return EINVAL;
+	}
+
+	if ((detachstate != PTHREAD_CREATE_DETACHED) && (detachstate != PTHREAD_CREATE_JOINABLE)) {
+		return EINVAL;
+	}
+
+	attr->detachstate = detachstate;
+
     return 0;
+}
+
+int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate) {
+	if (!attr || !detachstate) {
+		return EINVAL;
+	}
+
+	if (!attr->is_initialized) {
+		return EINVAL;
+	}
+
+	*detachstate = attr->detachstate;
+
+	return 0;
 }
 
 int pthread_setcancelstate(int state, int *oldstate) {
@@ -116,9 +176,16 @@ int pthread_setcancelstate(int state, int *oldstate) {
 }
 
 int pthread_attr_setaffinity_np(pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset) {
+	if (!attr || !cpuset) {
+		return EINVAL;
+	}
+
+	if (!attr->is_initialized) {
+		return EINVAL;
+	}
+
 	if ((*cpuset < 0) || (*cpuset > portNUM_PROCESSORS)) {
-		errno = EINVAL;
-		return errno;
+		return EINVAL;
 	}
 
 	attr->schedparam.affinityset = *cpuset;
@@ -127,12 +194,51 @@ int pthread_attr_setaffinity_np(pthread_attr_t *attr, size_t cpusetsize, const c
 }
 
 int pthread_attr_getaffinity_np(const pthread_attr_t *attr, size_t cpusetsize, cpu_set_t *cpuset) {
+	if (!attr || !cpuset) {
+		return EINVAL;
+	}
+
+	if (!attr->is_initialized) {
+		return EINVAL;
+	}
+
 	if ((*cpuset < 0) || (*cpuset > portNUM_PROCESSORS)) {
-		errno = EINVAL;
-		return errno;
+		return EINVAL;
 	}
 
 	*cpuset = attr->schedparam.affinityset;
 
 	return 0;
+}
+
+int pthread_attr_setinitialstate_np(pthread_attr_t *attr, int initial_state) {
+	if (!attr) {
+		return EINVAL;
+	}
+
+	if (!attr->is_initialized) {
+		return EINVAL;
+	}
+
+    if ((initial_state != PTHREAD_INITIAL_STATE_RUN) && (initial_state != PTHREAD_INITIAL_STATE_SUSPEND)) {
+        return EINVAL;
+    }
+
+    attr->schedparam.initial_state = initial_state;
+
+    return 0;
+}
+
+int pthread_attr_setinitfunc_np(pthread_attr_t *attr, void (*init_routine)(void *)) {
+	if (!attr || !init_routine) {
+		return EINVAL;
+	}
+
+	if (!attr->is_initialized) {
+		return EINVAL;
+	}
+
+    attr->init_func = init_routine;
+
+    return 0;
 }

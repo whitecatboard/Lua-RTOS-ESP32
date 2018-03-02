@@ -45,24 +45,23 @@
 
 #include "_pthread.h"
 
-#include <errno.h>
-
-extern struct mtx once_mtx;
-
 int pthread_once(pthread_once_t *once_control, void (*init_routine)(void)) {
-    // Init once_control, if not
-    mtx_lock(&once_mtx);
+	if (!once_control || !init_routine) {
+		return EINVAL;
+	}
 
-    if (((struct pthread_once *)once_control)->mutex.lock == NULL) {
-        mtx_init(&((struct pthread_once *)once_control)->mutex, NULL, NULL, 0);
-    }
+	if (once_control->is_initialized != 1) {
+		return EINVAL;
+	}
 
-    // Excec init_routine, if needed
-    if (mtx_trylock(&((struct pthread_once *)once_control)->mutex)) {
-        init_routine();
-    }
-
-    mtx_unlock(&once_mtx);  
+	_pthread_lock();
+	if (!once_control->init_executed) {
+		once_control->init_executed = 1;
+		_pthread_unlock();
+		init_routine();
+	} else {
+		_pthread_unlock();
+	}
 
     return 0;
 }

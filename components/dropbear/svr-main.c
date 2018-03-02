@@ -281,6 +281,7 @@ void dropbear_server_start() {
 	// Set priority
 	sched.sched_priority = MAX(CONFIG_LUA_RTOS_LUA_TASK_PRIORITY / 2, 10);
 	pthread_attr_setschedparam(&attr, &sched);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	if (pthread_create(&thread, &attr, dropbear_thread, NULL)) {
 		return;

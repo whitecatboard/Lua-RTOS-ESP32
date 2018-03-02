@@ -49,12 +49,15 @@
 #define	__PTHREAD_H
 
 #include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
 #include "freertos/adds.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 
 #include <pthread.h>
+
+#include <errno.h>
 
 #include <sys/mutex.h>
 #include <sys/list.h>
@@ -100,10 +103,11 @@
 #define PTHREAD_INITIAL_STATE_RUN     1
 #define PTHREAD_INITIAL_STATE_SUSPEND 2
 
-//#define PTHREAD_ONCE_INIT             {NULL}
+// Thread types
+#define PTHREAD_TYPE_DEFAULT 0
+#define PTHREAD_TYPE_LUA     1
 
 // Required structures and types
-
 struct pthread_mutex {
     SemaphoreHandle_t sem;
     int owner;
@@ -112,11 +116,8 @@ struct pthread_mutex {
 
 struct pthread_cond {
     struct mtx mutex;
+    EventGroupHandle_t ev;
     int referenced;
-};
-
-struct pthread_once {
-    struct mtx mutex;
 };
 
 struct pthread_key_specific {
@@ -139,33 +140,24 @@ struct pthread_clean {
 };
 
 struct pthread {
-    struct list join_list;
     struct list clean_list;
-    struct mtx init_mtx;
     sig_t signals[PTHREAD_NSIG];
-    pthread_t thread;
     xTaskHandle task;
     uint8_t is_delayed;
     uint8_t delay_interrupted;
+    uint8_t active;
+    xTaskHandle joined_task;
+    void *res;
+    pthread_attr_t attr;
 };
-
-struct pthread_attr {
-    int stack_size;
-    int initial_state;
-    int sched_priority;
-    int cpuset;
-};
-
-//struct sched_param {
-//    int sched_priority;
-//};
-
 
 // Helper functions, only for internal use
+void  _pthread_lock();
+void  _pthread_unlock();
 void  _pthread_init();
-int   _pthread_create(pthread_t *id, int priority, int stacksize, int cpu, int initial_state, void *(*start_routine)(void *), void *args);
-int   _pthread_join(pthread_t id);
-int   _pthread_free(pthread_t id);
+int   _pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *), void *args);
+int   _pthread_join(pthread_t id, void **value_ptr);
+int   _pthread_free(pthread_t id, int destroy);
 sig_t _pthread_signal(int s, sig_t h);
 void  _pthread_exec_signal(int dst, int s);
 void  _pthread_process_signal();
@@ -179,7 +171,11 @@ int   _pthread_get_prio();
 int   _pthread_stack_free(pthread_t id);
 int   _pthread_stack(pthread_t id);
 struct pthread *_pthread_get(pthread_t id);
-int _pthread_sleep(uint32_t msecs);
+int   _pthread_sleep(uint32_t msecs);
+void  _pthread_cleanup_push(void (*routine)(void *), void *arg);
+void  _pthread_cleanup_pop(int execute);
+void  _pthread_cleanup();
+int   _pthread_detach(pthread_t id);
 
 // API functions
 int  pthread_attr_init(pthread_attr_t *attr);
@@ -189,9 +185,7 @@ int  pthread_attr_getstacksize(const pthread_attr_t *attr, size_t *stacksize);
 int  pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *param);
 int  pthread_attr_getschedparam(const pthread_attr_t *attr, struct sched_param *param);
 int  pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
-int  pthread_attr_setinitialstate(pthread_attr_t *attr, int initial_state);
-int  pthread_attr_setaffinity_np(pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset);
-int  pthread_attr_getaffinity_np(const pthread_attr_t *attr, size_t cpusetsize, cpu_set_t *cpuset);
+int  pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate);
 
 int  pthread_mutex_init(pthread_mutex_t *mut, const pthread_mutexattr_t *attr);
 int  pthread_mutex_lock(pthread_mutex_t *mut);
@@ -216,15 +210,32 @@ int  pthread_join(pthread_t thread, void **value_ptr);
 int pthread_cancel(pthread_t thread);
 int pthread_kill(pthread_t thread, int signal);
 
+int  pthread_attr_setaffinity_np(pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset);
+int  pthread_attr_getaffinity_np(const pthread_attr_t *attr, size_t cpusetsize, cpu_set_t *cpuset);
 int pthread_setname_np(pthread_t id, const char *name);
 int pthread_getname_np(pthread_t id, char *name, size_t len);
+int  pthread_attr_setinitialstate_np(pthread_attr_t *attr, int initial_state);
+int pthread_attr_setinitfunc_np(pthread_attr_t *attr, void (*init_func)(void *));
 
 pthread_t pthread_self(void);
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
-                          void *(*start_routine) (void *), void *args);
+		void *(*start_routine) (void *), void *args);
 
-void pthread_cleanup_push(void (*routine)(void *), void *arg);
+#define pthread_exit(ret) \
+do { \
+	_pthread_cleanup(); \
+	return ((void *)ret); \
+} while (0)
+
+
+#define pthread_cleanup_push(routine, args) \
+do { \
+	_pthread_cleanup_push(routine, args)
+
+#define pthread_cleanup_pop(exec) \
+	_pthread_cleanup_pop(exec); \
+} while(0)
 
 #endif	/* __PTHREAD_H */
 

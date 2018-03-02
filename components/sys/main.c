@@ -66,6 +66,8 @@
 void luaos_main();
 void _sys_init();
 
+pthread_t lua_thread;
+
 void *lua_start(void *arg) {
 	for(;;) {
 		luaos_main();
@@ -73,8 +75,6 @@ void *lua_start(void *arg) {
 
 	return NULL;
 }
-
-int linenoise(char *buf, const char *prompt);
 
 void app_main() {
 	_sys_init();
@@ -88,7 +88,6 @@ void app_main() {
 	// Create and run a pthread for the Lua interpreter
 	pthread_attr_t attr;
 	struct sched_param sched;
-	pthread_t thread;
 	int res;
 
 	debug_free_mem_begin(lua_main_thread);
@@ -109,13 +108,14 @@ void app_main() {
 	CPU_SET(CONFIG_LUA_RTOS_LUA_TASK_CPU, &cpu_set);
 
 	pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	// Create thread
-	res = pthread_create(&thread, &attr, lua_start, NULL);
+	res = pthread_create(&lua_thread, &attr, lua_start, NULL);
 	if (res) {
 		panic("Cannot start lua");
 	}
 
-	pthread_setname_np(thread, "lua_main");
+	pthread_setname_np(lua_thread, "lua_main");
 	debug_free_mem_end(lua_main_thread, NULL);
 }

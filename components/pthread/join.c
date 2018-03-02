@@ -45,22 +45,12 @@
 
 #include "_pthread.h"
 
-#include <errno.h>
-
 int pthread_join(pthread_t thread, void **value_ptr) {
-    int res;
-    res = _pthread_join(thread);
-    if (res) {
-        errno = res;
-        return res;
-    }
-    
-    return 0;
+	return _pthread_join(thread, value_ptr);
 }
 
-
 int pthread_detach(pthread_t thread) {
-	return 0;
+	return _pthread_detach(thread);
 }
 
 int sched_yield( void ) {

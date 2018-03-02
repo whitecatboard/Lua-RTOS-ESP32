@@ -94,16 +94,16 @@ uint8_t flash_unique_id[8];
 
 #include <pthread.h>
 
-void *_sys_tests(void *arg) {
+void testTask(void *pvParameters) {
+    vTaskDelay(2);
+
 	printf("Running tests ...\r\n\r\n");
 
 	unity_run_all_tests();
 
 	printf("\r\nTests done!");
 
-	for(;;);
-
-	pthread_exit(NULL);
+	vTaskDelete(NULL);
 }
 
 #endif
@@ -217,35 +217,7 @@ void _sys_init() {
     printf("board type %s\r\n", LUA_RTOS_BOARD);
 
 	#ifdef RUN_TESTS
-		// Create and run a pthread for tests
-		pthread_attr_t attr;
-		struct sched_param sched;
-		pthread_t thread;
-		int res;
-
-		// Init thread attributes
-		pthread_attr_init(&attr);
-
-		// Set stack size
-	    pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_STACK_SIZE);
-
-	    // Set priority
-	    sched.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
-	    pthread_attr_setschedparam(&attr, &sched);
-
-	    // Set CPU
-	    cpu_set_t cpu_set = CPU_INITIALIZER;
-
-	    CPU_SET(CONFIG_LUA_TASK_CPU, &cpu_set);
-
-	    pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
-
-		// Create thread
-		res = pthread_create(&thread, &attr, _sys_tests, NULL);
-		if (res) {
-			panic("Cannot start tests");
-		}
-		pthread_setname_np(thread, "sys_tests");
+    		xTaskCreatePinnedToCore(testTask, "testTask", 8192, NULL, UNITY_FREERTOS_PRIORITY, NULL, UNITY_FREERTOS_CPU);
 
 		vTaskDelete(NULL);
 	#endif

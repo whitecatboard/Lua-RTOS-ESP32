@@ -79,7 +79,7 @@ struct list neopixel_list;
  */
 void neopixel_init() {
 	// Init  list
-    list_init(&neopixel_list, 0);
+    list_init(&neopixel_list, 0, LIST_DEFAULT);
 }
 
 driver_error_t *neopixel_rgb(uint32_t unit, uint32_t pixel, uint8_t r, uint8_t g, uint8_t b) {

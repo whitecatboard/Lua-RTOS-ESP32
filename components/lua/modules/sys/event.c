@@ -164,7 +164,7 @@ static int levent_create( lua_State* L ) {
     mtx_init(&udata->mtx, NULL, NULL, 0);
 
     // Create the listener list
-    list_init(&udata->listeners, 1);
+    list_init(&udata->listeners, 1, LIST_DEFAULT);
 
     // Create a queue for sync this event with the termination of the
     // listeners, when using broadcast(true)

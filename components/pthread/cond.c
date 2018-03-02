@@ -45,173 +45,156 @@
 
 #include "_pthread.h"
 
-#include <errno.h>
 #include <sys/mutex.h>
+#include <sys/time.h>
 
-extern struct mtx cond_mtx;
+#if configUSE_16_BIT_TICKS
+#define BITS_PER_EVENT_GROUP 8
+#else
+#define BITS_PER_EVENT_GROUP 24
+#endif
 
 int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) {
-	// Atrr values in this implementation are not allowed
-	if (attr) {
-		mtx_unlock(&cond_mtx);
-		return ENOMEM;
-	}
-
-	mtx_lock(&cond_mtx);
-
-	struct pthread_cond *scond;
-
+	// Avoid to reinitialize the object referenced by cond, a previously
+	// initialized, but not yet destroyed, condition variable
 	if (*cond != PTHREAD_COND_INITIALIZER) {
-		scond = calloc(1, sizeof(struct pthread_cond));
-		if (!scond) {
-        	mtx_unlock(&cond_mtx);
-			return ENOMEM;
-		}
-		scond->referenced = 0;
-	} else {
-		scond = (struct pthread_cond *)cond;
-	}
-
-	if (scond->referenced > 0) {
-		mtx_unlock(&cond_mtx);
-		if (*cond != PTHREAD_COND_INITIALIZER) free(scond);
 		return EBUSY;
 	}
 
-    if (!scond->mutex.lock) {
-        mtx_init(&scond->mutex, NULL, NULL, 0);
-        if (!scond->mutex.lock) {
-        	mtx_unlock(&cond_mtx);
-        	if (*cond != PTHREAD_COND_INITIALIZER) free(scond);
-        	return ENOMEM;
-        }
-    } else {
-    	mtx_unlock(&cond_mtx);
-    	if (*cond != PTHREAD_COND_INITIALIZER) free(scond);
-    	return EBUSY;
-    }
-    
-    scond->referenced = 0;
+	// Initialize the internal cond structure
+	struct pthread_cond *scond = calloc(1, sizeof(struct pthread_cond));
+	if (!scond) {
+		return ENOMEM;
+	}
 
-    mtx_unlock(&cond_mtx);
+	// Init the cond mutex
+	mtx_init(&scond->mutex, NULL, NULL, 0);
+	if (!scond->mutex.lock) {
+		free(scond);
+		return ENOMEM;
+	}
+
+	// Create the event group
+	scond->ev = xEventGroupCreate();
+	if (scond->ev == NULL) {
+		mtx_destroy(&scond->mutex);
+		free(scond);
+		return ENOMEM;
+	}
+
+	// Return the cond reference
+	*cond = (pthread_cond_t)scond;
 
 	return 0;
 }
 
 int pthread_cond_destroy(pthread_cond_t *cond) {
-	mtx_lock(&cond_mtx);
-
 	if (*cond == PTHREAD_COND_INITIALIZER) {
-    	mtx_unlock(&cond_mtx);
-    	return EINVAL;
+		return EINVAL;
 	}
 
-	struct pthread_cond *scond = (struct pthread_cond *)cond;
+	struct pthread_cond *scond = (struct pthread_cond *) *cond;
+
+	mtx_lock(&scond->mutex);
 
 	if (scond->referenced > 0) {
-		mtx_unlock(&cond_mtx);
+		mtx_unlock(&scond->mutex);
+
 		return EBUSY;
 	}
 
-    if (scond->mutex.lock) {
-        mtx_destroy(&scond->mutex);
-    } else {
-    	mtx_unlock(&cond_mtx);
-    	return EINVAL;
-    }
+	mtx_destroy(&scond->mutex);
 
-    mtx_unlock(&cond_mtx);
-	
-	return 0; 
+	return 0;
 }
 
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
-
-	if (*cond == PTHREAD_COND_INITIALIZER) {
-    	mtx_unlock(&cond_mtx);
-    	return EINVAL;
-	}
-
-	struct pthread_cond *scond = (struct pthread_cond *)cond;
-
-	if (!scond->mutex.lock) {
-		return EINVAL;
-	}
-
-	// At this point cond is protected by mutex, so is not necessary to use
-	// cond_mtx
-	scond->referenced++;
-
-    // Wait for condition
-    mtx_lock(&scond->mutex);
-
-    // If current thread is the first that calls to pthread_cond_wait, lock
-    // again for block thread
-    if (scond->referenced == 1) {
-        mtx_lock(&scond->mutex);
-
-    }
-
-    pthread_mutex_unlock(mutex);
-
-    return 0;
+	return pthread_cond_timedwait(cond, mutex, NULL);
 }
-  
-int pthread_cond_timedwait(pthread_cond_t *cond, 
-    pthread_mutex_t *mutex, const struct timespec *abstime) { 
-    
+
+int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,
+		const struct timespec *abstime) {
+
 	if (*cond == PTHREAD_COND_INITIALIZER) {
-    	mtx_unlock(&cond_mtx);
-    	return EINVAL;
-	}
-
-	struct pthread_cond *scond = (struct pthread_cond *)cond;
-
-	struct pthread_mutex *smutex = (struct pthread_mutex *)mutex;
-
-	if (!smutex->sem) {
 		return EINVAL;
 	}
 
-	// At this point cond is protected by mutex, so is not necessary to use
-	// cond_mtx
-	scond->referenced++;
+	struct pthread_cond *scond = (struct pthread_cond *)*cond;
 
-    // If current thread is the first that calls to pthread_cond_wait, lock
-    // again for block thread
-    if (scond->referenced == 1) {
-        mtx_lock(&scond->mutex);
-    }
+	// Find an unused bit in the event group to sync the condition
+	mtx_lock(&scond->mutex);
 
-    // Wait for condition
-    if (xSemaphoreTake(scond->mutex.lock, (1000 * abstime->tv_sec) / portTICK_PERIOD_MS ) != pdTRUE) {
-        return ETIMEDOUT;
-    }
-    
-    pthread_mutex_unlock(mutex);
-    
-    return 0;
+	uint8_t bit;
+	for(bit=0;bit < BITS_PER_EVENT_GROUP;bit++) {
+		if (!((1 << bit) & scond->referenced)) {
+			scond->referenced |= (1 << bit);
+
+			break;
+		}
+	}
+
+	mtx_unlock(&scond->mutex);
+
+	if (bit >= BITS_PER_EVENT_GROUP) {
+		// All bits are used in the event group. This is a rare condition, because
+		// in Lua RTOS an event group has 24 bits, which means that 24 conditions
+		// (or 24 threads) can be handled for each condition variable.
+		//
+		// Although is not part of the pthread specification we indicate this
+		// condition returning the EINVAL error code.
+		return EINVAL;
+	}
+
+	// Get the timeout in ticks
+	TickType_t ticks;
+
+	if (!abstime) {
+		ticks = portMAX_DELAY;
+	} else {
+		struct timeval now, future, diff;
+
+		gettimeofday(&now, NULL);
+
+		future.tv_sec = abstime->tv_sec;
+		future.tv_usec = abstime->tv_nsec / 1000;
+
+		if (timercmp(&future, &now, <)) {
+			return ETIMEDOUT;
+		} else {
+			timersub(&future, &now, &diff);
+			ticks = ((diff.tv_sec * 1000) + (diff.tv_usec / 1000)) / portTICK_PERIOD_MS;
+		}
+	}
+
+	pthread_mutex_unlock(mutex);
+	EventBits_t uxBits = xEventGroupWaitBits(scond->ev, (1 << bit), pdTRUE, pdTRUE, ticks);
+	if (!(uxBits & (1 << bit))) {
+		return ETIMEDOUT;
+	}
+	pthread_mutex_lock(mutex);
+
+	return 0;
 }
 
 int pthread_cond_signal(pthread_cond_t *cond) {
 	if (*cond == PTHREAD_COND_INITIALIZER) {
-    	mtx_unlock(&cond_mtx);
-    	return EINVAL;
-	}
-
-	struct pthread_cond *scond = (struct pthread_cond *)cond;
-
-	if (!scond->mutex.lock) {
 		return EINVAL;
 	}
 
-	// At this point cond is protected by mutex, prior to calling pthread_cond_wait or
-	// pthread_cond_timedwait. pthread_cond_init / pthread_cond_destroy fails due to
-	// referenced > 0, so is not necessary to use cond_mtx
-	scond->referenced--;
+	struct pthread_cond *scond = (struct pthread_cond *)*cond;
 
-	// Release cond
+	mtx_lock(&scond->mutex);
+
+	uint8_t bit;
+	for(bit=0;bit < BITS_PER_EVENT_GROUP;bit++) {
+		if ((1 << bit) & scond->referenced) {
+			xEventGroupSetBits(scond->ev, (1 << bit));
+
+			scond->referenced &= ~(1 << bit);
+		}
+	}
+
 	mtx_unlock(&scond->mutex);
 
-    return 0;
+	return 0;
 }
