@@ -1,10 +1,12 @@
-diff --git a/components/lwip/include/lwip/posix/netdb.h b/components/lwip/include/lwip/posix/netdb.h
-index 12d4c7f5..cf9f879f 100755
 --- a/components/lwip/include/lwip/posix/netdb.h
 +++ b/components/lwip/include/lwip/posix/netdb.h
-@@ -31,3 +31,57 @@
+@@ -30,4 +30,63 @@
+  *
   */
  
++#ifndef _LWIP_NETDB_H
++#define _LWIP_NETDB_H
++
  #include "lwip/netdb.h"
 +
 +// Lua RTOS additions
@@ -60,6 +62,8 @@ index 12d4c7f5..cf9f879f 100755
 +const char *gai_strerror(int ecode);
 +
 +struct servent *getservbyname(const char *name, const char *proto);
++
++#endif
 diff --git a/components/newlib/include/time.h b/components/newlib/include/time.h
 index d7b6612d..55fec5a4 100644
 --- a/components/newlib/include/time.h

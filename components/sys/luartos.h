@@ -238,4 +238,11 @@
 #include "luartos_custom.h"
 #endif
 
+// Curl
+#if CONFIG_LUA_RTOS_LUA_USE_CURL_NET
+#if !CONFIG_MBEDTLS_DES_C
+#error "curl requires CONFIG_MBEDTLS_DES_C = 1. Please activate it with make menuconfig, enabling option in mbedTLS -> Symmetric Ciphers -> DES block cipher."
+#endif
+#endif
+
 #endif
