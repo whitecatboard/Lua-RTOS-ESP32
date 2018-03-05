@@ -168,8 +168,12 @@ static int report (lua_State *L, int status) {
   if (status != LUA_OK) {
     const char *msg = lua_tostring(L, -1);
 
-	l_message(progname, msg);
-    lua_pop(L, 1);  /* remove message */
+    // Lua RTOS
+    if (msg) {
+    // Lua RTOS
+    		l_message(progname, msg);
+    		lua_pop(L, 1);  /* remove message */
+    }
   }
   return status;
 }
