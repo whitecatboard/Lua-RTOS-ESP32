@@ -76,6 +76,7 @@ driver_error_t *os_init () {
         CPU_SET(CONFIG_LUA_RTOS_LORA_TASK_CPU, &cpu_set);
 
         pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
         // Create thread
         res = pthread_create(&thread, &attr, os_runloop, NULL);

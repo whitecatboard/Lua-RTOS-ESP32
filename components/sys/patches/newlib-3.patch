@@ -1,0 +1,14 @@
+diff --git a/components/newlib/include/sys/unistd.h b/components/newlib/include/sys/unistd.h
+index a741383d..afd91e72 100644
+--- a/components/newlib/include/sys/unistd.h
++++ b/components/newlib/include/sys/unistd.h
+@@ -513,4 +513,9 @@ int _EXFUN(unlinkat, (int, const char *, int));
+ #ifdef __cplusplus
+ }
+ #endif
++
++// Lua RTOS additions
++int gethostname(char *name, size_t len);
++int sethostname(const char *name, size_t len);
++
+ #endif /* _SYS_UNISTD_H */

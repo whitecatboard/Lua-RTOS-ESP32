@@ -1256,6 +1256,7 @@ int http_start(lua_State* L) {
 		CPU_SET(CONFIG_LUA_RTOS_HTTP_SERVER_TASK_CPU, &cpu_set);
 
 		pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 		// Create threads
 		http_shutdown = 0;

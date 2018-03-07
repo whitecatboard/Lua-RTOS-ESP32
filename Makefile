@@ -3,10 +3,23 @@
 # project subdirectory.
 #
 
+COMPONENT_ADD_FS ?=
+COMPONENT_FS ?=
+
+EXTRA_COMPONENT_DIRS := $(abspath $(dir $(firstword $(MAKEFILE_LIST))))/components/lua/modules
+
+EXTRA_COMPONENTS := $(dir $(foreach cd,$(EXTRA_COMPONENT_DIRS),                           \
+					$(wildcard $(cd)/*/component.mk) $(wildcard $(cd)/component.mk) \
+				))
+EXTRA_COMPONENTS := $(sort $(foreach comp,$(EXTRA_COMPONENTS),$(lastword $(subst /, ,$(comp)))))
+EXTRA_COMPONENT_PATHS := $(foreach comp,$(EXTRA_COMPONENTS),$(firstword $(foreach cd,$(EXTRA_COMPONENT_DIRS),$(wildcard $(dir $(cd))$(comp) $(cd)/$(comp)))))
+
 BOARD_TYPE_REQUIRED := 1
+VERSION_CHECK_REQUIRED := 1
 
 ifneq (,$(findstring clean,$(MAKECMDGOALS)))
   BOARD_TYPE_REQUIRED := 0
+  VERSION_CHECK_REQUIRED := 0
 endif
 
 ifneq (,$(findstring menuconfig,$(MAKECMDGOALS)))
@@ -24,11 +37,13 @@ endif
 
 ifneq (,$(findstring restore-idf,$(MAKECMDGOALS)))
   BOARD_TYPE_REQUIRED := 0
+  VERSION_CHECK_REQUIRED := 0
   MAKECMDGOALS += defconfig
 endif
 
 ifneq (,$(findstring upgrade-idf,$(MAKECMDGOALS)))
   BOARD_TYPE_REQUIRED := 0
+  VERSION_CHECK_REQUIRED := 0
   MAKECMDGOALS += defconfig
 endif
 
@@ -39,13 +54,24 @@ define n
 endef
 
 # Use this esp-idf commit in build
-CURRENT_IDF := f8bda324ecde58214aaa00ab5e0da5eea9942aaf
+CURRENT_IDF := 17e8d49f26fd108efcc6b108843241d2eda2ba1e
 
 # Project name
 PROJECT_NAME := lua_rtos
 
 # Detect OS
 UNAME := $(shell uname)
+
+# Set the OS environment variable to build mkspiffs in windows
+ifeq ("$(UNAME)", "Linux")
+export OS = LINUX
+else
+ifeq ("$(UNAME)", "Darwin")
+export OS = OSX
+else
+export OS = Windows_NT
+endif
+endif
 
 # Default filesystem
 SPIFFS_IMAGE := default
@@ -74,14 +100,11 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
     $(info $(BOARDS))
     ifeq ("$(UNAME)", "Linux")
       BOARDN := $(shell read -p "Board type: " REPLY;echo $$REPLY)
-    endif
-
-    ifeq ("$(UNAME)", "Darwin")
+    else
       BOARDN := $(shell read -p "Board type: ";echo $$REPLY)
     endif
 
     BOARD := $(subst \,$(n),$(shell python boards/boards.py $(BOARDN)))
-    $(info $(BOARD))
     # Check if board exists
     ifneq ("$(shell test -e boards/$(BOARD) && echo ex)","ex")
       $(error "Invalid board type boards/$(BOARD)")
@@ -100,16 +123,51 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
   endif  
 endif
 
-# Apply patches
-ifneq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
-  $(info Reverting previous Lua RTOS esp-idf patches ...)
-  TMP := $(shell cd $(IDF_PATH) && git checkout .)
-  TMP := $(shell cd $(IDF_PATH) && git checkout $(CURRENT_IDF))
-  TMP := $(shell cd $(IDF_PATH) && git submodule update --recursive)
-  TMP := $(info Applying Lua RTOS esp-idf patches ...)
-  TMP := $(shell )
-  $(foreach PATCH,$(abspath $(wildcard components/lua_rtos/patches/*.patch)),$(shell cd $(IDF_PATH) && git apply --whitespace=warn $(PATCH)))
-  TMP := $(shell touch $(IDF_PATH)/lua_rtos_patches)
+ifeq ("$(VERSION_CHECK_REQUIRED)","1")
+  # Check if esp-idf installation contains the required version to build Lua RTOS
+  ifeq ("$(shell cd $(IDF_PATH) && git log --pretty="%H" | grep $(CURRENT_IDF))","")
+  $(error Please, run "make upgrade-idf" before, to upgrade esp-idf to the version required by Lua RTOS)
+  endif
+
+  # Apply Lua RTOS patches
+  ifneq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
+    APPLY_PATCHES := 1
+  else
+    # Get previous hash of applyied patches
+    PREV_HASH := $(shell cat $(IDF_PATH)/lua_rtos_patches)
+  
+    # Get current hash
+    ifeq ("$(UNAME)", "Linux")
+      CURR_HASH := $(shell cat components/sys/patches/*.patch | sha256sum)
+    else
+      CURR_HASH := $(shell cat components/sys/patches/*.patch | shasum -a 256 -p)
+    endif
+  
+    ifneq ("$(PREV_HASH)","$(CURR_HASH)")
+      APPLY_PATCHES := 1
+    else
+      APPLY_PATCHES := 0
+    endif
+  endif
+
+  ifeq ("$(APPLY_PATCHES)","1")
+    $(info Reverting previous Lua RTOS esp-idf patches ...)
+    TMP := $(shell cd $(IDF_PATH) && git checkout .)
+    TMP := $(shell cd $(IDF_PATH) && git checkout $(CURRENT_IDF))
+    TMP := $(info Applying Lua RTOS esp-idf patches ...)
+    $(foreach PATCH,$(abspath $(wildcard components/sys/patches/*.patch)), \
+      $(info Applying patch $(PATCH)...); \
+      $(shell cd $(IDF_PATH) && git apply --whitespace=warn $(PATCH)) \
+    )
+    $(info Patches applied)
+  
+    # Compute and save new hash
+    ifeq ("$(UNAME)", "Linux")
+      TMP := $(shell cat components/sys/patches/*.patch | sha256sum > $(IDF_PATH)/lua_rtos_patches)
+    else
+      TMP := $(shell cat components/sys/patches/*.patch | shasum -a 256 -p > $(IDF_PATH)/lua_rtos_patches)
+    endif
+  endif
 endif
 
 include $(IDF_PATH)/make/project.mk
@@ -141,7 +199,7 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
         OTA_PARTITION_SIZE_FACTOR := 1048576
       endif
 
-      OTA_PARTITION_SIZE := $(shell echo ${OTA_PARTITION_SIZE_UNITS}*${OTA_PARTITION_SIZE_FACTOR} | bc)
+      OTA_PARTITION_SIZE := $(shell expr $(OTA_PARTITION_SIZE_UNITS) \* $(OTA_PARTITION_SIZE_FACTOR))
 
       ESPTOOL_ERASE_OTA_ARGS := $(ESPTOOLPY) --chip esp32 --port $(ESPPORT) --baud $(ESPBAUD) erase_region $(OTA_PARTITION_ADDR) $(OTA_PARTITION_SIZE)
     else
@@ -174,7 +232,7 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
       SPIFFS_SIZE_FACTOR := 1024
     endif
 
-    SPIFFS_SIZE := $(shell echo ${SPIFFS_SIZE_UNITS}*${SPIFFS_SIZE_FACTOR} | bc)
+	SPIFFS_SIZE := $(shell expr $(SPIFFS_SIZE_UNITS) \* $(SPIFFS_SIZE_FACTOR))
   endif
 endif
 
@@ -190,10 +248,10 @@ erase-ota-data:
 	
 configure-idf-lua-rtos-tests:
 	@echo "Configure esp-idf for Lua RTOS tests ..."
-	@touch $(PROJECT_PATH)/components/lua_rtos/sys/sys_init.c
-	@touch $(PROJECT_PATH)/components/lua_rtos/Lua/src/lbaselib.c
-ifneq ("$(shell test -e  $(IDF_PATH)/components/lua_rtos && echo ex)","ex")
-	@ln -s $(PROJECT_PATH)/main/test/lua_rtos $(IDF_PATH)/components/lua_rtos 2> /dev/null
+	@touch $(PROJECT_PATH)/components/sys/sys/sys_init.c
+	@touch $(PROJECT_PATH)/components/sys/Lua/src/lbaselib.c
+ifneq ("$(shell test -e  $(IDF_PATH)/components/sys && echo ex)","ex")
+	@ln -s $(PROJECT_PATH)/main/test/lua_rtos $(IDF_PATH)/components/sys 2> /dev/null
 endif
 
 upgrade-idf: restore-idf
@@ -220,3 +278,26 @@ flash-args:
 			)\
 	 	  ) \
 	 $(subst /build/, , $(subst /build/bootloader/,, $(subst $(PROJECT_PATH), , $(ESPTOOL_ALL_FLASH_ARGS))))
+
+#
+# This part prepare the file system content into the build/tmp-fs folder. The file system content
+# comes from the SPIFFS_IMAGE variable, that contains the main folder to use, and the COMPONENT_ADD_FS
+# variable, that contains individual folders to add by component
+#
+COMPONENT_FS := 
+
+define includeComponentFS
+ifeq ("$(shell test -e $(1)/component.mk && echo ex)","ex")
+$(eval include $(1)/component.mk)
+COMPONENT_FS += $(addsuffix /*,$(addprefix $(1)/, $(COMPONENT_ADD_FS)))
+endif
+endef
+
+fs-prepare:
+	$(foreach componentpath,$(EXTRA_COMPONENT_PATHS), \
+		$(eval $(call includeComponentFS,$(componentpath))))
+	$(info  $(COMPONENT_FS))
+	@rm -f -r $(PROJECT_PATH)/build/tmp-fs
+	@mkdir -p $(PROJECT_PATH)/build/tmp-fs
+	@cp -f -r $(COMPONENT_FS) $(PROJECT_PATH)/build/tmp-fs
+	@cp -f -r $(PROJECT_PATH)/components/spiffs_image/$(SPIFFS_IMAGE)/* $(PROJECT_PATH)/build/tmp-fs
