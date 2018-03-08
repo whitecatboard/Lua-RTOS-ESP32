@@ -57,6 +57,10 @@
 #include "esp_event_loop.h"
 #include "esp_ota_ops.h"
 
+#if CONFIG_LUA_RTOS_LUA_USE_MDNS
+#include <mdns.h>
+#endif
+
 #include "nvs.h"
 #include "nvs_flash.h"
 
@@ -234,16 +238,18 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 			break;
 	}
 
-	// Call to the registered callbacks
-	int i = 0;
+#if CONFIG_LUA_RTOS_LUA_USE_MDNS
+	mdns_handle_system_event(ctx, event);
+#endif
 
-	for(i=0; i < MAX_NET_EVENT_CALLBACKS; i++) {
+	// Call to the registered callbacks
+	for(int i=0; i < MAX_NET_EVENT_CALLBACKS; i++) {
 		if (callback[i]) {
 			callback[i](event);
 		}
 	}
 
-   return ESP_OK;
+	return ESP_OK;
 }
 
 /*
