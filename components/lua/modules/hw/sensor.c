@@ -466,6 +466,7 @@ static int lsensor_list( lua_State* L ) {
 					case OWIRE_INTERFACE: strcpy(interface, "1-WIRE"); break;
 					case GPIO_INTERFACE:  strcpy(interface, "GPIO"); break;
 					case UART_INTERFACE:  strcpy(interface, "UART"); break;
+					case INTERNAL_INTERFACE:  strcpy(interface, "INTERNAL"); break;
 					default:
 						break;
 				}
