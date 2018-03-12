@@ -225,12 +225,12 @@ index 5dbd462c..117312ab 100644
 +          }
 +     }
 +
-+   // TODO: find a more elegat solution to stop select ....
-+   if (__select_cancelled) {
-+        __select_cancelled = 0;
-+        __errno_r(r) = 4;
-+        return -1;
-+   }
++     // TODO: find a more elegat solution to stop select ....
++     if (__select_cancelled) {
++          __select_cancelled = 0;
++          __errno_r(r) = 4;
++          return -1;
++     }
 +
 +      // If some file descriptor are set, terminate scan
 +      if (num > 0) {
@@ -244,8 +244,8 @@ index 5dbd462c..117312ab 100644
 +              break;
 +          }
 +      } else {
-+          if (!timeout) {
-+             // If not timeout, exit
++          if (timeout) {
++             // timeout = 0, exit
 +             break;
 +          }
 +      }
