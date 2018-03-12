@@ -145,7 +145,7 @@ struct linenoiseState {
     bool password;      /* A password is being entered. */
 };
 
-static struct list *ram_history;
+static struct list *ram_history = 0;
 
 enum KEY_ACTION{
 	KEY_NULL = 0,	    /* NULL */

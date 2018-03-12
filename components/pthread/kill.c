@@ -45,6 +45,7 @@
 
 #include "_pthread.h"
 
+#include <errno.h>
 #include <signal.h>
 #include <sys/_signal.h>
 

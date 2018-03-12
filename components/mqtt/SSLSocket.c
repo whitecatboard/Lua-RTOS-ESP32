@@ -118,6 +118,226 @@ int SSLSocket_error(char* aString, SSL* ssl, int sock, int rc)
     return error;
 }
 
+#if 0
+static struct
+{
+	int code;
+	char* string;
+}
+X509_message_table[] =
+{
+	{ X509_V_OK, "X509_V_OK" },
+	{ X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT, "X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT" },
+	{ X509_V_ERR_UNABLE_TO_GET_CRL, "X509_V_ERR_UNABLE_TO_GET_CRL" },
+	{ X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE, "X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE" },
+	{ X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE, "X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE" },
+	{ X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY, "X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY" },
+	{ X509_V_ERR_CERT_SIGNATURE_FAILURE, "X509_V_ERR_CERT_SIGNATURE_FAILURE" },
+	{ X509_V_ERR_CRL_SIGNATURE_FAILURE, "X509_V_ERR_CRL_SIGNATURE_FAILURE" },
+	{ X509_V_ERR_CERT_NOT_YET_VALID, "X509_V_ERR_CERT_NOT_YET_VALID" },
+	{ X509_V_ERR_CERT_HAS_EXPIRED, "X509_V_ERR_CERT_HAS_EXPIRED" },
+	{ X509_V_ERR_CRL_NOT_YET_VALID, "X509_V_ERR_CRL_NOT_YET_VALID" },
+	{ X509_V_ERR_CRL_HAS_EXPIRED, "X509_V_ERR_CRL_HAS_EXPIRED" },
+	{ X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD, "X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD" },
+	{ X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD, "X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD" },
+	{ X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD, "X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD" },
+	{ X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD, "X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD" },
+	{ X509_V_ERR_OUT_OF_MEM, "X509_V_ERR_OUT_OF_MEM" },
+	{ X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT, "X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT" },
+	{ X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN, "X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN" },
+	{ X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY, "X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY" },
+	{ X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE, "X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE" },
+	{ X509_V_ERR_CERT_CHAIN_TOO_LONG, "X509_V_ERR_CERT_CHAIN_TOO_LONG" },
+	{ X509_V_ERR_CERT_REVOKED, "X509_V_ERR_CERT_REVOKED" },
+	{ X509_V_ERR_INVALID_CA, "X509_V_ERR_INVALID_CA" },
+	{ X509_V_ERR_PATH_LENGTH_EXCEEDED, "X509_V_ERR_PATH_LENGTH_EXCEEDED" },
+	{ X509_V_ERR_INVALID_PURPOSE, "X509_V_ERR_INVALID_PURPOSE" },
+	{ X509_V_ERR_CERT_UNTRUSTED, "X509_V_ERR_CERT_UNTRUSTED" },
+	{ X509_V_ERR_CERT_REJECTED, "X509_V_ERR_CERT_REJECTED" },
+	{ X509_V_ERR_SUBJECT_ISSUER_MISMATCH, "X509_V_ERR_SUBJECT_ISSUER_MISMATCH" },
+	{ X509_V_ERR_AKID_SKID_MISMATCH, "X509_V_ERR_AKID_SKID_MISMATCH" },
+	{ X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH, "X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH" },
+	{ X509_V_ERR_KEYUSAGE_NO_CERTSIGN, "X509_V_ERR_KEYUSAGE_NO_CERTSIGN" },
+	{ X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER, "X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER" },
+	{ X509_V_ERR_UNHANDLED_CRITICAL_EXTENSION, "X509_V_ERR_UNHANDLED_CRITICAL_EXTENSION" },
+	{ X509_V_ERR_KEYUSAGE_NO_CRL_SIGN, "X509_V_ERR_KEYUSAGE_NO_CRL_SIGN" },
+	{ X509_V_ERR_UNHANDLED_CRITICAL_CRL_EXTENSION, "X509_V_ERR_UNHANDLED_CRITICAL_CRL_EXTENSION" },
+	{ X509_V_ERR_INVALID_NON_CA, "X509_V_ERR_INVALID_NON_CA" },
+	{ X509_V_ERR_PROXY_PATH_LENGTH_EXCEEDED, "X509_V_ERR_PROXY_PATH_LENGTH_EXCEEDED" },
+	{ X509_V_ERR_KEYUSAGE_NO_DIGITAL_SIGNATURE, "X509_V_ERR_KEYUSAGE_NO_DIGITAL_SIGNATURE" },
+	{ X509_V_ERR_PROXY_CERTIFICATES_NOT_ALLOWED, "X509_V_ERR_PROXY_CERTIFICATES_NOT_ALLOWED" },
+	{ X509_V_ERR_INVALID_EXTENSION, "X509_V_ERR_INVALID_EXTENSION" },
+	{ X509_V_ERR_INVALID_POLICY_EXTENSION, "X509_V_ERR_INVALID_POLICY_EXTENSION" },
+	{ X509_V_ERR_NO_EXPLICIT_POLICY, "X509_V_ERR_NO_EXPLICIT_POLICY" },
+	{ X509_V_ERR_UNNESTED_RESOURCE, "X509_V_ERR_UNNESTED_RESOURCE" },
+#if defined(X509_V_ERR_DIFFERENT_CRL_SCOPE)
+	{ X509_V_ERR_DIFFERENT_CRL_SCOPE, "X509_V_ERR_DIFFERENT_CRL_SCOPE" },
+	{ X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE, "X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE" },
+	{ X509_V_ERR_PERMITTED_VIOLATION, "X509_V_ERR_PERMITTED_VIOLATION" },
+	{ X509_V_ERR_EXCLUDED_VIOLATION, "X509_V_ERR_EXCLUDED_VIOLATION" },
+	{ X509_V_ERR_SUBTREE_MINMAX, "X509_V_ERR_SUBTREE_MINMAX" },
+	{ X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE, "X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE" },
+	{ X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX, "X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX" },
+	{ X509_V_ERR_UNSUPPORTED_NAME_SYNTAX, "X509_V_ERR_UNSUPPORTED_NAME_SYNTAX" },
+#endif
+};
+
+#if !defined(ARRAY_SIZE)
+/**
+ * Macro to calculate the number of entries in an array
+ */
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+#endif
+
+char* SSL_get_verify_result_string(int rc)
+{
+	int i;
+	char* retstring = "undef";
+
+	for (i = 0; i < ARRAY_SIZE(X509_message_table); ++i)
+	{
+		if (X509_message_table[i].code == rc)
+		{
+			retstring = X509_message_table[i].string;
+			break;
+		}
+	}
+	return retstring;
+}
+
+
+void SSL_CTX_info_callback(const SSL* ssl, int where, int ret)
+{
+	if (where & SSL_CB_LOOP)
+	{
+		Log(TRACE_PROTOCOL, 1, "SSL state %s:%s:%s",
+                  (where & SSL_ST_CONNECT) ? "connect" : (where & SSL_ST_ACCEPT) ? "accept" : "undef",
+                    SSL_state_string_long(ssl), SSL_get_cipher_name(ssl));
+	}
+	else if (where & SSL_CB_EXIT)
+	{
+		Log(TRACE_PROTOCOL, 1, "SSL %s:%s",
+                  (where & SSL_ST_CONNECT) ? "connect" : (where & SSL_ST_ACCEPT) ? "accept" : "undef",
+                    SSL_state_string_long(ssl));
+	}
+	else if (where & SSL_CB_ALERT)
+	{
+		Log(TRACE_PROTOCOL, 1, "SSL alert %s:%s:%s",
+                  (where & SSL_CB_READ) ? "read" : "write",
+                    SSL_alert_type_string_long(ret), SSL_alert_desc_string_long(ret));
+	}
+	else if (where & SSL_CB_HANDSHAKE_START)
+	{
+		Log(TRACE_PROTOCOL, 1, "SSL handshake started %s:%s:%s",
+                  (where & SSL_CB_READ) ? "read" : "write",
+                    SSL_alert_type_string_long(ret), SSL_alert_desc_string_long(ret));
+	}
+	else if (where & SSL_CB_HANDSHAKE_DONE)
+	{
+		Log(TRACE_PROTOCOL, 1, "SSL handshake done %s:%s:%s",
+                  (where & SSL_CB_READ) ? "read" : "write",
+                    SSL_alert_type_string_long(ret), SSL_alert_desc_string_long(ret));
+		Log(TRACE_PROTOCOL, 1, "SSL certificate verification: %s",
+                    SSL_get_verify_result_string(SSL_get_verify_result(ssl)));
+	}
+	else
+	{
+		Log(TRACE_PROTOCOL, 1, "SSL state %s:%s:%s", SSL_state_string_long(ssl),
+                   SSL_alert_type_string_long(ret), SSL_alert_desc_string_long(ret));
+	}
+}
+
+
+char* SSLSocket_get_version_string(int version)
+{
+	int i;
+	static char buf[20];
+	char* retstring = NULL;
+	static struct
+	{
+		int code;
+		char* string;
+	}
+	version_string_table[] =
+	{
+		{ SSL2_VERSION, "SSL 2.0" },
+		{ SSL3_VERSION, "SSL 3.0" },
+		{ TLS1_VERSION, "TLS 1.0" },
+#if defined(TLS2_VERSION)
+		{ TLS2_VERSION, "TLS 1.1" },
+#endif
+#if defined(TLS3_VERSION)
+		{ TLS3_VERSION, "TLS 1.2" },
+#endif
+	};
+
+	for (i = 0; i < ARRAY_SIZE(version_string_table); ++i)
+	{
+		if (version_string_table[i].code == version)
+		{
+			retstring = version_string_table[i].string;
+			break;
+		}
+	}
+
+	if (retstring == NULL)
+	{
+		sprintf(buf, "%i", version);
+		retstring = buf;
+	}
+	return retstring;
+}
+
+
+void SSL_CTX_msg_callback(int write_p, int version, int content_type, const void* buf, size_t len,
+        SSL* ssl, void* arg)
+{
+
+/*
+called by the SSL/TLS library for a protocol message, the function arguments have the following meaning:
+
+write_p
+This flag is 0 when a protocol message has been received and 1 when a protocol message has been sent.
+
+version
+The protocol version according to which the protocol message is interpreted by the library. Currently, this is one of SSL2_VERSION, SSL3_VERSION and TLS1_VERSION (for SSL 2.0, SSL 3.0 and TLS 1.0, respectively).
+
+content_type
+In the case of SSL 2.0, this is always 0. In the case of SSL 3.0 or TLS 1.0, this is one of the ContentType values defined in the protocol specification (change_cipher_spec(20), alert(21), handshake(22); but never application_data(23) because the callback will only be called for protocol messages).
+
+buf, len
+buf points to a buffer containing the protocol message, which consists of len bytes. The buffer is no longer valid after the callback function has returned.
+
+ssl
+The SSL object that received or sent the message.
+
+arg
+The user-defined argument optionally defined by SSL_CTX_set_msg_callback_arg() or SSL_set_msg_callback_arg().
+
+*/
+
+	Log(TRACE_PROTOCOL, -1, "%s %s %d buflen %d", (write_p ? "sent" : "received"),
+		SSLSocket_get_version_string(version),
+		content_type, (int)len);
+}
+
+
+int pem_passwd_cb(char* buf, int size, int rwflag, void* userdata)
+{
+	int rc = 0;
+
+	FUNC_ENTRY;
+	if (!rwflag)
+	{
+		strncpy(buf, (char*)(userdata), size);
+		buf[size-1] = '\0';
+		rc = (int)strlen(buf);
+	}
+	FUNC_EXIT_RC(rc);
+	return rc;
+}
+#endif
+
 int SSL_create_mutex(ssl_mutex_type* mutex)
 {
 	int rc = 0;
@@ -198,7 +418,7 @@ extern unsigned long SSLThread_id(void)
 }
 #endif
 
-/*
+#if 0
 extern void SSLLocks_callback(int mode, int n, const char *file, int line)
 {
 	if (sslLocks)
@@ -215,32 +435,32 @@ void SSLSocket_handleOpensslInit(int bool_value)
 {
 	handle_openssl_init = bool_value;
 }
-*/
+#endif
 
 int SSLSocket_initialize(void)
 {
 	int rc = 0;
 	/*int prc;*/
-	/*
+#if 0
 	int i;
 	int lockMemSize;
-	
+
 	FUNC_ENTRY;
 
 	if (handle_openssl_init)
 	{
 		if ((rc = SSL_library_init()) != 1)
 			rc = -1;
-			
+
 		ERR_load_crypto_strings();
 		SSL_load_error_strings();
-		
-		/ * OpenSSL 0.9.8o and 1.0.0a and later added SHA2 algorithms to SSL_library_init(). 
-		Applications which need to use SHA2 in earlier versions of OpenSSL should call 
-		OpenSSL_add_all_algorithms() as well. * /
-		
+
+		/* OpenSSL 0.9.8o and 1.0.0a and later added SHA2 algorithms to SSL_library_init().
+		Applications which need to use SHA2 in earlier versions of OpenSSL should call
+		OpenSSL_add_all_algorithms() as well. */
+
 		OpenSSL_add_all_algorithms();
-		
+
 		lockMemSize = CRYPTO_num_locks() * sizeof(ssl_mutex_type);
 
 		sslLocks = malloc(lockMemSize);
@@ -254,7 +474,7 @@ int SSLSocket_initialize(void)
 
 		for (i = 0; i < CRYPTO_num_locks(); i++)
 		{
-			/ * prc = * /SSL_create_mutex(&sslLocks[i]);
+			/* prc = */SSL_create_mutex(&sslLocks[i]);
 		}
 
 #if (OPENSSL_VERSION_NUMBER >= 0x010000000)
@@ -263,9 +483,9 @@ int SSLSocket_initialize(void)
 		CRYPTO_set_id_callback(SSLThread_id);
 #endif
 		CRYPTO_set_locking_callback(SSLLocks_callback);
-		
+
 	}
-	*/
+#endif
 	SSL_create_mutex(&sslCoreMutex);
 
 //exit:
@@ -276,7 +496,7 @@ int SSLSocket_initialize(void)
 void SSLSocket_terminate(void)
 {
 	FUNC_ENTRY;
-	/*
+#if 0
 	if (handle_openssl_init)
 	{
 		EVP_cleanup();
@@ -293,7 +513,7 @@ void SSLSocket_terminate(void)
 			free(sslLocks);
 		}
 	}
-	*/
+#endif
 	if(sslCoreMutex != PTHREAD_MUTEX_INITIALIZER) {
 		SSL_destroy_mutex(&sslCoreMutex);
 		sslCoreMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -404,8 +624,8 @@ int SSLSocket_setSocketForSSL(networkHandles* net, MQTTClient_SSLOptions* opts, 
 		if ((rc = SSL_set_fd(net->ssl, net->socket)) != 1)
 			SSLSocket_error("SSL_set_fd", net->ssl, net->socket, rc);
 
-		//SNI - server name indication
-		ssl_pm_set_hostname(net->ssl, hostname);
+		if ((rc = SSL_set_tlsext_host_name(net->ssl, hostname)) != 1)
+			SSLSocket_error("SSL_set_tlsext_host_name", NULL, net->socket, rc);
 	}
 
 	FUNC_EXIT_RC(rc);
@@ -583,7 +803,8 @@ int SSLSocket_close(networkHandles* net)
 	if (net->ssl) {
 		rc = SSL_shutdown(net->ssl);
 
-		//nasty bug... must NOT free original net->ssl->session or else the reconnect won't work
+		//nasty bug... must NOT free original net->ssl->session or there will be a
+		//Guru Meditation Error: Core  0 panic'ed (LoadProhibited) on reconnect
 		net->ssl->session = ssl_mem_zalloc(sizeof(SSL_SESSION));
 
 		SSL_free(net->ssl);
@@ -681,7 +902,7 @@ void SSLSocket_addPendingRead(int sock)
 }
 
 
-int SSLSocket_getPendingRead()
+int SSLSocket_getPendingRead(void)
 {
 	int sock = -1;
 

@@ -216,18 +216,18 @@ static int lmqtt_client( lua_State* L ){
     int persistence = MQTTCLIENT_PERSISTENCE_NONE;
 
     const char *clientId = luaL_checklstring( L, 1, &lenClientId ); //is being strdup'd in MQTTClient_create
-    const char *host = luaL_checklstring( L, 2, &lenHost ); //url is being strdup'd in MQTTClient_connectURI
+    const char *host = luaL_checklstring( L, 2, &lenHost ); //url is being strdup'd in MQTTClient_create
     int port = luaL_checkinteger( L, 3 );
 
     luaL_checktype(L, 4, LUA_TBOOLEAN);
     int secure = lua_toboolean( L, 4 );
 
-    const char *ca_file = luaL_optstring( L, 5, NULL );
+    const char *ca_file = luaL_optstring( L, 5, NULL ); //is being strdup'd below
 
 	if (lua_gettop(L) > 5) {
 	    luaL_checktype(L, 6, LUA_TBOOLEAN);
 	    persistence = lua_toboolean( L, 6 ) ? MQTTCLIENT_PERSISTENCE_DEFAULT : MQTTCLIENT_PERSISTENCE_NONE;
-	    persistence_folder = luaL_optstring( L, 7, NULL );
+	    persistence_folder = luaL_optstring( L, 7, NULL ); //is being strdup'd in MQTTClient_create
 	}
 
 
@@ -253,7 +253,7 @@ static int lmqtt_client( lua_State* L ){
         client_inited = 1;
     }
 
-    //url is being strdup'd in MQTTClient_connectURI
+    //url is being strdup'd in MQTTClient_create
     rc = MQTTClient_create(&mqtt->client, url, clientId, persistence, (char*)persistence_folder);
     if (rc < 0){
       return luaL_exception(L, LUA_MQTT_ERR_CANT_CREATE_CLIENT);

@@ -46,9 +46,13 @@ void recv_msg_global_request_remotetcp() {
 /* */
 #endif /* !ENABLE_SVR_REMOTETCPFWD */
 
+#ifdef ENABLE_SVR_REMOTETCPFWD
 static int svr_cancelremotetcp(void);
 static int svr_remotetcpreq(void);
+#endif /* ENABLE_SVR_REMOTETCPFWD */
+#ifdef ENABLE_SVR_LOCALTCPFWD
 static int newtcpdirect(struct Channel * channel);
+#endif /* ENABLE_SVR_LOCALTCPFWD */
 
 #ifdef ENABLE_SVR_REMOTETCPFWD
 static const struct ChanType svr_chan_tcpremote = {

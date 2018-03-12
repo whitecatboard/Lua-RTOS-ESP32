@@ -37,6 +37,7 @@
 #include "agentfwd.h"
 #include "runopts.h"
 #include "auth.h"
+#include <lwip/sockets.h>
 
 /* Handles sessions (either shells or programs) requested by the client */
 
@@ -60,7 +61,9 @@ static void send_msg_chansess_exitstatus(struct Channel * channel,
 		struct ChanSess * chansess);
 static void send_msg_chansess_exitsignal(struct Channel * channel,
 		struct ChanSess * chansess);
+#if !__XTENSA__
 static void get_termmodes(struct ChanSess *chansess);
+#endif
 
 const struct ChanType svrchansess = {
 	0, /* sepfds */
@@ -462,6 +465,7 @@ static int sessionwinchange(struct ChanSess *chansess) {
 	return DROPBEAR_SUCCESS;
 }
 
+#if !__XTENSA__
 static void get_termmodes(struct ChanSess *chansess) {
 
 	struct termios termio;
@@ -552,6 +556,7 @@ static void get_termmodes(struct ChanSess *chansess) {
 	}
 	TRACE(("leave get_termmodes"))
 }
+#endif
 
 /* Set up a session pty which will be used to execute the shell or program.
  * The pty is allocated now, and kept for when the shell/program executes.
@@ -1048,19 +1053,19 @@ static void execchild(void *user_data) {
  * handling */
 void svr_chansessinitialise() {
 
+#if 0
 	struct sigaction sa_chld;
 
 	/* single child process intially */
-#if 0
 	svr_ses.childpids = (struct ChildPid*)m_malloc(sizeof(struct ChildPid));
 	svr_ses.childpids[0].pid = -1; /* unused */
 	svr_ses.childpids[0].chansess = NULL;
 	svr_ses.childpidsize = 1;
 	svr_ses.lastexit.exitpid = -1; /* Nothing has exited yet */
-#endif
+
 	sa_chld.sa_handler = sesssigchild_handler;
 	sa_chld.sa_flags = SA_NOCLDSTOP;
-#if 0
+
 	sigemptyset(&sa_chld.sa_mask);
 	if (sigaction(SIGCHLD, &sa_chld, NULL) < 0) {
 		dropbear_exit("signal() error");
