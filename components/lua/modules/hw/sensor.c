@@ -164,7 +164,7 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 					break;
 
 				case UART_INTERFACE:
-						setup[i].uart.id = luaL_checkinteger(L, top++);
+					setup[i].uart.id = luaL_checkinteger(L, top++);
 					break;
 
 				default:
@@ -219,7 +219,7 @@ static int lsensor_attach( lua_State* L ) {
 	// Get sensor definition
 	sensor = get_sensor(id);
 	if (!sensor) {
-    	return luaL_exception(L, SENSOR_ERR_NOT_FOUND);
+		return luaL_exception(L, SENSOR_ERR_NOT_FOUND);
 	}
 
 	// Prepare setup
@@ -227,13 +227,13 @@ static int lsensor_attach( lua_State* L ) {
 
 	// Setup sensor
 	if ((error = sensor_setup(sensor, setup, &instance))) {
-    	return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
     }
 
 	// Create user data
     sensor_userdata *data = (sensor_userdata *)lua_newuserdata(L, sizeof(sensor_userdata));
     if (!data) {
-    	return luaL_exception(L, SENSOR_ERR_NOT_ENOUGH_MEMORY);
+    		return luaL_exception(L, SENSOR_ERR_NOT_ENOUGH_MEMORY);
     }
 
     data->instance = instance;

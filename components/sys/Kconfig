@@ -904,7 +904,11 @@ menu "Lua RTOS"
             config LUA_RTOS_USE_SENSOR_HALL_SWITCH
                depends on LUA_RTOS_LUA_USE_SENSOR
                bool "Hall effect switch"
-               default y      
+               default y                   
+            config LUA_RTOS_USE_SENSOR_HALL_INTERNAL
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "Internal Hall effect sensor"
+               default y    
             config LUA_RTOS_USE_SENSOR_LDR
                depends on LUA_RTOS_LUA_USE_SENSOR
                bool "LDR"
