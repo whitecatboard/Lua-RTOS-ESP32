@@ -604,12 +604,12 @@ static int lthread_create(lua_State* L) {
 }
 
 static int lthread_create_mutex(lua_State* L) {
-	mutex_userdata *mtx = (mutex_userdata *)lua_newuserdata(L, sizeof(mutex_userdata));
-
 	// Init mutex
 	pthread_mutexattr_t attr;
 
-	int type = luaL_optinteger(L, 2, PTHREAD_MUTEX_RECURSIVE);
+	int type = luaL_optinteger(L, 1, PTHREAD_MUTEX_RECURSIVE);
+
+	mutex_userdata *mtx = (mutex_userdata *)lua_newuserdata(L, sizeof(mutex_userdata));
 
 	pthread_mutexattr_init(&attr);
 	pthread_mutexattr_settype(&attr, type);
