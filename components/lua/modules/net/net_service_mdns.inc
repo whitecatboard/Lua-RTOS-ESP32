@@ -102,10 +102,9 @@ static void lmdns_deinit()
 	_mdns_initialized = false;
 }
 
-// Lua: result = setup( id, clock )
 static int lmdns_start( lua_State* L ){
 	int rc;
-	const char *hostname = luaL_optstring( L, 1, NULL );
+	const char *hostname = luaL_optstring( L, 1, "ESP32" );
 	const char *instance = luaL_optstring( L, 2, NULL );
 
 	rc = lmdns_init();
@@ -126,11 +125,8 @@ static int lmdns_start( lua_State* L ){
 			printf( "mdns: could not set instance name\n");
 		}
 	}
-	
-	luaL_getmetatable(L, "mdns.cli");
-	lua_setmetatable(L, -2);
 
-	return 1;
+	return 0;
 }
 
 static void value_to_table(lua_State* L, char* key, char* value){
@@ -180,12 +176,12 @@ static int results_to_table(lua_State* L, mdns_result_t * results){
 
 	mdns_result_t * r = results;
 	mdns_ip_addr_t * a = NULL;
-	int i = 1, t;
+	int row = 1, t;
 	while(r){
 
 		//put row into table
 		lua_newtable(L);
-		lua_pushnumber(L, i+1);
+		lua_pushnumber(L, row++);
 		lua_pushvalue(L, -2);
 		lua_settable(L, -4);
 
@@ -203,7 +199,6 @@ static int results_to_table(lua_State* L, mdns_result_t * results){
 			value_to_table(L, "port", tmp);
 		}
 		if(r->txt_count){
-//* TODO fix this
 			lua_pushstring(L, "txt");
 			lua_newtable(L);
 
@@ -212,11 +207,9 @@ static int results_to_table(lua_State* L, mdns_result_t * results){
 			}
 
 			lua_settable(L, -3);
-//*/
 		}
 		a = r->addr;
 		while(a){
-//* TODO fix this
 			lua_pushstring(L, "ip");
 			lua_newtable(L);
 
@@ -225,16 +218,16 @@ static int results_to_table(lua_State* L, mdns_result_t * results){
 				value_to_table(L, "ipv6", tmp);
 			} else {
 				snprintf(tmp, sizeof(tmp), IPSTR, IP2STR(&(a->addr.u_addr.ip4)));
-				value_to_table(L, "ip", tmp);
+				value_to_table(L, "ipv4", tmp);
 			}
 
 			lua_settable(L, -3);
-//*/
 			a = a->next;
 		}
 		r = r->next;
 
-		lua_pop(L, 1);										 
+		//finish the row
+		lua_pop(L, 1);
 	}
 
 	return 1; //one table
@@ -294,7 +287,7 @@ static int lmdns_find_service( lua_State* L ) {
 	if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
 	int maxresult = luaL_optinteger(L, 4, DEFAULT_MAXIMUM_RESULTS);
 	if(maxresult == 0) maxresult = DEFAULT_MAXIMUM_RESULTS;
-	
+
 	rc = lmdns_init();
 	if (rc != 0) {
 		return luaL_exception(L, LUA_MDNS_ERR_CANT_START);
@@ -321,7 +314,7 @@ static int lmdns_add_service( lua_State* L ) {
 	const char *instance = 0;
 	size_t txt_items = 0;
 	mdns_txt_item_t * txt_data = 0;
-	
+
 	if (lua_gettop(L) > 3) {
 		instance = luaL_checkstring( L, 4 );
 
