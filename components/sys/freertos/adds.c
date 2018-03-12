@@ -55,6 +55,9 @@
 #include <stdint.h>
 #include <string.h>
 
+// Reference to lua_thread, which is created in app_main
+extern pthread_t lua_thread;
+
 // Global state
 static lua_State *gL = NULL;
 
@@ -129,9 +132,8 @@ void uxSetLuaState(lua_State* L) {
 		lua_rtos_tcb->lthread->L = L;
 	}
 
-	// If this is the first thread (Lua thread) store
-	// state in global state
-	if ((uxGetThreadId() == 1) && (gL == NULL)) {
+	// If this is the lua thread, store state in global state
+	if ((uxGetThreadId() == lua_thread) && (gL == NULL)) {
 		gL = L;
 	}
 }

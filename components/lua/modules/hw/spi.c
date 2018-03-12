@@ -298,7 +298,7 @@ LUALIB_API int luaopen_spi( lua_State *L ) {
     return 0;
 }
 
-MODULE_REGISTER_MAPPED(SPI, spi, lspi_map, luaopen_spi);
+MODULE_REGISTER_ROM(SPI, spi, lspi_map, luaopen_spi, 1);
 
 #endif
 

@@ -48,8 +48,6 @@
 
 #include "bluetooth_hci.h"
 #include "esp_bt.h"
-#include "esp_gap_ble_api.h"
-#include "esp_bt_main.h"
 
 #include <stdint.h>
 

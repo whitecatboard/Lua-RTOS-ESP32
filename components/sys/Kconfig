@@ -904,7 +904,11 @@ menu "Lua RTOS"
             config LUA_RTOS_USE_SENSOR_HALL_SWITCH
                depends on LUA_RTOS_LUA_USE_SENSOR
                bool "Hall effect switch"
-               default y      
+               default y                   
+            config LUA_RTOS_USE_SENSOR_HALL_INTERNAL
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "Internal Hall effect sensor"
+               default y    
             config LUA_RTOS_USE_SENSOR_LDR
                depends on LUA_RTOS_LUA_USE_SENSOR
                bool "LDR"
@@ -1134,91 +1138,42 @@ menu "Lua RTOS"
                bool "Include package module in build"
                default y
          endmenu
-         menu "Lua RTOS Modules"         
-            config LUA_RTOS_LUA_USE_THREAD
-               bool "Include thread module in build"
-               default y
-   
-            config LUA_RTOS_LUA_USE_SENSOR
-               bool "Include sensor module in build"
-               default y
-   
-            config LUA_RTOS_LUA_USE_SERVO
-               bool "Include servo module in build"
-               default y
-   
-            config LUA_RTOS_LUA_USE_NEOPIXEL
-               bool "Include neopixel module in build"
-               default y
-   
-            config LUA_RTOS_LUA_USE_STEPPER
-               bool "Include stepper module in build"
-               default y
-   
-            config LUA_RTOS_LUA_USE_GDISPLAY
-               bool "Include gdisplay module in build"
-               default y
-
-            config LUA_RTOS_LUA_USE_SDISPLAY
-               bool "Include Segment Display module in build"
-               default n
-
-            config LUA_RTOS_LUA_USE_EVENT
-               bool "Include event module in build"
-               default y
-   
-            config LUA_RTOS_LUA_USE_NVS
-               bool "Include nvs module in build"
-               default y
-   
-            config LUA_RTOS_LUA_USE_PACK
-               bool "Include pack module in build"
-               default y
-   
+         menu "Lua RTOS Modules"    
             config LUA_RTOS_LUA_USE_ADC
                bool "Include adc module in build"
                default y   
       
-            config LUA_RTOS_LUA_USE_I2C
-               bool "Include i2c module in build"
-               default y
-   
-            config LUA_RTOS_LUA_USE_PIO
-               bool "Include pio (gpio) module in build"
+            config LUA_RTOS_LUA_USE_CAN
+               bool "Include CAN module in build"
                default y
 
-            config LUA_RTOS_LUA_USE_PWM
-               bool "Include pwm module in build"
-               default y
-   
-            config LUA_RTOS_LUA_USE_SPI
-               bool "Include spi module in build"
-               default y
-   
-            config LUA_RTOS_LUA_USE_TMR
-               bool "Include tmr (timer) module in build"
-               default y
-
-            config LUA_RTOS_LUA_USE_UART
-               bool "Include uart module in build"
-               default y
-
-            config LUA_RTOS_LUA_USE_ENCODER
-               bool "Include encoder module in build"
-               default y
-
-            config LUA_RTOS_LUA_USE_NET
-               bool "Include net module in build"
+            config LUA_RTOS_LUA_USE_CPU
+               bool "Include CPU module in build"
                default y
 
             config LUA_RTOS_LUA_USE_CURL_NET
                depends on LUA_RTOS_LUA_USE_NET
                bool "Include curl support in net module"
                default y
-            
-            config LUA_RTOS_LUA_USE_SCP_NET
-               depends on LUA_RTOS_LUA_USE_NET
-               bool "Include scp support in net module"
+             
+            config LUA_RTOS_LUA_USE_ENCODER
+               bool "Include encoder module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_CJSON
+               bool "Include cjson module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_EVENT
+               bool "Include event module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_GDISPLAY
+               bool "Include gdisplay module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_I2C
+               bool "Include i2c module in build"
                default y
 
             config LUA_RTOS_LUA_USE_MQTT
@@ -1231,14 +1186,71 @@ menu "Lua RTOS"
                bool "Include MDNS module in build"
                default n
 
-            config LUA_RTOS_LUA_USE_CAN
-               bool "Include CAN module in build"
+            config LUA_RTOS_LUA_USE_NEOPIXEL
+               bool "Include neopixel module in build"
                default y
 
-            config LUA_RTOS_LUA_USE_CPU
-               bool "Include CPU module in build"
+            config LUA_RTOS_LUA_USE_NET
+               bool "Include net module in build"
                default y
 
+            config LUA_RTOS_LUA_USE_NVS
+               bool "Include nvs module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_PACK
+               bool "Include pack module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_PIO
+               bool "Include pio (gpio) module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_PWM
+               bool "Include pwm module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_SENSOR
+               bool "Include sensor module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_SERVO
+               bool "Include servo module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_SOCKET
+               bool "Include socket module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_SPI
+               bool "Include spi module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_SCP_NET
+               depends on LUA_RTOS_LUA_USE_NET
+               bool "Include scp support in net module"
+               default y
+
+            config LUA_RTOS_LUA_USE_SDISPLAY
+               bool "Include Segment Display module in build"
+               default n
+
+            config LUA_RTOS_LUA_USE_STEPPER
+               bool "Include stepper module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_THREAD
+               bool "Include thread module in build"
+               default y
+   
+            config LUA_RTOS_LUA_USE_TMR
+               bool "Include tmr (timer) module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_UART
+               bool "Include uart module in build"
+               default y
+               
             config LUA_RTOS_LUA_USE_ULP
                bool "Include ULP module in build"
                default y

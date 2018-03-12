@@ -1,7 +1,7 @@
 COMPONENT_SRCDIRS := common modules modules/hw modules/net \
-				     modules/sys modules/middleware modules/bt \
-				     src
+				     modules/sys modules/middleware \
+				     modules/bluetooth src
 				      
 COMPONENT_ADD_INCLUDEDIRS := common modules modules/hw modules/net \
-						     modules/sys modules/middleware modules/br \
-						     src
+						     modules/sys modules/middleware \
+						     modules/bluetooth src

@@ -46,6 +46,8 @@
 #ifndef COMPONENTS_LUA_RTOS_SYS___SIGNAL_H_
 #define COMPONENTS_LUA_RTOS_SYS___SIGNAL_H_
 
+#include <pthread.h>
+
 typedef struct {
 	int s;    // Signal number
 	int dest; // Signal destination
@@ -53,5 +55,6 @@ typedef struct {
 
 void _signal_queue(int dest, int s);
 void _signal_init();
+void _signal_queue(int dest, int s);
 
 #endif /* COMPONENTS_LUA_RTOS_SYS___SIGNAL_H_ */

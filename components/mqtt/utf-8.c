@@ -23,6 +23,7 @@
  * UTF-8 byte sequences.
  *
  */
+#include "utf-8.h"
 
 #include <stdlib.h>
 #include <string.h>

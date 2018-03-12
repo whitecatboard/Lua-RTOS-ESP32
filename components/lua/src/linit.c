@@ -71,32 +71,28 @@ LUALIB_API void luaL_openlibs (lua_State *L) {
 #include "lgc.h"
 #include <sys/debug.h>
 
-extern const luaL_Reg lua_libs1[];
+extern const luaL_Reg_adv lua_libs1[];
 
-MODULE_REGISTER_UNMAPPED(_G, _G, luaopen_base);
-MODULE_REGISTER_UNMAPPED(IO, io, luaopen_io);
-MODULE_REGISTER_UNMAPPED(PACKAGE, package, luaopen_package);
+MODULE_REGISTER_RAM(_G, _G, luaopen_base, 1);
+MODULE_REGISTER_RAM(IO, io, luaopen_io, 1);
+MODULE_REGISTER_RAM(PACKAGE, package, luaopen_package, 1);
 
 LUALIB_API void luaL_openlibs (lua_State *L) {
-  const luaL_Reg *lib = lua_libs1;
+  const luaL_Reg_adv *lib = lua_libs1;
 
   for (; lib->name; lib++) {
     if (lib->func) {
   		debug_free_mem_begin(luaL_openlibs);
 
-		#if LUA_USE_ROTABLE
-		//if (luaR_findglobal(lib->name)) {
-	    //    lua_pushcfunction(L, lib->func);
-	    //    lua_pushstring(L, lib->name);
-	    //    lua_call(L, 1, 0);
-		//} else {
+  		if (lib->autoload) {
 			luaL_requiref(L, lib->name, lib->func, 1);
 			lua_pop(L, 1);  /* remove lib */
-		//}
-		#else
-			luaL_requiref(L, lib->name, lib->func, 1);
-			lua_pop(L, 1);  /* remove lib */
-		#endif
+  		} else {
+  			luaL_getsubtable(L, LUA_REGISTRYINDEX, LUA_PRELOAD_TABLE);
+  			lua_pushcfunction(L, lib->func);
+  			lua_setfield(L, -2, lib->name);
+  			lua_pop(L, 1);  // remove PRELOAD table
+  		}
 
 		#if DEBUG_FREE_MEM
 		luaC_fullgc(L, 1);

@@ -106,6 +106,9 @@
 static driver_unit_lock_t uart_locks[NUART];
 #endif
 
+ // Reference to lua_thread, which is created in app_main
+ extern pthread_t lua_thread;
+
 // Register drivers and errors
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 DRIVER_REGISTER_BEGIN(UART,uart,uart_locks,NULL,uart_lock_resources);
@@ -169,19 +172,19 @@ typedef struct {
 static void uart_deferred_intr_handler(void *args) {
 	uart_deferred_data data;
 
-	for(;;) {
+	for (;;) {
 		xQueueReceive(deferred_q, &data, portMAX_DELAY);
 		if (data.type == 0) {
-			_signal_queue(1, data.data);
+			_signal_queue(lua_thread, data.data);
 		} else {
 			if (data.data == 1) {
-		    	uart_ll_lock(CONSOLE_UART);
-		        uart_writes(CONSOLE_UART, "Lua RTOS-booting-ESP32\r\n");
-		    	uart_ll_unlock(CONSOLE_UART);
+				uart_ll_lock(CONSOLE_UART);
+				uart_writes(CONSOLE_UART, "Lua RTOS-booting-ESP32\r\n");
+				uart_ll_unlock(CONSOLE_UART);
 			} else if (data.data == 2) {
-		    	uart_ll_lock(CONSOLE_UART);
-		        uart_writes(CONSOLE_UART, "Lua RTOS-running-ESP32\r\n");
-		    	uart_ll_unlock(CONSOLE_UART);
+				uart_ll_lock(CONSOLE_UART);
+				uart_writes(CONSOLE_UART, "Lua RTOS-running-ESP32\r\n");
+				uart_ll_unlock(CONSOLE_UART);
 			}
 		}
 	}
@@ -201,7 +204,10 @@ static void uart_comm_param_config(int8_t unit, UartBautRate brg, UartBitsNum4Ch
                    ((parity == NONE_BITS) ? 0x0 : (UART_PARITY_EN | parity))
                    | (stop << UART_STOP_BIT_NUM_S)
                    | (data << UART_BIT_NUM_S
-                   | UART_TICK_REF_ALWAYS_ON_M));
+#ifndef CONFIG_PM_ENABLE
+                   | UART_TICK_REF_ALWAYS_ON_M
+#endif
+                     ));
 }
 
 // Configure the UART pins
@@ -265,7 +271,7 @@ static int IRAM_ATTR queue_byte(int8_t unit, uint8_t byte, uint8_t *status, int 
         } else if ((byte == 0x03) && (!console_raw)) {
         	if (status_get(STATUS_LUA_RUNNING)) {
 				*signal = SIGINT;
-				if (_pthread_has_signal(1, *signal)) {
+				if (_pthread_has_signal(lua_thread, *signal)) {
 					return 0;
 				}
 

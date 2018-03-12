@@ -339,7 +339,7 @@ LUALIB_API int luaopen_tmr( lua_State *L ) {
 	return 0;
 }
 
-MODULE_REGISTER_MAPPED(TMR, tmr, tmr_map, luaopen_tmr);
+MODULE_REGISTER_ROM(TMR, tmr, tmr_map, luaopen_tmr, 1);
 
 /*
 

@@ -198,15 +198,15 @@ index 950c05bb..08e5a232 100644
  } esp_interface_t;
  
 diff --git a/components/tcpip_adapter/include/tcpip_adapter.h b/components/tcpip_adapter/include/tcpip_adapter.h
-index d7ee00ea..cb9a0d2d 100644
+index 4777f160..2053a1ab 100644
 --- a/components/tcpip_adapter/include/tcpip_adapter.h
 +++ b/components/tcpip_adapter/include/tcpip_adapter.h
 @@ -110,6 +110,8 @@ typedef enum {
      TCPIP_ADAPTER_IF_STA = 0,     /**< ESP32 station interface */
      TCPIP_ADAPTER_IF_AP,          /**< ESP32 soft-AP interface */
      TCPIP_ADAPTER_IF_ETH,         /**< ESP32 ethernet interface */
-+    TCPIP_ADAPTER_IF_SPI_ETH,     /**< ESP32 spi ethernet interface */
-+    TCPIP_ADAPTER_IF_TUN,         /**< ESP32 tun interface */
++   TCPIP_ADAPTER_IF_SPI_ETH,     /**< ESP32 spi ethernet interface */
++   TCPIP_ADAPTER_IF_TUN,         /**< ESP32 tun interface */
      TCPIP_ADAPTER_IF_MAX
  } tcpip_adapter_if_t;
  
@@ -222,9 +222,9 @@ index d7ee00ea..cb9a0d2d 100644
  
  /**
   * @brief  Get DHCP server's status
-@@ -603,6 +603,8 @@ esp_err_t tcpip_adapter_set_hostname(tcpip_adapter_if_t tcpip_if, const char *ho
+@@ -615,6 +615,8 @@ esp_err_t tcpip_adapter_get_hostname(tcpip_adapter_if_t tcpip_if, const char **h
   */
- esp_err_t tcpip_adapter_get_hostname(tcpip_adapter_if_t tcpip_if, const char **hostname);
+ esp_err_t tcpip_adapter_get_netif(tcpip_adapter_if_t tcpip_if, void ** netif);
  
 +esp_err_t tcpip_adapter_tun_start(uint8_t *mac, tcpip_adapter_ip_info_t *ip_info);
 +

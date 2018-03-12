@@ -145,7 +145,7 @@ struct linenoiseState {
     bool password;      /* A password is being entered. */
 };
 
-static struct list *ram_history;
+static struct list *ram_history = 0;
 
 enum KEY_ACTION{
 	KEY_NULL = 0,	    /* NULL */
@@ -602,7 +602,7 @@ static void linenoiseHistoryAdd(struct linenoiseState *l) {
 			if(!ram_history) {
 				ram_history = malloc(sizeof(struct list));
 				assert(ram_history != NULL);
-				lstinit(ram_history, 0);
+				lstinit(ram_history, 0, LIST_DEFAULT);
 			}
 
 			int id = 0;

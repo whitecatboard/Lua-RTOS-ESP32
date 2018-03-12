@@ -11,6 +11,7 @@ CFLAGS += -Wno-error=implicit-function-declaration -Wno-error=pointer-sign -Wno-
 #
 # Lua RTOS configuration
 # 
+CFLAGS += -DINCLUDE_xTaskAbortDelay=1
 CFLAGS += -DNEWLIB_HAVE_SLEEP=1
 CFLAGS += -DNEWLIB_HAVE_USLEEP=1
 
@@ -22,7 +23,6 @@ CFLAGS += -DPATH_MAX=64
 CFLAGS += -DMAXNAMLEN=64
 
 CFLAGS += -DCONFIG_MAX_FD_BITS=4
-CFLAGS += -DCONFIG_VFS_WITH_SELECT=4
 
 CFLAGS += -DLWIP_IPV6=1
 CFLAGS += -DLWIP_RAW=1

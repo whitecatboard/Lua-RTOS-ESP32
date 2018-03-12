@@ -460,4 +460,4 @@ LUAMOD_API int luaopen_debug (lua_State *L) {
 #endif
 }
 
-MODULE_REGISTER_MAPPED(DEBUG, debug, dblib, luaopen_debug);
+MODULE_REGISTER_ROM(DEBUG, debug, dblib, luaopen_debug, 1);

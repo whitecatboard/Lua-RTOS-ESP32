@@ -210,6 +210,6 @@ LUALIB_API int luaopen_pwm( lua_State *L ) {
     return 0;
 }
 
-MODULE_REGISTER_MAPPED(PWM, pwm, lpwm_map, luaopen_pwm);
+MODULE_REGISTER_ROM(PWM, pwm, lpwm_map, luaopen_pwm, 1);
 
 #endif

@@ -144,7 +144,7 @@ struct dropbear_progress_connection *connect_remote(const char* remotehost, cons
 	c->cb = cb;
 	c->cb_data = cb_data;
 
-	list_append(&ses.conn_pending, c);
+	db_list_append(&ses.conn_pending, c);
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_socktype = SOCK_STREAM;

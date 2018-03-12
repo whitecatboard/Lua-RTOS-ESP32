@@ -168,15 +168,12 @@ static int report (lua_State *L, int status) {
   if (status != LUA_OK) {
     const char *msg = lua_tostring(L, -1);
 
-    // LUA RTOS BEGIN
-	//l_message(progname, msg);
-
-	if (msg) {
-    	l_message(progname, msg);
+    // Lua RTOS
+    if (msg) {
+    // Lua RTOS
+    		l_message(progname, msg);
+    		lua_pop(L, 1);  /* remove message */
     }
-    // LUA RTOS END
-
-    lua_pop(L, 1);  /* remove message */
   }
   return status;
 }
@@ -424,7 +421,7 @@ static void doREPL (lua_State *L) {
   while ((status = loadline(L)) != -1) {
     if (status == LUA_OK)
       status = docall(L, 0, LUA_MULTRET);
-    if (status == LUA_OK) l_print(L);
+    if (status == LUA_OK) {LuaLock(L);l_print(L);LuaUnlock(L);}
     else report(L, status);
   }
   lua_settop(L, 0);  /* clear stack */

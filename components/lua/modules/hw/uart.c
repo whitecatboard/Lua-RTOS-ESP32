@@ -378,6 +378,6 @@ int luaopen_uart(lua_State* L) {
     return 0;
 }
 
-MODULE_REGISTER_MAPPED(UART, uart, uart_map, luaopen_uart);
+MODULE_REGISTER_ROM(UART, uart, uart_map, luaopen_uart, 1);
 
 #endif

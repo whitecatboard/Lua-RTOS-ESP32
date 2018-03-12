@@ -137,7 +137,7 @@ static void i2c_init() {
 	memset(i2c, 0, sizeof(i2c_t) * (CPU_LAST_I2C + 1));
 
 	// Init transaction list
-	lstinit(&transactions, 0);
+	lstinit(&transactions, 0, LIST_DEFAULT);
 
     // Init mutexes and pin maps
     for(i=0;i < CPU_LAST_I2C + 1;i++) {

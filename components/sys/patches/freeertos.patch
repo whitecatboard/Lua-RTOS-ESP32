@@ -1,0 +1,110 @@
+diff --git a/components/freertos/include/freertos/task.h b/components/freertos/include/freertos/task.h
+index 5af62c69..376dd8aa 100644
+--- a/components/freertos/include/freertos/task.h
++++ b/components/freertos/include/freertos/task.h
+@@ -805,6 +805,8 @@ void vTaskDelete( TaskHandle_t xTaskToDelete ) PRIVILEGED_FUNCTION;
+  */
+ void vTaskDelay( const TickType_t xTicksToDelay ) PRIVILEGED_FUNCTION;
+
++BaseType_t xTaskAbortDelay( TaskHandle_t xTask );
++
+ /**
+  * Delay a task until a specified time.
+  *
+diff --git a/components/freertos/tasks.c b/components/freertos/tasks.c
+index e95a8b04..9f53de93 100644
+--- a/components/freertos/tasks.c
++++ b/components/freertos/tasks.c
+@@ -231,6 +231,9 @@ typedef struct tskTaskControlBlock
+ 		uint8_t	ucStaticallyAllocated; 		/*< Set to pdTRUE if the task is a statically allocated to ensure no attempt is made to free the memory. */
+ 	#endif
+
++	#if( INCLUDE_xTaskAbortDelay == 1 )
++		uint8_t ucDelayAborted;
++	#endif
+ } tskTCB;
+
+ /* The old tskTCB name is maintained above then typedefed to the new TCB_t name
+@@ -2447,6 +2450,82 @@ implementations require configUSE_TICKLESS_IDLE to be set to a value other than
+ #endif /* configUSE_TICKLESS_IDLE */
+ /*----------------------------------------------------------*/
+
++#if ( INCLUDE_xTaskAbortDelay == 1 )
++
++	BaseType_t xTaskAbortDelay( TaskHandle_t xTask )
++	{
++	TCB_t *pxTCB = ( TCB_t * ) xTask;
++	BaseType_t xReturn;
++
++		configASSERT( pxTCB );
++
++		vTaskSuspendAll();
++		{
++			/* A task can only be prematurely removed from the Blocked state if
++			it is actually in the Blocked state. */
++			if( eTaskGetState( xTask ) == eBlocked )
++			{
++				xReturn = pdPASS;
++
++				/* Remove the reference to the task from the blocked list.  An
++				interrupt won't touch the xStateListItem because the
++				scheduler is suspended. */
++				( void ) uxListRemove( &( pxTCB->xGenericListItem ) );
++
++				/* Is the task waiting on an event also?  If so remove it from
++				the event list too.  Interrupts can touch the event list item,
++				even though the scheduler is suspended, so a critical section
++				is used. */
++				taskENTER_CRITICAL(&xTaskQueueMutex);
++				{
++					if( listLIST_ITEM_CONTAINER( &( pxTCB->xEventListItem ) ) != NULL )
++					{
++						( void ) uxListRemove( &( pxTCB->xEventListItem ) );
++						pxTCB->ucDelayAborted = pdTRUE;
++					}
++					else
++					{
++						mtCOVERAGE_TEST_MARKER();
++					}
++				}
++				taskEXIT_CRITICAL(&xTaskQueueMutex);
++
++				/* Place the unblocked task into the appropriate ready list. */
++				prvAddTaskToReadyList( pxTCB );
++
++				/* A task being unblocked cannot cause an immediate context
++				switch if preemption is turned off. */
++				#if (  configUSE_PREEMPTION == 1 )
++				{
++					/* Preemption is on, but a context switch should only be
++					performed if the unblocked task has a priority that is
++					equal to or higher than the currently executing task. */
++					if( pxCurrentTCB[ xPortGetCoreID() ]->uxPriority > uxTopReadyPriority )
++					{
++						/* Pend the yield to be performed when the scheduler
++						is unsuspended. */
++						xYieldPending[xPortGetCoreID()] = pdTRUE;
++					}
++					else
++					{
++						mtCOVERAGE_TEST_MARKER();
++					}
++				}
++				#endif /* configUSE_PREEMPTION */
++			}
++			else
++			{
++				xReturn = pdFAIL;
++			}
++		}
++		( void ) xTaskResumeAll();
++
++		return xReturn;
++	}
++
++#endif /* INCLUDE_xTaskAbortDelay */
++/*----------------------------------------------------------*/
++
+ BaseType_t xTaskIncrementTick( void )
+ {
+ TCB_t * pxTCB;

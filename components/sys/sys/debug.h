@@ -59,9 +59,9 @@ int elapsed_begin_stack_##var = uxTaskGetStackHighWaterMark(NULL);
 int elapsed_end_stack_##var = uxTaskGetStackHighWaterMark(NULL); \
 const char *elapsed_end_stack_##var_msg = msg; \
 if (elapsed_end_stack_##var_msg) { \
-	printf("%s (%s) stack comsumption %d bytes (%d bytes free)\n", (char *)#var, elapsed_end_stack_##var_msg, elapsed_begin_stack_##var - elapsed_end_stack_##var, uxTaskGetStackHighWaterMark(NULL)); \
+	printf("%s (%s) stack consumption %d bytes (%d bytes free)\n", (char *)#var, elapsed_end_stack_##var_msg, elapsed_begin_stack_##var - elapsed_end_stack_##var, uxTaskGetStackHighWaterMark(NULL)); \
 } else { \
-	printf("%s stack comsumption %d bytes (%d bytes free)\n", (char *)#var, elapsed_begin_stack_##var - elapsed_end_stack_##var, uxTaskGetStackHighWaterMark(NULL));	\
+	printf("%s stack consumption %d bytes (%d bytes free)\n", (char *)#var, elapsed_begin_stack_##var - elapsed_end_stack_##var, uxTaskGetStackHighWaterMark(NULL));	\
 }
 
 #define debug_free_mem_begin(var) \
@@ -71,9 +71,9 @@ int elapsed_begin_##var = xPortGetFreeHeapSize();
 int elapsed_end_##var = xPortGetFreeHeapSize(); \
 const char *elapsed_end_##var_msg = msg; \
 if (elapsed_end_##var_msg) { \
-	printf("%s (%s) comsumption %d bytes (%d bytes free)\n", (char *)#var, elapsed_end_##var_msg, elapsed_begin_##var - elapsed_end_##var, xPortGetFreeHeapSize()); \
+	printf("%s (%s) consumption %d bytes (%d bytes free)\n", (char *)#var, elapsed_end_##var_msg, elapsed_begin_##var - elapsed_end_##var, xPortGetFreeHeapSize()); \
 } else { \
-	printf("%s comsumption %d bytes (%d bytes free)\n", (char *)#var, elapsed_begin_##var - elapsed_end_##var, xPortGetFreeHeapSize());	\
+	printf("%s consumption %d bytes (%d bytes free)\n", (char *)#var, elapsed_begin_##var - elapsed_end_##var, xPortGetFreeHeapSize());	\
 }
 #else
 #define debug_free_stack_begin(var)

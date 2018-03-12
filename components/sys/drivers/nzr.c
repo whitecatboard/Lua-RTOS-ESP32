@@ -70,7 +70,7 @@ struct list nzr_list;
  */
 void nzr_init() {
 	// Init  list
-	lstinit(&nzr_list, 0);
+    lstinit(&nzr_list, 0, LIST_DEFAULT);
 }
 
 driver_error_t *nzr_setup(nzr_timing_t *timing, uint8_t gpio, uint32_t *unit) {

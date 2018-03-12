@@ -432,6 +432,7 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 				case OWIRE_INTERFACE: error = sensor_owire_setup(i, instance);break;
 				case I2C_INTERFACE: error = sensor_i2c_setup(i, instance);break;
 				case UART_INTERFACE: error = sensor_uart_setup(i, instance);break;
+				case INTERNAL_INTERFACE: break;
 				default:
 					return driver_error(SENSOR_DRIVER, SENSOR_ERR_INTERFACE_NOT_SUPPORTED, NULL);
 					break;

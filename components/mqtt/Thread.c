@@ -73,7 +73,7 @@ thread_type Thread_start(thread_fn fn, void* parameter, char* name)
 	if (pthread_create(&thread, &attr, fn, parameter) != 0)
 		thread = 0;
 
-	pthread_setname_np(thread, "mqtt");
+	pthread_setname_np(thread, name);
 
 	pthread_attr_destroy(&attr);
 #endif

@@ -195,7 +195,7 @@ char *basename(const char *path) {
 	char *foo = strrchr(path, '/');
 	if (!foo)
 	{
-		return path;
+		return (char*)path;
 	}
 	return ++foo;
 }

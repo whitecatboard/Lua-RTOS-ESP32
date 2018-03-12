@@ -164,7 +164,7 @@ static int levent_create( lua_State* L ) {
     mtx_init(&udata->mtx, NULL, NULL, 0);
 
     // Create the listener list
-    lstinit(&udata->listeners, 1);
+    lstinit(&udata->listeners, 1, LIST_DEFAULT);
 
     // Create a queue for sync this event with the termination of the
     // listeners, when using broadcast(true)
@@ -344,7 +344,7 @@ LUALIB_API int luaopen_event( lua_State *L ) {
     return 0;
 }
 
-MODULE_REGISTER_MAPPED(EVENT, event, levent_map, luaopen_event);
+MODULE_REGISTER_ROM(EVENT, event, levent_map, luaopen_event, 1);
 
 #endif
 

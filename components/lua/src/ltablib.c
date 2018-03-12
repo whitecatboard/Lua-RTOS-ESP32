@@ -454,4 +454,4 @@ LUAMOD_API int luaopen_table (lua_State *L) {
 #endif
 }
 
-MODULE_REGISTER_MAPPED(TABLE, table, tab_funcs, luaopen_table);
+MODULE_REGISTER_ROM(TABLE, table, tab_funcs, luaopen_table, 1);

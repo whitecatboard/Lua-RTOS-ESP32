@@ -167,7 +167,7 @@ static void init() {
 
 		bt_setup(BLE);
 
-		lstinit(&beacons, 1);
+		lstinit(&beacons, 1, LIST_DEFAULT);
 
 		// Create task
 		BaseType_t ret = xTaskCreatePinnedToCore(&eddystone_task, "eddystone", 2048, NULL, 5, NULL, 0);

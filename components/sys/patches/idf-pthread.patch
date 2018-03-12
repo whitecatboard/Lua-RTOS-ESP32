@@ -37,11 +37,11 @@ index 8554fc2..81f2ac5 100644
  
  #if defined(_POSIX_SPORADIC_SERVER) || defined(_POSIX_THREAD_SPORADIC_SERVER)
    int sched_ss_low_priority;    /* Low scheduling priority for sporadic */
-   diff --git a/components/newlib/include/sys/types.h b/components/newlib/include/sys/types.h
-index ed33e0a..7fbbe21 100644
+diff --git a/components/newlib/include/sys/types.h b/components/newlib/include/sys/types.h
+index 446946a3..1b5099b5 100644
 --- a/components/newlib/include/sys/types.h
 +++ b/components/newlib/include/sys/types.h
-@@ -296,6 +296,8 @@ typedef long suseconds_t;
+@@ -300,6 +300,8 @@ typedef long suseconds_t;
   */
  #if defined(_POSIX_THREADS) && !defined(__CYGWIN__)
  
@@ -50,6 +50,16 @@ index ed33e0a..7fbbe21 100644
  #include <sys/sched.h>
  
  /*
+@@ -358,7 +360,8 @@ typedef struct {
+ #if defined(_POSIX_THREAD_CPUTIME)
+   int  cputime_clock_allowed;  /* see time.h */
+ #endif
+-  int  detachstate;
++  int detachstate;
++  void (*init_func)(void *);
+ #if defined(__rtems__)
+   size_t affinitysetsize;
+   cpu_set_t *affinityset;
 diff --git a/components/pthread/component.mk b/components/pthread/component.mk
 index cd69bb3..1d34434 100644
 --- a/components/pthread/component.mk

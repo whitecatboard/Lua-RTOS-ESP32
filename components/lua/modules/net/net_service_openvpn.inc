@@ -87,6 +87,7 @@ static int lopenvpn_service_start(lua_State* L) {
 	pthread_attr_init(&attr);
 
     pthread_attr_setstacksize(&attr, 8192);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
     if (pthread_create(&thread, &attr, openvpn_thread, NULL)) {
     	return 0;
