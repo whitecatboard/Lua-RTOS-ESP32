@@ -47,6 +47,9 @@
 
 #if CONFIG_LUA_RTOS_LUA_USE_BT
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/adds.h"
+
 #include "lua.h"
 #include "lauxlib.h"
 #include "modules.h"
@@ -58,6 +61,68 @@
 #include <drivers/bluetooth.h>
 
 #include "bluetooth_eddystone.inc"
+
+static void scan_cb(int callback, bt_adv_decode_t *data) {
+	lua_State *TL;
+	lua_State *L;
+	int fref;
+	char buff[63];
+
+	if (callback != LUA_NOREF) {
+	    L = pvGetLuaState();
+	    TL = lua_newthread(L);
+
+	    fref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+	    lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
+	    lua_xmove(L, TL, 1);
+
+	    lua_createtable(TL, 0, 0);
+
+		lua_pushstring(TL, "type");
+		lua_pushinteger(TL, data->frame_type);
+		lua_settable(TL, -3);
+
+		lua_pushstring(TL, "rssi");
+		lua_pushinteger(TL, data->rssi);
+		lua_settable(TL, -3);
+
+		val_to_hex_string(buff, data->raw, data->len, 0);
+		lua_pushstring(TL, "raw");
+		lua_pushstring(TL, buff);
+		lua_settable(TL, -3);
+
+		lua_pushstring(TL, "len");
+		lua_pushinteger(TL, data->len);
+		lua_settable(TL, -3);
+
+		switch (data->frame_type) {
+			case BTAdvEddystoneUID:
+				val_to_hex_string(buff, data->data.eddystone_uid.namespace, sizeof(data->data.eddystone_uid.namespace), 0);
+				lua_pushstring(TL, "namespace");
+				lua_pushstring(TL, buff);
+				lua_settable(TL, -3);
+
+				val_to_hex_string(buff, data->data.eddystone_uid.instance, sizeof(data->data.eddystone_uid.instance), 0);
+				lua_pushstring(TL, "instance");
+				lua_pushstring(TL, buff);
+				lua_settable(TL, -3);
+				break;
+
+			case BTAdvEddystoneURL:
+				lua_pushstring(TL, "url");
+				lua_pushstring(TL, data->data.eddystone_url.url);
+				lua_settable(TL, -3);
+				break;
+
+			default:
+				break;
+		}
+
+		lua_pcall(TL, 1, 0, 0);
+        luaL_unref(TL, LUA_REGISTRYINDEX, fref);
+	}
+}
 
 static int lbt_attach( lua_State* L ) {
 	driver_error_t *error;
@@ -140,7 +205,14 @@ static int lbt_advertise_stop( lua_State* L ) {
 static int lbt_scan_start( lua_State* L ) {
     driver_error_t *error;
 
-	if ((error = bt_scan_start())) {
+    // Get reference to callback function
+	luaL_checktype(L, 1, LUA_TFUNCTION);
+	lua_pushvalue(L, 1);
+
+	int callback = luaL_ref(L, LUA_REGISTRYINDEX);
+
+	// Start scanning
+	if ((error = bt_scan_start(scan_cb, callback))) {
     		return luaL_driver_error(L, error);
     }
 
@@ -214,12 +286,19 @@ static const LUA_REG_TYPE lbt_scan_map[] = {
 	{ LNILKEY,LNILVAL }
 };
 
+static const LUA_REG_TYPE lbt_frame_type[] = {
+	{ LSTRKEY( "EddystoneUID"  ), LINTVAL ( BTAdvEddystoneUID  ) },
+	{ LSTRKEY( "EddystoneURL"  ), LINTVAL ( BTAdvEddystoneURL  ) },
+	{ LNILKEY,LNILVAL }
+};
+
 static const LUA_REG_TYPE lbt_map[] = {
 	{ LSTRKEY( "attach"            ), LFUNCVAL( lbt_attach            ) },
 	{ LSTRKEY( "reset"             ), LFUNCVAL( lbt_reset             ) },
 	{ LSTRKEY( "advertise"         ), LROVAL  ( lbt_advertise_map     ) },
 	{ LSTRKEY( "scan"              ), LROVAL  ( lbt_scan_map          ) },
 	{ LSTRKEY( "mode"              ), LROVAL  ( lbt_mode              ) },
+	{ LSTRKEY( "frameType"         ), LROVAL  ( lbt_frame_type        ) },
 	{ LSTRKEY( "adv"               ), LROVAL  ( lbt_adv_type          ) },
 	{ LSTRKEY( "ownaddr"           ), LROVAL  ( lbt_own_addr_type     ) },
 	{ LSTRKEY( "peeraddr"          ), LROVAL  ( lbt_peer_addr_type    ) },

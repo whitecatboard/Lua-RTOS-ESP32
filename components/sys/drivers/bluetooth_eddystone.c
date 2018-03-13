@@ -223,9 +223,8 @@ driver_error_t *bt_add_eddystone_uid(
 	// Add beacon to beacon list
     int res = lstadd(&beacons, (void *)beacon, (int *)beacon_h);
     if (res) {
-    	free(beacon);
-
-    	return driver_error(BT_DRIVER, BT_ERR_NOT_ENOUGH_MEMORY, NULL);
+		free(beacon);
+		return driver_error(BT_DRIVER, BT_ERR_NOT_ENOUGH_MEMORY, NULL);
     }
 
 	return NULL;
@@ -362,7 +361,7 @@ driver_error_t *bt_eddystone_start(int beacon_h) {
 
     int res = lstget(&beacons, beacon_h, (void **)&beacon);
     if (res) {
-    	return driver_error(BT_DRIVER, BT_ERR_INVALID_BEACON, NULL);
+    		return driver_error(BT_DRIVER, BT_ERR_INVALID_BEACON, NULL);
     }
 
     beacon->started = 1;
@@ -375,7 +374,7 @@ driver_error_t *bt_eddystone_stop(int beacon_h) {
 
     int res = lstget(&beacons, beacon_h, (void **)&beacon);
     if (res) {
-    	return driver_error(BT_DRIVER, BT_ERR_INVALID_BEACON, NULL);
+    		return driver_error(BT_DRIVER, BT_ERR_INVALID_BEACON, NULL);
     }
 
     beacon->started = 0;
@@ -411,6 +410,44 @@ void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_decode_t *decoded) {
 			}
 		} else if (data[11] == 0x10) {
 			//URL
+
+			// Decode URL
+			int i;
+			int len = data[7] - 6;
+			char c[2] = {0x00, 0x00};
+
+			memset(decoded->data.eddystone_url.url, 0, sizeof(decoded->data.eddystone_url.url));
+
+			switch (data[13]) {
+				case HTTP_WWW:  strcat((char *)decoded->data.eddystone_url.url, "http://www.");break;
+				case HTTPS_WWW: strcat((char *)decoded->data.eddystone_url.url, "https://www.");break;
+				case HTTP:      strcat((char *)decoded->data.eddystone_url.url, "http://");break;
+				case HTTPS:     strcat((char *)decoded->data.eddystone_url.url, "https://");break;
+			}
+
+			for(i=0;i<len;i++) {
+				switch (data[14 + i]) {
+					case DOT_COM_P:  strcat((char *)decoded->data.eddystone_url.url, ".com/") ;break;
+					case DOT_ORG_P:  strcat((char *)decoded->data.eddystone_url.url, ".org/") ;break;
+					case DOT_EDU_P:  strcat((char *)decoded->data.eddystone_url.url, ".edu/") ;break;
+					case DOT_NET_P:  strcat((char *)decoded->data.eddystone_url.url, ".net/") ;break;
+					case DOT_INFO_P: strcat((char *)decoded->data.eddystone_url.url, ".info/");break;
+					case DOT_BIZ_P:  strcat((char *)decoded->data.eddystone_url.url, ".biz/") ;break;
+					case DOT_GOV_P:  strcat((char *)decoded->data.eddystone_url.url, ".gov/") ;break;
+					case DOT_COM_S:  strcat((char *)decoded->data.eddystone_url.url, ".com")  ;break;
+					case DOT_ORG_S:  strcat((char *)decoded->data.eddystone_url.url, ".org")  ;break;
+					case DOT_EDU_S:  strcat((char *)decoded->data.eddystone_url.url, ".edu")  ;break;
+					case DOT_NET_S:  strcat((char *)decoded->data.eddystone_url.url, ".net")  ;break;
+					case DOT_INFO_S: strcat((char *)decoded->data.eddystone_url.url, ".info") ;break;
+					case DOT_BIZ_S:  strcat((char *)decoded->data.eddystone_url.url, ".biz")  ;break;
+					case DOT_GOV_S:  strcat((char *)decoded->data.eddystone_url.url, ".gov")  ;break;
+
+					default:
+						c[0] = data[14 + i];
+						strcat((char *)decoded->data.eddystone_url.url, c);
+				}
+			}
+
 			decoded->frame_type = BTAdvEddystoneURL;
 		} else {
 			decoded->frame_type = BTAdvUnknown;

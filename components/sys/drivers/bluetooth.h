@@ -72,6 +72,9 @@ typedef enum {
 
 typedef struct {
 	bt_adv_frame_t frame_type;
+	int rssi;
+	uint8_t raw[31];
+	uint8_t len;
 
 	union {
 		struct {
@@ -84,6 +87,8 @@ typedef struct {
 		} eddystone_url;
 	} data;
 } bt_adv_decode_t;
+
+typedef void (*bt_scan_callback_t)(int, bt_adv_decode_t *);
 
 typedef uint8_t bt_adress_t[6];
 
@@ -101,7 +106,7 @@ driver_error_t *bt_setup(bt_mode_t mode);
 driver_error_t *bt_reset();
 driver_error_t *bt_adv_start(bte_advertise_params_t params, uint8_t *adv_data, uint16_t adv_data_len);
 driver_error_t *bt_adv_stop();
-driver_error_t *bt_scan_start();
+driver_error_t *bt_scan_start(bt_scan_callback_t cb, int cb_id);
 driver_error_t *bt_scan_stop();
 
 extern const int bt_errors;
