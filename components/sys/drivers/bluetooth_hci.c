@@ -58,15 +58,16 @@ driver_error_t *HCI_Reset() {
 	// Build hci command to reset the controller
 	pbuf = buf;
 
-    UINT8_TO_STREAM 	(pbuf, H4_TYPE_COMMAND);
-    UINT16_TO_STREAM 	(pbuf, HCI_RESET);
-    UINT8_TO_STREAM 	(pbuf, 0);
+	UINT8_TO_STREAM(pbuf, H4_TYPE_COMMAND);
+	UINT16_TO_STREAM(pbuf,HCI_RESET);
+	UINT8_TO_STREAM(pbuf, 0);
 
-    // Send command to controller
-    while (!esp_vhci_host_check_send_available()) delay(100);
-    esp_vhci_host_send_packet(buf, sizeof(buf));
+	// Send command to controller
+	while (!esp_vhci_host_check_send_available())
+		delay(100);
+	esp_vhci_host_send_packet(buf, sizeof(buf));
 
-    return NULL;
+	return NULL;
 }
 
 driver_error_t *HCI_Set_Event_Mask(uint8_t *mask) {
@@ -76,22 +77,23 @@ driver_error_t *HCI_Set_Event_Mask(uint8_t *mask) {
 
 	pbuf = buf;
 
-	UINT8_TO_STREAM 	(pbuf, H4_TYPE_COMMAND);
-    UINT16_TO_STREAM 	(pbuf, HCI_SET_EVENT_MASK);
-    UINT8_TO_STREAM  	(pbuf, HCI_SET_EVENT_MASK_SIZE);
-	UINT8_TO_STREAM 	(pbuf, mask[0]);
-	UINT8_TO_STREAM 	(pbuf, mask[1]);
-	UINT8_TO_STREAM 	(pbuf, mask[2]);
-	UINT8_TO_STREAM 	(pbuf, mask[3]);
-	UINT8_TO_STREAM 	(pbuf, mask[4]);
-	UINT8_TO_STREAM 	(pbuf, mask[5]);
-	UINT8_TO_STREAM 	(pbuf, mask[6]);
-	UINT8_TO_STREAM 	(pbuf, mask[7]);
+	UINT8_TO_STREAM(pbuf, H4_TYPE_COMMAND);
+	UINT16_TO_STREAM(pbuf,HCI_SET_EVENT_MASK);
+	UINT8_TO_STREAM(pbuf, HCI_SET_EVENT_MASK_SIZE);
+	UINT8_TO_STREAM(pbuf, mask[0]);
+	UINT8_TO_STREAM(pbuf, mask[1]);
+	UINT8_TO_STREAM(pbuf, mask[2]);
+	UINT8_TO_STREAM(pbuf, mask[3]);
+	UINT8_TO_STREAM(pbuf, mask[4]);
+	UINT8_TO_STREAM(pbuf, mask[5]);
+	UINT8_TO_STREAM(pbuf, mask[6]);
+	UINT8_TO_STREAM(pbuf, mask[7]);
 
-    while (!esp_vhci_host_check_send_available()) delay(100);
-    esp_vhci_host_send_packet(buf, sizeof(buf));
+	while (!esp_vhci_host_check_send_available())
+		delay(100);
+	esp_vhci_host_send_packet(buf, sizeof(buf));
 
-    return NULL;
+	return NULL;
 }
 
 driver_error_t *HCI_LE_Set_Event_Mask(uint8_t *mask) {
@@ -101,22 +103,23 @@ driver_error_t *HCI_LE_Set_Event_Mask(uint8_t *mask) {
 
 	pbuf = buf;
 
-	UINT8_TO_STREAM 	(pbuf, H4_TYPE_COMMAND);
-    UINT16_TO_STREAM 	(pbuf, HCI_BLE_SET_EVENT_MASK);
-    UINT8_TO_STREAM  	(pbuf, HCI_BLE_SET_EVENT_MASK_SIZE);
-	UINT8_TO_STREAM 	(pbuf, mask[0]);
-	UINT8_TO_STREAM 	(pbuf, mask[1]);
-	UINT8_TO_STREAM 	(pbuf, mask[2]);
-	UINT8_TO_STREAM 	(pbuf, mask[3]);
-	UINT8_TO_STREAM 	(pbuf, mask[4]);
-	UINT8_TO_STREAM 	(pbuf, mask[5]);
-	UINT8_TO_STREAM 	(pbuf, mask[6]);
-	UINT8_TO_STREAM 	(pbuf, mask[7]);
+	UINT8_TO_STREAM(pbuf, H4_TYPE_COMMAND);
+	UINT16_TO_STREAM(pbuf,HCI_BLE_SET_EVENT_MASK);
+	UINT8_TO_STREAM(pbuf, HCI_BLE_SET_EVENT_MASK_SIZE);
+	UINT8_TO_STREAM(pbuf, mask[0]);
+	UINT8_TO_STREAM(pbuf, mask[1]);
+	UINT8_TO_STREAM(pbuf, mask[2]);
+	UINT8_TO_STREAM(pbuf, mask[3]);
+	UINT8_TO_STREAM(pbuf, mask[4]);
+	UINT8_TO_STREAM(pbuf, mask[5]);
+	UINT8_TO_STREAM(pbuf, mask[6]);
+	UINT8_TO_STREAM(pbuf, mask[7]);
 
-    while (!esp_vhci_host_check_send_available()) delay(100);
-    esp_vhci_host_send_packet(buf, sizeof(buf));
+	while (!esp_vhci_host_check_send_available())
+		delay(100);
+	esp_vhci_host_send_packet(buf, sizeof(buf));
 
-    return NULL;
+	return NULL;
 }
 
 driver_error_t *HCI_LE_Set_Advertising_Parameters(bte_advertise_params_t params) {
@@ -139,17 +142,17 @@ driver_error_t *HCI_LE_Set_Advertising_Parameters(bte_advertise_params_t params)
 
 	pbuf = buf;
 
-	UINT8_TO_STREAM 	(pbuf, H4_TYPE_COMMAND);
-    UINT16_TO_STREAM 	(pbuf, HCI_BLE_SET_ADV_PARAMS);
-    UINT8_TO_STREAM  	(pbuf, HCI_BLE_SET_ADV_PARAMS_SIZE);
-    UINT16_TO_STREAM 	(pbuf, (uint16_t)(params.interval_min));
-    UINT16_TO_STREAM 	(pbuf, (uint16_t)(params.interval_max));
-    UINT8_TO_STREAM 	(pbuf, params.type);
-    UINT8_TO_STREAM 	(pbuf, params.own_address_type);
-    UINT8_TO_STREAM 	(pbuf, params.peer_address_type);
-    BDADDR_TO_STREAM 	(pbuf, params.peer_address);
-    UINT8_TO_STREAM 	(pbuf, params.chann_map);
-    UINT8_TO_STREAM 	(pbuf, params.filter_policy);
+	UINT8_TO_STREAM(pbuf,  H4_TYPE_COMMAND);
+	UINT16_TO_STREAM(pbuf, HCI_BLE_SET_ADV_PARAMS);
+	UINT8_TO_STREAM(pbuf,  HCI_BLE_SET_ADV_PARAMS_SIZE);
+	UINT16_TO_STREAM(pbuf, (uint16_t )(params.interval_min));
+	UINT16_TO_STREAM(pbuf, (uint16_t )(params.interval_max));
+	UINT8_TO_STREAM(pbuf,  params.type);
+	UINT8_TO_STREAM(pbuf,  params.own_address_type);
+	UINT8_TO_STREAM(pbuf,  params.peer_address_type);
+	BDADDR_TO_STREAM(pbuf, params.peer_address);
+	UINT8_TO_STREAM(pbuf,  params.chann_map);
+	UINT8_TO_STREAM(pbuf,  params.filter_policy);
 
     while (!esp_vhci_host_check_send_available()) delay(100);
     esp_vhci_host_send_packet(buf, sizeof(buf));
@@ -202,10 +205,10 @@ driver_error_t *HCI_LE_Set_Advertise_Enable(uint8_t enable) {
     // Send HCI command to enable advertising
     pbuf = buf;
 
-    UINT8_TO_STREAM 	(pbuf, H4_TYPE_COMMAND);
-    UINT16_TO_STREAM 	(pbuf, HCI_BLE_SET_ADV_ENABLE);
-    UINT8_TO_STREAM  	(pbuf, HCI_BLE_SET_ADV_ENABLE_SIZE);
-    UINT8_TO_STREAM 	(pbuf, enable);
+	UINT8_TO_STREAM(pbuf,  H4_TYPE_COMMAND);
+	UINT16_TO_STREAM(pbuf, HCI_BLE_SET_ADV_ENABLE);
+	UINT8_TO_STREAM(pbuf,  HCI_BLE_SET_ADV_ENABLE_SIZE);
+	UINT8_TO_STREAM(pbuf, enable);
 
     // Send command to controller
     while (!esp_vhci_host_check_send_available()) delay(100);

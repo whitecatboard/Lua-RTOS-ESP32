@@ -209,7 +209,6 @@
 #endif
 
 #define THREAD_LOCAL_STORAGE_POINTER_ID (CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS - 1)
-
 // External GPIO
 #define EXTERNAL_GPIO 0
 #define EXTERNAL_GPIO_PINS 0
@@ -246,6 +245,13 @@
 #if CONFIG_LUA_RTOS_LUA_USE_CURL_NET
 #if !CONFIG_MBEDTLS_DES_C
 #error "curl requires CONFIG_MBEDTLS_DES_C = 1. Please activate it with make menuconfig, enabling option in mbedTLS -> Symmetric Ciphers -> DES block cipher."
+#endif
+#endif
+
+// BT
+#if CONFIG_LUA_RTOS_LUA_USE_BT
+#if !CONFIG_BT_ENABLED
+#error "Bluetooh requires CONFIG_BT_ENABLED = 1. Please activate it with make menuconfig, enabling option in Component config -> Bluetooth."
 #endif
 #endif
 

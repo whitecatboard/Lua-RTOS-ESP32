@@ -382,7 +382,7 @@ driver_error_t *bt_eddystone_stop(int beacon_h) {
     return NULL;
 }
 
-void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_decode_t *decoded) {
+void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_frame_t *decoded) {
 	uint8_t is_eddystone = 1;
 
 	is_eddystone &= (data[0]  == 0x02); // Length	Flags. CSS v5, Part A, 1.3

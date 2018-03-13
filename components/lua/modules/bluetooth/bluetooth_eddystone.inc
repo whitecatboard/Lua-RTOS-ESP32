@@ -58,12 +58,14 @@ static uint8_t meta_created = 0;
 static int leddystone_start(lua_State* L) {
 	driver_error_t *error;
 
-	leddystone_udata_t *udata = (leddystone_udata_t *)luaL_checkudata(L, 1, "eddystone.ins");
-    luaL_argcheck(L, udata, 1, "eddystone expected");
+	leddystone_udata_t *udata = (leddystone_udata_t *) luaL_checkudata(L, 1,
+	        "eddystone.ins");
 
-    if ((error = bt_eddystone_start(udata->instance))) {
-    	return luaL_driver_error(L, error);
-    }
+	luaL_argcheck(L, udata, 1, "eddystone expected");
+
+	if ((error = bt_eddystone_start(udata->instance))) {
+		return luaL_driver_error(L, error);
+	}
 
 	return 0;
 }
@@ -71,21 +73,25 @@ static int leddystone_start(lua_State* L) {
 static int leddystone_stop(lua_State* L) {
 	driver_error_t *error;
 
-	leddystone_udata_t *udata = (leddystone_udata_t *)luaL_checkudata(L, 1, "eddystone.ins");
-    luaL_argcheck(L, udata, 1, "eddystone expected");
+	leddystone_udata_t *udata = (leddystone_udata_t *) luaL_checkudata(L, 1,
+	        "eddystone.ins");
 
-    if ((error = bt_eddystone_stop(udata->instance))) {
-    	return luaL_driver_error(L, error);
-    }
+	luaL_argcheck(L, udata, 1, "eddystone expected");
 
-    return 0;
+	if ((error = bt_eddystone_stop(udata->instance))) {
+		return luaL_driver_error(L, error);
+	}
+
+	return 0;
 }
 
 static int eddystone_ins_gc(lua_State* L) {
 	driver_error_t *error;
 
-	leddystone_udata_t *udata = (leddystone_udata_t *)luaL_checkudata(L, 1, "eddystone.ins");
-    luaL_argcheck(L, udata, 1, "eddystone expected");
+	leddystone_udata_t *udata = (leddystone_udata_t *) luaL_checkudata(L, 1,
+	        "eddystone.ins");
+
+	luaL_argcheck(L, udata, 1, "eddystone expected");
 
 	if ((error = bt_eddystone_remove(udata->instance))) {
 		return luaL_driver_error(L, error);
@@ -95,9 +101,9 @@ static int eddystone_ins_gc(lua_State* L) {
 }
 
 static const LUA_REG_TYPE eddystone_ins_map[] = {
-	{ LSTRKEY("start"		 ), LFUNCVAL(leddystone_start	  ) },
-	{ LSTRKEY("stop" 		 ), LFUNCVAL(leddystone_stop 	  ) },
-    { LSTRKEY( "__metatable" ),	LROVAL  ( eddystone_ins_map   ) },
+	{ LSTRKEY("start"        ), LFUNCVAL(leddystone_start     ) },
+	{ LSTRKEY("stop"         ), LFUNCVAL(leddystone_stop      ) },
+    { LSTRKEY( "__metatable" ),	LROVAL  ( eddystone_ins_map  ) },
 	{ LSTRKEY( "__index"     ), LROVAL  ( eddystone_ins_map   ) },
 	{ LSTRKEY( "__gc"        ), LFUNCVAL( eddystone_ins_gc    ) },
 	{ LNILKEY,LNILVAL }
@@ -107,55 +113,61 @@ static int leddystone_uid(lua_State* L) {
 	driver_error_t *error;
 
 	// Get address
-	const char *a_address = (const char *)luaL_checkstring(L, 1);
-    if (!lcheck_hex_str(a_address)) {
-    	return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT, "address must be in hex string format");
-    }
+	const char *a_address = (const char *) luaL_checkstring(L, 1);
+	if (!lcheck_hex_str(a_address)) {
+		return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT,
+		        "address must be in hex string format");
+	}
 
-    // Get TX power
-    bt_eddystone_tx_power_t tx_power = luaL_checkinteger(L, 2);
+	// Get TX power
+	bt_eddystone_tx_power_t tx_power = luaL_checkinteger(L, 2);
 
 	// Get namespace
-	const char *a_name_space = (const char *)luaL_checkstring(L, 3);
-    if (!lcheck_hex_str(a_name_space)) {
-    	return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT, "namespace must be in hex string format");
-    }
+	const char *a_name_space = (const char *) luaL_checkstring(L, 3);
+	if (!lcheck_hex_str(a_name_space)) {
+		return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT,
+		        "namespace must be in hex string format");
+	}
 
 	// Get instance
-	const char *a_instance = (const char *)luaL_checkstring(L, 4);
-    if (!lcheck_hex_str(a_instance)) {
-    	return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT, "instance must be in hex string format");
-    }
+	const char *a_instance = (const char *) luaL_checkstring(L, 4);
+	if (!lcheck_hex_str(a_instance)) {
+		return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT,
+		        "instance must be in hex string format");
+	}
 
-    if (!meta_created) {
-    	luaL_newmetarotable(L,"eddystone.ins", (void *)eddystone_ins_map);
-    	meta_created = 1;
-    }
+	if (!meta_created) {
+		luaL_newmetarotable(L, "eddystone.ins", (void *) eddystone_ins_map);
+		meta_created = 1;
+	}
 
-    // Create user data
-    leddystone_udata_t *udata = (leddystone_udata_t *)lua_newuserdata(L, sizeof(leddystone_udata_t));
-    if (!udata) {
-    	return luaL_exception(L, BT_ERR_NOT_ENOUGH_MEMORY);
-    }
+	// Create user data
+	leddystone_udata_t *udata = (leddystone_udata_t *) lua_newuserdata(L,
+	        sizeof(leddystone_udata_t));
 
-    // Add
-    bt_adress_t address;
-    bt_eddystone_namespace_t name_space;
-    bt_eddystone_instance_t instance;
+	if (!udata) {
+		return luaL_exception(L, BT_ERR_NOT_ENOUGH_MEMORY);
+	}
 
-    hex_string_to_val((char *)a_address, (char *)(address), 6, 0);
-    hex_string_to_val((char *)a_name_space, (char *)(name_space), 10, 0);
-    hex_string_to_val((char *)a_instance, (char *)(instance), 6, 0);
+	// Add
+	bt_adress_t address;
+	bt_eddystone_namespace_t name_space;
+	bt_eddystone_instance_t instance;
 
-    error = bt_add_eddystone_uid(address, tx_power, name_space, instance, &udata->instance);
-    if (error) {
-    	free(udata);
+	hex_string_to_val((char *) a_address, (char *) (address), 6, 0);
+	hex_string_to_val((char *) a_name_space, (char *) (name_space), 10, 0);
+	hex_string_to_val((char *) a_instance, (char *) (instance), 6, 0);
 
-    	return luaL_driver_error(L, error);
-    }
+	error = bt_add_eddystone_uid(address, tx_power, name_space, instance,
+	        &udata->instance);
+	if (error) {
+		free(udata);
 
-    luaL_getmetatable(L, "eddystone.ins");
-    lua_setmetatable(L, -2);
+		return luaL_driver_error(L, error);
+	}
+
+	luaL_getmetatable(L, "eddystone.ins");
+	lua_setmetatable(L, -2);
 
 	return 1;
 }
@@ -164,40 +176,43 @@ static int leddystone_url(lua_State* L) {
 	driver_error_t *error;
 
 	// Get address
-	const char *a_address = (const char *)luaL_checkstring(L, 1);
-    if (!lcheck_hex_str(a_address)) {
-    	return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT, "address must be in hex string format");
-    }
+	const char *a_address = (const char *) luaL_checkstring(L, 1);
+	if (!lcheck_hex_str(a_address)) {
+		return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT,
+		        "address must be in hex string format");
+	}
 
-    // Get TX power
-    bt_eddystone_tx_power_t tx_power = luaL_checkinteger(L, 2);
+	// Get TX power
+	bt_eddystone_tx_power_t tx_power = luaL_checkinteger(L, 2);
 
-    // Get URL
-    const char *url = (const char *)luaL_checkstring(L, 3);
+	// Get URL
+	const char *url = (const char *) luaL_checkstring(L, 3);
 
-    if (!meta_created) {
-    	luaL_newmetarotable(L,"eddystone.ins", (void *)eddystone_ins_map);
-    	meta_created = 1;
-    }
+	if (!meta_created) {
+		luaL_newmetarotable(L, "eddystone.ins", (void *) eddystone_ins_map);
+		meta_created = 1;
+	}
 
-    // Create user data
-    leddystone_udata_t *udata = (leddystone_udata_t *)lua_newuserdata(L, sizeof(leddystone_udata_t));
-    if (!udata) {
-    	return luaL_exception(L, BT_ERR_NOT_ENOUGH_MEMORY);
-    }
+	// Create user data
+	leddystone_udata_t *udata = (leddystone_udata_t *) lua_newuserdata(L,
+	        sizeof(leddystone_udata_t));
 
-    // Add
-    bt_adress_t address;
+	if (!udata) {
+		return luaL_exception(L, BT_ERR_NOT_ENOUGH_MEMORY);
+	}
 
-    hex_string_to_val((char *)a_address, (char *)(address), 6, 0);
+	// Add
+	bt_adress_t address;
 
-    error = bt_add_eddystone_url(address, tx_power, url, &udata->instance);
-    if (error) {
-    	return luaL_driver_error(L, error);
-    }
+	hex_string_to_val((char *) a_address, (char *) (address), 6, 0);
 
-    luaL_getmetatable(L, "eddystone.ins");
-    lua_setmetatable(L, -2);
+	error = bt_add_eddystone_url(address, tx_power, url, &udata->instance);
+	if (error) {
+		return luaL_driver_error(L, error);
+	}
+
+	luaL_getmetatable(L, "eddystone.ins");
+	lua_setmetatable(L, -2);
 
 	return 1;
 }
@@ -205,17 +220,6 @@ static int leddystone_url(lua_State* L) {
 static const LUA_REG_TYPE eddystone_map[] = {
 	{ LSTRKEY("uid"), LFUNCVAL(leddystone_uid) },
 	{ LSTRKEY("url"), LFUNCVAL(leddystone_url) },
-	{ LNILKEY,LNILVAL }
-};
+	{ LNILKEY, LNILVAL } };
 
 #endif
-
-
-/*
-
-b1 = bt.service.eddystone.uid("808182838485", 0xed, "3F3B51B60B88EF9949E5", "CF484185AE0B")
-b2 = bt.service.eddystone.url("808182838485", 0xed, "https://whitecatboard.org")
-b1:start()
-b2:start()
-
- */

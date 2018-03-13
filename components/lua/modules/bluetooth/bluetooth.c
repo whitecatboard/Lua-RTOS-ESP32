@@ -62,7 +62,7 @@
 
 #include "bluetooth_eddystone.inc"
 
-static void scan_cb(int callback, bt_adv_decode_t *data) {
+static void scan_cb(int callback, bt_adv_frame_t *data) {
 	lua_State *TL;
 	lua_State *L;
 	int fref;
@@ -111,7 +111,7 @@ static void scan_cb(int callback, bt_adv_decode_t *data) {
 
 			case BTAdvEddystoneURL:
 				lua_pushstring(TL, "url");
-				lua_pushstring(TL, data->data.eddystone_url.url);
+				lua_pushstring(TL, (const char *)data->data.eddystone_url.url);
 				lua_settable(TL, -3);
 				break;
 
@@ -130,16 +130,6 @@ static int lbt_attach( lua_State* L ) {
 	int mode = luaL_checkinteger( L, 1 );
 
     if ((error = bt_setup(mode))) {
-    		return luaL_driver_error(L, error);
-    }
-
-	return 0;
-}
-
-static int lbt_reset( lua_State* L ) {
-	driver_error_t *error;
-
-    if ((error = bt_reset())) {
     		return luaL_driver_error(L, error);
     }
 
@@ -294,7 +284,6 @@ static const LUA_REG_TYPE lbt_frame_type[] = {
 
 static const LUA_REG_TYPE lbt_map[] = {
 	{ LSTRKEY( "attach"            ), LFUNCVAL( lbt_attach            ) },
-	{ LSTRKEY( "reset"             ), LFUNCVAL( lbt_reset             ) },
 	{ LSTRKEY( "advertise"         ), LROVAL  ( lbt_advertise_map     ) },
 	{ LSTRKEY( "scan"              ), LROVAL  ( lbt_scan_map          ) },
 	{ LSTRKEY( "mode"              ), LROVAL  ( lbt_mode              ) },
@@ -315,10 +304,3 @@ LUALIB_API int luaopen_bt( lua_State *L ) {
 MODULE_REGISTER_ROM(BT, bt, lbt_map, luaopen_bt, 1);
 
 #endif
-
-/*
-
-bt.attach(bt.mode.BLE)
-bt.scan.start()
-
-*/

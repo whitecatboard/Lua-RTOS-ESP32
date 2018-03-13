@@ -171,6 +171,12 @@ driver_error_t *bt_eddystone_start(int beacon_h);
  */
 driver_error_t *bt_eddystone_stop(int beacon_h);
 
+driver_error_t *bt_add_eddystone_url(
+	bt_adress_t address,
+	bt_eddystone_tx_power_t tx_power,
+	const char *url,
+	int *beacon_h);
+
 /**
  * @brief Decode an eddystone beacon
  *
@@ -179,6 +185,6 @@ driver_error_t *bt_eddystone_stop(int beacon_h);
  * @param decoded Decoded beacon
  *
  */
-void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_decode_t *decoded);
+void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_frame_t *decoded);
 
 #endif /* BT_EDDYSTONE_H_ */

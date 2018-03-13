@@ -68,12 +68,26 @@ DRIVER_REGISTER_BEGIN(BT,bt,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(BT, bt, InvalidBeacon, "invalid beacon", BT_ERR_INVALID_BEACON);
 	DRIVER_REGISTER_ERROR(BT, bt, CannoStartScan, "can't start scanning", BT_ERR_CANT_START_SCAN);
 	DRIVER_REGISTER_ERROR(BT, bt, CannoStopScan, "can't stop scanning", BT_ERR_CANT_STOP_SCAN);
+	DRIVER_REGISTER_ERROR(BT, bt, CannoStartAdv, "can't start advertising", BT_ERR_CANT_START_ADV);
+	DRIVER_REGISTER_ERROR(BT, bt, CannoStopAdv, "can't start advertising", BT_ERR_CANT_STOP_ADV);
 DRIVER_REGISTER_END(BT,bt,NULL,NULL,NULL);
 
 #define evBT_SCAN_START_COMPLETE ( 1 << 0 )
 #define evBT_SCAN_START_ERROR    ( 1 << 1 )
 #define evBT_SCAN_STOP_COMPLETE  ( 1 << 2 )
 #define evBT_SCAN_STOP_ERROR     ( 1 << 3 )
+#define evBT_ADV_START_COMPLETE  ( 1 << 4 )
+#define evBT_ADV_START_ERROR     ( 1 << 5 )
+#define evBT_ADV_STOP_COMPLETE   ( 1 << 6 )
+#define evBT_ADV_STOP_ERROR      ( 1 << 7 )
+
+#define GAP_CB_CHECK(s, ok_ev, error_ev) \
+if(s != ESP_BT_STATUS_SUCCESS) { \
+	xEventGroupSetBits(bt_event, error_ev); \
+} else { \
+	xEventGroupSetBits(bt_event, ok_ev); \
+	break; \
+}
 
 // Is BT setup?
 static uint8_t setup = 0;
@@ -88,47 +102,14 @@ static TaskHandle_t task = NULL;
 bt_scan_callback_t callback;
 static int callback_id;
 
-// Scan arguments
-static esp_ble_scan_params_t scan_params = {
-    .scan_type              = BLE_SCAN_TYPE_ACTIVE,
-    .own_addr_type          = BLE_ADDR_TYPE_PUBLIC,
-    .scan_filter_policy     = BLE_SCAN_FILTER_ALLOW_ALL,
-    .scan_interval          = 0x50,
-    .scan_window            = 0x30
-};
-
 /*
  * Helper functions
  */
 
-static void controller_rcv_pkt_ready(void) {
-}
-
-static int host_rcv_pkt(uint8_t *data, uint16_t len) {
-#if 0
-	  printf ("BT (%d):", len);
-	  for (int i = 0; i < len; ++i)
-	    printf (" %02x", data[i]);
-	  printf ("\n");
-
-	if (data[0] == H4_TYPE_EVENT) {
-		uint8_t len = data[2];
-
-		printf("event\r\n");
-	}
-#endif
-	return 0;
-}
-
-static const esp_vhci_host_callback_t vhci_host_cb = {
-    controller_rcv_pkt_ready,
-    host_rcv_pkt
-};
-
 static void bt_task(void *arg) {
-	bt_adv_decode_t data;
+	bt_adv_frame_t data;
 
-	memset(&data,0,sizeof(bt_adv_decode_t));
+	memset(&data,0,sizeof(bt_adv_frame_t));
 
     for(;;) {
         xQueueReceive(queue, &data, portMAX_DELAY);
@@ -138,6 +119,16 @@ static void bt_task(void *arg) {
 
 static void gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param) {
 	switch (event) {
+		case ESP_GAP_BLE_ADV_START_COMPLETE_EVT: {
+			GAP_CB_CHECK(param->adv_start_cmpl.status, evBT_ADV_START_COMPLETE, evBT_ADV_START_ERROR);
+			break;
+		}
+
+		case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT: {
+			GAP_CB_CHECK(param->adv_stop_cmpl.status, evBT_ADV_STOP_COMPLETE, evBT_ADV_STOP_ERROR);
+			break;
+		}
+
 		case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
 			uint32_t duration = 0;
 			esp_ble_gap_start_scanning(duration);
@@ -145,19 +136,16 @@ static void gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param) 
 		}
 
 		case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT: {
-			if(param->scan_start_cmpl.status != ESP_BT_STATUS_SUCCESS) {
-				xEventGroupSetBits(bt_event, evBT_SCAN_START_ERROR);
-			} else {
-				xEventGroupSetBits(bt_event, evBT_SCAN_START_COMPLETE);
-			}
+			GAP_CB_CHECK(param->scan_start_cmpl.status, evBT_SCAN_START_COMPLETE, evBT_SCAN_START_ERROR);
 			break;
 		}
 
 	case ESP_GAP_BLE_SCAN_RESULT_EVT: {
-		esp_ble_gap_cb_param_t* scan_result = (esp_ble_gap_cb_param_t*)param;
-		switch(scan_result->scan_rst.search_evt) {
+		esp_ble_gap_cb_param_t* scan_result = param;
+
+		switch (scan_result->scan_rst.search_evt) {
 			case ESP_GAP_SEARCH_INQ_RES_EVT: {
-				bt_adv_decode_t decoded;
+				bt_adv_frame_t decoded;
 
 				decoded.rssi = scan_result->scan_rst.rssi;
 				decoded.len = scan_result->scan_rst.adv_data_len;
@@ -175,14 +163,12 @@ static void gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param) 
 
 		break;
 	}
+
 	case ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT: {
-		if(param->scan_stop_cmpl.status != ESP_BT_STATUS_SUCCESS) {
-			xEventGroupSetBits(bt_event, evBT_SCAN_STOP_ERROR);
-		} else {
-			xEventGroupSetBits(bt_event, evBT_SCAN_STOP_COMPLETE);
-		}
+		GAP_CB_CHECK(param->scan_stop_cmpl.status, evBT_SCAN_STOP_COMPLETE, evBT_SCAN_STOP_ERROR);
 		break;
 	}
+
 	default:
 		break;
 	}
@@ -205,7 +191,7 @@ driver_error_t *bt_setup(bt_mode_t mode) {
 	// Create an event group sync some driver functions with the event handler
 	bt_event = xEventGroupCreate();
 
-	queue = xQueueCreate(10, sizeof(bt_adv_decode_t));
+	queue = xQueueCreate(10, sizeof(bt_adv_frame_t));
 	if (!queue) {
 		return driver_error(BT_DRIVER, BT_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
@@ -223,17 +209,6 @@ driver_error_t *bt_setup(bt_mode_t mode) {
 	if (esp_bt_controller_enable(mode) != ESP_OK) {
 		return driver_error(BT_DRIVER, BT_ERR_CANT_INIT, NULL);
 	}
-
-	// Register callbacks
-	esp_vhci_host_register_callback(&vhci_host_cb);
-
-	// Reset controller
-	bt_reset();
-
-	// Set HCI event mask
-    uint8_t mask[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0x1f, 0x00, 0x20};
-    HCI_Set_Event_Mask(mask);
-    HCI_LE_Set_Event_Mask(mask);
 
     esp_bluedroid_init();
     esp_bluedroid_enable();
@@ -260,13 +235,15 @@ driver_error_t *bt_reset() {
 }
 
 driver_error_t *bt_adv_start(bte_advertise_params_t adv_params, uint8_t *adv_data, uint16_t adv_data_len) {
-	driver_error_t *error;
-
 	// Sanity checks
 	if (!setup) {
 		return driver_error(BT_DRIVER, BT_ERR_IS_NOT_SETUP, NULL);
 	}
 
+	// Set advertising data
+	esp_ble_gap_config_adv_data_raw(adv_data, adv_data_len);
+
+	// Start advertising
 	esp_ble_adv_params_t params;
 
 	params.adv_int_min = adv_params.interval_min;
@@ -278,28 +255,35 @@ driver_error_t *bt_adv_start(bte_advertise_params_t adv_params, uint8_t *adv_dat
 	params.channel_map = adv_params.chann_map;
 	params.adv_filter_policy = adv_params.filter_policy;
 
-	esp_ble_gap_config_adv_data_raw(adv_data, adv_data_len);
 	esp_ble_gap_start_advertising(&params);
 
-#if 0
-	if ((error = HCI_LE_Set_Advertise_Enable(0))) return error;
-	if ((error = HCI_LE_Set_Advertising_Parameters(adv_params))) return error;
-	if ((error = HCI_LE_Set_Advertising_Data(adv_data, adv_data_len))) return error;
-	if ((error = HCI_LE_Set_Advertise_Enable(1))) return error;
-#endif
+	// Wait for advertising start completion
+	EventBits_t uxBits = xEventGroupWaitBits(bt_event, evBT_ADV_START_COMPLETE | evBT_ADV_START_ERROR, pdTRUE, pdFALSE, portMAX_DELAY);
+	if (uxBits & (evBT_ADV_START_COMPLETE)) {
+		return NULL;
+	} else if (uxBits & (evBT_ADV_START_ERROR)) {
+		return driver_error(BT_DRIVER, BT_ERR_CANT_START_ADV, NULL);
+	}
 
 	return NULL;
 }
 
 driver_error_t *bt_adv_stop() {
-	driver_error_t *error;
-
 	// Sanity checks
 	if (!setup) {
 		return driver_error(BT_DRIVER, BT_ERR_IS_NOT_SETUP, NULL);
 	}
 
-	if ((error = HCI_LE_Set_Advertise_Enable(0))) return error;
+	// Stop advertising
+	esp_ble_gap_stop_advertising();
+
+	// Wait for advertising stop completion
+	EventBits_t uxBits = xEventGroupWaitBits(bt_event, evBT_ADV_STOP_COMPLETE | evBT_ADV_STOP_ERROR, pdTRUE, pdFALSE, portMAX_DELAY);
+	if (uxBits & (evBT_ADV_STOP_COMPLETE)) {
+		return NULL;
+	} else if (uxBits & (evBT_ADV_STOP_ERROR)) {
+		return driver_error(BT_DRIVER, BT_ERR_CANT_STOP_ADV, NULL);
+	}
 
 	return NULL;
 }
@@ -310,19 +294,33 @@ driver_error_t *bt_scan_start(bt_scan_callback_t cb, int cb_id) {
 		return driver_error(BT_DRIVER, BT_ERR_IS_NOT_SETUP, NULL);
 	}
 
+	// Store callback data
 	callback = cb;
 	callback_id = cb_id;
 
-	// Set scan parameters and start to scan
-	esp_ble_gap_set_scan_params(&scan_params);
+	// Set scan parameters
+	esp_ble_scan_params_t *scan_params = calloc(1, sizeof(esp_ble_scan_params_t));
+	if (!scan_params) {
+		return driver_error(BT_DRIVER, BT_ERR_NOT_ENOUGH_MEMORY, NULL);
+	}
 
+	scan_params->scan_type           = BLE_SCAN_TYPE_ACTIVE;
+	scan_params->own_addr_type       = BLE_ADDR_TYPE_PUBLIC;
+	scan_params->scan_filter_policy  = BLE_SCAN_FILTER_ALLOW_ALL;
+	scan_params->scan_interval       = 0x50;
+	scan_params->scan_window         = 0x3;
+
+	esp_ble_gap_set_scan_params(scan_params);
+
+	// Wait for scan start completion
 	EventBits_t uxBits = xEventGroupWaitBits(bt_event, evBT_SCAN_START_COMPLETE | evBT_SCAN_START_ERROR, pdTRUE, pdFALSE, portMAX_DELAY);
 	if (uxBits & (evBT_SCAN_START_COMPLETE)) {
-		return NULL;
 	} else if (uxBits & (evBT_SCAN_START_ERROR)) {
+		free(scan_params);
 		return driver_error(BT_DRIVER, BT_ERR_CANT_START_SCAN, NULL);
 	}
 
+	free(scan_params);
 	return NULL;
 }
 
@@ -332,8 +330,10 @@ driver_error_t *bt_scan_stop() {
 		return driver_error(BT_DRIVER, BT_ERR_IS_NOT_SETUP, NULL);
 	}
 
+	// Stop scan
 	esp_ble_gap_stop_scanning();
 
+	// Wait for scan stop completion
 	EventBits_t uxBits = xEventGroupWaitBits(bt_event, evBT_SCAN_STOP_COMPLETE | evBT_SCAN_STOP_ERROR, pdTRUE, pdFALSE, portMAX_DELAY);
 	if (uxBits & (evBT_SCAN_STOP_COMPLETE)) {
 		return NULL;
