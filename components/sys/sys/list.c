@@ -52,7 +52,7 @@
 #include <sys/list.h>
 #include <sys/mutex.h>
 
-void list_init(struct list *list, int first_index, uint8_t flags) {
+void lstinit(struct list *list, int first_index, uint8_t flags) {
     // Create the mutex
     mtx_init(&list->mutex, NULL, NULL, 0);
     
@@ -69,9 +69,9 @@ void list_init(struct list *list, int first_index, uint8_t flags) {
     mtx_unlock(&list->mutex);    
 }
 
-int list_add(struct list *list, void *item, int *item_index) {
-    struct list_index *index = NULL;
-    struct list_index *indexa = NULL;
+int lstadd(struct list *list, void *item, int *item_index) {
+    struct lstindex *index = NULL;
+    struct lstindex *indexa = NULL;
     int grow = 0;
         
     mtx_lock(&list->mutex);
@@ -92,7 +92,7 @@ int list_add(struct list *list, void *item, int *item_index) {
             list->indexes++;
 
             // Create a new index array for allocate new index
-            indexa = (struct list_index *)malloc(sizeof(struct list_index) * list->indexes);
+            indexa = (struct lstindex *)malloc(sizeof(struct lstindex) * list->indexes);
             if (!indexa) {
                 mtx_unlock(&list->mutex);
                 return ENOMEM;
@@ -100,7 +100,7 @@ int list_add(struct list *list, void *item, int *item_index) {
 
             if (list->index) {
                 // Copy current index array to new created
-                bcopy(list->index, indexa, sizeof(struct list_index) * (list->indexes - 1));
+                bcopy(list->index, indexa, sizeof(struct lstindex) * (list->indexes - 1));
 
                 // Free current index array
                 free(list->index);
@@ -126,7 +126,7 @@ int list_add(struct list *list, void *item, int *item_index) {
         }
     } else if (list->flags & LIST_NOT_INDEXED) {
     		// Create a new element
-    		index = (struct list_index *)calloc(1, sizeof(struct list_index));
+    		index = (struct lstindex *)calloc(1, sizeof(struct lstindex));
     		if (!index) {
     			return ENOMEM;
     		}
@@ -156,8 +156,8 @@ int list_add(struct list *list, void *item, int *item_index) {
     return 0;
 }
 
-int IRAM_ATTR list_get(struct list *list, int index, void **item) {
-    struct list_index *cindex = NULL;
+int IRAM_ATTR lstget(struct list *list, int index, void **item) {
+    struct lstindex *cindex = NULL;
     int iindex;
 
     mtx_lock(&list->mutex);
@@ -214,8 +214,8 @@ int IRAM_ATTR list_get(struct list *list, int index, void **item) {
     return 0;
 }
 
-int list_remove_compact(struct list *list, int index, int destroy, bool compact) {
-    struct list_index *cindex = NULL;
+int lstremovec(struct list *list, int index, int destroy, bool compact) {
+    struct lstindex *cindex = NULL;
     int iindex;
 
     mtx_lock(&list->mutex);
@@ -243,7 +243,7 @@ int list_remove_compact(struct list *list, int index, int destroy, bool compact)
 		}
 
 		if (compact) {
-			bcopy(&list->index[iindex+1], &list->index[iindex], sizeof(struct list_index) * (list->indexes - iindex - 1));
+			bcopy(&list->index[iindex+1], &list->index[iindex], sizeof(struct lstindex) * (list->indexes - iindex - 1));
 			iindex = list->indexes-1;
 			cindex = &list->index[iindex];
 		}
@@ -252,7 +252,7 @@ int list_remove_compact(struct list *list, int index, int destroy, bool compact)
 		cindex->deleted = 1;
 		list->free = cindex;
     } else if (list->flags & LIST_NOT_INDEXED) {
-    		struct list_index *cindex = list->index;
+    		struct lstindex *cindex = list->index;
 
     		while (cindex) {
     			if (cindex->item == (void *)index) {
@@ -287,11 +287,11 @@ int list_remove_compact(struct list *list, int index, int destroy, bool compact)
     return 0;
 }
 
-int list_remove(struct list *list, int index, int destroy) {
-    return list_remove_compact(list, index, destroy, false);
+int lstremove(struct list *list, int index, int destroy) {
+    return lstremovec(list, index, destroy, false);
 }
 
-int IRAM_ATTR list_first(struct list *list) {
+int IRAM_ATTR lstfirst(struct list *list) {
     int index;
     int res = -1;
     
@@ -315,7 +315,7 @@ int IRAM_ATTR list_first(struct list *list) {
     return res;
 }
 
-int IRAM_ATTR list_last(struct list *list) {
+int IRAM_ATTR lstlast(struct list *list) {
     int index;
     int res = -1;
 
@@ -339,7 +339,7 @@ int IRAM_ATTR list_last(struct list *list) {
     return res;
 }
 
-int IRAM_ATTR list_next(struct list *list, int index) {
+int IRAM_ATTR lstnext(struct list *list, int index) {
     int res = -1;
     int iindex;
     
@@ -363,7 +363,7 @@ int IRAM_ATTR list_next(struct list *list, int index) {
 			}
 		}
     } else if (list->flags & LIST_NOT_INDEXED) {
-    		struct list_index *cindex = NULL;
+    		struct lstindex *cindex = NULL;
 
     		cindex = list->index;
 
@@ -385,7 +385,7 @@ int IRAM_ATTR list_next(struct list *list, int index) {
     return res;
 }
 
-void list_destroy(struct list *list, int items) {
+void lstdestroy(struct list *list, int items) {
     int index;
     
     if (!list->init) return;
@@ -403,8 +403,8 @@ void list_destroy(struct list *list, int items) {
     
 		free(list->index);
     } else if (list->flags & LIST_NOT_INDEXED) {
-		struct list_index *cindex = NULL;
-		struct list_index *pindex = NULL;
+		struct lstindex *cindex = NULL;
+		struct lstindex *pindex = NULL;
 
 		cindex = list->index;
 

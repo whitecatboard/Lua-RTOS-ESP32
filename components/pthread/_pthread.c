@@ -100,10 +100,10 @@ void _pthread_init() {
 	    mtx_init(&thread_mtx, NULL, NULL, 0);
 
 	    // Init lists
-	    list_init(&active_threads,   1, LIST_NOT_INDEXED);
-	    list_init(&inactive_threads, 1, LIST_NOT_INDEXED);
+	    lstinit(&active_threads,   1, LIST_NOT_INDEXED);
+	    lstinit(&inactive_threads, 1, LIST_NOT_INDEXED);
 
-	    list_init(&key_list, 1, LIST_DEFAULT);
+	    lstinit(&key_list, 1, LIST_DEFAULT);
 
 	    inited = 1;
 	}
@@ -161,10 +161,10 @@ int _pthread_create(
     }
     
     // Init clean list
-    list_init(&threadd->clean_list, 1, LIST_DEFAULT);
+    lstinit(&threadd->clean_list, 1, LIST_DEFAULT);
 
     // Add thread to the thread list
-    res = list_add(&active_threads, (void *)threadd, NULL);
+    res = lstadd(&active_threads, (void *)threadd, NULL);
     if (res) {
         free(thread);
         return EAGAIN;
@@ -177,7 +177,7 @@ int _pthread_create(
 
     taskArgs = (struct pthreadTaskArg *)calloc(1, sizeof(struct pthreadTaskArg));
     if (!taskArgs) {
-    		list_remove(&active_threads, (int)threadd, 1);
+    		lstremove(&active_threads, (int)threadd, 1);
         return EAGAIN;
     }
 
@@ -218,7 +218,7 @@ int _pthread_create(
 
     if (res != pdPASS) {
         // Remove from thread list
-        list_remove(&active_threads,*thread, 1);
+        lstremove(&active_threads,*thread, 1);
         free(taskArgs);
         free(thread);
 
@@ -239,9 +239,9 @@ int _pthread_join(pthread_t id, void **value_ptr) {
     // Get thread
     struct pthread *thread;
 
-    if (list_get(&active_threads, id, (void **)&thread) != 0) {
+    if (lstget(&active_threads, id, (void **)&thread) != 0) {
     		// Thread not found in active threads, may be is inactive
-    		if (list_get(&inactive_threads, id, (void **)&thread) != 0) {
+    		if (lstget(&inactive_threads, id, (void **)&thread) != 0) {
     			// Thread not found
     			_pthread_unlock();
     			return ESRCH;
@@ -297,9 +297,9 @@ int _pthread_detach(pthread_t id) {
     // Get thread
     struct pthread *thread;
 
-    if (list_get(&active_threads, id, (void **)&thread) != 0) {
+    if (lstget(&active_threads, id, (void **)&thread) != 0) {
     		// Thread not found in active threads, may be is inactive
-    		if (list_get(&inactive_threads, id, (void **)&thread) != 0) {
+    		if (lstget(&inactive_threads, id, (void **)&thread) != 0) {
     			// Thread not found
     			_pthread_unlock();
     			return ESRCH;
@@ -312,7 +312,7 @@ int _pthread_detach(pthread_t id) {
 
     thread->attr.detachstate = PTHREAD_CREATE_DETACHED;
 
-    list_remove(&inactive_threads, id, 1);
+    lstremove(&inactive_threads, id, 1);
 
     _pthread_unlock();
 
@@ -326,7 +326,7 @@ void _pthread_cleanup_push(void (*routine)(void *), void *arg) {
     _pthread_lock();
 
     // Get current thread
-    if (list_get(&active_threads, pthread_self(), (void **)&thread) == 0) {
+    if (lstget(&active_threads, pthread_self(), (void **)&thread) == 0) {
     		// Create the clean structure
         clean = (struct pthread_clean *) malloc(sizeof(struct pthread_clean));
         if (!clean) {
@@ -338,7 +338,7 @@ void _pthread_cleanup_push(void (*routine)(void *), void *arg) {
         clean->args = arg;
 
         // Add to clean list
-        list_add(&thread->clean_list, clean, NULL);
+        lstadd(&thread->clean_list, clean, NULL);
     }
 
     _pthread_unlock();
@@ -351,19 +351,19 @@ void _pthread_cleanup_pop(int execute) {
     _pthread_lock();
 
     // Get current thread
-    if (list_get(&active_threads, pthread_self(), (void **)&thread) == 0) {
+    if (lstget(&active_threads, pthread_self(), (void **)&thread) == 0) {
     		// Get last element in clean list, so we must pop handlers in reverse order
     		int index;
 
-    		if ((index = list_last(&thread->clean_list)) >= 0) {
-    			if (list_get(&thread->clean_list, index, (void **)&clean) == 0) {
+    		if ((index = lstlast(&thread->clean_list)) >= 0) {
+    			if (lstget(&thread->clean_list, index, (void **)&clean) == 0) {
     				// Execute handler
     				if (clean->clean && execute) {
     					clean->clean(clean->args);
     				}
 
     				// Remove handler from list
-    				list_remove(&thread->clean_list, index, 1);
+    				lstremove(&thread->clean_list, index, 1);
     			}
     		}
     }
@@ -378,19 +378,19 @@ void _pthread_cleanup() {
     _pthread_lock();
 
     // Get current thread
-    if (list_get(&active_threads, pthread_self(), (void **)&thread) == 0) {
+    if (lstget(&active_threads, pthread_self(), (void **)&thread) == 0) {
     		// Get all elements in clean list, in reverse order
     		int index;
 
-    		while ((index = list_last(&thread->clean_list)) >= 0) {
-    			if (list_get(&thread->clean_list, index, (void **)&clean) == 0) {
+    		while ((index = lstlast(&thread->clean_list)) >= 0) {
+    			if (lstget(&thread->clean_list, index, (void **)&clean) == 0) {
     				// Execute handler
     				if (clean->clean) {
     					clean->clean(clean->args);
     				}
 
     				// Remove handler from list
-    				list_remove(&thread->clean_list, index, 1);
+    				lstremove(&thread->clean_list, index, 1);
     			}
     		}
     }
@@ -403,11 +403,11 @@ int _pthread_free(pthread_t id, int destroy) {
     struct pthread *thread = (struct pthread *)id;
 
     // Destroy clean list
-    	list_destroy(&thread->clean_list, 1);
+    	lstdestroy(&thread->clean_list, 1);
     
     // Remove thread
-    list_remove(&active_threads, id, destroy);
-    list_remove(&inactive_threads, id, destroy);
+    lstremove(&active_threads, id, destroy);
+    lstremove(&inactive_threads, id, destroy);
 
     return 0;
 }
@@ -420,7 +420,7 @@ sig_t _pthread_signal(int s, sig_t h) {
         return NULL;
     }
 
-    if (list_get(&active_threads, pthread_self(), (void **)&thread) == 0) {
+    if (lstget(&active_threads, pthread_self(), (void **)&thread) == 0) {
         // Add handler
         prev_h = thread->signals[s];
         thread->signals[s] = h;
@@ -439,7 +439,7 @@ void _pthread_exec_signal(int dst, int s) {
     // Get destination thread
     struct pthread *thread;
 
-    if (list_get(&active_threads, dst, (void **)&thread) == 0) {
+    if (lstget(&active_threads, dst, (void **)&thread) == 0) {
     		// If destination thread has a handler for the signal, execute it
 		if ((thread->signals[s] != SIG_DFL) && (thread->signals[s] != SIG_IGN)) {
 			if (thread->is_delayed && ((s == (SIGINT) || (s == SIGABRT)))) {
@@ -459,7 +459,7 @@ int _pthread_has_signal(int dst, int s) {
     // Get destination thread
     struct pthread *thread;
 
-    if (list_get(&active_threads, dst, (void **)&thread) == 0) {
+    if (lstget(&active_threads, dst, (void **)&thread) == 0) {
     		return ((thread->signals[s] != SIG_DFL) && (thread->signals[s] != SIG_IGN));
     }
 
@@ -471,7 +471,7 @@ int _pthread_sleep(uint32_t msecs) {
     int res;
 
     // Get the current thread
-    res = list_get(&active_threads, pthread_self(), (void **)&thread);
+    res = lstget(&active_threads, pthread_self(), (void **)&thread);
     if (res) {
     	// Its not a thread, simply delay task
     	vTaskDelay(msecs / portTICK_PERIOD_MS);
@@ -499,7 +499,7 @@ int _pthread_stop(pthread_t id) {
     int res;
 
     // Get thread
-    res = list_get(&active_threads, id, (void **)&thread);
+    res = lstget(&active_threads, id, (void **)&thread);
     if (res) {
         return res;
     }
@@ -515,7 +515,7 @@ int _pthread_core(pthread_t id) {
     int res;
 
     // Get thread
-    res = list_get(&active_threads, id, (void **)&thread);
+    res = lstget(&active_threads, id, (void **)&thread);
     if (res) {
         return res;
     }
@@ -528,7 +528,7 @@ int _pthread_stack(pthread_t id) {
     int res;
 
     // Get thread
-    res = list_get(&active_threads, id, (void **)&thread);
+    res = lstget(&active_threads, id, (void **)&thread);
     if (res) {
         return res;
     }
@@ -541,7 +541,7 @@ int _pthread_stack_free(pthread_t id) {
     int res;
 
     // Get thread
-    res = list_get(&active_threads, id, (void **)&thread);
+    res = lstget(&active_threads, id, (void **)&thread);
     if (res) {
         return res;
     }
@@ -554,7 +554,7 @@ int _pthread_suspend(pthread_t id) {
     int res;
 
     // Get thread
-    res = list_get(&active_threads, id, (void **)&thread);
+    res = lstget(&active_threads, id, (void **)&thread);
     if (res) {
         return res;
     }
@@ -576,7 +576,7 @@ int _pthread_resume(pthread_t id) {
     int res;
 
     // Get thread
-    res = list_get(&active_threads, id, (void **)&thread);
+    res = lstget(&active_threads, id, (void **)&thread);
     if (res) {
         return res;
     }
@@ -593,7 +593,7 @@ struct pthread *_pthread_get(pthread_t id) {
     int res;
 
     // Get the thread
-    res = list_get(&active_threads, id, (void **)&thread);
+    res = lstget(&active_threads, id, (void **)&thread);
     if (res) {
     	return NULL;
     }
@@ -664,7 +664,7 @@ void pthreadTask(void *taskArgs) {
         		thread->active = 0;
         		thread->res = ret;
 
-        		list_add(&inactive_threads, (void *)thread, NULL);
+        		lstadd(&inactive_threads, (void *)thread, NULL);
         }
     } else {
     		_pthread_free((pthread_t)thread, 1);
@@ -699,7 +699,7 @@ int pthread_setname_np(pthread_t id, const char *name) {
 	}
 
     // Get the thread
-    res = list_get(&active_threads, id, (void **)&thread);
+    res = lstget(&active_threads, id, (void **)&thread);
     if (res) {
     	return EINVAL;
     }
@@ -718,7 +718,7 @@ int pthread_getname_np(pthread_t id, char *name, size_t len) {
     int res;
 
     // Get the thread
-    res = list_get(&active_threads, id, (void **)&thread);
+    res = lstget(&active_threads, id, (void **)&thread);
     if (res) {
     	return EINVAL;
     }

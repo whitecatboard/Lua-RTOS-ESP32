@@ -98,7 +98,7 @@ static int get_listener(lua_State* L, event_userdata_t *udata, listener_data_t *
     int idx = 1;
     int listener_id = 0;
     while (idx >= 1) {
-        if (list_get(&udata->listeners, idx, (void **)&clistener)) {
+        if (lstget(&udata->listeners, idx, (void **)&clistener)) {
         	break;
         }
 
@@ -108,7 +108,7 @@ static int get_listener(lua_State* L, event_userdata_t *udata, listener_data_t *
         }
 
         // Next listener
-        idx = list_next(&udata->listeners, idx);
+        idx = lstnext(&udata->listeners, idx);
     }
 
 	// If not found, create a new listener for the current thread
@@ -134,14 +134,14 @@ static int get_listener(lua_State* L, event_userdata_t *udata, listener_data_t *
 		//Add listener data
 		int id;
 
-		if (list_add(&udata->listeners, clistener, &id)) {
+		if (lstadd(&udata->listeners, clistener, &id)) {
 			free(clistener);
 			mtx_unlock(&udata->mtx);
 			return luaL_exception(L, EVENT_ERR_NOT_ENOUGH_MEMORY);
 		}
     } else {
     	// Listener found
-        list_get(&udata->listeners, listener_id, (void **)&clistener);
+        lstget(&udata->listeners, listener_id, (void **)&clistener);
     }
 
     *listener_data = clistener;
@@ -164,7 +164,7 @@ static int levent_create( lua_State* L ) {
     mtx_init(&udata->mtx, NULL, NULL, 0);
 
     // Create the listener list
-    list_init(&udata->listeners, 1, LIST_DEFAULT);
+    lstinit(&udata->listeners, 1, LIST_DEFAULT);
 
     // Create a queue for sync this event with the termination of the
     // listeners, when using broadcast(true)
@@ -256,7 +256,7 @@ static int levent_broadcast( lua_State* L ) {
 
     while (idx >= 1) {
     	// Get queue
-        if (list_get(&udata->listeners, idx, (void **)&listener_data)) {
+        if (lstget(&udata->listeners, idx, (void **)&listener_data)) {
         	break;
         }
 
@@ -271,7 +271,7 @@ static int levent_broadcast( lua_State* L ) {
     	xQueueSend((xQueueHandle)listener_data->q, &d, portMAX_DELAY);
 
         // Next listener
-        idx = list_next(&udata->listeners, idx);
+        idx = lstnext(&udata->listeners, idx);
     }
 
     mtx_unlock(&udata->mtx);
@@ -302,21 +302,21 @@ static int levent_ins_gc (lua_State *L) {
 	if (udata) {
 	    // Destroy all listeners
 	    while (idx >= 0) {
-	        res = list_get(&udata->listeners, idx, (void **)&listener_data);
+	        res = lstget(&udata->listeners, idx, (void **)&listener_data);
 	        if (res) {
 	        	break;
 	        }
 
 	        vQueueDelete((xQueueHandle)listener_data->q);
 
-	        list_remove(&udata->listeners, idx, 1);
-	        idx = list_next(&udata->listeners, idx);
+	        lstremove(&udata->listeners, idx, 1);
+	        idx = lstnext(&udata->listeners, idx);
 	    }
 
 	    vQueueDelete((xQueueHandle)udata->q);
 
 	    mtx_destroy(&udata->mtx);
-	    list_destroy(&udata->listeners, 0);
+	    lstdestroy(&udata->listeners, 0);
 	}
 
 	return 0;

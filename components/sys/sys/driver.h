@@ -86,6 +86,7 @@
 #define CPU_DRIVER_ID      28
 #define ULP_DRIVER_ID      29
 #define ETH_DRIVER_ID  	   30
+#define BT_DRIVER_ID  	   31
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -116,6 +117,7 @@
 #define ULP_DRIVER driver_get_by_name("ulp")
 #define ETH_DRIVER driver_get_by_name("eth")
 #define SDISPLAY_DRIVER driver_get_by_name("sdisplay")
+#define BT_DRIVER driver_get_by_name("bt")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 

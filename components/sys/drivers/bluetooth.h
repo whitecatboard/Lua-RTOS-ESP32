@@ -39,46 +39,80 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS driver common functions
+ * Lua RTOS, BT driver
  *
  */
 
-#ifndef _LIST_H
-#define	_LIST_H
+#ifndef BT_H_
+#define BT_H_
+
+#include "esp_bt.h"
+#include "esp_bt_defs.h"
+#include "esp_bt_main.h"
+#include "bluetooth_hci.h"
+#include "esp_gap_ble_api.h"
 
 #include <stdint.h>
-#include <sys/mutex.h>
 
-struct list {
-    struct mtx mutex;
-    struct lstindex *index;
-    struct lstindex *free;
-    struct lstindex *last;
-    uint8_t indexes;
-    uint8_t first_index;
-    uint8_t flags;
-    uint8_t init;
-};
+#include <sys/driver.h>
 
-struct lstindex {
-    void *item;
-    uint8_t index;
-    uint8_t deleted;
-    struct lstindex *next;
-    struct lstindex *previous;
-};
+// BT modes
+typedef enum {
+	Idle = 0,
+	BLE = 1,
+	Classic = 2,
+	Dual = 3
+} bt_mode_t;
 
-#define LIST_DEFAULT 	(1 << 0)
-#define LIST_NOT_INDEXED (1 << 1)
+typedef enum {
+	BTAdvUnknown = 0,
+	BTAdvEddystoneUID = 1,
+	BTAdvEddystoneURL = 2,
+} bt_adv_frame_type_t;
 
-void lstinit(struct list *list, int first_index, uint8_t flags);
-int lstadd(struct list *list, void *item, int *item_index);
-int lstget(struct list *list, int index, void **item);
-int lstremove(struct list *list, int index, int destroy);
-int lstremoveC(struct list *list, int index, int destroy, bool compact);
-int lstfirst(struct list *list);
-int lstlast(struct list *list);
-int lstnext(struct list *list, int index);
-void lstdestroy(struct list *list, int items);
+typedef struct {
+	bt_adv_frame_type_t frame_type;
+	int rssi;
+	uint8_t raw[31];
+	uint8_t len;
 
-#endif	/* _LIST_H */
+	union {
+		struct {
+			uint8_t namespace[10];
+			uint8_t instance[6];
+		} eddystone_uid;
+
+		struct {
+			uint8_t url[100];
+		} eddystone_url;
+	} data;
+} bt_adv_frame_t;
+
+typedef void (*bt_scan_callback_t)(int, bt_adv_frame_t *);
+
+typedef uint8_t bt_adress_t[6];
+
+// BT errors
+#define BT_ERR_CANT_INIT			 	 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  0)
+#define BT_ERR_INVALID_MODE   		 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  1)
+#define BT_ERR_IS_NOT_SETUP   		 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  2)
+#define BT_ERR_NOT_ENOUGH_MEMORY	 	 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  3)
+#define BT_ERR_INVALID_ARGUMENT	 	 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  4)
+#define BT_ERR_INVALID_BEACON	 	 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  5)
+#define BT_ERR_CANT_START_SCAN	 	 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  6)
+#define BT_ERR_CANT_STOP_SCAN	 	 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  7)
+#define BT_ERR_CANT_START_ADV		 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  8)
+#define BT_ERR_CANT_STOP_ADV			 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  9)
+
+driver_error_t *bt_setup(bt_mode_t mode);
+driver_error_t *bt_adv_start(bte_advertise_params_t params, uint8_t *adv_data, uint16_t adv_data_len);
+driver_error_t *bt_adv_stop();
+driver_error_t *bt_scan_start(bt_scan_callback_t cb, int cb_id);
+driver_error_t *bt_scan_stop();
+
+extern const int bt_errors;
+extern const int bt_error_map;
+
+#include "bluetooth_eddystone.h"
+
+#endif /* BT_H_ */
