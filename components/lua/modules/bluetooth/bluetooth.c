@@ -65,7 +65,7 @@ static int lbt_attach( lua_State* L ) {
 	int mode = luaL_checkinteger( L, 1 );
 
     if ((error = bt_setup(mode))) {
-    	return luaL_driver_error(L, error);
+    		return luaL_driver_error(L, error);
     }
 
 	return 0;
@@ -75,13 +75,13 @@ static int lbt_reset( lua_State* L ) {
 	driver_error_t *error;
 
     if ((error = bt_reset())) {
-    	return luaL_driver_error(L, error);
+    		return luaL_driver_error(L, error);
     }
 
 	return 0;
 }
 
-static int lbt_advertising_start( lua_State* L ) {
+static int lbt_advertise_start( lua_State* L ) {
 	driver_error_t *error;
 	bte_advertise_params_t params;
 
@@ -95,7 +95,7 @@ static int lbt_advertising_start( lua_State* L ) {
 	const char *peer_addr = luaL_checkstring(L, 6);
 
     if (!lcheck_hex_str(peer_addr)) {
-    	return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT, "peer address must be in hex string format");
+    		return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT, "peer address must be in hex string format");
     }
 
     memset(params.peer_address, 0, 6);
@@ -106,20 +106,20 @@ static int lbt_advertising_start( lua_State* L ) {
 
 	const char *adv_data = luaL_checkstring(L, 9);
     if (!lcheck_hex_str(adv_data)) {
-    	return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT, "advertise data must be in hex string format");
+    		return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT, "advertise data must be in hex string format");
     }
 
     uint8_t *data = calloc(1, strlen(adv_data) / 2);
     if (!data) {
-    	return luaL_exception(L, BT_ERR_NOT_ENOUGH_MEMORY);
+    		return luaL_exception(L, BT_ERR_NOT_ENOUGH_MEMORY);
     }
 
     hex_string_to_val((char *)adv_data, (char *)(data), strlen(adv_data) / 2, 0);
 
     if ((error = bt_adv_start(params, data, strlen(adv_data)))) {
-    	free(data);
+    		free(data);
 
-    	return luaL_driver_error(L, error);
+    		return luaL_driver_error(L, error);
     }
 
     free(data);
@@ -127,11 +127,31 @@ static int lbt_advertising_start( lua_State* L ) {
 	return 0;
 }
 
-static int lbt_advertising_stop( lua_State* L ) {
+static int lbt_advertise_stop( lua_State* L ) {
     driver_error_t *error;
 
 	if ((error = bt_adv_stop())) {
-    	return luaL_driver_error(L, error);
+    		return luaL_driver_error(L, error);
+    }
+
+    return 0;
+}
+
+static int lbt_scan_start( lua_State* L ) {
+    driver_error_t *error;
+
+	if ((error = bt_scan_start())) {
+    		return luaL_driver_error(L, error);
+    }
+
+    return 0;
+}
+
+static int lbt_scan_stop( lua_State* L ) {
+    driver_error_t *error;
+
+	if ((error = bt_scan_stop())) {
+		return luaL_driver_error(L, error);
     }
 
     return 0;
@@ -150,8 +170,8 @@ static const LUA_REG_TYPE lbt_mode[] = {
 
 static const LUA_REG_TYPE lbt_adv_type[] = {
 	{ LSTRKEY( "ADV_IND"         	 ), LINTVAL( ADV_IND	         ) },
-	{ LSTRKEY( "ADV_DIRECT_IND_HIGH" ), LINTVAL( ADV_DIRECT_IND_HIGH ) },
-	{ LSTRKEY( "ADV_DIRECT_IND_LOW"  ), LINTVAL( ADV_DIRECT_IND_LOW  ) },
+	{ LSTRKEY( "ADV_DIRECT_IND_HIGH"  ), LINTVAL( ADV_DIRECT_IND_HIGH ) },
+	{ LSTRKEY( "ADV_DIRECT_IND_LOW"   ), LINTVAL( ADV_DIRECT_IND_LOW  ) },
 	{ LSTRKEY( "ADV_NONCONN_IND" 	 ), LINTVAL( ADV_NONCONN_IND 	 ) },
 	{ LSTRKEY( "ADV_SCAN_IND"    	 ), LINTVAL( ADV_SCAN_IND	     ) },
 };
@@ -182,11 +202,23 @@ static const LUA_REG_TYPE lbt_adv_filter_policy[] = {
 	{ LSTRKEY( "ConnWhiteScanWhite" ), LINTVAL( ConnWhiteScanWhite ) },
 };
 
+static const LUA_REG_TYPE lbt_advertise_map[] = {
+	{ LSTRKEY( "start" ), LFUNCVAL ( lbt_advertise_start ) },
+	{ LSTRKEY( "stop"  ), LFUNCVAL ( lbt_advertise_stop  ) },
+	{ LNILKEY,LNILVAL }
+};
+
+static const LUA_REG_TYPE lbt_scan_map[] = {
+	{ LSTRKEY( "start" ), LFUNCVAL ( lbt_scan_start ) },
+	{ LSTRKEY( "stop"  ), LFUNCVAL ( lbt_scan_stop  ) },
+	{ LNILKEY,LNILVAL }
+};
+
 static const LUA_REG_TYPE lbt_map[] = {
 	{ LSTRKEY( "attach"            ), LFUNCVAL( lbt_attach            ) },
 	{ LSTRKEY( "reset"             ), LFUNCVAL( lbt_reset             ) },
-	{ LSTRKEY( "advertisingStart"  ), LFUNCVAL( lbt_advertising_start ) },
-	{ LSTRKEY( "advertisingStop"   ), LFUNCVAL( lbt_advertising_stop  ) },
+	{ LSTRKEY( "advertise"         ), LROVAL  ( lbt_advertise_map     ) },
+	{ LSTRKEY( "scan"              ), LROVAL  ( lbt_scan_map          ) },
 	{ LSTRKEY( "mode"              ), LROVAL  ( lbt_mode              ) },
 	{ LSTRKEY( "adv"               ), LROVAL  ( lbt_adv_type          ) },
 	{ LSTRKEY( "ownaddr"           ), LROVAL  ( lbt_own_addr_type     ) },
@@ -204,3 +236,10 @@ LUALIB_API int luaopen_bt( lua_State *L ) {
 MODULE_REGISTER_ROM(BT, bt, lbt_map, luaopen_bt, 1);
 
 #endif
+
+/*
+
+bt.attach(bt.mode.BLE)
+bt.scan.start()
+
+*/

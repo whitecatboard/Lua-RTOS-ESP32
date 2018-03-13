@@ -67,23 +67,23 @@ static void eddystone_task(void *args) {
 	bt_eddystone_t *beacon;
 	int index;
 
-	for(;;) {
-	    index = lstfirst(&beacons);
-	    if (index == -1) {
-	    	bt_adv_stop();
-	    }
+	for (;;) {
+		index = lstfirst(&beacons);
+		if (index == -1) {
+			bt_adv_stop();
+		}
 
-	    while (index >= 0) {
-	        if (lstget(&beacons, index, (void **)&beacon) != 0) {
-	        	vTaskDelay(200 / portTICK_PERIOD_MS);
-	        	continue;
-	        }
+		while (index >= 0) {
+			if (lstget(&beacons, index, (void **) &beacon) != 0) {
+				vTaskDelay(200 / portTICK_PERIOD_MS);
+				continue;
+			}
 
-	        if (!beacon->started) {
-	        	bt_adv_stop();
-	        } else if (beacon->type == EddystoneUID) {
-	        	uint8_t adv_data[31] = {
-	        		0x02, // Length	Flags. CSS v5, Part A, 1.3
+			if (!beacon->started) {
+				bt_adv_stop();
+			} else if (beacon->type == EddystoneUID) {
+				uint8_t adv_data[31] = {
+					0x02, // Length	Flags. CSS v5, Part A, 1.3
 					0x01, // Flags data type value
 					0x06, // Flags data GENERAL_DISC_MODE 0x02 | BR_EDR_NOT_SUPPORTED 0x04
 					0x03, // Length	Complete list of 16-bit Service UUIDs. Ibid.1.1
@@ -114,12 +114,15 @@ static void eddystone_task(void *args) {
 					beacon->data.uid.instance[5], // 6-byte Instance MAC address
 					0x00, // RFU Reserved for future use, must be0x00
 					0x00  // RFU Reserved for future use, must be0x00
-	        	};
+				};
 
-	        	bt_adv_start(beacon->advParams, adv_data, sizeof(adv_data));
-	        } else if (beacon->type == EddystoneURL) {
-	        	uint8_t adv_data[28] = {
-	        		0x03, // Length of service list
+				bt_adv_start(beacon->advParams, adv_data, sizeof(adv_data));
+			} else if (beacon->type == EddystoneURL) {
+				uint8_t adv_data[31] = {
+					0x02, // Length	Flags. CSS v5, Part A, 1.3
+					0x01, // Flags data type value
+					0x06, // Flags data GENERAL_DISC_MODE 0x02 | BR_EDR_NOT_SUPPORTED 0x04
+					0x03, // Length of service list
 					0x03, // Service list
 					0xaa, // 16-bit Eddystone UUID 0xAA LSB
 					0xfe, // 16-bit Eddystone UUID 0xFE MSB
@@ -147,17 +150,17 @@ static void eddystone_task(void *args) {
 					beacon->data.url.encoded_url[14],
 					beacon->data.url.encoded_url[15],
 					beacon->data.url.encoded_url[16]
-	        	};
+				};
 
-	        	bt_adv_start(beacon->advParams, adv_data, sizeof(adv_data));
-	        }
+				bt_adv_start(beacon->advParams, adv_data, sizeof(adv_data));
+			}
 
-	        index = lstnext(&beacons, index);
+			index = lstnext(&beacons, index);
 
-	        vTaskDelay(200 / portTICK_PERIOD_MS);
-	    }
+			vTaskDelay(200 / portTICK_PERIOD_MS);
+		}
 
-	    vTaskDelay(200 / portTICK_PERIOD_MS);
+		vTaskDelay(200 / portTICK_PERIOD_MS);
 	}
 }
 
@@ -378,4 +381,41 @@ driver_error_t *bt_eddystone_stop(int beacon_h) {
     beacon->started = 0;
 
     return NULL;
+}
+
+void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_decode_t *decoded) {
+	uint8_t is_eddystone = 1;
+
+	is_eddystone &= (data[0]  == 0x02); // Length	Flags. CSS v5, Part A, 1.3
+	is_eddystone &= (data[1]  == 0x01); // Flags data type value
+	is_eddystone &= (data[2]  == 0x06); // Flags data GENERAL_DISC_MODE 0x02 | BR_EDR_NOT_SUPPORTED 0x04
+	is_eddystone &= (data[3]  == 0x03); // Length	Complete list of 16-bit Service UUIDs. Ibid.1.1
+	is_eddystone &= (data[4]  == 0x03); // Complete list of 16-bit Service UUIDs data type value
+	is_eddystone &= (data[5]  == 0xaa); // 16-bit Eddystone UUID 0xAA LSB
+	is_eddystone &= (data[6]  == 0xfe); // 16-bit Eddystone UUID 0xFE MSB
+	is_eddystone &= (data[7]  <= 23  ); // Length	Service Data. Ibid.1.11 from this point
+	is_eddystone &= (data[8]  == 0x16); // Service Data data type value
+	is_eddystone &= (data[9]  == 0xaa); // 16-bit Eddystone UUID 0xAA LSB
+	is_eddystone &= (data[10] == 0xfe); // 16-bit Eddystone UUID 0xFE MSB
+
+	if (is_eddystone) {
+		if (data[11] == 0x00) {
+			//UID
+			if ((data[29] == 0x00) && (data[30] == 0x00)) {
+				decoded->frame_type = BTAdvEddystoneUID;
+				memcpy(decoded->data.eddystone_uid.namespace, &data[13], sizeof(decoded->data.eddystone_uid.namespace));
+				memcpy(decoded->data.eddystone_uid.instance, &data[23], sizeof(decoded->data.eddystone_uid.instance));
+			} else {
+				decoded->frame_type = BTAdvUnknown;
+				memset(decoded->data.eddystone_url.url, 0, sizeof(decoded->data.eddystone_url.url));
+			}
+		} else if (data[11] == 0x10) {
+			//URL
+			decoded->frame_type = BTAdvEddystoneURL;
+		} else {
+			decoded->frame_type = BTAdvUnknown;
+		}
+	} else {
+		decoded->frame_type = BTAdvUnknown;
+	}
 }

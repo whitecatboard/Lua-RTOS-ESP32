@@ -43,6 +43,9 @@
  *
  */
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
+
 #include "sdkconfig.h"
 
 #include "bluetooth.h"
@@ -62,10 +65,29 @@ DRIVER_REGISTER_BEGIN(BT,bt,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(BT, bt, NotEnoughtMemory, "not enough memory", BT_ERR_NOT_ENOUGH_MEMORY);
 	DRIVER_REGISTER_ERROR(BT, bt, InvalidArgument, "invalid argument", BT_ERR_INVALID_ARGUMENT);
 	DRIVER_REGISTER_ERROR(BT, bt, InvalidBeacon, "invalid beacon", BT_ERR_INVALID_BEACON);
+	DRIVER_REGISTER_ERROR(BT, bt, CannoStartScan, "can't start scanning", BT_ERR_CANT_START_SCAN);
+	DRIVER_REGISTER_ERROR(BT, bt, CannoStopScan, "can't stop scanning", BT_ERR_CANT_STOP_SCAN);
 DRIVER_REGISTER_END(BT,bt,NULL,NULL,NULL);
+
+#define evBT_SCAN_START_COMPLETE ( 1 << 0 )
+#define evBT_SCAN_START_ERROR    ( 1 << 1 )
+#define evBT_SCAN_STOP_COMPLETE  ( 1 << 2 )
+#define evBT_SCAN_STOP_ERROR     ( 1 << 3 )
 
 // Is BT setup?
 static uint8_t setup = 0;
+
+// Event group to sync some functions with the bt event handler
+EventGroupHandle_t bt_event;
+
+// Scan arguments
+static esp_ble_scan_params_t scan_params = {
+    .scan_type              = BLE_SCAN_TYPE_ACTIVE,
+    .own_addr_type          = BLE_ADDR_TYPE_PUBLIC,
+    .scan_filter_policy     = BLE_SCAN_FILTER_ALLOW_ALL,
+    .scan_interval          = 0x50,
+    .scan_window            = 0x30
+};
 
 /*
  * Helper functions
@@ -95,6 +117,54 @@ static const esp_vhci_host_callback_t vhci_host_cb = {
     host_rcv_pkt
 };
 
+static void gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param) {
+	switch (event) {
+		case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
+			uint32_t duration = 0;
+			esp_ble_gap_start_scanning(duration);
+			break;
+		}
+
+		case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT: {
+			if(param->scan_start_cmpl.status != ESP_BT_STATUS_SUCCESS) {
+				xEventGroupSetBits(bt_event, evBT_SCAN_START_ERROR);
+			} else {
+				xEventGroupSetBits(bt_event, evBT_SCAN_START_COMPLETE);
+			}
+			break;
+		}
+
+	case ESP_GAP_BLE_SCAN_RESULT_EVT: {
+		esp_ble_gap_cb_param_t* scan_result = (esp_ble_gap_cb_param_t*)param;
+		switch(scan_result->scan_rst.search_evt)
+		{
+			case ESP_GAP_SEARCH_INQ_RES_EVT: {
+				bt_adv_decode_t data;
+
+				bt_eddystone_decode(scan_result->scan_rst.ble_adv, scan_result->scan_rst.adv_data_len, &data);
+				if (data.frame_type == BTAdvEddystoneUID) {
+					printf("BTAdvEddystoneUID\r\n");
+				}
+				break;
+			}
+			default:
+			break;
+		}
+
+		break;
+	}
+	case ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT: {
+		if(param->scan_stop_cmpl.status != ESP_BT_STATUS_SUCCESS) {
+			xEventGroupSetBits(bt_event, evBT_SCAN_STOP_ERROR);
+		} else {
+			xEventGroupSetBits(bt_event, evBT_SCAN_STOP_COMPLETE);
+		}
+		break;
+	}
+	default:
+		break;
+	}
+}
 
 /*
  * Operation functions
@@ -109,6 +179,8 @@ driver_error_t *bt_setup(bt_mode_t mode) {
 	if (mode > Dual) {
 		return driver_error(BT_DRIVER, BT_ERR_INVALID_MODE, NULL);
 	}
+
+	bt_event = xEventGroupCreate();
 
 	// Initialize BT controller
 	esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
@@ -129,6 +201,10 @@ driver_error_t *bt_setup(bt_mode_t mode) {
     uint8_t mask[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0x1f, 0x00, 0x20};
     HCI_Set_Event_Mask(mask);
     HCI_LE_Set_Event_Mask(mask);
+
+    esp_bluedroid_init();
+    esp_bluedroid_enable();
+	esp_ble_gap_register_callback(&gap_cb);
 
 	setup = 1;
 
@@ -175,6 +251,43 @@ driver_error_t *bt_adv_stop() {
 	}
 
 	if ((error = HCI_LE_Set_Advertise_Enable(0))) return error;
+
+	return NULL;
+}
+
+driver_error_t *bt_scan_start() {
+	// Sanity checks
+	if (!setup) {
+		return driver_error(BT_DRIVER, BT_ERR_IS_NOT_SETUP, NULL);
+	}
+
+	// Sent scan paraments and start to scan
+	esp_ble_gap_set_scan_params(&scan_params);
+
+	EventBits_t uxBits = xEventGroupWaitBits(bt_event, evBT_SCAN_START_COMPLETE | evBT_SCAN_START_ERROR, pdTRUE, pdFALSE, portMAX_DELAY);
+	if (uxBits & (evBT_SCAN_START_COMPLETE)) {
+		return NULL;
+	} else if (uxBits & (evBT_SCAN_START_ERROR)) {
+		return driver_error(BT_DRIVER, BT_ERR_CANT_START_SCAN, NULL);
+	}
+
+	return NULL;
+}
+
+driver_error_t *bt_scan_stop() {
+	// Sanity checks
+	if (!setup) {
+		return driver_error(BT_DRIVER, BT_ERR_IS_NOT_SETUP, NULL);
+	}
+
+	esp_ble_gap_stop_scanning();
+
+	EventBits_t uxBits = xEventGroupWaitBits(bt_event, evBT_SCAN_STOP_COMPLETE | evBT_SCAN_STOP_ERROR, pdTRUE, pdFALSE, portMAX_DELAY);
+	if (uxBits & (evBT_SCAN_STOP_COMPLETE)) {
+		return NULL;
+	} else if (uxBits & (evBT_SCAN_STOP_ERROR)) {
+		return driver_error(BT_DRIVER, BT_ERR_CANT_STOP_SCAN, NULL);
+	}
 
 	return NULL;
 }
