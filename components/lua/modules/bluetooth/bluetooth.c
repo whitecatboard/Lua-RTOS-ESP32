@@ -107,11 +107,27 @@ static void scan_cb(int callback, bt_adv_frame_t *data) {
 				lua_pushstring(TL, "instance");
 				lua_pushstring(TL, buff);
 				lua_settable(TL, -3);
+
+				lua_pushstring(TL, "txPower");
+				lua_pushinteger(TL, data->data.eddystone_uid.tx_power);
+				lua_settable(TL, -3);
+
+				lua_pushstring(TL, "distance");
+				lua_pushnumber(TL, data->data.eddystone_uid.distance);
+				lua_settable(TL, -3);
 				break;
 
 			case BTAdvEddystoneURL:
 				lua_pushstring(TL, "url");
 				lua_pushstring(TL, (const char *)data->data.eddystone_url.url);
+				lua_settable(TL, -3);
+
+				lua_pushstring(TL, "txPower");
+				lua_pushinteger(TL, data->data.eddystone_uid.tx_power);
+				lua_settable(TL, -3);
+
+				lua_pushstring(TL, "distance");
+				lua_pushnumber(TL, data->data.eddystone_uid.distance);
 				lua_settable(TL, -3);
 				break;
 

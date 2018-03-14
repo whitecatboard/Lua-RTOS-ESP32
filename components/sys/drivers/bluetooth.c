@@ -70,6 +70,7 @@ DRIVER_REGISTER_BEGIN(BT,bt,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(BT, bt, CannoStopScan, "can't stop scanning", BT_ERR_CANT_STOP_SCAN);
 	DRIVER_REGISTER_ERROR(BT, bt, CannoStartAdv, "can't start advertising", BT_ERR_CANT_START_ADV);
 	DRIVER_REGISTER_ERROR(BT, bt, CannoStopAdv, "can't start advertising", BT_ERR_CANT_STOP_ADV);
+	DRIVER_REGISTER_ERROR(BT, bt, InvalidTxPower, "invalid tx power", BT_ERR_INVALID_TX_POWER);
 DRIVER_REGISTER_END(BT,bt,NULL,NULL,NULL);
 
 #define evBT_SCAN_START_COMPLETE ( 1 << 0 )

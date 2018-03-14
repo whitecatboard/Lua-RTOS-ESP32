@@ -57,7 +57,7 @@ typedef enum {
 	EddystoneURL = 1
 } bt_eddystone_type_t;
 
-typedef uint8_t bt_eddystone_tx_power_t;
+typedef int8_t  bt_eddystone_tx_power_t;
 typedef uint8_t bt_eddystone_namespace_t[10];
 typedef uint8_t bt_eddystone_instance_t[6];
 

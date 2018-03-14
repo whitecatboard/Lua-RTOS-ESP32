@@ -51,6 +51,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 
 #include <sys/list.h>
 
@@ -63,6 +64,10 @@ static struct list beacons;
 /*
  * Helper functions
  */
+
+static inline float distance(int rssi, int tx_power) {
+	return (float)pow((double)10.0,  ((double)tx_power - (float)rssi) / (float)20.0) / (float)100.0;
+}
 
 static inline uint16_t little_endian_read_16(const uint8_t *buffer, uint8_t pos) {
     return ((uint16_t)buffer[pos]) | (((uint16_t)buffer[(pos)+1]) << 8);
@@ -193,6 +198,11 @@ driver_error_t *bt_add_eddystone_uid(
 	bt_eddystone_instance_t instance,
 	int *beacon_h
 ) {
+	// Sanity checks
+	if ((tx_power < -100) || (tx_power > 20)) {
+		return driver_error(BT_DRIVER, BT_ERR_INVALID_TX_POWER, NULL);
+	}
+
 	init();
 
 	// Allocate space for the beacon
@@ -418,7 +428,7 @@ void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_frame_t *frame) {
 
 	if ((ad_uuid == 0xfeaa) && (ad_sdt == 0xfeaa)) {
 		uint8_t type = data[pos++];
-		uint8_t tx_power = data[pos++];
+		int8_t  tx_power = data[pos++];
 
 		if (type == 0x00) {
 			//UID
@@ -435,6 +445,7 @@ void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_frame_t *frame) {
 
 			frame->frame_type = BTAdvEddystoneUID;
 			frame->data.eddystone_uid.tx_power = tx_power;
+			frame->data.eddystone_uid.distance = distance(frame->rssi, tx_power);
 
 			return;
 		} else if (type == 0x10) {
@@ -478,6 +489,7 @@ void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_frame_t *frame) {
 
 			frame->frame_type = BTAdvEddystoneURL;
 			frame->data.eddystone_url.tx_power = tx_power;
+			frame->data.eddystone_uid.distance = distance(frame->rssi, tx_power);
 
 			return;
 		}
