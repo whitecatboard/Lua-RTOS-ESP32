@@ -71,18 +71,21 @@ typedef enum {
 } bt_adv_frame_type_t;
 
 typedef struct {
-	bt_adv_frame_type_t frame_type;
-	int rssi;
+	int     rssi;
 	uint8_t raw[31];
 	uint8_t len;
+	uint8_t flags;
 
+	bt_adv_frame_type_t frame_type;
 	union {
 		struct {
+			uint8_t tx_power;
 			uint8_t namespace[10];
 			uint8_t instance[6];
 		} eddystone_uid;
 
 		struct {
+			uint8_t tx_power;
 			uint8_t url[100];
 		} eddystone_url;
 	} data;

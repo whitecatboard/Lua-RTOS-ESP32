@@ -105,7 +105,6 @@ static int callback_id;
 /*
  * Helper functions
  */
-
 static void bt_task(void *arg) {
 	bt_adv_frame_t data;
 
@@ -145,14 +144,17 @@ static void gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param) 
 
 		switch (scan_result->scan_rst.search_evt) {
 			case ESP_GAP_SEARCH_INQ_RES_EVT: {
-				bt_adv_frame_t decoded;
+				bt_adv_frame_t frame;
 
-				decoded.rssi = scan_result->scan_rst.rssi;
-				decoded.len = scan_result->scan_rst.adv_data_len;
-				memcpy(decoded.raw, scan_result->scan_rst.ble_adv, decoded.len);
+				// Get RSSI
+				frame.rssi = scan_result->scan_rst.rssi;
 
-				bt_eddystone_decode(scan_result->scan_rst.ble_adv, scan_result->scan_rst.adv_data_len, &decoded);
-				xQueueSend(queue, &decoded, 0);
+				// Get raw data
+				frame.len = scan_result->scan_rst.adv_data_len;
+				memcpy(frame.raw, scan_result->scan_rst.ble_adv, frame.len);
+
+				bt_eddystone_decode(scan_result->scan_rst.ble_adv, scan_result->scan_rst.adv_data_len, &frame);
+				xQueueSend(queue, &frame, 0);
 
 				break;
 			}

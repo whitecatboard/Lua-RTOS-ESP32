@@ -63,6 +63,11 @@ static struct list beacons;
 /*
  * Helper functions
  */
+
+static inline uint16_t little_endian_read_16(const uint8_t *buffer, uint8_t pos) {
+    return ((uint16_t)buffer[pos]) | (((uint16_t)buffer[(pos)+1]) << 8);
+}
+
 static void eddystone_task(void *args) {
 	bt_eddystone_t *beacon;
 	int index;
@@ -382,77 +387,101 @@ driver_error_t *bt_eddystone_stop(int beacon_h) {
     return NULL;
 }
 
-void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_frame_t *decoded) {
-	uint8_t is_eddystone = 1;
+void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_frame_t *frame) {
+	uint8_t pos;
+	uint8_t ad_len;
+	uint8_t ad_type;
+	uint16_t ad_uuid = 0;
+	uint16_t ad_sdt = 0;
 
-	is_eddystone &= (data[0]  == 0x02); // Length	Flags. CSS v5, Part A, 1.3
-	is_eddystone &= (data[1]  == 0x01); // Flags data type value
-	is_eddystone &= (data[2]  == 0x06); // Flags data GENERAL_DISC_MODE 0x02 | BR_EDR_NOT_SUPPORTED 0x04
-	is_eddystone &= (data[3]  == 0x03); // Length	Complete list of 16-bit Service UUIDs. Ibid.1.1
-	is_eddystone &= (data[4]  == 0x03); // Complete list of 16-bit Service UUIDs data type value
-	is_eddystone &= (data[5]  == 0xaa); // 16-bit Eddystone UUID 0xAA LSB
-	is_eddystone &= (data[6]  == 0xfe); // 16-bit Eddystone UUID 0xFE MSB
-	is_eddystone &= (data[7]  <= 23  ); // Length	Service Data. Ibid.1.11 from this point
-	is_eddystone &= (data[8]  == 0x16); // Service Data data type value
-	is_eddystone &= (data[9]  == 0xaa); // 16-bit Eddystone UUID 0xAA LSB
-	is_eddystone &= (data[10] == 0xfe); // 16-bit Eddystone UUID 0xFE MSB
+	pos = 0;
+	while (pos < len) {
+		ad_len  = data[pos++];
+		ad_type = data[pos++];
 
-	if (is_eddystone) {
-		if (data[11] == 0x00) {
+		if (ad_type == 0x01) {
+			// Flags
+			frame->flags = data[pos++];
+		} else if (ad_type == 0x03) {
+			// Complete List of 16-bit Service Class UUIDs
+			ad_uuid = little_endian_read_16(data, pos);
+			pos += 2;
+		} else if (ad_type == 0x16) {
+			// Service Data data type value
+			ad_sdt = little_endian_read_16(data, pos);
+			pos += 2;
+			break;
+		} else {
+			pos += ad_len;
+		}
+	}
+
+	if ((ad_uuid == 0xfeaa) && (ad_sdt == 0xfeaa)) {
+		uint8_t type = data[pos++];
+		uint8_t tx_power = data[pos++];
+
+		if (type == 0x00) {
 			//UID
-			if ((data[29] == 0x00) && (data[30] == 0x00)) {
-				decoded->frame_type = BTAdvEddystoneUID;
-				memcpy(decoded->data.eddystone_uid.namespace, &data[13], sizeof(decoded->data.eddystone_uid.namespace));
-				memcpy(decoded->data.eddystone_uid.instance, &data[23], sizeof(decoded->data.eddystone_uid.instance));
-			} else {
-				decoded->frame_type = BTAdvUnknown;
-				memset(decoded->data.eddystone_url.url, 0, sizeof(decoded->data.eddystone_url.url));
-			}
-		} else if (data[11] == 0x10) {
-			//URL
+			memcpy(frame->data.eddystone_uid.namespace, &data[pos], sizeof(frame->data.eddystone_uid.namespace));
+			pos += sizeof(frame->data.eddystone_uid.namespace);
 
+			memcpy(frame->data.eddystone_uid.instance, &data[pos], sizeof(frame->data.eddystone_uid.instance));
+			pos += sizeof(frame->data.eddystone_uid.instance);
+
+			if ((data[pos] != 0x00) || (data[pos +1 ] != 0x00)) {
+				frame->frame_type = BTAdvUnknown;
+				return;
+			}
+
+			frame->frame_type = BTAdvEddystoneUID;
+			frame->data.eddystone_uid.tx_power = tx_power;
+
+			return;
+		} else if (type == 0x10) {
+			// URL
 			// Decode URL
 			int i;
-			int len = data[7] - 6;
+			int len = ad_len - 6;
 			char c[2] = {0x00, 0x00};
 
-			memset(decoded->data.eddystone_url.url, 0, sizeof(decoded->data.eddystone_url.url));
+			memset(frame->data.eddystone_url.url, 0, sizeof(frame->data.eddystone_url.url));
 
-			switch (data[13]) {
-				case HTTP_WWW:  strcat((char *)decoded->data.eddystone_url.url, "http://www.");break;
-				case HTTPS_WWW: strcat((char *)decoded->data.eddystone_url.url, "https://www.");break;
-				case HTTP:      strcat((char *)decoded->data.eddystone_url.url, "http://");break;
-				case HTTPS:     strcat((char *)decoded->data.eddystone_url.url, "https://");break;
+			switch (data[pos]) {
+				case HTTP_WWW:  strcat((char *)frame->data.eddystone_url.url, "http://www.");break;
+				case HTTPS_WWW: strcat((char *)frame->data.eddystone_url.url, "https://www.");break;
+				case HTTP:      strcat((char *)frame->data.eddystone_url.url, "http://");break;
+				case HTTPS:     strcat((char *)frame->data.eddystone_url.url, "https://");break;
 			}
 
 			for(i=0;i<len;i++) {
-				switch (data[14 + i]) {
-					case DOT_COM_P:  strcat((char *)decoded->data.eddystone_url.url, ".com/") ;break;
-					case DOT_ORG_P:  strcat((char *)decoded->data.eddystone_url.url, ".org/") ;break;
-					case DOT_EDU_P:  strcat((char *)decoded->data.eddystone_url.url, ".edu/") ;break;
-					case DOT_NET_P:  strcat((char *)decoded->data.eddystone_url.url, ".net/") ;break;
-					case DOT_INFO_P: strcat((char *)decoded->data.eddystone_url.url, ".info/");break;
-					case DOT_BIZ_P:  strcat((char *)decoded->data.eddystone_url.url, ".biz/") ;break;
-					case DOT_GOV_P:  strcat((char *)decoded->data.eddystone_url.url, ".gov/") ;break;
-					case DOT_COM_S:  strcat((char *)decoded->data.eddystone_url.url, ".com")  ;break;
-					case DOT_ORG_S:  strcat((char *)decoded->data.eddystone_url.url, ".org")  ;break;
-					case DOT_EDU_S:  strcat((char *)decoded->data.eddystone_url.url, ".edu")  ;break;
-					case DOT_NET_S:  strcat((char *)decoded->data.eddystone_url.url, ".net")  ;break;
-					case DOT_INFO_S: strcat((char *)decoded->data.eddystone_url.url, ".info") ;break;
-					case DOT_BIZ_S:  strcat((char *)decoded->data.eddystone_url.url, ".biz")  ;break;
-					case DOT_GOV_S:  strcat((char *)decoded->data.eddystone_url.url, ".gov")  ;break;
+				switch (data[++pos]) {
+					case DOT_COM_P:  strcat((char *)frame->data.eddystone_url.url, ".com/") ;break;
+					case DOT_ORG_P:  strcat((char *)frame->data.eddystone_url.url, ".org/") ;break;
+					case DOT_EDU_P:  strcat((char *)frame->data.eddystone_url.url, ".edu/") ;break;
+					case DOT_NET_P:  strcat((char *)frame->data.eddystone_url.url, ".net/") ;break;
+					case DOT_INFO_P: strcat((char *)frame->data.eddystone_url.url, ".info/");break;
+					case DOT_BIZ_P:  strcat((char *)frame->data.eddystone_url.url, ".biz/") ;break;
+					case DOT_GOV_P:  strcat((char *)frame->data.eddystone_url.url, ".gov/") ;break;
+					case DOT_COM_S:  strcat((char *)frame->data.eddystone_url.url, ".com")  ;break;
+					case DOT_ORG_S:  strcat((char *)frame->data.eddystone_url.url, ".org")  ;break;
+					case DOT_EDU_S:  strcat((char *)frame->data.eddystone_url.url, ".edu")  ;break;
+					case DOT_NET_S:  strcat((char *)frame->data.eddystone_url.url, ".net")  ;break;
+					case DOT_INFO_S: strcat((char *)frame->data.eddystone_url.url, ".info") ;break;
+					case DOT_BIZ_S:  strcat((char *)frame->data.eddystone_url.url, ".biz")  ;break;
+					case DOT_GOV_S:  strcat((char *)frame->data.eddystone_url.url, ".gov")  ;break;
 
 					default:
-						c[0] = data[14 + i];
-						strcat((char *)decoded->data.eddystone_url.url, c);
+						c[0] = data[pos];
+						strcat((char *)frame->data.eddystone_url.url, c);
 				}
 			}
 
-			decoded->frame_type = BTAdvEddystoneURL;
-		} else {
-			decoded->frame_type = BTAdvUnknown;
+			frame->frame_type = BTAdvEddystoneURL;
+			frame->data.eddystone_url.tx_power = tx_power;
+
+			return;
 		}
-	} else {
-		decoded->frame_type = BTAdvUnknown;
 	}
+
+	frame->frame_type = BTAdvUnknown;
 }
