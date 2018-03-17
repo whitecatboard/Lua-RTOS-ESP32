@@ -371,15 +371,15 @@ static int lthread_list(lua_State *L) {
 
 	if (!table) {
 #ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
-		printf("-----------------------------------------------------------------------------------------------\n");
-		printf("     |        |                  |        |        CPU        |            STACK               \n");
-		printf("THID | TYPE   | NAME             | STATUS | CORE   PRIO     %% |   SIZE     FREE     USED       \n");
-		printf("-----------------------------------------------------------------------------------------------\n");
+		printf("-----------------------------------------------------------------------------------------------------\n");
+		printf("           |        |                  |        |        CPU        |            STACK               \n");
+		printf("THID       | TYPE   | NAME             | STATUS | CORE   PRIO     %% |   SIZE     FREE     USED      \n");
+		printf("-----------------------------------------------------------------------------------------------------\n");
 #else
-		printf("-----------------------------------------------------------------------------------------\n");
-		printf("     |        |                  |        |      |      |            STACK               \n");
-		printf("THID | TYPE   | NAME             | STATUS | CORE | PRIO |   SIZE     FREE     USED       \n");
-		printf("-----------------------------------------------------------------------------------------\n");
+		printf("-----------------------------------------------------------------------------------------------\n");
+		printf("           |        |                  |        |      |      |            STACK               \n");
+		printf("THID       | TYPE   | NAME             | STATUS | CORE | PRIO |   SIZE     FREE     USED       \n");
+		printf("-----------------------------------------------------------------------------------------------\n");
 #endif
 	} else {
 		lua_newtable(L);
@@ -412,9 +412,9 @@ static int lthread_list(lua_State *L) {
 		if (!table) {
 			printf(
 #ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
-					"%4d   %-6s   %-16s   %-6s   % 4d   % 4d   % 3d   % 6d   % 6d   % 6d (% 3d%%)   \n",
+					"%10d   %-6s   %-16s   %-6s   % 4d   % 4d   % 3d   % 6d   % 6d   % 6d (% 3d%%)   \n",
 #else
-					"%4d   %-6s   %-16s   %-6s   % 4d   % 4d   % 6d   % 6d   % 6d (% 3d%%)   \n",
+					"%10d   %-6s   %-16s   %-6s   % 4d   % 4d   % 6d   % 6d   % 6d (% 3d%%)   \n",
 #endif
 					cinfo->thid,
 					type,

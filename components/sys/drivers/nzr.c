@@ -70,7 +70,7 @@ struct list nzr_list;
  */
 void nzr_init() {
 	// Init  list
-    list_init(&nzr_list, 0, LIST_DEFAULT);
+    lstinit(&nzr_list, 0, LIST_DEFAULT);
 }
 
 driver_error_t *nzr_setup(nzr_timing_t *timing, uint8_t gpio, uint32_t *unit) {
@@ -91,7 +91,7 @@ driver_error_t *nzr_setup(nzr_timing_t *timing, uint8_t gpio, uint32_t *unit) {
 	instance->gpio = gpio;
 
 	// Add instance
-	if (list_add(&nzr_list, instance, (int *)unit)) {
+	if (lstadd(&nzr_list, instance, (int *)unit)) {
 		free(instance);
 
 		return driver_error(NZR_DRIVER, NZR_ERR_NOT_ENOUGH_MEMORY, NULL);
@@ -100,7 +100,7 @@ driver_error_t *nzr_setup(nzr_timing_t *timing, uint8_t gpio, uint32_t *unit) {
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     // Lock the GPIO
     if ((lock_error = driver_lock(NZR_DRIVER, *unit, GPIO_DRIVER, gpio, DRIVER_ALL_FLAGS, NULL))) {
-    	list_remove(&nzr_list, *unit, 1);
+    	lstremove(&nzr_list, *unit, 1);
     	// Revoked lock on pin
     	return driver_lock_error(NZR_DRIVER, lock_error);
     }
@@ -124,7 +124,7 @@ driver_error_t *nzr_send(uint32_t unit, uint8_t *data, uint32_t bits) {
 	uint32_t c, s, bit;
 
 	// Get instance
-    if (list_get(&nzr_list, (int)unit, (void **)&instance)) {
+    if (lstget(&nzr_list, (int)unit, (void **)&instance)) {
 		return driver_error(NZR_DRIVER, NRZ_ERR_INVALID_UNIT, NULL);
     }
 

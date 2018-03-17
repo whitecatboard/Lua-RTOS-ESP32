@@ -64,13 +64,17 @@
 #define CONFIG_LUA_RTOS_USE_SPIFFS 0
 #endif
 
+#ifndef CONFIG_LUA_RTOS_USE_SPIFFS
+#define CONFIG_LUA_RTOS_USE_SPIFFS 0
+#endif
+
 #ifndef CONFIG_LUA_RTOS_USE_SSH_SERVER
 #define CONFIG_LUA_RTOS_USE_SSH_SERVER 0
 #endif
 
 #define VFS_COUNT_IDF 3
 #define VFS_COUNT_FAT (CONFIG_SD_CARD_MMC + CONFIG_SD_CARD_SPI + 2)
-#define VFS_COUNT_SPIFFS (CONFIG_LUA_RTOS_USE_SPIFFS + 1)
+#define VFS_COUNT_SPIFFS CONFIG_LUA_RTOS_USE_SPIFFS
 #define VFS_COUNT_TTY 1
 #define VFS_COUNT_URANDOM CONFIG_LUA_RTOS_USE_SSH_SERVER
 #define VFS_COUNT_PTY CONFIG_LUA_RTOS_USE_SSH_SERVER
@@ -205,7 +209,6 @@
 #endif
 
 #define THREAD_LOCAL_STORAGE_POINTER_ID (CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS - 1)
-
 // External GPIO
 #define EXTERNAL_GPIO 0
 #define EXTERNAL_GPIO_PINS 0
@@ -242,6 +245,13 @@
 #if CONFIG_LUA_RTOS_LUA_USE_CURL_NET
 #if !CONFIG_MBEDTLS_DES_C
 #error "curl requires CONFIG_MBEDTLS_DES_C = 1. Please activate it with make menuconfig, enabling option in mbedTLS -> Symmetric Ciphers -> DES block cipher."
+#endif
+#endif
+
+// BT
+#if CONFIG_LUA_RTOS_LUA_USE_BT
+#if !CONFIG_BT_ENABLED
+#error "Bluetooh requires CONFIG_BT_ENABLED = 1. Please activate it with make menuconfig, enabling option in Component config -> Bluetooth."
 #endif
 #endif
 

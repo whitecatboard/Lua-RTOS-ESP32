@@ -104,23 +104,23 @@ DRIVER_REGISTER_END(ADC,adc,NULL,_adc_init,NULL);
  */
 
 static void _adc_init() {
-    list_init(&channels, 1, LIST_DEFAULT);
+    lstinit(&channels, 1, LIST_DEFAULT);
 }
 
 static adc_chann_t *get_channel(int8_t unit, int8_t channel, int *item_index) {
 	adc_chann_t *chan;
 	int index;
 
-    index = list_first(&channels);
+    index = lstfirst(&channels);
     while (index >= 0) {
-        list_get(&channels, index, (void **)&chan);
+        lstget(&channels, index, (void **)&chan);
 
         if ((chan->unit == unit) && (chan->channel == channel)) {
         	*item_index = index;
         	return chan;
         }
 
-        index = list_next(&channels, index);
+        index = lstnext(&channels, index);
     }
 
     return NULL;
@@ -196,7 +196,7 @@ driver_error_t *adc_setup(int8_t unit, int8_t channel, int16_t devid, int16_t vr
 	// At this point the channel is configured without errors
 	if (!index) {
 		// Store channel in channel list
-		if (list_add(&channels, chan, &index)) {
+		if (lstadd(&channels, chan, &index)) {
 			free(chan);
 			return driver_error(ADC_DRIVER, ADC_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
@@ -212,7 +212,7 @@ driver_error_t *adc_read(adc_channel_h_t *h, int *raw, double *mvolts) {
 	adc_chann_t *chan;
 
 	// Get channel
-	if (list_get(&channels, (int)*h, (void **)&chan)) {
+	if (lstget(&channels, (int)*h, (void **)&chan)) {
 		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
 	}
 
@@ -227,7 +227,7 @@ driver_error_t *adc_get_channel(adc_channel_h_t *h, adc_chann_t **chan) {
 	adc_chann_t *channel;
 
     // Get channel
-	if (list_get(&channels, (int)*h, (void **)&channel)) {
+	if (lstget(&channels, (int)*h, (void **)&channel)) {
 		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_CHANNEL, NULL);
 	}
 

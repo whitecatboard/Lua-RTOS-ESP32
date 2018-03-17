@@ -62,10 +62,10 @@ int pthread_key_create(pthread_key_t *k, void (*destructor)(void*)) {
     // Init key
     key->destructor = destructor;
     
-    list_init(&key->specific, 1, LIST_DEFAULT);
+    lstinit(&key->specific, 1, LIST_DEFAULT);
     
     // Add key to key list
-    res = list_add(&key_list, (void *)key, (int*)k);
+    res = lstadd(&key_list, (void *)key, (int*)k);
     if (res) {
         free(key);
         return res;
@@ -82,7 +82,7 @@ int pthread_setspecific(pthread_key_t k, const void *value) {
 	int index;
 
     // Get key
-    res = list_get(&key_list, k, (void **)&key);
+    res = lstget(&key_list, k, (void **)&key);
     if (res) {
         return res;
     }
@@ -97,20 +97,20 @@ int pthread_setspecific(pthread_key_t k, const void *value) {
         specific->thread = pthread_self();
         specific->value = value;
 
-        list_add(&key->specific, (void **)specific, &index);
+        lstadd(&key->specific, (void **)specific, &index);
     } else {
         thread = pthread_self();
 
-        index = list_first(&key->specific);
+        index = lstfirst(&key->specific);
         while (index >= 0) {
-            list_get(&key->specific, index, (void **)&specific);
+            lstget(&key->specific, index, (void **)&specific);
 
             if (specific->thread == thread) {
-            	list_remove(&key->specific, k, 1);
+            	lstremove(&key->specific, k, 1);
             	break;
             }
 
-            index = list_next(&key->specific, index);
+            index = lstnext(&key->specific, index);
         }
     }
 
@@ -125,7 +125,7 @@ void *pthread_getspecific(pthread_key_t k) {
     int index;
 
     // Get key
-    res = list_get(&key_list, k, (void **)&key);
+    res = lstget(&key_list, k, (void **)&key);
     if (res) {
         return NULL;
     }
@@ -133,15 +133,15 @@ void *pthread_getspecific(pthread_key_t k) {
     // Get specific value
     thread = pthread_self();
 
-    index = list_first(&key->specific);
+    index = lstfirst(&key->specific);
     while (index >= 0) {
-        list_get(&key->specific, index, (void **)&specific);
+        lstget(&key->specific, index, (void **)&specific);
                 
         if (specific->thread == thread) {
             return (void *)specific->value;
         }
         
-        index = list_next(&key->specific, index);
+        index = lstnext(&key->specific, index);
     }
     
     return NULL;
@@ -152,12 +152,12 @@ int pthread_key_delete(pthread_key_t k) {
     int res;
 
     // Get key
-    res = list_get(&key_list, k, (void **)&key);
+    res = lstget(&key_list, k, (void **)&key);
     if (res) {
         return res;
     }
     
-    list_remove(&key_list, k, 1);
+    lstremove(&key_list, k, 1);
 
     return 0;
 }
