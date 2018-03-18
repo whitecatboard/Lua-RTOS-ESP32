@@ -43,10 +43,13 @@
  *
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_BT_ENABLED
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "sdkconfig.h"
 #include "bluetooth.h"
 
 #include <stdint.h>
@@ -497,3 +500,5 @@ void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_frame_t *frame) {
 
 	frame->frame_type = BTAdvUnknown;
 }
+
+#endif

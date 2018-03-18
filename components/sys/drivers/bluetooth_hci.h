@@ -43,6 +43,10 @@
  *
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_BT_ENABLED
+
 #ifndef BT_HCI_H_
 #define BT_HCI_H_
 
@@ -162,3 +166,5 @@ driver_error_t *HCI_LE_Set_Advertising_Data(uint8_t *adv_data, uint16_t adv_data
 driver_error_t *HCI_LE_Set_Advertise_Enable(uint8_t enable);
 
 #endif /* BT_HCI_H_ */
+
+#endif

@@ -44,6 +44,9 @@
  */
 
 #include "sdkconfig.h"
+
+#if CONFIG_BT_ENABLED
+
 #include "bluetooth.h"
 
 #include <stdint.h>
@@ -216,3 +219,5 @@ driver_error_t *HCI_LE_Set_Advertise_Enable(uint8_t enable) {
 
     return NULL;
 }
+
+#endif

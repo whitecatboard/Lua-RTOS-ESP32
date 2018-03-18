@@ -43,6 +43,10 @@
  *
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_BT_ENABLED
+
 #ifndef BT_H_
 #define BT_H_
 
@@ -122,3 +126,5 @@ extern const int bt_error_map;
 #include "bluetooth_eddystone.h"
 
 #endif /* BT_H_ */
+
+#endif

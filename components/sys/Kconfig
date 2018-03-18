@@ -1097,10 +1097,6 @@ menu "Lua RTOS"
             config LUA_RTOS_LUA_USE__G
                bool "Include base module in build"
                default y
-   
-            config LUA_RTOS_LUA_USE_BT
-               bool "Include bt module in build"
-               default y
 
             config LUA_RTOS_LUA_USE_OS
                bool "Include os module in build"
@@ -1142,6 +1138,10 @@ menu "Lua RTOS"
             config LUA_RTOS_LUA_USE_ADC
                bool "Include adc module in build"
                default y   
+      
+            config LUA_RTOS_LUA_USE_BT
+               bool "Include bluetooh module in build"
+               default y
       
             config LUA_RTOS_LUA_USE_CAN
                bool "Include CAN module in build"

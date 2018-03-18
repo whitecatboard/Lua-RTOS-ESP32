@@ -43,11 +43,13 @@
  *
  */
 
+#include "sdkconfig.h"
+
+#if CONFIG_BT_ENABLED
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "freertos/queue.h"
-
-#include "sdkconfig.h"
 
 #include "bluetooth.h"
 #include "esp_bt.h"
@@ -346,3 +348,5 @@ driver_error_t *bt_scan_stop() {
 
 	return NULL;
 }
+
+#endif

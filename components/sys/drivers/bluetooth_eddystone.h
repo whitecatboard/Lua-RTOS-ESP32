@@ -46,6 +46,10 @@
 #ifndef BT_EDDYSTONE_H_
 #define BT_EDDYSTONE_H_
 
+#include "sdkconfig.h"
+
+#if CONFIG_BT_ENABLED
+
 #include "bluetooth.h"
 
 #include <stdint.h>
@@ -188,3 +192,5 @@ driver_error_t *bt_add_eddystone_url(
 void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_frame_t *decoded);
 
 #endif /* BT_EDDYSTONE_H_ */
+
+#endif
