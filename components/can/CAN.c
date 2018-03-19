@@ -128,16 +128,16 @@ static void CAN_read_frame(){
 
     }
 
-    //send frame to input queue
-    if (xQueueSendFromISR(CAN_cfg.rx_queue,&__frame,0) == errQUEUE_FULL) {
-    		CAN_stat.sw_overruns++;
-    }
-
     //Let the hardware know the frame has been read.
     MODULE_CAN->CMR.B.RRB=1;
 
 	CAN_stat.rx.packets++;
-	CAN_stat.rx.bytes += __frame.FIR.B.DLC;
+	CAN_stat.rx.bytes += __byte_i;
+
+    //send frame to input queue
+    if (xQueueSendFromISR(CAN_cfg.rx_queue,&__frame,0) == errQUEUE_FULL) {
+    		CAN_stat.sw_overruns++;
+    }
 }
 
 int CAN_write_frame(const CAN_frame_t* p_frame){

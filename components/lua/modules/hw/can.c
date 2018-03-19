@@ -70,7 +70,7 @@ static int lcan_attach(lua_State* L) {
 
 	int id = luaL_checkinteger(L, 1);
 	uint32_t speed = luaL_checkinteger(L, 2);
-	uint16_t rx_size = luaL_optinteger(L, 3, 100);
+	uint16_t rx_size = luaL_optinteger(L, 3, 200);
 
     if ((error = can_setup(id, speed, rx_size))) {
     	return luaL_driver_error(L, error);
