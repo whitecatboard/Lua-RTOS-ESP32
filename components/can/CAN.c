@@ -132,7 +132,7 @@ static void CAN_read_frame(){
     MODULE_CAN->CMR.B.RRB=1;
 
 	CAN_stat.rx.packets++;
-	CAN_stat.rx.bytes += __byte_i;
+	CAN_stat.rx.bytes += __frame.FIR.B.DLC;
 
     //send frame to input queue
     if (xQueueSendFromISR(CAN_cfg.rx_queue,&__frame,0) == errQUEUE_FULL) {
