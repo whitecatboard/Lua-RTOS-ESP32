@@ -681,7 +681,7 @@ void spi_ll_set_speed(int deviceid, uint32_t speed) {
 	spi_create();
 
 	// If SPI unit PIN map are not the native pins the max speed must be 26 Mhz
-	if (!spi_use_native_pins(unit)) {
+	if ((speed > 26000000) && (!spi_use_native_pins(unit))) {
 		speed = 26000000;
 	}
 
