@@ -205,52 +205,57 @@ static uint32_t spi_set_clock(int fapb, int hz, int duty_cycle, uint32_t *eff_cl
     int pre, n, h, l;
 
     //In hw, n, h and l are 1-64, pre is 1-8K. Value written to register is one lower than used value.
-    if (hz>((fapb/4)*3)) {
+    if (hz > ((fapb / 4) * 3)) {
         //Using Fapb directly will give us the best result here.
-    	clock.regL = 0;
-    	clock.regH = 0;
-    	clock.regN = 0;
-    	clock.regPre = 0;
-    	clock.regEQU = 1;
+        clock.regL = 0;
+        clock.regH = 0;
+        clock.regN = 0;
+        clock.regPre = 0;
+        clock.regEQU = 1;
 
-    	if (eff_clk) *eff_clk=fapb;
+        if (eff_clk)
+            *eff_clk = fapb;
     } else {
         //For best duty cycle resolution, we want n to be as close to 32 as possible, but
         //we also need a pre/n combo that gets us as close as possible to the intended freq.
         //To do this, we bruteforce n and calculate the best pre to go along with that.
         //If there's a choice between pre/n combos that give the same result, use the one
         //with the higher n.
-        int bestn=-1;
-        int bestpre=-1;
-        int besterr=0;
+        int bestn = -1;
+        int bestpre = -1;
+        int besterr = 0;
         int errval;
-        for (n=1; n<=64; n++) {
+        for (n = 1; n <= 64; n++) {
             //Effectively, this does pre=round((fapb/n)/hz).
-            pre=((fapb/n)+(hz/2))/hz;
-            if (pre<=0) pre=1;
-            if (pre>8192) pre=8192;
-            errval=abs(spi_freq_for_pre_n(fapb, pre, n)-hz);
-            if (bestn==-1 || errval<=besterr) {
-                besterr=errval;
-                bestn=n;
-                bestpre=pre;
+            pre = ((fapb / n) + (hz / 2)) / hz;
+            if (pre <= 0)
+                pre = 1;
+            if (pre > 8192)
+                pre = 8192;
+            errval = abs(spi_freq_for_pre_n(fapb, pre, n) - hz);
+            if (bestn == -1 || errval <= besterr) {
+                besterr = errval;
+                bestn = n;
+                bestpre = pre;
             }
         }
 
-        n=bestn;
-        pre=bestpre;
-        l=n;
+        n = bestn;
+        pre = bestpre;
+        l = n;
         //This effectively does round((duty_cycle*n)/256)
-        h=(duty_cycle*n+127)/256;
-        if (h<=0) h=1;
+        h = (duty_cycle * n + 127) / 256;
+        if (h <= 0)
+            h = 1;
 
-    	clock.regL = l-1;
-    	clock.regH = h-1;
-    	clock.regN = n-1;
-    	clock.regPre = pre-1;
-    	clock.regEQU = 0;
+        clock.regL = l - 1;
+        clock.regH = h - 1;
+        clock.regN = n - 1;
+        clock.regPre = pre - 1;
+        clock.regEQU = 0;
 
-    	if (eff_clk) *eff_clk=spi_freq_for_pre_n(fapb, pre, n);
+        if (eff_clk)
+            *eff_clk = spi_freq_for_pre_n(fapb, pre, n);
     }
 
     return clock.regValue;
@@ -428,30 +433,30 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 	}
 
 	if (flags & SPI_FLAG_NO_DMA) {
-		if (flags & SPI_FLAG_READ) {
-		    if (spi_bus[spi_idx(unit)].miso == SPI_DEFAULT_MISO(unit)) {
-		    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[spi_idx(unit)].miso], PIN_FUNC_SPI);
-		    } else {
-		        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[spi_idx(unit)].miso], PIN_FUNC_GPIO);
-		        gpio_set_direction(spi_bus[spi_idx(unit)].miso, GPIO_MODE_INPUT);
+        if (flags & SPI_FLAG_READ) {
+            if (spi_bus[spi_idx(unit)].miso == SPI_DEFAULT_MISO(unit)) {
+                PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[spi_idx(unit)].miso], PIN_FUNC_SPI);
+            } else {
+                PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[spi_idx(unit)].miso], PIN_FUNC_GPIO);
+                gpio_set_direction(spi_bus[spi_idx(unit)].miso, GPIO_MODE_INPUT);
 
-		        switch(unit) {
-		        	case 2:
-		                gpio_matrix_out(spi_bus[spi_idx(unit)].miso, HSPIQ_OUT_IDX, 0, 0);
-		                gpio_matrix_in(spi_bus[spi_idx(unit)].miso, HSPIQ_IN_IDX, 0);
-		                break;
+                switch (unit) {
+                case 2:
+                    gpio_matrix_out(spi_bus[spi_idx(unit)].miso, HSPIQ_OUT_IDX, 0, 0);
+                    gpio_matrix_in(spi_bus[spi_idx(unit)].miso, HSPIQ_IN_IDX, 0);
+                    break;
 
-		        	case 3:
-		                gpio_matrix_out(spi_bus[spi_idx(unit)].miso, VSPIQ_OUT_IDX, 0, 0);
-		                gpio_matrix_in(spi_bus[spi_idx(unit)].miso, VSPIQ_IN_IDX, 0);
-		                break;
-		        }
-		    }
-		}
+                case 3:
+                    gpio_matrix_out(spi_bus[spi_idx(unit)].miso, VSPIQ_OUT_IDX, 0, 0);
+                    gpio_matrix_in(spi_bus[spi_idx(unit)].miso, VSPIQ_IN_IDX, 0);
+                    break;
+                }
+            }
+        }
 
 		if (flags & SPI_FLAG_WRITE) {
 		    if (spi_bus[spi_idx(unit)].mosi == SPI_DEFAULT_MOSI(unit)) {
-		    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[spi_idx(unit)].mosi], PIN_FUNC_SPI);
+		    	    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[spi_idx(unit)].mosi], PIN_FUNC_SPI);
 		    } else {
 		        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[spi_idx(unit)].mosi], PIN_FUNC_GPIO);
 		        gpio_set_direction(spi_bus[spi_idx(unit)].mosi, GPIO_MODE_OUTPUT);
@@ -471,7 +476,7 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 		}
 
 	    if (spi_bus[spi_idx(unit)].clk == SPI_DEFAULT_CLK(unit)) {
-	    	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[spi_idx(unit)].clk], PIN_FUNC_SPI);
+	    	    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[spi_idx(unit)].clk], PIN_FUNC_SPI);
 	    } else {
 	        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[spi_bus[spi_idx(unit)].clk], PIN_FUNC_GPIO);
 	        gpio_set_direction(spi_bus[spi_idx(unit)].clk, GPIO_MODE_OUTPUT);
@@ -511,7 +516,7 @@ int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t
 	spi_create();
 
 	// If SPI unit PIN map are not the native pins the max speed must be 26 Mhz
-	if (!spi_use_native_pins(unit)) {
+	if ((speed > 26000000) && (!spi_use_native_pins(unit))) {
 		speed = 26000000;
 	}
 
@@ -578,28 +583,28 @@ int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t
         SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CS_SETUP);
 
         // Set mode
-    	switch (mode) {
-    		case 0: // CKP=0, CPHA = 0
-    		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit) , SPI_CK_IDLE_EDGE);
-    		    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
+        switch (mode) {
+            case 0: // CKP=0, CPHA = 0
+                CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit) , SPI_CK_IDLE_EDGE);
+                CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
                 break;
 
-    		case 1: // CKP=0, CPHA = 1
-    		    CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
-    		    SET_PERI_REG_MASK(SPI_USER_REG(unit) ,  SPI_CK_OUT_EDGE);
-    		    break;
+            case 1: // CKP=0, CPHA = 1
+                CLEAR_PERI_REG_MASK(SPI_PIN_REG(unit),  SPI_CK_IDLE_EDGE);
+                SET_PERI_REG_MASK(SPI_USER_REG(unit) ,  SPI_CK_OUT_EDGE);
+                break;
 
-    		case 2: // CKP=1, CPHA = 0
-    		    SET_PERI_REG_MASK(SPI_PIN_REG(unit)   , SPI_CK_IDLE_EDGE);
-    		    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
-    		    break;
+            case 2: // CKP=1, CPHA = 0
+                SET_PERI_REG_MASK(SPI_PIN_REG(unit)   , SPI_CK_IDLE_EDGE);
+                CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_CK_OUT_EDGE);
+                break;
 
-    		case 3: // CKP=1, CPHA = 1
-    		    SET_PERI_REG_MASK(SPI_PIN_REG(unit) ,   SPI_CK_IDLE_EDGE);
-    		    SET_PERI_REG_MASK(SPI_USER_REG(unit),   SPI_CK_OUT_EDGE);
-    	}
+            case 3: // CKP=1, CPHA = 1
+                SET_PERI_REG_MASK(SPI_PIN_REG(unit) ,   SPI_CK_IDLE_EDGE);
+                SET_PERI_REG_MASK(SPI_USER_REG(unit),   SPI_CK_OUT_EDGE);
+        }
 
-    	// Set bit order to MSB
+        // Set bit order to MSB
         CLEAR_PERI_REG_MASK(SPI_CTRL_REG(unit), SPI_WR_BIT_ORDER | SPI_RD_BIT_ORDER);
 
         // Full-Duplex
@@ -609,13 +614,13 @@ int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t
         if ((flags & SPI_FLAG_3WIRE)?1:0) {
 	        SET_PERI_REG_MASK(SPI_USER_REG(unit), SPI_SIO);
         } else {
-        	CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_SIO);
+        	    CLEAR_PERI_REG_MASK(SPI_USER_REG(unit), SPI_SIO);
         }
 
         // Configure as master
         WRITE_PERI_REG(SPI_USER1_REG(unit), 0);
-    	SET_PERI_REG_BITS(SPI_CTRL2_REG(unit), SPI_MISO_DELAY_MODE, 0, SPI_MISO_DELAY_MODE_S);
-    	CLEAR_PERI_REG_MASK(SPI_SLAVE_REG(unit), SPI_SLAVE_MODE);
+        SET_PERI_REG_BITS(SPI_CTRL2_REG(unit), SPI_MISO_DELAY_MODE, 0, SPI_MISO_DELAY_MODE_S);
+        CLEAR_PERI_REG_MASK(SPI_SLAVE_REG(unit), SPI_SLAVE_MODE);
 
         // Set clock
         WRITE_PERI_REG(SPI_CLOCK_REG(unit), spi_set_clock(APB_CLK_FREQ, speed, 128, NULL));
@@ -634,7 +639,7 @@ int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t
 
         spi_bus[spi_idx(unit)].setup |= SPI_NO_DMA_SETUP;
     } else {
-    	esp_err_t ret;
+        esp_err_t ret;
 
         spi_device_interface_config_t devcfg={
             .clock_speed_hz=speed,
@@ -874,12 +879,12 @@ driver_error_t *spi_pin_map(int unit, int miso, int mosi, int clk) {
 
     // Update mosi
     if (mosi >= 0) {
-    	spi_bus[spi_idx(unit)].mosi  = mosi;
+    	    spi_bus[spi_idx(unit)].mosi  = mosi;
     }
 
     // Update clk
     if (clk >= 0) {
-    	spi_bus[spi_idx(unit)].clk   = clk;
+    	    spi_bus[spi_idx(unit)].clk   = clk;
     }
 
     spi_unlock(unit);
@@ -957,7 +962,7 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode,
     // Low-level setup
 	spi_lock(unit);
     if (spi_ll_setup(unit, master, cs, mode, speed, flags, deviceid) != 0) {
-    	spi_unlock(unit);
+    	    spi_unlock(unit);
 		return driver_error(SPI_DRIVER, SPI_ERR_NO_MORE_DEVICES_ALLOWED, NULL);
     }
 	spi_unlock(unit);
