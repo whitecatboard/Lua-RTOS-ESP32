@@ -79,7 +79,7 @@ void *lua_start(void *arg) {
 void app_main() {
 	_sys_init();
 
-	#if CONFIG_LUA_RTOS_USE_LED_ACT
+	#if (CONFIG_LUA_RTOS_LED_ACT >= 0)
 	// Init leds
 	gpio_pin_output(CONFIG_LUA_RTOS_LED_ACT);
 	gpio_pin_clr(CONFIG_LUA_RTOS_LED_ACT);

@@ -114,7 +114,7 @@ driver_error_t *lmic_lock_resources(int unit, void *resources) {
 		return error;
 	}
 
-	#if !CONFIG_LUA_RTOS_USE_POWER_BUS && (CONFIG_LUA_RTOS_LORA_RST >= 0)
+	#if ((CONFIG_LUA_RTOS_POWER_BUS_PIN == -1) && (CONFIG_LUA_RTOS_LORA_RST >= 0))
     if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_RST, DRIVER_ALL_FLAGS, "RST"))) {
     	// Revoked lock on pin
     	return driver_lock_error(LORA_DRIVER, lock_error);
@@ -166,7 +166,7 @@ driver_error_t *hal_init (void) {
         gpio_portname(CONFIG_LUA_RTOS_LORA_CS), gpio_name(CONFIG_LUA_RTOS_LORA_CS)
 	);
 
-	#if !CONFIG_LUA_RTOS_USE_POWER_BUS && (CONFIG_LUA_RTOS_LORA_RST >= 0)
+	#if ((CONFIG_LUA_RTOS_POWER_BUS_PIN == -1) && (CONFIG_LUA_RTOS_LORA_RST >= 0))
 		// Init RESET pin
 		gpio_pin_output(CONFIG_LUA_RTOS_LORA_RST);
 	#endif
@@ -233,7 +233,7 @@ void hal_pin_rxtx (u1_t val) {
  * control radio RST pin (0=low, 1=high, 2=floating)
  */
 void hal_pin_rst (u1_t val) {
-	#if CONFIG_LUA_RTOS_USE_POWER_BUS
+	#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
 		if (val == 1) {
 			pwbus_off();
 			delay(1);

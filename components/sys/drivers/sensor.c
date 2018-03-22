@@ -249,7 +249,7 @@ static driver_error_t *sensor_owire_setup(uint8_t interface, sensor_instance_t *
 	// By default we always can get sensor data
     gettimeofday(&unit->next, NULL);
 
-	#if CONFIG_LUA_RTOS_USE_POWER_BUS
+	#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
 	pwbus_on();
 	#endif
 
@@ -289,7 +289,7 @@ static driver_error_t *sensor_i2c_setup(uint8_t interface, sensor_instance_t *un
 	driver_error_t *error;
 	int i2cdevice;
 
-	#if CONFIG_LUA_RTOS_USE_POWER_BUS
+    #if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
 	pwbus_on();
 	#endif
 
@@ -536,7 +536,7 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
     	return NULL;
     }
 
-	#if CONFIG_LUA_RTOS_USE_POWER_BUS
+    #if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
 	pwbus_on();
 	#endif
 

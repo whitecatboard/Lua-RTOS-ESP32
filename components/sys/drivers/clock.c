@@ -53,7 +53,7 @@
 
 #include <drivers/gpio.h>
 
-#if CONFIG_LUA_RTOS_USE_LED_ACT
+#if (CONFIG_LUA_RTOS_LED_ACT >= 0)
 static volatile uint64_t tdelta = 0;
 
 unsigned int activity = 0;
@@ -74,7 +74,7 @@ void IRAM_ATTR newTick(void) {
 #endif
 
 void _clock_init(void) {
-	#if CONFIG_LUA_RTOS_USE_LED_ACT
+	#if (CONFIG_LUA_RTOS_LED_ACT >= 0)
     esp_register_freertos_tick_hook(&newTick);
 	#endif
 }

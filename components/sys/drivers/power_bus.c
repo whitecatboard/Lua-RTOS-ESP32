@@ -45,7 +45,7 @@
 
 #include "luartos.h"
 
-#if CONFIG_LUA_RTOS_USE_POWER_BUS
+#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
 
 #include <sys/delay.h>
 #include <sys/driver.h>

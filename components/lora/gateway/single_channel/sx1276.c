@@ -57,7 +57,7 @@
 #include <drivers/power_bus.h>
 
 void sx1276_reset(uint8_t val) {
-	#if CONFIG_LUA_RTOS_USE_POWER_BUS
+	#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
 		if (val == 1) {
 			pwbus_off();
 			delay(1);

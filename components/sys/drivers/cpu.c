@@ -161,7 +161,7 @@ void cpu_show_flash_info() {
 
 void cpu_sleep(int seconds) {
 	// Stop powerbus
-	#if CONFIG_LUA_RTOS_USE_POWER_BUS
+	#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
 	pwbus_off();
 	#endif
 
@@ -181,7 +181,7 @@ void cpu_deepsleep() {
 	wifi_stop();
 
 	// Stop powerbus
-	#if CONFIG_LUA_RTOS_USE_POWER_BUS
+	#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
 	pwbus_off();
 	#endif
 

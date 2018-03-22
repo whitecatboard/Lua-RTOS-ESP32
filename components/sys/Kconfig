@@ -37,7 +37,7 @@ menu "Lua RTOS"
          bool "ESP32 CORE BOARD"
 
       config LUA_RTOS_BOARD_ESP32_WROVER_KIT
-         bool "ESP3 WROVER KIT"
+         bool "ESP32 WROVER KIT"
 
       config LUA_RTOS_BOARD_ESP32_THING
          bool "ESP32 THING"
@@ -47,6 +47,9 @@ menu "Lua RTOS"
 
       config LUA_RTOS_BOARD_ESP32_EVB
          bool "ESP32 EVB"
+
+      config LUA_RTOS_BOARD_FIPY
+         bool "FIPY"
 
       config LUA_RTOS_BOARD_OTHER
          bool "GENERIC"
@@ -103,10 +106,10 @@ menu "Lua RTOS"
             Power bus allows to provide power to sensors connected to the bus. This is useful in IOT deployments to
             ensure that the sensors do not consume energy while the CPU is sleeping.
    
-      config LUA_RTOS_POWER_BUS_PIN
+      	config LUA_RTOS_POWER_BUS_PIN
             int "Power bus GPIO number"
             depends on LUA_RTOS_USE_POWER_BUS
-            range 0 39
+            range -1 39
             default 27
          
          config LUA_RTOS_USE_LED_ACT
@@ -118,7 +121,7 @@ menu "Lua RTOS"
       config LUA_RTOS_LED_ACT
          depends on LUA_RTOS_USE_LED_ACT
             int "Activity led GPIO number"
-            range 0 39
+            range -1 39
             default 22
 
       menu "Console"

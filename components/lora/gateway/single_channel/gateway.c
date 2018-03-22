@@ -391,7 +391,7 @@ driver_error_t *lora_gw_lock_resources(int unit) {
 		return driver_lock_error(LORA_DRIVER, lock_error);
 	}
 
-	#if !CONFIG_LUA_RTOS_USE_POWER_BUS && (CONFIG_LUA_RTOS_LORA_RST >= 0)
+	#if ((CONFIG_LUA_RTOS_POWER_BUS_PIN == -1) && (CONFIG_LUA_RTOS_LORA_RST >= 0))
     if ((lock_error = driver_lock(LORA_DRIVER, unit, GPIO_DRIVER, CONFIG_LUA_RTOS_LORA_RST, DRIVER_ALL_FLAGS, "RST"))) {
     	// Revoked lock on pin
     	return driver_lock_error(LORA_DRIVER, lock_error);
@@ -473,7 +473,7 @@ driver_error_t *lora_gw_setup(int band, const char *host, int port) {
 		gw_eui[0],gw_eui[1],gw_eui[2],gw_eui[3],gw_eui[4],gw_eui[5], gw_eui[6], gw_eui[7]
 	);
 
-	#if !CONFIG_LUA_RTOS_USE_POWER_BUS && (CONFIG_LUA_RTOS_LORA_RST >= 0)
+	#if ((CONFIG_LUA_RTOS_POWER_BUS_PIN == -1) && (CONFIG_LUA_RTOS_LORA_RST >= 0))
 		// Init RESET pin
 		gpio_pin_output(CONFIG_LUA_RTOS_LORA_RST);
 	#endif
