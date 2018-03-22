@@ -53,7 +53,7 @@
 #include <sys/status.h>
 
 #include "lmic.h"
-#include "common.h"
+#include "hex_string.h"
 
 // Register driver and messages
 void _lora_init();
