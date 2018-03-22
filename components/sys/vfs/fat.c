@@ -64,10 +64,9 @@
 #include <drivers/gpio.h>
 #include <drivers/spi.h>
 
-extern spi_bus_t spi_bus[CPU_LAST_SPI - CPU_FIRST_SPI + 1];
-
 void vfs_fat_register() {
 #if CONFIG_SD_CARD_SPI
+	 spi_bus_t *spi_bus = get_spi_info();
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock resources

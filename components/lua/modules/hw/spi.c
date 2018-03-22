@@ -58,12 +58,12 @@
 #include <drivers/cpu.h>
 #include <drivers/spi.h>
 
-extern spi_bus_t spi_bus[CPU_LAST_SPI - CPU_FIRST_SPI + 1];
-
 static int lspi_pins(lua_State* L) {
 	uint8_t table = 0;
 	uint16_t count = 0, i = 0;
 	int unit = CPU_FIRST_SPI;
+
+	spi_bus_t *spi_bus = get_spi_info();
 
 	// Check if user wants result as a table, or wants result
 	// on the console

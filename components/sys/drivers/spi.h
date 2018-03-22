@@ -139,6 +139,8 @@ typedef struct {
 	spi_device_t device[SPI_BUS_DEVICES];
 } spi_bus_t;
 
+spi_bus_t *get_spi_info();
+
 /**
  * @brief Select SPI device for start a transaction over the SPI bus to the device. This function is thread safe.
  *        You must call to this function prior to any write / read operation with the device.
