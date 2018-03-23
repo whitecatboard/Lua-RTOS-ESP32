@@ -99,27 +99,12 @@ menu "Lua RTOS"
                be used for indentify your board. In the WHITECAT ESP32 N1 board this EUI is used in the LoRa WAN
                stack to set the DevEUI.
    
-         config LUA_RTOS_USE_POWER_BUS
-            bool "Use power bus"
-            default n
-            help
-            Power bus allows to provide power to sensors connected to the bus. This is useful in IOT deployments to
-            ensure that the sensors do not consume energy while the CPU is sleeping.
-   
       	config LUA_RTOS_POWER_BUS_PIN
             int "Power bus GPIO number"
-            depends on LUA_RTOS_USE_POWER_BUS
             range -1 39
             default 27
          
-         config LUA_RTOS_USE_LED_ACT
-            bool "Use activity led"
-            default n
-            help 
-            Select this to enable the Lua RTOS activity led.
-   
       config LUA_RTOS_LED_ACT
-         depends on LUA_RTOS_USE_LED_ACT
             int "Activity led GPIO number"
             range -1 39
             default 22
