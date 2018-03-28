@@ -317,10 +317,20 @@ driver_error_t *encoder_unsetup(encoder_h_t *h) {
 
 	// Remove interrupts
 	gpio_isr_detach(h->A);
-	gpio_isr_detach(h->B);
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    driver_unlock(ENCODER_DRIVER, 0, GPIO_DRIVER, h->A);
+#endif
+
+    gpio_isr_detach(h->B);
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    driver_unlock(ENCODER_DRIVER, 0, GPIO_DRIVER, h->B);
+#endif
 
 	if (h->SW >= 0) {
 		gpio_isr_detach(h->SW);
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+		driver_unlock(ENCODER_DRIVER, 0, GPIO_DRIVER, h->SW);
+#endif
 	}
 
 	if (attached == 1) {
