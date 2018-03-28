@@ -59,13 +59,13 @@ static const sdisplay_t displaydevs[] = {
 };
 
 // Register drivers and errors
-DRIVER_REGISTER_BEGIN(SDISPLAY,sdisplay,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(SDISPLAY,sdisplay,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(SDISPLAY, sdisplay, InvalidChipset, "invalid chipset", SDISPLAY_ERR_INVALID_CHIPSET);
 	DRIVER_REGISTER_ERROR(SDISPLAY, sdisplay, TimeOut, "timeout", SDISPLAY_ERR_TIMEOUT);
 	DRIVER_REGISTER_ERROR(SDISPLAY, sdisplay, InvalidBrightness, "invalid brightness", SDISPLAY_ERR_INVALID_BRIGHTNESS);
 	DRIVER_REGISTER_ERROR(SDISPLAY, sdisplay, NotEnoughMemory, "not enough memory", SDISPLAY_ERR_NOT_ENOUGH_MEMORY);
 	DRIVER_REGISTER_ERROR(SDISPLAY, sdisplay, InvalidDigits, "invalid digits", SDISPLAY_ERR_INVALID_DIGITS);
-DRIVER_REGISTER_END(SDISPLAY,sdisplay,NULL,NULL,NULL);
+DRIVER_REGISTER_END(SDISPLAY,sdisplay,0,NULL,NULL);
 
 static const sdisplay_t *sdisplay_get(uint8_t chipset) {
 	const sdisplay_t *cdisplay;

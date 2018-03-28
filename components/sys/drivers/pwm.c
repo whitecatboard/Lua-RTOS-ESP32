@@ -68,27 +68,14 @@
 // This macro gets a reference for this driver into drivers array
 #define PWM_DRIVER driver_get_by_name("pwm")
 
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-// Driver locks
-driver_unit_lock_t pwm_locks[CPU_LAST_PWM_CH + 1];
-#endif
-
 // Register drivers and errors
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-DRIVER_REGISTER_BEGIN(PWM,pwm,pwm_locks,NULL,NULL);
-#else
-DRIVER_REGISTER_BEGIN(PWM,pwm,NULL,NULL,NULL);
-#endif
+DRIVER_REGISTER_BEGIN(PWM,pwm,CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS * (CPU_LAST_PWM_CH + 1),NULL,NULL);
 	DRIVER_REGISTER_ERROR(PWM, pwm, CannotSetup, "can't setup", PWM_ERR_CANT_INIT);
 	DRIVER_REGISTER_ERROR(PWM, pwm, InvalidUnit, "invalid unit", PWM_ERR_INVALID_UNIT);
 	DRIVER_REGISTER_ERROR(PWM, pwm, InvalidChannel, "invalid channel", PWM_ERR_INVALID_CHANNEL);
 	DRIVER_REGISTER_ERROR(PWM, pwm, InvalidDuty, "invalid duty", PWM_ERR_INVALID_DUTY);
 	DRIVER_REGISTER_ERROR(PWM, pwm, InvalidFrequency, "invalid frequency", PWM_ERR_INVALID_FREQUENCY);
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-DRIVER_REGISTER_END(PWM,pwm,pwm_locks,NULL,NULL);
-#else
-DRIVER_REGISTER_END(PWM,pwm,NULL,NULL,NULL);
-#endif
+DRIVER_REGISTER_END(PWM,pwm,CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS * (CPU_LAST_PWM_CH + 1),NULL,NULL);
 
 // PWM structures
 struct pwm {

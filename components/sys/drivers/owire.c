@@ -54,26 +54,13 @@ void ow_devices_init(uint8_t dev) {
 	memset(ow_devices[dev].roms, 0, sizeof(ow_devices[dev].roms));
 }
 
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-// Driver locks
-driver_unit_lock_t owire_locks[CPU_LAST_GPIO];
-#endif
-
 // Register driver and messages
 void owire_init();
 
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-DRIVER_REGISTER_BEGIN(OWIRE,owire,owire_locks,owire_init,NULL);
-#else
-DRIVER_REGISTER_BEGIN(OWIRE,owire,NULL,owire_init,NULL);
-#endif
+DRIVER_REGISTER_BEGIN(OWIRE,owire,CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS * (CPU_LAST_GPIO + 1),owire_init,NULL);
 	DRIVER_REGISTER_ERROR(OWIRE, owire, CannotSetup, "can't setup", OWIRE_ERR_CANT_INIT);
 	DRIVER_REGISTER_ERROR(OWIRE, owire, InvalidChannel, "invalid channel", OWIRE_ERR_INVALID_CHANNEL);
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-DRIVER_REGISTER_END(OWIRE,owire,owire_locks,owire_init,NULL);
-#else
-DRIVER_REGISTER_END(OWIRE,owire,NULL,owire_init,NULL);
-#endif
+DRIVER_REGISTER_END(OWIRE,owire,CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS * (CPU_LAST_GPIO + 1),owire_init,NULL);
 
 // Get the pins used by an ONE WIRE channel
 void owire_pins(int8_t owpin, uint8_t *pin) {

@@ -79,12 +79,12 @@
 #endif
 
 // Register drivers and errors
-DRIVER_REGISTER_BEGIN(ETH,eth,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(ETH,eth,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(ETH, eth, CannotSetup, "can't setup", ETH_ERR_CANT_INIT);
 	DRIVER_REGISTER_ERROR(ETH, eth, NotSetup, "ethernet is not setup", ETH_ERR_NOT_INIT);
 	DRIVER_REGISTER_ERROR(ETH, eth, NotStarted, "ethernet is not started", ETH_ERR_NOT_START);
 	DRIVER_REGISTER_ERROR(ETH, eth, CannotConnect, "can't connect check cable", ETH_ERR_CANT_CONNECT);
-DRIVER_REGISTER_END(ETH,eth,NULL,NULL,NULL);
+DRIVER_REGISTER_END(ETH,eth,0,NULL,NULL);
 
 extern EventGroupHandle_t netEvent;
 

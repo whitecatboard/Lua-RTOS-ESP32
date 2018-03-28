@@ -107,7 +107,7 @@ extern void spi_flash_enable_interrupts_caches_and_other_cpu();
 // Register driver and messages
 static void _spi_init();
 
-DRIVER_REGISTER_BEGIN(SPI,spi,NULL,_spi_init,NULL);
+DRIVER_REGISTER_BEGIN(SPI,spi,0,_spi_init,NULL);
 	DRIVER_REGISTER_ERROR(SPI, spi, InvalidMode, "invalid mode", SPI_ERR_INVALID_MODE);
 	DRIVER_REGISTER_ERROR(SPI, spi, InvalidUnit, "invalid unit", SPI_ERR_INVALID_UNIT);
 	DRIVER_REGISTER_ERROR(SPI, spi, SlaveNotAllowed, "slave mode not allowed", SPI_ERR_SLAVE_NOT_ALLOWED);
@@ -118,7 +118,7 @@ DRIVER_REGISTER_BEGIN(SPI,spi,NULL,_spi_init,NULL);
 	DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSetup, "invalid device", SPI_ERR_DEVICE_NOT_SETUP);
 	DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSelected, "device is not selected", SPI_ERR_DEVICE_IS_NOT_SELECTED);
 	DRIVER_REGISTER_ERROR(SPI, spi, CannotChangePinMap, "cannot change pin map once the SPI unit has an attached device", SPI_ERR_CANNOT_CHANGE_PINMAP);
-DRIVER_REGISTER_END(SPI,spi,NULL,_spi_init,NULL);
+DRIVER_REGISTER_END(SPI,spi,0,_spi_init,NULL);
 
 // SPI bus information
 static spi_bus_t *spi_bus;

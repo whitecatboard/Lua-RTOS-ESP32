@@ -75,7 +75,7 @@
 #define LUA_ULP_ERR_CANT_SET_TIMER_4       (DRIVER_EXCEPTION_BASE(ULP_DRIVER_ID) |  8)
 
 // Register drivers and errors
-DRIVER_REGISTER_BEGIN(ULP,ulp,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(ULP,ulp,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinary,       "can't load ulp binary",  LUA_ULP_ERR_CANT_LOAD_BINARY);
 	DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinarySize,   "can't load ulp binary: invalid size",  LUA_ULP_ERR_CANT_LOAD_BINARY_SIZE);
 	DRIVER_REGISTER_ERROR(ULP, ulp, CannotLoadBinaryArg,    "can't load ulp binary: invalid load addr",  LUA_ULP_ERR_CANT_LOAD_BINARY_ARG);
@@ -85,7 +85,7 @@ DRIVER_REGISTER_BEGIN(ULP,ulp,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer2,        "can't set timer 2",      LUA_ULP_ERR_CANT_SET_TIMER_2);
 	DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer3,        "can't set timer 3",      LUA_ULP_ERR_CANT_SET_TIMER_3);
 	DRIVER_REGISTER_ERROR(ULP, ulp, CannotSetTimer4,        "can't set timer 4",      LUA_ULP_ERR_CANT_SET_TIMER_4);
-DRIVER_REGISTER_END(ULP,ulp,NULL,NULL,NULL);
+DRIVER_REGISTER_END(ULP,ulp,0,NULL,NULL);
 
 typedef struct {
     lua_State *L;

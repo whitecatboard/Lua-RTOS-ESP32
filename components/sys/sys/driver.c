@@ -238,18 +238,18 @@ void driver_unlock_all(const driver_t *owner_driver, int owner_unit) {
     mtx_lock(&driver_mtx);
 
     while (cdriver->name) {
-    	if (cdriver->lock) {
-    		target_lock = (driver_unit_lock_t *)cdriver->lock;
-    		for(i=0; i < cdriver->locks;i++) {
-    			if ((target_lock[i].owner == owner_driver) && (target_lock[i].unit == owner_unit)) {
-    				target_lock[i].owner = NULL;
-    				target_lock[i].unit = 0;
-    				target_lock[i].tag = NULL;
-    			}
-    		}
-    	}
+        if (*cdriver->lock) {
+            target_lock = (driver_unit_lock_t *)*cdriver->lock;
+            for(i=0; i < cdriver->locks;i++) {
+                if ((target_lock[i].owner == owner_driver) && (target_lock[i].unit == owner_unit)) {
+                    target_lock[i].owner = NULL;
+                    target_lock[i].unit = 0;
+                    target_lock[i].tag = NULL;
+                }
+            }
+        }
 
-    	cdriver++;
+        cdriver++;
     }
 
 	mtx_unlock(&driver_mtx);
@@ -264,7 +264,14 @@ driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_un
 	}
 
     // Get the target driver lock array
-	driver_unit_lock_t *target_lock = (driver_unit_lock_t *)target_driver->lock;
+	driver_unit_lock_t *target_lock = (driver_unit_lock_t *)*target_driver->lock;
+	if (!target_lock) {
+	    // Allocate space for loks
+	    target_lock = calloc(target_driver->locks, sizeof(driver_unit_lock_t));
+	    assert(target_lock != NULL);
+
+	    *target_driver->lock = target_lock;
+	}
 
 	#if DRIVER_LOCK_DEBUG
 	char *name = driver_target_name(target_driver, target_unit, NULL);
@@ -398,7 +405,7 @@ void driver_unlock(const driver_t *owner_driver, int owner_unit, const driver_t 
 	mtx_lock(&driver_mtx);
 
     // Get the target driver lock array
-	driver_unit_lock_t *target_lock = (driver_unit_lock_t *)target_driver->lock;
+	driver_unit_lock_t *target_lock = (driver_unit_lock_t *)*target_driver->lock;
 
 	if (target_lock) {
 		target_lock[lock_index(target_driver, target_unit)].owner = NULL;
@@ -418,9 +425,12 @@ void _driver_init() {
     const driver_t *cdriver = drivers;
 
     while (cdriver->name) {
-    	if (cdriver->init) {
-    		cdriver->init();
-    	}
-    	cdriver++;
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+        *cdriver->lock = NULL;
+#endif
+        if (cdriver->init) {
+            cdriver->init();
+        }
+        cdriver++;
     }
 }

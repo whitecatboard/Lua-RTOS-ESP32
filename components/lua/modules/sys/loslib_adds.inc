@@ -861,13 +861,13 @@ static int os_locks(lua_State *L) {
 	int has_locks = 0;
 	int unit = 0;
 	while (cdriver->name) {
-		if (cdriver->lock) {
+		if (*cdriver->lock) {
 			first = 1;
 			has_locks = 0;
 
 			for(lock = 0; lock < cdriver->locks; lock++) {
 				unit = lock;
-				if (cdriver->lock[lock].owner) {
+				if ((*cdriver->lock)[lock].owner) {
 					has_locks = 1;
 
 					if (first){
@@ -885,7 +885,7 @@ static int os_locks(lua_State *L) {
 					}
 
 					char *oname = driver_target_name(cdriver, unit, NULL);
-					char *tname = driver_target_name(cdriver->lock[lock].owner, cdriver->lock[lock].unit, cdriver->lock[lock].tag);
+					char *tname = driver_target_name((*cdriver->lock)[lock].owner, (*cdriver->lock)[lock].unit, (*cdriver->lock)[lock].tag);
 
 					printf("  %s locked by %s\r\n", oname, tname);
 

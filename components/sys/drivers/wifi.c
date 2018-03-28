@@ -80,7 +80,7 @@
 // This macro gets a reference for this driver into drivers array
 #define WIFI_DRIVER driver_get_by_name("wifi")
 
-DRIVER_REGISTER_BEGIN(WIFI,wifi,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(WIFI,wifi,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, CannotSetup, "can't setup", WIFI_ERR_CANT_INIT);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, CannotConnect, "can't connect, review your SSID / password", WIFI_ERR_CANT_CONNECT);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, GeneralFail, "general fail", WIFI_ERR_WIFI_FAIL);
@@ -100,7 +100,7 @@ DRIVER_REGISTER_BEGIN(WIFI,wifi,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidArg, "invalid argument", WIFI_ERR_INVALID_ARGUMENT);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, NotSupport, "wifi API is not supported yet", WIFI_ERR_NOT_SUPPORT);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, NotStopped, "driver was not stopped", WIFI_ERR_NOT_STOPPED);
-DRIVER_REGISTER_END(WIFI,wifi,NULL,NULL,NULL);
+DRIVER_REGISTER_END(WIFI,wifi,0,NULL,NULL);
 
 extern EventGroupHandle_t netEvent;
 

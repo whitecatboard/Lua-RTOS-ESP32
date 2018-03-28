@@ -80,7 +80,7 @@
 #include <lwip/ping.h>
 
 // Register drivers and errors
-DRIVER_REGISTER_BEGIN(NET,net,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(NET,net,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(NET, net, NotAvailable, "network is not available", NET_ERR_NOT_AVAILABLE);
 	DRIVER_REGISTER_ERROR(NET, net, InvalidIpAddr, "invalid IP adddress", NET_ERR_INVALID_IP);
 	DRIVER_REGISTER_ERROR(NET, net, NoMoreCallbacksAvailable, "no more callbacks available", NET_ERR_NO_MORE_CALLBACKS);
@@ -95,7 +95,7 @@ DRIVER_REGISTER_BEGIN(NET,net,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(NET, net, InvalidResponse, "invalid response", NET_ERR_INVALID_RESPONSE);
 	DRIVER_REGISTER_ERROR(NET, net, InvalidContent, "invalid content", NET_ERR_INVALID_CONTENT);
 	DRIVER_REGISTER_ERROR(NET, net, NoOTA, "OTA partition not found", NET_ERR_NO_OTA);
-DRIVER_REGISTER_END(NET,net,NULL,NULL,NULL);
+DRIVER_REGISTER_END(NET,net,0,NULL,NULL);
 
 // FreeRTOS events used by driver
 EventGroupHandle_t netEvent;

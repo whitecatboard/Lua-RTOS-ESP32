@@ -72,7 +72,7 @@
 extern const sensor_t sensors[];
 
 // Register drivers and errors
-DRIVER_REGISTER_BEGIN(SENSOR,sensor,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(SENSOR,sensor,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(SENSOR, sensor, CannotSetup, "can't setup", SENSOR_ERR_CANT_INIT);
 	DRIVER_REGISTER_ERROR(SENSOR, sensor, Timeout, "timeout", SENSOR_ERR_TIMEOUT);
 	DRIVER_REGISTER_ERROR(SENSOR, sensor, NotEnoughtMemory, "not enough memory", SENSOR_ERR_NOT_ENOUGH_MEMORY);
@@ -87,7 +87,7 @@ DRIVER_REGISTER_BEGIN(SENSOR,sensor,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(SENSOR, sensor, InvalidData, "invalid data", SENSOR_ERR_INVALID_DATA);
 	DRIVER_REGISTER_ERROR(SENSOR, sensor, NoCallbacksAlowed, "callbacks not allowed for this sensor", SENSOR_ERR_CALLBACKS_NOT_ALLOWED);
 	DRIVER_REGISTER_ERROR(SENSOR, sensor, InvalidValue, "invalid value", SENSOR_ERR_INVALID_VALUE);
-DRIVER_REGISTER_END(SENSOR,sensor,NULL,NULL,NULL);
+DRIVER_REGISTER_END(SENSOR,sensor,0,NULL,NULL);
 
 static xQueueHandle queue = NULL;
 static TaskHandle_t task = NULL;

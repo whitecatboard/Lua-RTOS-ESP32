@@ -66,13 +66,13 @@
 // Register driver and messages
 static void tmr_init();
 
-DRIVER_REGISTER_BEGIN(TIMER,timer,NULL,tmr_init,NULL);
+DRIVER_REGISTER_BEGIN(TIMER,timer,0,tmr_init,NULL);
 	DRIVER_REGISTER_ERROR(TIMER, timer, InvalidUnit, "invalid unit", TIMER_ERR_INVALID_UNIT);
 	DRIVER_REGISTER_ERROR(TIMER, timer, NotEnoughtMemory, "not enough memory", TIMER_ERR_NOT_ENOUGH_MEMORY);
 	DRIVER_REGISTER_ERROR(TIMER, timer, NoMoreTimers, "no more timers available", TIMER_ERR_NO_MORE_TIMERS);
 	DRIVER_REGISTER_ERROR(TIMER, timer, InvalidPeriod, "invalid period", TIMER_ERR_INVALID_PERIOD);
 	DRIVER_REGISTER_ERROR(TIMER, timer, NotSetup, "is not setup", TIMER_ERR_IS_NOT_SETUP);
-DRIVER_REGISTER_END(TIMER,timer,NULL,tmr_init,NULL);
+DRIVER_REGISTER_END(TIMER,timer,0,tmr_init,NULL);
 
 typedef struct {
 	tmr_t timer[CPU_LAST_TIMER + 1]; ///< Timer array with needed information about timers

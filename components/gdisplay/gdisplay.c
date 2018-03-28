@@ -109,7 +109,7 @@ static dispWin_t dispWin = {
 };
 
 // Register driver and messages
-DRIVER_REGISTER_BEGIN(GDISPLAY,gdisplay,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(GDISPLAY,gdisplay,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, InvalidChipset, "invalid chipset", GDISPLAY_ERR_INVALID_CHIPSET);
 	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, InvalidColor, "invalid color", GDISPLAY_ERR_INVALID_COLOR);
 	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, NotSetup, "is not setup", GDISPLAY_ERR_IS_NOT_SETUP);
@@ -126,7 +126,7 @@ DRIVER_REGISTER_BEGIN(GDISPLAY,gdisplay,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, BooleanRequired, "boolean required", GDISPLAY_ERR_BOOLEAN_REQUIRED);
 	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, TouchNotSupported, "touch pad not supported in this display", GDISPLAY_ERR_TOUCH_NOT_SUPPORTED);
 	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, CannotSetup, "can't setup", GDISPLAY_ERR_TOUCH_NOT_SUPPORTED);
-DRIVER_REGISTER_END(GDISPLAY,gdisplay,NULL,NULL,NULL);
+DRIVER_REGISTER_END(GDISPLAY,gdisplay,0,NULL,NULL);
 
 /*
  * Helper functions

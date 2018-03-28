@@ -58,9 +58,9 @@ static int power = 0;
 // Register driver and errors
 static void _pwbus_init();
 
-DRIVER_REGISTER_BEGIN(PWBUS,pwbus,NULL,_pwbus_init,NULL);
+DRIVER_REGISTER_BEGIN(PWBUS,pwbus,0,_pwbus_init,NULL);
 	DRIVER_REGISTER_ERROR(PWBUS, pwbus, InvalidPin, "invalid pin", PWBUS_ERR_INVALID_PIN);
-DRIVER_REGISTER_END(PWBUS,pwbus,NULL,_pwbus_init,NULL);
+DRIVER_REGISTER_END(PWBUS,pwbus,0,_pwbus_init,NULL);
 
 /*
  * Helper functions

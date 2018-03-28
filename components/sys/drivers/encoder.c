@@ -90,13 +90,11 @@
 #include <drivers/encoder.h>
 #include <drivers/gpio.h>
 
-DRIVER_REGISTER_BEGIN(ENCODER, encoder, NULL, NULL, NULL);
-
-// Driver message errors
-DRIVER_REGISTER_ERROR(ENCODER, encoder, NotEnoughtMemory, "not enough memory", ENCODER_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(ENCODER, encoder, InvalidPin, "invalid pin", ENCODER_ERR_INVALID_PIN);
-
-DRIVER_REGISTER_END(ENCODER, encoder, NULL, NULL, NULL);
+DRIVER_REGISTER_BEGIN(ENCODER, encoder, 0, NULL, NULL);
+    // Driver message errors
+    DRIVER_REGISTER_ERROR(ENCODER, encoder, NotEnoughtMemory, "not enough memory", ENCODER_ERR_NOT_ENOUGH_MEMORY);
+    DRIVER_REGISTER_ERROR(ENCODER, encoder, InvalidPin, "invalid pin", ENCODER_ERR_INVALID_PIN);
+DRIVER_REGISTER_END(ENCODER, encoder, 0, NULL, NULL);
 
 /*
  * The below state table has, for each state (row), the new state

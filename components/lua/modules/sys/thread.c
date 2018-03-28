@@ -82,7 +82,7 @@
 #define LUA_THREAD_ERR_GET_TASKLIST	          (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  9)
 
 // Register driver and messages
-DRIVER_REGISTER_BEGIN(THREAD,thread,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(THREAD,thread,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(THREAD, thread, NotEnoughtMemory, "not enough memory", LUA_THREAD_ERR_NOT_ENOUGH_MEMORY);
 	DRIVER_REGISTER_ERROR(THREAD, thread, NotAllowed, "not allowed", LUA_THREAD_ERR_NOT_ALLOWED);
 	DRIVER_REGISTER_ERROR(THREAD, thread, NonExistentThread, "non-existent thread", LUA_THREAD_ERR_NON_EXISTENT);
@@ -93,7 +93,7 @@ DRIVER_REGISTER_BEGIN(THREAD,thread,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(THREAD, thread, CannotMonitorAsTable, "you can't monitor thread as table", LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE);
 	DRIVER_REGISTER_ERROR(THREAD, thread, InvalidThreadId, "invalid thread id", LUA_THREAD_ERR_INVALID_THREAD_ID);
 	DRIVER_REGISTER_ERROR(THREAD, thread, GetTaskList, "cannot get tasklist", LUA_THREAD_ERR_GET_TASKLIST);
-DRIVER_REGISTER_END(THREAD,thread,NULL,NULL,NULL);
+DRIVER_REGISTER_END(THREAD,thread,0,NULL,NULL);
 
 typedef struct {
 	pthread_t pthread;

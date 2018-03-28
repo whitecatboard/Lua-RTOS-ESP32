@@ -61,7 +61,7 @@
 #include <sys/driver.h>
 #include <sys/syslog.h>
 
-DRIVER_REGISTER_BEGIN(BT,bt,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(BT,bt,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(BT, bt, CannotSetup, "can't setup", BT_ERR_CANT_INIT);
 	DRIVER_REGISTER_ERROR(BT, bt, InvalidMode, "invalid mode", BT_ERR_INVALID_MODE);
 	DRIVER_REGISTER_ERROR(BT, bt, NotSetup, "is not setup", BT_ERR_IS_NOT_SETUP);
@@ -73,7 +73,7 @@ DRIVER_REGISTER_BEGIN(BT,bt,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(BT, bt, CannoStartAdv, "can't start advertising", BT_ERR_CANT_START_ADV);
 	DRIVER_REGISTER_ERROR(BT, bt, CannoStopAdv, "can't start advertising", BT_ERR_CANT_STOP_ADV);
 	DRIVER_REGISTER_ERROR(BT, bt, InvalidTxPower, "invalid tx power", BT_ERR_INVALID_TX_POWER);
-DRIVER_REGISTER_END(BT,bt,NULL,NULL,NULL);
+DRIVER_REGISTER_END(BT,bt,0,NULL,NULL);
 
 #define evBT_SCAN_START_COMPLETE ( 1 << 0 )
 #define evBT_SCAN_START_ERROR    ( 1 << 1 )

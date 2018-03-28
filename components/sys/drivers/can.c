@@ -82,7 +82,7 @@ static uint8_t filters = 0;
 static CAN_filter_t can_filter[CAN_NUM_FILTERS];
 
 // Register driver and errors
-DRIVER_REGISTER_BEGIN(CAN,can,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(CAN,can,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(CAN, can, NotEnoughtMemory, "not enough memory", CAN_ERR_NOT_ENOUGH_MEMORY);
 	DRIVER_REGISTER_ERROR(CAN, can, InvalidFrameLength, "invalid frame length", CAN_ERR_INVALID_FRAME_LENGTH);
 	DRIVER_REGISTER_ERROR(CAN, can, InvalidUnit, "invalid unit", CAN_ERR_INVALID_UNIT);
@@ -91,7 +91,7 @@ DRIVER_REGISTER_BEGIN(CAN,can,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(CAN, can, NotSetup, "is not setup", CAN_ERR_IS_NOT_SETUP);
 	DRIVER_REGISTER_ERROR(CAN, can, CannotStart, "can't start", CAN_ERR_CANT_START);
 	DRIVER_REGISTER_ERROR(CAN, can, GatewayNotStarted, "gateway not started", CAN_ERR_GW_NOT_STARTED);
-DRIVER_REGISTER_END(CAN,can,NULL,NULL,NULL);
+DRIVER_REGISTER_END(CAN,can,0,NULL,NULL);
 
 /*
  * Helper functions
