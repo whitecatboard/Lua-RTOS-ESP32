@@ -155,16 +155,26 @@ static int messageArrived(void *context, char * topicName, int topicLen, MQTTCli
 
       callback = mqtt->callbacks;
       while (callback) {
-          if (strcmp(callback->topic, topicName) == 0) {
-              call = callback->callback;
-              if (call != LUA_NOREF) {
-                  lua_rawgeti(mqtt->L, LUA_REGISTRYINDEX, call);
-                  lua_pushinteger(mqtt->L, m->payloadlen);
-                  lua_pushlstring(mqtt->L, m->payload, m->payloadlen);
-                  lua_call(mqtt->L, 2, 0);
-              }
-          }
+          call = callback->callback;
+          if (call != LUA_NOREF) {
+                lua_rawgeti(mqtt->L, LUA_REGISTRYINDEX, call);
+                lua_pushinteger(mqtt->L, m->payloadlen);
+                lua_pushlstring(mqtt->L, m->payload, m->payloadlen);
 
+                // see: https://www.ibm.com/support/knowledgecenter/SSFKSJ_7.5.0/com.ibm.mq.javadoc.doc/WMQMQxrCClasses/_m_q_t_t_client_8h.html?view=kc#aa42130dd069e7e949bcab37b6dce64a5
+                if(topicLen == 0)
+                {
+                        lua_pushinteger(mqtt->L, strlen(topicName));
+                        lua_pushstring(mqtt->L, topicName);
+                }
+                else
+                {
+                        lua_pushinteger(mqtt->L, topicLen);
+                        lua_pushlstring(mqtt->L, topicName, topicLen);
+                }
+
+                lua_call(mqtt->L, 4, 0);
+          }
           callback = callback->next;
       }
 
