@@ -49,6 +49,7 @@
 #include <stdint.h>
 
 #include "driver/adc.h"
+#include "esp_adc_cal.h"
 
 #include <drivers/cpu.h>
 #include <sys/driver.h>
@@ -66,6 +67,8 @@ typedef struct {
 	uint16_t max_val;        ///< Max value, depends on resolution
 	int16_t vref;             ///< VREF voltage attached in mvolts
 	int16_t max;             ///< Max voltage attached in mvolts
+
+	esp_adc_cal_characteristics_t *chars;
 } adc_chann_t;
 
 // Adc devices
