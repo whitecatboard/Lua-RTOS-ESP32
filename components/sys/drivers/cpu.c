@@ -129,7 +129,11 @@ uint32_t cpu_speed() {
 }
 
 int cpu_revision() {
-	return (REG_READ(EFUSE_BLK0_RDATA3_REG) >> EFUSE_RD_CHIP_VER_RESERVE_S) && EFUSE_RD_CHIP_VER_RESERVE_V;
+    esp_chip_info_t info;
+
+    esp_chip_info(&info);
+
+    return info.revision;
 }
 
 void cpu_show_info() {
