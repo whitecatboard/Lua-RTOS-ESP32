@@ -956,7 +956,11 @@ menu "Lua RTOS"
             config LUA_RTOS_USE_SENSOR_TMP36
                depends on LUA_RTOS_LUA_USE_SENSOR
                bool "TMP36"
-               default y      
+               default y   
+            config LUA_RTOS_USE_VH400 
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "VH400"
+               default y   
          endmenu   
       endmenu
       
