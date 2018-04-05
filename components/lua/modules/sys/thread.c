@@ -62,24 +62,25 @@
 #include <assert.h>
 #include <signal.h>
 #include <errno.h>
-
 #include <pthread.h>
 
 #include <drivers/uart.h>
 #include <sys/console.h>
 #include <sys/fcntl.h>
 
+#include <esp_task_wdt.h>
+
 // Module errors
-#define LUA_THREAD_ERR_NOT_ENOUGH_MEMORY    	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  0)
-#define LUA_THREAD_ERR_NOT_ALLOWED          	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  1)
-#define LUA_THREAD_ERR_NON_EXISTENT         	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  2)
-#define LUA_THREAD_ERR_CANNOT_START         	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  3)
-#define LUA_THREAD_ERR_INVALID_STACK_SIZE   	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  4)
-#define LUA_THREAD_ERR_INVALID_PRIORITY     	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  5)
-#define LUA_THREAD_ERR_INVALID_CPU_AFFINITY 	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  6)
-#define LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE 	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  7)
-#define LUA_THREAD_ERR_INVALID_THREAD_ID	    (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  8)
-#define LUA_THREAD_ERR_GET_TASKLIST	          (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  9)
+#define LUA_THREAD_ERR_NOT_ENOUGH_MEMORY       (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  0)
+#define LUA_THREAD_ERR_NOT_ALLOWED             (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  1)
+#define LUA_THREAD_ERR_NON_EXISTENT            (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  2)
+#define LUA_THREAD_ERR_CANNOT_START            (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  3)
+#define LUA_THREAD_ERR_INVALID_STACK_SIZE      (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  4)
+#define LUA_THREAD_ERR_INVALID_PRIORITY        (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  5)
+#define LUA_THREAD_ERR_INVALID_CPU_AFFINITY    (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  6)
+#define LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  7)
+#define LUA_THREAD_ERR_INVALID_THREAD_ID       (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  8)
+#define LUA_THREAD_ERR_GET_TASKLIST            (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  9)
 
 // Register driver and messages
 DRIVER_REGISTER_BEGIN(THREAD,thread,0,NULL,NULL);
@@ -730,21 +731,31 @@ static int lthread_status(lua_State* L) {
 	return 0;
 }
 
+static int lthread_feed_wdt(lua_State* L) {
+#ifdef CONFIG_TASK_WDT_CHECK_IDLE_TASK_CPU0
+	esp_task_wdt_delete(xTaskGetIdleTaskHandleForCPU(0));
+	esp_task_wdt_add(xTaskGetIdleTaskHandleForCPU(0));
+#endif
+	return 0;
+}
+
+
 #include "modules.h"
 
 static const LUA_REG_TYPE thread[] = {
-    { LSTRKEY( "status"      ),			LFUNCVAL( lthread_status        ) },
-    { LSTRKEY( "create"      ),			LFUNCVAL( lthread_create        ) },
-    { LSTRKEY( "createmutex" ),			LFUNCVAL( lthread_create_mutex  ) },
-    { LSTRKEY( "start"       ),			LFUNCVAL( lthread_start         ) },
-    { LSTRKEY( "suspend"     ),			LFUNCVAL( lthread_suspend       ) },
-    { LSTRKEY( "resume"      ),			LFUNCVAL( lthread_resume        ) },
-    { LSTRKEY( "stop"        ),			LFUNCVAL( lthread_stop          ) },
-    { LSTRKEY( "list"        ),			LFUNCVAL( lthread_list          ) },
-    { LSTRKEY( "sleep"       ),			LFUNCVAL( lthread_sleep         ) },
-    { LSTRKEY( "sleepms"     ),			LFUNCVAL( lthread_sleepms       ) },
-    { LSTRKEY( "sleepus"     ),			LFUNCVAL( lthread_sleepus       ) },
-    { LSTRKEY( "usleep"      ),			LFUNCVAL( lthread_sleepus       ) },
+    { LSTRKEY( "status"       ),			LFUNCVAL( lthread_status        ) },
+    { LSTRKEY( "create"       ),			LFUNCVAL( lthread_create        ) },
+    { LSTRKEY( "createmutex"  ),			LFUNCVAL( lthread_create_mutex  ) },
+    { LSTRKEY( "start"        ),			LFUNCVAL( lthread_start         ) },
+    { LSTRKEY( "suspend"      ),			LFUNCVAL( lthread_suspend       ) },
+    { LSTRKEY( "resume"       ),			LFUNCVAL( lthread_resume        ) },
+    { LSTRKEY( "stop"         ),			LFUNCVAL( lthread_stop          ) },
+    { LSTRKEY( "list"         ),			LFUNCVAL( lthread_list          ) },
+    { LSTRKEY( "sleep"        ),			LFUNCVAL( lthread_sleep         ) },
+    { LSTRKEY( "sleepms"      ),			LFUNCVAL( lthread_sleepms       ) },
+    { LSTRKEY( "sleepus"      ),			LFUNCVAL( lthread_sleepus       ) },
+    { LSTRKEY( "usleep"       ),			LFUNCVAL( lthread_sleepus       ) },
+    { LSTRKEY( "feedwatchdog" ),			LFUNCVAL( lthread_feed_wdt      ) },
 
     { LSTRKEY( "Lock"    		    ),	LINTVAL( PTHREAD_MUTEX_NORMAL    ) },
     { LSTRKEY( "RecursiveLock"      ),	LINTVAL( PTHREAD_MUTEX_RECURSIVE ) },

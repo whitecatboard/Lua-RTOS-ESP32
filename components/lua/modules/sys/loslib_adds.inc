@@ -907,16 +907,45 @@ static int os_locks(lua_State *L) {
 
 static int os_factory_reset(lua_State *L) {
 	// Find ota data partition
-    const esp_partition_t *partition =
-    	esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_OTA, NULL);
+	const esp_partition_t *partition =
+		esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_OTA, NULL);
 
-    if (partition) {
-    	esp_partition_erase_range(partition, partition->address, partition->size);
-    }
+	if (partition) {
+		esp_partition_erase_range(partition, partition->address, partition->size);
+	}
 
-    esp_restart();
+	esp_restart();
+	return 0;
+}
 
-    return 0;
+static int os_partitions(lua_State *L) {
+	char address[9];
+	char size[9];
+	esp_partition_iterator_t it;
+
+	printf("TYPE:SUB\t ADDRESS\t  LENGTH\tENC\tLABEL\n");
+
+	it = esp_partition_find(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
+	for (; it != NULL; it = esp_partition_next(it)) {
+		const esp_partition_t *p = esp_partition_get(it);
+
+		snprintf(address, sizeof(address),"%8d", p->address);
+		snprintf(size, sizeof(size),"%8d", p->size);
+		printf("0x%02x:0x%02x\t%s\t%s\t%c\t%s\n", p->type, p->subtype, address, size, p->encrypted ? 'Y':'N', p->label);
+	}
+	esp_partition_iterator_release(it);
+
+	it = esp_partition_find(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, NULL);
+	for (; it != NULL; it = esp_partition_next(it)) {
+		const esp_partition_t *p = esp_partition_get(it);
+
+		snprintf(address, sizeof(address),"%8d", p->address);
+		snprintf(size, sizeof(size),"%8d", p->size);
+		printf("0x%02x:0x%02x\t%s\t%s\t%c\t%s\n", p->type, p->subtype, address, size, p->encrypted ? 'Y':'N', p->label);
+	}
+	esp_partition_iterator_release(it);
+
+	return 0;
 }
 
 static int os_passwd(lua_State *L) {
@@ -930,8 +959,8 @@ static int os_passwd(lua_State *L) {
 	struct stat sb;
 
 	if (stat("/etc", &sb) != 0 || !S_ISDIR(sb.st_mode)) {
-    	mkdir("/etc", 0755);
-    }
+		mkdir("/etc", 0755);
+	}
 
 	// If system password is set read the password hash
 	// from /etc/passwd
@@ -1010,16 +1039,16 @@ static int os_passwd(lua_State *L) {
 	password = crypt(pass, salt);
 
 	// Store password in file
-    fp = fopen("/etc/passwd", "wb");
-    if (fp) {
-        fputs(password, fp);
-        fclose(fp);
-    } else {
-    	printf("can't write to /etc/passwd (%s)\r\n", strerror(errno));
-    	goto exit;
-    }
+	fp = fopen("/etc/passwd", "wb");
+	if (fp) {
+		fputs(password, fp);
+		fclose(fp);
+	} else {
+		printf("can't write to /etc/passwd (%s)\r\n", strerror(errno));
+		goto exit;
+	}
 
-    return 0;
+	return 0;
 
  exit:
  	 fclose(fp);
