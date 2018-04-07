@@ -365,7 +365,9 @@ static const LUA_REG_TYPE wifi_mode_map[] = {
 
 static const LUA_REG_TYPE wifi_powersave_map[] = {
 	{ LSTRKEY( "NONE"          ), LINTVAL( WIFI_PS_NONE ) },
-	{ LSTRKEY( "MODEM"         ), LINTVAL( WIFI_PS_MODEM ) },
+	{ LSTRKEY( "MODEM"         ), LINTVAL( WIFI_PS_MIN_MODEM ) },
+    { LSTRKEY( "MODEM_MIN"     ), LINTVAL( WIFI_PS_MIN_MODEM ) },
+    { LSTRKEY( "MODEM_MAX"     ), LINTVAL( WIFI_PS_MAX_MODEM ) },
 };
 
 static const LUA_REG_TYPE wifi_wpstype_map[] = {

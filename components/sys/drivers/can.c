@@ -82,7 +82,7 @@ static uint8_t filters = 0;
 static CAN_filter_t can_filter[CAN_NUM_FILTERS];
 
 // Register driver and errors
-DRIVER_REGISTER_BEGIN(CAN,can,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(CAN,can,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(CAN, can, NotEnoughtMemory, "not enough memory", CAN_ERR_NOT_ENOUGH_MEMORY);
 	DRIVER_REGISTER_ERROR(CAN, can, InvalidFrameLength, "invalid frame length", CAN_ERR_INVALID_FRAME_LENGTH);
 	DRIVER_REGISTER_ERROR(CAN, can, InvalidUnit, "invalid unit", CAN_ERR_INVALID_UNIT);
@@ -91,7 +91,7 @@ DRIVER_REGISTER_BEGIN(CAN,can,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(CAN, can, NotSetup, "is not setup", CAN_ERR_IS_NOT_SETUP);
 	DRIVER_REGISTER_ERROR(CAN, can, CannotStart, "can't start", CAN_ERR_CANT_START);
 	DRIVER_REGISTER_ERROR(CAN, can, GatewayNotStarted, "gateway not started", CAN_ERR_GW_NOT_STARTED);
-DRIVER_REGISTER_END(CAN,can,NULL,NULL,NULL);
+DRIVER_REGISTER_END(CAN,can,0,NULL,NULL);
 
 /*
  * Helper functions
@@ -254,7 +254,7 @@ static void *gw_thread(void *arg) {
  * Operation functions
  */
 
-driver_error_t *can_setup(int32_t unit, uint32_t speed) {
+driver_error_t *can_setup(int32_t unit, uint32_t speed, uint16_t rx_size) {
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	driver_unit_lock_error_t *lock_error = NULL;
 #endif
@@ -286,7 +286,7 @@ driver_error_t *can_setup(int32_t unit, uint32_t speed) {
 	CAN_cfg.rx_pin_id = CONFIG_LUA_RTOS_CAN_RX;
 
 	if (!setup) {
-		CAN_cfg.rx_queue = xQueueCreate(50,sizeof(CAN_frame_t));;
+		CAN_cfg.rx_queue = xQueueCreate(rx_size,sizeof(CAN_frame_t));;
 
 		// Init filters
 		uint8_t i;
@@ -476,7 +476,7 @@ driver_error_t *can_gateway_start(int32_t unit, uint32_t speed, int32_t port) {
 		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_UNIT, NULL);
 	}
 
-	if ((error = can_setup(unit, speed))) {
+	if ((error = can_setup(unit, speed, 100))) {
 		return error;
 	}
 

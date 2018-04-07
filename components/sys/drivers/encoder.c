@@ -90,13 +90,11 @@
 #include <drivers/encoder.h>
 #include <drivers/gpio.h>
 
-DRIVER_REGISTER_BEGIN(ENCODER, encoder, NULL, NULL, NULL);
-
-// Driver message errors
-DRIVER_REGISTER_ERROR(ENCODER, encoder, NotEnoughtMemory, "not enough memory", ENCODER_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(ENCODER, encoder, InvalidPin, "invalid pin", ENCODER_ERR_INVALID_PIN);
-
-DRIVER_REGISTER_END(ENCODER, encoder, NULL, NULL, NULL);
+DRIVER_REGISTER_BEGIN(ENCODER, encoder, 0, NULL, NULL);
+    // Driver message errors
+    DRIVER_REGISTER_ERROR(ENCODER, encoder, NotEnoughtMemory, "not enough memory", ENCODER_ERR_NOT_ENOUGH_MEMORY);
+    DRIVER_REGISTER_ERROR(ENCODER, encoder, InvalidPin, "invalid pin", ENCODER_ERR_INVALID_PIN);
+DRIVER_REGISTER_END(ENCODER, encoder, 0, NULL, NULL);
 
 /*
  * The below state table has, for each state (row), the new state
@@ -319,10 +317,20 @@ driver_error_t *encoder_unsetup(encoder_h_t *h) {
 
 	// Remove interrupts
 	gpio_isr_detach(h->A);
-	gpio_isr_detach(h->B);
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    driver_unlock(ENCODER_DRIVER, 0, GPIO_DRIVER, h->A);
+#endif
+
+    gpio_isr_detach(h->B);
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    driver_unlock(ENCODER_DRIVER, 0, GPIO_DRIVER, h->B);
+#endif
 
 	if (h->SW >= 0) {
 		gpio_isr_detach(h->SW);
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+		driver_unlock(ENCODER_DRIVER, 0, GPIO_DRIVER, h->SW);
+#endif
 	}
 
 	if (attached == 1) {

@@ -34,6 +34,8 @@
 
 #include "esp_intr.h"
 #include "soc/dport_reg.h"
+
+#include <string.h>
 #include <math.h>
 
 #include "driver/gpio.h"
@@ -45,38 +47,47 @@
 static void CAN_read_frame();
 static void CAN_isr(void *arg_p);
 
+CAN_stats_t CAN_stat;
 
 static void CAN_isr(void *arg_p){
 
 	//Interrupt flag buffer
 	__CAN_IRQ_t interrupt;
 
-    // Read interrupt status and clear flags
-    interrupt = MODULE_CAN->IR.U;
+	// Read interrupt status and clear flags
+	interrupt = MODULE_CAN->IR.U;
 
-    // Handle TX complete interrupt
-    if ((interrupt & __CAN_IRQ_TX) != 0) {
-    	/*handler*/
-    }
+	// Handle TX complete interrupt
+	if ((interrupt & __CAN_IRQ_TX) != 0) {
+		/*handler*/
+	}
 
-    // Handle RX frame available interrupt
-    if ((interrupt & __CAN_IRQ_RX) != 0)
-    	CAN_read_frame();
+	// Handle RX frame available interrupt
+	if ((interrupt & __CAN_IRQ_RX) != 0)
+		CAN_read_frame();
 
-    // Handle error interrupts.
-    if ((interrupt & (__CAN_IRQ_ERR						//0x4
-                      | __CAN_IRQ_DATA_OVERRUN			//0x8
-                      | __CAN_IRQ_WAKEUP				//0x10
-                      | __CAN_IRQ_ERR_PASSIVE			//0x20
-                      | __CAN_IRQ_ARB_LOST				//0x40
-                      | __CAN_IRQ_BUS_ERR				//0x80
-	)) != 0) {
-    	/*handler*/
-    }
+	// Handle overrun
+	if ((interrupt & __CAN_IRQ_DATA_OVERRUN) != 0)
+		CAN_stat.hw_overruns++;
+
+	// Handle bus errors
+	if ((interrupt & __CAN_IRQ_BUS_ERR) != 0)
+		CAN_stat.bus_errors++;
+
+	// Handle arbitration lost
+	if ((interrupt & __CAN_IRQ_ARB_LOST) != 0)
+		CAN_stat.passive_errors++;
+
+	// Handle arbitration lost
+	if ((interrupt & __CAN_IRQ_ERR) != 0)
+		CAN_stat.irq_errors++;
+
+	// Handle irq wakeup
+	if ((interrupt & __CAN_IRQ_WAKEUP) != 0) {
+	}
 }
 
 static void CAN_read_frame(){
-
 	//byte iterator
 	uint8_t __byte_i;
 
@@ -117,14 +128,21 @@ static void CAN_read_frame(){
 
     }
 
-    //send frame to input queue
-    xQueueSendFromISR(CAN_cfg.rx_queue,&__frame,0);
-
     //Let the hardware know the frame has been read.
     MODULE_CAN->CMR.B.RRB=1;
+
+	CAN_stat.rx.packets++;
+	CAN_stat.rx.bytes += __frame.FIR.B.DLC;
+
+    //send frame to input queue
+    if (xQueueSendFromISR(CAN_cfg.rx_queue,&__frame,0) == errQUEUE_FULL) {
+    		CAN_stat.sw_overruns++;
+    }
 }
 
 int CAN_write_frame(const CAN_frame_t* p_frame){
+	CAN_stat.tx.packets++;
+	CAN_stat.tx.bytes += p_frame->FIR.B.DLC;
 
 	//byte iterator
 	uint8_t __byte_i;
@@ -162,9 +180,11 @@ int CAN_write_frame(const CAN_frame_t* p_frame){
 }
 
 int CAN_init(){
-
-	//Time quantum
+	// Time quantum
 	double __tq;
+
+	// reset stats
+	memset(&CAN_stat, 0, sizeof(CAN_stats_t));
 
     //enable module
     DPORT_SET_PERI_REG_MASK(DPORT_PERIP_CLK_EN_REG, DPORT_CAN_CLK_EN);

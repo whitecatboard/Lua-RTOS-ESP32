@@ -56,18 +56,23 @@
 
 #include <signal.h>
 
+#include <can_bus.h>
+
 #include <drivers/can.h>
 #include <drivers/cpu.h>
 
 static uint8_t dump_stop = 0;
+
+extern CAN_stats_t CAN_stat;
 
 static int lcan_attach(lua_State* L) {
 	driver_error_t *error;
 
 	int id = luaL_checkinteger(L, 1);
 	uint32_t speed = luaL_checkinteger(L, 2);
+	uint16_t rx_size = luaL_optinteger(L, 3, 200);
 
-    if ((error = can_setup(id, speed))) {
+    if ((error = can_setup(id, speed, rx_size))) {
     	return luaL_driver_error(L, error);
     }
 
@@ -112,7 +117,7 @@ static int lcan_remove_filter(lua_State* L) {
 	int toId = luaL_checkinteger(L, 3);
 
     if ((error = can_remove_filter(id, fromId, toId))) {
-    	return luaL_driver_error(L, error);
+    		return luaL_driver_error(L, error);
     }
 
 	return 0;
@@ -128,7 +133,7 @@ static int lcan_recv(lua_State* L) {
 	int id = luaL_checkinteger(L, 1);
 
     if ((error = can_rx(id, &msg_id, &msg_id_type, data, &len))) {
-    	return luaL_driver_error(L, error);
+    		return luaL_driver_error(L, error);
     }
 
 	lua_pushinteger(L, msg_id);
@@ -157,7 +162,7 @@ static int lcan_dump(lua_State* L) {
 
 	while (!dump_stop) {
 	    if ((error = can_rx(id, &msg_id, &msg_id_type, data, &len))) {
-	    	return luaL_driver_error(L, error);
+	    		return luaL_driver_error(L, error);
 	    }
 
 	    printf("can%d  %08x  [%d] ", id, msg_id, len);
@@ -176,26 +181,66 @@ static int lcan_dump(lua_State* L) {
 	return 0;
 }
 
-#if 0
 static int lcan_stats(lua_State* L) {
-	u8 len;
-	int id;
-	struct can_stats stats;
+	uint8_t table = 0;
 
-	id = luaL_checkinteger(L, 1);
-	MOD_CHECK_ID(can, id);
+	// Check if user wants result as a table, or wants scan's result
+	// on the console
+	if (lua_gettop(L) == 1) {
+		luaL_checktype(L, 1, LUA_TBOOLEAN);
+		if (lua_toboolean(L, 1)) {
+			table = 1;
+		}
+	}
 
-	if (platform_can_stats(id, &stats)) {
-		lua_pushinteger(L, stats.rx);
-		lua_pushinteger(L, stats.tx);
-		lua_pushinteger(L, stats.rxqueued);
-		lua_pushinteger(L, stats.rxunqueued);
+	if (table) {
+		lua_createtable(L, 0, 12);
 
-		return 4;
-	} else
-		return 0;
+		lua_pushinteger(L, CAN_stat.rx.packets);
+		lua_setfield (L, -2, "rx_packets");
+
+		lua_pushinteger(L, CAN_stat.rx.bytes);
+		lua_setfield (L, -2, "rx_bytes");
+
+		lua_pushinteger(L, CAN_stat.tx.packets);
+		lua_setfield (L, -2, "tx_packets");
+
+		lua_pushinteger(L, CAN_stat.hw_overruns);
+		lua_setfield (L, -2, "hw_overruns");
+
+		lua_pushinteger(L, CAN_stat.sw_overruns);
+		lua_setfield (L, -2, "sw_overruns");
+
+		lua_pushinteger(L, CAN_stat.bus_errors);
+		lua_setfield (L, -2, "bus_error");
+
+		lua_pushinteger(L, CAN_stat.arbitration_lost_errors);
+		lua_setfield (L, -2, "arbitration_lost_errors");
+
+		lua_pushinteger(L, CAN_stat.passive_errors);
+		lua_setfield (L, -2, "passive_errors");
+
+		lua_pushinteger(L, CAN_stat.irq_errors);
+		lua_setfield (L, -2, "irq_errors");
+	} else {
+		printf("RX packets:%d bytes:%d\r\n", CAN_stat.rx.packets, CAN_stat.rx.bytes);
+		printf("TX packets:%d bytes:%d\r\n", CAN_stat.tx.packets, CAN_stat.tx.bytes);
+		printf("hw overruns:%d\r\n",CAN_stat.hw_overruns);
+		printf("sw overruns:%d\r\n",CAN_stat.sw_overruns);
+
+		printf("errors:\r\n");
+		printf("   hw overruns:%d\r\n",CAN_stat.hw_overruns);
+		printf("   sw overruns:%d\r\n",CAN_stat.sw_overruns);
+		printf("   bus:%d arbitration lost:%d passive:%d irq:%d\r\n",
+			CAN_stat.bus_errors,
+			CAN_stat.arbitration_lost_errors,
+			CAN_stat.passive_errors,
+			CAN_stat.irq_errors
+		);
+	}
+
+	return table;
 }
-#endif
 
 static const LUA_REG_TYPE lcan_map[] = {
     { LSTRKEY( "attach"       ),		  LFUNCVAL( lcan_attach        ) },
@@ -204,6 +249,7 @@ static const LUA_REG_TYPE lcan_map[] = {
     { LSTRKEY( "send"         ),		  LFUNCVAL( lcan_send          ) },
     { LSTRKEY( "receive"      ),		  LFUNCVAL( lcan_recv          ) },
     { LSTRKEY( "dump"         ),		  LFUNCVAL( lcan_dump          ) },
+    { LSTRKEY( "stats"        ),		  LFUNCVAL( lcan_stats         ) },
 	CAN_CAN0
 	CAN_CAN1
 	DRIVER_REGISTER_LUA_ERRORS(can)

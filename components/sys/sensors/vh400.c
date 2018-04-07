@@ -39,101 +39,77 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS, servo driver
- *
+ * Lua RTOS, VH400 Soil Moisture Sensor
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LUA_USE_SERVO
+#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_VH400
+
+#define VH400_SAMPLES 10
 
 #include <math.h>
-#include <string.h>
 
-#include <sys/list.h>
 #include <sys/driver.h>
-#include <sys/syslog.h>
 
-#include <drivers/servo.h>
-#include <drivers/pwm.h>
+#include <drivers/sensor.h>
+#include <drivers/adc.h>
 
-// Register drivers and errors
-DRIVER_REGISTER_BEGIN(SERVO,servo,0,NULL,NULL);
-	DRIVER_REGISTER_ERROR(SERVO, servo, CannotSetup, "can't setup", SERVO_ERR_CANT_INIT);
-	DRIVER_REGISTER_ERROR(SERVO, servo, NotEnoughtMemory, "not enough memory", SERVO_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_END(SERVO,servo,0,NULL,NULL);
+driver_error_t *vh400_presetup(sensor_instance_t *unit);
+driver_error_t *vh400_acquire(sensor_instance_t *unit, sensor_value_t *values);
 
-/*
- * Helper functions
- */
-static double get_duty(servo_instance_t *instance) {
-	return (double)instance->value / ((double)20000);
-}
-
-static uint16_t angle_to_pulse(servo_instance_t *instance, double angle) {
-	uint16_t pulse;
-
-	if (angle <= 90) {
-		pulse = SERVO_MID - (90 - angle) * SERVO_USEC_PER_DEG;
-	} else {
-		pulse = SERVO_MID + (angle - 90) * SERVO_USEC_PER_DEG;
-	}
-
-	return pulse;
-}
+// Sensor specification and registration
+static const sensor_t __attribute__((used,unused,section(".sensors"))) vh400_sensor = {
+	.id = "VH400",
+	.interface = {
+		{.type = ADC_INTERFACE},
+	},
+	.data = {
+		{.id = "vwc", .type = SENSOR_DATA_FLOAT},
+	},
+	.presetup = vh400_presetup,
+	.acquire = vh400_acquire
+};
 
 /*
  * Operation functions
  */
-driver_error_t *servo_setup(int8_t pin, servo_instance_t **instance) {
-	driver_error_t *error;
+driver_error_t *vh400_presetup(sensor_instance_t *unit) {
+    unit->setup[0].adc.max = 3000;
 
-	// Allocate space for a servo instance
-	*instance = calloc(1,sizeof(servo_instance_t));
-	if (!*instance) {
-		return driver_error(SERVO_DRIVER, SERVO_ERR_NOT_ENOUGH_MEMORY, NULL);
-	}
-
-	(*instance)->pin = pin;
-	(*instance)->value = SERVO_MID;
-
-	// Configure PWM channel (channel is assigned by PWM driver).
-	// Servo frequency is 50 hertzs.
-	if ((error = pwm_setup(0, -1, pin, 50, get_duty(*instance), &(*instance)->pwm_channel))) {
-		free(*instance);
-		return error;
-	}
-
-	// Start PWM generation
-	if ((error = pwm_start(0, (*instance)->pwm_channel))) {
-		free(*instance);
-		return error;
-	}
-
-	return NULL;
+    return NULL;
 }
 
-driver_error_t *servo_write(servo_instance_t *instance, double value) {
+driver_error_t *vh400_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	driver_error_t *error;
+	double mvolts = 0;
 
-	if ((value >= 0) && (value <= 180)) {
-		instance->value = angle_to_pulse(instance, value);
+	// Read average for some samples
+	if ((error = adc_read_avg(&unit->setup[0].adc.h, VH400_SAMPLES, NULL, &mvolts))) {
+		return error;
+	}
+
+	// Get channel info
+	adc_chann_t *chan;
+
+	adc_get_channel(&unit->setup[0].adc.h, &chan);
+
+	// https://www.vegetronix.com/Products/VH400/VH400-Piecewise-Curve.phtml
+	if ((mvolts >= 0) && (mvolts <= 1100)) {
+	    values[0].floatd.value = roundf(100 * ((10 * ((float)mvolts / 1000)) - 1)) / 100;
+	} else if ((mvolts > 1100) && (mvolts <= 1300)) {
+        values[0].floatd.value = roundf(100 * ((25 * ((float)mvolts / 1000)) - 17.5)) / 100;
+    } else if ((mvolts > 1300) && (mvolts <= 1820)) {
+        values[0].floatd.value = roundf(100 * ((48.08 * ((float)mvolts / 1000)) - 47.5)) / 100;
+    } else if ((mvolts > 1820) && (mvolts <= 2200)) {
+        values[0].floatd.value = roundf(100 * ((26.32 * ((float)mvolts / 1000)) - 7.89)) / 100;
 	} else {
-		instance->value = value;
-	}
-
-	if ((error = pwm_set_duty(0, instance->pwm_channel, get_duty(instance)))) {
-    	return error;
+        values[0].floatd.value = roundf(100 * ((62.5 * ((float)mvolts / 1000)) - 87.5)) / 100;
 	}
 
 	return NULL;
 }
 
-driver_error_t *servo_unsetup(servo_instance_t *instance) {
-	pwm_unsetup(0, instance->pwm_channel);
-	free(instance);
-
-	return NULL;
-}
-
+#endif
 #endif

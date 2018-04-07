@@ -80,7 +80,7 @@
 // This macro gets a reference for this driver into drivers array
 #define WIFI_DRIVER driver_get_by_name("wifi")
 
-DRIVER_REGISTER_BEGIN(WIFI,wifi,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(WIFI,wifi,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, CannotSetup, "can't setup", WIFI_ERR_CANT_INIT);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, CannotConnect, "can't connect, review your SSID / password", WIFI_ERR_CANT_CONNECT);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, GeneralFail, "general fail", WIFI_ERR_WIFI_FAIL);
@@ -100,7 +100,7 @@ DRIVER_REGISTER_BEGIN(WIFI,wifi,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, InvalidArg, "invalid argument", WIFI_ERR_INVALID_ARGUMENT);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, NotSupport, "wifi API is not supported yet", WIFI_ERR_NOT_SUPPORT);
 	DRIVER_REGISTER_ERROR(WIFI, wifi, NotStopped, "driver was not stopped", WIFI_ERR_NOT_STOPPED);
-DRIVER_REGISTER_END(WIFI,wifi,NULL,NULL,NULL);
+DRIVER_REGISTER_END(WIFI,wifi,0,NULL,NULL);
 
 extern EventGroupHandle_t netEvent;
 
@@ -117,11 +117,11 @@ static wifi_sc_cb* wps_sc_callback = NULL;
 #define WPSPIN2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6], (a)[7]
 
 driver_error_t *wifi_check_error(esp_err_t error) {
-	if (error == ESP_ERR_WIFI_OK) return NULL;
+	if (error == ESP_OK) return NULL;
 
 	switch (error) {
-		case ESP_ERR_WIFI_FAIL:        return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_FAIL,NULL);
-		case ESP_ERR_WIFI_NO_MEM:      return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NO_MEM,NULL);
+		case ESP_FAIL:                 return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_FAIL,NULL);
+		case ESP_ERR_NO_MEM:           return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NO_MEM,NULL);
 		case ESP_ERR_WIFI_NOT_INIT:    return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_INIT,NULL);
 		case ESP_ERR_WIFI_NOT_STARTED: return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_START,NULL);
 		case ESP_ERR_WIFI_IF:          return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_IF,NULL);
@@ -134,8 +134,8 @@ driver_error_t *wifi_check_error(esp_err_t error) {
 		case ESP_ERR_WIFI_TIMEOUT:     return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_TIMEOUT,NULL);
 		case ESP_ERR_WIFI_WAKE_FAIL:   return driver_error(WIFI_DRIVER, WIFI_ERR_WAKE_FAIL,NULL);
 		case ESP_ERR_WIFI_MODE:        return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_MODE,NULL);
-		case ESP_ERR_WIFI_ARG:		   return driver_error(WIFI_DRIVER, WIFI_ERR_INVALID_ARGUMENT,NULL);
-		case ESP_ERR_WIFI_NOT_SUPPORT: return driver_error(WIFI_DRIVER, WIFI_ERR_NOT_SUPPORT,NULL);
+		case ESP_ERR_INVALID_ARG:	  return driver_error(WIFI_DRIVER, WIFI_ERR_INVALID_ARGUMENT,NULL);
+		case ESP_ERR_NOT_SUPPORTED:    return driver_error(WIFI_DRIVER, WIFI_ERR_NOT_SUPPORT,NULL);
 		case ESP_ERR_WIFI_NOT_STOPPED: return driver_error(WIFI_DRIVER, WIFI_ERR_NOT_STOPPED,NULL);
 
 		default: {

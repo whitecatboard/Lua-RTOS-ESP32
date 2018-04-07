@@ -99,6 +99,24 @@
 		"filesystem": "default"
 	},
 	{
+		"id": "PYCOM-FIPY",
+		"description": "Pycom FIPY",
+		"manufacturer": "Pycom",
+		"brand": "",
+		"type": "FIPY",
+		"subtype": "",
+		"filesystem": "default"
+	},
+	{
+		"id": "PYCOM-FIPY",
+		"description": "Pycom FIPY with OTA",
+		"manufacturer": "Pycom",
+		"brand": "",
+		"type": "FIPY",
+		"subtype": "OTA",
+		"filesystem": "default"
+	},
+	{
 		"id": "ESP32-THING-OTA",
 		"description": "SparkFun ESP32 Thing with OTA",
 		"manufacturer": "SparkFun",

@@ -58,8 +58,6 @@
 #include <drivers/adc.h>
 #include <drivers/adc_internal.h>
 
-esp_adc_cal_characteristics_t characteristics;
-
 /*
  * Helper functions
  */
@@ -185,7 +183,14 @@ driver_error_t *adc_internal_setup(adc_chann_t *chan) {
 	adc1_config_width(chan->resolution - 9);
 
 	// Get characteristics
-	esp_adc_cal_get_characteristics(CONFIG_ADC_INTERNAL_VREF, atten, chan->resolution - 9, &characteristics);
+	if (!chan->chars) {
+	    chan->chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
+	    if (!chan->chars) {
+	        return driver_error(ADC_DRIVER, ADC_ERR_NOT_ENOUGH_MEMORY, NULL);
+	    }
+	}
+
+	esp_adc_cal_characterize(1, atten, chan->resolution - 9, CONFIG_ADC_INTERNAL_VREF, chan->chars);
 
 	if (!chan->setup) {
 		syslog(
@@ -202,7 +207,7 @@ driver_error_t *adc_internal_read(adc_chann_t *chan, int *raw, double *mvolts) {
 	uint8_t channel = chan->channel;
 
 	int traw = adc1_get_raw(channel);
-	double tmvolts = esp_adc_cal_raw_to_voltage(traw, &characteristics);
+	double tmvolts = esp_adc_cal_raw_to_voltage(traw, chan->chars);
 
 	if (raw) {
 		*raw = traw;

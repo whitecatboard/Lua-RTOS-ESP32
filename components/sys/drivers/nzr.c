@@ -57,10 +57,10 @@
 // Register driver and messages
 void nzr_init();
 
-DRIVER_REGISTER_BEGIN(NZR,nzr,NULL,nzr_init,NULL);
+DRIVER_REGISTER_BEGIN(NZR,nzr,0,nzr_init,NULL);
 	DRIVER_REGISTER_ERROR(NZR, nzr, NotEnoughtMemory, "not enough memory", NZR_ERR_NOT_ENOUGH_MEMORY);
 	DRIVER_REGISTER_ERROR(NZR, nzr, InvalidUnit, "invalid unit", NRZ_ERR_INVALID_UNIT);
-DRIVER_REGISTER_END(NZR,nzr,NULL,nzr_init,NULL);
+DRIVER_REGISTER_END(NZR,nzr,0,nzr_init,NULL);
 
 // List of units
 struct list nzr_list;

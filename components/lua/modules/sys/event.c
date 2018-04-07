@@ -66,9 +66,9 @@
 #define EVENT_ERR_NOT_ENOUGH_MEMORY (DRIVER_EXCEPTION_BASE(EVENT_DRIVER_ID) |  0)
 
 // Register driver and messages
-DRIVER_REGISTER_BEGIN(EVENT,event,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(EVENT,event,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(EVENT, event, NotEnoughtMemory, "not enough memory", EVENT_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_END(EVENT,event,NULL,NULL,NULL);
+DRIVER_REGISTER_END(EVENT,event,0,NULL,NULL);
 
 static int has_pending_events(event_userdata_t *udata) {
 	int pending;

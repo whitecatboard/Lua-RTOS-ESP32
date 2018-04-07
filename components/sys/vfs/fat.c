@@ -64,10 +64,9 @@
 #include <drivers/gpio.h>
 #include <drivers/spi.h>
 
-extern spi_bus_t spi_bus[CPU_LAST_SPI - CPU_FIRST_SPI + 1];
-
 void vfs_fat_register() {
 #if CONFIG_SD_CARD_SPI
+	 spi_bus_t *spi_bus = get_spi_info();
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock resources
@@ -174,28 +173,31 @@ void vfs_fat_register() {
     syslog(LOG_INFO, "sd%u is at mmc0", 0);
 #endif
 
+    gpio_pin_pullup(2);
+    gpio_pin_pullup(14);
+    gpio_pin_pullup(15);
 
     sdmmc_card_t* card;
     esp_err_t ret = esp_vfs_fat_sdmmc_mount("/fat", &host, &slot_config, &mount_config, &card);
     if (ret != ESP_OK) {
-    	esp_vfs_fat_sdmmc_unmount();
-    	syslog(LOG_INFO, "fat%d can't mounted", 0);
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-    	driver_unlock_all(SYSTEM_DRIVER, 0);
-#endif
+            esp_vfs_fat_sdmmc_unmount();
+            syslog(LOG_INFO, "fat%d can't mounted (error %d)", 0, ret);
+    #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+            driver_unlock_all(SYSTEM_DRIVER, 0);
+    #endif
 
-#if CONFIG_SD_CARD_SPI
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-   	#if (CONFIG_LUA_RTOS_SD_SPI == 2)
-    spi_unlock_bus_resources(2);
-	#endif
+    #if CONFIG_SD_CARD_SPI
+    #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+        #if (CONFIG_LUA_RTOS_SD_SPI == 2)
+        spi_unlock_bus_resources(2);
+        #endif
 
-	#if (CONFIG_LUA_RTOS_SD_SPI == 3)
-	spi_unlock_bus_resources(3);
-	#endif
-#endif
-#endif
-    	return;
+        #if (CONFIG_LUA_RTOS_SD_SPI == 3)
+        spi_unlock_bus_resources(3);
+        #endif
+    #endif
+    #endif
+            return;
     }
 
 	syslog(LOG_INFO, "sd%u name %s", 0, card->cid.name);

@@ -61,17 +61,15 @@ index 446946a3..1b5099b5 100644
    size_t affinitysetsize;
    cpu_set_t *affinityset;
 diff --git a/components/pthread/component.mk b/components/pthread/component.mk
-index cd69bb3..1d34434 100644
+index 97ace4b7..beeb9a67 100644
 --- a/components/pthread/component.mk
 +++ b/components/pthread/component.mk
-@@ -2,8 +2,8 @@
- # Component Makefile
- #
+@@ -4,6 +4,6 @@
  
--COMPONENT_SRCDIRS := .
-+COMPONENT_SRCDIRS :=
+ COMPONENT_SRCDIRS := .
  
- #COMPONENT_ADD_INCLUDEDIRS := include
+-COMPONENT_ADD_INCLUDEDIRS := include
++COMPONENT_ADD_INCLUDEDIRS :=
  
 -COMPONENT_ADD_LDFLAGS := -lpthread
 +COMPONENT_ADD_LDFLAGS :=

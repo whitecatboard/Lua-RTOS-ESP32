@@ -68,19 +68,10 @@
 #define ACK_VAL        0x0     /*!< I2C ack value */
 #define NACK_VAL       0x1     /*!< I2C nack value */
 
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-// Driver locks
-driver_unit_lock_t i2c_locks[(CPU_LAST_I2C + 1) * I2C_BUS_DEVICES];
-#endif
-
 // Register driver and messages
 static void i2c_init();
 
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-DRIVER_REGISTER_BEGIN(I2C,i2c,i2c_locks,i2c_init,NULL);
-#else
-DRIVER_REGISTER_BEGIN(I2C,i2c,NULL,i2c_init,NULL);
-#endif
+DRIVER_REGISTER_BEGIN(I2C,i2c,CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS * ((CPU_LAST_I2C + 1) * I2C_BUS_DEVICES),i2c_init,NULL);
 	DRIVER_REGISTER_ERROR(I2C, i2c, CannotSetup, "can't setup", I2C_ERR_CANT_INIT);
 	DRIVER_REGISTER_ERROR(I2C, i2c, NotSetup, "is not setup", I2C_ERR_IS_NOT_SETUP);
 	DRIVER_REGISTER_ERROR(I2C, i2c, InvalidUnit, "invalid unit", I2C_ERR_INVALID_UNIT);
@@ -92,11 +83,7 @@ DRIVER_REGISTER_BEGIN(I2C,i2c,NULL,i2c_init,NULL);
 	DRIVER_REGISTER_ERROR(I2C, i2c, PinNowAllowed, "pin not allowed", I2C_ERR_PIN_NOT_ALLOWED);
 	DRIVER_REGISTER_ERROR(I2C, i2c, CannotChangePinMap, "cannot change pin map once the I2C unit has an attached device", I2C_ERR_CANNOT_CHANGE_PINMAP);
 	DRIVER_REGISTER_ERROR(I2C, i2c, NoMoreDevicesAllowed, "no more devices allowed", I2C_ERR_NO_MORE_DEVICES_ALLOWED);
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-DRIVER_REGISTER_END(I2C,i2c,i2c_locks,i2c_init,NULL);
-#else
-DRIVER_REGISTER_END(I2C,i2c,NULL,i2c_init,NULL);
-#endif
+DRIVER_REGISTER_END(I2C,i2c,CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS * ((CPU_LAST_I2C + 1) * I2C_BUS_DEVICES),i2c_init,NULL);
 
 // i2c info needed by driver
 i2c_t i2c[CPU_LAST_I2C + 1];

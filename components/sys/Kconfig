@@ -37,7 +37,7 @@ menu "Lua RTOS"
          bool "ESP32 CORE BOARD"
 
       config LUA_RTOS_BOARD_ESP32_WROVER_KIT
-         bool "ESP3 WROVER KIT"
+         bool "ESP32 WROVER KIT"
 
       config LUA_RTOS_BOARD_ESP32_THING
          bool "ESP32 THING"
@@ -47,6 +47,9 @@ menu "Lua RTOS"
 
       config LUA_RTOS_BOARD_ESP32_EVB
          bool "ESP32 EVB"
+
+      config LUA_RTOS_BOARD_FIPY
+         bool "FIPY"
 
       config LUA_RTOS_BOARD_OTHER
          bool "GENERIC"
@@ -96,29 +99,14 @@ menu "Lua RTOS"
                be used for indentify your board. In the WHITECAT ESP32 N1 board this EUI is used in the LoRa WAN
                stack to set the DevEUI.
    
-         config LUA_RTOS_USE_POWER_BUS
-            bool "Use power bus"
-            default n
-            help
-            Power bus allows to provide power to sensors connected to the bus. This is useful in IOT deployments to
-            ensure that the sensors do not consume energy while the CPU is sleeping.
-   
-      config LUA_RTOS_POWER_BUS_PIN
+      	config LUA_RTOS_POWER_BUS_PIN
             int "Power bus GPIO number"
-            depends on LUA_RTOS_USE_POWER_BUS
-            range 0 39
+            range -1 39
             default 27
          
-         config LUA_RTOS_USE_LED_ACT
-            bool "Use activity led"
-            default n
-            help 
-            Select this to enable the Lua RTOS activity led.
-   
       config LUA_RTOS_LED_ACT
-         depends on LUA_RTOS_USE_LED_ACT
             int "Activity led GPIO number"
-            range 0 39
+            range -1 39
             default 22
 
       menu "Console"
@@ -968,7 +956,11 @@ menu "Lua RTOS"
             config LUA_RTOS_USE_SENSOR_TMP36
                depends on LUA_RTOS_LUA_USE_SENSOR
                bool "TMP36"
-               default y      
+               default y   
+            config LUA_RTOS_USE_VH400 
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "VH400"
+               default y   
          endmenu   
       endmenu
       
@@ -1097,10 +1089,6 @@ menu "Lua RTOS"
             config LUA_RTOS_LUA_USE__G
                bool "Include base module in build"
                default y
-   
-            config LUA_RTOS_LUA_USE_BT
-               bool "Include bt module in build"
-               default y
 
             config LUA_RTOS_LUA_USE_OS
                bool "Include os module in build"
@@ -1142,6 +1130,10 @@ menu "Lua RTOS"
             config LUA_RTOS_LUA_USE_ADC
                bool "Include adc module in build"
                default y   
+      
+            config LUA_RTOS_LUA_USE_BT
+               bool "Include bluetooh module in build"
+               default y
       
             config LUA_RTOS_LUA_USE_CAN
                bool "Include CAN module in build"

@@ -67,14 +67,14 @@
 // Register driver and messages
 static void stepper_init();
 
-DRIVER_REGISTER_BEGIN(STEPPER,stepper,NULL,stepper_init,NULL);
+DRIVER_REGISTER_BEGIN(STEPPER,stepper,0,stepper_init,NULL);
 	DRIVER_REGISTER_ERROR(STEPPER, stepper, NotEnoughtMemory, "not enough memory", STEPPER_ERR_NOT_ENOUGH_MEMORY);
 	DRIVER_REGISTER_ERROR(STEPPER, stepper, InvalidUnit, "invalid unit", STEPPER_ERR_INVALID_UNIT);
 	DRIVER_REGISTER_ERROR(STEPPER, stepper, NoMoreUnits, "no more units available", STEPPER_ERR_NO_MORE_UNITS);
 	DRIVER_REGISTER_ERROR(STEPPER, stepper, UnitNotSetup, "unit is not setup", STEPPER_ERR_UNIT_NOT_SETUP);
 	DRIVER_REGISTER_ERROR(STEPPER, stepper, InvalidPin, "invalid pin", STEPPER_ERR_INVALID_PIN);
 	DRIVER_REGISTER_ERROR(STEPPER, stepper, InvalidDirection, "invalid direction", STEPPER_ERR_INVALID_DIRECTION);
-DRIVER_REGISTER_END(STEPPER,stepper,NULL,stepper_init,NULL);
+DRIVER_REGISTER_END(STEPPER,stepper,0,stepper_init,NULL);
 
 // Stepper units
 static stepper_t stepper[NSTEP];

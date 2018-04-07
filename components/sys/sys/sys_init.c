@@ -166,6 +166,7 @@ void _sys_init() {
 
 	// Disable hardware modules modules
 	periph_module_disable(PERIPH_LEDC_MODULE);
+	periph_module_disable(PERIPH_CAN_MODULE);
 
 	// set the current time only if RTC has not already been set
 	struct timeval tv;

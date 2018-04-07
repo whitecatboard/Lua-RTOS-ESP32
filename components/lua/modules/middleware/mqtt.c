@@ -82,7 +82,7 @@ void MQTTClient_init();
 #define LUA_MQTT_ERR_LOST_CONNECTION    (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  6)
 
 // Register driver and messages
-DRIVER_REGISTER_BEGIN(MQTT,mqtt,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(MQTT,mqtt,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotCreateClient, "can't create client", LUA_MQTT_ERR_CANT_CREATE_CLIENT);
 	DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotSetCallbacks, "can't set callbacks", LUA_MQTT_ERR_CANT_SET_CALLBACKS);
 	DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotConnect, "can't connect", LUA_MQTT_ERR_CANT_CONNECT);
@@ -90,7 +90,7 @@ DRIVER_REGISTER_BEGIN(MQTT,mqtt,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotPublishToTopic, "can't publish to topic", LUA_MQTT_ERR_CANT_PUBLISH);
 	DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotDisconnect, "can't disconnect", LUA_MQTT_ERR_CANT_DISCONNECT);
 	DRIVER_REGISTER_ERROR(MQTT, mqtt, LostConnection, "lost connection", LUA_MQTT_ERR_LOST_CONNECTION);
-DRIVER_REGISTER_END(MQTT,mqtt,NULL,NULL,NULL);
+DRIVER_REGISTER_END(MQTT,mqtt,0,NULL,NULL);
 
 static int client_inited = 0;
 

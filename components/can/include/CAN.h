@@ -70,6 +70,24 @@ typedef struct {
     } data;
 }CAN_frame_t;
 
+typedef struct {
+	struct {
+		uint32_t packets;
+		uint32_t bytes;
+	} rx;
+
+	struct {
+		uint32_t packets;
+		uint32_t bytes;
+	} tx;
+
+	uint32_t hw_overruns;
+	uint32_t sw_overruns;
+	uint32_t bus_errors;
+	uint32_t arbitration_lost_errors;
+	uint32_t passive_errors;
+	uint32_t irq_errors;
+} CAN_stats_t;
 
 /**
  * \brief Initialize the CAN Module

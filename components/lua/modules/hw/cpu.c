@@ -77,7 +77,7 @@ extern const int cpu_error_map;
 #define LUA_CPU_ERR_CANT_SET_CPU_SPEED  (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  7)
 
 // Register drivers and errors
-DRIVER_REGISTER_BEGIN(CPU,cpu,NULL,NULL,NULL);
+DRIVER_REGISTER_BEGIN(CPU,cpu,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnExt0,    "can't wake on EXT0",   LUA_CPU_ERR_CANT_WAKEON_EXT0);
 	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnExt1,    "can't wake on EXT1",   LUA_CPU_ERR_CANT_WAKEON_EXT1);
 	DRIVER_REGISTER_ERROR(CPU, cpu, CannotWakeOnTimer,   "can't wake on timer",  LUA_CPU_ERR_CANT_WAKEON_TIMER);
@@ -86,7 +86,7 @@ DRIVER_REGISTER_BEGIN(CPU,cpu,NULL,NULL,NULL);
 	DRIVER_REGISTER_ERROR(CPU, cpu, CannotSetWatchpoint, "can't set Watchpoint", LUA_CPU_ERR_CANT_SET_WATCHPOINT);
 	DRIVER_REGISTER_ERROR(CPU, cpu, CPUSpeedInvalid,     "invalid CPU speed",    LUA_CPU_ERR_INVALID_CPU_SPEED);
 	DRIVER_REGISTER_ERROR(CPU, cpu, CannotSetCPUSpeed,   "can't set CPU speed",  LUA_CPU_ERR_CANT_SET_CPU_SPEED);
-DRIVER_REGISTER_END(CPU,cpu,NULL,NULL,NULL);
+DRIVER_REGISTER_END(CPU,cpu,0,NULL,NULL);
 
 int temprature_sens_read(void); //undocumented esp32 function
 

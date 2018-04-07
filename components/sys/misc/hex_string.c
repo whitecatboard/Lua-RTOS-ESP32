@@ -43,7 +43,7 @@
  *
  */
 
-#include "common.h"
+#include "hex_string.h"
 
 // Convert a buffer coded into an hex string (hbuff) into a byte buffer (vbuff)
 // Length of byte buffer is len

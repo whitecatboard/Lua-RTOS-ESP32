@@ -86,7 +86,7 @@ static struct list channels;
 // Register driver and messages
 static void _adc_init();
 
-DRIVER_REGISTER_BEGIN(ADC,adc,NULL,_adc_init,NULL);
+DRIVER_REGISTER_BEGIN(ADC,adc,0,_adc_init,NULL);
 	DRIVER_REGISTER_ERROR(ADC, adc, InvalidUnit, "invalid unit", ADC_ERR_INVALID_UNIT);
 	DRIVER_REGISTER_ERROR(ADC, adc, InvalidChannel, "invalid channel", ADC_ERR_INVALID_CHANNEL);
 	DRIVER_REGISTER_ERROR(ADC, adc, InvalidResolution, "invalid resolution", ADC_ERR_INVALID_RESOLUTION);
@@ -97,7 +97,7 @@ DRIVER_REGISTER_BEGIN(ADC,adc,NULL,_adc_init,NULL);
 	DRIVER_REGISTER_ERROR(ADC, adc, InvalidMax, "invalid max value", ADC_ERR_INVALID_MAX);
 	DRIVER_REGISTER_ERROR(ADC, adc, CannotCalibrate, "calibration is not allowed for this ADC", ADC_ERR_CANNOT_CALIBRATE);
 	DRIVER_REGISTER_ERROR(ADC, adc, CalibrationError, "calibration error", ADC_ERR_CALIBRATION);
-DRIVER_REGISTER_END(ADC,adc,NULL,_adc_init,NULL);
+DRIVER_REGISTER_END(ADC,adc,0,_adc_init,NULL);
 
 /*
  * Helper functions
