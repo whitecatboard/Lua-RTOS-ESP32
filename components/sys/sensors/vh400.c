@@ -97,9 +97,9 @@ driver_error_t *vh400_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 
 	// https://www.vegetronix.com/Products/VH400/VH400-Piecewise-Curve.phtml
 	if ((mvolts >= 0) && (mvolts <= 1100)) {
-	    values[0].floatd.value = roundf(100 * ((10 * ((float)mvolts / 1000)) - 1)) / 100;
+	    values[0].floatd.value = roundf(100 * ((10.0 * ((float)mvolts / 1000)) - 1.0)) / 100;
 	} else if ((mvolts > 1100) && (mvolts <= 1300)) {
-        values[0].floatd.value = roundf(100 * ((25 * ((float)mvolts / 1000)) - 17.5)) / 100;
+        values[0].floatd.value = roundf(100 * ((25.0 * ((float)mvolts / 1000)) - 17.5)) / 100;
     } else if ((mvolts > 1300) && (mvolts <= 1820)) {
         values[0].floatd.value = roundf(100 * ((48.08 * ((float)mvolts / 1000)) - 47.5)) / 100;
     } else if ((mvolts > 1820) && (mvolts <= 2200)) {
