@@ -63,32 +63,33 @@
 #define I2C_TRANSACTION_INITIALIZER -1
 
 typedef struct i2c_device {
-	int speed;
+    int speed;
+    int pending;
 } i2c_device_t;
 
 // Internal driver structure
 typedef struct i2c {
-	uint8_t mode;
-	uint8_t setup;
-	int8_t sda;
-	int8_t scl;
-	SemaphoreHandle_t mtx;
-	i2c_device_t device[I2C_BUS_DEVICES];
+    uint8_t mode;
+    uint8_t setup;
+    int8_t sda;
+    int8_t scl;
+    SemaphoreHandle_t mtx;
+    i2c_device_t device[I2C_BUS_DEVICES];
 } i2c_t;
 
-#define I2C_SLAVE	0 /*!< I2C slave mode */
-#define I2C_MASTER	1 /*!< I2C master mode */
+#define I2C_SLAVE    0 /*!< I2C slave mode */
+#define I2C_MASTER    1 /*!< I2C master mode */
 
 // I2C errors
 #define I2C_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  0)
 #define I2C_ERR_IS_NOT_SETUP             (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  1)
 #define I2C_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  2)
-#define I2C_ERR_INVALID_OPERATION		 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  3)
-#define I2C_ERR_NOT_ENOUGH_MEMORY		 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  4)
-#define I2C_ERR_INVALID_TRANSACTION		 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  5)
-#define I2C_ERR_NOT_ACK					 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  6)
-#define I2C_ERR_TIMEOUT					 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  7)
-#define I2C_ERR_PIN_NOT_ALLOWED		     (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  8)
+#define I2C_ERR_INVALID_OPERATION        (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  3)
+#define I2C_ERR_NOT_ENOUGH_MEMORY        (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  4)
+#define I2C_ERR_INVALID_TRANSACTION      (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  5)
+#define I2C_ERR_NOT_ACK                  (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  6)
+#define I2C_ERR_TIMEOUT                  (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  7)
+#define I2C_ERR_PIN_NOT_ALLOWED          (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  8)
 #define I2C_ERR_CANNOT_CHANGE_PINMAP     (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  10)
 #define I2C_ERR_NO_MORE_DEVICES_ALLOWED  (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  11)
 extern const int i2c_errors;
@@ -106,8 +107,8 @@ extern const int i2c_error_map;
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 I2C_ERR_PIN_NOT_ALLOWED
+ *          SPI_ERR_INVALID_UNIT
+ *          I2C_ERR_PIN_NOT_ALLOWED
  */
 driver_error_t *i2c_pin_map(int unit, int sda, int scl);
 
@@ -125,8 +126,8 @@ driver_error_t *i2c_pin_map(int unit, int sda, int scl);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 A LOCK error, if sda, or scl gpios are used by other driver
+ *          SPI_ERR_INVALID_UNIT
+ *          A LOCK error, if sda, or scl gpios are used by other driver
  */
 driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr, int *deviceid);
 
@@ -143,9 +144,9 @@ driver_error_t *i2c_setspeed(int unit, int speed);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 I2C_ERR_INVALID_UNIT
- *     	 I2C_ERR_IS_NOT_SETUP
- *     	 I2C_ERR_INVALID_OPERATION
+ *          I2C_ERR_INVALID_UNIT
+ *          I2C_ERR_IS_NOT_SETUP
+ *          I2C_ERR_INVALID_OPERATION
  */
 driver_error_t *i2c_start(int deviceid, int *transaction);
 
@@ -159,10 +160,10 @@ driver_error_t *i2c_start(int deviceid, int *transaction);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 I2C_ERR_INVALID_UNIT
- *     	 I2C_ERR_IS_NOT_SETUP
- *     	 I2C_ERR_INVALID_OPERATION
- *     	 I2C_ERR_INVALID_TRANSACTION
+ *          I2C_ERR_INVALID_UNIT
+ *          I2C_ERR_IS_NOT_SETUP
+ *          I2C_ERR_INVALID_OPERATION
+ *          I2C_ERR_INVALID_TRANSACTION
  */
 driver_error_t *i2c_stop(int deviceid, int *transaction);
 
@@ -178,10 +179,10 @@ driver_error_t *i2c_stop(int deviceid, int *transaction);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 I2C_ERR_INVALID_UNIT
- *     	 I2C_ERR_IS_NOT_SETUP
- *     	 I2C_ERR_INVALID_OPERATION
- *     	 I2C_ERR_INVALID_TRANSACTION
+ *          I2C_ERR_INVALID_UNIT
+ *          I2C_ERR_IS_NOT_SETUP
+ *          I2C_ERR_INVALID_OPERATION
+ *          I2C_ERR_INVALID_TRANSACTION
  */
 driver_error_t *i2c_write_address(int deviceid, int *transaction, char address, int read);
 
@@ -197,10 +198,10 @@ driver_error_t *i2c_write_address(int deviceid, int *transaction, char address, 
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 I2C_ERR_INVALID_UNIT
- *     	 I2C_ERR_IS_NOT_SETUP
- *     	 I2C_ERR_INVALID_OPERATION
- *     	 I2C_ERR_INVALID_TRANSACTION
+ *          I2C_ERR_INVALID_UNIT
+ *          I2C_ERR_IS_NOT_SETUP
+ *          I2C_ERR_INVALID_OPERATION
+ *          I2C_ERR_INVALID_TRANSACTION
  */
 driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len);
 
@@ -216,10 +217,10 @@ driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 I2C_ERR_INVALID_UNIT
- *     	 I2C_ERR_IS_NOT_SETUP
- *     	 I2C_ERR_INVALID_OPERATION
- *     	 I2C_ERR_INVALID_TRANSACTION
+ *          I2C_ERR_INVALID_UNIT
+ *          I2C_ERR_IS_NOT_SETUP
+ *          I2C_ERR_INVALID_OPERATION
+ *          I2C_ERR_INVALID_TRANSACTION
  */
 driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len);
 
@@ -234,10 +235,10 @@ driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 I2C_ERR_INVALID_UNIT
- *     	 I2C_ERR_IS_NOT_SETUP
- *     	 I2C_ERR_INVALID_OPERATION
- *     	 I2C_ERR_INVALID_TRANSACTION
+ *          I2C_ERR_INVALID_UNIT
+ *          I2C_ERR_IS_NOT_SETUP
+ *          I2C_ERR_INVALID_OPERATION
+ *          I2C_ERR_INVALID_TRANSACTION
  */
 driver_error_t *i2c_flush(int deviceid, int *transaction, int new_transaction);
 
