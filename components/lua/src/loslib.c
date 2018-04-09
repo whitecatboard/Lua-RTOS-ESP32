@@ -488,6 +488,7 @@ static const LUA_REG_TYPE syslib[] =
   { LSTRKEY( "getenv" ),  	  LFUNCVAL( os_getenv ) },
   { LSTRKEY( "factoryreset"), LFUNCVAL( os_factory_reset ) },
   { LSTRKEY( "passwd"),       LFUNCVAL( os_passwd ) },
+  { LSTRKEY( "uptime"),       LFUNCVAL( os_uptime ) },
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
   { LSTRKEY( "locks" ),  	  LFUNCVAL( os_locks ) },
 #endif
