@@ -149,11 +149,11 @@ static int os_edit (lua_State *L) {
 }
 
 static int os_sleep(lua_State *L) {
-    unsigned int      = luaL_checkinteger(L, 1);
+    unsigned int secs = luaL_checkinteger(L, 1);
 
     //luaL_deprecated(L, "os.sleep", "cpu.sleep");
 
-    cpu_sleep(    );
+    cpu_sleep(  secs  );
     return 0;
 }
 
