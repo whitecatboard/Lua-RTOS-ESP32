@@ -64,7 +64,6 @@
 
 typedef struct i2c_device {
     int speed;
-    int pending;
 } i2c_device_t;
 
 // Internal driver structure

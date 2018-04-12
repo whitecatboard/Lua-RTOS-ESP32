@@ -171,5 +171,17 @@ driver_error_t *hall_flow_unsetup(sensor_instance_t *unit) {
 #endif
 
 /*
- *
+
+ -- Attach to GPIO26
+ s = sensor.attach("HALL_FLOW",26)
+
+ -- Set K factor
+ s:set("k", 120)
+
+ -- Read current l/min
+ s:read("q")
+
+ -- Read total litters
+ s:read("l")
+
  */

@@ -225,21 +225,12 @@ static driver_error_t *i2c_flush_internal(int unit, int device,
     esp_err_t err = ESP_OK;
 
     // Flush
-    if (i2c[unit].device[device].pending) {
-        err = i2c_master_cmd_begin(unit, cmd, 1000 / portTICK_RATE_MS);
-    } else {
-        err = i2c_master_cmd_begin(unit, cmd, 0);
-        if (err == ESP_ERR_TIMEOUT) {
-            err = ESP_OK;
-        }
-    }
+    err = i2c_master_cmd_begin(unit, cmd, 1000 / portTICK_RATE_MS);
 
     i2c_cmd_link_delete(cmd);
     lstremove(&transactions, *transaction, 0);
 
     *transaction = I2C_TRANSACTION_INITIALIZER;
-
-    i2c[unit].device[device].pending = 0;
 
     if (err == ESP_FAIL) {
         i2c_unlock(unit);
@@ -411,7 +402,6 @@ driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en,
     }
 
     i2c[unit].device[device].speed = speed;
-    i2c[unit].device[device].pending = 0;
 
     *deviceid = ((unit << 8) | device);
 
@@ -519,7 +509,6 @@ driver_error_t *i2c_write_address(int deviceid, int *transaction, char address,
     driver_error_t *error;
 
     int unit = (deviceid & 0xff00) >> 8;
-    int device = (deviceid & 0x00ff);
 
     // Sanity checks
     if ((error = i2c_check(unit))) {
@@ -544,8 +533,6 @@ driver_error_t *i2c_write_address(int deviceid, int *transaction, char address,
             address << 1 | (read ? I2C_MASTER_READ : I2C_MASTER_WRITE),
             ACK_CHECK_EN);
 
-    i2c[unit].device[device].pending = 1;
-
     i2c_unlock(unit);
 
     return NULL;
@@ -555,7 +542,6 @@ driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len) {
     driver_error_t *error;
 
     int unit = (deviceid & 0xff00) >> 8;
-    int device = (deviceid & 0x00ff);
 
     // Sanity checks
     if ((error = i2c_check(unit))) {
@@ -582,8 +568,6 @@ driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len) {
         i2c_master_write_byte(cmd, *data, ACK_CHECK_EN);
     }
 
-    i2c[unit].device[device].pending = 1;
-
     i2c_unlock(unit);
 
     return NULL;
@@ -593,7 +577,6 @@ driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len) {
     driver_error_t *error;
 
     int unit = (deviceid & 0xff00) >> 8;
-    int device = (deviceid & 0x00ff);
 
     // Sanity checks
     if ((error = i2c_check(unit))) {
@@ -619,8 +602,6 @@ driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len) {
     }
 
     i2c_master_read_byte(cmd, (uint8_t *) (data + len - 1), NACK_VAL);
-
-    i2c[unit].device[device].pending = 1;
 
     i2c_unlock(unit);
 
