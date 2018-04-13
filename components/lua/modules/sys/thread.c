@@ -100,6 +100,8 @@ typedef struct {
 	lthread_t *lthread;
 } lcleanup_info_t;
 
+extern pthread_t lua_thread;
+
 static void cleanup(void *args) {
 	lcleanup_info_t *info = (lcleanup_info_t *)args;
 
@@ -167,7 +169,7 @@ static int lthread_suspend_pthreads(lua_State *L, int thid) {
 		luaL_exception(L, LUA_THREAD_ERR_INVALID_THREAD_ID);
 	}
 
-	if (thid == 1) {
+	if (thid == lua_thread) {
 		luaL_exception_extended(L, LUA_THREAD_ERR_NOT_ALLOWED, "lua main thread can not be suspended");
 	}
 
@@ -183,7 +185,7 @@ static int lthread_suspend_pthreads(lua_State *L, int thid) {
 
 	cinfo = info;
 	while (cinfo->stack_size > 0) {
-		if ((cinfo->task_type == 2) && (cinfo->thid != 1)) {
+		if ((cinfo->task_type == 2) && (cinfo->thid != lua_thread)) {
 			if (thid && (cinfo->thid == thid)) {
 				_pthread_suspend(cinfo->thid);
 				suspended++;
@@ -215,7 +217,7 @@ static int lthread_resume_pthreads(lua_State *L, int thid) {
 		luaL_exception(L, LUA_THREAD_ERR_INVALID_THREAD_ID);
 	}
 
-	if (thid == 1) {
+	if (thid == lua_thread) {
 		luaL_exception_extended(L, LUA_THREAD_ERR_NOT_ALLOWED, "lua main thread can not be suspended");
 	}
 
@@ -231,7 +233,7 @@ static int lthread_resume_pthreads(lua_State *L, int thid) {
 
 	cinfo = info;
 	while (cinfo->stack_size > 0) {
-		if ((cinfo->task_type == 2) && (cinfo->thid != 1)) {
+		if ((cinfo->task_type == 2) && (cinfo->thid != lua_thread)) {
 			if (thid && (cinfo->thid == thid)) {
 				_pthread_resume(cinfo->thid);
 				resumed++;
@@ -264,7 +266,7 @@ static int lthread_stop_pthreads(lua_State *L, int thid) {
 		luaL_exception(L, LUA_THREAD_ERR_INVALID_THREAD_ID);
 	}
 
-	if (thid == 1) {
+	if (thid == lua_thread) {
 		luaL_exception_extended(L, LUA_THREAD_ERR_NOT_ALLOWED, "lua main thread can not be stopped");
 	}
 
@@ -280,7 +282,7 @@ static int lthread_stop_pthreads(lua_State *L, int thid) {
 
 	cinfo = info;
 	while (cinfo->stack_size > 0) {
-		if ((cinfo->task_type == 2) && (cinfo->thid != 1)) {
+		if ((cinfo->task_type == 2) && (cinfo->thid != lua_thread)) {
 			if (thid && (cinfo->thid == thid)) {
 				_pthread_stop(cinfo->thid);
 
