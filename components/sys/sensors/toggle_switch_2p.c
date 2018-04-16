@@ -54,31 +54,31 @@ driver_error_t *_2_pos_switch_setup(sensor_instance_t *unit);
 
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) _2_pos_switch_sensor = {
-	.id = "2P_TOGGLE_SWITCH",
-	.interface = {
-		{
-			.type = GPIO_INTERFACE,
+    .id = "2P_TOGGLE_SWITCH",
+    .interface = {
+        {
+            .type = GPIO_INTERFACE,
 
-			.flags = SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_H(0) | SENSOR_FLAG_ON_L(1) |
-					 SENSOR_FLAG_DEBOUNCING | SENSOR_FLAG_DEBOUNCING_THRESHOLD(10000)
-		},
-	},
-	.data = {
-		{.id = "pos", .type = SENSOR_DATA_INT},
-	},
-	.interface_name = {"P1"},
-	.setup = _2_pos_switch_setup
+            .flags = SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_H(0) | SENSOR_FLAG_ON_L(1) |
+                     SENSOR_FLAG_DEBOUNCING | SENSOR_FLAG_DEBOUNCING_THRESHOLD(10000)
+        },
+    },
+    .data = {
+        {.id = "pos", .type = SENSOR_DATA_INT},
+    },
+    .interface_name = {"P1"},
+    .setup = _2_pos_switch_setup
 };
 
 driver_error_t *_2_pos_switch_setup(sensor_instance_t *unit) {
-	// Get initial state
-	if (gpio_ll_pin_get(unit->setup[0].gpio.gpio) == 0) {
-		unit->data[0].integerd.value = SENSOR_FLAG_GET_ON_L(unit->sensor->interface[0]);
-	}
+    // Get initial state
+    if (gpio_ll_pin_get(unit->setup[0].gpio.gpio) == 0) {
+        unit->data[0].integerd.value = SENSOR_FLAG_GET_ON_L(unit->sensor->interface[0]);
+    }
 
-	unit->latch[0].value.integerd.value = unit->data[0].integerd.value;
+    unit->latch[0].value.integerd.value = unit->data[0].integerd.value;
 
-	return NULL;
+    return NULL;
 }
 
 #endif
