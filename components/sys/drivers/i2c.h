@@ -64,6 +64,7 @@
 
 typedef struct i2c_device {
     int speed;
+    int8_t reading;
 } i2c_device_t;
 
 // Internal driver structure

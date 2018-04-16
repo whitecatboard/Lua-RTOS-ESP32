@@ -151,13 +151,13 @@ static driver_error_t *i2c_lock_resources(int unit) {
 
     // Lock sda
     if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].sda,
-            DRIVER_ALL_FLAGS, "SDA"))) {
+    DRIVER_ALL_FLAGS, "SDA"))) {
         return driver_lock_error(I2C_DRIVER, lock_error);
     }
 
     // Lock scl
     if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].scl,
-            DRIVER_ALL_FLAGS, "SCL"))) {
+    DRIVER_ALL_FLAGS, "SCL"))) {
         return driver_lock_error(I2C_DRIVER, lock_error);
     }
 
@@ -402,6 +402,7 @@ driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en,
     }
 
     i2c[unit].device[device].speed = speed;
+    i2c[unit].device[device].reading = 0;
 
     *deviceid = ((unit << 8) | device);
 
@@ -491,6 +492,12 @@ driver_error_t *i2c_stop(int deviceid, int *transaction) {
         return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
     }
 
+    if (i2c[unit].device[device].reading) {
+        uint8_t dummy;
+
+        i2c_master_read_byte(cmd, (uint8_t *) (&dummy), NACK_VAL);
+    }
+
     i2c_master_stop(cmd);
 
     // Flush
@@ -498,6 +505,8 @@ driver_error_t *i2c_stop(int deviceid, int *transaction) {
         i2c_unlock(unit);
         return error;
     }
+
+    i2c[unit].device[device].reading = 0;
 
     i2c_unlock(unit);
 
@@ -509,6 +518,7 @@ driver_error_t *i2c_write_address(int deviceid, int *transaction, char address,
     driver_error_t *error;
 
     int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
 
     // Sanity checks
     if ((error = i2c_check(unit))) {
@@ -516,7 +526,8 @@ driver_error_t *i2c_write_address(int deviceid, int *transaction, char address,
     }
 
     if (i2c[unit].mode != I2C_MASTER) {
-        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, NULL);
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION,
+                "only allowed in master mode");
     }
 
     i2c_lock(unit);
@@ -528,6 +539,8 @@ driver_error_t *i2c_write_address(int deviceid, int *transaction, char address,
 
         return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
     }
+
+    i2c[unit].device[device].reading = read;
 
     i2c_master_write_byte(cmd,
             address << 1 | (read ? I2C_MASTER_READ : I2C_MASTER_WRITE),
@@ -542,6 +555,7 @@ driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len) {
     driver_error_t *error;
 
     int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
 
     // Sanity checks
     if ((error = i2c_check(unit))) {
@@ -549,7 +563,8 @@ driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len) {
     }
 
     if (i2c[unit].mode != I2C_MASTER) {
-        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, NULL);
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION,
+                "only allowed in master mode");
     }
 
     i2c_lock(unit);
@@ -560,6 +575,11 @@ driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len) {
         i2c_unlock(unit);
 
         return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+    }
+
+    if (i2c[unit].device[device].reading) {
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION,
+                "transaction is for read");
     }
 
     if (len > 1) {
@@ -577,6 +597,7 @@ driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len) {
     driver_error_t *error;
 
     int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
 
     // Sanity checks
     if ((error = i2c_check(unit))) {
@@ -597,11 +618,17 @@ driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len) {
         return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
     }
 
-    if (len > 1) {
-        i2c_master_read(cmd, (uint8_t *) data, len - 1, ACK_VAL);
+    if (!i2c[unit].device[device].reading) {
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION,
+                "transaction is for write");
     }
 
-    i2c_master_read_byte(cmd, (uint8_t *) (data + len - 1), NACK_VAL);
+    if (len > 1) {
+        i2c_master_read(cmd, (uint8_t *) data, len - 1, ACK_VAL);
+        i2c_master_read_byte(cmd, (uint8_t *) (data + len - 1), NACK_VAL);
+    } else {
+        i2c_master_read_byte(cmd, (uint8_t *) (data + len - 1), ACK_VAL);
+    }
 
     i2c_unlock(unit);
 
