@@ -58,6 +58,7 @@
 #include <crypt.h>
 #include <sys/dirent.h>
 #include <errno.h>
+#include <time.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,6 +67,7 @@
 #include <vfs/vfs.h>
 #include <sys/driver.h>
 #include <sys/stat.h>
+#include <sys/times.h>
 #include <sys/syslog.h>
 #include <sys/status.h>
 #include <sys/console.h>
@@ -713,7 +715,6 @@ static int os_run (lua_State *L) {
 		luaL_error(L, "not enough memory");
 	}
 
-	lua_pop(L, 1);
 
 	// Lock tty, avoid other threads to write to console
 	uart_ll_lock(CONSOLE_UART);
