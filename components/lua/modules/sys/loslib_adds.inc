@@ -115,7 +115,7 @@ static int os_stdout(lua_State *L) {
 	return 0;
 }
 
-static int os_shell(lua_State *L) { 
+static int os_shell(lua_State *L) {
 	if (lua_gettop(L) == 1) {
 		luaL_checktype(L, 1, LUA_TBOOLEAN);
 
@@ -242,7 +242,7 @@ static int more(const char *path, int stop) {
 static int os_cat(lua_State *L) {
 	const char *path = luaL_checkstring(L, 1);
 	int res;
-	
+
 	if ((res = more(path, 0)) < 0) {
 		return luaL_fileresult(L, 0, path);
 	}
@@ -253,7 +253,7 @@ static int os_cat(lua_State *L) {
 static int os_more(lua_State *L) {
 	const char *path = luaL_checkstring(L, 1);
 	int res;
-	
+
 	if ((res = more(path, 1)) < 0) {
 		return luaL_fileresult(L, 0, path);
 	}
@@ -296,7 +296,7 @@ static int os_cd (lua_State *L) {
 
 static int os_pwd (lua_State *L) {
 	char path[PATH_MAX + 1];
-	
+
 	if (getcwd(path, PATH_MAX)) {
 		lua_pushstring(L, path);
 		return 1;
@@ -308,16 +308,16 @@ static int os_pwd (lua_State *L) {
 static int os_mkdir (lua_State *L) {
 	const char *path = luaL_optstring(L, 1, NULL);
 	char cpath[PATH_MAX + 1];
-	
+
 	// If path is not present get the current directory as path
 	if (!path) {
 		if (!getcwd(cpath, PATH_MAX)) {
 			return luaL_fileresult(L, 0, cpath);
 		}
-		
+
 		path = cpath;
 	}
-	
+
 	return luaL_fileresult(L, mkdir(path, 0) == 0, path);
 }
 
@@ -334,7 +334,7 @@ inline int fnmatch(/*const*/ char *pattern, const char *string, int flags) {
 	}
 	if (pattern[i]=='*' || (string[i]==0 && pattern[i]==0))
 	{
-		if (pattern[i+1]!=0) {					
+		if (pattern[i+1]!=0) {
 			//need to check strlen(pattern)-i chars from the back...
 			while (string[si]!=0 && pattern[pi]!=0 && string[si]==pattern[pi] && pi>i) {
 				si--; pi--;
@@ -413,7 +413,7 @@ static int os_ls (lua_State *L) {
 		if (!getcwd(cpath, PATH_MAX)) {
 			return luaL_fileresult(L, 0, cpath);
 		}
-		
+
 		path = cpath;
 	}
 
@@ -424,7 +424,7 @@ static int os_ls (lua_State *L) {
 	}
 
 	//tty_lock();
-	
+
 	// Read entries
 	while ((ent = readdir(dir)) != NULL) {
 		strcpy(tpath, path);
@@ -456,15 +456,15 @@ static int os_ls (lua_State *L) {
 	}
 
 	//tty_unlock();
-	
+
 	closedir(dir);
 
 	return 0;
 }
- 
+
 static int os_clear (lua_State *L) {
 	console_clear();
-	
+
 	return 0;
 }
 
@@ -473,16 +473,16 @@ static int os_version(lua_State *L) {
 	lua_pushstring(L, LUA_OS_VER);
 	lua_pushinteger(L, BUILD_TIME);
 	lua_pushstring(L, BUILD_COMMIT);
-	
+
 	return 4;
 }
 
 static int os_cpu(lua_State *L) {
 	int revision;
-	
+
 	char model[18];
 	char cpuInfo[26];
-	
+
 	//luaL_deprecated(L, "os.cpu", "cpu.model");
 
 	cpu_model(model, sizeof(model));
@@ -492,9 +492,9 @@ static int os_cpu(lua_State *L) {
 	} else {
 		snprintf(cpuInfo, sizeof(cpuInfo), "%s", model);
 	}
-	
+
 	lua_pushstring(L, cpuInfo);
-	
+
 	return 1;
 }
 
@@ -505,7 +505,7 @@ static int os_board(lua_State *L) {
 	return 3;
 }
 
-static int os_logcons(lua_State *L) { 
+static int os_logcons(lua_State *L) {
 	if (lua_gettop(L) == 1) {
 		int mask = LOG_NDELAY;
 
@@ -534,7 +534,7 @@ static int os_stats(lua_State *L) {
 	lua_lock(L);
 	luaC_fullgc(L, 0);
 	lua_unlock(L);
-	
+
 	if (stat && strcmp(stat,"mem") == 0) {
 		lua_pushinteger(L, xPortGetFreeHeapSize());
 		return 1;
@@ -562,11 +562,11 @@ static int os_format(lua_State *L) {
 	} else {
 		return luaL_error(L, "device %s not exists for format", device);
 	}
-	
+
 	if (!mount_is_mounted(device)) {
 		 return luaL_error(L, "device %s is not mounted", device);
 	}
-	
+
 	// Confirmation
 	while ((response != 'y') && (response != 'Y') && (response != 'n') && (response != 'N')) {
 		printf("\r");
@@ -574,9 +574,9 @@ static int os_format(lua_State *L) {
 		printf("All data in %s will be deleted. Continue? [y/n]: ", device);
 		response = fgetc(stdin);
 	}
-	
+
 	printf("\n");
-	
+
 	if ((response == 'y') || (response == 'Y')) {
 		printf("Formatting...\r\n");
 
@@ -596,19 +596,19 @@ static int os_format(lua_State *L) {
 	return 0;
 }
 
-static int os_lua_running(lua_State *L) { 
+static int os_lua_running(lua_State *L) {
 	lua_pushboolean(L, status_get(STATUS_LUA_RUNNING));
 
 	return 1;
 }
 
-static int os_lua_interpreter(lua_State *L) { 
+static int os_lua_interpreter(lua_State *L) {
 	lua_pushboolean(L, status_get(STATUS_LUA_INTERPRETER));
 
 	return 1;
 }
 
-static int os_history(lua_State *L) { 
+static int os_history(lua_State *L) {
 	if (lua_gettop(L) == 1) {
 		luaL_checktype(L, 1, LUA_TBOOLEAN);
 
@@ -636,7 +636,7 @@ static int os_cp(lua_State *L) {
 
 	//make sure not to damage files if src file is dst file
 	//currently only works on fat...
-	if (strcmp((const char *)mount_device(src),"fat") == 0 || 
+	if (strcmp((const char *)mount_device(src),"fat") == 0 ||
 	    strcmp((const char *)mount_device(dst),"fat") == 0) {
 		dev_t src_dev;
 		ino_t src_ino;
@@ -666,16 +666,16 @@ static int os_cp(lua_State *L) {
 		fclose(fsrc);
 		return luaL_fileresult(L, 0, dst);
 	}
-	
+
 	c = fgetc(fsrc);
 	while (!feof(fsrc)) {
 		fputc(c, fdst);
 		c = fgetc(fsrc);
 	}
-	
+
 	res1 = fclose(fsrc);
 	res2 = fclose(fdst);
-	
+
 	if (res1 != 0) {
 		return luaL_fileresult(L, 0, src);
 	}
@@ -683,7 +683,7 @@ static int os_cp(lua_State *L) {
 	if (res2 != 0) {
 		return luaL_fileresult(L, 0, dst);
 	}
-	
+
 	lua_pushboolean(L, 1);
 	return 1;
 }
@@ -697,18 +697,16 @@ static int os_run (lua_State *L) {
 
 	char *code = NULL;
 	int code_size = 0;
-	
+
 	char *cchunk;
 	char chunk_size;
 
 	if (*argCode) {
 		code = (char *)argCode;
 		lua_pop(L, 1);
-
-		
 		goto skip;
 	}
-	
+
 	from_uart = 1;
 	code = (char *)calloc(1,1024);
 	if (!code) {
@@ -740,7 +738,7 @@ static int os_run (lua_State *L) {
 			done = 1;
 			break;
 		}
-		
+
 		code = realloc(code, code_size + chunk_size + 1);
 		if (!code) {
 			free(code);
@@ -756,16 +754,16 @@ static int os_run (lua_State *L) {
 				break;
 			}
 		}
-		
+
 		*cchunk = 0x00;
-		
+
 		code_size = code_size + chunk_size;
 
 		// Send 'C' for start
 		uart_write(CONSOLE_UART, 'C');
 		uart_write(CONSOLE_UART, '\n');
 	}
-		
+
 	if (!done) {
 		// Unlock tty, permit other threads to write to console
 		uart_ll_set_raw(0);
@@ -775,7 +773,7 @@ static int os_run (lua_State *L) {
 
 		return luaL_error(L, "timeout");
 	}
-		
+
 	uart_ll_set_raw(0);
 	uart_ll_unlock(CONSOLE_UART);
 
@@ -792,14 +790,14 @@ skip:
 
 #if 0
 	lua_remove(L, -1);
-	
+
 	lua_getglobal(L, "thread");
 	lua_getfield(L, -1, "start");
 
 	lua_remove(L, -2);	// Remove "thread" from the stack
 	lua_insert(L, -2);	// Switch "thread" with parsed function
 #endif
-	
+
 	status = lua_pcall(L, 1, 0, 0);
 	if (status != LUA_OK) {
 		if (code && from_uart) free(code);
