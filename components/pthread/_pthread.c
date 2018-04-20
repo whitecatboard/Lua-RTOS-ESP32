@@ -630,7 +630,7 @@ void pthreadTask(void *taskArgs) {
     lua_rtos_tcb->status = StatusRunning;
 
     vTaskSetThreadLocalStoragePointerAndDelCallback(NULL,
-            THREAD_LOCAL_STORAGE_POINTER_ID, (void *) lua_rtos_tcb,
+    THREAD_LOCAL_STORAGE_POINTER_ID, (void *) lua_rtos_tcb,
             pthreadLocaleStoragePointerCallback);
 
     // Set thread id

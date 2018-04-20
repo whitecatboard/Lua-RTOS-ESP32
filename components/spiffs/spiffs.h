@@ -810,4 +810,7 @@ u32_t SPIFFS_buffer_bytes_for_cache(spiffs *fs, u32_t num_pages);
 }
 #endif
 
+void spiffs_lock(spiffs *fs);
+void spiffs_unlock(spiffs *fs);
+
 #endif /* SPIFFS_H_ */
