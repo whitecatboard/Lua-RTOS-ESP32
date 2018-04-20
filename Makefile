@@ -54,7 +54,7 @@ define n
 endef
 
 # Use this esp-idf commit in build
-CURRENT_IDF := bae9709a7950e2ee08e14c65be27831bcb547105
+CURRENT_IDF := c1c49b635a6c59b4ca0c4a285e490545241e7a73
 
 
 # Project name
