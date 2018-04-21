@@ -586,7 +586,7 @@ static int new_thread(lua_State* L, int run) {
 			goto retry;
 		}
 
-		return luaL_exception_extended(L, LUA_THREAD_ERR_CANNOT_START, strerror(errno));
+		return luaL_exception_extended(L, LUA_THREAD_ERR_CANNOT_START, strerror(res));
 	}
 
 	pthread_setname_np(id, name);
