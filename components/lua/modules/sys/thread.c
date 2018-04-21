@@ -546,7 +546,12 @@ static int new_thread(lua_State* L, int run) {
 	thread->thread_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	lua_rawgeti(L, LUA_REGISTRYINDEX, thread->function_ref);
-	lua_xmove(L, thread->L, 1);
+
+	// Ensure that we have only the thread function in the lua stack prior to
+	// move it to the lua thread stack
+	lua_settop(L, 1);
+
+    lua_xmove(L, thread->L, 1);
 
 	// Init thread attributes
 	pthread_attr_init(&attr);
