@@ -202,6 +202,7 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
                       const TValue *slot) {
   int loop;  /* counter to avoid infinite loops */
   const TValue *tm;  /* metamethod */
+  int has_index = 0;
 
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
     if (slot == NULL) {  /* 't' is not a table? */
@@ -210,6 +211,8 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
       if (ttisnil(tm))
         luaG_typeerror(L, t, "index");  /* no metamethod */
       /* else will try the metamethod */
+
+      has_index = 1;
     }
     else {  /* 't' is a table */
       lua_assert(ttisnil(slot));
@@ -218,6 +221,8 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
        setnilvalue(val);  /* result is nil */
         return;
       }
+      has_index = 1;
+
       /* else will try the metamethod */
     }
     if (ttisfunction(tm)) {  /* is metamethod a function? */
@@ -231,7 +236,12 @@ void luaV_finishget (lua_State *L, const TValue *t, TValue *key, StkId val,
     }
     /* else repeat (tail call 'luaV_finishget') */
   }
-  luaG_runerror(L, "'__index' chain too long; possible loop");
+
+  if (has_index) {
+      setnilvalue(val);
+  } else {
+      luaG_runerror(L, "'__index' chain too long; possible loop");
+  }
 }
 #endif
 
