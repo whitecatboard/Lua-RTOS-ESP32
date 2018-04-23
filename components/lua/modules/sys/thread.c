@@ -610,6 +610,12 @@ static int lthread_create(lua_State* L) {
 	return new_thread(L, 0);
 }
 
+static int lthread_self(lua_State* L) {
+    lua_pushinteger(L, pthread_self());
+
+    return 1;
+}
+
 static int lthread_create_mutex(lua_State* L) {
 	// Init mutex
 	pthread_mutexattr_t attr;
@@ -742,6 +748,7 @@ static int lthread_status(lua_State* L) {
 static const LUA_REG_TYPE thread[] = {
     { LSTRKEY( "status"      ),			LFUNCVAL( lthread_status        ) },
     { LSTRKEY( "create"      ),			LFUNCVAL( lthread_create        ) },
+    { LSTRKEY( "self"        ),          LFUNCVAL( lthread_self          ) },
     { LSTRKEY( "createmutex" ),			LFUNCVAL( lthread_create_mutex  ) },
     { LSTRKEY( "start"       ),			LFUNCVAL( lthread_start         ) },
     { LSTRKEY( "suspend"     ),			LFUNCVAL( lthread_suspend       ) },
