@@ -239,6 +239,10 @@ task_info_t *GetTaskInfo() {
 #endif
 
 	for(int i = 0; i <task_num; i++){
+	    if (status_array[i].eCurrentState == eDeleted) {
+	        continue;
+	    }
+
 		// Get the task TCB
 		ctask = (tskTCB_t *)status_array[i].xHandle;
 
