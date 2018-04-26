@@ -657,6 +657,7 @@ int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t
 
     spi_bus[spi_idx(unit)].device[device].mode = mode;
     spi_bus[spi_idx(unit)].device[device].dma = !(flags & SPI_FLAG_NO_DMA);
+    spi_bus[spi_idx(unit)].device[device].setup = 1;
 
     spi_ll_save_registers(unit, device);
 
