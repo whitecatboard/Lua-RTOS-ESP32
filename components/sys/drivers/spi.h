@@ -81,10 +81,10 @@
 
 // Check if SPI unit use the native pins
 #define spi_use_native_pins(unit) \
-	( \
-		(unit==2)?((spi_bus[spi_idx(unit)].miso == 12) && (spi_bus[spi_idx(unit)].mosi == 13) && (spi_bus[spi_idx(unit)].clk == 14)): \
-		((spi_bus[spi_idx(unit)].miso == 19) && (spi_bus[spi_idx(unit)].mosi == 23) && (spi_bus[spi_idx(unit)].clk == 18)) \
-	)
+    ( \
+        (unit==2)?((spi_bus[spi_idx(unit)].miso == 12) && (spi_bus[spi_idx(unit)].mosi == 13) && (spi_bus[spi_idx(unit)].clk == 14)): \
+        ((spi_bus[spi_idx(unit)].miso == 19) && (spi_bus[spi_idx(unit)].mosi == 23) && (spi_bus[spi_idx(unit)].clk == 18)) \
+    )
 
 // Native pins
 #define SPI_DEFAULT_MISO(unit) (unit==2?GPIO12:(unit==3?GPIO19:-1))
@@ -94,14 +94,14 @@
 // SPI errors
 #define SPI_ERR_INVALID_MODE             (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  0)
 #define SPI_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  1)
-#define SPI_ERR_SLAVE_NOT_ALLOWED	 	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  2)
-#define SPI_ERR_NOT_ENOUGH_MEMORY	 	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  3)
-#define SPI_ERR_PIN_NOT_ALLOWED		     (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  4)
+#define SPI_ERR_SLAVE_NOT_ALLOWED          (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  2)
+#define SPI_ERR_NOT_ENOUGH_MEMORY          (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  3)
+#define SPI_ERR_PIN_NOT_ALLOWED             (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  4)
 #define SPI_ERR_NO_MORE_DEVICES_ALLOWED  (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  5)
-#define SPI_ERR_INVALID_DEVICE 			 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  6)
-#define SPI_ERR_DEVICE_NOT_SETUP     	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  7)
-#define SPI_ERR_DEVICE_IS_NOT_SELECTED 	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  8)
-#define SPI_ERR_CANNOT_CHANGE_PINMAP 	 (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  9)
+#define SPI_ERR_INVALID_DEVICE              (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  6)
+#define SPI_ERR_DEVICE_NOT_SETUP          (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  7)
+#define SPI_ERR_DEVICE_IS_NOT_SELECTED      (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  8)
+#define SPI_ERR_CANNOT_CHANGE_PINMAP      (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  9)
 
 extern const int spi_errors;
 extern const int spi_error_map;
@@ -321,9 +321,9 @@ int spi_ll_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs. Error can be an operation error or a lock error.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_PIN_NOT_ALLOWED
- *     	 SPI_ERR_CANNOT_CHANGE_PINMAP
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_PIN_NOT_ALLOWED
+ *          SPI_ERR_CANNOT_CHANGE_PINMAP
  */
 driver_error_t *spi_pin_map(int unit, int miso, int mosi, int clk);
 
@@ -342,11 +342,11 @@ driver_error_t *spi_pin_map(int unit, int miso, int mosi, int clk);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs. Error can be an operation error or a lock error.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_SLAVE_NOT_ALLOWED
- *     	 SPI_ERR_INVALID_MODE
- *     	 SPI_ERR_PIN_NOT_ALLOWED
- *     	 SPI_ERR_NO_MORE_DEVICES_ALLOWED
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_SLAVE_NOT_ALLOWED
+ *          SPI_ERR_INVALID_MODE
+ *          SPI_ERR_PIN_NOT_ALLOWED
+ *          SPI_ERR_NO_MORE_DEVICES_ALLOWED
  */
 driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode,
         uint32_t speed, uint8_t flags, int *deviceid);
@@ -363,9 +363,9 @@ driver_error_t *spi_unsetup(int deviceid);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_NOT_SETUP
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_INVALID_DEVICE
+ *          SPI_ERR_DEVICE_NOT_SETUP
  */
 driver_error_t *spi_select(int deviceid);
 
@@ -378,10 +378,10 @@ driver_error_t *spi_select(int deviceid);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_NOT_SETUP
- *     	 SPI_ERR_DEVICE_IS_NOT_SELECTED
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_INVALID_DEVICE
+ *          SPI_ERR_DEVICE_NOT_SETUP
+ *          SPI_ERR_DEVICE_IS_NOT_SELECTED
  */
 driver_error_t *spi_deselect(int deviceid);
 
@@ -395,9 +395,9 @@ driver_error_t *spi_deselect(int deviceid);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_NOT_SETUP
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_INVALID_DEVICE
+ *          SPI_ERR_DEVICE_NOT_SETUP
  */
 driver_error_t *spi_get_speed(int deviceid, uint32_t *speed);
 
@@ -411,9 +411,9 @@ driver_error_t *spi_get_speed(int deviceid, uint32_t *speed);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_NOT_SETUP
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_INVALID_DEVICE
+ *          SPI_ERR_DEVICE_NOT_SETUP
  */
 driver_error_t *spi_set_speed(int deviceid, uint32_t speed);
 
@@ -429,9 +429,9 @@ driver_error_t *spi_set_speed(int deviceid, uint32_t speed);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_IS_NOT_SELECTED
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_INVALID_DEVICE
+ *          SPI_ERR_DEVICE_IS_NOT_SELECTED
  */
 driver_error_t *spi_transfer(int deviceid, uint8_t data, uint8_t *read);
 
@@ -447,9 +447,9 @@ driver_error_t *spi_transfer(int deviceid, uint8_t data, uint8_t *read);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_IS_NOT_SELECTED
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_INVALID_DEVICE
+ *          SPI_ERR_DEVICE_IS_NOT_SELECTED
  */
 driver_error_t *spi_bulk_write(int deviceid, uint32_t nbytes, uint8_t *data);
 
@@ -465,9 +465,9 @@ driver_error_t *spi_bulk_write(int deviceid, uint32_t nbytes, uint8_t *data);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_IS_NOT_SELECTED
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_INVALID_DEVICE
+ *          SPI_ERR_DEVICE_IS_NOT_SELECTED
  */
 driver_error_t *spi_bulk_read(int deviceid, uint32_t nbytes, uint8_t *data);
 
@@ -484,10 +484,10 @@ driver_error_t *spi_bulk_read(int deviceid, uint32_t nbytes, uint8_t *data);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_IS_NOT_SELECTED
- *     	 SPI_ERR_NOT_ENOUGH_MEMORY
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_INVALID_DEVICE
+ *          SPI_ERR_DEVICE_IS_NOT_SELECTED
+ *          SPI_ERR_NOT_ENOUGH_MEMORY
  */
 driver_error_t *spi_bulk_rw(int deviceid, uint32_t nbytes, uint8_t *data);
 
@@ -503,9 +503,9 @@ driver_error_t *spi_bulk_rw(int deviceid, uint32_t nbytes, uint8_t *data);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_IS_NOT_SELECTED
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_INVALID_DEVICE
+ *          SPI_ERR_DEVICE_IS_NOT_SELECTED
  */
 driver_error_t *spi_bulk_write16(int deviceid, uint32_t nelements,
         uint16_t *data);
@@ -522,9 +522,9 @@ driver_error_t *spi_bulk_write16(int deviceid, uint32_t nelements,
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_IS_NOT_SELECTED
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_INVALID_DEVICE
+ *          SPI_ERR_DEVICE_IS_NOT_SELECTED
  */
 driver_error_t *spi_bulk_read16(int deviceid, uint32_t nelements,
         uint16_t *data);
@@ -542,10 +542,10 @@ driver_error_t *spi_bulk_read16(int deviceid, uint32_t nelements,
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_IS_NOT_SELECTED
- *     	 SPI_ERR_NOT_ENOUGH_MEMORY
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_INVALID_DEVICE
+ *          SPI_ERR_DEVICE_IS_NOT_SELECTED
+ *          SPI_ERR_NOT_ENOUGH_MEMORY
  */
 driver_error_t *spi_bulk_rw16(int deviceid, uint32_t nelements, uint16_t *data);
 
@@ -561,9 +561,9 @@ driver_error_t *spi_bulk_rw16(int deviceid, uint32_t nelements, uint16_t *data);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_IS_NOT_SELECTED
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_INVALID_DEVICE
+ *          SPI_ERR_DEVICE_IS_NOT_SELECTED
  */
 driver_error_t *spi_bulk_write32(int deviceid, uint32_t nelements,
         uint32_t *data);
@@ -580,9 +580,9 @@ driver_error_t *spi_bulk_write32(int deviceid, uint32_t nelements,
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_IS_NOT_SELECTED
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_INVALID_DEVICE
+ *          SPI_ERR_DEVICE_IS_NOT_SELECTED
  */
 driver_error_t *spi_bulk_read32(int deviceid, uint32_t nelements,
         uint32_t *data);
@@ -600,10 +600,10 @@ driver_error_t *spi_bulk_read32(int deviceid, uint32_t nelements,
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 SPI_ERR_INVALID_UNIT
- *     	 SPI_ERR_INVALID_DEVICE
- *     	 SPI_ERR_DEVICE_IS_NOT_SELECTED
- *     	 SPI_ERR_NOT_ENOUGH_MEMORY
+ *          SPI_ERR_INVALID_UNIT
+ *          SPI_ERR_INVALID_DEVICE
+ *          SPI_ERR_DEVICE_IS_NOT_SELECTED
+ *          SPI_ERR_NOT_ENOUGH_MEMORY
  */
 driver_error_t *spi_bulk_rw32(int deviceid, uint32_t nelements, uint32_t *data);
 
