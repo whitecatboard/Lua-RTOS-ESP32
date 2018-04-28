@@ -42,6 +42,9 @@ menu "Lua RTOS"
       config LUA_RTOS_BOARD_ESP32_THING
          bool "ESP32 THING"
 
+      config LUA_RTOS_BOARD_ADAFRUIT_HUZZAH32
+         bool "ADAFRUIT HUZZAH32"
+
       config LUA_RTOS_BOARD_ESP32_GATEWAY
          bool "ESP32 GATEWAY"
 

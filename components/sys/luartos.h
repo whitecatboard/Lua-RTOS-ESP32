@@ -107,6 +107,10 @@
 #define LUA_RTOS_BOARD "ESP32THING"
 #endif
 
+#if CONFIG_LUA_RTOS_BOARD_ADAFRUIT_HUZZAH32
+#define LUA_RTOS_BOARD "HUZZAH32"
+#endif
+
 #if CONFIG_LUA_RTOS_BOARD_ESP32_GATEWAY
 #define LUA_RTOS_BOARD "ESP32-GATEWAY"
 #endif
@@ -255,7 +259,7 @@
 // BT
 #if CONFIG_LUA_RTOS_LUA_USE_BT
 #if !CONFIG_BT_ENABLED
-#error "Bluetooh requires CONFIG_BT_ENABLED = 1. Please activate it with make menuconfig, enabling option in Component config -> Bluetooth."
+#error "Bluetooth requires CONFIG_BT_ENABLED = 1. Please activate it with make menuconfig, enabling option in Component config -> Bluetooth."
 #endif
 #endif
 
