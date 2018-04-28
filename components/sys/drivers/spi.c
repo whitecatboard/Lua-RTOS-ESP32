@@ -115,7 +115,7 @@ DRIVER_REGISTER_BEGIN(SPI,spi,0,_spi_init,NULL);
 	DRIVER_REGISTER_ERROR(SPI, spi, PinNowAllowed, "pin not allowed", SPI_ERR_PIN_NOT_ALLOWED);
 	DRIVER_REGISTER_ERROR(SPI, spi, NoMoreDevicesAllowed, "no more devices allowed", SPI_ERR_NO_MORE_DEVICES_ALLOWED);
 	DRIVER_REGISTER_ERROR(SPI, spi, InvalidDevice, "invalid device", SPI_ERR_INVALID_DEVICE);
-	DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSetup, "invalid device", SPI_ERR_DEVICE_NOT_SETUP);
+	DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSetup, "invalid is not set up", SPI_ERR_DEVICE_NOT_SETUP);
 	DRIVER_REGISTER_ERROR(SPI, spi, DeviceNotSelected, "device is not selected", SPI_ERR_DEVICE_IS_NOT_SELECTED);
 	DRIVER_REGISTER_ERROR(SPI, spi, CannotChangePinMap, "cannot change pin map once the SPI unit has an attached device", SPI_ERR_CANNOT_CHANGE_PINMAP);
 DRIVER_REGISTER_END(SPI,spi,0,_spi_init,NULL);
@@ -657,6 +657,7 @@ int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t
 
     spi_bus[spi_idx(unit)].device[device].mode = mode;
     spi_bus[spi_idx(unit)].device[device].dma = !(flags & SPI_FLAG_NO_DMA);
+    spi_bus[spi_idx(unit)].device[device].setup = 1;
 
     spi_ll_save_registers(unit, device);
 
