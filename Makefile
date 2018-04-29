@@ -53,6 +53,7 @@ define n
 
 endef
 
+
 # Use this esp-idf commit in build
 CURRENT_IDF := 051d8d69000839985e9b6a281e89ccfe6c16080e
 
