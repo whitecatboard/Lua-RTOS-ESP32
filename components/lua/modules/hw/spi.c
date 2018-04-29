@@ -279,6 +279,8 @@ static int lspi_rw_helper( lua_State *L, int withread ) {
                 }
             }
         }
+
+        free(buff);
     } else {
         for (i = 2; i <= total; i++) {
             if(lua_isinteger(L, i)) {
