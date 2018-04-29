@@ -171,6 +171,15 @@
 		"filesystem": "default"
 	},
 	{
+		"id": "WEMOS-ESP32-OLED",
+		"description": "WeMos ESP32 with 128x64 OLED",
+		"manufacturer": "WeMos",
+		"brand": "WeMos",
+		"type": "ESP32",
+		"subtype": "OLED",
+		"filesystem": "default"
+	},
+	{
 		"id": "GENERIC",
 		"description": "Generic ESP32 board",
 		"manufacturer": "Generic",
