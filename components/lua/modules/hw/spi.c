@@ -54,6 +54,8 @@
 #include "spi.h"
 #include "modules.h"
 
+#include <string.h>
+
 #include <drivers/gpio.h>
 #include <drivers/cpu.h>
 #include <drivers/spi.h>
@@ -166,7 +168,7 @@ static int lspi_attach(lua_State* L) {
 	    return luaL_driver_error(L, error);
 	}
 
-    luaL_getmetatable(L, "spi.ins");
+	luaL_getmetatable(L, "spi.ins");
     lua_setmetatable(L, -2);
 
 	(void)data_bits;
@@ -217,32 +219,94 @@ static int lspi_rw_helper( lua_State *L, int withread ) {
 	if (withread)
 		lua_newtable(L);
 
-	for (i = 2; i <= total; i++) {
-		if(lua_isnumber(L, i)) {
-			error = spi_transfer(spi->spi_device, lua_tointeger(L, i), &value);
-			if (error) {
-				return luaL_driver_error(L, error);
-			}
+	// Try to create a buffer
+	int buflen = 0;
+    for (i = 2; i <= total; i++) {
+        if(lua_isinteger(L, i)) {
+            buflen += 1;
+        } else if(lua_isstring( L, i )) {
+            buflen += lua_rawlen(L, i);
+        }
+    }
 
-			if(withread) {
-				lua_pushinteger(L, value);
-				lua_rawseti(L, -2, residx++);
-			}
-		}
-		else if(lua_isstring( L, i )) {
-			sval = lua_tolstring(L, i, &len);
-			for(j = 0; j < len; j ++) {
-				error = spi_transfer(spi->spi_device, sval[j], &value);
-				if (error) {
-					return luaL_driver_error(L, error);
-				}
-				if (withread) {
-					lua_pushinteger(L, value);
-					lua_rawseti(L, -2, residx++);
-				}
-			}
-		}
-	}
+    uint8_t *buff = NULL;
+    if (buflen > 0) {
+        buff = calloc(buflen, 1);
+        if (!buff) {
+            buflen = 0;
+        }
+    }
+
+    if (buflen > 0) {
+        // Populate the buffer
+        uint8_t *cbuff = buff;
+        for (i = 2; i <= total; i++) {
+            if(lua_isinteger(L, i)) {
+                *cbuff++ = (uint8_t)(lua_tointeger(L, i) & 0xff);
+            } else if(lua_isstring( L, i )) {
+                sval = lua_tolstring(L, i, &len);
+                memcpy(cbuff, sval, len);
+                cbuff += len;
+            }
+        }
+
+        if (withread) {
+            error = spi_bulk_rw(spi->spi_device, buflen, buff);
+        } else {
+            error = spi_bulk_write(spi->spi_device, buflen, buff);
+        }
+
+        if (error) {
+            return luaL_driver_error(L, error);
+        }
+
+        cbuff = buff;
+        for (i = 2; i <= total; i++) {
+            if(lua_isinteger(L, i)) {
+                if(withread) {
+                    lua_pushinteger(L, *cbuff);
+                    lua_rawseti(L, -2, residx++);
+                    cbuff += 1;
+                }
+            } else if(lua_isstring( L, i )) {
+                if (withread) {
+                    len = lua_rawlen(L, i);
+                    for(j = 0; j < len; j ++) {
+                        lua_pushinteger(L, *cbuff);
+                        lua_rawseti(L, -2, residx++);
+                        cbuff += 1;
+                    }
+                }
+            }
+        }
+    } else {
+        for (i = 2; i <= total; i++) {
+            if(lua_isinteger(L, i)) {
+                error = spi_transfer(spi->spi_device, lua_tointeger(L, i), &value);
+                if (error) {
+                    return luaL_driver_error(L, error);
+                }
+
+                if(withread) {
+                    lua_pushinteger(L, value);
+                    lua_rawseti(L, -2, residx++);
+                }
+            }
+            else if(lua_isstring( L, i )) {
+                sval = lua_tolstring(L, i, &len);
+                for(j = 0; j < len; j ++) {
+                    error = spi_transfer(spi->spi_device, sval[j], &value);
+                    if (error) {
+                        return luaL_driver_error(L, error);
+                    }
+                    if (withread) {
+                        lua_pushinteger(L, value);
+                        lua_rawseti(L, -2, residx++);
+                    }
+                }
+            }
+        }
+    }
 
 	return withread ? 1 : 0;
 }
