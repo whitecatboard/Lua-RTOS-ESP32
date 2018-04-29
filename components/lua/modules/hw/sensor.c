@@ -165,6 +165,10 @@ static void lsensor_setup_prepare( lua_State* L, const sensor_t *sensor, sensor_
 
 				case UART_INTERFACE:
 					setup[i].uart.id = luaL_checkinteger(L, top++);
+					setup[i].uart.speed = luaL_optinteger(L, top++, 9600);
+					setup[i].uart.data_bits = luaL_optinteger(L, top++,8);
+					setup[i].uart.parity = luaL_optinteger(L, top++,0);
+					setup[i].uart.stop_bits = luaL_optinteger(L, top++,1);
 					break;
 
 				default:
@@ -800,8 +804,8 @@ static const LUA_REG_TYPE lsensor_ins_map[] = {
   	{ LSTRKEY( "get"         ),	LFUNCVAL( lsensor_get 	    ) },
   	{ LSTRKEY( "callback"    ),	LFUNCVAL( lsensor_callback  ) },
     { LSTRKEY( "__metatable" ),	LROVAL  ( lsensor_ins_map   ) },
-	{ LSTRKEY( "__index"     ), LROVAL  ( lsensor_ins_map   ) },
-	{ LSTRKEY( "__gc"        ), LFUNCVAL( lsensor_ins_gc    ) },
+	{ LSTRKEY( "__index"     ),  LROVAL  ( lsensor_ins_map   ) },
+	{ LSTRKEY( "__gc"        ),  LFUNCVAL( lsensor_ins_gc    ) },
     { LNILKEY, LNILVAL }
 };
 
