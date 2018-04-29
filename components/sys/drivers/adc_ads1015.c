@@ -138,8 +138,8 @@ driver_error_t *adc_ads1015_setup(adc_chann_t *chan) {
 		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_RESOLUTION, NULL);
 	}
 
-	// Setup
-	if ((error = i2c_setup(i2c, I2C_MASTER, CONFIG_ADC_SPEED, 0, 0, &i2cdevice))) {
+	// Attach
+	if ((error = i2c_attach(i2c, I2C_MASTER, CONFIG_ADC_SPEED, 0, 0, &i2cdevice))) {
 		return error;
 	}
 

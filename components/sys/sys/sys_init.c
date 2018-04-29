@@ -131,6 +131,12 @@ void __attribute__((weak)) firmware_copyright_notice() {
 }
 
 void _sys_init() {
+    // Disable hardware modules modules
+    periph_module_disable(PERIPH_LEDC_MODULE);
+    periph_module_disable(PERIPH_CAN_MODULE);
+    periph_module_disable(PERIPH_I2C0_MODULE);
+    periph_module_disable(PERIPH_I2C1_MODULE);
+
 	nvs_flash_init();
 
 	#if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
@@ -163,10 +169,6 @@ void _sys_init() {
 	boot_count++;
 
 	esp_log_level_set("*", ESP_LOG_ERROR);
-
-	// Disable hardware modules modules
-	periph_module_disable(PERIPH_LEDC_MODULE);
-	periph_module_disable(PERIPH_CAN_MODULE);
 
 	// set the current time only if RTC has not already been set
 	struct timeval tv;

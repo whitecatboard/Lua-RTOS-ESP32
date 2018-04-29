@@ -89,9 +89,9 @@ static void callback_func(int callback, sensor_instance_t *instance, sensor_valu
 	    // Count properties
 	    int cnt = 0;
 	    for(idx=0; idx < SENSOR_MAX_PROPERTIES; idx++) {
-	    	if (csensor->properties[idx].id) {
-	    		cnt++;
-	    	}
+                if (csensor->properties[idx].id) {
+                    cnt++;
+                }
 	    }
 
 	    // Create a table with all the properties values
@@ -253,6 +253,8 @@ static int lsensor_dettach( lua_State* L ) {
 	sensor_userdata *udata =  (sensor_userdata *)luaL_checkudata(L, 1, "sensor.ins");;
 	driver_error_t *error;
 
+	if (!udata->instance) return 0;
+
 	// Destroy callbacks
 	int i;
 	for(i=0; i < SENSOR_MAX_CALLBACKS; i++) {
@@ -263,8 +265,10 @@ static int lsensor_dettach( lua_State* L ) {
 
 	// Destroy sensor
     if ((error = sensor_unsetup(udata->instance))) {
-    	return luaL_driver_error(L, error);
+        return luaL_driver_error(L, error);
     }
+
+    udata->instance = NULL;
 
 	return 0;
 }
@@ -282,12 +286,12 @@ static int lsensor_set( lua_State* L ) {
 
     // Prepare property value
     if ((ret = lsensor_set_prepare(L, udata->instance->sensor, property, &property_value))) {
-    	return ret;
+        return ret;
     }
 
     // Set sensor
 	if ((error = sensor_set(udata->instance, property, &property_value))) {
-    	return luaL_driver_error(L, error);
+    	    return luaL_driver_error(L, error);
     }
 
     return 0;
@@ -305,7 +309,7 @@ static int lsensor_get( lua_State* L ) {
 
     // Get sensor
 	if ((error = sensor_get(udata->instance, property, &value))) {
-    	return luaL_driver_error(L, error);
+	    return luaL_driver_error(L, error);
     }
 
 	switch (value->type) {
@@ -345,7 +349,7 @@ static int lsensor_acquire( lua_State* L ) {
 
     // Acquire data from sensor
     if ((error = sensor_acquire(udata->instance))) {
-    	return luaL_driver_error(L, error);
+        return luaL_driver_error(L, error);
     }
 
     udata->adquired = 1;
@@ -366,7 +370,7 @@ static int lsensor_read( lua_State* L ) {
     // If data is not acquired acquire data
     if (!udata->adquired) {
         if ((error = sensor_acquire(udata->instance))) {
-        	return luaL_driver_error(L, error);
+            return luaL_driver_error(L, error);
         }
     }
 
@@ -789,10 +793,10 @@ static int lsensor_ins_gc (lua_State *L) {
 
 static const LUA_REG_TYPE lsensor_map[] = {
     { LSTRKEY( "attach"  	 ),	LFUNCVAL( lsensor_attach      ) },
-	{ LSTRKEY( "list"   	 ),	LFUNCVAL( lsensor_list   	  ) },
-	{ LSTRKEY( "enumerate"   ),	LFUNCVAL( lsensor_enumerate   ) },
+	{ LSTRKEY( "list"   	     ),	LFUNCVAL( lsensor_list   	  ) },
+	{ LSTRKEY( "enumerate"    ),	LFUNCVAL( lsensor_enumerate   ) },
 	DRIVER_REGISTER_LUA_ERRORS(sensor)
-	{ LSTRKEY( "OWire"       ), LINTVAL ( OWIRE_INTERFACE     ) },
+	{ LSTRKEY( "OWire"        ), LINTVAL ( OWIRE_INTERFACE     ) },
     { LNILKEY, LNILVAL }
 };
 

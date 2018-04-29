@@ -153,7 +153,7 @@ static int li2c_attach(lua_State* L) {
         speed = luaL_checkinteger(L, 3);
     }
 
-    if ((error = i2c_setup(id, mode, speed, 0, 0, &i2cdevice))) {
+    if ((error = i2c_attach(id, mode, speed, 0, 0, &i2cdevice))) {
         return luaL_driver_error(L, error);
     }
 
@@ -171,6 +171,20 @@ static int li2c_attach(lua_State* L) {
     lua_setmetatable(L, -2);
 
     return 1;
+}
+
+static int li2c_detach(lua_State* L) {
+    driver_error_t *error;
+    i2c_user_data_t *user_data = NULL;
+
+    user_data = (i2c_user_data_t *) luaL_testudata(L, 1, "i2c.trans");
+    if (user_data) {
+        if ((error = i2c_detach(user_data->unit))) {
+            return luaL_driver_error(L, error);
+        }
+    }
+
+    return 0;
 }
 
 static int li2c_setspeed(lua_State* L) {
@@ -303,19 +317,15 @@ static int li2c_write(lua_State* L) {
 
 // Destructor
 static int li2c_trans_gc(lua_State *L) {
-    i2c_user_data_t *user_data = NULL;
-
-    user_data = (i2c_user_data_t *) luaL_testudata(L, 1, "i2c.trans");
-    if (user_data) {
-    }
+    li2c_detach(L);
 
     return 0;
 }
 
 static const LUA_REG_TYPE li2c_map[] = {
     { LSTRKEY( "attach"  ),            LFUNCVAL( li2c_attach  ) },
-    { LSTRKEY( "pins"    ),             LFUNCVAL( li2c_pins     ) },
-    { LSTRKEY( "setpins" ),             LFUNCVAL( li2c_setpins  ) },
+    { LSTRKEY( "pins"    ),            LFUNCVAL( li2c_pins     ) },
+    { LSTRKEY( "setpins" ),            LFUNCVAL( li2c_setpins  ) },
     { LSTRKEY( "MASTER"  ),            LINTVAL ( I2C_MASTER   ) },
     { LSTRKEY( "SLAVE"   ),            LINTVAL ( I2C_SLAVE    ) },
     I2C_I2C0
@@ -325,15 +335,16 @@ static const LUA_REG_TYPE li2c_map[] = {
 };
 
 static const LUA_REG_TYPE li2c_trans_map[] = {
-    { LSTRKEY( "start"      ),        LFUNCVAL( li2c_start     ) },
+    { LSTRKEY( "detach"      ),        LFUNCVAL( li2c_detach    ) },
+    { LSTRKEY( "start"       ),        LFUNCVAL( li2c_start     ) },
     { LSTRKEY( "address"     ),        LFUNCVAL( li2c_address   ) },
     { LSTRKEY( "read"        ),        LFUNCVAL( li2c_read      ) },
     { LSTRKEY( "write"       ),        LFUNCVAL( li2c_write     ) },
     { LSTRKEY( "setspeed"    ),        LFUNCVAL( li2c_setspeed  ) },
     { LSTRKEY( "stop"        ),        LFUNCVAL( li2c_stop      ) },
-    { LSTRKEY( "__metatable" ),      LROVAL  ( li2c_trans_map ) },
-    { LSTRKEY( "__index"     ),       LROVAL  ( li2c_trans_map ) },
-    { LSTRKEY( "__gc"        ),       LFUNCVAL  ( li2c_trans_gc ) },
+    { LSTRKEY( "__metatable" ),        LROVAL  ( li2c_trans_map ) },
+    { LSTRKEY( "__index"     ),        LROVAL  ( li2c_trans_map ) },
+    { LSTRKEY( "__gc"        ),        LFUNCVAL ( li2c_trans_gc ) },
     { LNILKEY, LNILVAL }
 };
 
