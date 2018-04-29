@@ -99,6 +99,15 @@
 		"filesystem": "default"
 	},
 	{
+		"id": "ADAFRUIT-HUZZAH32",
+		"description": "Adafruit HUZZAH32",
+		"manufacturer": "Adafruit",
+		"brand": "",
+		"type": "HUZZAH32",
+		"subtype": "",
+		"filesystem": "default"
+	},
+	{
 		"id": "PYCOM-FIPY",
 		"description": "Pycom FIPY",
 		"manufacturer": "Pycom",
