@@ -35,143 +35,149 @@
 #define PIO_PIN_OP          1
 
 typedef struct {
-	uint8_t pin;
-	uint8_t type;
-	int callbak;
-	lua_State *L;
-	xQueueHandle q;
+    uint8_t pin;
+    uint8_t type;
+    int callbak;
+    lua_State *L;
+    xQueueHandle q;
 } pio_intr_t;
 
 typedef struct {
-	uint8_t value;
+    uint8_t value;
 } pio_intr_data_t;
 
 static void IRAM_ATTR pio_intr_handler(void* arg) {
-	pio_intr_t *args = (pio_intr_t *)arg;
-	pio_intr_data_t data;
+    portBASE_TYPE high_priority_task_awoken = 0;
+    pio_intr_t *args = (pio_intr_t *)arg;
+    pio_intr_data_t data;
 
-	if (args->pin < 40) {
-		gpio_intr_disable(args->pin);
-	}
+    if (args->pin < 40) {
+        gpio_intr_disable(args->pin);
+    }
 
-	// Get pin value
-	switch (args->type) {
-		case GPIO_INTR_POSEDGE: data.value = 1; break;
-		case GPIO_INTR_NEGEDGE: data.value = 0; break;
-		case GPIO_INTR_ANYEDGE: data.value = gpio_ll_pin_get(args->pin); break;
-		case GPIO_INTR_LOW_LEVEL: data.value = 0; break;
-		case GPIO_INTR_HIGH_LEVEL: data.value =1; break;
-	}
+    // Get pin value
+    switch (args->type) {
+        case GPIO_INTR_POSEDGE: data.value = 1; break;
+        case GPIO_INTR_NEGEDGE: data.value = 0; break;
+        case GPIO_INTR_ANYEDGE: data.value = gpio_ll_pin_get(args->pin); break;
+        case GPIO_INTR_LOW_LEVEL: data.value = 0; break;
+        case GPIO_INTR_HIGH_LEVEL: data.value =1; break;
+    }
 
-	xQueueSendFromISR(args->q, &data, NULL);
+    xQueueSendFromISR(args->q, &data, &high_priority_task_awoken);
+
+    // Try to exec deferred callback as soon as possible
+    if(high_priority_task_awoken == pdTRUE) {
+        portYIELD_FROM_ISR();
+    }
 }
 
 static void pioTask(void *taskArgs) {
-	pio_intr_t *args = (pio_intr_t *)taskArgs;
-	pio_intr_data_t data;
+    pio_intr_t *args = (pio_intr_t *)taskArgs;
+    pio_intr_data_t data;
 
-	while (1) {
-		xQueueReceive(args->q, &data, portMAX_DELAY);
-	    if (args->callbak != LUA_NOREF) {
-	        lua_rawgeti(args->L , LUA_REGISTRYINDEX, args->callbak );
-	        lua_pushinteger(args->L, data.value);
-	        lua_call(args->L, 1, 0);
-	    }
+    for(;;) {
+        xQueueReceive(args->q, &data, portMAX_DELAY);
+        if (args->callbak != LUA_NOREF) {
+            lua_rawgeti(args->L , LUA_REGISTRYINDEX, args->callbak );
+            lua_pushinteger(args->L, data.value);
+            lua_call(args->L, 1, 0);
+        }
 
-	    if (args->pin < 40) {
-	    	gpio_intr_enable(args->pin);
-	    }
-	}
+        if (args->pin < 40) {
+            gpio_intr_enable(args->pin);
+        }
+    }
 }
 
 // Helper functions
 //
 // port goes from 1 to GPIO_PORTS
 static int pio_op(lua_State *L, unsigned port, gpio_pin_mask_t pinmask, int op, gpio_pin_mask_t *value) {
-	driver_error_t *error;
+    driver_error_t *error;
 
-	switch (op) {
-		case PLATFORM_IO_PIN_DIR_INPUT:
-			if ((error = gpio_pin_input_mask(port, pinmask))) {
-				return luaL_driver_error(L, error);
-			}
-			break;
+    switch (op) {
+        case PLATFORM_IO_PIN_DIR_INPUT:
+            if ((error = gpio_pin_input_mask(port, pinmask))) {
+                return luaL_driver_error(L, error);
+            }
+            break;
 
-		case PLATFORM_IO_PORT_DIR_INPUT:
-			if ((error = gpio_port_input(port))) {
-				return luaL_driver_error(L, error);
-			}
-			break;
-			
-		case PLATFORM_IO_PIN_DIR_OUTPUT:
-			if ((error = gpio_pin_output_mask(port, pinmask))) {
-				return luaL_driver_error(L, error);
-			}
-			break;
+        case PLATFORM_IO_PORT_DIR_INPUT:
+            if ((error = gpio_port_input(port))) {
+                return luaL_driver_error(L, error);
+            }
+            break;
 
-		case PLATFORM_IO_PORT_DIR_OUTPUT:
-			if ((error = gpio_port_output(port))) {
-				return luaL_driver_error(L, error);
-			}
-			break;
-			
-		case PLATFORM_IO_PIN_SET:
-			if ((error = gpio_pin_set_mask(port, pinmask))) {
-				return luaL_driver_error(L, error);
-			}
-			break;
-			
-		case PLATFORM_IO_PORT_SET_VALUE:
-			if ((error = gpio_port_set(port, pinmask))) {
-				return luaL_driver_error(L, error);
-			}
-			break;
-			
+        case PLATFORM_IO_PIN_DIR_OUTPUT:
+            if ((error = gpio_pin_output_mask(port, pinmask))) {
+                return luaL_driver_error(L, error);
+            }
+            break;
+
+        case PLATFORM_IO_PORT_DIR_OUTPUT:
+            if ((error = gpio_port_output(port))) {
+                return luaL_driver_error(L, error);
+            }
+            break;
+
+        case PLATFORM_IO_PIN_SET:
+            if ((error = gpio_pin_set_mask(port, pinmask))) {
+                return luaL_driver_error(L, error);
+            }
+            break;
+
+        case PLATFORM_IO_PORT_SET_VALUE:
+            if ((error = gpio_port_set(port, pinmask))) {
+                return luaL_driver_error(L, error);
+            }
+            break;
+
 
         case PLATFORM_IO_PIN_INV:
-			if ((error = gpio_pin_inv_mask(port, pinmask))) {
-				return luaL_driver_error(L, error);
-			}
-			break;
+            if ((error = gpio_pin_inv_mask(port, pinmask))) {
+                return luaL_driver_error(L, error);
+            }
+            break;
 
         case PLATFORM_IO_PIN_CLEAR:
-			if ((error = gpio_pin_clr_mask(port, pinmask))) {
-				return luaL_driver_error(L, error);
-			}
-			break;
-			
-		case PLATFORM_IO_PIN_GET:
-			if ((error = gpio_pin_get_mask(port, pinmask, value))) {
-				return luaL_driver_error(L, error);
-			}
-			break;
+            if ((error = gpio_pin_clr_mask(port, pinmask))) {
+                return luaL_driver_error(L, error);
+            }
+            break;
 
-		case PLATFORM_IO_PORT_GET_VALUE:
-			if ((error = gpio_port_get(port, value))) {
-				return luaL_driver_error(L, error);
-			}
-			break;
+        case PLATFORM_IO_PIN_GET:
+            if ((error = gpio_pin_get_mask(port, pinmask, value))) {
+                return luaL_driver_error(L, error);
+            }
+            break;
+
+        case PLATFORM_IO_PORT_GET_VALUE:
+            if ((error = gpio_port_get(port, value))) {
+                return luaL_driver_error(L, error);
+            }
+            break;
 
         case PLATFORM_IO_PIN_PULLUP:
-			if ((error = gpio_pin_pullup_mask(port, pinmask))) {
-				return luaL_driver_error(L, error);
-			}
-			break;
+            if ((error = gpio_pin_pullup_mask(port, pinmask))) {
+                return luaL_driver_error(L, error);
+            }
+            break;
 
         case PLATFORM_IO_PIN_PULLDOWN:
-			if ((error = gpio_pin_pulldwn_mask(port, pinmask))) {
-				return luaL_driver_error(L, error);
-			}
-			break;
+            if ((error = gpio_pin_pulldwn_mask(port, pinmask))) {
+                return luaL_driver_error(L, error);
+            }
+            break;
 
         case PLATFORM_IO_PIN_NOPULL:
-			if ((error = gpio_pin_nopull_mask(port, pinmask))) {
-				return luaL_driver_error(L, error);
-			}
-			break;
-	}
+            if ((error = gpio_pin_nopull_mask(port, pinmask))) {
+                return luaL_driver_error(L, error);
+            }
+            break;
+    }
 
-	return 0;
+    return 0;
 }
 
 static int pioh_set_pins(lua_State* L, int stackidx, int op) {
@@ -236,21 +242,21 @@ static int pioh_get_pins(lua_State* L, int stackidx, int op) {
   // Execute the given operation
   for(i = 0; i < GPIO_PORTS; i ++) {
      if(pio_masks[i]) {
-    	 gpio_pin_mask_t mask = GPIO_BIT_MASK;
+         gpio_pin_mask_t mask = GPIO_BIT_MASK;
 
-    	pio_op(L, i + 1, pio_masks[i], op, &val);
+        pio_op(L, i + 1, pio_masks[i], op, &val);
 
-      	for(j=0; j < GPIO_PER_PORT; j++) {
-      		if (pio_masks[i] & mask) {
-      			if (val & mask) {
-      				 lua_pushinteger(L, 1);
-      			} else {
-      				 lua_pushinteger(L, 0);
-      			}
-      		}
-      		
-      		mask = (mask << 1);
-      	}
+          for(j=0; j < GPIO_PER_PORT; j++) {
+              if (pio_masks[i] & mask) {
+                  if (val & mask) {
+                       lua_pushinteger(L, 1);
+                  } else {
+                       lua_pushinteger(L, 0);
+                  }
+              }
+
+              mask = (mask << 1);
+          }
      }
   }
 
@@ -295,25 +301,25 @@ static int pio_gen_setdir(lua_State *L, int optype) {
 }
 
 static int pio_gen_setpull(lua_State *L, int optype) {
-	int op = luaL_checkinteger(L, 1);
+    int op = luaL_checkinteger(L, 1);
 
-  	if((op != PLATFORM_IO_PIN_PULLUP) &&
+      if((op != PLATFORM_IO_PIN_PULLUP) &&
       (op != PLATFORM_IO_PIN_PULLDOWN) &&
       (op != PLATFORM_IO_PIN_NOPULL))
-    	return luaL_error(L, "invalid pull type");
-  	if(optype == PIO_PIN_OP)
-    	return pioh_set_pins(L, 2, op);
-  	else
-    	return pioh_set_ports(L, 2, op, GPIO_ALL);
+        return luaL_error(L, "invalid pull type");
+      if(optype == PIO_PIN_OP)
+        return pioh_set_pins(L, 2, op);
+      else
+        return pioh_set_ports(L, 2, op, GPIO_ALL);
 }
 
 static int pio_gen_setval(lua_State *L, int optype, gpio_pin_mask_t val, int stackidx) {
-	if((optype == PIO_PIN_OP) && (val != 1) && (val != 0)) 
-    	return luaL_error(L, "invalid pin value");
-  	if(optype == PIO_PIN_OP)
-    	return pioh_set_pins(L, stackidx, val == 1 ? PLATFORM_IO_PIN_SET : PLATFORM_IO_PIN_CLEAR);
-  	else
-    	return pioh_set_ports(L, stackidx, PLATFORM_IO_PORT_SET_VALUE, val);
+    if((optype == PIO_PIN_OP) && (val != 1) && (val != 0))
+        return luaL_error(L, "invalid pin value");
+      if(optype == PIO_PIN_OP)
+        return pioh_set_pins(L, stackidx, val == 1 ? PLATFORM_IO_PIN_SET : PLATFORM_IO_PIN_CLEAR);
+      else
+        return pioh_set_ports(L, stackidx, PLATFORM_IO_PORT_SET_VALUE, val);
 }
 
 static int pio_gen_invval(lua_State *L, int optype, gpio_pin_mask_t val, int stackidx) {
@@ -322,19 +328,19 @@ static int pio_gen_invval(lua_State *L, int optype, gpio_pin_mask_t val, int sta
 
 // Module functions
 static int pio_pin_setdir(lua_State *L) {
-	return pio_gen_setdir(L, PIO_PIN_OP);
+    return pio_gen_setdir(L, PIO_PIN_OP);
 }
 
 static int pio_pin_output(lua_State *L) {
-	return pioh_set_pins(L, 1, PLATFORM_IO_PIN_DIR_OUTPUT);
+    return pioh_set_pins(L, 1, PLATFORM_IO_PIN_DIR_OUTPUT);
 }
 
 static int pio_pin_input(lua_State *L) {
-	return pioh_set_pins(L, 1, PLATFORM_IO_PIN_DIR_INPUT);
+    return pioh_set_pins(L, 1, PLATFORM_IO_PIN_DIR_INPUT);
 }
 
 static int pio_pin_setpull(lua_State *L) {
-	return pio_gen_setpull(L, PIO_PIN_OP);
+    return pio_gen_setpull(L, PIO_PIN_OP);
 }
 
 static int pio_pin_setval(lua_State *L) {
@@ -344,19 +350,19 @@ static int pio_pin_setval(lua_State *L) {
 }
 
 static int pio_pin_sethigh(lua_State *L) {
-	return pio_gen_setval(L, PIO_PIN_OP, 1, 1);
+    return pio_gen_setval(L, PIO_PIN_OP, 1, 1);
 }
 
 static int pio_pin_setlow(lua_State *L) {
-	return pio_gen_setval(L, PIO_PIN_OP, 0, 1);
+    return pio_gen_setval(L, PIO_PIN_OP, 0, 1);
 }
 
 static int pio_pin_invval(lua_State *L) {
-	return pio_gen_invval(L, PIO_PIN_OP, 0, 1);
+    return pio_gen_invval(L, PIO_PIN_OP, 0, 1);
 }
 
 static int pio_pin_getval(lua_State *L) {
-	return pioh_get_pins(L, 1, PLATFORM_IO_PIN_GET);
+    return pioh_get_pins(L, 1, PLATFORM_IO_PIN_GET);
 }
 
 static int pio_pin_pinnum(lua_State *L) {
@@ -391,24 +397,24 @@ static int pio_pin_interrupt(lua_State *L) {
     int stack = luaL_optinteger(L, 5, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE);
     int priority = luaL_optinteger(L, 6, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY);
 
-	luaL_checktype(L, 2, LUA_TFUNCTION);
+    luaL_checktype(L, 2, LUA_TFUNCTION);
     lua_pushvalue(L, 2);
 
     int callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     args = (pio_intr_t *)calloc(1,sizeof(pio_intr_t));
     if (!args) {
-		return luaL_exception(L, GPIO_ERR_NOT_ENOUGH_MEMORY);
+        return luaL_exception(L, GPIO_ERR_NOT_ENOUGH_MEMORY);
 
     }
     args->callbak = callback;
-    args->L = L;
+    args->L = lua_newthread(L);;
     args->pin = pin;
     args->type = type;
     args->q = xQueueCreate(qsize, sizeof(pio_intr_data_t));
     if (!args->q) {
-    	free(args);
-		return luaL_exception(L, GPIO_ERR_NOT_ENOUGH_MEMORY);
+        free(args);
+        return luaL_exception(L, GPIO_ERR_NOT_ENOUGH_MEMORY);
     }
 
     // ISR related task must run on the same core that ISR handler is added
@@ -416,37 +422,37 @@ static int pio_pin_interrupt(lua_State *L) {
 
     gpio_isr_attach(pin, pio_intr_handler, type, args);
 
-	return 0;
+    return 0;
 }
 
 static int pio_port_setdir(lua_State *L) {
-	return pio_gen_setdir(L, PIO_PORT_OP);
+    return pio_gen_setdir(L, PIO_PORT_OP);
 }
 
 static int pio_port_output(lua_State *L) {
-	return pioh_set_ports(L, 1, PLATFORM_IO_PIN_DIR_OUTPUT, GPIO_ALL);
+    return pioh_set_ports(L, 1, PLATFORM_IO_PIN_DIR_OUTPUT, GPIO_ALL);
 }
 
 static int pio_port_input(lua_State *L) {
-	return pioh_set_ports(L, 1, PLATFORM_IO_PIN_DIR_INPUT, GPIO_ALL);
+    return pioh_set_ports(L, 1, PLATFORM_IO_PIN_DIR_INPUT, GPIO_ALL);
 }
 
 static int pio_port_setpull(lua_State *L) {
-	return pio_gen_setpull(L, PIO_PORT_OP);
+    return pio_gen_setpull(L, PIO_PORT_OP);
 }
 
 static int pio_port_setval(lua_State *L) {
-	gpio_pin_mask_t val = (gpio_pin_mask_t)luaL_checkinteger(L, 1);
+    gpio_pin_mask_t val = (gpio_pin_mask_t)luaL_checkinteger(L, 1);
 
-	return pio_gen_setval(L, PIO_PORT_OP, val, 2);
+    return pio_gen_setval(L, PIO_PORT_OP, val, 2);
 }
 
 static int pio_port_sethigh(lua_State *L) {
-	return pio_gen_setval(L, PIO_PORT_OP, GPIO_ALL, 1);
+    return pio_gen_setval(L, PIO_PORT_OP, GPIO_ALL, 1);
 }
 
 static int pio_port_setlow(lua_State *L) {
-	return pio_gen_setval(L, PIO_PORT_OP, 0, 1);
+    return pio_gen_setval(L, PIO_PORT_OP, 0, 1);
 }
 
 static int pio_port_getval(lua_State *L) {
@@ -468,66 +474,66 @@ static int pio_port_getval(lua_State *L) {
 }
 
 static int pio_decode(lua_State *L) {
-	int code = (int)luaL_checkinteger(L, 1);
-  	int port = cpu_port_number(code);
-  	int pin  = cpu_gpio_number(code);
+    int code = (int)luaL_checkinteger(L, 1);
+      int port = cpu_port_number(code);
+      int pin  = cpu_gpio_number(code);
 
-	lua_pushinteger(L, port);
-  	lua_pushinteger(L, pin);
-	
-	return 2;
+    lua_pushinteger(L, port);
+      lua_pushinteger(L, pin);
+
+    return 2;
 }
 
 #include "modules.h"
 
 static const LUA_REG_TYPE pio_pin_map[] = {
-    { LSTRKEY( "setdir"    ),			LFUNCVAL( pio_pin_setdir     ) },
-    { LSTRKEY( "output"    ),			LFUNCVAL( pio_pin_output     ) },
-    { LSTRKEY( "input"     ),			LFUNCVAL( pio_pin_input      ) },
-    { LSTRKEY( "setpull"   ),			LFUNCVAL( pio_pin_setpull    ) },
-    { LSTRKEY( "setval"    ),			LFUNCVAL( pio_pin_setval     ) },
-    { LSTRKEY( "sethigh"   ),			LFUNCVAL( pio_pin_sethigh    ) },
-    { LSTRKEY( "setlow"    ),			LFUNCVAL( pio_pin_setlow     ) },
-    { LSTRKEY( "inv"       ),			LFUNCVAL( pio_pin_invval     ) },
-    { LSTRKEY( "getval"    ),			LFUNCVAL( pio_pin_getval     ) },
-    { LSTRKEY( "num"  	   ),			LFUNCVAL( pio_pin_pinnum     ) },
-    { LSTRKEY( "interrupt" ),			LFUNCVAL( pio_pin_interrupt  ) },
-	{ LSTRKEY( "IntrPosEdge"   ),		LINTVAL ( GPIO_INTR_POSEDGE        ) },
-	{ LSTRKEY( "IntrNegEdge"   ),		LINTVAL ( GPIO_INTR_NEGEDGE        ) },
-	{ LSTRKEY( "IntrAnyEdge"   ),		LINTVAL ( GPIO_INTR_ANYEDGE        ) },
-	{ LSTRKEY( "IntrLowLevel"  ),		LINTVAL ( GPIO_INTR_LOW_LEVEL      ) },
-	{ LSTRKEY( "IntrHighLevel" ),		LINTVAL ( GPIO_INTR_HIGH_LEVEL     ) },
+    { LSTRKEY( "setdir"    ),            LFUNCVAL( pio_pin_setdir     ) },
+    { LSTRKEY( "output"    ),            LFUNCVAL( pio_pin_output     ) },
+    { LSTRKEY( "input"     ),            LFUNCVAL( pio_pin_input      ) },
+    { LSTRKEY( "setpull"   ),            LFUNCVAL( pio_pin_setpull    ) },
+    { LSTRKEY( "setval"    ),            LFUNCVAL( pio_pin_setval     ) },
+    { LSTRKEY( "sethigh"   ),            LFUNCVAL( pio_pin_sethigh    ) },
+    { LSTRKEY( "setlow"    ),            LFUNCVAL( pio_pin_setlow     ) },
+    { LSTRKEY( "inv"       ),            LFUNCVAL( pio_pin_invval     ) },
+    { LSTRKEY( "getval"    ),            LFUNCVAL( pio_pin_getval     ) },
+    { LSTRKEY( "num"         ),          LFUNCVAL( pio_pin_pinnum     ) },
+    { LSTRKEY( "interrupt" ),            LFUNCVAL( pio_pin_interrupt  ) },
+    { LSTRKEY( "IntrPosEdge"   ),        LINTVAL ( GPIO_INTR_POSEDGE        ) },
+    { LSTRKEY( "IntrNegEdge"   ),        LINTVAL ( GPIO_INTR_NEGEDGE        ) },
+    { LSTRKEY( "IntrAnyEdge"   ),        LINTVAL ( GPIO_INTR_ANYEDGE        ) },
+    { LSTRKEY( "IntrLowLevel"  ),        LINTVAL ( GPIO_INTR_LOW_LEVEL      ) },
+    { LSTRKEY( "IntrHighLevel" ),        LINTVAL ( GPIO_INTR_HIGH_LEVEL     ) },
     { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE pio_port_map[] = {
-    { LSTRKEY( "setdir"  ),			LFUNCVAL( pio_port_setdir  ) },
-    { LSTRKEY( "output"  ),			LFUNCVAL( pio_port_output  ) },
-    { LSTRKEY( "input"   ),			LFUNCVAL( pio_port_input   ) },
-    { LSTRKEY( "setpull" ),			LFUNCVAL( pio_port_setpull ) },
-    { LSTRKEY( "setval"  ),			LFUNCVAL( pio_port_setval  ) },
-    { LSTRKEY( "sethigh" ),			LFUNCVAL( pio_port_sethigh ) },
-    { LSTRKEY( "setlow"  ),			LFUNCVAL( pio_port_setlow  ) },
-    { LSTRKEY( "getval"  ),			LFUNCVAL( pio_port_getval  ) },
+    { LSTRKEY( "setdir"  ),            LFUNCVAL( pio_port_setdir  ) },
+    { LSTRKEY( "output"  ),            LFUNCVAL( pio_port_output  ) },
+    { LSTRKEY( "input"   ),            LFUNCVAL( pio_port_input   ) },
+    { LSTRKEY( "setpull" ),            LFUNCVAL( pio_port_setpull ) },
+    { LSTRKEY( "setval"  ),            LFUNCVAL( pio_port_setval  ) },
+    { LSTRKEY( "sethigh" ),            LFUNCVAL( pio_port_sethigh ) },
+    { LSTRKEY( "setlow"  ),            LFUNCVAL( pio_port_setlow  ) },
+    { LSTRKEY( "getval"  ),            LFUNCVAL( pio_port_getval  ) },
     { LNILKEY, LNILVAL }
 };
 
 #if !LUA_USE_ROTABLE
 static const LUA_REG_TYPE pio_map[] = {
-    { LSTRKEY( "decode"   ),		LFUNCVAL( pio_decode       ) },
+    { LSTRKEY( "decode"   ),        LFUNCVAL( pio_decode       ) },
     { LNILKEY, LNILVAL }
 };
 #else
 static const LUA_REG_TYPE pio_map[] = {
-    { LSTRKEY( "decode"   ),		LFUNCVAL( pio_decode               ) },
-	{ LSTRKEY( "pin"      ), 	   	LROVAL  ( pio_pin_map              ) },
-	{ LSTRKEY( "port"     ), 	   	LROVAL  ( pio_port_map             ) },
+    { LSTRKEY( "decode"   ),        LFUNCVAL( pio_decode               ) },
+    { LSTRKEY( "pin"      ),            LROVAL  ( pio_pin_map              ) },
+    { LSTRKEY( "port"     ),            LROVAL  ( pio_port_map             ) },
 
-    { LSTRKEY( "INPUT"    ),		LINTVAL ( PIO_DIR_INPUT            ) },
-    { LSTRKEY( "OUTPUT"   ),		LINTVAL ( PIO_DIR_OUTPUT           ) },
-    { LSTRKEY( "PULLUP"   ),		LINTVAL ( PLATFORM_IO_PIN_PULLUP   ) },
-    { LSTRKEY( "PULLDOWN" ),		LINTVAL ( PLATFORM_IO_PIN_PULLDOWN ) },
-    { LSTRKEY( "NOPULL"   ),		LINTVAL ( PLATFORM_IO_PIN_NOPULL   ) },
+    { LSTRKEY( "INPUT"    ),        LINTVAL ( PIO_DIR_INPUT            ) },
+    { LSTRKEY( "OUTPUT"   ),        LINTVAL ( PIO_DIR_OUTPUT           ) },
+    { LSTRKEY( "PULLUP"   ),        LINTVAL ( PLATFORM_IO_PIN_PULLUP   ) },
+    { LSTRKEY( "PULLDOWN" ),        LINTVAL ( PLATFORM_IO_PIN_PULLDOWN ) },
+    { LSTRKEY( "NOPULL"   ),        LINTVAL ( PLATFORM_IO_PIN_NOPULL   ) },
 
     PIO_GPIO0
     PIO_GPIO1
@@ -546,43 +552,43 @@ static const LUA_REG_TYPE pio_map[] = {
     PIO_GPIO14
     PIO_GPIO15
     PIO_GPIO16
-	PIO_GPIO17
-	PIO_GPIO18
-	PIO_GPIO19
-	PIO_GPIO20
-	PIO_GPIO21
-	PIO_GPIO22
-	PIO_GPIO23
-	PIO_GPIO24
-	PIO_GPIO25
-	PIO_GPIO26
-	PIO_GPIO27
-	PIO_GPIO28
-	PIO_GPIO29
-	PIO_GPIO30
-	PIO_GPIO31
-	PIO_GPIO32
-	PIO_GPIO33
-	PIO_GPIO34
-	PIO_GPIO35
-	PIO_GPIO36
-	PIO_GPIO37
-	PIO_GPIO38
-	PIO_GPIO39
-	PIO_GPIO40
-	PIO_GPIO41
-	PIO_GPIO42
-	PIO_GPIO43
-	PIO_GPIO44
-	PIO_GPIO45
-	PIO_GPIO46
-		
+    PIO_GPIO17
+    PIO_GPIO18
+    PIO_GPIO19
+    PIO_GPIO20
+    PIO_GPIO21
+    PIO_GPIO22
+    PIO_GPIO23
+    PIO_GPIO24
+    PIO_GPIO25
+    PIO_GPIO26
+    PIO_GPIO27
+    PIO_GPIO28
+    PIO_GPIO29
+    PIO_GPIO30
+    PIO_GPIO31
+    PIO_GPIO32
+    PIO_GPIO33
+    PIO_GPIO34
+    PIO_GPIO35
+    PIO_GPIO36
+    PIO_GPIO37
+    PIO_GPIO38
+    PIO_GPIO39
+    PIO_GPIO40
+    PIO_GPIO41
+    PIO_GPIO42
+    PIO_GPIO43
+    PIO_GPIO44
+    PIO_GPIO45
+    PIO_GPIO46
+
     { LNILKEY, LNILVAL }
 };
 #endif
 
 LUALIB_API int luaopen_pio(lua_State *L) {
-	return 0;
+    return 0;
 }
 
 MODULE_REGISTER_ROM(PIO, pio, pio_map, luaopen_pio, 1);
@@ -593,7 +599,7 @@ MODULE_REGISTER_ROM(PIO, pio, pio_map, luaopen_pio, 1);
 /*
 
  pio.pin.interrupt(pio.GPIO35, function(value)
- 	 print("value: "..value)
+      print("value: "..value)
  end, pio.pin.IntrNegEdge)
 
 
