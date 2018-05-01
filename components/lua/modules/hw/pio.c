@@ -51,7 +51,7 @@ static void IRAM_ATTR pio_intr_handler(void* arg) {
     pio_intr_data_t data;
 
     if (args->pin < 40) {
-        gpio_intr_disable(args->pin);
+        //gpio_intr_disable(args->pin);
     }
 
     // Get pin value
@@ -87,14 +87,17 @@ static void pioTask(void *taskArgs) {
     for(;;) {
         xQueueReceive(args->q, &data, portMAX_DELAY);
         if (args->callbak != LUA_NOREF) {
+            LuaLock(L);
             lua_rawgeti(L, LUA_REGISTRYINDEX, args->callbak);
             lua_xmove(L, TL, 1);
+            LuaUnlock(L);
+
             lua_pushinteger(TL, data.value);
             lua_pcall(TL, 1, 0, 0);
         }
 
         if (args->pin < 40) {
-            gpio_intr_enable(args->pin);
+            //gpio_intr_enable(args->pin);
         }
     }
 
