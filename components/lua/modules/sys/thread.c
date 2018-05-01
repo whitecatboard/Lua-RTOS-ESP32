@@ -109,10 +109,10 @@ static void cleanup(void *args) {
 	struct pthread *pthread = _pthread_get(info->pthread);
 
 	if (pthread) {
-		LuaLock(info->lthread->PL);
+	    lua_lock(info->lthread->PL);
 		luaL_unref(info->lthread->L, LUA_REGISTRYINDEX, info->lthread->function_ref);
 		luaL_unref(info->lthread->PL, LUA_REGISTRYINDEX, info->lthread->thread_ref);
-		LuaUnlock(info->lthread->PL);
+		lua_unlock(info->lthread->PL);
 	}
 
 	free(info->lthread);

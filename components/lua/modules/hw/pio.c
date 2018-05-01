@@ -51,7 +51,7 @@ static void IRAM_ATTR pio_intr_handler(void* arg) {
     pio_intr_data_t data;
 
     if (args->pin < 40) {
-        //gpio_intr_disable(args->pin);
+        gpio_intr_disable(args->pin);
     }
 
     // Get pin value
@@ -75,29 +75,40 @@ static void pioTask(void *taskArgs) {
     pio_intr_t *args = (pio_intr_t *)taskArgs;
     pio_intr_data_t data;
 
+    // Create a new Lua thread
+    //
+    // This lua thread has 2 copies of the callback at the top of
+    // it's stack. This avoid calling lua_lock / lua_unlock to get
+    // the callback reference into the task infinite loop.
     lua_State *TL;
     lua_State *L;
-    int tref;
 
     L  = pvGetLuaState();
     TL = lua_newthread(L);
 
-    tref = luaL_ref(L, LUA_REGISTRYINDEX);
+    int tref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    // Copy callback to thread
+    lua_lock(L);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, args->callbak);
+    lua_xmove(L, TL, 1);
+    lua_unlock(L);
+
+    // Get a copy of the callback
+    lua_pushvalue(TL,1);
 
     for(;;) {
         xQueueReceive(args->q, &data, portMAX_DELAY);
         if (args->callbak != LUA_NOREF) {
-            LuaLock(L);
-            lua_rawgeti(L, LUA_REGISTRYINDEX, args->callbak);
-            lua_xmove(L, TL, 1);
-            LuaUnlock(L);
-
             lua_pushinteger(TL, data.value);
             lua_pcall(TL, 1, 0, 0);
+
+            // Copy callback to thread
+            lua_pushvalue(TL,1);
         }
 
         if (args->pin < 40) {
-            //gpio_intr_enable(args->pin);
+            gpio_intr_enable(args->pin);
         }
     }
 
