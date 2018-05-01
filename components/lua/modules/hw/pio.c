@@ -38,7 +38,6 @@ typedef struct {
     uint8_t pin;
     uint8_t type;
     int callbak;
-    lua_State *L;
     xQueueHandle q;
 } pio_intr_t;
 
@@ -76,18 +75,30 @@ static void pioTask(void *taskArgs) {
     pio_intr_t *args = (pio_intr_t *)taskArgs;
     pio_intr_data_t data;
 
+    lua_State *TL;
+    lua_State *L;
+    int tref;
+
+    L  = pvGetLuaState();
+    TL = lua_newthread(L);
+
+    tref = luaL_ref(L, LUA_REGISTRYINDEX);
+
     for(;;) {
         xQueueReceive(args->q, &data, portMAX_DELAY);
         if (args->callbak != LUA_NOREF) {
-            lua_rawgeti(args->L , LUA_REGISTRYINDEX, args->callbak );
-            lua_pushinteger(args->L, data.value);
-            lua_call(args->L, 1, 0);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, args->callbak);
+            lua_xmove(L, TL, 1);
+            lua_pushinteger(TL, data.value);
+            lua_pcall(TL, 1, 0, 0);
         }
 
         if (args->pin < 40) {
             gpio_intr_enable(args->pin);
         }
     }
+
+    luaL_unref(TL, LUA_REGISTRYINDEX, tref);
 }
 
 // Helper functions
@@ -408,9 +419,9 @@ static int pio_pin_interrupt(lua_State *L) {
 
     }
     args->callbak = callback;
-    args->L = lua_newthread(L);;
     args->pin = pin;
     args->type = type;
+
     args->q = xQueueCreate(qsize, sizeof(pio_intr_data_t));
     if (!args->q) {
         free(args);
