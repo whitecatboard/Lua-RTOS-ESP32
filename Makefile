@@ -55,7 +55,7 @@ endef
 
 
 # Use this esp-idf commit in build
-CURRENT_IDF := 051d8d69000839985e9b6a281e89ccfe6c16080e
+CURRENT_IDF := 0d65f3b7f9a1dace8853719871d920d80aa3604b
 
 
 # Project name
