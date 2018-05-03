@@ -46,9 +46,9 @@
 #ifndef LUA_RTOS_LUARTOS_H_
 #define LUA_RTOS_LUARTOS_H_
 
+#include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "esp_task.h"
-#include "sdkconfig.h"
 
 /* VFS */
 /* Calculate how many vfs are needed */
@@ -260,6 +260,12 @@
 #if CONFIG_LUA_RTOS_LUA_USE_BT
 #if !CONFIG_BT_ENABLED
 #error "Bluetooth requires CONFIG_BT_ENABLED = 1. Please activate it with make menuconfig, enabling option in Component config -> Bluetooth."
+#endif
+#endif
+
+#if CONFIG_LUA_RTOS_LUA_USE_NUM_64BIT
+#if CONFIG_NEWLIB_NANO_FORMAT
+#error "Use 64 bits for integer and real is not compatible with CONFIG_NEWLIB_NANO_FORMAT = 1. Please disable it with make menuconfig, disabling option in Component config -> ESP32-especific -> Enable 'nano' formatting options for printf/scanf family  ."
 #endif
 #endif
 

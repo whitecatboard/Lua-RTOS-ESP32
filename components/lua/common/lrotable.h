@@ -45,7 +45,7 @@
 #endif // #ifndef LUA_PACK_VALUE
 
 #define LRO_STRKEY(k)   {LUA_TSTRING, sizeof(k) - 1, {.strkey = k}}
-#define LRO_NUMKEY(k)   {LUA_TNUMFLT, -1, {.numkey = k}}
+#define LRO_NUMKEY(k)   {LUA_TNUMINT, -1, {.numkey = k}}
 #define LRO_NILKEY      {LUA_TNIL,    -1, {.strkey=NULL}}
 
 /* Maximum length of a rotable name and of a string key*/

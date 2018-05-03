@@ -1044,10 +1044,8 @@ static void json_next_number_token(json_parse_t *json, json_token_t *token)
         if ((*cc >= '0') && (*cc <= '9')) {
             *cb++ = *cc;
         } else {
-            if (*cc == '.') {
-                is_int = 0;
-                break;
-            }
+            is_int = 0;
+            break;
         }
         cc++;
     }

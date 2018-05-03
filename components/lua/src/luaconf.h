@@ -4,15 +4,24 @@
 ** See Copyright Notice in lua.h
 */
 
-
 #ifndef luaconf_h
 #define luaconf_h
+
+#include "sdkconfig.h"
 
 #include <limits.h>
 #include <stddef.h>
 
 #define LUA_USE_CTYPE    1
 #define LUA_USE_LUA_LOCK 1
+
+#ifndef LLONG_MAX
+#define LLONG_MAX __LONG_LONG_MAX__
+#endif
+
+#ifndef LLONG_MIN
+#define LLONG_MIN __LONG_LONG_MIN__
+#endif
 
 /*
 ** ===================================================================
@@ -35,7 +44,9 @@
 ** ensure that all software connected to Lua will be compiled with the
 ** same configuration.
 */
+#if !CONFIG_LUA_RTOS_LUA_USE_NUM_64BIT
 #define LUA_32BITS
+#endif
 
 /*
 @@ LUA_USE_C89 controls the use of non-ISO-C89 features.
@@ -561,7 +572,6 @@
 /* use presence of macro LLONG_MAX as proxy for C99 compliance */
 #if defined(LLONG_MAX)		/* { */
 /* use ISO C99 stuff */
-
 #define LUA_INTEGER		long long
 #define LUA_INTEGER_FRMLEN	"ll"
 
