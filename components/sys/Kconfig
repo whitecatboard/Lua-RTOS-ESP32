@@ -1028,50 +1028,50 @@ menu "Lua RTOS"
       menu "Lua"
          menu "Tuning"
          config LUA_RTOS_LUA_STACK_SIZE
-            int "Lua RTOSinterpreter stack size"
+            int "Lua RTOS interpreter stack size"
             range 1024 40960
             default 20480
             help
-               Default stack size assigned to the Lua RTOSinterpreter.
+               Default stack size assigned to the Lua RTOS interpreter.
    
          config LUA_RTOS_LUA_TASK_PRIORITY
-            int "Lua RTOSinterpreter task priority"
+            int "Lua RTOS interpreter task priority"
             range 3 25
             default 3
             help
-               Task priority assigned to the Lua RTOSinterpreter. Lua RTOS has a thread-oriented programming model and
-               basically the Lua RTOSinterpreter is used only for launch new threads and configure the system, so
+               Task priority assigned to the Lua RTOS interpreter. Lua RTOS has a thread-oriented programming model and
+               basically the Lua RTOS interpreter is used only for launch new threads and configure the system, so
                it's not necessary to assing a high piority to the interpreter.
             
          config LUA_RTOS_LUA_TASK_CPU
             depends on !FREERTOS_UNICORE
-            int "Lua RTOSinterpreter task CPU affinity"
+            int "Lua RTOS interpreter task CPU affinity"
             range 0 1
             default 0
             help
-               CPU affinity for the task assigned to the Lua RTOSinterpreter.
+               CPU affinity for the task assigned to the Lua RTOS interpreter.
                
          config LUA_RTOS_LUA_THREAD_STACK_SIZE
-            int "Default Lua RTOSthread stack size"
+            int "Default Lua RTOS thread stack size"
             range 1024 40960
             default 10240
             help
-               Default Stack size assigned to Lua RTOSthreads.
+               Default Stack size assigned to Lua RTOS threads.
    
          config LUA_RTOS_LUA_THREAD_PRIORITY
-            int "Default Lua RTOSthread priority"
+            int "Default Lua RTOS thread priority"
             range 3 25
             default 20
             help
-               Default priority assigned to Lua RTOSthreads.
+               Default priority assigned to Lua RTOS threads.
             
          config LUA_RTOS_LUA_THREAD_CPU
             depends on !FREERTOS_UNICORE
-            int "Default Lua RTOSthread CPU affinity"
+            int "Default Lua RTOS thread CPU affinity"
             range 0 1
             default 1
             help
-               Default CPU affinity for Lua RTOSthreads.
+               Default CPU affinity for Lua RTOS threads.
    
          config LUA_RTOS_LUA_USE_ROTABLE_CACHE
             bool "Use cache for readonly tables access"
@@ -1079,7 +1079,7 @@ menu "Lua RTOS"
             help
                When accessing to readonly tables,
                Lua RTOS can get the key/value pair from a cache. This can speedup
-               the execution of Lua RTOSscripts.
+               the execution of Lua RTOS scripts.
                
          config LUA_RTOS_USE_HARDWARE_LOCKS 
             bool "Enable hardware locks"
