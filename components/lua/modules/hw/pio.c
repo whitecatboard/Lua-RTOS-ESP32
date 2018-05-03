@@ -49,25 +49,44 @@ static void IRAM_ATTR pio_intr_handler(void* arg) {
     portBASE_TYPE high_priority_task_awoken = 0;
     pio_intr_t *args = (pio_intr_t *)arg;
     pio_intr_data_t data;
-
-    if (args->pin < 40) {
-        gpio_intr_disable(args->pin);
-    }
+    uint8_t valid = 1;
 
     // Get pin value
     switch (args->type) {
         case GPIO_INTR_POSEDGE: data.value = 1; break;
         case GPIO_INTR_NEGEDGE: data.value = 0; break;
         case GPIO_INTR_ANYEDGE: data.value = gpio_ll_pin_get(args->pin); break;
-        case GPIO_INTR_LOW_LEVEL: data.value = 0; break;
-        case GPIO_INTR_HIGH_LEVEL: data.value =1; break;
+        case GPIO_INTR_LOW_LEVEL:
+            data.value = gpio_ll_pin_get(args->pin);
+            if (data.value == 0) {
+                gpio_set_intr_type(args->pin, GPIO_INTR_HIGH_LEVEL);
+            } else {
+                valid = 0;
+                gpio_set_intr_type(args->pin, GPIO_INTR_LOW_LEVEL);
+            }
+            break;
+        case GPIO_INTR_HIGH_LEVEL:
+            data.value = gpio_ll_pin_get(args->pin);
+            if (data.value == 1) {
+                gpio_set_intr_type(args->pin, GPIO_INTR_LOW_LEVEL);
+            } else {
+                valid = 0;
+                gpio_set_intr_type(args->pin, GPIO_INTR_HIGH_LEVEL);
+            }
+            break;
     }
 
-    xQueueSendFromISR(args->q, &data, &high_priority_task_awoken);
+    if (valid) {
+        if (args->pin < 40) {
+            gpio_intr_disable(args->pin);
+        }
 
-    // Try to exec deferred callback as soon as possible
-    if(high_priority_task_awoken == pdTRUE) {
-        portYIELD_FROM_ISR();
+        xQueueSendFromISR(args->q, &data, &high_priority_task_awoken);
+
+        // Try to exec deferred callback as soon as possible
+        if(high_priority_task_awoken == pdTRUE) {
+            portYIELD_FROM_ISR();
+        }
     }
 }
 
