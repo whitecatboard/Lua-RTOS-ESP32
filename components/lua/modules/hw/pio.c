@@ -38,7 +38,7 @@ typedef struct {
     uint8_t pin;
     uint8_t type;
     int callbak;
-    xQueueHandle q;
+    TaskHandle_t task;
 } pio_intr_t;
 
 typedef struct {
@@ -48,7 +48,7 @@ typedef struct {
 static void IRAM_ATTR pio_intr_handler(void* arg) {
     portBASE_TYPE high_priority_task_awoken = 0;
     pio_intr_t *args = (pio_intr_t *)arg;
-    pio_intr_data_t data;
+    uint32_t data;
 
     if (args->pin < 40) {
         gpio_intr_disable(args->pin);
@@ -56,14 +56,14 @@ static void IRAM_ATTR pio_intr_handler(void* arg) {
 
     // Get pin value
     switch (args->type) {
-        case GPIO_INTR_POSEDGE: data.value = 1; break;
-        case GPIO_INTR_NEGEDGE: data.value = 0; break;
-        case GPIO_INTR_ANYEDGE: data.value = gpio_ll_pin_get(args->pin); break;
-        case GPIO_INTR_LOW_LEVEL: data.value = 0; break;
-        case GPIO_INTR_HIGH_LEVEL: data.value =1; break;
+        case GPIO_INTR_POSEDGE: data = 1; break;
+        case GPIO_INTR_NEGEDGE: data = 0; break;
+        case GPIO_INTR_ANYEDGE: data = gpio_ll_pin_get(args->pin); break;
+        case GPIO_INTR_LOW_LEVEL: data = 0; break;
+        case GPIO_INTR_HIGH_LEVEL: data =1; break;
     }
 
-    xQueueSendFromISR(args->q, &data, &high_priority_task_awoken);
+    xTaskNotifyFromISR(args->task, data, eSetValueWithOverwrite, &high_priority_task_awoken);
 
     // Try to exec deferred callback as soon as possible
     if(high_priority_task_awoken == pdTRUE) {
@@ -73,7 +73,7 @@ static void IRAM_ATTR pio_intr_handler(void* arg) {
 
 static void pioTask(void *taskArgs) {
     pio_intr_t *args = (pio_intr_t *)taskArgs;
-    pio_intr_data_t data;
+    uint32_t data;
 
     // Create a new Lua thread
     //
@@ -98,9 +98,10 @@ static void pioTask(void *taskArgs) {
     lua_pushvalue(TL,1);
 
     for(;;) {
-        xQueueReceive(args->q, &data, portMAX_DELAY);
+        xTaskNotifyWait(NULL, NULL, &data, portMAX_DELAY);
+
         if (args->callbak != LUA_NOREF) {
-            lua_pushinteger(TL, data.value);
+            lua_pushinteger(TL, data);
             lua_pcall(TL, 1, 0, 0);
 
             // Copy callback to thread
@@ -436,14 +437,8 @@ static int pio_pin_interrupt(lua_State *L) {
     args->pin = pin;
     args->type = type;
 
-    args->q = xQueueCreate(qsize, sizeof(pio_intr_data_t));
-    if (!args->q) {
-        free(args);
-        return luaL_exception(L, GPIO_ERR_NOT_ENOUGH_MEMORY);
-    }
-
     // ISR related task must run on the same core that ISR handler is added
-    xTaskCreatePinnedToCore(pioTask, "lpio", stack, args, priority, NULL, xPortGetCoreID());
+    xTaskCreatePinnedToCore(pioTask, "lpio", stack, args, priority, &args->task, xPortGetCoreID());
 
     gpio_isr_attach(pin, pio_intr_handler, type, args);
 
