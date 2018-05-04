@@ -44,9 +44,9 @@
 #endif // #ifdef ELUA_ENDIAN_LITTLE
 #endif // #ifndef LUA_PACK_VALUE
 
-#define LRO_STRKEY(k)   {LUA_TSTRING, sizeof(k) - 1, {.strkey = k}}
+#define LRO_STRKEY(k)   {LUA_TSTRING, sizeof(k) - 1, {.strkey = k}, __COUNTER__}
 #define LRO_NUMKEY(k)   {LUA_TNUMINT, -1, {.numkey = k}}
-#define LRO_NILKEY      {LUA_TNIL,    -1, {.strkey=NULL}}
+#define LRO_NILKEY      {LUA_TNIL,    -1, {.strkey=NULL}, __COUNTER__}
 
 /* Maximum length of a rotable name and of a string key*/
 #define LUA_MAX_ROTABLE_NAME      32
@@ -64,6 +64,7 @@ typedef struct
     const char*   strkey;
     luaR_numkey   numkey;
   } id;
+  uint32_t count;
 } luaR_key;
 
 /* An entry in the read only table */
