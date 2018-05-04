@@ -53,10 +53,8 @@ define n
 
 endef
 
-
 # Use this esp-idf commit in build
 CURRENT_IDF := 0d65f3b7f9a1dace8853719871d920d80aa3604b
-
 
 # Project name
 PROJECT_NAME := lua_rtos
@@ -173,6 +171,21 @@ ifeq ("$(VERSION_CHECK_REQUIRED)","1")
 endif
 
 include $(IDF_PATH)/make/project.mk
+
+ifdef TOOLCHAIN_COMMIT_DESC
+    ifneq ($(TOOLCHAIN_COMMIT_DESC), $(SUPPORTED_TOOLCHAIN_COMMIT_DESC))
+        $(info Toolchain version is not supported: $(TOOLCHAIN_COMMIT_DESC))
+        $(info Expected to see version: $(SUPPORTED_TOOLCHAIN_COMMIT_DESC))
+        $(info Please check ESP-IDF setup instructions and update the toolchain.)
+        $(error Aborting)
+    endif
+    ifeq (,$(findstring $(TOOLCHAIN_GCC_VER), $(SUPPORTED_TOOLCHAIN_GCC_VERSIONS)))
+        $(info Compiler version is not supported: $(TOOLCHAIN_GCC_VER))
+        $(info Expected to see version(s): $(SUPPORTED_TOOLCHAIN_GCC_VERSIONS))
+        $(info Please check ESP-IDF setup instructions and update the toolchain.)
+        $(error Aborting)
+    endif
+endif # TOOLCHAIN_COMMIT_DESC
 
 ifeq ($(BOARD_TYPE_REQUIRED),1)
   #
