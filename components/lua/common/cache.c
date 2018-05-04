@@ -123,13 +123,15 @@ int rotable_cache_init() {
 }
 
 const IRAM_ATTR TValue *rotable_cache_get(const luaR_entry *rotable, const char *strkey) {
-	struct rotable_cache_entry *entry = cache.first;
-
-	portENTER_CRITICAL(&lock);
-
 	// rotable strkey is cached?
+	int len = strlen(strkey);
+
+    portENTER_CRITICAL(&lock);
+
+    struct rotable_cache_entry *entry = cache.first;
+
 	while (entry) {
-		if ((entry->rotable == rotable) && (!strcmp(entry->entry->key.id.strkey, strkey))) {
+		if ((entry->rotable == rotable) && (entry->entry->key.len == len) &&  (!strcmp(entry->entry->key.id.strkey, strkey))) {
 			// hit
 			cache.hit++;
 			entry->used++;
