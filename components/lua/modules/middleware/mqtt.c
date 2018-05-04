@@ -115,9 +115,12 @@ typedef struct {
     int persistence;
 } mqtt_userdata;
 
-/* Does a topic match a subscription? */
-static int mosquitto_topic_matches_sub(const char *sub, const char *topic)
-{
+// Extracted from:
+//
+// http://git.eclipse.org/c/mosquitto/org.eclipse.mosquitto.git/tree/lib/util_mosq.c
+//
+// mosquitto_topic_matches_sub function
+static int topic_matches_sub(const char *sub, const char *topic) {
     int slen, tlen;
     int spos, tpos;
     bool multilevel_wildcard = false;
@@ -125,9 +128,9 @@ static int mosquitto_topic_matches_sub(const char *sub, const char *topic)
     slen = strlen(sub);
     tlen = strlen(topic);
 
-    if(slen && tlen){
-        if((sub[0] == '$' && topic[0] != '$')
-                || (topic[0] == '$' && sub[0] != '$')){
+    if (slen && tlen) {
+        if ((sub[0] == '$' && topic[0] != '$')
+                || (topic[0] == '$' && sub[0] != '$')) {
 
             return 0;
         }
@@ -136,48 +139,47 @@ static int mosquitto_topic_matches_sub(const char *sub, const char *topic)
     spos = 0;
     tpos = 0;
 
-    while(spos < slen && tpos < tlen){
-        if(sub[spos] == topic[tpos]){
-            if(tpos == tlen-1){
+    while (spos < slen && tpos < tlen) {
+        if (sub[spos] == topic[tpos]) {
+            if (tpos == tlen - 1) {
                 /* Check for e.g. foo matching foo/# */
-                if(spos == slen-3
-                        && sub[spos+1] == '/'
-                        && sub[spos+2] == '#'){
+                if (spos == slen - 3 && sub[spos + 1] == '/'
+                        && sub[spos + 2] == '#') {
                     multilevel_wildcard = true;
                     return 1;
                 }
             }
             spos++;
             tpos++;
-            if(spos == slen && tpos == tlen){
+            if (spos == slen && tpos == tlen) {
                 return 1;
-            }else if(tpos == tlen && spos == slen-1 && sub[spos] == '+'){
+            } else if (tpos == tlen && spos == slen - 1 && sub[spos] == '+') {
                 spos++;
                 return 1;
             }
-        }else{
-            if(sub[spos] == '+'){
+        } else {
+            if (sub[spos] == '+') {
                 spos++;
-                while(tpos < tlen && topic[tpos] != '/'){
+                while (tpos < tlen && topic[tpos] != '/') {
                     tpos++;
                 }
-                if(tpos == tlen && spos == slen){
+                if (tpos == tlen && spos == slen) {
                     return 1;
                 }
-            }else if(sub[spos] == '#'){
+            } else if (sub[spos] == '#') {
                 multilevel_wildcard = true;
-                if(spos+1 != slen){
+                if (spos + 1 != slen) {
                     return 0;
-                }else{
+                } else {
                     return 1;
                 }
-            }else{
+            } else {
                 return 0;
             }
         }
     }
 
-    if(multilevel_wildcard == false && (tpos < tlen || spos < slen)){
+    if (multilevel_wildcard == false && (tpos < tlen || spos < slen)) {
         return 0;
     }
 
@@ -226,7 +228,7 @@ static int messageArrived(void *context, char * topicName, int topicLen,
         callback = mqtt->callbacks;
         while (callback) {
             call = callback->callback;
-            if ((call != LUA_NOREF) && mosquitto_topic_matches_sub(callback->topic, topicName)) {
+            if ((call != LUA_NOREF) && topic_matches_sub(callback->topic, topicName)) {
                 lua_rawgeti(mqtt->L, LUA_REGISTRYINDEX, call);
                 lua_pushinteger(mqtt->L, m->payloadlen);
                 lua_pushlstring(mqtt->L, m->payload, m->payloadlen);
@@ -386,7 +388,7 @@ static int lmqtt_connect(lua_State* L) {
     bcopy(&ssl_opts, &mqtt->ssl_opts, sizeof(MQTTClient_SSLOptions));
 
     MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
-    conn_opts.connectTimeout = 10;
+    conn_opts.connectTimeout = 20;
     conn_opts.keepAliveInterval = 60;
     conn_opts.reliable = 0;
     conn_opts.cleansession = 0;
