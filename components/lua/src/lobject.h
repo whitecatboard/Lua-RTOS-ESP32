@@ -426,6 +426,9 @@ typedef struct Proto {
   struct LClosure *cache;  /* last-created closure with this prototype */
   TString  *source;  /* used for debug information */
   GCObject *gclist;
+#if CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
+  int optimized;
+#endif
 } Proto;
 
 

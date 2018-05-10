@@ -891,19 +891,27 @@ void luaV_finishOp (lua_State *L) {
   if (!luaV_fastset(L,t,k,slot,luaH_get,v)) \
     Protect(luaV_finishset(L,t,k,v,slot)); }
 
+#include <lua/common/jit_optimizer.inc>
 
+void luaV_execute(lua_State *L) {
+    CallInfo *ci = L->ci;
+    LClosure *cl;
+    TValue *k;
+    StkId base;
+    ci->callstatus |= CIST_FRESH; /* fresh invocation of 'luaV_execute" */
+    newframe: /* reentry point when frame changes (call/return) */
+    lua_assert(ci == L->ci);
+    cl = clLvalue(ci->func); /* local reference to function's closure */
 
-void luaV_execute (lua_State *L) {
-  CallInfo *ci = L->ci;
-  LClosure *cl;
-  TValue *k;
-  StkId base;
-  ci->callstatus |= CIST_FRESH;  /* fresh invocation of 'luaV_execute" */
- newframe:  /* reentry point when frame changes (call/return) */
-  lua_assert(ci == L->ci);
-  cl = clLvalue(ci->func);  /* local reference to function's closure */
-  k = cl->p->k;  /* local reference to function's constant table */
-  base = ci->u.l.base;  /* local copy of function's base */
+#if CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
+    if (!cl->p->optimized) {
+        while (jit_opt(L, ci, cl));
+    }
+#endif
+
+    k = cl->p->k; /* local reference to function's constant table */
+    base = ci->u.l.base; /* local copy of function's base */
+
   /* main loop of interpreter */
   for (;;) {
     Instruction i;

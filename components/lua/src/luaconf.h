@@ -13,7 +13,6 @@
 #include <stddef.h>
 
 #define LUA_USE_CTYPE    1
-#define LUA_USE_LUA_LOCK 1
 
 #ifndef LLONG_MAX
 #define LLONG_MAX __LONG_LONG_MAX__
