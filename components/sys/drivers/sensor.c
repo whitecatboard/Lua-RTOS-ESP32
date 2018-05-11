@@ -294,7 +294,7 @@ static driver_error_t *sensor_i2c_setup(uint8_t interface, sensor_instance_t *un
     pwbus_on();
     #endif
 
-    if ((error = i2c_setup(unit->setup[interface].i2c.id, I2C_MASTER, unit->setup[interface].i2c.speed, 0, 0, &i2cdevice))) {
+    if ((error = i2c_attach(unit->setup[interface].i2c.id, I2C_MASTER, unit->setup[interface].i2c.speed, 0, 0, &i2cdevice))) {
         return error;
     }
 
@@ -305,6 +305,20 @@ static driver_error_t *sensor_i2c_setup(uint8_t interface, sensor_instance_t *un
     if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, I2C_DRIVER, unit->setup[interface].i2c.id, DRIVER_ALL_FLAGS, unit->sensor->id))) {
         return driver_lock_error(SENSOR_DRIVER, lock_error);
     }
+#endif
+
+    return NULL;
+}
+
+static driver_error_t *sensor_i2c_unsetup(uint8_t interface, sensor_instance_t *unit) {
+    driver_error_t *error;
+
+    if ((error = i2c_detach(unit->setup[interface].i2c.id))) {
+        return error;
+    }
+
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    driver_unlock(SENSOR_DRIVER, unit->unit, I2C_DRIVER, unit->setup[interface].i2c.id);
 #endif
 
     return NULL;
@@ -508,6 +522,22 @@ driver_error_t *sensor_unsetup(sensor_instance_t *unit) {
         if (queue) {
             vQueueDelete(queue);
             queue = NULL;
+        }
+    }
+
+    // Detach interface
+    for(i=0;i<SENSOR_MAX_INTERFACES;i++) {
+        if (!(unit->sensor->interface[i].flags & SENSOR_FLAG_CUSTOM_INTERFACE_INIT) && unit->sensor->interface[i].type) {
+            switch (unit->sensor->interface[i].type) {
+                case I2C_INTERFACE: error = sensor_i2c_unsetup(i, unit);break;
+                default:
+                    return driver_error(SENSOR_DRIVER, SENSOR_ERR_INTERFACE_NOT_SUPPORTED, NULL);
+                    break;
+            }
+
+            if (error) {
+                break;
+            }
         }
     }
 

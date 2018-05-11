@@ -107,13 +107,13 @@ extern const int i2c_error_map;
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *          SPI_ERR_INVALID_UNIT
+ *          I2C_ERR_INVALID_UNIT
  *          I2C_ERR_PIN_NOT_ALLOWED
  */
 driver_error_t *i2c_pin_map(int unit, int sda, int scl);
 
 /**
- * @brief Setup I2C device attached to a I2C bus. This function is thread safe.
+ * @brief Attach an I2C device to an I2C bus. This function is thread safe.
  *
  * @param unit I2C unit, can be either 0 or 1.
  * @param mode I2C mode, can be either I2C_MASTER or I2C_SLAVE.
@@ -126,10 +126,24 @@ driver_error_t *i2c_pin_map(int unit, int sda, int scl);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *          SPI_ERR_INVALID_UNIT
+ *          I2C_ERR_INVALID_UNIT
  *          A LOCK error, if sda, or scl gpios are used by other driver
  */
-driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr, int *deviceid);
+driver_error_t *i2c_attach(int unit, int mode, int speed, int addr10_en, int addr, int *deviceid);
+
+/**
+ * @brief Attach an I2C device from an I2C bus. This function is thread safe.
+ *
+ * @param deviceid Device identifier.
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs.
+ *
+ *          I2C_ERR_INVALID_UNIT
+ *          I2C_ERR_IS_NOT_SETUP
+ */
+driver_error_t *i2c_detach(int deviceid);
 
 driver_error_t *i2c_setspeed(int unit, int speed);
 

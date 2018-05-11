@@ -326,8 +326,11 @@ void lua_shell(lua_State* L, char *buffer) {
         memcpy(arg, tokens[0].tb, tl);
         arg[tl] = 0x00;
 
-        // for execution without "do " the file extension must be ".lua"
-        if(arg[tl-4] != '.' || arg[tl-3] != 'l' || arg[tl-2] != 'u' || arg[tl-1] != 'a') {
+        // for execution without "do " the file extension must be ".lua" or ".luac"
+        if (
+                (arg[tl-4] != '.' || arg[tl-3] != 'l' || arg[tl-2] != 'u' || arg[tl-1] != 'a') &&
+                (arg[tl-5] != '.' || arg[tl-4] != 'l' || arg[tl-3] != 'u' || arg[tl-2] != 'a' || arg[tl-1] != 'c')
+        ) {
             goto exit;
         }
 

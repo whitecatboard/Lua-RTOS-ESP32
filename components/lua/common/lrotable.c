@@ -67,7 +67,7 @@ static const IRAM_ATTR TValue *luaR_auxfind(const luaR_entry *pentry, const char
 
 	if (k) {
 		// Try to get from cache
-		#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+		#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE && !CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
 		res = rotable_cache_get(pentry, k);
 		if (res) {
 			return res;
@@ -78,7 +78,7 @@ static const IRAM_ATTR TValue *luaR_auxfind(const luaR_entry *pentry, const char
 
 		while (entry->key.id.strkey) {
 			if ((entry->key.type == LUA_TSTRING) && (entry->key.len == kl) && (!strncmp(entry->key.id.strkey, k, kl))) {
-				#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+				#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE && !CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
 				// Put in cache
 				rotable_cache_put(pentry, entry);
 				#endif
@@ -118,7 +118,7 @@ static const IRAM_ATTR TValue *luaR_auxfind(const luaR_entry *pentry, const char
  */
 const IRAM_ATTR TValue *luaR_findglobal(const char *name) {
 	// Try to get from cache
-	#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+	#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE && !CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
 	const TValue *res = NULL;
 
 	res = rotable_cache_get(lua_rotable, name);
@@ -132,7 +132,7 @@ const IRAM_ATTR TValue *luaR_findglobal(const char *name) {
 
 	while (entry->key.id.strkey) {
 		if ((entry->key.len == len) && (!strncmp(entry->key.id.strkey, name, len))) {
-			#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+			#if CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE && !CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
 			// Put in cache
 			rotable_cache_put(lua_rotable, entry);
 			#endif
@@ -169,13 +169,13 @@ const TValue *luaR_findentry(const void *pentry, const char *strkey,
 	}
 }
 extern uint32_t _rodata_start;
-extern uint32_t _lit4_end;
+extern uint32_t _thread_local_end;
 extern uint32_t _lua_rtos_rodata_start;
 extern uint32_t _lua_rtos_rodata_end;
 
 int luaR_isrotable(const void *p) {
 	return (((&_rodata_start) <= (uint32_t *) p
-			&& (uint32_t *) p <= (&_lit4_end))
+			&& (uint32_t *) p <= (&_thread_local_end))
 			|| ((&_lua_rtos_rodata_start) <= (uint32_t *) p
 					&& (uint32_t *) p <= (&_lua_rtos_rodata_end)));
 }

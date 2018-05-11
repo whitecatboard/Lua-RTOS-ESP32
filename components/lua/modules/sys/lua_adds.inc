@@ -59,7 +59,7 @@ static int dofile (lua_State *L, const char *name);
 
 extern int threadInited;
 
-#if LUA_USE_LUA_LOCK
+#if CONFIG_LUA_RTOS_LUA_USE_LOCKS && !CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
 #include <pthread.h>
 
 pthread_mutex_t lua_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -206,7 +206,7 @@ static void luaos_boot_scripts(lua_State *L) {
 static int luaos_pmain (lua_State *L) {
   status_set(STATUS_LUA_RUNNING);
 
-#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE && !CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
     rotable_cache_init();
 #endif
 

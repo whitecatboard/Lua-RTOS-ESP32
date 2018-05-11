@@ -39,45 +39,29 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS read only table cache
- *
+ * Lua RTOS, Hall effect switch sensor (example 44E402)
  */
 
 #include "sdkconfig.h"
 
-#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE && !CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
+#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_HALL_SWITCH
 
-#include "lrotable.h"
+#include <drivers/sensor.h>
 
-#ifndef ROTABLE_CACHE_H
-#define ROTABLE_CACHE_H
-
-#define ROTABLE_CACHE_LENGTH 8
-
-#include <sys/mutex.h>
-
-struct rotable_cache_entry {
-	struct rotable_cache_entry *previous; // Previous entry
-	struct rotable_cache_entry *next;     // Next entry
-
-	luaR_entry *rotable; // cached rotable
-	luaR_entry *entry;   // cached entry
-	uint32_t used;
+// Sensor specification and registration
+static const sensor_t __attribute__((used,unused,section(".sensors"))) hall_switch_sensor = {
+	.id = "HALL_SWITCH",
+	.interface = {
+		{
+			.type = GPIO_INTERFACE,
+			.flags = SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_H(0) | SENSOR_FLAG_ON_L(1)
+		},
+	},
+	.data = {
+		{.id = "on", .type = SENSOR_DATA_INT},
+	}
 };
 
-typedef struct {
-	uint32_t miss;     // Number of cache misses
-	uint32_t hit;      // Number of cache hits
-
-	struct rotable_cache_entry *first; // First entry
-	struct rotable_cache_entry *last;  // Last entry
-} rotable_cache_t;
-
-void rotable_cache_dump();
-int rotable_cache_init();
-const TValue *rotable_cache_get(const luaR_entry *rotable, const char *strkey);
-void rotable_cache_put(const luaR_entry *rotable, const luaR_entry *entry);
-
 #endif
-
 #endif

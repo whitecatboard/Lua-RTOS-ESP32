@@ -26,7 +26,7 @@
 LUALIB_API void luaL_checkanytable (lua_State *L, int arg);
 // LUA RTOS END
 
-#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE && !CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
 #include "lua/common/cache.h"
 #endif
 
@@ -474,7 +474,7 @@ static int luaB_tostring (lua_State *L) {
 #include "modules.h"
 
 static const LUA_REG_TYPE base_funcs[] = {
-#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE && !CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
   { LSTRKEY( "cache" 		  ),			LFUNCVAL( rotable_cache_dump  	) },
 #endif
   { LSTRKEY( "compile" 		  ),			LFUNCVAL( luaB_compile   		) },

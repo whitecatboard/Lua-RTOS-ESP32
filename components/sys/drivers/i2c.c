@@ -163,6 +163,17 @@ static driver_error_t *i2c_lock_resources(int unit) {
 
     return NULL;
 }
+
+static driver_error_t *i2c_unlock_resources(int unit) {
+    // Unlock sda
+    driver_unlock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].sda);
+
+    // Unlock scl
+    driver_unlock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].scl);
+
+    return NULL;
+}
+
 #endif
 
 static driver_error_t *i2c_check(int unit) {
@@ -329,7 +340,7 @@ driver_error_t *i2c_pin_map(int unit, int sda, int scl) {
     return NULL;
 }
 
-driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en,
+driver_error_t *i2c_attach(int unit, int mode, int speed, int addr10_en,
         int addr, int *deviceid) {
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     driver_error_t *error;
@@ -405,6 +416,55 @@ driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en,
     i2c[unit].device[device].reading = 0;
 
     *deviceid = ((unit << 8) | device);
+
+    i2c_unlock(unit);
+
+    return NULL;
+}
+
+driver_error_t *i2c_detach(int deviceid) {
+    driver_error_t *error;
+
+    int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
+
+    // Sanity checks
+    if ((error = i2c_check(unit))) {
+        return error;
+    }
+
+    i2c_lock(unit);
+
+    // Mark device as unused
+    i2c[unit].device[device].speed = 0;
+    i2c[unit].device[device].reading = 0;
+
+    // Check if all devices are unused or not
+    int i;
+    int no_devices = 1;
+
+    for (i = 0; i < I2C_BUS_DEVICES; i++) {
+        if (i2c[unit].device[i].speed != 0) {
+            no_devices = 0;
+            break;
+        }
+    }
+
+    if (no_devices) {
+        // Unlock resources
+        i2c_unlock_resources(unit);
+
+        i2c_driver_delete(unit);
+
+        // Disable unit
+        if (unit == 0) {
+            periph_module_disable(PERIPH_I2C0_MODULE);
+        } else {
+            periph_module_disable(PERIPH_I2C1_MODULE);
+        }
+
+        i2c[unit].setup = 0;
+    }
 
     i2c_unlock(unit);
 

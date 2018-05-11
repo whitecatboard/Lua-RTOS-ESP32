@@ -200,6 +200,9 @@ static driver_error_t *wifi_deinit() {
 driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 	driver_error_t *error;
 
+	*list = NULL;
+	*count = 0;
+
 	if (status_get(STATUS_WIFI_INITED)) {
 		wifi_mode_t mode;
 		if ((error = wifi_check_error(esp_wifi_get_mode(&mode)))) return error;
@@ -255,6 +258,8 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
 
 			// Get AP list
 			if ((error = wifi_check_error(esp_wifi_scan_get_ap_records(count, *list)))) {
+			    *list = NULL;
+			    *count = 0;
 				free(list);
 
 				return error;

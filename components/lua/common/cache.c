@@ -45,7 +45,7 @@
 
 #include "luartos.h"
 
-#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE && !CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
 
 #include "cache.h"
 
@@ -57,12 +57,13 @@
 
 
 static rotable_cache_t cache;
+static portMUX_TYPE lock = portMUX_INITIALIZER_UNLOCKED;
 
 void rotable_cache_dump() {
 	struct rotable_cache_entry *entry = cache.first;
 	int i = 0;
 
-	mtx_lock(&cache.mtx);
+	portENTER_CRITICAL(&lock);
 
 	while (entry) {
 		printf("[%d]: used %d ", i, entry->used);
@@ -83,7 +84,7 @@ void rotable_cache_dump() {
 
 	printf("hit: %d, miss: %d\r\n", cache.hit, cache.miss);
 
-	mtx_unlock(&cache.mtx);
+	portEXIT_CRITICAL(&lock);
 
 	printf("\r\n\r\n");
 }
@@ -118,20 +119,19 @@ int rotable_cache_init() {
 
 	cache.last = entries;
 
-	// Init mutex
-	mtx_init(&cache.mtx, NULL, NULL, 0);
-
 	return 0;
 }
 
 const IRAM_ATTR TValue *rotable_cache_get(const luaR_entry *rotable, const char *strkey) {
-	struct rotable_cache_entry *entry = cache.first;
-
-	mtx_lock(&cache.mtx);
-
 	// rotable strkey is cached?
+	int len = strlen(strkey);
+
+    portENTER_CRITICAL(&lock);
+
+    struct rotable_cache_entry *entry = cache.first;
+
 	while (entry) {
-		if ((entry->rotable == rotable) && (!strcmp(entry->entry->key.id.strkey, strkey))) {
+		if ((entry->rotable == rotable) && (entry->entry->key.len == len) &&  (!strcmp(entry->entry->key.id.strkey, strkey))) {
 			// hit
 			cache.hit++;
 			entry->used++;
@@ -154,9 +154,8 @@ const IRAM_ATTR TValue *rotable_cache_get(const luaR_entry *rotable, const char 
 				}
 			}
 
-			mtx_unlock(&cache.mtx);
+			portEXIT_CRITICAL(&lock);
 			return &entry->entry->value;
-			break;
 		}
 
 		entry = entry->next;
@@ -165,13 +164,13 @@ const IRAM_ATTR TValue *rotable_cache_get(const luaR_entry *rotable, const char 
 	// miss
 	cache.miss++;
 
-	mtx_unlock(&cache.mtx);
+	portEXIT_CRITICAL(&lock);
 
 	return NULL;
 }
 
 void IRAM_ATTR rotable_cache_put(const luaR_entry *rotable, const luaR_entry *entry) {
-	mtx_lock(&cache.mtx);
+    portENTER_CRITICAL(&lock);
 
 	struct rotable_cache_entry *first  = cache.last;
 	struct rotable_cache_entry *second = cache.first;
@@ -189,7 +188,7 @@ void IRAM_ATTR rotable_cache_put(const luaR_entry *rotable, const luaR_entry *en
 	cache.first->used = 1;
 	cache.last = last;
 
-	mtx_unlock(&cache.mtx);
+	portEXIT_CRITICAL(&lock);
 }
 
 /*

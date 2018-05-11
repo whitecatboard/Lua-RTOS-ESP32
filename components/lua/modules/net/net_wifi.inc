@@ -167,7 +167,9 @@ static int lwifi_scan(lua_State* L) {
 		}
 	}
 
-	free(list);
+	if (list) {
+	    free(list);
+	}
 
 	if (!table) {
 		printf("\r\n");

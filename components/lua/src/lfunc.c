@@ -118,6 +118,9 @@ Proto *luaF_newproto (lua_State *L) {
   f->linedefined = 0;
   f->lastlinedefined = 0;
   f->source = NULL;
+#if CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
+  f->optimized = 0;
+#endif
   return f;
 }
 

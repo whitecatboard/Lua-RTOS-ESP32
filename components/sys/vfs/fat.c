@@ -190,10 +190,12 @@ void vfs_fat_register() {
     #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
         #if (CONFIG_LUA_RTOS_SD_SPI == 2)
         spi_unlock_bus_resources(2);
+        spi_bus[spi_idx(2)].setup &= ~SPI_DMA_SETUP;
         #endif
 
         #if (CONFIG_LUA_RTOS_SD_SPI == 3)
         spi_unlock_bus_resources(3);
+        spi_bus[spi_idx(3)].setup &= ~SPI_DMA_SETUP;
         #endif
     #endif
     #endif

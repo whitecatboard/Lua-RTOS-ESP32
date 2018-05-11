@@ -156,8 +156,8 @@ driver_error_t *ht16k33_write_digit(struct sdisplay *device, uint8_t pos, uint8_
 driver_error_t *ht16k33_setup(struct sdisplay *device) {
 	driver_error_t *error;
 
-	// Init I2C bus
-	if ((error = i2c_setup(1, I2C_MASTER, 400000, 0, 0, &device->config.i2c.device))) {
+	// Attach to I2C bus
+	if ((error = i2c_attach(1, I2C_MASTER, 400000, 0, 0, &device->config.i2c.device))) {
 		return error;
 	}
 
