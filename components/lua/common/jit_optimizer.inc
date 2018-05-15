@@ -52,22 +52,31 @@
 
 #if OPT_ENABLE_DEBUG
 #define OPT_DEBUG(...) printf( __VA_ARGS__ )
+#define OPT_DEBUG_CODE(cl,c,f,t)\
+    PrintCode(cl, c, f, t);\
+
 #else
 #define OPT_DEBUG(...)
+#define OPT_DEBUG_CODE(cl,c,f,t)
 #endif
-#define OPT_DEBUG_CODE 0
 
 // NOP (not operation instruction). This instruction is an special instruction used
 // by the optimizer to mark instructions that must be deleted in the optimized code.
 #define OPT_NOP 0xffffffff
+
+#define OPT_INF_EXCLUDED (1 << 0) // The instruction can't participate in future
+                                  // optimization processes
+
+#define OPT_INF_UPDATE(k, f)\
+    oicode[pc + k - 1] |= f
 
 // Get the instruction at position pc + k
 #define OPT_INS(k) \
     ocode[pc + k - 1]
 
 // Get the instruction's op code at position pc + i
-#define OPT_OPCODE(i) \
-    ((i <= sizecode)?GET_OPCODE(OPT_INS(i)):0)
+#define OPT_OPCODE(k) \
+    ((pc + k <= sizecode)?((oicode[pc + k - 1] & OPT_INF_EXCLUDED)?OPT_NOP:GET_OPCODE(OPT_INS(k))):OPT_NOP)
 
 // Transform num instructions before / after the pc to
 // a NOP instruction
@@ -107,7 +116,7 @@
     (OPT_OPCODE(i) == OP_LEN) ||\
     (OPT_OPCODE(i) == OP_NOT))
 
-#if OPT_DEBUG_CODE
+#if OPT_ENABLE_DEBUG
 #define VOID(p)     ((const void*)(p))
 
 static void PrintString(const TString* ts) {
@@ -187,10 +196,11 @@ static void PrintConstant(const Proto* f, int i) {
 #define UPVALNAME(x) ((f->upvalues[x].name) ? getstr(f->upvalues[x].name) : "-")
 #define MYK(x)      (-1-(x))
 
-static void PrintCode(const Proto* f) {
+#if 0
+static void PrintCode(const Proto* f, int from, int to) {
     const Instruction* code = f->code;
-    int pc, n = f->sizecode;
-    for (pc = 0; pc < n; pc++) {
+    int pc;
+    for (pc = from; pc < to; pc++) {
         Instruction i = code[pc];
         OpCode o = GET_OPCODE(i);
         int a = GETARG_A(i);
@@ -315,6 +325,148 @@ static void PrintCode(const Proto* f) {
         printf("\n");
     }
 }
+#endif
+static void PrintCode(const Proto* f, Instruction *ocode, int from, int to) {
+    int pc;
+    Instruction *code = f->code;
+
+    for (pc = from - 1; pc <= to - 1; pc++) {
+        Instruction i = code[pc];
+        Instruction io = ocode[pc];
+
+
+    print_optimized: {
+        if (i == OPT_NOP) continue;
+
+        OpCode o = GET_OPCODE(i);
+        int a = GETARG_A(i);
+        int b = GETARG_B(i);
+        int c = GETARG_C(i);
+        int ax = GETARG_Ax(i);
+        int bx = GETARG_Bx(i);
+        int sbx = GETARG_sBx(i);
+        int line = getfuncline(f, pc);
+        printf("\t%d%s\t", pc + 1, ((io == OPT_NOP)?"-":(i != io)?"*":" "));
+        if (line > 0)
+            printf("[%d]\t", line);
+        else
+            printf("[-]\t");
+        printf("%-9s\t", luaP_opnames[o]);
+        switch (getOpMode(o)) {
+        case iABC:
+            printf("%d", a);
+            if (getBMode(o) != OpArgN)
+                printf(" %d", ISK(b) ? (MYK(INDEXK(b))) : b);
+            if (getCMode(o) != OpArgN)
+                printf(" %d", ISK(c) ? (MYK(INDEXK(c))) : c);
+            break;
+        case iABx:
+            printf("%d", a);
+            if (getBMode(o) == OpArgK)
+                printf(" %d", MYK(bx));
+            if (getBMode(o) == OpArgU)
+                printf(" %d", bx);
+            break;
+        case iAsBx:
+            printf("%d %d", a, sbx);
+            break;
+        case iAx:
+            printf("%d", MYK(ax));
+            break;
+        }
+        switch (o) {
+        case OP_LOADK:
+            printf("\t; ");
+            PrintConstant(f, bx);
+            break;
+        case OP_GETUPVAL:
+        case OP_SETUPVAL:
+            printf("\t; %s", UPVALNAME(b));
+            break;
+        case OP_GETTABUP:
+            printf("\t; %s", UPVALNAME(b));
+            if (ISK(c)) {
+                printf(" ");
+                PrintConstant(f, INDEXK(c));
+            }
+            break;
+        case OP_SETTABUP:
+            printf("\t; %s", UPVALNAME(a));
+            if (ISK(b)) {
+                printf(" ");
+                PrintConstant(f, INDEXK(b));
+            }
+            if (ISK(c)) {
+                printf(" ");
+                PrintConstant(f, INDEXK(c));
+            }
+            break;
+        case OP_GETTABLE:
+        case OP_SELF:
+            if (ISK(c)) {
+                printf("\t; ");
+                PrintConstant(f, INDEXK(c));
+            }
+            break;
+        case OP_SETTABLE:
+        case OP_ADD:
+        case OP_SUB:
+        case OP_MUL:
+        case OP_POW:
+        case OP_DIV:
+        case OP_IDIV:
+        case OP_BAND:
+        case OP_BOR:
+        case OP_BXOR:
+        case OP_SHL:
+        case OP_SHR:
+        case OP_EQ:
+        case OP_LT:
+        case OP_LE:
+            if (ISK(b) || ISK(c)) {
+                printf("\t; ");
+                if (ISK(b))
+                    PrintConstant(f, INDEXK(b));
+                else
+                    printf("-");
+                printf(" ");
+                if (ISK(c))
+                    PrintConstant(f, INDEXK(c));
+                else
+                    printf("-");
+            }
+            break;
+        case OP_JMP:
+        case OP_FORLOOP:
+        case OP_FORPREP:
+        case OP_TFORLOOP:
+            printf("\t; to %d", sbx + pc + 2);
+            break;
+        case OP_CLOSURE:
+            printf("\t; %p", VOID(f->p[bx]));
+            break;
+        case OP_SETLIST:
+            if (c == 0)
+                printf("\t; %d", (int) code[++pc]);
+            else
+                printf("\t; %d", c);
+            break;
+        case OP_EXTRAARG:
+            printf("\t; ");
+            PrintConstant(f, ax);
+            break;
+        default:
+            break;
+        }
+
+        printf("\n");
+        if (i != io) {
+            i = io;
+            goto print_optimized;
+        }
+    }
+    }
+}
 
 #define SS(x)   ((x==1)?"":"s")
 #define S(x)    (int)(x),SS(x)
@@ -360,19 +512,21 @@ static void PrintDebug(const Proto* f) {
     }
 }
 
+#if 0
 static void PrintFunction(const Proto* f, int full) {
     int i, n = f->sizep;
     PrintHeader(f);
-    PrintCode(f);
+    PrintCode(f,0,f->sizecode);
     if (full)
         PrintDebug(f);
     for (i = 0; i < n; i++)
         PrintFunction(f->p[i], full);
 }
+#endif
 
 #endif
 
-static int jit_opt_eval(lua_State *L, CallInfo *ci, LClosure *cl, Instruction *ocode, int pc, int nins, TValue *k, StkId base) {
+static int jit_opt_eval(lua_State *L, CallInfo *ci, LClosure *cl, Instruction *ocode, char *oicode, int pc, int nins, TValue *k, StkId base) {
     int ins = 0;
     int is_eval = 0;
     StkId ra;
@@ -383,15 +537,21 @@ static int jit_opt_eval(lua_State *L, CallInfo *ci, LClosure *cl, Instruction *o
         ra = RA(OPT_INS(ins));
 
         switch (OPT_OPCODE(ins)) {
+        vmcase(OP_GETUPVAL) {
+          int b = GETARG_B(OPT_INS(ins));
+          setobj2s(L, ra, cl->upvals[b]->v);
+
+          is_eval  = (!ttisnil(ra) && (nins > 1));
+
+          vmbreak;
+        }
         vmcase(OP_GETTABUP) {
             TValue *upval = cl->upvals[GETARG_B(OPT_INS(ins))]->v;
             TValue *rc = RKC(OPT_INS(ins));
 
             gettableProtected(L, upval, rc, ra);
 
-            // Skip evaluation if result is nil or is not a read-only table
-            is_eval  = !ttisnil(ra);
-            is_eval &= ttisrotable(ra);
+            is_eval  = (!ttisnil(ra) && (nins > 1));
 
             vmbreak;
         }
@@ -409,6 +569,22 @@ static int jit_opt_eval(lua_State *L, CallInfo *ci, LClosure *cl, Instruction *o
             is_eval = !ttisnil(ra);
 
             vmbreak;
+        }
+        vmcase(OP_SELF) {
+          const TValue *aux;
+          StkId rb = RB(OPT_INS(ins));
+          TValue *rc = RKC(OPT_INS(ins));
+          TString *key = tsvalue(rc);  /* key must be a string */
+          setobjs2s(L, ra + 1, rb);
+          if (luaV_fastget(L, rb, key, aux, luaH_getstr)) {
+            setobj2s(L, ra, aux);
+          }
+          else Protect(luaV_finishget(L, rb, rc, ra, aux));
+
+          is_eval  = !ttisnil(ra);
+          is_eval &= luaR_isrotable(fvalue(ra));
+
+          vmbreak;
         }
         vmcase(OP_LOADK) {
             TValue *rb = k + GETARG_Bx(OPT_INS(ins));
@@ -746,15 +922,15 @@ static int jit_opt_eval(lua_State *L, CallInfo *ci, LClosure *cl, Instruction *o
 }
 
 #define jit_pattern_done()\
-    OPT_DEBUG("\r\n");\
     optimized = 1;\
     continue;
 
-#define jit_pattern_skip()\
-    OPT_DEBUG(", skip\r\n");
+#define jit_pattern_skip()
 
 static int jit_opt(lua_State *L, CallInfo *ci, LClosure *cl) {
     int saved_pc;
+
+    OPT_DEBUG("\r\noptimizing %s ...\r\n",getstr(cl->p->source));
 
     // Start at instruction 1
     int pc = 1;
@@ -765,12 +941,41 @@ static int jit_opt(lua_State *L, CallInfo *ci, LClosure *cl) {
     // Allocate space for the optimized code. The optimization process
     // reduces the code size, so the instructions of the optimized
     // code will be <= clousure's code size
+    OPT_DEBUG("\tallocating %d bytes for optimized code\r\n", sizecode * sizeof(Instruction));
     Instruction *ocode = calloc(sizecode, sizeof(Instruction));
-    if (!ocode) {
-        // Abort optimization, no memory available for the optimized code
-        cl->p->optimized = 1;
-        return 0;
+    if (ocode == NULL) {
+        OPT_DEBUG("\tno memory for optimized code");
+        goto opt_exit;
     }
+
+    // We need to store certain information for each of the optimized code
+    // instruction
+
+    // First create it into the clousure's prototype to preserve this information
+    // between invocations of the jit_opt function
+    if (cl->p->icode == NULL) {
+        OPT_DEBUG("\tallocating %d bytes for code information\r\n", sizecode * sizeof(char));
+        cl->p->icode = calloc(sizecode, sizeof(char));
+        if (cl->p->icode == NULL) {
+            OPT_DEBUG("\tno memory for code info");
+            goto opt_exit;
+        }
+    } else {
+        OPT_DEBUG("\treusing code information\r\n");
+    }
+
+    // Now, create the information for the current invocation of the jit_opt, and
+    // initialize it with the preserved in the clousure's prototype
+    OPT_DEBUG("\tallocating %d bytes for optimized code information\r\n", sizecode * sizeof(char));
+    char *oicode = calloc(sizecode, sizeof(char));
+    if (oicode == NULL) {
+        OPT_DEBUG("\tno memory for optimized code info");
+        goto opt_exit;
+    }
+
+    OPT_DEBUG("\r\n");
+
+    memcpy(oicode, cl->p->icode, sizecode * sizeof(char));
 
     // Copy the clousure's code into the optimized code. Now two codes are
     // equal
@@ -783,12 +988,45 @@ static int jit_opt(lua_State *L, CallInfo *ci, LClosure *cl) {
 
     int optimized = 0;
 
-    OPT_DEBUG("\r\noptimizing %s ...\r\n",getstr(cl->p->source));
-
     while (pc <= sizecode) {
         // Local reference to function's constant table and function's base
         k = cl->p->k;
         base = ci->u.l.base;
+
+        pattern = ((OPT_OPCODE(0) == OP_GETUPVAL) && (OPT_OPCODE(1) == OP_SELF));
+        if (pattern) {
+            int ki = jit_opt_eval(L, ci, cl, ocode, oicode, pc, 2, k, base);
+            if (ki > 0) {
+                OPT_INS(0) = CREATE_ABx(OP_GETUPVAL, GETARG_A(OPT_INS(1)) + 1, GETARG_B(OPT_INS(0)));
+                OPT_INS(1) = CREATE_ABx(OP_LOADK, GETARG_A(OPT_INS(1)), ki);
+
+                OPT_INF_UPDATE(0, OPT_INF_EXCLUDED);
+                OPT_INF_UPDATE(1, OPT_INF_EXCLUDED);
+
+                OPT_DEBUG_CODE(cl->p, ocode, pc, pc + 1);
+                pc += 2;
+                jit_pattern_done();
+            }
+            jit_pattern_skip();
+        }
+
+        pattern = ((OPT_OPCODE(0) == OP_GETTABUP) && (OPT_OPCODE(1) == OP_SELF));
+        if (pattern) {
+            int ki = jit_opt_eval(L, ci, cl, ocode, oicode, pc, 2, k, base);
+            if (ki > 0) {
+
+                OPT_INS(0) = CREATE_ABC(OP_GETTABUP, GETARG_A(OPT_INS(1)) + 1, GETARG_B(OPT_INS(0)), GETARG_C(OPT_INS(0)));
+                OPT_INS(1) = CREATE_ABx(OP_LOADK, GETARG_A(OPT_INS(1)), ki);
+
+                OPT_INF_UPDATE(0, OPT_INF_EXCLUDED);
+                OPT_INF_UPDATE(1, OPT_INF_EXCLUDED);
+
+                OPT_DEBUG_CODE(cl->p, ocode, pc, pc + 1);
+                pc += 2;
+                jit_pattern_done();
+            }
+            jit_pattern_skip();
+        }
 
         // GETTABUP;x+;y+ => LOADK;y+, where x+ = OP_GETTABLE
         pattern = (OPT_OPCODE(0) == OP_GETTABUP);
@@ -796,17 +1034,18 @@ static int jit_opt(lua_State *L, CallInfo *ci, LClosure *cl) {
             saved_pc = pc;
 
             pc++;
+            int tables = 0;
             while (OPT_OPCODE(0) == OP_GETTABLE) {
                 pc++;
+                tables++;
             }
 
             if (pc != saved_pc + 1) {
-                OPT_DEBUG("pc: % 4d, GETTABUP;x+;y+ => LOADK;y+, where x+ = OP_GETTABLE", saved_pc);
-
-                int ki = jit_opt_eval(L, ci, cl, ocode, saved_pc, pc - saved_pc, k, base);
+                int ki = jit_opt_eval(L, ci, cl, ocode, oicode, saved_pc, pc - saved_pc, k, base);
                 if (ki > 0) {
                     OPT_INS(-pc + saved_pc)= CREATE_ABx(OP_LOADK, GETARG_A(OPT_INS(-1)), ki);
                     OPT_TO_NOP(-pc + saved_pc + 1);
+                    OPT_DEBUG_CODE(cl->p, ocode, saved_pc, pc - 1);
                     jit_pattern_done();
                 }
                 jit_pattern_skip();
@@ -818,11 +1057,10 @@ static int jit_opt(lua_State *L, CallInfo *ci, LClosure *cl) {
         // GETTABUP;x+ => LOADK;x+
         pattern = (OPT_OPCODE(0) == OP_GETTABUP);
         if (pattern) {
-            OPT_DEBUG("pc: % 4d, GETTABUP;x+ => LOADK;x+", pc);
-
-            int ki = jit_opt_eval(L, ci, cl, ocode, pc, 1, k, base);
+            int ki = jit_opt_eval(L, ci, cl, ocode, oicode, pc, 1, k, base);
             if (ki > 0) {
                 OPT_INS(0) = CREATE_ABx(OP_LOADK, GETARG_A(OPT_INS(0)), ki);
+                OPT_DEBUG_CODE(cl->p, ocode, pc, pc);
                 pc++;
                 jit_pattern_done();
             }
@@ -832,10 +1070,10 @@ static int jit_opt(lua_State *L, CallInfo *ci, LClosure *cl) {
         // op(a0,b0,c0) => LOADK(a0, v(b0) op v(c0)), op=binary and isk(b0) and isk(c0)
         pattern = (OPT_IS_BIN_OP(0) && ISK(GETARG_B(OPT_INS(0))) && ISK(GETARG_C(OPT_INS(0))));
         if (pattern) {
-            OPT_DEBUG("pc: % 4d, op(a0,b0,c0) => LOADK(a0, v(b0) op v(c0)), op=%-4s and isk(b0) and isk(c0)", pc, luaP_opnames[OPT_OPCODE(0)]);
-            int ki = jit_opt_eval(L, ci, cl, ocode, pc, 1, k, base);
+            int ki = jit_opt_eval(L, ci, cl, ocode, oicode, pc, 1, k, base);
             if (ki > 0) {
                 OPT_INS(0) = CREATE_ABx(OP_LOADK, GETARG_A(OPT_INS(0)), ki);
+                OPT_DEBUG_CODE(cl->p, ocode, pc, pc);
                 pc++;
                 jit_pattern_done();
             }
@@ -845,10 +1083,10 @@ static int jit_opt(lua_State *L, CallInfo *ci, LClosure *cl) {
         // LOADK(a-2,b-2);LOADK(a-1,b-1);op(a0,b0,c0) => LOADK(a0, v(b0) op v(c0)), op=binary and !isk(b0) and !isk(c0)
         pattern = (OPT_IS_BIN_OP(0) && (OPT_OPCODE(-2) == OP_LOADK) && (OPT_OPCODE(-1) == OP_LOADK) && !ISK(GETARG_B(OPT_INS(0))) && !ISK(GETARG_C(OPT_INS(0))));
         if (pattern) {
-            OPT_DEBUG("pc: % 4d, LOADK(a-2,b-2);LOADK(a-1,b-1);op(a0,b0,c0) => LOADK(a0, v(b0) op v(c0)), op=%-4s and !isk(b0) and !isk(c0)", pc, luaP_opnames[OPT_OPCODE(0)]);
-            int ki = jit_opt_eval(L, ci, cl, ocode, pc-2, 3, k, base);
+            int ki = jit_opt_eval(L, ci, cl, ocode, oicode, pc-2, 3, k, base);
             if (ki > 0) {
                 OPT_INS(0) = CREATE_ABx(OP_LOADK, GETARG_A(OPT_INS(0)), ki);
+                OPT_DEBUG_CODE(cl->p, ocode, pc, pc);
                 OPT_TO_NOP(-2);
                 pc++;
                 jit_pattern_done();
@@ -859,10 +1097,10 @@ static int jit_opt(lua_State *L, CallInfo *ci, LClosure *cl) {
         // LOADK(a-1,b-1);op(a0,b0,c0) => LOADK(a0, v(b0) op v(c0)), op=binary and isk(c0)
         pattern = (OPT_IS_BIN_OP(0) && (OPT_OPCODE(-1) == OP_LOADK) && ISK(GETARG_C(OPT_INS(0))));
         if (pattern) {
-            OPT_DEBUG("pc: % 4d, LOADK(a-1,b-1);op(a0,b0,c0) => LOADK(a0, v(b0) op v(c0)), op=%-4s and isk(c0)", pc, luaP_opnames[OPT_OPCODE(0)]);
-            int ki = jit_opt_eval(L, ci, cl, ocode, pc-1, 2, k, base);
+            int ki = jit_opt_eval(L, ci, cl, ocode, oicode, pc-1, 2, k, base);
             if (ki > 0) {
                 OPT_INS(0) = CREATE_ABx(OP_LOADK, GETARG_A(OPT_INS(0)), ki);
+                OPT_DEBUG_CODE(cl->p, ocode, pc, pc);
                 OPT_TO_NOP(-1);
                 pc++;
                 jit_pattern_done();
@@ -873,10 +1111,10 @@ static int jit_opt(lua_State *L, CallInfo *ci, LClosure *cl) {
         // op(a0,b0) => LOADK(a0, op v(b0)), op=unary and isk(b0)
         pattern = (OPT_IS_UNA_OP(0) && ISK(GETARG_B(OPT_INS(0))));
         if (pattern) {
-            OPT_DEBUG("pc: % 4d, op(a0,b0) => LOADK(a0, op v(b0)), op=%-4s and isk(b0)", pc, luaP_opnames[OPT_OPCODE(0)]);
-            int ki = jit_opt_eval(L, ci, cl, ocode, pc, 1, k, base);
+            int ki = jit_opt_eval(L, ci, cl, ocode, oicode, pc, 1, k, base);
             if (ki > 0) {
                 OPT_INS(0) = CREATE_ABx(OP_LOADK, GETARG_A(OPT_INS(0)), ki);
+                OPT_DEBUG_CODE(cl->p, ocode, pc, pc);
                 pc++;
                 jit_pattern_done();
             }
@@ -886,16 +1124,17 @@ static int jit_opt(lua_State *L, CallInfo *ci, LClosure *cl) {
         // LOADK(a-1,b-1);op(a0,b0) => LOADK(a0, op v(b-1)), op=unary and !isk(b0)
         pattern = (OPT_IS_UNA_OP(0) && !ISK(GETARG_B(OPT_INS(0))) && (OPT_OPCODE(-1) == OP_LOADK));
         if (pattern) {
-            OPT_DEBUG("pc: % 4d, LOADK(a-1,b-1);op(a0,b0) => LOADK(a0, op v(b-1)), op=%-4s and !isk(b0)", pc, luaP_opnames[OPT_OPCODE(0)]);
-            int ki = jit_opt_eval(L, ci, cl, ocode, pc-1, 2, k, base);
+            int ki = jit_opt_eval(L, ci, cl, ocode, oicode, pc-1, 2, k, base);
             if (ki > 0) {
                 OPT_INS(0) = CREATE_ABx(OP_LOADK, GETARG_A(OPT_INS(0)), ki);
+                OPT_DEBUG_CODE(cl->p, ocode, pc, pc);
                 pc++;
                 jit_pattern_done();
             }
             jit_pattern_skip();
         }
 
+        OPT_DEBUG_CODE(cl->p, ocode, pc, pc);
         pc++;
     }
 
@@ -905,8 +1144,10 @@ static int jit_opt(lua_State *L, CallInfo *ci, LClosure *cl) {
         int jump;  // Current jump
         int dir;   // Jump direction (-1 backward, 1 forward)
 
+        OPT_DEBUG("\r\n");
+
         for (pc = 1; pc <= sizecode; pc++) {
-            if ((OPT_INS(0) != OPT_NOP) && (OPT_OPCODE(0) == OP_JMP) && (GETARG_A(OPT_INS(0)) == 0)) {
+            if ((OPT_INS(0) != OPT_NOP) && ((OPT_OPCODE(0) == OP_JMP) || (OPT_OPCODE(0) == OP_FORPREP) || (OPT_OPCODE(0) == OP_FORLOOP))) {
                 // Store the current pc
                 saved_pc = pc;
 
@@ -924,47 +1165,38 @@ static int jit_opt(lua_State *L, CallInfo *ci, LClosure *cl) {
                     jump--;
                 }
 
-                OPT_DEBUG("pc: % 4d, JMP fixed to %d\r\n", pc, jumps);
-
                 // Restore pc
                 pc = saved_pc;
+
+                OPT_DEBUG("\t%d, %-4s fixed to %d\r\n", pc, luaP_opnames[OPT_OPCODE(0)], jumps);
 
                 // Fix
                 SETARG_sBx(OPT_INS(0), jumps);
             }
         }
 
-        #if OPT_DEBUG_CODE
-        if (optimized) {
-            printf("\r\n");
-            printf("Original code\r\n");
-            printf("-------------------------------------------------------\r\n");
-            PrintFunction(cl->p, 1);
-        }
-        #endif
-
         // Now the clousure's code is the optimized code
         int i = 0;
         for (pc = 1; pc <= sizecode; pc++) {
             if (OPT_INS(0) != OPT_NOP) {
-                cl->p->code[i++] = OPT_INS(0);
+                cl->p->code[i] = OPT_INS(0);
+                cl->p->icode[i++] = oicode[pc - 1];
             }
         }
 
         cl->p->sizecode = i;
     }
 
+opt_exit:
     cl->p->optimized = 1;
-    free(ocode);
 
-    #if OPT_DEBUG_CODE
-    if (optimized) {
-        printf("\r\n");
-        printf("Optimized code\r\n");
-        printf("-------------------------------------------------------\r\n");
-        PrintFunction(cl->p, 1);
+    if (ocode != NULL) free(ocode);
+    if (oicode != NULL) free(oicode);
+
+    if (!optimized) {
+        free(cl->p->icode);
+        cl->p->icode = NULL;
     }
-    #endif
 
     return optimized;
 }

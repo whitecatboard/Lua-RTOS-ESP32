@@ -523,9 +523,9 @@ const TValue *luaH_getint (Table *t, lua_Integer key) {
 #endif
 
   /* (1 <= key && key <= t->sizearray) */
-  if (l_castS2U(key) - 1 < t->sizearray)
+  if (l_castS2U(key) - 1 < t->sizearray) {
     return &t->array[key - 1];
-  else {
+  } else {
     Node *n = hashint(t, key);
     for (;;) {  /* check whether 'key' is somewhere in the chain */
       if (ttisinteger(gkey(n)) && ivalue(gkey(n)) == key)
