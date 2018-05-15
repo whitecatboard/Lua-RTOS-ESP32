@@ -293,7 +293,7 @@ static int lspi_ins_gc (lua_State *L) {
 	return 0;
 }
 
-static const __attribute__((section(".lua_rotable_data"))) LUA_REG_TYPE lspi_map[] = {
+static const LUA_REG_TYPE lspi_map[] = {
 	{ LSTRKEY( "attach"     ),	 LFUNCVAL( lspi_attach   ) },
 	{ LSTRKEY( "pins"       ),	 LFUNCVAL( lspi_pins     ) },
 	{ LSTRKEY( "setpins"    ),	 LFUNCVAL( lspi_setpins  ) },
