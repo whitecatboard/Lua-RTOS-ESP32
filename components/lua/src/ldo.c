@@ -410,9 +410,15 @@ int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
 ** the execution ('luaV_execute') to the caller, to allow stackless
 ** calls.) Returns true iff function has been executed (C function).
 */
+
 int luaD_precall (lua_State *L, StkId func, int nresults) {
   lua_CFunction f;
   CallInfo *ci;
+
+  // Lua RTOS begin
+  unsigned int ccount = xthal_get_ccount();
+  // Lua RTOS end
+
   switch (ttype(func)) {
     case LUA_TCCL:  /* C closure */
       f = clCvalue(func)->f;
@@ -423,6 +429,11 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       int n;  /* number of returns */
       checkstackp(L, LUA_MINSTACK, func);  /* ensure minimum stack size */
       ci = next_ci(L);  /* now 'enter' new function */
+
+      // Lua RTOS begin
+      ci->ccount = ccount;
+      // Lua RTOS end
+
       ci->nresults = nresults;
       ci->func = func;
       ci->top = L->top + LUA_MINSTACK;

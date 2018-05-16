@@ -32,7 +32,7 @@ SECTIONS {
     KEEP(*(.sensors))
     LONG(0) LONG(0)
     LONG(0) LONG(0)
-
+   
     _lua_rtos_rodata_end = ABSOLUTE(.);
   } >drom0_0_seg
 }

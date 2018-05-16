@@ -68,42 +68,42 @@
 #include <drivers/cpu.h>
 
 typedef struct {
-	int callback;
+    int callback;
 } tmr_callback_t;
 
 static tmr_callback_t callbacks[CPU_LAST_TIMER + 1];
 
 static void callback_hw_func(void *arg) {
-	int unit = (int)arg;
-	lua_State *TL;
-	lua_State *L;
-	int tref;
+    int unit = (int)arg;
+    lua_State *TL;
+    lua_State *L;
+    int tref;
 
-	if (callbacks[unit].callback != LUA_NOREF) {
-	    L = pvGetLuaState();
-	    TL = lua_newthread(L);
+    if (callbacks[unit].callback != LUA_NOREF) {
+        L = pvGetLuaState();
+        TL = lua_newthread(L);
 
-	    tref = luaL_ref(L, LUA_REGISTRYINDEX);
+        tref = luaL_ref(L, LUA_REGISTRYINDEX);
 
-	    lua_rawgeti(L, LUA_REGISTRYINDEX, callbacks[unit].callback);
-	    lua_xmove(L, TL, 1);
-	    int status = lua_pcall(TL, 0, 0, 0);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, callbacks[unit].callback);
+        lua_xmove(L, TL, 1);
+        int status = lua_pcall(TL, 0, 0, 0);
         luaL_unref(TL, LUA_REGISTRYINDEX, tref);
 
         if (status != LUA_OK) {
-        	const char *msg = lua_tostring(TL, -1);
-        	luaL_error(TL, msg);
+            const char *msg = lua_tostring(TL, -1);
+            luaL_error(TL, msg);
         }
     }
 }
 
 static void callback_sw_func(TimerHandle_t xTimer) {
-	tmr_userdata *tmr = (tmr_userdata *)pvTimerGetTimerID(xTimer);
-	lua_State *TL;
-	lua_State *L;
-	int tref;
+    tmr_userdata *tmr = (tmr_userdata *)pvTimerGetTimerID(xTimer);
+    lua_State *TL;
+    lua_State *L;
+    int tref;
 
-	L = pvGetLuaState();
+    L = pvGetLuaState();
     TL = lua_newthread(L);
 
     tref = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -114,15 +114,13 @@ static void callback_sw_func(TimerHandle_t xTimer) {
     luaL_unref(TL, LUA_REGISTRYINDEX, tref);
 
     if (status != LUA_OK) {
-    	const char *msg = lua_tostring(TL, -1);
-    	luaL_error(TL, msg);
+        const char *msg = lua_tostring(TL, -1);
+        luaL_error(TL, msg);
     }
 }
 
 static int ltmr_delay( lua_State* L ) {
-    unsigned long long period;
-
-    period = luaL_checkinteger( L, 1 );
+    unsigned int period = luaL_checkinteger( L, 1 );
     
     delay(period * 1000);
     
@@ -130,9 +128,7 @@ static int ltmr_delay( lua_State* L ) {
 }
 
 static int ltmr_delay_ms( lua_State* L ) {
-    unsigned long long period;
-
-    period = luaL_checkinteger( L, 1 );
+    unsigned int period = luaL_checkinteger( L, 1 );
 
     delay(period);
         
@@ -140,65 +136,71 @@ static int ltmr_delay_ms( lua_State* L ) {
 }
 
 static int ltmr_delay_us( lua_State* L ) {
-    unsigned long long period;
+    unsigned int period = luaL_checkinteger( L, 1 );
 
-    period = luaL_checkinteger( L, 1 );
-    udelay(period);
-    
+    // Get current counter
+    unsigned int start = xthal_get_ccount();
+
+    // Compute how many cycles are needed for the period delay, and discount
+    // cycles need by lua vm to invoke this function and cycles needed by lua vm
+    // to return function
+    int cycles = ((CPU_HZ / 1000000L) * period) - ((start >= L->ci->ccount)?(start - L->ci->ccount):(start + 0xffffffff - L->ci->ccount)) - 47;
+
+    unsigned int now = start;
+    while (cycles > 0) {
+        start = now;
+        now = xthal_get_ccount();
+        cycles -= ((now >= start)?(now - start):(now + 0xffffffff - start));
+    }
+
     return 0;
 }
 
 static int ltmr_sleep( lua_State* L ) {
-    unsigned long long period;
-
-    period = luaL_checkinteger( L, 1 );
+    unsigned int period = luaL_checkinteger( L, 1 );
     sleep(period);
     return 0;
 }
 
 static int ltmr_sleep_ms( lua_State* L ) {
-    unsigned long long period;
-
-    period = luaL_checkinteger( L, 1 );
+    unsigned int period = luaL_checkinteger( L, 1 );
     usleep(period * 1000);
     return 0;
 }
 
 static int ltmr_sleep_us( lua_State* L ) {
-    unsigned long long period;
-
-    period = luaL_checkinteger( L, 1 );
+    unsigned int period = luaL_checkinteger( L, 1 );
     usleep(period);
     
     return 0;
 }
 
 static int ltmr_hw_attach( lua_State* L ) {
-	driver_error_t *error;
+    driver_error_t *error;
 
-	int id = luaL_checkinteger(L, 1);
-	uint32_t micros = luaL_checkinteger(L, 2);
-	if (micros < 500) {
-		return luaL_exception(L, TIMER_ERR_INVALID_PERIOD);
-	}
+    int id = luaL_checkinteger(L, 1);
+    uint32_t micros = luaL_checkinteger(L, 2);
+    if (micros < 500) {
+        return luaL_exception(L, TIMER_ERR_INVALID_PERIOD);
+    }
 
-	luaL_checktype(L, 3, LUA_TFUNCTION);
+    luaL_checktype(L, 3, LUA_TFUNCTION);
     lua_pushvalue(L, 3);
 
     int callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
-	callbacks[id].callback = callback;
+    callbacks[id].callback = callback;
 
     tmr_userdata *tmr = (tmr_userdata *)lua_newuserdata(L, sizeof(tmr_userdata));
     if (!tmr) {
-       	return luaL_exception(L, TIMER_ERR_NOT_ENOUGH_MEMORY);
+           return luaL_exception(L, TIMER_ERR_NOT_ENOUGH_MEMORY);
     }
 
     tmr->type = TmrHW;
     tmr->callback = callback;
 
     if ((error = tmr_setup(id, micros, callback_hw_func, 1))) {
-    	return luaL_driver_error(L, error);
+        return luaL_driver_error(L, error);
     }
 
     tmr->unit = id;
@@ -210,17 +212,17 @@ static int ltmr_hw_attach( lua_State* L ) {
 }
 
 static int ltmr_sw_attach( lua_State* L ) {
-	tmr_userdata *tmr = (tmr_userdata *)lua_newuserdata(L, sizeof(tmr_userdata));
+    tmr_userdata *tmr = (tmr_userdata *)lua_newuserdata(L, sizeof(tmr_userdata));
     if (!tmr) {
-       	return luaL_exception(L, TIMER_ERR_NOT_ENOUGH_MEMORY);
+           return luaL_exception(L, TIMER_ERR_NOT_ENOUGH_MEMORY);
     }
 
-	uint32_t millis = luaL_checkinteger(L, 1);
-	if (millis < 1) {
-		return luaL_exception(L, TIMER_ERR_INVALID_PERIOD);
-	}
+    uint32_t millis = luaL_checkinteger(L, 1);
+    if (millis < 1) {
+        return luaL_exception(L, TIMER_ERR_INVALID_PERIOD);
+    }
 
-	luaL_checktype(L, 2, LUA_TFUNCTION);
+    luaL_checktype(L, 2, LUA_TFUNCTION);
     lua_pushvalue(L, 2);
 
     int callback = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -230,7 +232,7 @@ static int ltmr_sw_attach( lua_State* L ) {
 
     tmr->h = xTimerCreate("tmr", millis / portTICK_PERIOD_MS, pdTRUE, (void *)tmr, callback_sw_func);
     if (!tmr->h) {
-    	return luaL_exception(L, TIMER_ERR_NOT_ENOUGH_MEMORY);
+        return luaL_exception(L, TIMER_ERR_NOT_ENOUGH_MEMORY);
     }
 
     luaL_getmetatable(L, "tmr.timer");
@@ -240,103 +242,103 @@ static int ltmr_sw_attach( lua_State* L ) {
 }
 
 static int ltmr_attach( lua_State* L ) {
-	if ((lua_gettop(L) == 3)) {
-		return ltmr_hw_attach(L);
-	} else {
-		return ltmr_sw_attach(L);
-	}
+    if ((lua_gettop(L) == 3)) {
+        return ltmr_hw_attach(L);
+    } else {
+        return ltmr_sw_attach(L);
+    }
 }
 
 static int ltmr_start( lua_State* L ) {
-	driver_error_t *error;
-	tmr_userdata *tmr = NULL;
+    driver_error_t *error;
+    tmr_userdata *tmr = NULL;
 
     tmr = (tmr_userdata *)luaL_checkudata(L, 1, "tmr.timer");
     luaL_argcheck(L, tmr, 1, "tmr expected");
 
     if (tmr->type == TmrHW) {
-    	if ((error = tmr_start(tmr->unit))) {
-    		return luaL_driver_error(L, error);
-    	}
+        if ((error = tmr_start(tmr->unit))) {
+            return luaL_driver_error(L, error);
+        }
     } else {
-    	xTimerStart(tmr->h, 0);
+        xTimerStart(tmr->h, 0);
     }
 
     return 0;
 }
 
 static int ltmr_stop( lua_State* L ) {
-	driver_error_t *error;
-	tmr_userdata *tmr = NULL;
+    driver_error_t *error;
+    tmr_userdata *tmr = NULL;
 
     tmr = (tmr_userdata *)luaL_checkudata(L, 1, "tmr.timer");
     luaL_argcheck(L, tmr, 1, "tmr expected");
 
     if (tmr->type == TmrHW) {
-    	if ((error = tmr_stop(tmr->unit))) {
-    		return luaL_driver_error(L, error);
-    	}
+        if ((error = tmr_stop(tmr->unit))) {
+            return luaL_driver_error(L, error);
+        }
     } else {
-    	xTimerStop(tmr->h, 0);
+        xTimerStop(tmr->h, 0);
     }
 
     return 0;
 }
 
 static int ltmr_detach (lua_State *L) {
-	tmr_userdata *tmr = NULL;
-	tmr = (tmr_userdata *)luaL_checkudata(L, 1, "tmr.timer");
+    tmr_userdata *tmr = NULL;
+    tmr = (tmr_userdata *)luaL_checkudata(L, 1, "tmr.timer");
 
-	if (tmr->type == TmrHW) {
-		tmr_ll_unsetup(tmr->unit);
-	} else {
-		xTimerStop(tmr->h, portMAX_DELAY);
-		xTimerDelete(tmr->h, portMAX_DELAY);
-	}
+    if (tmr->type == TmrHW) {
+        tmr_ll_unsetup(tmr->unit);
+    } else {
+        xTimerStop(tmr->h, portMAX_DELAY);
+        xTimerDelete(tmr->h, portMAX_DELAY);
+    }
 
-	luaL_unref(L, LUA_REGISTRYINDEX, tmr->callback);
-	memset(tmr, 0, sizeof(tmr_userdata));
+    luaL_unref(L, LUA_REGISTRYINDEX, tmr->callback);
+    memset(tmr, 0, sizeof(tmr_userdata));
 
-	return 0;
+    return 0;
 }
 
 // Destructor
 static int ltmr_gc (lua_State *L) {
-	ltmr_detach(L);
+    ltmr_detach(L);
 
-	return 0;
+    return 0;
 }
 
 static const LUA_REG_TYPE tmr_timer_map[] = {
-	{ LSTRKEY( "start" ),			LFUNCVAL( ltmr_start    ) },
-	{ LSTRKEY( "stop" ),			LFUNCVAL( ltmr_stop     ) },
-	{ LSTRKEY( "detach" ),			LFUNCVAL( ltmr_detach 	) },
-    { LSTRKEY( "__metatable" ),	    LROVAL  ( tmr_timer_map ) },
-	{ LSTRKEY( "__index"     ),     LROVAL  ( tmr_timer_map ) },
-    { LSTRKEY( "__gc" ),	 	    LFUNCVAL( ltmr_gc 		) },
+    { LSTRKEY( "start" ),            LFUNCVAL( ltmr_start    ) },
+    { LSTRKEY( "stop" ),            LFUNCVAL( ltmr_stop     ) },
+    { LSTRKEY( "detach" ),            LFUNCVAL( ltmr_detach     ) },
+    { LSTRKEY( "__metatable" ),        LROVAL  ( tmr_timer_map ) },
+    { LSTRKEY( "__index"     ),     LROVAL  ( tmr_timer_map ) },
+    { LSTRKEY( "__gc" ),             LFUNCVAL( ltmr_gc         ) },
     { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE tmr_map[] = {
-	{ LSTRKEY( "attach" ),			LFUNCVAL( ltmr_attach ) },
-    { LSTRKEY( "delay" ),			LFUNCVAL( ltmr_delay ) },
-    { LSTRKEY( "delayms" ),			LFUNCVAL( ltmr_delay_ms ) },
-    { LSTRKEY( "delayus" ),			LFUNCVAL( ltmr_delay_us ) },
-    { LSTRKEY( "sleep" ),			LFUNCVAL( ltmr_sleep ) },
-    { LSTRKEY( "sleepms" ),			LFUNCVAL( ltmr_sleep_ms ) },
-    { LSTRKEY( "sleepus" ),			LFUNCVAL( ltmr_sleep_us ) },
-	TMR_TMR0
-	TMR_TMR1
-	TMR_TMR2
-	TMR_TMR3
+    { LSTRKEY( "attach" ),            LFUNCVAL( ltmr_attach ) },
+    { LSTRKEY( "delay" ),            LFUNCVAL( ltmr_delay ) },
+    { LSTRKEY( "delayms" ),            LFUNCVAL( ltmr_delay_ms ) },
+    { LSTRKEY( "delayus" ),            LFUNCVAL( ltmr_delay_us ) },
+    { LSTRKEY( "sleep" ),            LFUNCVAL( ltmr_sleep ) },
+    { LSTRKEY( "sleepms" ),            LFUNCVAL( ltmr_sleep_ms ) },
+    { LSTRKEY( "sleepus" ),            LFUNCVAL( ltmr_sleep_us ) },
+    TMR_TMR0
+    TMR_TMR1
+    TMR_TMR2
+    TMR_TMR3
     { LNILKEY, LNILVAL }
 };
 
 LUALIB_API int luaopen_tmr( lua_State *L ) {
-	memset(callbacks, 0, sizeof(callbacks));
+    memset(callbacks, 0, sizeof(callbacks));
 
     luaL_newmetarotable(L,"tmr.timer", (void *)tmr_timer_map);
-	return 0;
+    return 0;
 }
 
 MODULE_REGISTER_ROM(TMR, tmr, tmr_map, luaopen_tmr, 1);
@@ -344,13 +346,13 @@ MODULE_REGISTER_ROM(TMR, tmr, tmr_map, luaopen_tmr, 1);
 /*
 
 function blink()
-	if (led_on) then
-		pio.pin.sethigh(pio.GPIO26)
-		led_on = false
-	else
-		pio.pin.setlow(pio.GPIO26)
-		led_on = true
-	end
+    if (led_on) then
+        pio.pin.sethigh(pio.GPIO26)
+        led_on = false
+    else
+        pio.pin.setlow(pio.GPIO26)
+        led_on = true
+    end
 end
 
 led_on = false
@@ -363,13 +365,13 @@ t0:stop()
 ---
 
 function blink()
-	if (led_on) then
-		pio.pin.sethigh(pio.GPIO26)
-		led_on = false
-	else
-		pio.pin.setlow(pio.GPIO26)
-		led_on = true
-	end
+    if (led_on) then
+        pio.pin.sethigh(pio.GPIO26)
+        led_on = false
+    else
+        pio.pin.setlow(pio.GPIO26)
+        led_on = true
+    end
 end
 
 led_on = false

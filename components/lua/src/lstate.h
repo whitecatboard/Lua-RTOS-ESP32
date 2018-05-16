@@ -89,6 +89,10 @@ typedef struct CallInfo {
   ptrdiff_t extra;
   short nresults;  /* expected number of results from this function */
   unsigned short callstatus;
+
+  // Lua RTOS begin
+  unsigned int ccount;
+  // Lua RTOS end
 } CallInfo;
 
 
