@@ -45,7 +45,7 @@
 
 #include "sdkconfig.h"
 
-#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE
+#if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE && !CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
 
 #include "lrotable.h"
 
@@ -66,9 +66,8 @@ struct rotable_cache_entry {
 };
 
 typedef struct {
-	uint32_t miss;  // Number of cache misses
-	uint32_t hit;   // Number of cache hits
-	struct mtx mtx; // Mutex for protect cache entries
+	uint32_t miss;     // Number of cache misses
+	uint32_t hit;      // Number of cache hits
 
 	struct rotable_cache_entry *first; // First entry
 	struct rotable_cache_entry *last;  // Last entry

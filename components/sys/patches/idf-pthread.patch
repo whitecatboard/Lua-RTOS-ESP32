@@ -61,10 +61,10 @@ index 446946a3..1b5099b5 100644
    size_t affinitysetsize;
    cpu_set_t *affinityset;
 diff --git a/components/pthread/component.mk b/components/pthread/component.mk
-index 97ace4b7..beeb9a67 100644
+index 0dd23948..6ded33b2 100644
 --- a/components/pthread/component.mk
 +++ b/components/pthread/component.mk
-@@ -4,6 +4,6 @@
+@@ -4,9 +4,9 @@
  
  COMPONENT_SRCDIRS := .
  
@@ -73,3 +73,6 @@ index 97ace4b7..beeb9a67 100644
  
 -COMPONENT_ADD_LDFLAGS := -lpthread
 +COMPONENT_ADD_LDFLAGS :=
+ 
+ ifdef CONFIG_ENABLE_STATIC_TASK_CLEAN_UP_HOOK
+ COMPONENT_ADD_LDFLAGS += -Wl,--wrap=vPortCleanUpTCB

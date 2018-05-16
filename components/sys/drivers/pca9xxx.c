@@ -192,7 +192,7 @@ driver_error_t *pca9xxx_setup() {
 	driver_error_t *error;
 	int i2cdevice;
 
-	if ((error = i2c_setup(CONFIG_PCA9xxx_I2C, I2C_MASTER, CONFIG_PCA9xxx_I2C_SPEED, 0, 0, &i2cdevice))) {
+	if ((error = i2c_attach(CONFIG_PCA9xxx_I2C, I2C_MASTER, CONFIG_PCA9xxx_I2C_SPEED, 0, 0, &i2cdevice))) {
 		return error;
 	}
 

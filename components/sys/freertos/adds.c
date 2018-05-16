@@ -79,11 +79,11 @@ static int compare(const void *a, const void *b) {
 
 void uxSetThreadId(UBaseType_t id) {
 	lua_rtos_tcb_t *lua_rtos_tcb;
-	
+
 	// Get Lua RTOS specific TCB parts for current task
 	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle(), THREAD_LOCAL_STORAGE_POINTER_ID))) {
 		// Store thread id into Lua RTOS specific TCB parts
-		lua_rtos_tcb->threadid = id;		
+		lua_rtos_tcb->threadid = id;
 	}
 }
 
@@ -189,7 +189,7 @@ void IRAM_ATTR uxSetSignaled(TaskHandle_t h, int s) {
 	// Get Lua RTOS specific TCB parts for current task
 	if ((lua_rtos_tcb = pvTaskGetThreadLocalStoragePointer(h, THREAD_LOCAL_STORAGE_POINTER_ID))) {
 		// Store current signaled mask into Lua RTOS specific TCB parts
-		lua_rtos_tcb->signaled = s;		
+		lua_rtos_tcb->signaled = s;
 	}
 }
 
@@ -239,6 +239,10 @@ task_info_t *GetTaskInfo() {
 #endif
 
 	for(int i = 0; i <task_num; i++){
+	    if (status_array[i].eCurrentState == eDeleted) {
+	        continue;
+	    }
+
 		// Get the task TCB
 		ctask = (tskTCB_t *)status_array[i].xHandle;
 

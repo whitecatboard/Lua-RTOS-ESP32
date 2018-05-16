@@ -72,17 +72,17 @@
 static void i2c_init();
 
 DRIVER_REGISTER_BEGIN(I2C,i2c,CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS * ((CPU_LAST_I2C + 1) * I2C_BUS_DEVICES),i2c_init,NULL);
-	DRIVER_REGISTER_ERROR(I2C, i2c, CannotSetup, "can't setup", I2C_ERR_CANT_INIT);
-	DRIVER_REGISTER_ERROR(I2C, i2c, NotSetup, "is not setup", I2C_ERR_IS_NOT_SETUP);
-	DRIVER_REGISTER_ERROR(I2C, i2c, InvalidUnit, "invalid unit", I2C_ERR_INVALID_UNIT);
-	DRIVER_REGISTER_ERROR(I2C, i2c, InvalidOperation,"invalid operation", I2C_ERR_INVALID_OPERATION);
-	DRIVER_REGISTER_ERROR(I2C, i2c, NotEnoughtMemory, "not enough memory", I2C_ERR_NOT_ENOUGH_MEMORY);
-	DRIVER_REGISTER_ERROR(I2C, i2c, InvalidTransaction, "invalid transaction", I2C_ERR_INVALID_TRANSACTION);
-	DRIVER_REGISTER_ERROR(I2C, i2c, AckNotReceived, "not ack received", I2C_ERR_NOT_ACK);
-	DRIVER_REGISTER_ERROR(I2C, i2c, Timeout, "timeout", I2C_ERR_TIMEOUT);
-	DRIVER_REGISTER_ERROR(I2C, i2c, PinNowAllowed, "pin not allowed", I2C_ERR_PIN_NOT_ALLOWED);
-	DRIVER_REGISTER_ERROR(I2C, i2c, CannotChangePinMap, "cannot change pin map once the I2C unit has an attached device", I2C_ERR_CANNOT_CHANGE_PINMAP);
-	DRIVER_REGISTER_ERROR(I2C, i2c, NoMoreDevicesAllowed, "no more devices allowed", I2C_ERR_NO_MORE_DEVICES_ALLOWED);
+    DRIVER_REGISTER_ERROR(I2C, i2c, CannotSetup, "can't setup", I2C_ERR_CANT_INIT);
+    DRIVER_REGISTER_ERROR(I2C, i2c, NotSetup, "is not setup", I2C_ERR_IS_NOT_SETUP);
+    DRIVER_REGISTER_ERROR(I2C, i2c, InvalidUnit, "invalid unit", I2C_ERR_INVALID_UNIT);
+    DRIVER_REGISTER_ERROR(I2C, i2c, InvalidOperation,"invalid operation", I2C_ERR_INVALID_OPERATION);
+    DRIVER_REGISTER_ERROR(I2C, i2c, NotEnoughtMemory, "not enough memory", I2C_ERR_NOT_ENOUGH_MEMORY);
+    DRIVER_REGISTER_ERROR(I2C, i2c, InvalidTransaction, "invalid transaction", I2C_ERR_INVALID_TRANSACTION);
+    DRIVER_REGISTER_ERROR(I2C, i2c, AckNotReceived, "not ack received", I2C_ERR_NOT_ACK);
+    DRIVER_REGISTER_ERROR(I2C, i2c, Timeout, "timeout", I2C_ERR_TIMEOUT);
+    DRIVER_REGISTER_ERROR(I2C, i2c, PinNowAllowed, "pin not allowed", I2C_ERR_PIN_NOT_ALLOWED);
+    DRIVER_REGISTER_ERROR(I2C, i2c, CannotChangePinMap, "cannot change pin map once the I2C unit has an attached device", I2C_ERR_CANNOT_CHANGE_PINMAP);
+    DRIVER_REGISTER_ERROR(I2C, i2c, NoMoreDevicesAllowed, "no more devices allowed", I2C_ERR_NO_MORE_DEVICES_ALLOWED);
 DRIVER_REGISTER_END(I2C,i2c,CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS * ((CPU_LAST_I2C + 1) * I2C_BUS_DEVICES),i2c_init,NULL);
 
 // i2c info needed by driver
@@ -96,489 +96,599 @@ static struct list transactions;
  */
 
 static int i2c_get_free_device(int unit) {
-	int i;
+    int i;
 
-	for(i = 0;i < I2C_BUS_DEVICES;i++) {
-		if (i2c[unit].device[i].speed == 0) return i;
-	}
+    for (i = 0; i < I2C_BUS_DEVICES; i++) {
+        if (i2c[unit].device[i].speed == 0)
+            return i;
+    }
 
-	return -1;
+    return -1;
 }
 
 static void i2c_lock(uint8_t unit) {
-	xSemaphoreTakeRecursive(i2c[unit].mtx, portMAX_DELAY);
+    xSemaphoreTakeRecursive(i2c[unit].mtx, portMAX_DELAY);
 }
 
 static void i2c_unlock(uint8_t unit) {
-	xSemaphoreGiveRecursive(i2c[unit].mtx);
+    xSemaphoreGiveRecursive(i2c[unit].mtx);
 }
 
 static void i2c_init() {
-	int i;
+    int i;
 
-	// Disable i2c modules
-	periph_module_disable(PERIPH_I2C0_MODULE);
-	periph_module_disable(PERIPH_I2C1_MODULE);
+    // Disable i2c modules
+    periph_module_disable(PERIPH_I2C0_MODULE);
+    periph_module_disable(PERIPH_I2C1_MODULE);
 
-	// Set driver structure to 0;
-	memset(i2c, 0, sizeof(i2c_t) * (CPU_LAST_I2C + 1));
+    // Set driver structure to 0;
+    memset(i2c, 0, sizeof(i2c_t) * (CPU_LAST_I2C + 1));
 
-	// Init transaction list
-	lstinit(&transactions, 0, LIST_DEFAULT);
+    // Init transaction list
+    lstinit(&transactions, 0, LIST_DEFAULT);
 
     // Init mutexes and pin maps
-    for(i=0;i < CPU_LAST_I2C + 1;i++) {
-    	i2c[i].mtx = xSemaphoreCreateRecursiveMutex();
+    for (i = 0; i < CPU_LAST_I2C + 1; i++) {
+        i2c[i].mtx = xSemaphoreCreateRecursiveMutex();
 
         switch (i) {
         case 0:
-        	i2c[i].scl = CONFIG_LUA_RTOS_I2C0_SCL;
-        	i2c[i].sda = CONFIG_LUA_RTOS_I2C0_SDA;
-        	break;
+            i2c[i].scl = CONFIG_LUA_RTOS_I2C0_SCL;
+            i2c[i].sda = CONFIG_LUA_RTOS_I2C0_SDA;
+            break;
 
         case 1:
-        	i2c[i].scl = CONFIG_LUA_RTOS_I2C1_SCL;
-        	i2c[i].sda = CONFIG_LUA_RTOS_I2C1_SDA;
-        	break;
+            i2c[i].scl = CONFIG_LUA_RTOS_I2C1_SCL;
+            i2c[i].sda = CONFIG_LUA_RTOS_I2C1_SDA;
+            break;
         }
     }
 }
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 static driver_error_t *i2c_lock_resources(int unit) {
-	driver_unit_lock_error_t *lock_error = NULL;
+    driver_unit_lock_error_t *lock_error = NULL;
 
-	// Lock sda
-	if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].sda, DRIVER_ALL_FLAGS, "SDA"))) {
-    	return driver_lock_error(I2C_DRIVER, lock_error);
+    // Lock sda
+    if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].sda,
+    DRIVER_ALL_FLAGS, "SDA"))) {
+        return driver_lock_error(I2C_DRIVER, lock_error);
     }
 
-	// Lock scl
-	if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].scl, DRIVER_ALL_FLAGS, "SCL"))) {
-    	return driver_lock_error(I2C_DRIVER, lock_error);
-    }
-
-	return NULL;
-}
-#endif
-
-static driver_error_t *i2c_check(int unit) {
-    // Sanity checks
-	if (!((1 << unit) & CPU_I2C_ALL)) {
-		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
-	}
-
-	if (!i2c[unit].setup) {
-		return driver_error(I2C_DRIVER, I2C_ERR_IS_NOT_SETUP, NULL);
-	}
-
-	return NULL;
-}
-
-static driver_error_t *i2c_get_command(int unit, int *transaction, i2c_cmd_handle_t *cmd) {
-    if (lstget(&transactions, *transaction, (void **)cmd)) {
-    	i2c_unlock(unit);
-
-		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+    // Lock scl
+    if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].scl,
+    DRIVER_ALL_FLAGS, "SCL"))) {
+        return driver_lock_error(I2C_DRIVER, lock_error);
     }
 
     return NULL;
 }
 
-static driver_error_t *i2c_create_or_get_command(int unit, int *transaction, i2c_cmd_handle_t *cmd) {
-	driver_error_t *error;
+static driver_error_t *i2c_unlock_resources(int unit) {
+    // Unlock sda
+    driver_unlock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].sda);
 
-	// If transaction is valid get command, we don't need to create
-	if (*transaction != I2C_TRANSACTION_INITIALIZER) {
-		if ((error = i2c_get_command(unit, transaction, cmd))) {
-			return error;
-		}
-	} else {
-		// Create command
-		*cmd = i2c_cmd_link_create();
-		if (!*cmd) {
-			i2c_unlock(unit);
-			return driver_error(I2C_DRIVER, I2C_ERR_NOT_ENOUGH_MEMORY, NULL);
-		}
+    // Unlock scl
+    driver_unlock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].scl);
 
-		// Add transaction to list
-		if (lstadd(&transactions, *cmd, transaction)) {
-			*transaction = I2C_TRANSACTION_INITIALIZER;
-
-			i2c_cmd_link_delete(*cmd);
-			i2c_unlock(unit);
-			return driver_error(I2C_DRIVER, I2C_ERR_NOT_ENOUGH_MEMORY, NULL);
-		}
-	}
-
-	return NULL;
+    return NULL;
 }
 
-static driver_error_t *i2c_flush_internal(int unit, int *transaction, i2c_cmd_handle_t cmd) {
-	// Flush
-	esp_err_t err = i2c_master_cmd_begin(unit, cmd, 1000 / portTICK_RATE_MS);
-	i2c_cmd_link_delete(cmd);
-	lstremove(&transactions, *transaction, 0);
+#endif
+
+static driver_error_t *i2c_check(int unit) {
+    // Sanity checks
+    if (!((1 << unit) & CPU_I2C_ALL)) {
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
+    }
+
+    if (!i2c[unit].setup) {
+        return driver_error(I2C_DRIVER, I2C_ERR_IS_NOT_SETUP, NULL);
+    }
+
+    return NULL;
+}
+
+static driver_error_t *i2c_get_command(int unit, int *transaction,
+        i2c_cmd_handle_t *cmd) {
+    if (lstget(&transactions, *transaction, (void **) cmd)) {
+        i2c_unlock(unit);
+
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+    }
+
+    return NULL;
+}
+
+static driver_error_t *i2c_create_or_get_command(int unit, int *transaction,
+        i2c_cmd_handle_t *cmd) {
+    driver_error_t *error;
+
+    // If transaction is valid get command, we don't need to create
+    if (*transaction != I2C_TRANSACTION_INITIALIZER) {
+        if ((error = i2c_get_command(unit, transaction, cmd))) {
+            return error;
+        }
+    } else {
+        // Create command
+        *cmd = i2c_cmd_link_create();
+        if (!*cmd) {
+            i2c_unlock(unit);
+            return driver_error(I2C_DRIVER, I2C_ERR_NOT_ENOUGH_MEMORY, NULL);
+        }
+
+        // Add transaction to list
+        if (lstadd(&transactions, *cmd, transaction)) {
+            *transaction = I2C_TRANSACTION_INITIALIZER;
+
+            i2c_cmd_link_delete(*cmd);
+            i2c_unlock(unit);
+            return driver_error(I2C_DRIVER, I2C_ERR_NOT_ENOUGH_MEMORY, NULL);
+        }
+    }
+
+    return NULL;
+}
+
+static driver_error_t *i2c_flush_internal(int unit, int device,
+        int *transaction, i2c_cmd_handle_t cmd) {
+
+    esp_err_t err = ESP_OK;
+
+    // Flush
+    err = i2c_master_cmd_begin(unit, cmd, 1000 / portTICK_RATE_MS);
+
+    i2c_cmd_link_delete(cmd);
+    lstremove(&transactions, *transaction, 0);
 
     *transaction = I2C_TRANSACTION_INITIALIZER;
 
-	if (err == ESP_FAIL) {
-    	i2c_unlock(unit);
-		return driver_error(I2C_DRIVER, I2C_ERR_NOT_ACK, NULL);
-	} else if (err == ESP_ERR_TIMEOUT) {
-    	i2c_unlock(unit);
-		return driver_error(I2C_DRIVER, I2C_ERR_TIMEOUT, NULL);
-	}
+    if (err == ESP_FAIL) {
+        i2c_unlock(unit);
+        return driver_error(I2C_DRIVER, I2C_ERR_NOT_ACK, NULL);
+    } else if (err == ESP_ERR_TIMEOUT) {
+        i2c_unlock(unit);
+        return driver_error(I2C_DRIVER, I2C_ERR_TIMEOUT, NULL);
+    }
 
-	return NULL;
+    return NULL;
 }
 
 /*
  * Operation functions
  */
-driver_error_t *i2c_flush(int unit, int *transaction, int new_transaction) {
-	driver_error_t *error;
-	i2c_cmd_handle_t cmd = NULL;
+driver_error_t *i2c_flush(int deviceid, int *transaction, int new_transaction) {
+    driver_error_t *error;
+    i2c_cmd_handle_t cmd = NULL;
 
-	// Get command
-	if ((error = i2c_get_command(unit, transaction, &cmd))) {
-		return error;
-	}
+    int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
 
-	// Flush
-	if ((error = i2c_flush_internal(unit, transaction, cmd))) {
-		return error;
-	}
+    // Get command
+    if ((error = i2c_get_command(unit, transaction, &cmd))) {
+        return error;
+    }
 
-	if (new_transaction) {
-		// Create a new command
-		if ((error = i2c_create_or_get_command(unit, transaction, &cmd))) {
-			i2c_unlock(unit);
-			return error;
-		}
-	}
+    // Flush
+    if ((error = i2c_flush_internal(unit, device, transaction, cmd))) {
+        return error;
+    }
 
-	return NULL;
+    if (new_transaction) {
+        // Create a new command
+        if ((error = i2c_create_or_get_command(unit, transaction, &cmd))) {
+            i2c_unlock(unit);
+            return error;
+        }
+    }
+
+    return NULL;
 }
 
 driver_error_t *i2c_pin_map(int unit, int sda, int scl) {
     // Sanity checks
-	if (!((1 << unit) & CPU_I2C_ALL)) {
-		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
-	}
+    if (!((1 << unit) & CPU_I2C_ALL)) {
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
+    }
 
-	i2c_lock(unit);
+    i2c_lock(unit);
 
-	if (i2c[unit].setup) {
-	   	i2c_unlock(unit);
-		return driver_error(I2C_DRIVER, I2C_ERR_CANNOT_CHANGE_PINMAP, NULL);
-	}
+    if (i2c[unit].setup) {
+        i2c_unlock(unit);
+        return driver_error(I2C_DRIVER, I2C_ERR_CANNOT_CHANGE_PINMAP, NULL);
+    }
 
-	// Sanity checks on pinmap
+    // Sanity checks on pinmap
     if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << i2c[unit].scl))) && (scl >= 0)) {
-    	i2c_unlock(unit);
+        i2c_unlock(unit);
 
-		return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "scl, selected pin cannot be output");
+        return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED,
+                "scl, selected pin cannot be output");
     }
 
     if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << i2c[unit].sda))) && (sda >= 0)) {
-    	i2c_unlock(unit);
+        i2c_unlock(unit);
 
-    	return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda, selected pin cannot be output");
+        return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED,
+                "sda, selected pin cannot be output");
     }
 
     if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << i2c[unit].sda))) && (sda >= 0)) {
-    	i2c_unlock(unit);
+        i2c_unlock(unit);
 
-    	return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda, selected pin cannot be input");
+        return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED,
+                "sda, selected pin cannot be input");
     }
 
     if (!TEST_UNIQUE2(i2c[unit].sda, i2c[unit].scl)) {
-    	i2c_unlock(unit);
-		return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED, "sda and scl must be different");
+        i2c_unlock(unit);
+        return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED,
+                "sda and scl must be different");
     }
 
     // Update pin map, if needed
-	if (scl >= 0) {
-		i2c[unit].scl = scl;
-	}
+    if (scl >= 0) {
+        i2c[unit].scl = scl;
+    }
 
-	if (sda >= 0) {
-		i2c[unit].sda = sda;
-	}
+    if (sda >= 0) {
+        i2c[unit].sda = sda;
+    }
 
-	i2c_unlock(unit);
+    i2c_unlock(unit);
 
-	return NULL;
+    return NULL;
 }
 
-driver_error_t *i2c_setup(int unit, int mode, int speed, int addr10_en, int addr, int *deviceid) {
+driver_error_t *i2c_attach(int unit, int mode, int speed, int addr10_en,
+        int addr, int *deviceid) {
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-	driver_error_t *error;
+    driver_error_t *error;
 #endif
 
     // Sanity checks
-	if (!((1 << unit) & CPU_I2C_ALL)) {
-		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
-	}
+    if (!((1 << unit) & CPU_I2C_ALL)) {
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
+    }
 
-	if ((speed < 0) || (speed == 0)) {
-		speed = 400000;
-	}
+    if ((speed < 0) || (speed == 0)) {
+        speed = 400000;
+    }
 
-	i2c_lock(unit);
+    i2c_lock(unit);
 
-	// Setup only once
-	if (!i2c[unit].setup) {
+    // Setup only once
+    if (!i2c[unit].setup) {
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-		if ((error = i2c_lock_resources(unit))) {
-	    	i2c_unlock(unit);
+        if ((error = i2c_lock_resources(unit))) {
+            i2c_unlock(unit);
 
-			return error;
-		}
+            return error;
+        }
 #endif
 
-	    // Enable module
-	    if (unit == 0) {
-			periph_module_enable(PERIPH_I2C0_MODULE);
-		} else {
-			periph_module_enable(PERIPH_I2C1_MODULE);
-		}
+        // Enable module
+        if (unit == 0) {
+            periph_module_enable(PERIPH_I2C0_MODULE);
+        } else {
+            periph_module_enable(PERIPH_I2C1_MODULE);
+        }
 
-	    // Setup
-	    int buff_len = 0;
-	    i2c_config_t conf;
+        // Setup
+        int buff_len = 0;
+        i2c_config_t conf;
 
-	    conf.sda_io_num = i2c[unit].sda;
-	    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-	    conf.scl_io_num = i2c[unit].scl;
-	    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+        conf.sda_io_num = i2c[unit].sda;
+        conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
+        conf.scl_io_num = i2c[unit].scl;
+        conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
 
-	    if (mode == I2C_MASTER) {
-	        conf.mode = I2C_MODE_MASTER;
-	        conf.master.clk_speed = speed;
-	        buff_len = 0;
-	    } else {
-	    	conf.mode = I2C_MODE_SLAVE;
-	    	conf.slave.addr_10bit_en = addr10_en;
-	    	conf.slave.slave_addr = addr;
-	    	buff_len = 1024;
-	    }
+        if (mode == I2C_MASTER) {
+            conf.mode = I2C_MODE_MASTER;
+            conf.master.clk_speed = speed;
+            buff_len = 0;
+        } else {
+            conf.mode = I2C_MODE_SLAVE;
+            conf.slave.addr_10bit_en = addr10_en;
+            conf.slave.slave_addr = addr;
+            buff_len = 1024;
+        }
 
-	    i2c_param_config(unit, &conf);
-	    i2c_driver_install(unit, conf.mode, buff_len, buff_len, 0);
+        i2c_param_config(unit, &conf);
+        i2c_driver_install(unit, conf.mode, buff_len, buff_len, 0);
 
-	    i2c[unit].mode = mode;
-	    i2c[unit].setup = 1;
+        i2c[unit].mode = mode;
+        i2c[unit].setup = 1;
 
-	    syslog(LOG_INFO,
-	        "i2c%u at pins scl=%s%d/sdc=%s%d", unit,
-	        gpio_portname(i2c[unit].scl), gpio_name(i2c[unit].scl),
-	        gpio_portname(i2c[unit].sda), gpio_name(i2c[unit].sda)
-	    );
-	}
+        syslog(LOG_INFO, "i2c%u at pins scl=%s%d/sdc=%s%d", unit,
+                gpio_portname(i2c[unit].scl), gpio_name(i2c[unit].scl),
+                gpio_portname(i2c[unit].sda), gpio_name(i2c[unit].sda));
+    }
 
-	// Get a free device
-	int device = i2c_get_free_device(unit);
-	if (device < 0) {
-		// No more devices
-		return driver_error(I2C_DRIVER, I2C_ERR_NO_MORE_DEVICES_ALLOWED, NULL);
-	}
+    // Get a free device
+    int device = i2c_get_free_device(unit);
+    if (device < 0) {
+        // No more devices
+        return driver_error(I2C_DRIVER, I2C_ERR_NO_MORE_DEVICES_ALLOWED, NULL);
+    }
 
-	i2c[unit].device[device].speed = speed;
+    i2c[unit].device[device].speed = speed;
+    i2c[unit].device[device].reading = 0;
 
-	*deviceid = ((unit << 8) | device);
+    *deviceid = ((unit << 8) | device);
 
-	i2c_unlock(unit);
+    i2c_unlock(unit);
+
+    return NULL;
+}
+
+driver_error_t *i2c_detach(int deviceid) {
+    driver_error_t *error;
+
+    int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
+
+    // Sanity checks
+    if ((error = i2c_check(unit))) {
+        return error;
+    }
+
+    i2c_lock(unit);
+
+    // Mark device as unused
+    i2c[unit].device[device].speed = 0;
+    i2c[unit].device[device].reading = 0;
+
+    // Check if all devices are unused or not
+    int i;
+    int no_devices = 1;
+
+    for (i = 0; i < I2C_BUS_DEVICES; i++) {
+        if (i2c[unit].device[i].speed != 0) {
+            no_devices = 0;
+            break;
+        }
+    }
+
+    if (no_devices) {
+        // Unlock resources
+        i2c_unlock_resources(unit);
+
+        i2c_driver_delete(unit);
+
+        // Disable unit
+        if (unit == 0) {
+            periph_module_disable(PERIPH_I2C0_MODULE);
+        } else {
+            periph_module_disable(PERIPH_I2C1_MODULE);
+        }
+
+        i2c[unit].setup = 0;
+    }
+
+    i2c_unlock(unit);
 
     return NULL;
 }
 
 driver_error_t *i2c_setspeed(int unit, int speed) {
-	driver_error_t *error;
+    driver_error_t *error;
 
-	// Sanity checks
-	if ((error = i2c_check(unit))) {
-		return error;
-	}
-
-	i2c_lock(unit);
-
-	int half_cycle = (I2C_APB_CLK_FREQ / speed) / 2;
-
-	i2c_set_period(unit, (I2C_APB_CLK_FREQ / speed) - half_cycle - 1,  half_cycle - 1);
-	i2c_set_start_timing(unit, half_cycle, half_cycle);
-	i2c_set_stop_timing(unit, half_cycle, half_cycle);
-	i2c_set_data_timing(unit, half_cycle / 2, half_cycle / 2);
-
-	i2c_unlock(unit);
-
-	return NULL;
-}
-
-driver_error_t *i2c_start(int deviceid, int *transaction) {
-	driver_error_t *error;
-	i2c_cmd_handle_t cmd = NULL;
-
-	int unit = (deviceid & 0xff00) >> 8;
-	int device = (deviceid & 0x00ff);
-
-	// Sanity checks
-	if ((error = i2c_check(unit))) {
-		return error;
-	}
-
-	if (i2c[unit].mode != I2C_MASTER) {
-		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, "only allowed in master mode");
-	}
-
-	i2c_lock(unit);
-
-	i2c_setspeed(unit, i2c[unit].device[device].speed);
-
-	if ((error = i2c_create_or_get_command(unit, transaction, &cmd))) {
-		i2c_unlock(unit);
-		return error;
-	}
-
-	i2c_master_start(cmd);
-
-	i2c_unlock(unit);
-
-	return NULL;
-}
-
-driver_error_t *i2c_stop(int deviceid, int *transaction) {
-	driver_error_t *error;
-
-	int unit = (deviceid & 0xff00) >> 8;
-
-	// Sanity checks
-	if ((error = i2c_check(unit))) {
-		return error;
-	}
-
-	if (i2c[unit].mode != I2C_MASTER) {
-		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, "only allowed in master mode");
-	}
-
-	i2c_lock(unit);
-
-	// Get command
-	i2c_cmd_handle_t cmd;
-    if (lstget(&transactions, *transaction, (void **)&cmd)) {
-    	i2c_unlock(unit);
-		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+    // Sanity checks
+    if ((error = i2c_check(unit))) {
+        return error;
     }
 
-	i2c_master_stop(cmd);
+    i2c_lock(unit);
 
-	// Flush
-	if ((error = i2c_flush_internal(unit, transaction, cmd))) {
-		i2c_unlock(unit);
-		return error;
-	}
+    int half_cycle = (I2C_APB_CLK_FREQ / speed) / 2;
 
-	i2c_unlock(unit);
-
-	return NULL;
-}
-
-driver_error_t *i2c_write_address(int deviceid, int *transaction, char address, int read) {
-	driver_error_t *error;
-
-	int unit = (deviceid & 0xff00) >> 8;
-
-	// Sanity checks
-	if ((error = i2c_check(unit))) {
-		return error;
-	}
-
-	if (i2c[unit].mode != I2C_MASTER) {
-		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, NULL);
-	}
-
-	i2c_lock(unit);
-
-	// Get command
-	i2c_cmd_handle_t cmd;
-    if (lstget(&transactions, *transaction, (void **)&cmd)) {
-    	i2c_unlock(unit);
-
-		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
-    }
-
-    i2c_master_write_byte(cmd, address << 1 | (read?I2C_MASTER_READ:I2C_MASTER_WRITE), ACK_CHECK_EN);
+    i2c_set_period(unit, (I2C_APB_CLK_FREQ / speed) - half_cycle - 1,
+            half_cycle - 1);
+    i2c_set_start_timing(unit, half_cycle, half_cycle);
+    i2c_set_stop_timing(unit, half_cycle, half_cycle);
+    i2c_set_data_timing(unit, half_cycle / 2, half_cycle / 2);
 
     i2c_unlock(unit);
 
-	return NULL;
+    return NULL;
+}
+
+driver_error_t *i2c_start(int deviceid, int *transaction) {
+    driver_error_t *error;
+    i2c_cmd_handle_t cmd = NULL;
+
+    int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
+
+    // Sanity checks
+    if ((error = i2c_check(unit))) {
+        return error;
+    }
+
+    if (i2c[unit].mode != I2C_MASTER) {
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION,
+                "only allowed in master mode");
+    }
+
+    i2c_lock(unit);
+
+    i2c_setspeed(unit, i2c[unit].device[device].speed);
+
+    if ((error = i2c_create_or_get_command(unit, transaction, &cmd))) {
+        i2c_unlock(unit);
+        return error;
+    }
+
+    i2c_master_start(cmd);
+
+    i2c_unlock(unit);
+
+    return NULL;
+}
+
+driver_error_t *i2c_stop(int deviceid, int *transaction) {
+    driver_error_t *error;
+
+    int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
+
+    // Sanity checks
+    if ((error = i2c_check(unit))) {
+        return error;
+    }
+
+    if (i2c[unit].mode != I2C_MASTER) {
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION,
+                "only allowed in master mode");
+    }
+
+    i2c_lock(unit);
+
+    // Get command
+    i2c_cmd_handle_t cmd;
+    if (lstget(&transactions, *transaction, (void **) &cmd)) {
+        i2c_unlock(unit);
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+    }
+
+    if (i2c[unit].device[device].reading) {
+        uint8_t dummy;
+
+        i2c_master_read_byte(cmd, (uint8_t *) (&dummy), NACK_VAL);
+    }
+
+    i2c_master_stop(cmd);
+
+    // Flush
+    if ((error = i2c_flush_internal(unit, device, transaction, cmd))) {
+        i2c_unlock(unit);
+        return error;
+    }
+
+    i2c[unit].device[device].reading = 0;
+
+    i2c_unlock(unit);
+
+    return NULL;
+}
+
+driver_error_t *i2c_write_address(int deviceid, int *transaction, char address,
+        int read) {
+    driver_error_t *error;
+
+    int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
+
+    // Sanity checks
+    if ((error = i2c_check(unit))) {
+        return error;
+    }
+
+    if (i2c[unit].mode != I2C_MASTER) {
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION,
+                "only allowed in master mode");
+    }
+
+    i2c_lock(unit);
+
+    // Get command
+    i2c_cmd_handle_t cmd;
+    if (lstget(&transactions, *transaction, (void **) &cmd)) {
+        i2c_unlock(unit);
+
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+    }
+
+    i2c[unit].device[device].reading = read;
+
+    i2c_master_write_byte(cmd,
+            address << 1 | (read ? I2C_MASTER_READ : I2C_MASTER_WRITE),
+            ACK_CHECK_EN);
+
+    i2c_unlock(unit);
+
+    return NULL;
 }
 
 driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len) {
-	driver_error_t *error;
+    driver_error_t *error;
 
-	int unit = (deviceid & 0xff00) >> 8;
+    int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
 
-	// Sanity checks
-	if ((error = i2c_check(unit))) {
-		return error;
-	}
+    // Sanity checks
+    if ((error = i2c_check(unit))) {
+        return error;
+    }
 
-	if (i2c[unit].mode != I2C_MASTER) {
-		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, NULL);
-	}
+    if (i2c[unit].mode != I2C_MASTER) {
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION,
+                "only allowed in master mode");
+    }
 
-	i2c_lock(unit);
+    i2c_lock(unit);
 
-	// Get command
-	i2c_cmd_handle_t cmd;
-    if (lstget(&transactions, *transaction, (void **)&cmd)) {
-    	i2c_unlock(unit);
+    // Get command
+    i2c_cmd_handle_t cmd;
+    if (lstget(&transactions, *transaction, (void **) &cmd)) {
+        i2c_unlock(unit);
 
-		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+    }
+
+    if (i2c[unit].device[device].reading) {
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION,
+                "transaction is for read");
     }
 
     if (len > 1) {
-    	i2c_master_write(cmd, (uint8_t *)data, len, ACK_CHECK_EN);
+        i2c_master_write(cmd, (uint8_t *) data, len, ACK_CHECK_EN);
     } else {
         i2c_master_write_byte(cmd, *data, ACK_CHECK_EN);
     }
 
-	i2c_unlock(unit);
+    i2c_unlock(unit);
 
     return NULL;
 }
 
 driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len) {
-	driver_error_t *error;
+    driver_error_t *error;
 
-	int unit = (deviceid & 0xff00) >> 8;
+    int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
 
-	// Sanity checks
-	if ((error = i2c_check(unit))) {
-		return error;
-	}
+    // Sanity checks
+    if ((error = i2c_check(unit))) {
+        return error;
+    }
 
-	if (i2c[unit].mode != I2C_MASTER) {
-		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, NULL);
-	}
+    if (i2c[unit].mode != I2C_MASTER) {
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION, NULL);
+    }
 
-	i2c_lock(unit);
+    i2c_lock(unit);
 
-	// Get command
-	i2c_cmd_handle_t cmd;
-    if (lstget(&transactions, *transaction, (void **)&cmd)) {
-    	i2c_unlock(unit);
+    // Get command
+    i2c_cmd_handle_t cmd;
+    if (lstget(&transactions, *transaction, (void **) &cmd)) {
+        i2c_unlock(unit);
 
-		return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_TRANSACTION, NULL);
+    }
+
+    if (!i2c[unit].device[device].reading) {
+        return driver_error(I2C_DRIVER, I2C_ERR_INVALID_OPERATION,
+                "transaction is for write");
     }
 
     if (len > 1) {
-    	i2c_master_read(cmd, (uint8_t *)data, len - 1, ACK_VAL);
+        i2c_master_read(cmd, (uint8_t *) data, len - 1, ACK_VAL);
+        i2c_master_read_byte(cmd, (uint8_t *) (data + len - 1), NACK_VAL);
+    } else {
+        i2c_master_read_byte(cmd, (uint8_t *) (data + len - 1), ACK_VAL);
     }
-
-   	i2c_master_read_byte(cmd, (uint8_t *)(data + len - 1), NACK_VAL);
 
     i2c_unlock(unit);
 

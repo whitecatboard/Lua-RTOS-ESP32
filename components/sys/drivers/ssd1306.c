@@ -141,8 +141,8 @@ driver_error_t *ssd1306_init(uint8_t chip, uint8_t orient, uint8_t address) {
 	// Store chipset
 	chipset = chip;
 
-	// Init I2C bus
-	if ((error = i2c_setup(CONFIG_LUA_RTOS_GDISPLAY_I2C, I2C_MASTER, 400000, 0, 0, &caps->device))) {
+	// Attach to I2C
+	if ((error = i2c_attach(CONFIG_LUA_RTOS_GDISPLAY_I2C, I2C_MASTER, 400000, 0, 0, &caps->device))) {
 		return error;
 	}
 

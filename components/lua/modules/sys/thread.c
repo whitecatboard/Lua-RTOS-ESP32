@@ -62,6 +62,7 @@
 #include <assert.h>
 #include <signal.h>
 #include <errno.h>
+
 #include <pthread.h>
 
 #include <drivers/uart.h>
@@ -71,16 +72,16 @@
 #include <esp_task_wdt.h>
 
 // Module errors
-#define LUA_THREAD_ERR_NOT_ENOUGH_MEMORY       (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  0)
-#define LUA_THREAD_ERR_NOT_ALLOWED             (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  1)
-#define LUA_THREAD_ERR_NON_EXISTENT            (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  2)
-#define LUA_THREAD_ERR_CANNOT_START            (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  3)
-#define LUA_THREAD_ERR_INVALID_STACK_SIZE      (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  4)
-#define LUA_THREAD_ERR_INVALID_PRIORITY        (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  5)
-#define LUA_THREAD_ERR_INVALID_CPU_AFFINITY    (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  6)
-#define LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  7)
-#define LUA_THREAD_ERR_INVALID_THREAD_ID       (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  8)
-#define LUA_THREAD_ERR_GET_TASKLIST            (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  9)
+#define LUA_THREAD_ERR_NOT_ENOUGH_MEMORY    	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  0)
+#define LUA_THREAD_ERR_NOT_ALLOWED          	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  1)
+#define LUA_THREAD_ERR_NON_EXISTENT         	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  2)
+#define LUA_THREAD_ERR_CANNOT_START         	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  3)
+#define LUA_THREAD_ERR_INVALID_STACK_SIZE   	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  4)
+#define LUA_THREAD_ERR_INVALID_PRIORITY     	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  5)
+#define LUA_THREAD_ERR_INVALID_CPU_AFFINITY 	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  6)
+#define LUA_THREAD_ERR_CANNOT_MONITOR_AS_TABLE 	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  7)
+#define LUA_THREAD_ERR_INVALID_THREAD_ID	    (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  8)
+#define LUA_THREAD_ERR_GET_TASKLIST	          (DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  9)
 
 // Register driver and messages
 DRIVER_REGISTER_BEGIN(THREAD,thread,0,NULL,NULL);
@@ -101,6 +102,8 @@ typedef struct {
 	lthread_t *lthread;
 } lcleanup_info_t;
 
+extern pthread_t lua_thread;
+
 static void cleanup(void *args) {
 	lcleanup_info_t *info = (lcleanup_info_t *)args;
 
@@ -108,10 +111,10 @@ static void cleanup(void *args) {
 	struct pthread *pthread = _pthread_get(info->pthread);
 
 	if (pthread) {
-		LuaLock(info->lthread->PL);
+	    lua_lock(info->lthread->PL);
 		luaL_unref(info->lthread->L, LUA_REGISTRYINDEX, info->lthread->function_ref);
 		luaL_unref(info->lthread->PL, LUA_REGISTRYINDEX, info->lthread->thread_ref);
-		LuaUnlock(info->lthread->PL);
+		lua_unlock(info->lthread->PL);
 	}
 
 	free(info->lthread);
@@ -168,7 +171,7 @@ static int lthread_suspend_pthreads(lua_State *L, int thid) {
 		luaL_exception(L, LUA_THREAD_ERR_INVALID_THREAD_ID);
 	}
 
-	if (thid == 1) {
+	if (thid == lua_thread) {
 		luaL_exception_extended(L, LUA_THREAD_ERR_NOT_ALLOWED, "lua main thread can not be suspended");
 	}
 
@@ -184,7 +187,7 @@ static int lthread_suspend_pthreads(lua_State *L, int thid) {
 
 	cinfo = info;
 	while (cinfo->stack_size > 0) {
-		if ((cinfo->task_type == 2) && (cinfo->thid != 1)) {
+		if ((cinfo->task_type == 2) && (cinfo->thid != lua_thread)) {
 			if (thid && (cinfo->thid == thid)) {
 				_pthread_suspend(cinfo->thid);
 				suspended++;
@@ -216,7 +219,7 @@ static int lthread_resume_pthreads(lua_State *L, int thid) {
 		luaL_exception(L, LUA_THREAD_ERR_INVALID_THREAD_ID);
 	}
 
-	if (thid == 1) {
+	if (thid == lua_thread) {
 		luaL_exception_extended(L, LUA_THREAD_ERR_NOT_ALLOWED, "lua main thread can not be suspended");
 	}
 
@@ -232,7 +235,7 @@ static int lthread_resume_pthreads(lua_State *L, int thid) {
 
 	cinfo = info;
 	while (cinfo->stack_size > 0) {
-		if ((cinfo->task_type == 2) && (cinfo->thid != 1)) {
+		if ((cinfo->task_type == 2) && (cinfo->thid != lua_thread)) {
 			if (thid && (cinfo->thid == thid)) {
 				_pthread_resume(cinfo->thid);
 				resumed++;
@@ -265,7 +268,7 @@ static int lthread_stop_pthreads(lua_State *L, int thid) {
 		luaL_exception(L, LUA_THREAD_ERR_INVALID_THREAD_ID);
 	}
 
-	if (thid == 1) {
+	if (thid == lua_thread) {
 		luaL_exception_extended(L, LUA_THREAD_ERR_NOT_ALLOWED, "lua main thread can not be stopped");
 	}
 
@@ -281,7 +284,7 @@ static int lthread_stop_pthreads(lua_State *L, int thid) {
 
 	cinfo = info;
 	while (cinfo->stack_size > 0) {
-		if ((cinfo->task_type == 2) && (cinfo->thid != 1)) {
+		if ((cinfo->task_type == 2) && (cinfo->thid != lua_thread)) {
 			if (thid && (cinfo->thid == thid)) {
 				_pthread_stop(cinfo->thid);
 
@@ -545,7 +548,12 @@ static int new_thread(lua_State* L, int run) {
 	thread->thread_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	lua_rawgeti(L, LUA_REGISTRYINDEX, thread->function_ref);
-	lua_xmove(L, thread->L, 1);
+
+	// Ensure that we have only the thread function in the lua stack prior to
+	// move it to the lua thread stack
+	lua_settop(L, 1);
+
+    lua_xmove(L, thread->L, 1);
 
 	// Init thread attributes
 	pthread_attr_init(&attr);
@@ -580,7 +588,7 @@ static int new_thread(lua_State* L, int run) {
 			goto retry;
 		}
 
-		return luaL_exception_extended(L, LUA_THREAD_ERR_CANNOT_START, strerror(errno));
+		return luaL_exception_extended(L, LUA_THREAD_ERR_CANNOT_START, strerror(res));
 	}
 
 	pthread_setname_np(id, name);
@@ -602,6 +610,12 @@ static int lthread_start(lua_State* L) {
 // Create a new thread in suspended mode
 static int lthread_create(lua_State* L) {
 	return new_thread(L, 0);
+}
+
+static int lthread_self(lua_State* L) {
+    lua_pushinteger(L, pthread_self());
+
+    return 1;
 }
 
 static int lthread_create_mutex(lua_State* L) {
@@ -743,19 +757,20 @@ static int lthread_feed_wdt(lua_State* L) {
 #include "modules.h"
 
 static const LUA_REG_TYPE thread[] = {
-    { LSTRKEY( "status"       ),			LFUNCVAL( lthread_status        ) },
-    { LSTRKEY( "create"       ),			LFUNCVAL( lthread_create        ) },
-    { LSTRKEY( "createmutex"  ),			LFUNCVAL( lthread_create_mutex  ) },
-    { LSTRKEY( "start"        ),			LFUNCVAL( lthread_start         ) },
-    { LSTRKEY( "suspend"      ),			LFUNCVAL( lthread_suspend       ) },
-    { LSTRKEY( "resume"       ),			LFUNCVAL( lthread_resume        ) },
-    { LSTRKEY( "stop"         ),			LFUNCVAL( lthread_stop          ) },
-    { LSTRKEY( "list"         ),			LFUNCVAL( lthread_list          ) },
-    { LSTRKEY( "sleep"        ),			LFUNCVAL( lthread_sleep         ) },
-    { LSTRKEY( "sleepms"      ),			LFUNCVAL( lthread_sleepms       ) },
-    { LSTRKEY( "sleepus"      ),			LFUNCVAL( lthread_sleepus       ) },
-    { LSTRKEY( "usleep"       ),			LFUNCVAL( lthread_sleepus       ) },
-    { LSTRKEY( "feedwatchdog" ),			LFUNCVAL( lthread_feed_wdt      ) },
+    { LSTRKEY( "status"      ),			LFUNCVAL( lthread_status        ) },
+    { LSTRKEY( "create"      ),			LFUNCVAL( lthread_create        ) },
+    { LSTRKEY( "self"        ),          LFUNCVAL( lthread_self          ) },
+    { LSTRKEY( "createmutex" ),			LFUNCVAL( lthread_create_mutex  ) },
+    { LSTRKEY( "start"       ),			LFUNCVAL( lthread_start         ) },
+    { LSTRKEY( "suspend"     ),			LFUNCVAL( lthread_suspend       ) },
+    { LSTRKEY( "resume"      ),			LFUNCVAL( lthread_resume        ) },
+    { LSTRKEY( "stop"        ),			LFUNCVAL( lthread_stop          ) },
+    { LSTRKEY( "list"        ),			LFUNCVAL( lthread_list          ) },
+    { LSTRKEY( "sleep"       ),			LFUNCVAL( lthread_sleep         ) },
+    { LSTRKEY( "sleepms"     ),			LFUNCVAL( lthread_sleepms       ) },
+    { LSTRKEY( "sleepus"     ),			LFUNCVAL( lthread_sleepus       ) },
+    { LSTRKEY( "usleep"      ),			LFUNCVAL( lthread_sleepus       ) },
+    { LSTRKEY( "feedwatchdog" ),		LFUNCVAL( lthread_feed_wdt      ) },
 
     { LSTRKEY( "Lock"    		    ),	LINTVAL( PTHREAD_MUTEX_NORMAL    ) },
     { LSTRKEY( "RecursiveLock"      ),	LINTVAL( PTHREAD_MUTEX_RECURSIVE ) },

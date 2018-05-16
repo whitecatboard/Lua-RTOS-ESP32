@@ -43,8 +43,8 @@
  *
  */
 
-#ifndef FREERTOS_ADDS_H
-#define FREERTOS_ADDS_H
+#ifndef _FREERTOS_ADDS_H
+#define _FREERTOS_ADDS_H
 
 #include "lua.h"
 

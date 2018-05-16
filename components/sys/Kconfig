@@ -42,6 +42,9 @@ menu "Lua RTOS"
       config LUA_RTOS_BOARD_ESP32_THING
          bool "ESP32 THING"
 
+      config LUA_RTOS_BOARD_ADAFRUIT_HUZZAH32
+         bool "ADAFRUIT HUZZAH32"
+
       config LUA_RTOS_BOARD_ESP32_GATEWAY
          bool "ESP32 GATEWAY"
 
@@ -72,7 +75,7 @@ menu "Lua RTOS"
    menu "General"
       menu "Deep Sleep"
          config LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
-               bool "Mantain power for RTC IO, sensors and ULP co-processor by default (experimental)"
+               bool "Mantain power for RTC IO, sensors and ULP co-processor by default"
                default n
    
          config LUA_RTOS_DEEP_SLEEP_RTC_SLOW_MEM
@@ -88,7 +91,7 @@ menu "Lua RTOS"
             bool "Use event group in mtx implementation"
          default n
             help
-               This is experimental. Lua RTOS can use a binary semaphore to implement mtx (if disabled), or
+               Lua RTOS can use a binary semaphore to implement mtx (if disabled), or
                event groups (if enabled). Enabling this option saves arround 2 Kb of RAM memory.
       
       config LUA_RTOS_READ_FLASH_UNIQUE_ID
@@ -99,7 +102,7 @@ menu "Lua RTOS"
                be used for indentify your board. In the WHITECAT ESP32 N1 board this EUI is used in the LoRa WAN
                stack to set the DevEUI.
    
-      	config LUA_RTOS_POWER_BUS_PIN
+         config LUA_RTOS_POWER_BUS_PIN
             int "Power bus GPIO number"
             range -1 39
             default 27
@@ -897,6 +900,10 @@ menu "Lua RTOS"
                depends on LUA_RTOS_LUA_USE_SENSOR
                bool "Internal Hall effect sensor"
                default y    
+            config LUA_RTOS_USE_SENSOR_HALL_FLOW_SENSOR
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "Hall effect flow sensor"
+               default y                   
             config LUA_RTOS_USE_SENSOR_LDR
                depends on LUA_RTOS_LUA_USE_SENSOR
                bool "LDR"
@@ -1021,59 +1028,75 @@ menu "Lua RTOS"
       menu "Lua"
          menu "Tuning"
          config LUA_RTOS_LUA_STACK_SIZE
-            int "Lua interpreter stack size"
+            int "Lua RTOS interpreter stack size"
             range 1024 40960
             default 20480
             help
-               Default stack size assigned to the Lua interpreter.
+               Default stack size assigned to the Lua RTOS interpreter.
    
          config LUA_RTOS_LUA_TASK_PRIORITY
-            int "Lua interpreter task priority"
+            int "Lua RTOS interpreter task priority"
             range 3 25
             default 3
             help
-               Task priority assigned to the Lua interpreter. Lua RTOS has a thread-oriented programming model and
-               basically the Lua interpreter is used only for launch new threads and configure the system, so
+               Task priority assigned to the Lua RTOS interpreter. Lua RTOS has a thread-oriented programming model and
+               basically the Lua RTOS interpreter is used only for launch new threads and configure the system, so
                it's not necessary to assing a high piority to the interpreter.
             
          config LUA_RTOS_LUA_TASK_CPU
             depends on !FREERTOS_UNICORE
-            int "Lua interpreter task CPU affinity"
+            int "Lua RTOS interpreter task CPU affinity"
             range 0 1
             default 0
             help
-               CPU affinity for the task assigned to the Lua interpreter.
+               CPU affinity for the task assigned to the Lua RTOS interpreter.
                
          config LUA_RTOS_LUA_THREAD_STACK_SIZE
-            int "Default Lua thread stack size"
+            int "Default Lua RTOS thread stack size"
             range 1024 40960
             default 10240
             help
-               Default Stack size assigned to Lua threads.
+               Default Stack size assigned to Lua RTOS threads.
    
          config LUA_RTOS_LUA_THREAD_PRIORITY
-            int "Default Lua thread priority"
+            int "Default Lua RTOS thread priority"
             range 3 25
             default 20
             help
-               Default priority assigned to Lua threads.
+               Default priority assigned to Lua RTOS threads.
             
          config LUA_RTOS_LUA_THREAD_CPU
             depends on !FREERTOS_UNICORE
-            int "Default Lua thread CPU affinity"
+            int "Default Lua RTOS thread CPU affinity"
             range 0 1
             default 1
             help
-               Default CPU affinity for Lua threads.
-   
+               Default CPU affinity for Lua RTOS threads.
+  
+         config LUA_RTOS_LUA_USE_LOCKS
+            bool "Use locks when the program enters the Lua core"
+            default y
+            help
+               Use locks when the program enters the Lua core. This option is disabled when the JIT bytecode
+               optimizer is enabled.
+        
          config LUA_RTOS_LUA_USE_ROTABLE_CACHE
-            bool "Use cache for readonly tables access (experimental)"
+            bool "Use cache for readonly tables access"
             default n
             help
-               This is an experimental feature. When accessing to readonly tables,
-               Lua RTOS can get the key/value pair from a cache. This can speedup
-               the execution of Lua scripts.
-               
+               When accessing to readonly tables, Lua RTOS can get the key/value pair from a cache. This can
+               speedud the execution of Lua RTOS scripts. This option is disabled when the JIT bytecode
+               optimizer is enabled.
+
+         config LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
+            bool "Use JIT bytecode optimizer (experimental)"
+            default n
+            help
+               As Lua RTOS makes intensive use of read-only tables, a series of optimizations can be performed
+               on the program's bytecode to speed-up the program execution. This can help that programs written
+               for Lua RTOS to have a similar performance than the writtens in C, and takes a special importance
+               when the programmer use the Lua RTOS hardware-access modules.
+                              
          config LUA_RTOS_USE_HARDWARE_LOCKS 
             bool "Enable hardware locks"
             default y
@@ -1083,6 +1106,14 @@ menu "Lua RTOS"
                 and debuging phase, because in case that your application try to use
                 a hardware resource that is used in other part of your application, an
                 exeption will be raised. This feature consumes arround 3 Kb of memory.
+
+         config LUA_RTOS_LUA_USE_NUM_64BIT
+            bool "Use 64 bits for integer and real numbers (experimental)"
+            default n
+            help
+                If enabled, Lua RTOS use 64 bits to represent integer and real numbers. Enable
+                if you need to work with large integers, or you need more precission when working
+                with real numbers.
          endmenu
          
          menu "Lua Modules"

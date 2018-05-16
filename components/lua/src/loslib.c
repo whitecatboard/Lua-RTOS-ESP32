@@ -489,6 +489,7 @@ static const LUA_REG_TYPE syslib[] =
   { LSTRKEY( "factoryreset"), LFUNCVAL( os_factory_reset ) },
   { LSTRKEY( "partitions"),   LFUNCVAL( os_partitions ) },
   { LSTRKEY( "passwd"),       LFUNCVAL( os_passwd ) },
+  { LSTRKEY( "uptime"),       LFUNCVAL( os_uptime ) },
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
   { LSTRKEY( "locks" ),       LFUNCVAL( os_locks ) },
 #endif

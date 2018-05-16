@@ -39,63 +39,29 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS, Push switch sensor
- *
+ * Lua RTOS, Hall effect switch sensor (example 44E402)
  */
 
 #include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_SENSOR_HALL_SWITCH
 
 #include <drivers/sensor.h>
-#if CONFIG_LUA_RTOS_USE_SENSOR_3P_TOGGLE_SWITCH
-
-driver_error_t *_3_pos_switch_setup(sensor_instance_t *unit);
 
 // Sensor specification and registration
-static const sensor_t __attribute__((used,unused,section(".sensors"))) _3_pos_switch_sensor = {
-    .id = "3P_TOGGLE_SWITCH",
-    .interface = {
-        {
-            .type = GPIO_INTERFACE,
-
-            .flags = SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_H(0) | SENSOR_FLAG_ON_L(1) |
-                     SENSOR_FLAG_DEBOUNCING | SENSOR_FLAG_DEBOUNCING_THRESHOLD(10000)
-        },
-        {
-            .type = GPIO_INTERFACE,
-
-            .flags = SENSOR_FLAG_AUTO_ACQ | SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_H(0) | SENSOR_FLAG_ON_L(2) |
-                     SENSOR_FLAG_DEBOUNCING | SENSOR_FLAG_DEBOUNCING_THRESHOLD(10000)
-        },
-    },
-    .interface_name = {"P1", "P2"},
-    .data = {
-        {.id = "pos", .type = SENSOR_DATA_INT},
-    },
-    .setup = _3_pos_switch_setup
+static const sensor_t __attribute__((used,unused,section(".sensors"))) hall_switch_sensor = {
+	.id = "HALL_SWITCH",
+	.interface = {
+		{
+			.type = GPIO_INTERFACE,
+			.flags = SENSOR_FLAG_ON_OFF | SENSOR_FLAG_ON_H(0) | SENSOR_FLAG_ON_L(1)
+		},
+	},
+	.data = {
+		{.id = "on", .type = SENSOR_DATA_INT},
+	}
 };
-
-driver_error_t *_3_pos_switch_setup(sensor_instance_t *unit) {
-    // Get initial state
-    unit->data[0].integerd.value = 0;
-
-    if ((gpio_ll_pin_get(unit->setup[0].gpio.gpio) == 1) && (gpio_ll_pin_get(unit->setup[1].gpio.gpio) == 1)) {
-        unit->data[0].integerd.value = 0;
-    } else {
-        if (gpio_ll_pin_get(unit->setup[0].gpio.gpio) == 0) {
-            unit->data[0].integerd.value = SENSOR_FLAG_GET_ON_L(unit->sensor->interface[0]);
-        }
-
-        if (gpio_ll_pin_get(unit->setup[1].gpio.gpio) == 0) {
-            unit->data[0].integerd.value = SENSOR_FLAG_GET_ON_L(unit->sensor->interface[1]);
-        }
-    }
-
-    unit->latch[0].value.integerd.value = unit->data[0].integerd.value;
-
-    return NULL;
-}
 
 #endif
 #endif

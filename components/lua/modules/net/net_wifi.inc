@@ -124,8 +124,8 @@ static int lwifi_scan(lua_State* L) {
 
 	// Show / get APs
 	if (!table) {
-		printf("\r\n                           SSID  RSSI          AUTH\r\n");
-		printf("---------------------------------------------------\r\n");
+		printf("\r\n                           SSID  RSSI          AUTH  CH1  CH2\r\n");
+		printf("-------------------------------------------------------------\r\n");
 	} else {
 		lua_createtable(L, count, 0);
 	}
@@ -142,7 +142,7 @@ static int lwifi_scan(lua_State* L) {
 					break;
 			}
 
-			printf("%31.31s  %4d %13.13s\r\n",list[i].ssid, list[i].rssi, auth);
+			printf("%31.31s  %4d %13.13s   %2d   %2d\r\n",list[i].ssid, list[i].rssi, auth, list[i].primary, list[i].second);
 		} else {
 			lua_pushinteger(L, i);
 
@@ -157,11 +157,19 @@ static int lwifi_scan(lua_State* L) {
 			lua_pushinteger(L, list[i].authmode);
 			lua_setfield (L, -2, "auth");
 
-			lua_settable(L,-3);
+            lua_pushinteger(L, list[i].primary);
+            lua_setfield (L, -2, "ch1");
+
+            lua_pushinteger(L, list[i].second);
+            lua_setfield (L, -2, "ch2");
+
+            lua_settable(L,-3);
 		}
 	}
 
-	free(list);
+	if (list) {
+	    free(list);
+	}
 
 	if (!table) {
 		printf("\r\n");

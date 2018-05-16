@@ -90,6 +90,7 @@ typedef enum {
     T_ARR_BEGIN,
     T_ARR_END,
     T_STRING,
+    T_INTEGER,
     T_NUMBER,
     T_BOOLEAN,
     T_NULL,
@@ -107,6 +108,7 @@ static const char *json_token_type_name[] = {
     "T_ARR_BEGIN",
     "T_ARR_END",
     "T_STRING",
+    "T_INTEGER",
     "T_NUMBER",
     "T_BOOLEAN",
     "T_NULL",
@@ -153,6 +155,7 @@ typedef struct {
     union {
         const char *string;
         double number;
+        int integer;
         int boolean;
     } value;
     int string_len;
@@ -598,39 +601,56 @@ static void json_append_array(lua_State *l, json_config_t *cfg, int current_dept
 static void json_append_number(lua_State *l, json_config_t *cfg,
                                strbuf_t *json, int lindex)
 {
-    double num = lua_tonumber(l, lindex);
-    int len;
+    if (lua_isinteger(l, lindex)) {
+        char buf[FPCONV_G_FMT_BUFSIZE];
+        int num = lua_tointeger(l, lindex);
+        int len;
+        char *c, *cc;
 
-    if (cfg->encode_invalid_numbers == 0) {
-        /* Prevent encoding invalid numbers */
-        if (isinf(num) || isnan(num))
-            json_encode_exception(l, cfg, json, lindex,
-                                  "must not be NaN or Infinity");
-    } else if (cfg->encode_invalid_numbers == 1) {
-        /* Encode NaN/Infinity separately to ensure Javascript compatible
-         * values are used. */
-        if (isnan(num)) {
-            strbuf_append_mem(json, "NaN", 3);
-            return;
+        sprintf(buf,"%d",num);
+        len = strlen(buf);
+        c = strbuf_empty_ptr(json);
+        cc = buf;
+        while (*cc) {
+            *c++ = *cc;
+            cc++;
         }
-        if (isinf(num)) {
-            if (num < 0)
-                strbuf_append_mem(json, "-Infinity", 9);
-            else
-                strbuf_append_mem(json, "Infinity", 8);
-            return;
-        }
+        strbuf_extend_length(json, len);
     } else {
-        /* Encode invalid numbers as "null" */
-        if (isinf(num) || isnan(num)) {
-            strbuf_append_mem(json, "null", 4);
-            return;
-        }
-    }
+        double num = lua_tonumber(l, lindex);
+        int len;
 
-    strbuf_ensure_empty_length(json, FPCONV_G_FMT_BUFSIZE);
-    len = fpconv_g_fmt(strbuf_empty_ptr(json), num, cfg->encode_number_precision);
-    strbuf_extend_length(json, len);
+        if (cfg->encode_invalid_numbers == 0) {
+            /* Prevent encoding invalid numbers */
+            if (isinf(num) || isnan(num))
+                json_encode_exception(l, cfg, json, lindex,
+                                      "must not be NaN or Infinity");
+        } else if (cfg->encode_invalid_numbers == 1) {
+            /* Encode NaN/Infinity separately to ensure Javascript compatible
+             * values are used. */
+            if (isnan(num)) {
+                strbuf_append_mem(json, "NaN", 3);
+                return;
+            }
+            if (isinf(num)) {
+                if (num < 0)
+                    strbuf_append_mem(json, "-Infinity", 9);
+                else
+                    strbuf_append_mem(json, "Infinity", 8);
+                return;
+            }
+        } else {
+            /* Encode invalid numbers as "null" */
+            if (isinf(num) || isnan(num)) {
+                strbuf_append_mem(json, "null", 4);
+                return;
+            }
+        }
+
+        strbuf_ensure_empty_length(json, FPCONV_G_FMT_BUFSIZE);
+        len = fpconv_g_fmt(strbuf_empty_ptr(json), num, cfg->encode_number_precision);
+        strbuf_extend_length(json, len);
+    }
 }
 
 static void json_append_object(lua_State *l, json_config_t *cfg,
@@ -1015,12 +1035,34 @@ static void json_next_number_token(json_parse_t *json, json_token_t *token)
 {
     char *endptr;
 
-    token->type = T_NUMBER;
-    token->value.number = fpconv_strtod(json->ptr, &endptr);
-    if (json->ptr == endptr)
-        json_set_token_error(token, json, "invalid number");
-    else
-        json->ptr = endptr;     /* Skip the processed number */
+    char buff[FPCONV_G_FMT_BUFSIZE];
+    char *cc,*cb;
+    int is_int = 1;
+    cc = (char *)json->ptr;
+    cb = buff;
+    while (*cc && (*cc != ' ') && (*cc != ',') && (*cc != '}')) {
+        if ((*cc >= '0') && (*cc <= '9')) {
+            *cb++ = *cc;
+        } else {
+            is_int = 0;
+            break;
+        }
+        cc++;
+    }
+    *cb = 0x00;
+
+    if (is_int) {
+        token->type = T_INTEGER;
+        token->value.integer = atoi(buff);
+        json->ptr = cc;
+    } else {
+        token->type = T_NUMBER;
+        token->value.number = fpconv_strtod(json->ptr, &endptr);
+        if (json->ptr == endptr)
+            json_set_token_error(token, json, "invalid number");
+        else
+            json->ptr = endptr;     /* Skip the processed number */
+    }
 
     return;
 }
@@ -1245,6 +1287,9 @@ static void json_process_value(lua_State *l, json_parse_t *json,
     switch (token->type) {
     case T_STRING:
         lua_pushlstring(l, token->value.string, token->string_len);
+        break;;
+    case T_INTEGER:
+        lua_pushinteger(l, token->value.integer);
         break;;
     case T_NUMBER:
         lua_pushnumber(l, token->value.number);

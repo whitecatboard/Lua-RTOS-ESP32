@@ -10,7 +10,7 @@
 
 #define LUA_OS_VER "beta 0.1"
 	
-#if LUA_USE_LUA_LOCK
+#if CONFIG_LUA_RTOS_LUA_USE_LOCKS && !CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
 	void LuaLock(lua_State *L);
 	void LuaUnlock(lua_State *L);
 

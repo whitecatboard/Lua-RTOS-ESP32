@@ -164,10 +164,6 @@ void _sys_init() {
 
 	esp_log_level_set("*", ESP_LOG_ERROR);
 
-	// Disable hardware modules modules
-	periph_module_disable(PERIPH_LEDC_MODULE);
-	periph_module_disable(PERIPH_CAN_MODULE);
-
 	// set the current time only if RTC has not already been set
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
@@ -185,6 +181,12 @@ void _sys_init() {
 	spi_flash_send_cmd(sizeof(command), command, response);
 	memcpy(flash_unique_id, response + 5, sizeof(flash_unique_id));
 	#endif
+
+    // Disable hardware modules modules
+    periph_module_disable(PERIPH_LEDC_MODULE);
+    periph_module_disable(PERIPH_CAN_MODULE);
+    periph_module_disable(PERIPH_I2C0_MODULE);
+    periph_module_disable(PERIPH_I2C1_MODULE);
 
 	// Init important things for Lua RTOS
 	_clock_init();
