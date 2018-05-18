@@ -773,10 +773,10 @@ int process(http_request_handle *request) {
 		return 0;
 	}
 
-	char *saveptr;
-	request->method = strtok_r(reqbuf, " ", &saveptr);
-	request->path = strtok_r(NULL, " ", &saveptr);
-	protocol = strtok_r(NULL, "\r", &saveptr);
+	char *save_ptr = NULL;
+	request->method = strtok_r(reqbuf, " ", &save_ptr);
+	request->path = strtok_r(NULL, " ", &save_ptr);
+	protocol = strtok_r(NULL, "\r", &save_ptr);
 
 	if(!request->path) {
 		len = strlen(request->method)-1;
@@ -816,8 +816,9 @@ int process(http_request_handle *request) {
 
 				//check if the line begins with "Host:"
 				if (host==(char *)pathbuf) {
-					host = strtok_r(host, ":", &saveptr);  //Host:
-					host = strtok_r(NULL, "\r", &saveptr); //the actual host
+					save_ptr = NULL;
+					host = strtok_r(host, ":", &save_ptr);  //Host:
+					host = strtok_r(NULL, "\r", &save_ptr); //the actual host
 					while(*host==' ') host++;  //skip spaces after the :
 
 					if (0 == strcasecmp(CAPTIVE_SERVER_NAME, host) ||
@@ -870,8 +871,9 @@ int process(http_request_handle *request) {
 
 					//check if the line begins with "Content-Length:"
 					if (contentlen==(char *)pathbuf) {
-						contentlen = strtok_r(contentlen, ":", &saveptr);  //Content-Length:
-						contentlen = strtok_r(NULL, "\r", &saveptr); //the actual content length
+						save_ptr = NULL;
+						contentlen = strtok_r(contentlen, ":", &save_ptr);  //Content-Length:
+						contentlen = strtok_r(NULL, "\r", &save_ptr); //the actual content length
 						while(*contentlen==' ') contentlen++;  //skip spaces after the :
 						contentlength = atoi(contentlen)+1;
 					}
