@@ -973,7 +973,10 @@ static void http_net_callback(system_event_t *event){
 		case SYSTEM_EVENT_STA_START:                /**< ESP32 station start */
 			//only if we have previously been in AP mode
 			if (wifi_mode == WIFI_MODE_AP) {
-				free((void*)esp_wifi_get_mode(&wifi_mode));
+				driver_error_t *error;
+				if ((error = wifi_check_error(esp_wifi_get_mode(&wifi_mode)))) {
+					free(error);
+				}
 
 				syslog(LOG_DEBUG, "http: switched to non-captive mode\n");
 				http_captiverun = captivedns_running();
@@ -990,7 +993,9 @@ static void http_net_callback(system_event_t *event){
 				driver_error_t *error;
 				ifconfig_t info;
 
-				free((void*)esp_wifi_get_mode(&wifi_mode));
+				if ((error = wifi_check_error(esp_wifi_get_mode(&wifi_mode)))) {
+					free(error);
+				}
 				if ((error = wifi_stat(&info))) {
 					free(error);
 					strcpy(ip4addr, "0.0.0.0");
