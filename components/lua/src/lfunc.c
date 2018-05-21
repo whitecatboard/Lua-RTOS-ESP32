@@ -120,6 +120,7 @@ Proto *luaF_newproto (lua_State *L) {
   f->source = NULL;
 #if CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
   f->optimized = 0;
+  f->icode = NULL;
 #endif
   return f;
 }

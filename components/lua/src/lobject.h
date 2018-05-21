@@ -428,6 +428,7 @@ typedef struct Proto {
   GCObject *gclist;
 #if CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
   int optimized;
+  char *icode;
 #endif
 } Proto;
 

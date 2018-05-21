@@ -95,13 +95,15 @@ DRIVER_REGISTER_END(MQTT,mqtt,0,NULL,NULL);
 static int client_inited = 0;
 
 typedef struct {
-    char *topic;
-    int callback;
-    void *next;
+    char *topic;   // Topic
+    lua_State *L;  // Parent Lua thread
+    lua_State *TL; // Callback Lua thread
+    int callback;  // Callback reference (in parent thread)
+    int lthread;   // Lua thread reference (in parent thread)
+    void *next;    // Next callback
 } mqtt_subs_callback;
 
 typedef struct {
-    lua_State *L;
     struct mtx callback_mtx;
 
     MQTTClient_connectOptions conn_opts;
@@ -186,7 +188,7 @@ static int topic_matches_sub(const char *sub, const char *topic) {
     return 0;
 }
 
-static int add_subs_callback(mqtt_userdata *mqtt, const char *topic, int call) {
+static int add_subs_callback(mqtt_userdata *mqtt, const char *topic, lua_State *L, lua_State *TL, int call, int th) {
     mqtt_subs_callback *callback;
 
     // Create and populate callback structure
@@ -205,7 +207,10 @@ static int add_subs_callback(mqtt_userdata *mqtt, const char *topic, int call) {
 
     strcpy(callback->topic, topic);
 
+    callback->L = L;
+    callback->TL = TL;
     callback->callback = call;
+    callback->lthread = th;
 
     mtx_lock(&mqtt->callback_mtx);
     callback->next = mqtt->callbacks;
@@ -215,8 +220,7 @@ static int add_subs_callback(mqtt_userdata *mqtt, const char *topic, int call) {
     return 0;
 }
 
-static int messageArrived(void *context, char * topicName, int topicLen,
-        MQTTClient_message* m) {
+static int messageArrived(void *context, char * topicName, int topicLen, MQTTClient_message* m) {
     mqtt_userdata *mqtt = (mqtt_userdata *) context;
     if (mqtt) {
 
@@ -229,20 +233,22 @@ static int messageArrived(void *context, char * topicName, int topicLen,
         while (callback) {
             call = callback->callback;
             if ((call != LUA_NOREF) && topic_matches_sub(callback->topic, topicName)) {
-                lua_rawgeti(mqtt->L, LUA_REGISTRYINDEX, call);
-                lua_pushinteger(mqtt->L, m->payloadlen);
-                lua_pushlstring(mqtt->L, m->payload, m->payloadlen);
+                lua_pushinteger(callback->TL, m->payloadlen);
+                lua_pushlstring(callback->TL, m->payload, m->payloadlen);
 
                 // see: https://www.ibm.com/support/knowledgecenter/SSFKSJ_7.5.0/com.ibm.mq.javadoc.doc/WMQMQxrCClasses/_m_q_t_t_client_8h.html?view=kc#aa42130dd069e7e949bcab37b6dce64a5
                 if (topicLen == 0) {
-                    lua_pushinteger(mqtt->L, strlen(topicName));
-                    lua_pushstring(mqtt->L, topicName);
+                    lua_pushinteger(callback->TL, strlen(topicName));
+                    lua_pushstring(callback->TL, topicName);
                 } else {
-                    lua_pushinteger(mqtt->L, topicLen);
-                    lua_pushlstring(mqtt->L, topicName, topicLen);
+                    lua_pushinteger(callback->TL, topicLen);
+                    lua_pushlstring(callback->TL, topicName, topicLen);
                 }
 
-                lua_call(mqtt->L, 4, 0);
+                lua_pcall(callback->TL, 4, 0, 0);
+
+                // Copy callback to thread
+                lua_pushvalue(callback->TL,1);
             }
             callback = callback->next;
         }
@@ -315,7 +321,6 @@ static int lmqtt_client(lua_State* L) {
 
     // Allocate mqtt structure and initialize
     mqtt = (mqtt_userdata *) lua_newuserdata(L, sizeof(mqtt_userdata));
-    mqtt->L = L;
     mqtt->client = NULL;
     mqtt->callbacks = NULL;
     mqtt->secure = secure;
@@ -328,8 +333,7 @@ static int lmqtt_client(lua_State* L) {
     bcopy(&conn_opts, &mqtt->conn_opts, sizeof(MQTTClient_connectOptions));
 
     // Calculate uri
-    snprintf(url, sizeof(url), "%s://%s:%d", mqtt->secure ? "ssl" : "tcp", host,
-            port);
+    snprintf(url, sizeof(url), "%s://%s:%d", mqtt->secure ? "ssl" : "tcp", host, port);
 
     if (!client_inited) {
         MQTTClient_init();
@@ -414,7 +418,6 @@ static int lmqtt_subscribe(lua_State* L) {
     int rc;
     int qos;
     const char *topic;
-    int callback = 0;
 
     mqtt_userdata *mqtt = NULL;
 
@@ -429,13 +432,31 @@ static int lmqtt_subscribe(lua_State* L) {
                 "enable persistence for a qos > 0");
     }
 
+    // Get the callback reference
+    lua_lock(L);
     luaL_checktype(L, 4, LUA_TFUNCTION);
-    // Copy argument (function) to the top of stack
     lua_pushvalue(L, 4);
-    // Copy function reference
-    callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    add_subs_callback(mqtt, topic, callback);
+    int callback = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    // Create a new Lua thread for the callback
+    //
+    // This lua thread has 2 copies of the callback at the top of
+    // it's stack. This avoid calling lua_lock / lua_unlock to get
+    // the callback reference each time the callback is executed.
+    lua_State *TL = lua_newthread(L);
+    int tref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    // Copy callback to thread
+    lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
+    lua_xmove(L, TL, 1);
+    lua_unlock(L);
+
+    // Get a copy of the callback
+    lua_pushvalue(TL,1);
+
+    // Add callback
+    add_subs_callback(mqtt, topic, L, TL, callback, tref);
 
     rc = MQTTClient_subscribe(mqtt->client, topic, qos);
     if (rc == 0) {
@@ -466,8 +487,7 @@ static int lmqtt_publish(lua_State* L) {
                 "enable persistence for a qos > 0");
     }
 
-    rc = MQTTClient_publish(mqtt->client, topic, payload_len, payload, qos, 0,
-            NULL);
+    rc = MQTTClient_publish(mqtt->client, topic, payload_len, payload, qos, 0, NULL);
 
     if (rc == 0) {
         return 0;
@@ -507,7 +527,11 @@ static int lmqtt_client_gc(lua_State *L) {
 
         callback = mqtt->callbacks;
         while (callback) {
-            luaL_unref(L, LUA_REGISTRYINDEX, callback->callback);
+            lua_lock(callback->L);
+            luaL_unref(callback->L, LUA_REGISTRYINDEX, callback->callback);
+            luaL_unref(callback->L, LUA_REGISTRYINDEX, callback->lthread);
+            lua_unlock(callback->L);
+
             nextcallback = callback->next;
 
             free(callback);
@@ -546,41 +570,41 @@ static int lmqtt_client_gc(lua_State *L) {
 }
 
 static const LUA_REG_TYPE lmqtt_map[] = {
-  { LSTRKEY( "client"      ),   LFUNCVAL( lmqtt_client     ) },
+    { LSTRKEY( "client"      ),   LFUNCVAL( lmqtt_client     ) },
 
-  { LSTRKEY("QOS0"), LINTVAL(0) },
-  { LSTRKEY("QOS1"), LINTVAL(1) },
-  { LSTRKEY("QOS2"), LINTVAL(2) },
+    { LSTRKEY("QOS0"), LINTVAL(0) },
+    { LSTRKEY("QOS1"), LINTVAL(1) },
+    { LSTRKEY("QOS2"), LINTVAL(2) },
 
-  { LSTRKEY("PERSISTENCE_FILE"), LINTVAL(MQTTCLIENT_PERSISTENCE_DEFAULT) },
-  { LSTRKEY("PERSISTENCE_NONE"), LINTVAL(MQTTCLIENT_PERSISTENCE_NONE) },
-  { LSTRKEY("PERSISTENCE_USER"), LINTVAL(MQTTCLIENT_PERSISTENCE_USER) },
+    { LSTRKEY("PERSISTENCE_FILE"), LINTVAL(MQTTCLIENT_PERSISTENCE_DEFAULT) },
+    { LSTRKEY("PERSISTENCE_NONE"), LINTVAL(MQTTCLIENT_PERSISTENCE_NONE) },
+    { LSTRKEY("PERSISTENCE_USER"), LINTVAL(MQTTCLIENT_PERSISTENCE_USER) },
 
-  // Error definitions
-  DRIVER_REGISTER_LUA_ERRORS(mqtt)
-  { LNILKEY, LNILVAL }
+    // Error definitions
+    DRIVER_REGISTER_LUA_ERRORS(mqtt)
+    { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE lmqtt_client_map[] = {
-  { LSTRKEY( "connect"     ),   LFUNCVAL( lmqtt_connect    ) },
-  { LSTRKEY( "connected"   ),   LFUNCVAL( lmqtt_connected  ) },
-  { LSTRKEY( "disconnect"  ),   LFUNCVAL( lmqtt_disconnect ) },
-  { LSTRKEY( "subscribe"   ),   LFUNCVAL( lmqtt_subscribe  ) },
-  { LSTRKEY( "publish"     ),   LFUNCVAL( lmqtt_publish    ) },
-  { LSTRKEY( "__metatable" ),   LROVAL  ( lmqtt_client_map ) },
-  { LSTRKEY( "__index"     ),   LROVAL  ( lmqtt_client_map ) },
-  { LSTRKEY( "__gc"        ),   LFUNCVAL( lmqtt_client_gc  ) },
-  { LNILKEY, LNILVAL }
+    { LSTRKEY( "connect"     ),   LFUNCVAL( lmqtt_connect    ) },
+    { LSTRKEY( "connected"   ),   LFUNCVAL( lmqtt_connected  ) },
+    { LSTRKEY( "disconnect"  ),   LFUNCVAL( lmqtt_disconnect ) },
+    { LSTRKEY( "subscribe"   ),   LFUNCVAL( lmqtt_subscribe  ) },
+    { LSTRKEY( "publish"     ),   LFUNCVAL( lmqtt_publish    ) },
+    { LSTRKEY( "__metatable" ),   LROVAL  ( lmqtt_client_map ) },
+    { LSTRKEY( "__index"     ),   LROVAL  ( lmqtt_client_map ) },
+    { LSTRKEY( "__gc"        ),   LFUNCVAL( lmqtt_client_gc  ) },
+    { LNILKEY, LNILVAL }
 };
 
 LUALIB_API int luaopen_mqtt( lua_State *L ) {
-  luaL_newmetarotable(L,"mqtt.cli", (void *)lmqtt_client_map);
+    luaL_newmetarotable(L,"mqtt.cli", (void *)lmqtt_client_map);
 
 #if !LUA_USE_ROTABLE
-  luaL_newlib(L, mqtt);
-  return 1;
+    luaL_newlib(L, mqtt);
+    return 1;
 #else
-  return 0;
+    return 0;
 #endif
 }
 

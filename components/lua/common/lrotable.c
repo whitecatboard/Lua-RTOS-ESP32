@@ -169,15 +169,15 @@ const TValue *luaR_findentry(const void *pentry, const char *strkey,
 	}
 }
 extern uint32_t _rodata_start;
-extern uint32_t _thread_local_end;
-extern uint32_t _lua_rtos_rodata_start;
 extern uint32_t _lua_rtos_rodata_end;
+extern uint32_t _text_start;
+extern uint32_t _text_end;
 
 int luaR_isrotable(const void *p) {
 	return (((&_rodata_start) <= (uint32_t *) p
-			&& (uint32_t *) p <= (&_thread_local_end))
-			|| ((&_lua_rtos_rodata_start) <= (uint32_t *) p
-					&& (uint32_t *) p <= (&_lua_rtos_rodata_end)));
+			&& (uint32_t *) p <= (&_lua_rtos_rodata_end))
+			|| ((&_text_start) <= (uint32_t *) p
+					&& (uint32_t *) p <= (&_text_end)));
 }
 
 int luaH_getn_ro(void *t) {

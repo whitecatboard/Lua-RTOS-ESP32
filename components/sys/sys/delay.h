@@ -46,8 +46,6 @@
 #ifndef _SYS_DELAY_H_
 #define _SYS_DELAY_H_
 
-extern unsigned int _read_core_timer(void);
-
 void delay(unsigned int msec);
 void udelay(unsigned int usec);
 
