@@ -51,6 +51,7 @@
 #include "lauxlib.h"
 #include "modules.h"
 #include "error.h"
+#include "sys.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -80,6 +81,7 @@ void MQTTClient_init();
 #define LUA_MQTT_ERR_CANT_PUBLISH       (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  4)
 #define LUA_MQTT_ERR_CANT_DISCONNECT    (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  5)
 #define LUA_MQTT_ERR_LOST_CONNECTION    (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  6)
+#define LUA_MQTT_ERR_NOT_ENOUGH_MEMORY  (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  7)
 
 // Register driver and messages
 DRIVER_REGISTER_BEGIN(MQTT,mqtt,0,NULL,NULL);
@@ -90,17 +92,15 @@ DRIVER_REGISTER_BEGIN(MQTT,mqtt,0,NULL,NULL);
     DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotPublishToTopic, "can't publish to topic", LUA_MQTT_ERR_CANT_PUBLISH);
     DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotDisconnect, "can't disconnect", LUA_MQTT_ERR_CANT_DISCONNECT);
     DRIVER_REGISTER_ERROR(MQTT, mqtt, LostConnection, "lost connection", LUA_MQTT_ERR_LOST_CONNECTION);
+    DRIVER_REGISTER_ERROR(MQTT, mqtt, NotEnoughMemory, "not enough memory", LUA_MQTT_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_END(MQTT,mqtt,0,NULL,NULL);
 
 static int client_inited = 0;
 
 typedef struct {
-    char *topic;   // Topic
-    lua_State *L;  // Parent Lua thread
-    lua_State *TL; // Callback Lua thread
-    int callback;  // Callback reference (in parent thread)
-    int lthread;   // Lua thread reference (in parent thread)
-    void *next;    // Next callback
+    char *topic;              // Topic
+    lua_callback_t *callback; // Lua callback
+    void *next;              // Next callback
 } mqtt_subs_callback;
 
 typedef struct {
@@ -188,29 +188,25 @@ static int topic_matches_sub(const char *sub, const char *topic) {
     return 0;
 }
 
-static int add_subs_callback(mqtt_userdata *mqtt, const char *topic, lua_State *L, lua_State *TL, int call, int th) {
-    mqtt_subs_callback *callback;
-
+static int add_subs_callback(lua_State *L, int index, mqtt_userdata *mqtt, const char *topic) {
     // Create and populate callback structure
-    callback = (mqtt_subs_callback *) malloc(sizeof(mqtt_subs_callback));
+    mqtt_subs_callback *callback = (mqtt_subs_callback *)calloc(1, sizeof(mqtt_subs_callback));
     if (!callback) {
-        errno = ENOMEM;
-        return -1;
+        return luaL_exception_extended(L, LUA_MQTT_ERR_NOT_ENOUGH_MEMORY, NULL);
     }
-
-    callback->topic = (char *) malloc(strlen(topic) + 1);
+    callback->topic = strdup(topic);
     if (!callback->topic) {
-        errno = ENOMEM;
         free(callback);
-        return -1;
+        return luaL_exception_extended(L, LUA_MQTT_ERR_NOT_ENOUGH_MEMORY, NULL);
     }
 
-    strcpy(callback->topic, topic);
+    callback->callback = luaS_callback_create(L, index);
+    if (callback->callback == NULL) {
+        free(callback->topic);
+        free(callback);
 
-    callback->L = L;
-    callback->TL = TL;
-    callback->callback = call;
-    callback->lthread = th;
+        return luaL_exception_extended(L, LUA_MQTT_ERR_NOT_ENOUGH_MEMORY, NULL);
+    }
 
     mtx_lock(&mqtt->callback_mtx);
     callback->next = mqtt->callbacks;
@@ -225,30 +221,26 @@ static int messageArrived(void *context, char * topicName, int topicLen, MQTTCli
     if (mqtt) {
 
         mqtt_subs_callback *callback;
-        int call = 0;
 
         mtx_lock(&mqtt->callback_mtx);
 
         callback = mqtt->callbacks;
         while (callback) {
-            call = callback->callback;
-            if ((call != LUA_NOREF) && topic_matches_sub(callback->topic, topicName)) {
-                lua_pushinteger(callback->TL, m->payloadlen);
-                lua_pushlstring(callback->TL, m->payload, m->payloadlen);
+            if (topic_matches_sub(callback->topic, topicName)) {
+                // Push argument for the callback's function
+                lua_pushinteger(luaS_callback_state(callback->callback), m->payloadlen);
+                lua_pushlstring(luaS_callback_state(callback->callback), m->payload, m->payloadlen);
 
                 // see: https://www.ibm.com/support/knowledgecenter/SSFKSJ_7.5.0/com.ibm.mq.javadoc.doc/WMQMQxrCClasses/_m_q_t_t_client_8h.html?view=kc#aa42130dd069e7e949bcab37b6dce64a5
                 if (topicLen == 0) {
-                    lua_pushinteger(callback->TL, strlen(topicName));
-                    lua_pushstring(callback->TL, topicName);
+                    lua_pushinteger(luaS_callback_state(callback->callback), strlen(topicName));
+                    lua_pushstring(luaS_callback_state(callback->callback), topicName);
                 } else {
-                    lua_pushinteger(callback->TL, topicLen);
-                    lua_pushlstring(callback->TL, topicName, topicLen);
+                    lua_pushinteger(luaS_callback_state(callback->callback), topicLen);
+                    lua_pushlstring(luaS_callback_state(callback->callback), topicName, topicLen);
                 }
 
-                lua_pcall(callback->TL, 4, 0, 0);
-
-                // Copy callback to thread
-                lua_pushvalue(callback->TL,1);
+                luaS_callback_call(callback->callback, 4);
             }
             callback = callback->next;
         }
@@ -432,31 +424,8 @@ static int lmqtt_subscribe(lua_State* L) {
                 "enable persistence for a qos > 0");
     }
 
-    // Get the callback reference
-    lua_lock(L);
-    luaL_checktype(L, 4, LUA_TFUNCTION);
-    lua_pushvalue(L, 4);
-
-    int callback = luaL_ref(L, LUA_REGISTRYINDEX);
-
-    // Create a new Lua thread for the callback
-    //
-    // This lua thread has 2 copies of the callback at the top of
-    // it's stack. This avoid calling lua_lock / lua_unlock to get
-    // the callback reference each time the callback is executed.
-    lua_State *TL = lua_newthread(L);
-    int tref = luaL_ref(L, LUA_REGISTRYINDEX);
-
-    // Copy callback to thread
-    lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
-    lua_xmove(L, TL, 1);
-    lua_unlock(L);
-
-    // Get a copy of the callback
-    lua_pushvalue(TL,1);
-
     // Add callback
-    add_subs_callback(mqtt, topic, L, TL, callback, tref);
+    add_subs_callback(L, 4, mqtt, topic);
 
     rc = MQTTClient_subscribe(mqtt->client, topic, qos);
     if (rc == 0) {
@@ -527,10 +496,7 @@ static int lmqtt_client_gc(lua_State *L) {
 
         callback = mqtt->callbacks;
         while (callback) {
-            lua_lock(callback->L);
-            luaL_unref(callback->L, LUA_REGISTRYINDEX, callback->callback);
-            luaL_unref(callback->L, LUA_REGISTRYINDEX, callback->lthread);
-            lua_unlock(callback->L);
+            luaS_callback_destroy(callback->callback);
 
             nextcallback = callback->next;
 

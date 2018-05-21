@@ -12,6 +12,7 @@
 #include "lualib.h"
 #include "lauxlib.h"
 #include "pio.h"
+#include "sys.h"
 #include "modules.h"
 
 #include <stdint.h>
@@ -37,7 +38,7 @@
 typedef struct {
     uint8_t pin;
     uint8_t type;
-    int callbak;
+    lua_callback_t *callback;
     TaskHandle_t task;
 } pio_intr_t;
 
@@ -75,45 +76,18 @@ static void pioTask(void *taskArgs) {
     pio_intr_t *args = (pio_intr_t *)taskArgs;
     uint32_t data;
 
-    // Create a new Lua thread
-    //
-    // This lua thread has 2 copies of the callback at the top of
-    // it's stack. This avoid calling lua_lock / lua_unlock to get
-    // the callback reference into the task infinite loop.
-    lua_State *TL;
-    lua_State *L;
-
-    L  = pvGetLuaState();
-    TL = lua_newthread(L);
-
-    int tref = luaL_ref(L, LUA_REGISTRYINDEX);
-
-    // Copy callback to thread
-    lua_lock(L);
-    lua_rawgeti(L, LUA_REGISTRYINDEX, args->callbak);
-    lua_xmove(L, TL, 1);
-    lua_unlock(L);
-
-    // Get a copy of the callback
-    lua_pushvalue(TL,1);
-
     for(;;) {
-        xTaskNotifyWait(NULL, NULL, &data, portMAX_DELAY);
+        xTaskNotifyWait(0, 0, &data, portMAX_DELAY);
 
-        if (args->callbak != LUA_NOREF) {
-            lua_pushinteger(TL, data);
-            lua_pcall(TL, 1, 0, 0);
-
-            // Copy callback to thread
-            lua_pushvalue(TL,1);
-        }
+        lua_pushinteger(luaS_callback_state(args->callback), data);
+        luaS_callback_call(args->callback, 1);
 
         if (args->pin < 40) {
             gpio_intr_enable(args->pin);
         }
     }
 
-    luaL_unref(TL, LUA_REGISTRYINDEX, tref);
+    luaS_callback_destroy(args->callback);
 }
 
 // Helper functions
@@ -419,21 +393,20 @@ static int pio_pin_interrupt(lua_State *L) {
 
     uint32_t pin = luaL_checkinteger(L, 1);
     int type = luaL_optinteger(L, 3, GPIO_INTR_POSEDGE);
-    int qsize = luaL_optinteger(L, 4, 100);
-    int stack = luaL_optinteger(L, 5, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE);
-    int priority = luaL_optinteger(L, 6, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY);
-
-    luaL_checktype(L, 2, LUA_TFUNCTION);
-    lua_pushvalue(L, 2);
-
-    int callback = luaL_ref(L, LUA_REGISTRYINDEX);
+    int stack = luaL_optinteger(L, 4, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE);
+    int priority = luaL_optinteger(L, 5, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY);
 
     args = (pio_intr_t *)calloc(1,sizeof(pio_intr_t));
     if (!args) {
         return luaL_exception(L, GPIO_ERR_NOT_ENOUGH_MEMORY);
-
     }
-    args->callbak = callback;
+
+    args->callback = luaS_callback_create(L, 2);
+    if (args->callback == NULL) {
+        free(args);
+        return luaL_exception(L, GPIO_ERR_NOT_ENOUGH_MEMORY);
+    }
+
     args->pin = pin;
     args->type = type;
 
