@@ -310,6 +310,14 @@ static driver_error_t *sensor_i2c_setup(uint8_t interface, sensor_instance_t *un
     return NULL;
 }
 
+static driver_error_t *sensor_gpio_unsetup(uint8_t interface, sensor_instance_t *unit) {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    driver_unlock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup[interface].gpio.gpio);
+#endif
+
+    return NULL;
+}
+
 static driver_error_t *sensor_i2c_unsetup(uint8_t interface, sensor_instance_t *unit) {
     driver_error_t *error;
 
@@ -529,9 +537,9 @@ driver_error_t *sensor_unsetup(sensor_instance_t *unit) {
     for(i=0;i<SENSOR_MAX_INTERFACES;i++) {
         if (!(unit->sensor->interface[i].flags & SENSOR_FLAG_CUSTOM_INTERFACE_INIT) && unit->sensor->interface[i].type) {
             switch (unit->sensor->interface[i].type) {
+                case GPIO_INTERFACE: error = sensor_gpio_unsetup(i, unit);break;
                 case I2C_INTERFACE: error = sensor_i2c_unsetup(i, unit);break;
                 default:
-                    return driver_error(SENSOR_DRIVER, SENSOR_ERR_INTERFACE_NOT_SUPPORTED, NULL);
                     break;
             }
 
