@@ -43,7 +43,6 @@ LDFLAGS += -Wl,--wrap=_stat_r
 LDFLAGS += -Wl,--wrap=mkdir
 LDFLAGS += -Wl,--wrap=opendir
 LDFLAGS += -Wl,--wrap=rmdir
-LDFLAGS += -Wl,--wrap=lwip_select
 
 #
 # Lua configuration

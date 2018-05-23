@@ -79,7 +79,6 @@ pty_make_controlling_tty(int *ttyfd, const char *tty_name)
 	/* Solaris has a problem with TIOCNOTTY for a bg process, so
 	 * we disable the signal which would STOP the process - matt */
 	signal(SIGTTOU, SIG_IGN);
-
 	/* First disconnect from the old controlling tty. */
 #ifdef TIOCNOTTY
 	fd = open(_PATH_TTY, O_RDWR | O_NOCTTY);

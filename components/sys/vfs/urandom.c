@@ -58,56 +58,56 @@ static int vfs_urandom_open(const char *path, int flags, int mode) {
 }
 
 static ssize_t vfs_urandom_read(int fd, void * dst, size_t size) {
-	os_get_random(dst, size);
-	
-	return size;
+    os_get_random(dst, size);
+
+    return size;
 }
 
 static int vfs_urandom_close(int fd) {
-	return 0;
+    return 0;
 }
 
 static int vfs_urandom_select (int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout) {
-	int num = 0;
-	int fd;
+    int num = 0;
+    int fd;
 
-	for(fd = 0;fd <= maxfdp1;fd++) {
-		if (readset && FD_ISSET(fd, readset)) {
-			num++;
-		}
+    for(fd = 0;fd <= maxfdp1;fd++) {
+        if (readset && FD_ISSET(fd, readset)) {
+            num++;
+        }
 
-		if (writeset && FD_ISSET(fd, writeset)) {
-			num++;
-		}
+        if (writeset && FD_ISSET(fd, writeset)) {
+            num++;
+        }
 
-		if (exceptset && FD_ISSET(fd, exceptset)) {
-		}
-	}
+        if (exceptset && FD_ISSET(fd, exceptset)) {
+        }
+    }
 
-	return num;
+    return num;
 }
 
 void vfs_urandom_register() {
-	if (!registered) {
-	    esp_vfs_t vfs = {
-	    	.flags = ESP_VFS_FLAG_DEFAULT,
-	        .write = NULL,
-	        .open = &vfs_urandom_open,
-	        .fstat = NULL,
-	        .close = &vfs_urandom_close,
-	        .read = &vfs_urandom_read,
-	        .lseek = NULL,
-	        .stat = NULL,
-	        .link = NULL,
-	        .unlink = NULL,
-	        .rename = NULL,
-			.select = &vfs_urandom_select,
-	    };
+    if (!registered) {
+        esp_vfs_t vfs = {
+            .flags = ESP_VFS_FLAG_DEFAULT,
+            .write = NULL,
+            .open = &vfs_urandom_open,
+            .fstat = NULL,
+            .close = &vfs_urandom_close,
+            .read = &vfs_urandom_read,
+            .lseek = NULL,
+            .stat = NULL,
+            .link = NULL,
+            .unlink = NULL,
+            .rename = NULL,
+            .select = &vfs_urandom_select,
+        };
 
-	    ESP_ERROR_CHECK(esp_vfs_register("/dev/urandom", &vfs, NULL));
+        ESP_ERROR_CHECK(esp_vfs_register("/dev/urandom", &vfs, NULL));
 
-	    registered = 1;
-	}
+        registered = 1;
+    }
 }
 
 #endif

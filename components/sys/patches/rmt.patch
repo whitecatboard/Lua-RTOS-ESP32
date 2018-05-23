@@ -1,26 +1,27 @@
 diff --git a/components/driver/include/driver/rmt.h b/components/driver/include/driver/rmt.h
-index 13d97b91..c428515e 100644
+index 7abf63ec..6dbbdba8 100644
 --- a/components/driver/include/driver/rmt.h
 +++ b/components/driver/include/driver/rmt.h
-@@ -756,7 +756,7 @@ rmt_tx_end_callback_t rmt_register_tx_end_callback(rmt_tx_end_fn_t function, voi
-  *--------------------------END OF EXAMPLE --------------------------
+@@ -787,6 +787,7 @@ esp_err_t rmt_write_sample(rmt_channel_t channel, const uint8_t *src, size_t src
   */
+ rmt_tx_end_callback_t rmt_register_tx_end_callback(rmt_tx_end_fn_t function, void *arg);
  
--
 +esp_err_t rmt_config_one(const rmt_config_t* rmt_param, uint8_t *chan);
  
- #ifdef __cplusplus
- }
+ /*
+  * ----------------EXAMPLE OF RMT INTERRUPT ------------------
 diff --git a/components/driver/rmt.c b/components/driver/rmt.c
-index 8e7b2a1d..cd2140ca 100644
+index 9460cefa..5eba95b4 100644
 --- a/components/driver/rmt.c
 +++ b/components/driver/rmt.c
-@@ -784,3 +784,112 @@ rmt_tx_end_callback_t rmt_register_tx_end_callback(rmt_tx_end_fn_t function, voi
-     rmt_tx_end_callback.arg = arg;
-     return previous;
- }
+@@ -929,4 +929,112 @@ esp_err_t rmt_write_sample(rmt_channel_t channel, const uint8_t *src, size_t src
+         xSemaphoreGive(p_rmt->tx_sem);
+     }
+     return ESP_OK;
+-}
+\ No newline at end of file
++}
 +
-+// Lua RTOS
 +esp_err_t rmt_config_one(const rmt_config_t* rmt_param, uint8_t *chan)
 +{
 +    uint8_t mode = rmt_param->rmt_mode;

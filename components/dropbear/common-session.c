@@ -164,7 +164,9 @@ void session_loop(void(*loophandler)()) {
 
 		/* We get woken up when signal handlers write to this pipe.
 		   SIGCHLD in svr-chansession is the only one currently. */
+#if !__XTENSA__
 		FD_SET(ses.signal_pipe[0], &readfd);
+#endif
 		ses.channel_signal_pending = 0;
 
 		/* set up for channels which can be read/written */
@@ -210,6 +212,7 @@ void session_loop(void(*loophandler)()) {
 			FD_ZERO(&readfd);
 		}
 		
+#if !__XTENSA__
 		/* We'll just empty out the pipe if required. We don't do
 		any thing with the data, since the pipe's purpose is purely to
 		wake up the select() above. */
@@ -219,6 +222,7 @@ void session_loop(void(*loophandler)()) {
 			while (read(ses.signal_pipe[0], &x, 1) > 0) {}
 			ses.channel_signal_pending = 1;
 		}
+#endif
 
 		/* check for auth timeout, rekeying required etc */
 		if (!checktimeouts()) break;
@@ -253,6 +257,7 @@ void session_loop(void(*loophandler)()) {
 
 		/* process pipes etc for the channels, ses.dataallowed == 0
 		 * during rekeying ) */
+
 		channelio(&readfd, &writefd);
 
 		/* process session socket's outgoing data */

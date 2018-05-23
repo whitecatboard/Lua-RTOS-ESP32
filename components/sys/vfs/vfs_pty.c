@@ -62,17 +62,17 @@
 #include "freertos/queue.h"
 
 typedef struct {
-	// Number of opened vfs_pty->masters and vfs_pty->slaves
-	// Only 1 master / slave allowed
-	uint8_t slaves;
-	uint8_t masters;
+    // Number of opened vfs_pty->masters and vfs_pty->slaves
+    // Only 1 master / slave allowed
+    uint8_t slaves;
+    uint8_t masters;
 
-	// Local storage for file descriptors
-	vfs_fd_local_storage_t *slave_local_storage;
-	vfs_fd_local_storage_t *master_local_storage;
+    // Local storage for file descriptors
+    vfs_fd_local_storage_t *slave_local_storage;
+    vfs_fd_local_storage_t *master_local_storage;
 
-	xQueueHandle slave_q;
-	xQueueHandle master_q;
+    xQueueHandle slave_q;
+    xQueueHandle master_q;
 } vfs_pty_t;
 
 // Register master functions
@@ -83,28 +83,29 @@ static int vfs_ptm_close(int fd);
 static ssize_t vfs_ptm_writev(int fd, const struct iovec *iov, int iovcnt);
 static int vfs_ptm_select (int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
 static int vfs_ptm_fcntl(int fd, int cmd, va_list args);
+static int vfs_ptm_ioctl(int fd, int request, va_list args);
 
 static int registered = 0;
 static vfs_pty_t *vfs_pty;
 
 static void init() {
-	if (!vfs_pty) {
-		vfs_pty = calloc(1, sizeof(vfs_pty_t));
-		assert(vfs_pty != NULL);
-	}
+    if (!vfs_pty) {
+        vfs_pty = calloc(1, sizeof(vfs_pty_t));
+        assert(vfs_pty != NULL);
+    }
 
-	vfs_pty->slave_local_storage = vfs_create_fd_local_storage(1);
-	assert(vfs_pty->slave_local_storage != NULL);
+    vfs_pty->slave_local_storage = vfs_create_fd_local_storage(1);
+    assert(vfs_pty->slave_local_storage != NULL);
 
-	vfs_pty->master_local_storage = vfs_create_fd_local_storage(1);
-	assert(vfs_pty->master_local_storage != NULL);
+    vfs_pty->master_local_storage = vfs_create_fd_local_storage(1);
+    assert(vfs_pty->master_local_storage != NULL);
 
-	// Create the slave and master queues
-	vfs_pty->slave_q = xQueueCreate(1024, sizeof(char));
-	assert(vfs_pty->slave_q != NULL);
+    // Create the slave and master queues
+    vfs_pty->slave_q = xQueueCreate(1024, sizeof(char));
+    assert(vfs_pty->slave_q != NULL);
 
-	vfs_pty->master_q = xQueueCreate(1024, sizeof(char));
-	assert(vfs_pty->master_q != NULL);
+    vfs_pty->master_q = xQueueCreate(1024, sizeof(char));
+    assert(vfs_pty->master_q != NULL);
 }
 
 static void register_master() {
@@ -112,13 +113,12 @@ static void register_master() {
         .flags = ESP_VFS_FLAG_DEFAULT,
         .write = &vfs_ptm_write,
         .open = &vfs_ptm_open,
-        .fstat = NULL,
         .close = &vfs_ptm_close,
         .read = &vfs_ptm_read,
         .fcntl = &vfs_ptm_fcntl,
-        .ioctl = NULL,
+        .ioctl = &vfs_ptm_ioctl,
         .writev = &vfs_ptm_writev,
-		.select = &vfs_ptm_select,
+        .select = &vfs_ptm_select,
     };
 
     ESP_ERROR_CHECK(esp_vfs_register("/dev/ptm", &vfs, NULL));
@@ -132,19 +132,19 @@ static int vfs_pts_close(int fd);
 static ssize_t vfs_pts_writev(int fd, const struct iovec *iov, int iovcnt);
 static int vfs_pts_select (int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
 static int vfs_pts_fcntl(int fd, int cmd, va_list args);
+static int vfs_pts_ioctl(int fd, int request, va_list args);
 
 static void register_slave() {
     esp_vfs_t vfs = {
         .flags = ESP_VFS_FLAG_DEFAULT,
         .write = &vfs_pts_write,
         .open = &vfs_pts_open,
-        .fstat = NULL,
         .close = &vfs_pts_close,
         .read = &vfs_pts_read,
         .fcntl = &vfs_pts_fcntl,
-        .ioctl = NULL,
+        .ioctl = &vfs_pts_ioctl,
         .writev = &vfs_pts_writev,
-		.select = &vfs_pts_select,
+        .select = &vfs_pts_select,
     };
 
     ESP_ERROR_CHECK(esp_vfs_register("/dev/pts", &vfs, NULL));
@@ -152,203 +152,211 @@ static void register_slave() {
 
 // Register vfs
 void vfs_pty_register() {
-	if (!registered) {
-		register_master();
-		register_slave();
+    if (!registered) {
+        register_master();
+        register_slave();
 
-		registered = 1;
-	}
+        registered = 1;
+    }
 }
 
 // Master functions
 static int master_has_bytes(int fd, int to) {
-	char c;
+    char c;
 
-	if (to != portMAX_DELAY) {
-		to = to / portTICK_PERIOD_MS;
-	}
+    if (to != portMAX_DELAY) {
+        to = to / portTICK_PERIOD_MS;
+    }
 
-	return (xQueuePeek(vfs_pty->master_q, &c, (BaseType_t)to) == pdTRUE);
+    return (xQueuePeek(vfs_pty->master_q, &c, (BaseType_t)to) == pdTRUE);
 }
 
 static int master_free(int fd) {
-	return uxQueueSpacesAvailable(vfs_pty->master_q);
+    return uxQueueSpacesAvailable(vfs_pty->master_q);
 }
 
 static int master_get(int fd, char *c) {
-	return xQueueReceive(vfs_pty->master_q, c, portMAX_DELAY);
+    return xQueueReceive(vfs_pty->master_q, c, portMAX_DELAY);
 }
 
 static void master_put(int fd, char *c) {
-	xQueueSend(vfs_pty->slave_q, c, portMAX_DELAY);
+    xQueueSend(vfs_pty->slave_q, c, portMAX_DELAY);
 }
 
 static int vfs_ptm_open(const char *path, int flags, int mode) {
-	if (!vfs_pty) {
-		init();
-	}
+    if (!vfs_pty) {
+        init();
+    }
 
-	if (vfs_pty->masters > 0) {
-		errno = ENOENT;
-		return -1;
-	}
+    if (vfs_pty->masters > 0) {
+        errno = ENOENT;
+        return -1;
+    }
 
-	vfs_pty->masters++;
-	vfs_pty->master_local_storage[0].flags = flags;
+    vfs_pty->masters++;
+    vfs_pty->master_local_storage[0].flags = flags;
 
-	return 0;
+    return 0;
 }
 
 static int vfs_ptm_close(int fd) {
-	if (!vfs_pty) {
-		init();
-	}
+    if (!vfs_pty) {
+        init();
+    }
 
-	if (vfs_pty->masters > 0) {
-		vfs_pty->masters--;
-	}
+    if (vfs_pty->masters > 0) {
+        vfs_pty->masters--;
+    }
 
-	if (vfs_pty->master_q) {
-		xQueueReset(vfs_pty->master_q);
-	}
+    if (vfs_pty->master_q) {
+        xQueueReset(vfs_pty->master_q);
+    }
 
-	return 0;
+    return 0;
 }
 
 static ssize_t vfs_ptm_read(int fd, void * dst, size_t size) {
-	if (!vfs_pty) {
-		init();
-	}
+    if (!vfs_pty) {
+        init();
+    }
 
-	return vfs_generic_read(vfs_pty->master_local_storage, master_has_bytes, master_get, fd, dst, size);
+    return vfs_generic_read(vfs_pty->master_local_storage, master_has_bytes, master_get, fd, dst, size);
 }
 
 static ssize_t vfs_ptm_write(int fd, const void *data, size_t size) {
-	if (!vfs_pty) {
-		init();
-	}
+    if (!vfs_pty) {
+        init();
+    }
 
-	return vfs_generic_write(vfs_pty->master_local_storage, master_put, fd, data, size);
+    return vfs_generic_write(vfs_pty->master_local_storage, master_put, fd, data, size);
 }
 
 static ssize_t vfs_ptm_writev(int fd, const struct iovec *iov, int iovcnt) {
-	if (!vfs_pty) {
-		init();
-	}
+    if (!vfs_pty) {
+        init();
+    }
 
-	return vfs_generic_writev(vfs_pty->master_local_storage, master_put, fd, iov, iovcnt);
+    return vfs_generic_writev(vfs_pty->master_local_storage, master_put, fd, iov, iovcnt);
 }
 
 static int vfs_ptm_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout) {
-	if (!vfs_pty) {
-		init();
-	}
+    if (!vfs_pty) {
+        init();
+    }
 
-	return vfs_generic_select(vfs_pty->master_local_storage, master_has_bytes, master_free, maxfdp1, readset, writeset, exceptset, timeout);
+    return vfs_generic_select(vfs_pty->master_local_storage, master_has_bytes, master_free, maxfdp1, readset, writeset, exceptset, timeout);
 }
 
 static int vfs_ptm_fcntl(int fd, int cmd, va_list args) {
-	if (!vfs_pty) {
-		init();
-	}
+    if (!vfs_pty) {
+        init();
+    }
 
-	return vfs_generic_fcntl(vfs_pty->master_local_storage, fd, cmd, args);
+    return vfs_generic_fcntl(vfs_pty->master_local_storage, fd, cmd, args);
+}
+
+static int vfs_ptm_ioctl(int fd, int request, va_list args) {
+    return 0;
 }
 
 // Slave functions
 static int slave_has_bytes(int fd, int to) {
-	char c;
+    char c;
 
-	if (to != portMAX_DELAY) {
-		to = to / portTICK_PERIOD_MS;
-	}
+    if (to != portMAX_DELAY) {
+        to = to / portTICK_PERIOD_MS;
+    }
 
-	return (xQueuePeek(vfs_pty->slave_q, &c, (BaseType_t)to) == pdTRUE);
+    return (xQueuePeek(vfs_pty->slave_q, &c, (BaseType_t)to) == pdTRUE);
 }
 
 static int slave_free(int fd) {
-	return uxQueueSpacesAvailable(vfs_pty->slave_q);
+    return uxQueueSpacesAvailable(vfs_pty->slave_q);
 }
 
 static int slave_get(int fd, char *c) {
-	return xQueueReceive(vfs_pty->slave_q, c, portMAX_DELAY);
+    return xQueueReceive(vfs_pty->slave_q, c, portMAX_DELAY);
 }
 
 static void slave_put(int fd, char *c) {
-	xQueueSend(vfs_pty->master_q, c, portMAX_DELAY);
+    xQueueSend(vfs_pty->master_q, c, portMAX_DELAY);
 }
 
 static int vfs_pts_open(const char *path, int flags, int mode) {
-	if (!vfs_pty) {
-		init();
-	}
+    if (!vfs_pty) {
+        init();
+    }
 
-	if (vfs_pty->slaves > 0) {
-		errno = ENOENT;
-		return -1;
-	}
+    if (vfs_pty->slaves > 0) {
+        errno = ENOENT;
+        return -1;
+    }
 
-	vfs_pty->slaves++;
-	vfs_pty->slave_local_storage[0].flags = flags;
+    vfs_pty->slaves++;
+    vfs_pty->slave_local_storage[0].flags = flags;
 
-	return 0;
+    return 0;
 
 }
 
 static int vfs_pts_close(int fd) {
-	if (!vfs_pty) {
-		init();
-	}
+    if (!vfs_pty) {
+        init();
+    }
 
-	if (vfs_pty->slaves > 0) {
-		vfs_pty->slaves--;
-	}
+    if (vfs_pty->slaves > 0) {
+        vfs_pty->slaves--;
+    }
 
-	if (vfs_pty->slave_q) {
-		xQueueReset(vfs_pty->slave_q);
-	}
+    if (vfs_pty->slave_q) {
+        xQueueReset(vfs_pty->slave_q);
+    }
 
-	return 0;
+    return 0;
 }
 
 static ssize_t vfs_pts_write(int fd, const void *data, size_t size) {
-	if (!vfs_pty) {
-		init();
-	}
+    if (!vfs_pty) {
+        init();
+    }
 
-	return vfs_generic_write(vfs_pty->slave_local_storage, slave_put, fd, data, size);
+    return vfs_generic_write(vfs_pty->slave_local_storage, slave_put, fd, data, size);
 }
 
 static ssize_t vfs_pts_read(int fd, void * dst, size_t size) {
-	if (!vfs_pty) {
-		init();
-	}
+    if (!vfs_pty) {
+        init();
+    }
 
-	return vfs_generic_read(vfs_pty->slave_local_storage, slave_has_bytes, slave_get, fd, dst, size);
+    return vfs_generic_read(vfs_pty->slave_local_storage, slave_has_bytes, slave_get, fd, dst, size);
 }
 
 static ssize_t vfs_pts_writev(int fd, const struct iovec *iov, int iovcnt) {
-	if (!vfs_pty) {
-		init();
-	}
+    if (!vfs_pty) {
+        init();
+    }
 
-	return vfs_generic_writev(vfs_pty->slave_local_storage, slave_put, fd, iov, iovcnt);
+    return vfs_generic_writev(vfs_pty->slave_local_storage, slave_put, fd, iov, iovcnt);
 }
 
 static int vfs_pts_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout) {
-	if (!vfs_pty) {
-		init();
-	}
+    if (!vfs_pty) {
+        init();
+    }
 
-	return vfs_generic_select(vfs_pty->slave_local_storage, slave_has_bytes, slave_free, maxfdp1, readset, writeset, exceptset, timeout);
+    return vfs_generic_select(vfs_pty->slave_local_storage, slave_has_bytes, slave_free, maxfdp1, readset, writeset, exceptset, timeout);
 }
 
 static int vfs_pts_fcntl(int fd, int cmd, va_list args) {
-	if (!vfs_pty) {
-		init();
-	}
+    if (!vfs_pty) {
+        init();
+    }
 
-	return vfs_generic_fcntl(vfs_pty->slave_local_storage, fd, cmd, args);
+    return vfs_generic_fcntl(vfs_pty->slave_local_storage, fd, cmd, args);
+}
+
+static int vfs_pts_ioctl(int fd, int request, va_list args) {
+    return 0;
 }
 
 #endif

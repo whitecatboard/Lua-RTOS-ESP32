@@ -81,6 +81,24 @@ static void put(int fd, char *c) {
     }
 }
 
+static int tty_has_bytes(int fd, int to) {
+    char c;
+
+    if (to != portMAX_DELAY) {
+        to = to / portTICK_PERIOD_MS;
+    }
+
+    return (xQueuePeek(uart_get_queue(fd), &c, (BaseType_t)to) == pdTRUE);
+}
+
+static int tty_free(int fd) {
+    return uxQueueSpacesAvailable(uart_get_queue(fd));
+}
+
+static int vfs_tty_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout) {
+    return vfs_generic_select(local_storage, tty_has_bytes, tty_free, maxfdp1, readset, writeset, exceptset, timeout);
+}
+
 static int  vfs_tty_open(const char *path, int flags, int mode) {
 	int unit = 0;
 
@@ -158,6 +176,7 @@ void vfs_tty_register() {
         .rename = NULL,
 		.fcntl = &vfs_tty_fcntl,
 		.writev = &vfs_tty_writev,
+		.select = &vfs_tty_select,
     };
 	
     ESP_ERROR_CHECK(esp_vfs_register("/dev/tty", &vfs, NULL));

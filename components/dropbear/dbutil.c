@@ -510,7 +510,7 @@ out:
 void m_close(int fd) {
 	int val;
 
-	if (fd == -1) {
+	if ((fd == -1) || (fd == STDOUT_FILENO) || (fd == STDIN_FILENO) || (fd == STDERR_FILENO)) {
 		return;
 	}
 
