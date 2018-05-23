@@ -152,8 +152,9 @@ ifeq ("$(VERSION_CHECK_REQUIRED)","1")
 
   ifeq ("$(APPLY_PATCHES)","1")
     $(info Reverting previous Lua RTOS esp-idf patches ...)
-    TMP := $(shell cd $(IDF_PATH) && git checkout .)
-    TMP := $(shell cd $(IDF_PATH) && git checkout $(CURRENT_IDF))
+    TMP := $(shell cd $(IDF_PATH) && git checkout -f .)
+    TMP := $(shell cd $(IDF_PATH) && git checkout -f $(CURRENT_IDF))
+    TMP := $(shell cd $(IDF_PATH) && git submodule update -f --init --recursive)
     TMP := $(info Applying Lua RTOS esp-idf patches ...)
     $(foreach PATCH,$(abspath $(wildcard components/sys/patches/*.patch)), \
       $(info Applying patch $(PATCH)...); \
@@ -271,14 +272,14 @@ endif
 
 upgrade-idf: restore-idf
 	@cd $(IDF_PATH) && git pull
-	@cd $(IDF_PATH) && git submodule update --init --recursive
+	@cd $(IDF_PATH) && git submodule update -f --init --recursive
 	
 restore-idf:
 	@echo "Reverting previous Lua RTOS esp-idf patches ..."
 ifeq ("$(shell test -e $(IDF_PATH)/lua_rtos_patches && echo ex)","ex")
-	@cd $(IDF_PATH) && git checkout .
-	@cd $(IDF_PATH) && git checkout master
-	@cd $(IDF_PATH) && git submodule update --recursive
+	@cd $(IDF_PATH) && git checkout -f .
+	@cd $(IDF_PATH) && git checkout -f master
+	@cd $(IDF_PATH) && git submodule update -f --init --recursive
 	@rm $(IDF_PATH)/lua_rtos_patches
 endif
 	@rm -f sdkconfig || true
