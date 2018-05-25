@@ -17,9 +17,9 @@ Maintainer: Michael Coracin
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
+#include "hex_string.h"
 
-#include "common.h"
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
 
 /* -------------------------------------------------------------------------- */
 /* --- DEPENDANCIES --------------------------------------------------------- */
@@ -58,7 +58,8 @@ Maintainer: Michael Coracin
 #include <sys/stat.h>
 #include <pthread.h>
 
-#define exit(reason) return;
+#define pkt_fwd_exit(reason) return reason;
+#define pkt_fwd_exit_thread(reason) return;
 
 #include <sys/socket.h>
 #include <netdb.h>
@@ -237,7 +238,9 @@ static uint32_t tx_freq_max[LGW_RF_CHAIN_NB]; /* highest frequency supported by 
 /* -------------------------------------------------------------------------- */
 /* --- PRIVATE FUNCTIONS DECLARATION ---------------------------------------- */
 
+#if !__XTENSA__
 static void sig_handler(int sigio);
+#endif
 
 static int parse_SX1301_configuration(const char * conf_file);
 
@@ -258,6 +261,7 @@ void thread_timersync(void);
 /* -------------------------------------------------------------------------- */
 /* --- PRIVATE FUNCTIONS DEFINITION ----------------------------------------- */
 
+#if !__XTENSA__
 static void sig_handler(int sigio) {
     if (sigio == SIGQUIT) {
         quit_sig = true;
@@ -266,6 +270,7 @@ static void sig_handler(int sigio) {
     }
     return;
 }
+#endif
 
 static int parse_SX1301_configuration(const char * conf_file) {
     int i;
@@ -288,7 +293,7 @@ static int parse_SX1301_configuration(const char * conf_file) {
     root_val = json_parse_file_with_comments(conf_file);
     if (root_val == NULL) {
         MSG("ERROR: %s is not a valid JSON file\n", conf_file);
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit(EXIT_FAILURE);
     }
 
     /* point to the gateway configuration object */
@@ -667,7 +672,7 @@ static int parse_gateway_configuration(const char * conf_file) {
     root_val = json_parse_file_with_comments(conf_file);
     if (root_val == NULL) {
         MSG("ERROR: %s is not a valid JSON file\n", conf_file);
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit(EXIT_FAILURE);
     }
 
     /* point to the gateway configuration object */
@@ -928,6 +933,7 @@ static int send_tx_ack(uint8_t token_h, uint8_t token_l, enum jit_error_e error)
 /* -------------------------------------------------------------------------- */
 /* --- MAIN FUNCTION -------------------------------------------------------- */
 
+#if !__XTENSA__
 int access(const char *path, int amode) {
     struct stat s;
 
@@ -941,10 +947,13 @@ int access(const char *path, int amode) {
     }
 	return 0;
 }
+#endif
 
 int lora_pkt_fwd(void)
 {
+#if !__XTENSA__
     struct sigaction sigact; /* SIGQUIT&SIGINT&SIGTERM signal handling */
+#endif
     int i; /* loop variable and temporary variable for return value */
     int x;
 
@@ -1013,21 +1022,21 @@ int lora_pkt_fwd(void)
         MSG("INFO: other configuration files will be ignored\n");
         x = parse_SX1301_configuration(debug_cfg_path);
         if (x != 0) {
-            exit(EXIT_FAILURE);
+            pkt_fwd_exit(EXIT_FAILURE);
         }
         x = parse_gateway_configuration(debug_cfg_path);
         if (x != 0) {
-            exit(EXIT_FAILURE);
+            pkt_fwd_exit(EXIT_FAILURE);
         }
     } else if (access(global_cfg_path, R_OK) == 0) { /* if there is a global conf, parse it and then try to parse local conf  */
         MSG("INFO: found global configuration file %s, parsing it\n", global_cfg_path);
         x = parse_SX1301_configuration(global_cfg_path);
         if (x != 0) {
-            exit(EXIT_FAILURE);
+            pkt_fwd_exit(EXIT_FAILURE);
         }
         x = parse_gateway_configuration(global_cfg_path);
         if (x != 0) {
-            exit(EXIT_FAILURE);
+            pkt_fwd_exit(EXIT_FAILURE);
         }
         if (access(local_cfg_path, R_OK) == 0) {
             MSG("INFO: found local configuration file %s, parsing it\n", local_cfg_path);
@@ -1039,15 +1048,15 @@ int lora_pkt_fwd(void)
         MSG("INFO: found local configuration file %s, parsing it\n", local_cfg_path);
         x = parse_SX1301_configuration(local_cfg_path);
         if (x != 0) {
-            exit(EXIT_FAILURE);
+            pkt_fwd_exit(EXIT_FAILURE);
         }
         x = parse_gateway_configuration(local_cfg_path);
         if (x != 0) {
-            exit(EXIT_FAILURE);
+            pkt_fwd_exit(EXIT_FAILURE);
         }
     } else {
         MSG("ERROR: [main] failed to find any configuration file named %s, %s OR %s\n", global_cfg_path, local_cfg_path, debug_cfg_path);
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit(EXIT_FAILURE);
     }
 
     /* Start GPS a.s.a.p., to allow it to lock */
@@ -1083,7 +1092,7 @@ int lora_pkt_fwd(void)
     i = getaddrinfo(serv_addr, serv_port_up, &hints, &result);
     if (i != 0) {
         MSG("ERROR: [up] getaddrinfo on address %s (PORT %s) returned %s\n", serv_addr, serv_port_up, gai_strerror(i));
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit(EXIT_FAILURE);
     }
 
     /* try to open socket for upstream traffic */
@@ -1100,14 +1109,14 @@ int lora_pkt_fwd(void)
             MSG("INFO: [up] result %i host:%s service:%s\n", i, host_name, port_name);
             ++i;
         }
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit(EXIT_FAILURE);
     }
 
     /* connect so we can send/receive packet with the server only */
     i = connect(sock_up, q->ai_addr, q->ai_addrlen);
     if (i != 0) {
         MSG("ERROR: [up] connect returned %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit(EXIT_FAILURE);
     }
     freeaddrinfo(result);
 
@@ -1115,7 +1124,7 @@ int lora_pkt_fwd(void)
     i = getaddrinfo(serv_addr, serv_port_down, &hints, &result);
     if (i != 0) {
         MSG("ERROR: [down] getaddrinfo on address %s (port %s) returned %s\n", serv_addr, serv_port_up, gai_strerror(i));
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit(EXIT_FAILURE);
     }
 
     /* try to open socket for downstream traffic */
@@ -1132,14 +1141,14 @@ int lora_pkt_fwd(void)
             MSG("INFO: [down] result %i host:%s service:%s\n", i, host_name, port_name);
             ++i;
         }
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit(EXIT_FAILURE);
     }
 
     /* connect so we can send/receive packet with the server only */
     i = connect(sock_down, q->ai_addr, q->ai_addrlen);
     if (i != 0) {
         MSG("ERROR: [down] connect returned %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit(EXIT_FAILURE);
     }
     freeaddrinfo(result);
 
@@ -1149,7 +1158,7 @@ int lora_pkt_fwd(void)
         MSG("INFO: [main] concentrator started, packet can now be received\n");
     } else {
         MSG("ERROR: [main] failed to start the concentrator\n");
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit(EXIT_FAILURE);
     }
 
     pthread_attr_t attr;
@@ -1160,7 +1169,7 @@ int lora_pkt_fwd(void)
     i = pthread_create( &thrid_up, &attr, (void * (*)(void *))thread_up, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create upstream thread\n");
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit(EXIT_FAILURE);
     }
     pthread_setname_np(thrid_up, "lora_upstream");
 
@@ -1168,7 +1177,7 @@ int lora_pkt_fwd(void)
     i = pthread_create( &thrid_down, &attr, (void * (*)(void *))thread_down, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create downstream thread\n");
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit(EXIT_FAILURE);
     }
     pthread_setname_np(thrid_down, "lora_downstream");
 
@@ -1176,7 +1185,7 @@ int lora_pkt_fwd(void)
     i = pthread_create( &thrid_jit, &attr, (void * (*)(void *))thread_jit, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create JIT thread\n");
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit(EXIT_FAILURE);
     }
     pthread_setname_np(thrid_jit, "lora_jit");
 
@@ -1184,7 +1193,7 @@ int lora_pkt_fwd(void)
     i = pthread_create( &thrid_timersync, &attr, (void * (*)(void *))thread_timersync, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create Timer Sync thread\n");
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit(EXIT_FAILURE);
     }
     pthread_setname_np(thrid_timersync, "lora_timersync");
 
@@ -1194,7 +1203,7 @@ int lora_pkt_fwd(void)
         i = pthread_create( &thrid_gps, &attr, (void * (*)(void *))thread_gps, NULL);
         if (i != 0) {
             MSG("ERROR: [main] impossible to create GPS thread\n");
-            exit(EXIT_FAILURE);
+            pkt_fwd_exit(EXIT_FAILURE);
         }
         pthread_setname_np(thrid_gps, "lora_gps");
 
@@ -1202,19 +1211,21 @@ int lora_pkt_fwd(void)
         i = pthread_create( &thrid_valid, &attr, (void * (*)(void *))thread_valid, NULL);
         if (i != 0) {
             MSG("ERROR: [main] impossible to create validation thread\n");
-            exit(EXIT_FAILURE);
+            pkt_fwd_exit(EXIT_FAILURE);
         }
         pthread_setname_np(thrid_valid, "lora_validation");
     }
 
     /* configure signal handling */
+#if !__XTENSA__
     // TO DO
-    //sigemptyset(&sigact.sa_mask);
-    //sigact.sa_flags = 0;
-    //sigact.sa_handler = sig_handler;
-    //sigaction(SIGQUIT, &sigact, NULL); /* Ctrl-\ */
-    //sigaction(SIGINT, &sigact, NULL); /* Ctrl-C */
-    //sigaction(SIGTERM, &sigact, NULL); /* default "kill" command */
+    sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
+    sigact.sa_handler = sig_handler;
+    sigaction(SIGQUIT, &sigact, NULL); /* Ctrl-\ */
+    sigaction(SIGINT, &sigact, NULL); /* Ctrl-C */
+    sigaction(SIGTERM, &sigact, NULL); /* default "kill" command */
+#endif
 
     /* main loop task : statistics collection */
     while (!exit_sig && !quit_sig) {
@@ -1393,7 +1404,7 @@ int lora_pkt_fwd(void)
     }
 
     MSG("INFO: Exiting packet forwarder program\n");
-    exit(EXIT_SUCCESS);
+    pkt_fwd_exit(EXIT_SUCCESS);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1440,7 +1451,7 @@ void thread_up(void) {
     i = setsockopt(sock_up, SOL_SOCKET, SO_RCVTIMEO, (void *)&push_timeout_half, sizeof push_timeout_half);
     if (i != 0) {
         MSG("ERROR: [up] setsockopt returned %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit_thread(EXIT_FAILURE);
     }
 
     /* pre-fill the data buffer with fixed fields */
@@ -1457,7 +1468,7 @@ void thread_up(void) {
         pthread_mutex_unlock(&mx_concent);
         if (nb_pkt == LGW_HAL_ERROR) {
             MSG("ERROR: [up] failed packet fetch, exiting\n");
-            exit(EXIT_FAILURE);
+            pkt_fwd_exit_thread(EXIT_FAILURE);
         }
 
         /* check if there are status report to send */
@@ -1536,7 +1547,7 @@ void thread_up(void) {
                     MSG("WARNING: [up] received packet with unknown status %u (size %u, modulation %u, BW %u, DR %u, RSSI %.1f)\n", p->status, p->size, p->modulation, p->bandwidth, p->datarate, p->rssi);
                     pthread_mutex_unlock(&mx_meas_up);
                     continue; /* skip that packet */
-                    // exit(EXIT_FAILURE);
+                    // pkt_fwd_exit_thread(EXIT_FAILURE);
             }
             meas_up_pkt_fwd += 1;
             meas_up_payload_byte += p->size;
@@ -1558,7 +1569,7 @@ void thread_up(void) {
                 buff_index += j;
             } else {
                 MSG("ERROR: [up] snprintf failed line %u\n", (__LINE__ - 4));
-                exit(EXIT_FAILURE);
+                pkt_fwd_exit_thread(EXIT_FAILURE);
             }
 
             /* Packet RX time (GPS based), 37 useful chars */
@@ -1573,7 +1584,7 @@ void thread_up(void) {
                         buff_index += j;
                     } else {
                         MSG("ERROR: [up] snprintf failed line %u\n", (__LINE__ - 4));
-                        exit(EXIT_FAILURE);
+                        pkt_fwd_exit_thread(EXIT_FAILURE);
                     }
                 }
             }
@@ -1584,7 +1595,7 @@ void thread_up(void) {
                 buff_index += j;
             } else {
                 MSG("ERROR: [up] snprintf failed line %u\n", (__LINE__ - 4));
-                exit(EXIT_FAILURE);
+                pkt_fwd_exit_thread(EXIT_FAILURE);
             }
 
             /* Packet status, 9-10 useful chars */
@@ -1605,7 +1616,7 @@ void thread_up(void) {
                     MSG("ERROR: [up] received packet with unknown status\n");
                     memcpy((void *)(buff_up + buff_index), (void *)",\"stat\":?", 9);
                     buff_index += 9;
-                    exit(EXIT_FAILURE);
+                    pkt_fwd_exit_thread(EXIT_FAILURE);
             }
 
             /* Packet modulation, 13-14 useful chars */
@@ -1643,7 +1654,7 @@ void thread_up(void) {
                         MSG("ERROR: [up] lora packet with unknown datarate\n");
                         memcpy((void *)(buff_up + buff_index), (void *)",\"datr\":\"SF?", 12);
                         buff_index += 12;
-                        exit(EXIT_FAILURE);
+                        pkt_fwd_exit_thread(EXIT_FAILURE);
                 }
                 switch (p->bandwidth) {
                     case BW_125KHZ:
@@ -1662,7 +1673,7 @@ void thread_up(void) {
                         MSG("ERROR: [up] lora packet with unknown bandwidth\n");
                         memcpy((void *)(buff_up + buff_index), (void *)"BW?\"", 4);
                         buff_index += 4;
-                        exit(EXIT_FAILURE);
+                        pkt_fwd_exit_thread(EXIT_FAILURE);
                 }
 
                 /* Packet ECC coding rate, 11-13 useful chars */
@@ -1691,7 +1702,7 @@ void thread_up(void) {
                         MSG("ERROR: [up] lora packet with unknown coderate\n");
                         memcpy((void *)(buff_up + buff_index), (void *)",\"codr\":\"?\"", 11);
                         buff_index += 11;
-                        exit(EXIT_FAILURE);
+                        pkt_fwd_exit_thread(EXIT_FAILURE);
                 }
 
                 /* Lora SNR, 11-13 useful chars */
@@ -1700,7 +1711,7 @@ void thread_up(void) {
                     buff_index += j;
                 } else {
                     MSG("ERROR: [up] snprintf failed line %u\n", (__LINE__ - 4));
-                    exit(EXIT_FAILURE);
+                    pkt_fwd_exit_thread(EXIT_FAILURE);
                 }
             } else if (p->modulation == MOD_FSK) {
                 memcpy((void *)(buff_up + buff_index), (void *)",\"modu\":\"FSK\"", 13);
@@ -1712,11 +1723,11 @@ void thread_up(void) {
                     buff_index += j;
                 } else {
                     MSG("ERROR: [up] snprintf failed line %u\n", (__LINE__ - 4));
-                    exit(EXIT_FAILURE);
+                    pkt_fwd_exit_thread(EXIT_FAILURE);
                 }
             } else {
                 MSG("ERROR: [up] received packet with unknown modulation\n");
-                exit(EXIT_FAILURE);
+                pkt_fwd_exit_thread(EXIT_FAILURE);
             }
 
             /* Packet RSSI, payload size, 18-23 useful chars */
@@ -1725,7 +1736,7 @@ void thread_up(void) {
                 buff_index += j;
             } else {
                 MSG("ERROR: [up] snprintf failed line %u\n", (__LINE__ - 4));
-                exit(EXIT_FAILURE);
+                pkt_fwd_exit_thread(EXIT_FAILURE);
             }
 
             /* Packet base64-encoded payload, 14-350 useful chars */
@@ -1736,7 +1747,7 @@ void thread_up(void) {
                 buff_index += j;
             } else {
                 MSG("ERROR: [up] bin_to_b64 failed line %u\n", (__LINE__ - 5));
-                exit(EXIT_FAILURE);
+                pkt_fwd_exit_thread(EXIT_FAILURE);
             }
             buff_up[buff_index] = '"';
             ++buff_index;
@@ -1777,7 +1788,7 @@ void thread_up(void) {
                 buff_index += j;
             } else {
                 MSG("ERROR: [up] snprintf failed line %u\n", (__LINE__ - 5));
-                exit(EXIT_FAILURE);
+                pkt_fwd_exit_thread(EXIT_FAILURE);
             }
         }
 
@@ -1887,7 +1898,7 @@ void thread_down(void) {
     i = setsockopt(sock_down, SOL_SOCKET, SO_RCVTIMEO, (void *)&pull_timeout, sizeof pull_timeout);
     if (i != 0) {
         MSG("ERROR: [down] setsockopt returned %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
+        pkt_fwd_exit_thread(EXIT_FAILURE);
     }
 
     /* pre-fill the pull request buffer with fixed fields */
