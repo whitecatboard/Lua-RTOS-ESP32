@@ -35,7 +35,7 @@ index 9460cefa..5eba95b4 100644
 +    uint8_t i;
 +    uint8_t channel;
 +
-+    for(i=0;i < RMT_CHANNEL_MAX;i) {
++    for(i=0;i < RMT_CHANNEL_MAX;i++) {
 +        if(p_rmt_obj[i] == NULL) {
 +           channel = i;
 +           break;

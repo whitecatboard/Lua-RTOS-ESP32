@@ -39,63 +39,29 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS, DHT23 sensor (temperature & humidity)
+ * Lua RTOS, DHT sensors common functions
  *
  */
+
+#ifndef _SENSORS_DHTXX_H_
+#define _SENSORS_DHTXX_H_
 
 #include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
-#if CONFIG_LUA_RTOS_USE_SENSOR_DHT23
+#if CONFIG_LUA_RTOS_USE_SENSOR_DHT11 || CONFIG_LUA_RTOS_USE_SENSOR_DHT22 || CONFIG_LUA_RTOS_USE_SENSOR_DHT23
 
-#include "dhtxx.h"
-
-#include <time.h>
+#include <stdint.h>
 
 #include <sys/driver.h>
 
 #include <drivers/sensor.h>
 
-
-driver_error_t *dht23_acquire(sensor_instance_t *unit, sensor_value_t *values);
-
-// Sensor specification and registration
-static const sensor_t __attribute__((used,unused,section(".sensors"))) dht23_sensor = {
-	.id = "DHT23",
-	.interface = {
-		{.type = GPIO_INTERFACE},
-	},
-	.data = {
-		{.id = "temperature", .type = SENSOR_DATA_FLOAT},
-		{.id = "humidity"   , .type = SENSOR_DATA_FLOAT},
-	},
-	.setup = dhtxx_setup,
-	.acquire = dht23_acquire
-};
-
-driver_error_t *dht23_acquire(sensor_instance_t *unit, sensor_value_t *values) {
-	uint8_t data[5]; // dht11 returns 5 bytes of data in each transfer
-
-    driver_error_t *error = dhtxx_acquire(unit, 1, data);
-    if (error != NULL) {
-    		return error;
-    }
-
-    values[0].floatd.value = (float)(((uint16_t)data[2]) << 8 | (uint16_t)data[3]) / 10.0;
-
-	// Apply temperature sing
-	if (data[2] & 0b1000000) {
-		values[0].floatd.value = -1 * values[0].floatd.value;
-	}
-
-	values[1].floatd.value = (float)(((uint16_t)data[0]) << 8 | (uint16_t)data[1]) / 10.0;
-
-	// Next value can get in 2 seconds
-	gettimeofday(&unit->next, NULL);
-	unit->next.tv_sec += 2;
-
-	return NULL;
-}
+driver_error_t *dhtxx_setup(sensor_instance_t *unit);
+driver_error_t *dhtxx_acquire(sensor_instance_t *unit, uint8_t mdt, uint8_t *data);
+driver_error_t *dhtxx_unsetup(sensor_instance_t *unit);
 
 #endif
 #endif
+
+#endif /* _SENSORS_DHTXX_H_ */
