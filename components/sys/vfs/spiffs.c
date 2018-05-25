@@ -77,6 +77,7 @@ static ssize_t vfs_spiffs_read(int fd, void * dst, size_t size);
 static int vfs_spiffs_fstat(int fd, struct stat * st);
 static int vfs_spiffs_close(int fd);
 static off_t vfs_spiffs_lseek(int fd, off_t size, int mode);
+static int vfs_spiffs_access(const char *path, int amode);
 
 #if !defined(max)
 #define max(A,B) ( (A) > (B) ? (A):(B))
@@ -512,6 +513,21 @@ static int vfs_spiffs_stat(const char * path, struct stat * st) {
     return res;
 }
 
+static int vfs_spiffs_access(const char *path, int amode) {
+    struct stat s;
+
+    if (vfs_spiffs_stat(path, &s) < 0) {
+        return -1;
+    }
+
+    if (s.st_mode != S_IFREG) {
+        errno = EACCES;
+        return -1;
+    }
+
+    return 0;
+}
+
 static int vfs_spiffs_unlink(const char *path) {
     char npath[PATH_MAX + 1];
 
@@ -939,14 +955,26 @@ static int vfs_spiffs_fsync(int fd) {
 }
 
 void vfs_spiffs_register() {
-    esp_vfs_t vfs = { .flags = ESP_VFS_FLAG_DEFAULT, .write = &vfs_spiffs_write,
-            .open = &vfs_spiffs_open, .fstat = &vfs_spiffs_fstat, .close =
-                    &vfs_spiffs_close, .read = &vfs_spiffs_read, .lseek =
-                    &vfs_spiffs_lseek, .stat = &vfs_spiffs_stat, .link = NULL,
-            .unlink = &vfs_spiffs_unlink, .rename = &vfs_spiffs_rename, .mkdir =
-                    &vfs_spiffs_mkdir, .opendir = &vfs_spiffs_opendir,
-            .readdir = &vfs_spiffs_readdir, .closedir = &vfs_piffs_closedir,
-            .rmdir = &vfs_spiffs_rmdir, .fsync = &vfs_spiffs_fsync, };
+    esp_vfs_t vfs = {
+        .flags = ESP_VFS_FLAG_DEFAULT,
+        .write = &vfs_spiffs_write,
+        .open = &vfs_spiffs_open,
+        .fstat = &vfs_spiffs_fstat,
+        .close = &vfs_spiffs_close,
+        .read = &vfs_spiffs_read,
+        .lseek = &vfs_spiffs_lseek,
+        .stat = &vfs_spiffs_stat,
+        .link = NULL,
+        .unlink = &vfs_spiffs_unlink,
+        .rename = &vfs_spiffs_rename,
+        .mkdir = &vfs_spiffs_mkdir,
+        .opendir = &vfs_spiffs_opendir,
+        .readdir = &vfs_spiffs_readdir,
+        .closedir = &vfs_piffs_closedir,
+        .rmdir = &vfs_spiffs_rmdir,
+        .fsync = &vfs_spiffs_fsync,
+        .access = &vfs_spiffs_access,
+    };
 
     ESP_ERROR_CHECK(esp_vfs_register("/spiffs", &vfs, NULL));
 

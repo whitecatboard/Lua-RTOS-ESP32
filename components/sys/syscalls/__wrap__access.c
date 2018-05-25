@@ -39,28 +39,38 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS malloc wrapper
+ * Lua RTOS access wrapper
  *
  */
 
 #include "esp_attr.h"
 
-#include <stddef.h>
+#include <limits.h>
 #include <reent.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
 
-int __garbage_collector();
-extern int __real__malloc_r(struct _reent *r, size_t size);
+#include <sys/mount.h>
 
-int IRAM_ATTR __wrap__malloc_r(struct _reent *r, size_t size) {
+extern int __real_access(const char *path, int amode);
+
+int IRAM_ATTR __wrap_access(const char *path, int amode) {
+    char *ppath;
     int res;
 
-    if (!(res = __real__malloc_r(r, size))) {
-        // If there is not enough memory, try to execute the garbage collector
-        // and try again
-        if (__garbage_collector() == 0) {
-            res = __real__malloc_r(r, size);
-        }
+    if (!path || !*path) {
+        errno = ENOENT;
+        return -1;
     }
 
-    return res;
+    ppath = mount_resolve_to_physical(path);
+    if (ppath) {
+        res = __real_access(ppath, amode);
+        free(ppath);
+        return res;
+    } else {
+        return -1;
+    }
 }

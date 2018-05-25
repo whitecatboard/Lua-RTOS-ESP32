@@ -51,28 +51,28 @@
 #include <lua/src/lgc.h>
 
 int IRAM_ATTR __garbage_collector() {
-	if (xPortInIsrContext()) {
-		// We are in an interrupt, and we can't
-		// execute the garbage collector
-		return -1;
-	}
+    if (xPortInIsrContext()) {
+        // We are in an interrupt, and we can't
+        // execute the garbage collector
+        return -1;
+    }
 
-	// Get the thread's Lua state
-	lua_State *L = pvGetLuaState();
-	if (L) {
-		// Lua thread
-		// Execute the garbage collector 2 times, and
-		// wait 1 msec to get time to the idle task to
-		// free memory
-		luaC_fullgc(L, 0);
-		vTaskDelay(1 / portTICK_PERIOD_MS);
+    // Get the thread's Lua state
+    lua_State *L = pvGetLuaState();
+    if (L) {
+        // Lua thread
+        // Execute the garbage collector 2 times, and
+        // wait 1 msec to get time to the idle task to
+        // free memory
+        luaC_fullgc(L, 0);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
 
-		luaC_fullgc(L, 0);
-		vTaskDelay(1 / portTICK_PERIOD_MS);
-	} else {
-		// Not a Lua thread
-		return -1;
-	}
+        luaC_fullgc(L, 0);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    } else {
+        // Not a Lua thread
+        return -1;
+    }
 
-	return 0;
+    return 0;
 }

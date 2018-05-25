@@ -59,22 +59,22 @@
 DIR* __real_opendir(const char* name);
 
 DIR* __wrap_opendir(const char* name) {
-	char *ppath;
-	DIR *dir;
+    char *ppath;
+    DIR *dir;
 
-	if (!name || *name == 0x00) {
-		errno = ENOENT;
-		return (DIR*)NULL;
-	}
+    if (!name || *name == 0x00) {
+        errno = ENOENT;
+        return (DIR*)NULL;
+    }
 
-	ppath = mount_resolve_to_physical(name);
-	if (ppath) {
-		dir = __real_opendir(ppath);
+    ppath = mount_resolve_to_physical(name);
+    if (ppath) {
+        dir = __real_opendir(ppath);
 
-		free(ppath);
+        free(ppath);
 
-		return dir;
-	} else {
-		return (DIR*)NULL;
-	}
+        return dir;
+    } else {
+        return (DIR*)NULL;
+    }
 }

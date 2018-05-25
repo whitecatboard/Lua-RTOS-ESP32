@@ -57,22 +57,22 @@
 extern int __real_mkdir(const char* name, mode_t mode);
 
 int __wrap_mkdir(const char* name, mode_t mode) {
-	char *ppath;
-	int res;
+    char *ppath;
+    int res;
 
-	if (!name || !*name) {
-		errno = ENOENT;
-		return -1;
-	}
+    if (!name || !*name) {
+        errno = ENOENT;
+        return -1;
+    }
 
-	ppath = mount_resolve_to_physical(name);
-	if (ppath) {
-		res = __real_mkdir(ppath, mode);
+    ppath = mount_resolve_to_physical(name);
+    if (ppath) {
+        res = __real_mkdir(ppath, mode);
 
-		free(ppath);
+        free(ppath);
 
-		return res;
-	} else {
-		return -1;
-	}
+        return res;
+    } else {
+        return -1;
+    }
 }

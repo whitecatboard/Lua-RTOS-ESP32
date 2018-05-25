@@ -52,15 +52,15 @@ int __garbage_collector();
 extern int __real__realloc_r(struct _reent *r, void *ptr, size_t size);
 
 int IRAM_ATTR __wrap__realloc_r(struct _reent *r, void *ptr, size_t size) {
-	int res;
+    int res;
 
-	if (!(res = __real__realloc_r(r, ptr,size))) {
-		// If there is not enough memory, try to execute the garbage collector
-		// and try again
-		if (__garbage_collector() == 0) {
-			res = __real__realloc_r(r, ptr, size);
-		}
-	}
+    if (!(res = __real__realloc_r(r, ptr,size))) {
+        // If there is not enough memory, try to execute the garbage collector
+        // and try again
+        if (__garbage_collector() == 0) {
+            res = __real__realloc_r(r, ptr, size);
+        }
+    }
 
-	return res;
+    return res;
 }
