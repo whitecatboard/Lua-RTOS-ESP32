@@ -72,7 +72,24 @@ static int lspi_eth_setup(lua_State* L) {
 static int lspi_eth_start(lua_State* L) {
 	driver_error_t *error;
 
-	if ((error = spi_eth_start())) {
+    // Determine if the interface start must be synchronous
+    // or asynchronous
+    uint8_t async = 1;
+
+    if (lua_gettop(L) >= 1) {
+        if (lua_gettop(L) == 1) {
+            luaL_checktype(L, 1, LUA_TBOOLEAN);
+            if (lua_toboolean(L, 1)) {
+                async = 1;
+            } else {
+                async = 0;
+            }
+        } else {
+            return luaL_exception(L, SPI_ERR_INVALID_ARGUMENT);
+        }
+    }
+
+	if ((error = spi_eth_start(async))) {
     	return luaL_driver_error(L, error);
 	}
 

@@ -63,7 +63,7 @@
 
 // WIFI errors
 #define WIFI_ERR_CANT_INIT              (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  0)
-#define WIFI_ERR_CANT_CONNECT			(DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  1)
+#define WIFI_ERR_CANT_CONNECT           (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  1)
 #define WIFI_ERR_WIFI_FAIL              (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  2)
 #define WIFI_ERR_WIFI_NO_MEM            (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  3)
 #define WIFI_ERR_WIFI_NOT_INIT          (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  4)
@@ -78,16 +78,16 @@
 #define WIFI_ERR_WIFI_PASSWORD          (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  13)
 #define WIFI_ERR_WIFI_TIMEOUT           (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  14)
 #define WIFI_ERR_WAKE_FAIL              (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  15)
-#define WIFI_ERR_INVALID_ARGUMENT		(DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  16)
-#define WIFI_ERR_NOT_SUPPORT			(DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  17)
-#define WIFI_ERR_NOT_STOPPED			(DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  18)
+#define WIFI_ERR_INVALID_ARGUMENT       (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  16)
+#define WIFI_ERR_NOT_SUPPORT            (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  17)
+#define WIFI_ERR_NOT_STOPPED            (DRIVER_EXCEPTION_BASE(WIFI_DRIVER_ID) |  18)
 
 extern const int wifi_errors;
 extern const int wifi_error_map;
 
 driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list);
 driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1, uint32_t dns2, int powersave, int channel, int hidden);
-driver_error_t *wifi_start();
+driver_error_t *wifi_start(uint8_t async);
 driver_error_t *wifi_stop();
 driver_error_t *wifi_stat(ifconfig_t *info);
 driver_error_t *wifi_get_mac(uint8_t mac[6]);

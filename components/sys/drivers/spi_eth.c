@@ -73,6 +73,7 @@ DRIVER_REGISTER_BEGIN(SPI_ETH,spi_eth,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, NotSetup, "ethernet is not setup", SPI_ETH_ERR_NOT_INIT);
 	DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, NotStarted, "ethernet is not started", SPI_ETH_ERR_NOT_START);
 	DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, CannotConnect, "can't connect check cable", SPI_ETH_ERR_CANT_CONNECT);
+    DRIVER_REGISTER_ERROR(SPI_ETH, spi_eth, InvalidArg, "invalid argument", SPI_ERR_INVALID_ARGUMENT);
 DRIVER_REGISTER_END(SPI_ETH,spi_eth,0,NULL,NULL);
 
 extern EventGroupHandle_t netEvent;
@@ -122,8 +123,14 @@ driver_error_t *spi_eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t 
 	return NULL;
 }
 
-driver_error_t *spi_eth_start() {
-	if (!status_get(STATUS_SPI_ETH_SETUP)) {
+driver_error_t *spi_eth_start(uint8_t async) {
+    if (!async) {
+        status_set(STATUS_ETH_SYNC);
+    } else {
+        status_clear(STATUS_ETH_SYNC);
+    }
+
+    if (!status_get(STATUS_SPI_ETH_SETUP)) {
 		return driver_error(SPI_ETH_DRIVER, SPI_ETH_ERR_NOT_INIT, NULL);
 	}
 

@@ -48,18 +48,17 @@
 uint32_t LuaRTOS_status[] = {0};
 
 void IRAM_ATTR status_set(uint16_t flag) {
-	LuaRTOS_status[(flag >> 8)] |= (1 << (flag & 0x00ff));
+    LuaRTOS_status[(flag >> 8)] |= (1 << (flag & 0x00ff));
 }
 
 void IRAM_ATTR status_clear(uint16_t flag) {
-	LuaRTOS_status[(flag >> 8)] &= ~(1 << (flag & 0x00ff));
+    LuaRTOS_status[(flag >> 8)] &= ~(1 << (flag & 0x00ff));
 }
 
 int IRAM_ATTR status_get(uint16_t flag) {
-	int value;
+    int value;
 
-	value = (LuaRTOS_status[(flag >> 8)] & (1 << (flag & 0x00ff)));
+    value = (LuaRTOS_status[(flag >> 8)] & (1 << (flag & 0x00ff)));
 
-	return value;
+    return value;
 }
-
