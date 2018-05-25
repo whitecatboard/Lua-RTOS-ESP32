@@ -451,8 +451,10 @@ driver_error_t *i2c_detach(int deviceid) {
     }
 
     if (no_devices) {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
         // Unlock resources
         i2c_unlock_resources(unit);
+#endif
 
         i2c_driver_delete(unit);
 
