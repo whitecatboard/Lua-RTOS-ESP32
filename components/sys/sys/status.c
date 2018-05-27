@@ -43,22 +43,44 @@
  *
  */
 
+#include <sys/mutex.h>
 #include <sys/status.h>
 
-uint32_t LuaRTOS_status[] = {0};
+static struct mtx mtx;               // Mutex for protect the status
+static uint32_t LuaRTOS_status;      // Current status
+static uint32_t LuaRTOS_prev_status; // Previous status
 
-void IRAM_ATTR status_set(uint16_t flag) {
-    LuaRTOS_status[(flag >> 8)] |= (1 << (flag & 0x00ff));
+void _status_init() {
+    mtx_init(&mtx, NULL, NULL, 0);
+    LuaRTOS_status = 0;
 }
 
-void IRAM_ATTR status_clear(uint16_t flag) {
-    LuaRTOS_status[(flag >> 8)] &= ~(1 << (flag & 0x00ff));
+void IRAM_ATTR status_set(uint32_t mask) {
+    mtx_lock(&mtx);
+    LuaRTOS_prev_status = LuaRTOS_status;
+    LuaRTOS_status |= mask;
+    mtx_unlock(&mtx);
 }
 
-int IRAM_ATTR status_get(uint16_t flag) {
-    int value;
+void IRAM_ATTR status_clear(uint32_t mask) {
+    mtx_lock(&mtx);
+    LuaRTOS_prev_status = LuaRTOS_status;
+    LuaRTOS_status &= ~mask;
+    mtx_unlock(&mtx);
+}
 
-    value = (LuaRTOS_status[(flag >> 8)] & (1 << (flag & 0x00ff)));
+int IRAM_ATTR status_get(uint32_t mask) {
+    mtx_lock(&mtx);
+    int res = ((LuaRTOS_status & mask) == mask);
+    mtx_unlock(&mtx);
 
-    return value;
+    return res;
+}
+
+int IRAM_ATTR status_get_prev(uint32_t mask) {
+    mtx_lock(&mtx);
+    int res = ((LuaRTOS_prev_status & mask) == mask);
+    mtx_unlock(&mtx);
+
+    return res;
 }

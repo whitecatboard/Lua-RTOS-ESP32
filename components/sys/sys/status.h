@@ -60,36 +60,35 @@
 	(status_get(STATUS_ETH_CONNECTED) && status_get(STATUS_ETH_HAS_IP))\
 )
 
-#define STATUS_SYSCALLS_INITED         0x0000
-#define STATUS_LUA_RUNNING             0x0001
-#define STATUS_LUA_INTERPRETER         0x0002
-#define STATUS_LUA_ABORT_BOOT_SCRIPTS  0x0003
-#define STATUS_LUA_HISTORY             0x0004
-#define STATUS_LUA_SHELL               0x0005
-#define STATUS_NEED_RTC_SLOW_MEM       0x0006
-#define STATUS_ISR_SERVICE_INSTALLED   0x0007
-#define STATUS_TCPIP_INITED            0x0008
-#define STATUS_WIFI_INITED             0x0009
-#define STATUS_WIFI_SETUP              0x000a
-#define STATUS_WIFI_SYNC               0x000b
-#define STATUS_WIFI_STARTED            0x000c
-#define STATUS_WIFI_CONNECTED          0x000d
-#define STATUS_WIFI_HAS_IP             0x000e
-#define STATUS_SPI_ETH_SETUP           0x000f
-#define STATUS_SPI_ETH_SYNC            0x0010
-#define STATUS_SPI_ETH_STARTED         0x0011
-#define STATUS_SPI_ETH_CONNECTED       0x0012
-#define STATUS_SPI_ETH_HAS_IP          0x0013
-#define STATUS_ETH_SETUP               0x0014
-#define STATUS_ETH_SYNC                0x0015
-#define STATUS_ETH_STARTED             0x0016
-#define STATUS_ETH_CONNECTED           0x0017
-#define STATUS_ETH_HAS_IP              0x0018
+#define STATUS_SYSCALLS_INITED         (1 <<  0)
+#define STATUS_LUA_RUNNING             (1 <<  1)
+#define STATUS_LUA_INTERPRETER         (1 <<  2)
+#define STATUS_LUA_ABORT_BOOT_SCRIPTS  (1 <<  3)
+#define STATUS_LUA_HISTORY             (1 <<  4)
+#define STATUS_LUA_SHELL               (1 <<  5)
+#define STATUS_NEED_RTC_SLOW_MEM       (1 <<  6)
+#define STATUS_ISR_SERVICE_INSTALLED   (1 <<  7)
+#define STATUS_TCPIP_INITED            (1 <<  8)
+#define STATUS_WIFI_INITED             (1 <<  9)
+#define STATUS_WIFI_SETUP              (1 << 10)
+#define STATUS_WIFI_SYNC               (1 << 11)
+#define STATUS_WIFI_STARTED            (1 << 12)
+#define STATUS_WIFI_CONNECTED          (1 << 13)
+#define STATUS_WIFI_HAS_IP             (1 << 14)
+#define STATUS_SPI_ETH_SETUP           (1 << 15)
+#define STATUS_SPI_ETH_SYNC            (1 << 16)
+#define STATUS_SPI_ETH_STARTED         (1 << 17)
+#define STATUS_SPI_ETH_CONNECTED       (1 << 18)
+#define STATUS_SPI_ETH_HAS_IP          (1 << 19)
+#define STATUS_ETH_SETUP               (1 << 20)
+#define STATUS_ETH_SYNC                (1 << 21)
+#define STATUS_ETH_STARTED             (1 << 22)
+#define STATUS_ETH_CONNECTED           (1 << 23)
+#define STATUS_ETH_HAS_IP              (1 << 24)
 
-extern uint32_t LuaRTOS_status[];
-
-void IRAM_ATTR status_set(uint16_t flag);
-void IRAM_ATTR status_clear(uint16_t flag);
-int  IRAM_ATTR status_get(uint16_t flag);
+void IRAM_ATTR status_set(uint32_t mask);
+void IRAM_ATTR status_clear(uint32_t mask);
+int  IRAM_ATTR status_get(uint32_t mask);
+int  IRAM_ATTR status_get_prev(uint32_t mask);
 
 #endif /* !_SYS_STATUS_H_ */

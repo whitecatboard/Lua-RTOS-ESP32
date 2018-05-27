@@ -127,8 +127,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
             break;
 
         case SYSTEM_EVENT_STA_STOP: // ESP32 station stop
-        		status_clear(STATUS_WIFI_STARTED);
-        		status_clear(STATUS_WIFI_CONNECTED);
+        		status_clear(STATUS_WIFI_STARTED | STATUS_WIFI_CONNECTED);
             break;
 
         case SYSTEM_EVENT_STA_CONNECTED: // ESP32 station connected to AP
@@ -190,8 +189,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
             break;
 
         case SYSTEM_EVENT_AP_STOP:                  /**< ESP32 soft-AP stop */
-            status_clear(STATUS_WIFI_CONNECTED);
-            status_clear(STATUS_WIFI_INITED);
+            status_clear(STATUS_WIFI_CONNECTED | STATUS_WIFI_INITED);
             break;
 
         case SYSTEM_EVENT_AP_STACONNECTED:          /**< a station connected to ESP32 soft-AP */
@@ -215,8 +213,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
             status_set(STATUS_ETH_STARTED);
             break;
         case SYSTEM_EVENT_ETH_STOP: // ESP32 ethernet stop
-            status_clear(STATUS_ETH_STARTED);
-            status_clear(STATUS_ETH_CONNECTED);
+            status_clear(STATUS_ETH_STARTED | STATUS_ETH_CONNECTED);
             break;
 
         case SYSTEM_EVENT_ETH_CONNECTED: // ESP32 ethernet phy link up
@@ -225,8 +222,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
             break;
 
         case SYSTEM_EVENT_ETH_DISCONNECTED: // ESP32 ethernet phy link down
-            status_clear(STATUS_ETH_CONNECTED);
-            status_clear(STATUS_ETH_HAS_IP);
+            status_clear(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP);
 
             if (status_get(STATUS_ETH_SYNC)) {
                 xEventGroupSetBits(netEvent, evETH_CANT_CONNECT);
@@ -248,8 +244,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
             break;
 
         case SYSTEM_EVENT_SPI_ETH_STOP: // ESP32 spi ethernet stop
-            status_clear(STATUS_SPI_ETH_STARTED);
-            status_clear(STATUS_SPI_ETH_CONNECTED);
+            status_clear(STATUS_SPI_ETH_STARTED | STATUS_SPI_ETH_CONNECTED);
             break;
 
         case SYSTEM_EVENT_SPI_ETH_CONNECTED: // ESP32 spi ethernet phy link up
@@ -258,8 +253,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
             break;
 
         case SYSTEM_EVENT_SPI_ETH_DISCONNECTED: // ESP32 spi ethernet phy link down
-            status_clear(STATUS_SPI_ETH_CONNECTED);
-            status_clear(STATUS_SPI_ETH_HAS_IP);
+            status_clear(STATUS_SPI_ETH_CONNECTED | STATUS_SPI_ETH_HAS_IP);
             if (status_get(STATUS_SPI_ETH_SYNC)) {
                 xEventGroupSetBits(netEvent, evETH_CANT_CONNECT);
             }

@@ -51,6 +51,7 @@
 #include "lauxlib.h"
 #include "net.h"
 #include "error.h"
+#include "sys.h"
 
 #include "modules.h"
 
@@ -84,6 +85,80 @@ typedef union {
     uint8_t ipbytes[4];
     uint16_t ipwords[2];
 } net_ip;
+
+static lua_callback_t *callback;
+
+static void callback_func(system_event_t *event) {
+    uint8_t for_us = 0; // The event is for us?
+    char interface[3];
+    char type[5];
+
+    switch (event->event_id) {
+        case SYSTEM_EVENT_STA_START:
+        case SYSTEM_EVENT_STA_STOP:
+        case SYSTEM_EVENT_STA_CONNECTED:
+        case SYSTEM_EVENT_STA_DISCONNECTED:
+        case SYSTEM_EVENT_STA_GOT_IP:
+        case SYSTEM_EVENT_STA_LOST_IP:
+        case SYSTEM_EVENT_STA_AUTHMODE_CHANGE:
+            if (!status_get_prev(STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP) && status_get(STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP)) {
+                for_us = 1;
+                strcpy(interface,"wf");
+                strcpy(type,"up");
+            } else if (status_get_prev(STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP) && !status_get(STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP)) {
+                for_us = 1;
+                strcpy(interface,"wf");
+                strcpy(type,"down");
+            }
+            break;
+
+#if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
+        case SYSTEM_EVENT_ETH_START:
+        case SYSTEM_EVENT_ETH_STOP:
+        case SYSTEM_EVENT_ETH_CONNECTED:
+        case SYSTEM_EVENT_ETH_DISCONNECTED:
+        case SYSTEM_EVENT_ETH_GOT_IP:
+#endif
+#if CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
+        case SYSTEM_EVENT_SPI_ETH_START:
+        case SYSTEM_EVENT_SPI_ETH_STOP:
+        case SYSTEM_EVENT_SPI_ETH_CONNECTED:
+        case SYSTEM_EVENT_SPI_ETH_DISCONNECTED:
+        case SYSTEM_EVENT_SPI_ETH_GOT_IP:
+#endif
+#if (CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII || CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI)
+            if (!status_get_prev(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP) && status_get(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP)) {
+                for_us = 1;
+                strcpy(interface,"en");
+                strcpy(type,"up");
+            } else if (status_get_prev(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP) && !status_get(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP)) {
+                for_us = 1;
+                strcpy(interface,"en");
+                strcpy(type,"down");
+            }
+            break;
+#endif
+        default:
+            for_us = 0;
+            break;
+    }
+
+    if (for_us) {
+        lua_State *state = luaS_callback_state(callback);
+
+        lua_createtable(state, 0, 0);
+
+        lua_pushstring(state, "interface");
+        lua_pushstring(state, interface);
+        lua_settable(state, -3);
+
+        lua_pushstring(state, "type");
+        lua_pushstring(state, type);
+        lua_settable(state, -3);
+
+        luaS_callback_call(callback, 1);
+    }
+}
 
 static int lnet_lookup(lua_State* L) {
     driver_error_t *error;
@@ -275,6 +350,21 @@ static int lnet_ota(lua_State *L) {
     return 0;
 }
 
+static int lnet_callback(lua_State *L) {
+    driver_error_t *error;
+
+    callback = luaS_callback_create(L, 1);
+    if (callback == NULL) {
+        return luaL_exception(L, NET_ERR_NOT_ENOUGH_MEMORY);
+    }
+
+    if ((error = net_event_register_callback(callback_func))) {
+        return luaL_driver_error(L, error);
+    }
+
+    return 0;
+}
+
 static const LUA_REG_TYPE service_map[] = {
     { LSTRKEY( "sntp" ), LROVAL ( sntp_map ) },
 #if CONFIG_LUA_RTOS_USE_HTTP_SERVER
@@ -303,6 +393,7 @@ static const LUA_REG_TYPE net_map[] = {
     { LSTRKEY( "unpackip" ),  LFUNCVAL ( lnet_unpackip ) },
     { LSTRKEY( "ping" ),      LFUNCVAL ( lnet_ping ) },
     { LSTRKEY( "ota" ),       LFUNCVAL ( lnet_ota ) },
+    { LSTRKEY( "callback" ),  LFUNCVAL ( lnet_callback ) },
 
 #if CONFIG_LUA_RTOS_LUA_USE_SCP_NET
     { LSTRKEY( "scp" ), LROVAL ( scp_map ) },
