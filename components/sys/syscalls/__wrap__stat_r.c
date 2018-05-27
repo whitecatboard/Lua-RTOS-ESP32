@@ -56,7 +56,7 @@
 
 extern int __real__stat_r(struct _reent *r, const char *path, int flags, int mode);
 
-int IRAM_ATTR __wrap__stat_r(struct _reent *r, const char *path, int flags, int mode) {
+int __wrap__stat_r(struct _reent *r, const char *path, int flags, int mode) {
     char *ppath;
     int res;
 

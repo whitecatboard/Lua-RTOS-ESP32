@@ -47,8 +47,6 @@
 
 #if CONFIG_LUA_RTOS_LUA_USE_GDISPLAY
 
-#include "esp_attr.h"
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -88,7 +86,7 @@ static int buff_y1 = 0;
 // Pixels in buffer
 static int buff_pixels  = 0;
 
-void IRAM_ATTR gdisplay_ll_command(uint8_t command) {
+void gdisplay_ll_command(uint8_t command) {
 	gpio_ll_pin_clr(CONFIG_LUA_RTOS_GDISPLAY_CMD);
 	spi_ll_select(caps.device);
 	spi_ll_transfer(caps.device, command, NULL);
@@ -267,7 +265,7 @@ void gdisplay_ll_update(int x0, int y0, int x1, int y1, uint8_t *buffer) {
 	gdisplay_ll_invalidate_buffer();
 }
 
-void IRAM_ATTR gdisplay_ll_set_pixel(int x, int y, uint32_t color, uint8_t *buffer, int buffw, int buffh) {
+void gdisplay_ll_set_pixel(int x, int y, uint32_t color, uint8_t *buffer, int buffw, int buffh) {
 	// Take care about endianness
 	uint32_t wd;
 

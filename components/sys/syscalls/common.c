@@ -50,7 +50,7 @@
 
 #include <lua/src/lgc.h>
 
-int IRAM_ATTR __garbage_collector() {
+int __garbage_collector() {
     if (xPortInIsrContext()) {
         // We are in an interrupt, and we can't
         // execute the garbage collector

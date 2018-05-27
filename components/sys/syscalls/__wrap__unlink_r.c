@@ -56,7 +56,7 @@
 
 extern int __real__unlink_r(struct _reent *r, const char *path);
 
-int IRAM_ATTR __wrap__unlink_r(struct _reent *r, const char *path) {
+int __wrap__unlink_r(struct _reent *r, const char *path) {
     char *ppath;
     int res;
 

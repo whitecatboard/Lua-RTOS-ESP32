@@ -56,7 +56,7 @@
 
 extern int __real__rename_r(struct _reent *r, const char *src, const char *dst);
 
-int IRAM_ATTR __wrap__rename_r(struct _reent *r, const char *src, const char *dst) {
+int __wrap__rename_r(struct _reent *r, const char *src, const char *dst) {
     char *ppath_src;
     char *ppath_dst;
     int res;

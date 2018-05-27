@@ -57,7 +57,7 @@
 extern int __real__open_r(struct _reent *r, const char *path, int flags, int mode);
 extern int __real_open(const char *path, int flags, int mode);
 
-int IRAM_ATTR __wrap__open_r(struct _reent *r, const char *path, int flags, int mode) {
+int __wrap__open_r(struct _reent *r, const char *path, int flags, int mode) {
     char *ppath;
     int res;
 
@@ -76,7 +76,7 @@ int IRAM_ATTR __wrap__open_r(struct _reent *r, const char *path, int flags, int 
     }
 }
 
-int IRAM_ATTR __wrap_open(const char *path, int flags, int mode) {
+int __wrap_open(const char *path, int flags, int mode) {
     char *ppath;
     int res;
 

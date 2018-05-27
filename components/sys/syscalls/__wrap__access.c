@@ -43,8 +43,6 @@
  *
  */
 
-#include "esp_attr.h"
-
 #include <limits.h>
 #include <reent.h>
 #include <stdio.h>
@@ -56,7 +54,7 @@
 
 extern int __real_access(const char *path, int amode);
 
-int IRAM_ATTR __wrap_access(const char *path, int amode) {
+int __wrap_access(const char *path, int amode) {
     char *ppath;
     int res;
 
