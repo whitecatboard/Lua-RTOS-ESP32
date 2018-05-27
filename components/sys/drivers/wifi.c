@@ -410,6 +410,8 @@ driver_error_t *wifi_start(uint8_t async) {
                     esp_wifi_stop();
                     return driver_error(WIFI_DRIVER, WIFI_ERR_CANT_CONNECT, NULL);
                 }
+            } else {
+                status_set(STATUS_WIFI_STARTED);
             }
         }
     }

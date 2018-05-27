@@ -121,13 +121,12 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
         // STA events
         case SYSTEM_EVENT_STA_START: // ESP32 station start
-        		status_set(STATUS_WIFI_STARTED);
         		status_clear(STATUS_WIFI_CONNECTED);
         		esp_wifi_connect();
             break;
 
         case SYSTEM_EVENT_STA_STOP: // ESP32 station stop
-        		status_clear(STATUS_WIFI_STARTED | STATUS_WIFI_CONNECTED);
+        		status_clear(STATUS_WIFI_CONNECTED);
             break;
 
         case SYSTEM_EVENT_STA_CONNECTED: // ESP32 station connected to AP
@@ -142,11 +141,13 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 				retries = 0;
 			} else {
 	            status_clear(STATUS_WIFI_CONNECTED);
-				if (status_get(STATUS_WIFI_SYNC)) {
-					retries++;
-				}
-				delay(200);
-				esp_wifi_connect();
+	            if (status_get(STATUS_WIFI_STARTED)) {
+	                if (status_get(STATUS_WIFI_SYNC)) {
+	                    retries++;
+	                }
+	                delay(200);
+	                esp_wifi_connect();
+	            }
 			}
             break;
 
@@ -184,7 +185,6 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
             break;
 
         case SYSTEM_EVENT_AP_START:                 /**< ESP32 soft-AP start */
-        		status_set(STATUS_WIFI_STARTED);
             tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_AP);
             break;
 
