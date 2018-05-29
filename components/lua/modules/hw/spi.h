@@ -51,7 +51,9 @@
 #include <drivers/cpu.h>
 
 typedef struct {
-	int spi_device;
+	int spi_device; // SPI device
+	uint8_t  *buff; // Data buffer
+	uint32_t len;   // Data buffer length
 } spi_userdata;
 
 #ifdef CPU_SPI0

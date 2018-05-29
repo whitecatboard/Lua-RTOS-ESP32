@@ -94,14 +94,14 @@
 // SPI errors
 #define SPI_ERR_INVALID_MODE             (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  0)
 #define SPI_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  1)
-#define SPI_ERR_SLAVE_NOT_ALLOWED          (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  2)
-#define SPI_ERR_NOT_ENOUGH_MEMORY          (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  3)
-#define SPI_ERR_PIN_NOT_ALLOWED             (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  4)
+#define SPI_ERR_SLAVE_NOT_ALLOWED        (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  2)
+#define SPI_ERR_NOT_ENOUGH_MEMORY        (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  3)
+#define SPI_ERR_PIN_NOT_ALLOWED          (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  4)
 #define SPI_ERR_NO_MORE_DEVICES_ALLOWED  (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  5)
-#define SPI_ERR_INVALID_DEVICE              (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  6)
-#define SPI_ERR_DEVICE_NOT_SETUP          (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  7)
-#define SPI_ERR_DEVICE_IS_NOT_SELECTED      (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  8)
-#define SPI_ERR_CANNOT_CHANGE_PINMAP      (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  9)
+#define SPI_ERR_INVALID_DEVICE           (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  6)
+#define SPI_ERR_DEVICE_NOT_SETUP         (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  7)
+#define SPI_ERR_DEVICE_IS_NOT_SELECTED   (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  8)
+#define SPI_ERR_CANNOT_CHANGE_PINMAP     (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  9)
 
 extern const int spi_errors;
 extern const int spi_error_map;
@@ -110,16 +110,18 @@ extern const int spi_error_map;
 #define SPI_NO_DMA_SETUP (1 << 1)
 
 // Flags
-#define SPI_FLAG_WRITE  (1 << 0)
-#define SPI_FLAG_READ   (1 << 1)
-#define SPI_FLAG_NO_DMA (1 << 2)
-#define SPI_FLAG_3WIRE  (1 << 3)
+#define SPI_FLAG_WRITE   (1 << 0)
+#define SPI_FLAG_READ    (1 << 1)
+#define SPI_FLAG_NO_DMA  (1 << 2)
+#define SPI_FLAG_CS_AUTO (1 << 3)
+#define SPI_FLAG_3WIRE   (1 << 4)
 
 typedef struct {
     uint8_t setup;
     int8_t cs;
     uint8_t mode;
     uint8_t dma;
+    uint8_t flags;
     uint32_t regs[14];
     spi_device_handle_t h;
 } spi_device_t;
@@ -140,6 +142,8 @@ typedef struct {
 } spi_bus_t;
 
 spi_bus_t *get_spi_info();
+
+#define SPI_MAX_SIZE (4096 - 4)
 
 /**
  * @brief Select SPI device for start a transaction over the SPI bus to the device. This function is thread safe.
@@ -348,8 +352,7 @@ driver_error_t *spi_pin_map(int unit, int miso, int mosi, int clk);
  *          SPI_ERR_PIN_NOT_ALLOWED
  *          SPI_ERR_NO_MORE_DEVICES_ALLOWED
  */
-driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode,
-        uint32_t speed, uint8_t flags, int *deviceid);
+driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid);
 
 driver_error_t *spi_unsetup(int deviceid);
 
@@ -507,8 +510,7 @@ driver_error_t *spi_bulk_rw(int deviceid, uint32_t nbytes, uint8_t *data);
  *          SPI_ERR_INVALID_DEVICE
  *          SPI_ERR_DEVICE_IS_NOT_SELECTED
  */
-driver_error_t *spi_bulk_write16(int deviceid, uint32_t nelements,
-        uint16_t *data);
+driver_error_t *spi_bulk_write16(int deviceid, uint32_t nelements, uint16_t *data);
 
 /**
  * @brief Read a chunk of 16-bit data from the device. Device must be selected
@@ -526,8 +528,7 @@ driver_error_t *spi_bulk_write16(int deviceid, uint32_t nelements,
  *          SPI_ERR_INVALID_DEVICE
  *          SPI_ERR_DEVICE_IS_NOT_SELECTED
  */
-driver_error_t *spi_bulk_read16(int deviceid, uint32_t nelements,
-        uint16_t *data);
+driver_error_t *spi_bulk_read16(int deviceid, uint32_t nelements, uint16_t *data);
 
 /**
  * @brief Transfer and read a chunk 16-bit data to / from the device. Device must be selected
@@ -565,8 +566,7 @@ driver_error_t *spi_bulk_rw16(int deviceid, uint32_t nelements, uint16_t *data);
  *          SPI_ERR_INVALID_DEVICE
  *          SPI_ERR_DEVICE_IS_NOT_SELECTED
  */
-driver_error_t *spi_bulk_write32(int deviceid, uint32_t nelements,
-        uint32_t *data);
+driver_error_t *spi_bulk_write32(int deviceid, uint32_t nelements, uint32_t *data);
 
 /**
  * @brief Read a chunk of 32-bit data from the device. Device must be selected
@@ -584,8 +584,7 @@ driver_error_t *spi_bulk_write32(int deviceid, uint32_t nelements,
  *          SPI_ERR_INVALID_DEVICE
  *          SPI_ERR_DEVICE_IS_NOT_SELECTED
  */
-driver_error_t *spi_bulk_read32(int deviceid, uint32_t nelements,
-        uint32_t *data);
+driver_error_t *spi_bulk_read32(int deviceid, uint32_t nelements, uint32_t *data);
 
 /**
  * @brief Transfer and read a chunk 32-bit data to / from the device. Device must be selected
