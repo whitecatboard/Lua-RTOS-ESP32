@@ -69,7 +69,10 @@
 #include <sys/syslog.h>
 #include <sys/mount.h>
 
+#include <sys/drivers/net.h>
+
 #define MQTT_MAX_RECONNECT_RETRIES 10
+#define MQTT_CONNECT_TIMEOUT 10
 
 void MQTTClient_init();
 
@@ -367,7 +370,6 @@ static int lmqtt_connected(lua_State* L) {
 
 static int lmqtt_connect(lua_State* L) {
     int rc;
-    int retries = 0;
     const char *user;
     const char *password;
     mqtt_userdata *mqtt = NULL;
@@ -384,7 +386,7 @@ static int lmqtt_connect(lua_State* L) {
     bcopy(&ssl_opts, &mqtt->ssl_opts, sizeof(MQTTClient_SSLOptions));
 
     MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
-    conn_opts.connectTimeout = 20;
+    conn_opts.connectTimeout = MQTT_CONNECT_TIMEOUT;
     conn_opts.keepAliveInterval = 60;
     conn_opts.reliable = 0;
     conn_opts.cleansession = 0;
@@ -393,13 +395,10 @@ static int lmqtt_connect(lua_State* L) {
     conn_opts.ssl = &mqtt->ssl_opts;
     bcopy(&conn_opts, &mqtt->conn_opts, sizeof(MQTTClient_connectOptions));
 
-    retry: rc = MQTTClient_connect(mqtt->client, &mqtt->conn_opts);
-    if (rc < 0) {
-        if (retries < 2) {
-            retries++;
-            goto retry;
-        }
+    wait_for_network(MQTT_CONNECT_TIMEOUT);
 
+    rc = MQTTClient_connect(mqtt->client, &mqtt->conn_opts);
+    if (rc < 0) {
         return luaL_exception(L, LUA_MQTT_ERR_CANT_CONNECT);
     }
 
@@ -420,12 +419,14 @@ static int lmqtt_subscribe(lua_State* L) {
     qos = luaL_checkinteger(L, 3);
 
     if (qos > 0 && mqtt->persistence == MQTTCLIENT_PERSISTENCE_NONE) {
-        return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_PUBLISH,
+        return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_SUBSCRIBE,
                 "enable persistence for a qos > 0");
     }
 
     // Add callback
     add_subs_callback(L, 4, mqtt, topic);
+
+    wait_for_network(MQTT_CONNECT_TIMEOUT);
 
     rc = MQTTClient_subscribe(mqtt->client, topic, qos);
     if (rc == 0) {
@@ -455,6 +456,8 @@ static int lmqtt_publish(lua_State* L) {
         return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_PUBLISH,
                 "enable persistence for a qos > 0");
     }
+
+    wait_for_network(MQTT_CONNECT_TIMEOUT);
 
     rc = MQTTClient_publish(mqtt->client, topic, payload_len, payload, qos, 0, NULL);
 

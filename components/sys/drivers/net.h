@@ -173,6 +173,20 @@ driver_error_t *net_event_register_callback(net_event_register_callback_t func);
  */
 driver_error_t *net_event_unregister_callback(net_event_register_callback_t func);
 
+/**
+ * @brief Wait for network availability.
+ *
+ * @param timeout Number of seconds to wait for network availability.
+ *
+ * @return
+ *     - 1: network is available
+ *     - 0: network isn' available, or timeout
+ *
+ *       NET_ERR_NO_MORE_CALLBACKS
+ */
+int wait_for_network(uint32_t timeout);
+
+
 driver_error_t *net_ping(const char *name, int count, int interval, int size, int timeout);
 
 driver_error_t *net_reconnect();

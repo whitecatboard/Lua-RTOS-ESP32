@@ -153,9 +153,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
         case SYSTEM_EVENT_STA_GOT_IP: // ESP32 station got IP from connected AP
         		status_set(STATUS_WIFI_HAS_IP);
-            if (status_get(STATUS_WIFI_SYNC)) {
-                xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
-            }
+            xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
             break;
 
         case SYSTEM_EVENT_STA_LOST_IP: // ESP32 station lost IP and the IP is reset to 0
@@ -202,9 +200,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
             break;
 
         case SYSTEM_EVENT_AP_STA_GOT_IP6:           /**< ESP32 station or ap interface v6IP addr is preferred */
-            if (status_get(STATUS_WIFI_SYNC)) {
-                xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
-            }
+            xEventGroupSetBits(netEvent, evWIFI_CONNECTED);
             break;
 
 #if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
@@ -223,17 +219,12 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
         case SYSTEM_EVENT_ETH_DISCONNECTED: // ESP32 ethernet phy link down
             status_clear(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP);
-
-            if (status_get(STATUS_ETH_SYNC)) {
-                xEventGroupSetBits(netEvent, evETH_CANT_CONNECT);
-            }
+            xEventGroupSetBits(netEvent, evETH_CANT_CONNECT);
             break;
 
         case SYSTEM_EVENT_ETH_GOT_IP: // ESP32 ethernet got IP from connected AP
             status_set(STATUS_ETH_HAS_IP);
-            if (status_get(STATUS_ETH_SYNC)) {
-                xEventGroupSetBits(netEvent, evETH_CONNECTED);
-            }
+            xEventGroupSetBits(netEvent, evETH_CONNECTED);
             break;
 #endif
 
@@ -254,16 +245,12 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
         case SYSTEM_EVENT_SPI_ETH_DISCONNECTED: // ESP32 spi ethernet phy link down
             status_clear(STATUS_SPI_ETH_CONNECTED | STATUS_SPI_ETH_HAS_IP);
-            if (status_get(STATUS_SPI_ETH_SYNC)) {
-                xEventGroupSetBits(netEvent, evETH_CANT_CONNECT);
-            }
+            xEventGroupSetBits(netEvent, evETH_CANT_CONNECT);
             break;
 
         case SYSTEM_EVENT_SPI_ETH_GOT_IP: // ESP32 spi ethernet got IP from connected AP
             status_set(STATUS_SPI_ETH_HAS_IP);
-            if (status_get(STATUS_SPI_ETH_SYNC)) {
-                xEventGroupSetBits(netEvent, evSPI_ETH_CONNECTED);
-            }
+            xEventGroupSetBits(netEvent, evSPI_ETH_CONNECTED);
             break;
 #endif
         default :
@@ -383,6 +370,41 @@ driver_error_t *net_ping(const char *name, int count, int interval, int size, in
 
 driver_error_t *net_reconnect() {
     return NULL;
+}
+
+int wait_for_network(uint32_t timeout) {
+    TickType_t ticks_to_wait;
+
+    if (timeout == 0) {
+        ticks_to_wait = portMAX_DELAY;
+    } else {
+        ticks_to_wait = (timeout * 1000) / portTICK_PERIOD_MS;
+
+    }
+
+    if (!NETWORK_AVAILABLE()) {
+        if (status_get(STATUS_WIFI_STARTED) | status_get(STATUS_SPI_ETH_STARTED) | status_get(STATUS_ETH_STARTED)) {
+            EventBits_t uxBits = xEventGroupWaitBits(
+                    netEvent,
+                    evWIFI_CONNECTED | evWIFI_CANT_CONNECT |
+                    evSPI_ETH_CONNECTED | evSPI_ETH_CANT_CONNECT |
+                    evETH_CONNECTED | evETH_CANT_CONNECT,
+                    pdTRUE, pdFALSE, ticks_to_wait
+            );
+
+            if (uxBits & (evWIFI_CONNECTED | evSPI_ETH_CONNECTED | evETH_CONNECTED)) {
+                return 1;
+            }
+
+            if (uxBits & (evWIFI_CANT_CONNECT | evSPI_ETH_CANT_CONNECT | evETH_CANT_CONNECT)) {
+                return 0;
+            }
+        } else {
+            return 0;
+        }
+    }
+
+    return 1;
 }
 
 driver_error_t *net_ota() {
