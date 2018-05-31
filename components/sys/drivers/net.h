@@ -182,7 +182,6 @@ driver_error_t *net_event_unregister_callback(net_event_register_callback_t func
  *     - 1: network is available
  *     - 0: network isn' available, or timeout
  *
- *       NET_ERR_NO_MORE_CALLBACKS
  */
 int wait_for_network(uint32_t timeout);
 

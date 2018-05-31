@@ -71,8 +71,7 @@
 
 #include <sys/drivers/net.h>
 
-#define MQTT_MAX_RECONNECT_RETRIES 10
-#define MQTT_CONNECT_TIMEOUT 10
+#define MQTT_CONNECT_TIMEOUT 20
 
 void MQTTClient_init();
 
