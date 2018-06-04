@@ -31,9 +31,12 @@ ifeq ("$(SDKCONFIG_DEFAULTS)","sdkconfig.defaults")
 endif
 
 ifneq ("$(SDKCONFIG_DEFAULTS)","")
+  BOARDN := $(shell python boards/boards.py $(SDKCONFIG_DEFAULTS) number)
+  TMP := $(shell echo $(BOARDN) > .board)
+
   BOARD_TYPE_REQUIRED := 0
   override SDKCONFIG_DEFAULTS := boards/$(SDKCONFIG_DEFAULTS)
-  MAKECMDGOALS += defconfig
+  MAKECMDGOALS += defconfig  
 endif
 
 ifneq (,$(findstring restore-idf,$(MAKECMDGOALS)))

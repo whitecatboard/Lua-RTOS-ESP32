@@ -1,33 +1,38 @@
 import json
 import sys
 
-i = 1
-board = 0
+board = "0"
 prop = "description"
 
 if (len(sys.argv) == 2):
-    board = int(sys.argv[1])
+    board = sys.argv[1]
     prop = "id"
 
 if (len(sys.argv) == 3):
-    board = int(sys.argv[1])
+    board = sys.argv[1]
     prop = sys.argv[2]
     
 with open('boards/boards.json') as json_data:
     d = json.load(json_data)
     json_data.close()
     
-for row in d:
-    if ((board == 0) or (board == i)):
-        if (board == 0):
-            sys.stdout.write(`i`.rjust(2) + ": ")
-            sys.stdout.write(row[prop])
-        else:
-            sys.stdout.write(row[prop])
-        
-        if (board == 0):
-             sys.stdout.write("\\")
-        
-    i = i + 1
-    
+if (board.isdigit()):
+    board = int(board)
+    for i, row in enumerate(d, 1):
+        if ((board == 0) or (board == i)):
+            if (board == 0):
+                sys.stdout.write('%2d: %s' % (i, row[prop]))
+            else:
+                sys.stdout.write(row[prop])
+            
+            if (board == 0):
+                 sys.stdout.write("\\")
+else:
+    for i, row in enumerate(d, 1):
+        if (board == row["id"]):
+            if (prop == "number"):
+                sys.stdout.write(str(i))
+            else:
+                sys.stdout.write(row[prop])
+            
 sys.stdout.flush()
