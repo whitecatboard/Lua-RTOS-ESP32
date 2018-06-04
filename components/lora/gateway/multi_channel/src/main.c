@@ -123,10 +123,7 @@ static void *lora_gw(void *arg) {
 	mkpath("/etc/lora");
 
 	// Wait for network
-	while ((error = net_check_connectivity())) {
-		free(error);
-		delay(100);
-	}
+	wait_for_network(0);
 
 	// Create local configuration if not exist
 	if (mkfile("/etc/lora/local_conf.json") == 0) {
