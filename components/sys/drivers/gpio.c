@@ -982,7 +982,7 @@ driver_error_t *gpio_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_
         if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
             gpio_install_isr_service(0);
 
-            status_set(STATUS_ISR_SERVICE_INSTALLED);
+            status_set(STATUS_ISR_SERVICE_INSTALLED, 0x00000000);
         }
 
         gpio_set_intr_type(pin, type);

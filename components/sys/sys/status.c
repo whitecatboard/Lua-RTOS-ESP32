@@ -53,19 +53,14 @@ static uint32_t LuaRTOS_prev_status; // Previous status
 void _status_init() {
     mtx_init(&mtx, NULL, NULL, 0);
     LuaRTOS_status = 0;
+    LuaRTOS_prev_status = 0;
 }
 
-void IRAM_ATTR status_set(uint32_t mask) {
+void IRAM_ATTR status_set(uint32_t setMask, uint32_t clearMask) {
     mtx_lock(&mtx);
     LuaRTOS_prev_status = LuaRTOS_status;
-    LuaRTOS_status |= mask;
-    mtx_unlock(&mtx);
-}
-
-void IRAM_ATTR status_clear(uint32_t mask) {
-    mtx_lock(&mtx);
-    LuaRTOS_prev_status = LuaRTOS_status;
-    LuaRTOS_status &= ~mask;
+    LuaRTOS_status |= setMask;
+    LuaRTOS_status &= ~clearMask;
     mtx_unlock(&mtx);
 }
 

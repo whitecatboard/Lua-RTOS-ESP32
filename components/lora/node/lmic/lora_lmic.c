@@ -650,7 +650,7 @@ void _lora_init() {
     mtx_init(&lora_mtx, NULL, NULL, 0);
 
     // LMIC need to mantain some information in RTC
-    status_set(STATUS_NEED_RTC_SLOW_MEM);
+    status_set(STATUS_NEED_RTC_SLOW_MEM, 0x00000000);
 
     // Get device EUI from flash id
 	#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID

@@ -252,7 +252,7 @@ static int IRAM_ATTR queue_byte(int8_t unit, uint8_t byte, uint8_t *status, int 
             	*status = 2;
             }
 
-			status_set(STATUS_LUA_ABORT_BOOT_SCRIPTS);
+			status_set(STATUS_LUA_ABORT_BOOT_SCRIPTS, 0x00000000);
 
             return 0;
         } else if ((byte == 0x03) && (!console_raw)) {

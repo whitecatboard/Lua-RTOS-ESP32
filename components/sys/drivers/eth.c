@@ -146,7 +146,7 @@ driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1
             return error;
         }
 
-        status_set(STATUS_ETH_SETUP);
+        status_set(STATUS_ETH_SETUP, 0x00000000);
     } else {
         return NULL;
     }
@@ -239,9 +239,9 @@ driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1
 
 driver_error_t *eth_start(uint8_t async) {
     if (!async) {
-        status_set(STATUS_ETH_SYNC);
+        status_set(STATUS_ETH_SYNC, 0x00000000);
     } else {
-        status_clear(STATUS_ETH_SYNC);
+        status_set(0x00000000, STATUS_ETH_SYNC);
     }
 
     if (!status_get(STATUS_ETH_SETUP)) {
@@ -272,7 +272,7 @@ driver_error_t *eth_stop() {
     }
 
     if (status_get(STATUS_ETH_STARTED)) {
-        status_clear(STATUS_ETH_STARTED);
+        status_set(0x00000000, STATUS_ETH_STARTED);
     }
 
     esp_eth_disable();

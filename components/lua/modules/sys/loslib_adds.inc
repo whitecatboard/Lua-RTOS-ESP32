@@ -120,9 +120,9 @@ static int os_shell(lua_State *L) {
         luaL_checktype(L, 1, LUA_TBOOLEAN);
 
         if (lua_toboolean( L, 1 )) {
-            status_set(STATUS_LUA_SHELL);
+            status_set(STATUS_LUA_SHELL, 0x00000000);
         } else {
-            status_clear(STATUS_LUA_SHELL);
+            status_set(0x00000000, STATUS_LUA_SHELL);
         }
 
         return 0;
@@ -613,9 +613,9 @@ static int os_history(lua_State *L) {
         luaL_checktype(L, 1, LUA_TBOOLEAN);
 
         if (lua_toboolean( L, 1 )) {
-            status_set(STATUS_LUA_HISTORY);
+            status_set(STATUS_LUA_HISTORY, 0x00000000);
         } else {
-            status_clear(STATUS_LUA_HISTORY);
+            status_set(0x00000000, STATUS_LUA_HISTORY);
             linenoiseHistoryClear();
         }
 

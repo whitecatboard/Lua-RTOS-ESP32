@@ -204,7 +204,7 @@ static void luaos_boot_scripts(lua_State *L) {
 // * Run system.lua before executing the interpreter (in same state)
 // * Run autorun.lua before executing the interpreter (in same state)
 static int luaos_pmain (lua_State *L) {
-  status_set(STATUS_LUA_RUNNING);
+  status_set(STATUS_LUA_RUNNING, 0x00000000);
 
 #if LUA_USE_ROTABLE && CONFIG_LUA_RTOS_LUA_USE_ROTABLE_CACHE && !CONFIG_LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
     rotable_cache_init();
@@ -222,7 +222,7 @@ static int luaos_pmain (lua_State *L) {
 	  printf("Lua RTOS-boot-scripts-aborted-ESP32\r\n");
   }
 
-  status_set(STATUS_LUA_INTERPRETER);
+  status_set(STATUS_LUA_INTERPRETER, 0x00000000);
 
   for(;;)
       doREPL(L);  /* do read-eval-print loop */

@@ -178,7 +178,7 @@ static driver_error_t *wifi_init(wifi_mode_t mode) {
 //        wifi_country_t country = { "EU", 1, 13, WIFI_COUNTRY_POLICY_AUTO };
   //      if ((error = wifi_check_error(esp_wifi_set_country(&country)))) return error;
 
-        status_set(STATUS_WIFI_INITED);
+        status_set(STATUS_WIFI_INITED, 0x00000000);
     }
 
     return NULL;
@@ -193,7 +193,7 @@ static driver_error_t *wifi_deinit() {
         // doesn't seem to be recreated so DON'T remove the event group
         // vEventGroupDelete(netEvent);
 
-        status_clear(STATUS_WIFI_INITED);
+        status_set(0x00000000, STATUS_WIFI_INITED);
     }
 
     return NULL;
@@ -212,9 +212,9 @@ driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list) {
         if (WIFI_MODE_AP == mode) {
             if(status_get(STATUS_WIFI_STARTED)) {
                 if ((error = wifi_check_error(esp_wifi_stop()))) return error;
-                status_clear(STATUS_WIFI_STARTED);
+                status_set(0x00000000, STATUS_WIFI_STARTED);
             }
-            status_clear(STATUS_WIFI_INITED);
+            status_set(0x00000000, STATUS_WIFI_INITED);
         }
     }
 
@@ -290,7 +290,7 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_
     ip_addr_t dns;
     ip_addr_t *dns_p = &dns;
 
-    status_clear(STATUS_WIFI_SETUP);
+    status_set(0x00000000, STATUS_WIFI_SETUP);
 
     // Sanity checks
     if (mode == WIFI_MODE_AP || mode == WIFI_MODE_APSTA) {
@@ -306,9 +306,9 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_
             //in case of switching mode AP<->STA Stop wifi
             if(status_get(STATUS_WIFI_STARTED)) {
                 if ((error = wifi_check_error(esp_wifi_stop()))) return error;
-                status_clear(STATUS_WIFI_STARTED);
+                status_set(0x00000000, STATUS_WIFI_STARTED);
             }
-            status_clear(STATUS_WIFI_INITED);
+            status_set(0x00000000, STATUS_WIFI_INITED);
         }
     }
 
@@ -352,7 +352,7 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_
     if (powersave)
         if ((error = wifi_check_error(esp_wifi_set_ps(powersave)))) return error;
 
-    status_set(STATUS_WIFI_SETUP);
+    status_set(STATUS_WIFI_SETUP, 0x00000000);
 
     // Set ip / mask / gw, if present
     if (ip && mask && gw) {
@@ -382,9 +382,9 @@ driver_error_t *wifi_start(uint8_t async) {
     driver_error_t *error;
 
     if (!async) {
-        status_set(STATUS_WIFI_SYNC);
+        status_set(STATUS_WIFI_SYNC, 0x00000000);
     } else {
-        status_clear(STATUS_WIFI_SYNC);
+        status_set(0x00000000, STATUS_WIFI_SYNC);
     }
 
     if (!status_get(STATUS_WIFI_SETUP)) {
@@ -398,13 +398,16 @@ driver_error_t *wifi_start(uint8_t async) {
         if ((error = wifi_check_error(esp_wifi_get_mode(&mode)))) return error;
 
         if (mode == WIFI_MODE_AP || mode == WIFI_MODE_APSTA) {
-            status_set(STATUS_WIFI_STARTED);
+            status_set(STATUS_WIFI_STARTED, 0x00000000);
         } else {
-            status_set(STATUS_WIFI_STARTED);
+            status_set(STATUS_WIFI_STARTED, 0x00000000);
             if (!async) {
                 EventBits_t uxBits = xEventGroupWaitBits(netEvent, evWIFI_CONNECTED | evWIFI_CANT_CONNECT, pdTRUE, pdFALSE, portMAX_DELAY);
                 if (uxBits & (evWIFI_CONNECTED)) {
-                    return NULL;                    status_set(STATUS_WIFI_STARTED);
+                    if (!async) {
+                        status_set(0x00000000, STATUS_WIFI_SYNC);
+                    }
+                    return NULL;
                 }
 
                 if (uxBits & (evWIFI_CANT_CONNECT)) {
@@ -429,7 +432,7 @@ driver_error_t *wifi_stop() {
     esp_smartconfig_stop();
 
     if (status_get(STATUS_WIFI_STARTED)) {
-        status_clear(STATUS_WIFI_STARTED);
+        status_set(0x00000000, STATUS_WIFI_STARTED);
 
         if ((error = wifi_check_error(esp_wifi_stop()))) return error;
     }
@@ -479,14 +482,14 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
 driver_error_t *wifi_wps(int wpsmode, wifi_wps_pin_cb* callback) {
     driver_error_t *error;
 
-    status_clear(STATUS_WIFI_SETUP);
+    status_set(0x00000000, STATUS_WIFI_SETUP);
 
     if (status_get(STATUS_WIFI_INITED)) {
         if(status_get(STATUS_WIFI_STARTED)) {
             if ((error = wifi_check_error(esp_wifi_stop()))) return error;
-            status_clear(STATUS_WIFI_STARTED);
+            status_set(0x00000000, STATUS_WIFI_STARTED);
         }
-        status_clear(STATUS_WIFI_INITED);
+        status_set(0x00000000, STATUS_WIFI_INITED);
     }
 
     wps_mode = wpsmode;
@@ -494,10 +497,10 @@ driver_error_t *wifi_wps(int wpsmode, wifi_wps_pin_cb* callback) {
 
     // Attach wifi driver
     if ((error = wifi_init(WIFI_MODE_STA))) return error; //does NOT work with APSTA
-    status_set(STATUS_WIFI_SETUP);
+    status_set(STATUS_WIFI_SETUP, 0x00000000);
 
     if ((error = wifi_check_error(esp_wifi_start()))) return error;
-    status_set(STATUS_WIFI_STARTED);
+    status_set(STATUS_WIFI_STARTED, 0x00000000);
 
     if (wps_mode != WPS_TYPE_DISABLE) {
         if ((error = wifi_check_error(esp_wifi_wps_enable(wps_mode == WPS_TYPE_PIN ? &wps_config_pin : &wps_config_pbc)))) return error;
@@ -593,16 +596,16 @@ driver_error_t *wifi_smartconfig(wifi_sc_cb* callback) {
     driver_error_t *error;
     wifi_mode_t mode = WIFI_MODE_STA;
 
-    status_clear(STATUS_WIFI_SETUP);
+    status_set(0x00000000, STATUS_WIFI_SETUP);
 
     if (status_get(STATUS_WIFI_INITED)) {
         if ((error = wifi_check_error(esp_wifi_get_mode(&mode)))) return error;
 
         if(status_get(STATUS_WIFI_STARTED)) {
             if ((error = wifi_check_error(esp_wifi_stop()))) return error;
-            status_clear(STATUS_WIFI_STARTED);
+            status_set(0x00000000, STATUS_WIFI_STARTED);
         }
-        status_clear(STATUS_WIFI_INITED);
+        status_set(0x00000000, STATUS_WIFI_INITED);
     }
 
     wps_sc_callback = callback;
@@ -614,13 +617,13 @@ driver_error_t *wifi_smartconfig(wifi_sc_cb* callback) {
 
     // Attach wifi driver
     if ((error = wifi_init(mode))) return error; //APSTA confirmed to work
-    status_set(STATUS_WIFI_SETUP);
+    status_set(STATUS_WIFI_SETUP, 0x00000000);
 
     // make smartconfig restartable
     esp_smartconfig_stop();
 
     if ((error = wifi_check_error(esp_wifi_start()))) return error;
-    status_set(STATUS_WIFI_STARTED);
+    status_set(STATUS_WIFI_STARTED, 0x00000000);
 
     //delay until wifi has been started...
     delay(10);

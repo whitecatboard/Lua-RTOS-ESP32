@@ -155,7 +155,7 @@ static int lulp_run(lua_State *L) {
 		entry_point = luaL_checkinteger(L, 1);
 	}
 
-	status_set(STATUS_NEED_RTC_SLOW_MEM); //used for ulp variables
+	status_set(STATUS_NEED_RTC_SLOW_MEM, 0x00000000); //used for ulp variables
 
 	esp_err_t error;
 	if ((error = ulp_run(entry_point))) {

@@ -86,8 +86,7 @@
 #define STATUS_ETH_CONNECTED           (1 << 23)
 #define STATUS_ETH_HAS_IP              (1 << 24)
 
-void IRAM_ATTR status_set(uint32_t mask);
-void IRAM_ATTR status_clear(uint32_t mask);
+void IRAM_ATTR status_set(uint32_t setMask, uint32_t clearMask);
 int  IRAM_ATTR status_get(uint32_t mask);
 int  IRAM_ATTR status_get_prev(uint32_t mask);
 

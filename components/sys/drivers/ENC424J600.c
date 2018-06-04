@@ -495,7 +495,7 @@ int enc424j600_init(struct netif *netif) {
 	if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
 		gpio_install_isr_service(0);
 
-		status_set(STATUS_ISR_SERVICE_INSTALLED);
+		status_set(STATUS_ISR_SERVICE_INSTALLED, 0x00000000);
 	}
 
 	gpio_pin_input(CONFIG_SPI_ETHERNET_INT);

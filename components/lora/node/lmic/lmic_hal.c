@@ -174,7 +174,7 @@ driver_error_t *hal_init (void) {
 	if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
 		gpio_install_isr_service(0);
 
-		status_set(STATUS_ISR_SERVICE_INSTALLED);
+		status_set(STATUS_ISR_SERVICE_INSTALLED, 0x00000000);
 	}
 
 	// Init DIO pins

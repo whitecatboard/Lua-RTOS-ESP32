@@ -196,9 +196,9 @@ void _sys_init() {
     _driver_init();
     _signal_init();
 
-    status_set(STATUS_SYSCALLS_INITED);
-    status_set(STATUS_LUA_SHELL);
-    status_set(STATUS_LUA_HISTORY);
+    status_set(STATUS_SYSCALLS_INITED, 0x00000000);
+    status_set(STATUS_LUA_SHELL, 0x00000000);
+    status_set(STATUS_LUA_HISTORY, 0x00000000);
 
     esp_vfs_lwip_sockets_register();
 	esp_vfs_unregister("/dev/uart");
