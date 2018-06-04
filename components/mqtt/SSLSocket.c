@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2017 IBM Corp.
+ * Copyright (c) 2009, 2018 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -34,13 +34,20 @@
 #include "Log.h"
 #include "StackTrace.h"
 #include "Socket.h"
+char* MQTTProtocol_addressPort(const char* uri, int* port);
 
-//#include "Heap.h"
+#include "Heap.h"
 
+#if !__XTENSA__
+#include <string.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/crypto.h>
+#include <openssl/x509v3.h>
+#else
 #include <openssl/ssl.h>
 #include <string.h>
 #include <sys/status.h>
-
 #include "mbedtls/platform.h"
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/esp_debug.h"
@@ -49,7 +56,7 @@
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/error.h"
 #include "mbedtls/certs.h"
-
+#endif
 
 extern Sockets s;
 
@@ -77,14 +84,63 @@ extern void SSLLocks_callback(int mode, int n, const char *file, int line);
 int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts);
 void SSLSocket_destroyContext(networkHandles* net);
 void SSLSocket_addPendingRead(int sock);
-void ssl_pm_set_hostname(SSL *ssl, const char *hostname);
 
-//static ssl_mutex_type* sslLocks = NULL;
+#if !__XTENSA__
+/* 1 ~ we are responsible for initializing openssl; 0 ~ openssl init is done externally */
+static int handle_openssl_init = 1;
+static ssl_mutex_type* sslLocks = NULL;
+#endif
+
+#if !__XTENSA__
+static ssl_mutex_type sslCoreMutex;
+#else
 static ssl_mutex_type sslCoreMutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 #if defined(WIN32) || defined(WIN64)
 #define iov_len len
 #define iov_base buf
+#endif
+
+#if defined(OPENSSL) && __XTENSA__
+SSL_SESSION *SSL_get1_session(SSL *ssl)
+{
+    return ssl->session;
+}
+
+int SSL_set_session(SSL *ssl, SSL_SESSION *session)
+{
+    ssl->session = session;
+    return 1;
+}
+
+static void mbedtls_zeroize( void *v, size_t n ) {
+    volatile unsigned char *p = v; while( n-- ) *p++ = 0;
+}
+
+int SSL_CTX_load_verify_locations(SSL_CTX *ctx, const char *CAfile,
+                                  const char *CApath) {
+  /* Path is not supported */
+  if (CApath != NULL) {
+    return 0;
+  }
+
+  size_t n;
+  unsigned char *buf;
+
+    if( mbedtls_pk_load_file( CAfile, &buf, &n ) != 0 ) return 0;
+    // no need to free ctx->client_CA before calling SSL_CTX_add_client_CA
+    X509* server_CA = d2i_X509(NULL, buf, n);
+    mbedtls_zeroize( buf, n );
+    mbedtls_free( buf );
+
+    //SSL_CTX_add_client_CA(ctx, server_CA) <- will load a cert into ctx->client_CA
+    //SSL_CTX_use_certificate(ctx, server_CA) <- will load a cert into ctx->cert->x509
+
+    //ssl_pm_reload_crt will hand over ctx->client_CA to mbedtls_ssl_conf_ca_chain
+    //so despite it might look weired we need to call SSL_CTX_add_client_CA here...
+    return SSL_CTX_add_client_CA(ctx, server_CA);
+}
 #endif
 
 /**
@@ -95,22 +151,37 @@ static ssl_mutex_type sslCoreMutex = PTHREAD_MUTEX_INITIALIZER;
  */
 int SSLSocket_error(char* aString, SSL* ssl, int sock, int rc)
 {
+#if !__XTENSA__       
+    int error;
+#else
     int error = -1;
+#endif
+    
 
     FUNC_ENTRY;
     if (ssl)
         error = SSL_get_error(ssl, rc);
-	//else
-    //    error = ERR_get_error();
-
-    if (error == SSL_ERROR_WANT_READ)
-			Log(TRACE_MIN, -1, "SSLSocket WANT_READ in %s for socket %d", aString, sock);
-    else if (error == SSL_ERROR_WANT_WRITE)
-			Log(TRACE_MIN, -1, "SSLSocket WANT_WRITE in %s for socket %d", aString, sock);
+#if !__XTENSA__        
+    else
+        error = ERR_get_error();
+#else
+    else {
+        Log(TRACE_MIN, -1, "SSLSocket error in %s\n", aString);
+    }
+#endif
+    if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
+    {
+		Log(TRACE_MIN, -1, "SSLSocket error WANT_READ/WANT_WRITE");
+    }
     else
     {
+        static char buf[120];
+
         if (strcmp(aString, "shutdown") != 0)
-        	Log(TRACE_MIN, -1, "SSLSocket error %d in %s for socket %d rc %d errno %d %s\n", error, aString, sock, rc, errno, strerror(errno));
+        	Log(TRACE_MIN, -1, "SSLSocket error %s(%d) in %s for socket %d rc %d errno %d %s\n", buf, error, aString, sock, rc, errno, strerror(errno));
+#if !__XTENSA__
+        ERR_print_errors_fp(stderr);
+#endif
 		if (error == SSL_ERROR_SSL || error == SSL_ERROR_SYSCALL)
 			error = SSL_FATAL;
     }
@@ -118,7 +189,7 @@ int SSLSocket_error(char* aString, SSL* ssl, int sock, int rc)
     return error;
 }
 
-#if 0
+#if !__XTENSA__
 static struct
 {
 	int code;
@@ -205,7 +276,7 @@ char* SSL_get_verify_result_string(int rc)
 	return retstring;
 }
 
-
+#if !__XENSA__
 void SSL_CTX_info_callback(const SSL* ssl, int where, int ret)
 {
 	if (where & SSL_CB_LOOP)
@@ -246,7 +317,7 @@ void SSL_CTX_info_callback(const SSL* ssl, int where, int ret)
                    SSL_alert_type_string_long(ret), SSL_alert_desc_string_long(ret));
 	}
 }
-
+#endif
 
 char* SSLSocket_get_version_string(int version)
 {
@@ -393,7 +464,9 @@ void SSL_destroy_mutex(ssl_mutex_type* mutex)
 	rc = pthread_mutex_destroy(mutex);
 #endif
 	FUNC_EXIT_RC(rc);
+#if __XTENSA__
 	(void)rc;
+#endif
 }
 
 
@@ -418,7 +491,7 @@ extern unsigned long SSLThread_id(void)
 }
 #endif
 
-#if 0
+#if !__XTENSA__
 extern void SSLLocks_callback(int mode, int n, const char *file, int line)
 {
 	if (sslLocks)
@@ -430,18 +503,18 @@ extern void SSLLocks_callback(int mode, int n, const char *file, int line)
 	}
 }
 
-
 void SSLSocket_handleOpensslInit(int bool_value)
 {
 	handle_openssl_init = bool_value;
 }
 #endif
 
+
 int SSLSocket_initialize(void)
 {
 	int rc = 0;
 	/*int prc;*/
-#if 0
+#if !__XTENSA__
 	int i;
 	int lockMemSize;
 
@@ -486,9 +559,12 @@ int SSLSocket_initialize(void)
 
 	}
 #endif
+
 	SSL_create_mutex(&sslCoreMutex);
 
-//exit:
+#if !__XTENSA__
+exit:
+#endif
 	FUNC_EXIT_RC(rc);
 	return rc;
 }
@@ -496,7 +572,7 @@ int SSLSocket_initialize(void)
 void SSLSocket_terminate(void)
 {
 	FUNC_ENTRY;
-#if 0
+#if !__XTENSA__
 	if (handle_openssl_init)
 	{
 		EVP_cleanup();
@@ -513,61 +589,89 @@ void SSLSocket_terminate(void)
 			free(sslLocks);
 		}
 	}
-#endif
+
+	SSL_destroy_mutex(&sslCoreMutex);
+#else
 	if(sslCoreMutex != PTHREAD_MUTEX_INITIALIZER) {
 		SSL_destroy_mutex(&sslCoreMutex);
 		sslCoreMutex = PTHREAD_MUTEX_INITIALIZER;
 	}
+#endif
+
 	FUNC_EXIT;
 }
 
-void *ssl_mem_zalloc(size_t size);
-static void mbedtls_zeroize( void *v, size_t n ) {
-    volatile unsigned char *p = v; while( n-- ) *p++ = 0;
-}
-
-int SSL_CTX_load_verify_locations(SSL_CTX *ctx, const char *CAfile,
-                                  const char *CApath) {
-  /* Path is not supported */
-  if (CApath != NULL) {
-    return 0;
-  }
-
-  size_t n;
-  unsigned char *buf;
-
-	if( mbedtls_pk_load_file( CAfile, &buf, &n ) != 0 ) return 0;
-	// no need to free ctx->client_CA before calling SSL_CTX_add_client_CA
-	X509* server_CA = d2i_X509(NULL, buf, n);
-	mbedtls_zeroize( buf, n );
-	mbedtls_free( buf );
-
-	//SSL_CTX_add_client_CA(ctx, server_CA) <- will load a cert into ctx->client_CA
-	//SSL_CTX_use_certificate(ctx, server_CA) <- will load a cert into ctx->cert->x509
-
-	//ssl_pm_reload_crt will hand over ctx->client_CA to mbedtls_ssl_conf_ca_chain
-	//so despite it might look weired we need to call SSL_CTX_add_client_CA here...
-	return SSL_CTX_add_client_CA(ctx, server_CA);
-}
-
+#if !__XTENSA__
 int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 {
 	int rc = 1;
+	const char* ciphers = NULL;
 
 	FUNC_ENTRY;
-
-	if (net->ctx == NULL) {
-		if ((net->ctx = SSL_CTX_new(TLS_client_method())) == NULL)	/* TLS_client_method for compatibility with TLSv1 */
+	if (net->ctx == NULL)
+	{
+		int sslVersion = MQTT_SSL_VERSION_DEFAULT;
+		if (opts->struct_version >= 1) sslVersion = opts->sslVersion;
+/* SSL_OP_NO_TLSv1_1 is defined in ssl.h if the library version supports TLSv1.1.
+ * OPENSSL_NO_TLS1 is defined in opensslconf.h or on the compiler command line
+ * if TLS1.x was removed at OpenSSL library build time via Configure options.
+ */
+		switch (sslVersion)
 		{
-			rc = SSLSocket_error("SSL_CTX_new", NULL, net->socket, rc);
+		case MQTT_SSL_VERSION_DEFAULT:
+			net->ctx = SSL_CTX_new(SSLv23_client_method()); /* SSLv23 for compatibility with SSLv2, SSLv3 and TLSv1 */
+			break;
+#if defined(SSL_OP_NO_TLSv1) && !defined(OPENSSL_NO_TLS1)
+		case MQTT_SSL_VERSION_TLS_1_0:
+			net->ctx = SSL_CTX_new(TLSv1_client_method());
+			break;
+#endif
+#if defined(SSL_OP_NO_TLSv1_1) && !defined(OPENSSL_NO_TLS1)
+		case MQTT_SSL_VERSION_TLS_1_1:
+			net->ctx = SSL_CTX_new(TLSv1_1_client_method());
+			break;
+#endif
+#if defined(SSL_OP_NO_TLSv1_2) && !defined(OPENSSL_NO_TLS1)
+		case MQTT_SSL_VERSION_TLS_1_2:
+			net->ctx = SSL_CTX_new(TLSv1_2_client_method());
+			break;
+#endif
+		default:
+			break;
+		}
+		if (net->ctx == NULL)
+		{
+			SSLSocket_error("SSL_CTX_new", NULL, net->socket, rc);
 			goto exit;
 		}
 	}
 
 	if (opts->keyStore)
 	{
-		rc = SSLSocket_error("keyStore not supported!", NULL, net->socket, rc);
-		goto free_ctx;
+		if ((rc = SSL_CTX_use_certificate_chain_file(net->ctx, opts->keyStore)) != 1)
+		{
+			SSLSocket_error("SSL_CTX_use_certificate_chain_file", NULL, net->socket, rc);
+			goto free_ctx; /*If we can't load the certificate (chain) file then loading the privatekey won't work either as it needs a matching cert already loaded */
+		}
+
+		if (opts->privateKey == NULL)
+			opts->privateKey = opts->keyStore;   /* the privateKey can be included in the keyStore */
+
+		if (opts->privateKeyPassword != NULL)
+		{
+			SSL_CTX_set_default_passwd_cb(net->ctx, pem_passwd_cb);
+			SSL_CTX_set_default_passwd_cb_userdata(net->ctx, (void*)opts->privateKeyPassword);
+		}
+
+		/* support for ASN.1 == DER format? DER can contain only one certificate? */
+		rc = SSL_CTX_use_PrivateKey_file(net->ctx, opts->privateKey, SSL_FILETYPE_PEM);
+		if (opts->privateKey == opts->keyStore)
+			opts->privateKey = NULL;
+		if (rc != 1)
+		{
+			SSLSocket_error("SSL_CTX_use_PrivateKey_file", NULL, net->socket, rc);
+			goto free_ctx;
+		}
 	}
 
 	if (opts->trustStore)
@@ -578,22 +682,24 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 			goto free_ctx;
 		}
 	}
-
-	if (opts->enabledCipherSuites != NULL)
+	else if ((rc = SSL_CTX_set_default_verify_paths(net->ctx)) != 1)
 	{
-		rc = SSLSocket_error("enabledCipherSuites not supported!", NULL, net->socket, rc);
+		SSLSocket_error("SSL_CTX_set_default_verify_paths", NULL, net->socket, rc);
 		goto free_ctx;
 	}
 
-	/*
-	 * SSL_CTX_set_mode(net->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER) is not supported
-	 *
-   * mbedTLS requires to recall ssl_write with the SAME parameters
-   * in case of WANT_WRITE and SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER
-   * - doesn't support directly -
-   * but since mbedTLS stores sent data as OFFSET (not pointer)
-   * it is not a problem to move buffer (if data remains the same)
-   */
+	if (opts->enabledCipherSuites == NULL)
+		ciphers = "DEFAULT";
+	else
+		ciphers = opts->enabledCipherSuites;
+
+	if ((rc = SSL_CTX_set_cipher_list(net->ctx, ciphers)) != 1)
+	{
+		SSLSocket_error("SSL_CTX_set_cipher_list", NULL, net->socket, rc);
+		goto free_ctx;
+	}
+
+	SSL_CTX_set_mode(net->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
 	goto exit;
 free_ctx:
@@ -604,7 +710,62 @@ exit:
 	FUNC_EXIT_RC(rc);
 	return rc;
 }
+#else
+int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
+{
+    int rc = 1;
 
+    FUNC_ENTRY;
+
+    if (net->ctx == NULL) {
+        if ((net->ctx = SSL_CTX_new(TLS_client_method())) == NULL)  /* TLS_client_method for compatibility with TLSv1 */
+        {
+            rc = SSLSocket_error("SSL_CTX_new", NULL, net->socket, rc);
+            goto exit;
+        }
+    }
+
+    if (opts->keyStore)
+    {
+        rc = SSLSocket_error("keyStore not supported!", NULL, net->socket, rc);
+        goto free_ctx;
+    }
+
+    if (opts->trustStore)
+    {
+        if ((rc = SSL_CTX_load_verify_locations(net->ctx, opts->trustStore, NULL)) != 1)
+        {
+            SSLSocket_error("SSL_CTX_load_verify_locations", NULL, net->socket, rc);
+            goto free_ctx;
+        }
+    }
+
+    if (opts->enabledCipherSuites != NULL)
+    {
+        rc = SSLSocket_error("enabledCipherSuites not supported!", NULL, net->socket, rc);
+        goto free_ctx;
+    }
+
+    /*
+     * SSL_CTX_set_mode(net->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER) is not supported
+     *
+   * mbedTLS requires to recall ssl_write with the SAME parameters
+   * in case of WANT_WRITE and SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER
+   * - doesn't support directly -
+   * but since mbedTLS stores sent data as OFFSET (not pointer)
+   * it is not a problem to move buffer (if data remains the same)
+   */
+
+    goto exit;
+free_ctx:
+    SSL_CTX_free(net->ctx);
+    net->ctx = NULL;
+
+exit:
+    FUNC_EXIT_RC(rc);
+    return rc;
+}
+#endif
 
 int SSLSocket_setSocketForSSL(networkHandles* net, MQTTClient_SSLOptions* opts, char* hostname)
 {
@@ -614,12 +775,27 @@ int SSLSocket_setSocketForSSL(networkHandles* net, MQTTClient_SSLOptions* opts, 
 
 	if (net->ctx != NULL || (rc = SSLSocket_createContext(net, opts)) == 1)
 	{
+#if !__XTENSA__
+		int i;
 
-		if (opts->enableServerCertAuth) {
+		SSL_CTX_set_info_callback(net->ctx, SSL_CTX_info_callback);
+		SSL_CTX_set_msg_callback(net->ctx, SSL_CTX_msg_callback);
+#endif
+   		if (opts->enableServerCertAuth)
 			SSL_CTX_set_verify(net->ctx, SSL_VERIFY_PEER, NULL);
-		}
 
 		net->ssl = SSL_new(net->ctx);
+
+#if !__XTENSA__
+		/* Log all ciphers available to the SSL sessions (loaded in ctx) */
+		for (i = 0; ;i++)
+		{
+			const char* cipher = SSL_get_cipher_list(net->ssl, i);
+			if (cipher == NULL)
+				break;
+			Log(TRACE_PROTOCOL, 1, "SSL cipher available: %d:%s", i, cipher);
+	    	}
+#endif
 
 		if ((rc = SSL_set_fd(net->ssl, net->socket)) != 1)
 			SSLSocket_error("SSL_set_fd", net->ssl, net->socket, rc);
@@ -632,39 +808,50 @@ int SSLSocket_setSocketForSSL(networkHandles* net, MQTTClient_SSLOptions* opts, 
 	return rc;
 }
 
-
-int SSLSocket_connect(SSL* ssl, int sock)
+/*
+ * Return value: 1 - success, TCPSOCKET_INTERRUPTED - try again, anything else is failure
+ */
+int SSLSocket_connect(SSL* ssl, int sock, char* hostname, int verify)
 {
 	int rc = 0;
 
 	FUNC_ENTRY;
 
-retry:
+#if __XTENSA__
+
+#endif
 	rc = SSL_connect(ssl);
 	if (rc != 1)
 	{
 		int error;
-		if (ssl->verify_mode!=SSL_VERIFY_NONE && (error = SSL_get_verify_result(ssl)) != X509_V_OK) {
-			Log(TRACE_MIN, -1, "SSLSocket error %d in %s for socket %d\n", error, "SSL_get_verify_result", sock);
-			error = SSL_get_error(ssl, rc);
+		error = SSLSocket_error("SSL_connect", ssl, sock, rc);
+		if (error == SSL_FATAL)
 			rc = error;
-		}
-		else {
-			error = SSL_get_error(ssl, rc);
-			if (error == SSL_FATAL) {
-				SSLSocket_error("SSL_connect", ssl, sock, rc);
-				rc = error;
-			}
-			if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
-				if (NETWORK_AVAILABLE()) {
-					goto retry;
-				}
-
-				SSLSocket_error("SSL_connect", ssl, sock, rc);
-				rc = TCPSOCKET_INTERRUPTED;
-			}
-		}
+		if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
+			rc = TCPSOCKET_INTERRUPTED;
 	}
+#if (OPENSSL_VERSION_NUMBER >= 0x010002000) /* 1.0.2 and later */
+	else if (verify == 1)
+	{
+		char* peername = NULL;
+		int port;
+		char* addr = NULL;
+
+		X509* cert = SSL_get_peer_certificate(ssl);
+		addr = MQTTProtocol_addressPort(hostname, &port);
+
+		rc = X509_check_host(cert, addr, strlen(addr), 0, &peername);
+		if (rc == 0)
+			rc = SOCKET_ERROR;
+		Log(TRACE_MIN, -1, "rc from X509_check_host is %d", rc);
+		Log(TRACE_MIN, -1, "peername from X509_check_host is %s", peername);
+
+		if (cert)
+			X509_free(cert);
+		if (addr != hostname)
+			free(addr);
+	}
+#endif
 
 	FUNC_EXIT_RC(rc);
 	return rc;
@@ -686,23 +873,13 @@ int SSLSocket_getch(SSL* ssl, int socket, char* c)
 	if ((rc = SocketBuffer_getQueuedChar(socket, c)) != SOCKETBUFFER_INTERRUPTED)
 		goto exit;
 
-retry:
 	if ((rc = SSL_read(ssl, c, (size_t)1)) < 0)
 	{
-		int err = SSL_get_error(ssl, rc);
+		int err = SSLSocket_error("SSL_read - getch", ssl, socket, rc);
 		if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
 		{
-			if (NETWORK_AVAILABLE()) {
-				goto retry;
-			} else {
-				SSLSocket_error("SSL_read - getch", ssl, socket, rc);
-
-				//we should discard 'half-received' data when the socket (wifi) is gone...
-				//so we basically call connectionLost here...
-				rc = TCPSOCKET_INTERRUPTED_FINAL;
-			}
-		} else {
-			SSLSocket_error("SSL_read - getch", ssl, socket, rc);
+			rc = TCPSOCKET_INTERRUPTED;
+			SocketBuffer_interrupted(socket, 0);
 		}
 	}
 	else if (rc == 0)
@@ -741,21 +918,13 @@ char *SSLSocket_getdata(SSL* ssl, int socket, size_t bytes, size_t* actual_len)
 
 	buf = SocketBuffer_getQueuedData(socket, bytes, actual_len);
 
-retry:
 	if ((rc = SSL_read(ssl, buf + (*actual_len), (int)(bytes - (*actual_len)))) < 0)
 	{
-		rc = SSL_get_error(ssl, rc);
+		rc = SSLSocket_error("SSL_read - getdata", ssl, socket, rc);
 		if (rc != SSL_ERROR_WANT_READ && rc != SSL_ERROR_WANT_WRITE)
 		{
-			SSLSocket_error("SSL_read - getdata", ssl, socket, rc);
 			buf = NULL;
 			goto exit;
-		} else {
-			if (NETWORK_AVAILABLE()) {
-				goto retry;
-			}
-
-			SSLSocket_error("SSL_read - getdata", ssl, socket, rc);
 		}
 	}
 	else if (rc == 0) /* rc 0 means the other end closed the socket */
@@ -802,11 +971,7 @@ int SSLSocket_close(networkHandles* net)
 	FUNC_ENTRY;
 	if (net->ssl) {
 		rc = SSL_shutdown(net->ssl);
-
-		//nasty bug... must NOT free original net->ssl->session or there will be a
-		//Guru Meditation Error: Core  0 panic'ed (LoadProhibited) on reconnect
-		net->ssl->session = ssl_mem_zalloc(sizeof(SSL_SESSION));
-
+		
 		SSL_free(net->ssl);
 		net->ssl = NULL;
 	}
@@ -848,20 +1013,16 @@ int SSLSocket_putdatas(SSL* ssl, int socket, char* buf0, size_t buf0len, int cou
 
 		if (sslerror == SSL_ERROR_WANT_WRITE)
 		{
-			if (NETWORK_AVAILABLE()) {
-				int* sockmem = (int*)malloc(sizeof(int));
-				int free = 1;
+			int* sockmem = (int*)malloc(sizeof(int));
+			int free = 1;
 
-				Log(TRACE_MIN, -1, "Partial write: incomplete write of %d bytes on SSL socket %d",
-					iovec.iov_len, socket);
-				SocketBuffer_pendingWrite(socket, ssl, 1, &iovec, &free, iovec.iov_len, 0);
-				*sockmem = socket;
-				ListAppend(s.write_pending, sockmem, sizeof(int));
-				FD_SET(socket, &(s.pending_wset));
-				rc = TCPSOCKET_INTERRUPTED;
-			} else {
-				rc = SOCKET_ERROR;
-			}
+			Log(TRACE_MIN, -1, "Partial write: incomplete write of %d bytes on SSL socket %d",
+				iovec.iov_len, socket);
+			SocketBuffer_pendingWrite(socket, ssl, 1, &iovec, &free, iovec.iov_len, 0);
+			*sockmem = socket;
+			ListAppend(s.write_pending, sockmem, sizeof(int));
+			FD_SET(socket, &(s.pending_wset));
+			rc = TCPSOCKET_INTERRUPTED;
 		}
 		else
 			rc = SOCKET_ERROR;
@@ -876,9 +1037,12 @@ int SSLSocket_putdatas(SSL* ssl, int socket, char* buf0, size_t buf0len, int cou
 		free(buf0);
 		for (i = 0; i < count; ++i)
 		{
-			if (frees[i])
-				free(buffers[i]);
-		}
+		    if (frees[i])
+		    {
+			free(buffers[i]);
+			buffers[i] = NULL;
+		    }
+		}	
 	}
 	FUNC_EXIT_RC(rc);
 	return rc;

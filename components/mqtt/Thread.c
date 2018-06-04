@@ -55,7 +55,7 @@
  * @param parameter pointer to the function parameter, can be NULL
  * @return the new thread
  */
-thread_type Thread_start(thread_fn fn, void* parameter, char* name)
+thread_type Thread_start(thread_fn fn, void* parameter)
 {
 #if defined(WIN32) || defined(WIN64)
 	thread_type thread = NULL;
@@ -72,9 +72,6 @@ thread_type Thread_start(thread_fn fn, void* parameter, char* name)
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	if (pthread_create(&thread, &attr, fn, parameter) != 0)
 		thread = 0;
-
-	pthread_setname_np(thread, name);
-
 	pthread_attr_destroy(&attr);
 #endif
 	FUNC_EXIT;
@@ -98,18 +95,18 @@ mutex_type Thread_create_mutex(void)
 			rc = GetLastError();
 	#else
 		mutex = malloc(sizeof(pthread_mutex_t));
+		#if !__XTENSA__
 		*mutex = PTHREAD_MUTEX_INITIALIZER;
+		#endif
 		rc = pthread_mutex_init(mutex, NULL);
 	#endif
 	FUNC_EXIT_RC(rc);
-	(void) rc;
 	return mutex;
 }
 
 
 /**
- * Lock a mutex which has already been created, block until ready
- * @param mutex the mutex
+ * Lock a mutex which has alrea
  * @return completion code, 0 is success
  */
 int Thread_lock_mutex(mutex_type mutex)
@@ -168,7 +165,6 @@ void Thread_destroy_mutex(mutex_type mutex)
 		free(mutex);
 	#endif
 	FUNC_EXIT_RC(rc);
-	(void) rc;
 }
 
 
@@ -193,13 +189,27 @@ thread_id_type Thread_getid(void)
 sem_type Thread_create_sem(void)
 {
 	sem_type sem = NULL;
+	int rc = 0;
 
 	FUNC_ENTRY;
-
-	sem = xSemaphoreCreateCounting(10,0);
-
-	FUNC_EXIT_RC(sem?0:-1);
-
+	#if defined(WIN32) || defined(WIN64)
+		sem = CreateEvent(
+		        NULL,               /* default security attributes */
+		        FALSE,              /* manual-reset event? */
+		        FALSE,              /* initial state is nonsignaled */
+		        NULL                /* object name */
+		        );
+	#elif defined(OSX)
+		sem = dispatch_semaphore_create(0L);
+		rc = (sem == NULL) ? -1 : 0;
+	#elif __XTENSA__
+		sem = xSemaphoreCreateCounting(10,0);
+		rc = sem?0:-1;
+	#else
+		sem = malloc(sizeof(sem_t));
+		rc = sem_init(sem, 0, 0);
+	#endif
+	FUNC_EXIT_RC(rc);
 	return sem;
 }
 
@@ -212,16 +222,50 @@ sem_type Thread_create_sem(void)
  */
 int Thread_wait_sem(sem_type sem, int timeout)
 {
-    uint32_t rc = -1;
+/* sem_timedwait is the obvious call to use, but seemed not to work on the Viper,
+ * so I've used trywait in a loop instead. Ian Craggs 23/7/2010
+ */
+	int rc = -1;
+#if !defined(WIN32) && !defined(WIN64) && !defined(OSX) && !defined(__XTENSA__)
+#define USE_TRYWAIT
+#if defined(USE_TRYWAIT)
+	int i = 0;
+	int interval = 10000; /* 10000 microseconds: 10 milliseconds */
+	int count = (1000 * timeout) / interval; /* how many intervals in timeout period */
+#else
+	struct timespec ts;
+#endif
+#endif
 
-    FUNC_ENTRY;
-
-    if (xSemaphoreTake(sem, timeout / portTICK_PERIOD_MS) == pdTRUE) {
+	FUNC_ENTRY;
+	#if defined(WIN32) || defined(WIN64)
+		rc = WaitForSingleObject(sem, timeout < 0 ? 0 : timeout);
+    #elif defined(OSX)
+		rc = (int)dispatch_semaphore_wait(sem, dispatch_time(DISPATCH_TIME_NOW, (int64_t)timeout*1000000L));
+	#elif defined(USE_TRYWAIT)
+		while (++i < count && (rc = sem_trywait(sem)) != 0)
+		{
+			if (rc == -1 && ((rc = errno) != EAGAIN))
+			{
+				rc = 0;
+				break;
+			}
+			usleep(interval); /* microseconds - .1 of a second */
+		}
+	#elif __XTENSA__
+	if (xSemaphoreTake(sem, timeout / portTICK_PERIOD_MS) == pdTRUE) {
     	rc = 0;
     }
+	#else
+		if (clock_gettime(CLOCK_REALTIME, &ts) != -1)
+		{
+			ts.tv_sec += timeout;
+			rc = sem_timedwait(sem, &ts);
+		}
+	#endif
 
-    FUNC_EXIT_RC((int)rc);
-    return (int)rc;
+ 	FUNC_EXIT_RC(rc);
+ 	return rc;
 }
 
 
@@ -232,7 +276,17 @@ int Thread_wait_sem(sem_type sem, int timeout)
  */
 int Thread_check_sem(sem_type sem)
 {
-	return (uxSemaphoreGetCount(sem) > 0);
+#if defined(WIN32) || defined(WIN64)
+	return WaitForSingleObject(sem, 0) == WAIT_OBJECT_0;
+#elif defined(OSX)
+  return dispatch_semaphore_wait(sem, DISPATCH_TIME_NOW) == 0;
+#elif __XTENSA__
+  return (uxSemaphoreGetCount(sem) > 0);
+#else
+	int semval = -1;
+	sem_getvalue(sem, &semval);
+	return semval > 0;
+#endif
 }
 
 
@@ -243,15 +297,23 @@ int Thread_check_sem(sem_type sem)
  */
 int Thread_post_sem(sem_type sem)
 {
-    int rc = 0;
+	int rc = 0;
 
-    FUNC_ENTRY;
+	FUNC_ENTRY;
+	#if defined(WIN32) || defined(WIN64)
+		if (SetEvent(sem) == 0)
+			rc = GetLastError();
+	#elif defined(OSX)
+		rc = (int)dispatch_semaphore_signal(sem);
+	#elif __XTENSA__
+		xSemaphoreGive(sem);
+	#else
+		if (sem_post(sem) == -1)
+			rc = errno;
+	#endif
 
-    xSemaphoreGive(sem);
-
-    FUNC_EXIT_RC(rc);
-
-    return rc;
+ 	FUNC_EXIT_RC(rc);
+  return rc;
 }
 
 
@@ -261,15 +323,21 @@ int Thread_post_sem(sem_type sem)
  */
 int Thread_destroy_sem(sem_type sem)
 {
-    int rc = 0;
+	int rc = 0;
 
-    FUNC_ENTRY;
-
-    vSemaphoreDelete(sem);
-
-    FUNC_EXIT_RC(rc);
-
-    return rc;
+	FUNC_ENTRY;
+	#if defined(WIN32) || defined(WIN64)
+		rc = CloseHandle(sem);
+    #elif defined(OSX)
+	  dispatch_release(sem);
+	#elif __XTENSA__
+	  vSemaphoreDelete(sem);
+	#else
+		rc = sem_destroy(sem);
+		free(sem);
+	#endif
+	FUNC_EXIT_RC(rc);
+	return rc;
 }
 
 
@@ -289,7 +357,6 @@ cond_type Thread_create_cond(void)
 	rc = pthread_mutex_init(&condvar->mutex, NULL);
 
 	FUNC_EXIT_RC(rc);
-	(void) rc;
 	return condvar;
 }
 
@@ -305,6 +372,7 @@ int Thread_signal_cond(cond_type condvar)
 	rc = pthread_cond_signal(&condvar->cond);
 	pthread_mutex_unlock(&condvar->mutex);
 
+    FUNC_EXIT_RC(rc);
 	return rc;
 }
 
@@ -344,6 +412,7 @@ int Thread_destroy_cond(cond_type condvar)
 	rc = pthread_cond_destroy(&condvar->cond);
 	free(condvar);
 
+    FUNC_EXIT_RC(rc);
 	return rc;
 }
 #endif
@@ -394,7 +463,7 @@ int main(int argc, char *argv[])
 	printf("check sem %d\n", Thread_check_sem(sem));
 
 	printf("Starting secondary thread\n");
-	Thread_start(secondary, (void*)sem, "test");
+	Thread_start(secondary, (void*)sem);
 
 	sleep(3);
 	printf("check sem %d\n", Thread_check_sem(sem));

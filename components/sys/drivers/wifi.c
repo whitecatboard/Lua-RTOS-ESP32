@@ -400,18 +400,17 @@ driver_error_t *wifi_start(uint8_t async) {
         if (mode == WIFI_MODE_AP || mode == WIFI_MODE_APSTA) {
             status_set(STATUS_WIFI_STARTED);
         } else {
+            status_set(STATUS_WIFI_STARTED);
             if (!async) {
                 EventBits_t uxBits = xEventGroupWaitBits(netEvent, evWIFI_CONNECTED | evWIFI_CANT_CONNECT, pdTRUE, pdFALSE, portMAX_DELAY);
                 if (uxBits & (evWIFI_CONNECTED)) {
-                    status_set(STATUS_WIFI_STARTED);
+                    return NULL;                    status_set(STATUS_WIFI_STARTED);
                 }
 
                 if (uxBits & (evWIFI_CANT_CONNECT)) {
                     esp_wifi_stop();
                     return driver_error(WIFI_DRIVER, WIFI_ERR_CANT_CONNECT, NULL);
                 }
-            } else {
-                status_set(STATUS_WIFI_STARTED);
             }
         }
     }
@@ -430,9 +429,9 @@ driver_error_t *wifi_stop() {
     esp_smartconfig_stop();
 
     if (status_get(STATUS_WIFI_STARTED)) {
-        if ((error = wifi_check_error(esp_wifi_stop()))) return error;
-
         status_clear(STATUS_WIFI_STARTED);
+
+        if ((error = wifi_check_error(esp_wifi_stop()))) return error;
     }
 
     return NULL;

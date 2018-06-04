@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2014 IBM Corp.
+ * Copyright (c) 2009, 2017 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -62,10 +62,10 @@
 #endif
 #endif
 
-void StackTrace_entry(const char* name, int line, int trace);
-void StackTrace_exit(const char* name, int line, void* return_value, int trace);
+void StackTrace_entry(const char* name, int line, enum LOG_LEVELS trace);
+void StackTrace_exit(const char* name, int line, void* return_value, enum LOG_LEVELS trace);
 
 void StackTrace_printStack(FILE* dest);
-char* StackTrace_get(thread_id_type);
+char* StackTrace_get(thread_id_type, char* buf, int bufsize);
 
 #endif /* STACKTRACE_H_ */

@@ -3,11 +3,11 @@
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution.
+ * and Eclipse Distribution License v1.0 which accompany this distribution. 
  *
- * The Eclipse Public License is available at
+ * The Eclipse Public License is available at 
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at
+ * and the Eclipse Distribution License is available at 
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-//#include "Heap.h"
+#include "Heap.h"
 
 
 static int ListUnlink(List* aList, void* content, int(*callback)(void*, void*), int freeContent);
@@ -218,7 +218,10 @@ static int ListUnlink(List* aList, void* content, int(*callback)(void*, void*), 
 
 	next = aList->current->next;
 	if (freeContent)
+        {
 		free(aList->current->content);
+                aList->current->content = NULL;
+        }
 	if (saved == aList->current)
 		saveddeleted = 1;
 	free(aList->current);
@@ -357,7 +360,10 @@ void ListEmpty(List* aList)
 	{
 		ListElement* first = aList->first;
 		if (first->content != NULL)
+                {
 			free(first->content);
+                        first->content = NULL;
+                }
 		aList->first = first->next;
 		free(first);
 	}

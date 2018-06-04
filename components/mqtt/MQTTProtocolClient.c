@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2013 IBM Corp.
+ * Copyright (c) 2009, 2018 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -17,6 +17,7 @@
  *    Ian Craggs - fix for bug 421103 - trying to write to same socket, in retry
  *    Rong Xiang, Ian Craggs - C++ compatibility
  *    Ian Craggs - turn off DUP flag for PUBREL - MQTT 3.1.1
+ *    Ian Craggs - ensure that acks are not sent if write is outstanding on socket
  *******************************************************************************/
 
 /**
@@ -36,7 +37,7 @@
 #endif
 #include "SocketBuffer.h"
 #include "StackTrace.h"
-//#include "Heap.h"
+#include "Heap.h"
 
 #if !defined(min)
 #define min(A,B) ( (A) < (B) ? (A):(B))
@@ -218,11 +219,9 @@ Publications* MQTTProtocol_storePublication(Publish* publish, int* len)
 	p->refcount = 1;
 
 	*len = (int)strlen(publish->topic)+1;
-	/*
 	if (Heap_findItem(publish->topic))
 		p->topic = publish->topic;
 	else
-	*/
 	{
 		p->topic = malloc(*len);
 		strcpy(p->topic, publish->topic);
@@ -277,12 +276,14 @@ int MQTTProtocol_handlePublishes(void* pack, int sock)
 
 	if (publish->header.bits.qos == 0)
 		Protocol_processPublication(publish, client);
+	else if (!Socket_noPendingWrites(sock))
+		rc = SOCKET_ERROR; /* queue acks? */
 	else if (publish->header.bits.qos == 1)
 	{
-		/* send puback before processing the publications because a lot of return publications could fill up the socket buffer */
-		rc = MQTTPacket_send_puback(publish->msgId, &client->net, client->clientID);
-		/* if we get a socket error from sending the puback, should we ignore the publication? */
-		Protocol_processPublication(publish, client);
+	  /* send puback before processing the publications because a lot of return publications could fill up the socket buffer */
+	  rc = MQTTPacket_send_puback(publish->msgId, &client->net, client->clientID);
+	  /* if we get a socket error from sending the puback, should we ignore the publication? */
+	  Protocol_processPublication(publish, client);
 	}
 	else if (publish->header.bits.qos == 2)
 	{
@@ -422,6 +423,8 @@ int MQTTProtocol_handlePubrels(void* pack, int sock)
 	{
 		if (pubrel->header.bits.dup == 0)
 			Log(TRACE_MIN, 3, NULL, "PUBREL", client->clientID, pubrel->msgId);
+		else if (!Socket_noPendingWrites(sock))
+			rc = SOCKET_ERROR; /* queue acks? */
 		else
 			/* Apparently this is "normal" behaviour, so we don't need to issue a warning */
 			rc = MQTTPacket_send_pubcomp(pubrel->msgId, &client->net, client->clientID);
@@ -433,6 +436,8 @@ int MQTTProtocol_handlePubrels(void* pack, int sock)
 			Log(TRACE_MIN, 4, NULL, "PUBREL", client->clientID, pubrel->msgId, m->qos);
 		else if (m->nextMessageType != PUBREL)
 			Log(TRACE_MIN, 5, NULL, "PUBREL", client->clientID, pubrel->msgId);
+		else if (!Socket_noPendingWrites(sock))
+		  rc = SOCKET_ERROR; /* queue acks? */
 		else
 		{
 			Publish publish;
@@ -523,7 +528,7 @@ void MQTTProtocol_keepalive(time_t now)
 	while (current)
 	{
 		Clients* client =	(Clients*)(current->content);
-		ListNextElement(bstate->clients, &current); 
+		ListNextElement(bstate->clients, &current);
 		if (client->connected && client->keepAliveInterval > 0 &&
 			(difftime(now, client->net.lastSent) >= client->keepAliveInterval ||
 					difftime(now, client->net.lastReceived) >= client->keepAliveInterval))
@@ -670,12 +675,18 @@ void MQTTProtocol_freeClient(Clients* client)
 	MQTTProtocol_freeMessageList(client->inboundMsgs);
 	ListFree(client->messageQueue);
 	free(client->clientID);
+        client->clientID = NULL;
 	if (client->will)
 	{
 		free(client->will->payload);
 		free(client->will->topic);
 		free(client->will);
+                client->will = NULL;
 	}
+	if (client->username)
+		free((void*)client->username);
+	if (client->password)
+		free((void*)client->password);
 #if defined(OPENSSL)
 	if (client->sslopts)
 	{
@@ -689,7 +700,13 @@ void MQTTProtocol_freeClient(Clients* client)
 			free((void*)client->sslopts->privateKeyPassword);
 		if (client->sslopts->enabledCipherSuites)
 			free((void*)client->sslopts->enabledCipherSuites);
+		if (client->sslopts->struct_version >= 2)
+		{
+			if (client->sslopts->CApath)
+				free((void*)client->sslopts->CApath);
+		}
 		free(client->sslopts);
+                client->sslopts = NULL;
 	}
 #endif
 	/* don't free the client structure itself... this is done elsewhere */
@@ -737,14 +754,14 @@ void MQTTProtocol_freeMessageList(List* msgList)
 * @param dest_size the size of the memory pointed to by dest: copy no more than this -1 (allow for null).  Must be >= 1
 * @return the destination string pointer
 */
-char* MQTTStrncpyInt(char *dest, const char *src, size_t dest_size, bool warn_truncate)
+char* MQTTStrncpy(char *dest, const char *src, size_t dest_size)
 {
   size_t count = dest_size;
   char *temp = dest;
 
-  FUNC_ENTRY; 
-  if (dest_size < strlen(src) && 0 != warn_truncate)
-    Log(TRACE_MIN, -1, "the src string is truncated from %i to %i - src string was: %s", strlen(src), dest_size, src);
+  FUNC_ENTRY;
+  if (dest_size < strlen(src))
+    Log(TRACE_MIN, -1, "the src string is truncated");
 
   /* We must copy only the first (dest_size - 1) bytes */
   while (count > 1 && (*temp++ = *src++))
@@ -754,11 +771,6 @@ char* MQTTStrncpyInt(char *dest, const char *src, size_t dest_size, bool warn_tr
 
   FUNC_EXIT;
   return dest;
-}
-
-char* MQTTStrncpy(char *dest, const char *src, size_t dest_size)
-{
-	return MQTTStrncpyInt(dest, src, dest_size, 1);
 }
 
 

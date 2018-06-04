@@ -1,19 +1,20 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2014 IBM Corp.
+ * Copyright (c) 2009, 2018 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution.
+ * and Eclipse Distribution License v1.0 which accompany this distribution. 
  *
- * The Eclipse Public License is available at
+ * The Eclipse Public License is available at 
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at
+ * and the Eclipse Distribution License is available at 
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
  *    Ian Craggs - initial API and implementation and/or initial documentation
  *    Ian Craggs, Allan Stockdill-Mander - SSL updates
  *    Ian Craggs - MQTT 3.1.1 support
+ *    Ian Craggs - fix for issue 453
  *******************************************************************************/
 
 /**
@@ -34,7 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-//#include "Heap.h"
+#include "Heap.h"
 
 #if !defined(min)
 #define min(A,B) ( (A) < (B) ? (A):(B))
@@ -109,7 +110,7 @@ void* MQTTPacket_Factory(networkHandles* net, int* error)
 
 	/* read the packet data from the socket */
 #if defined(OPENSSL)
-	*error = (net->ssl) ? SSLSocket_getch(net->ssl, net->socket, &header.byte) : Socket_getch(net->socket, &header.byte);
+	*error = (net->ssl) ? SSLSocket_getch(net->ssl, net->socket, &header.byte) : Socket_getch(net->socket, &header.byte); 
 #else
 	*error = Socket_getch(net->socket, &header.byte);
 #endif
@@ -122,7 +123,7 @@ void* MQTTPacket_Factory(networkHandles* net, int* error)
 
 	/* now read the rest, the variable header and payload */
 #if defined(OPENSSL)
-	data = (net->ssl) ? SSLSocket_getdata(net->ssl, net->socket, remaining_length, &actual_len) :
+	data = (net->ssl) ? SSLSocket_getdata(net->ssl, net->socket, remaining_length, &actual_len) : 
 						Socket_getdata(net->socket, remaining_length, &actual_len);
 #else
 	data = Socket_getdata(net->socket, remaining_length, &actual_len);
@@ -179,31 +180,36 @@ int MQTTPacket_send(networkHandles* net, Header header, char* buffer, size_t buf
 	int rc;
 	size_t buf0len;
 	char *buf;
+	int count = 0;
 
 	FUNC_ENTRY;
 	buf = malloc(10);
 	buf[0] = header.byte;
 	buf0len = 1 + MQTTPacket_encode(&buf[1], buflen);
+
+	if (buffer != NULL)
+		count = 1;
+
 #if !defined(NO_PERSISTENCE)
 	if (header.bits.type == PUBREL)
 	{
 		char* ptraux = buffer;
 		int msgId = readInt(&ptraux);
-		rc = MQTTPersistence_put(net->socket, buf, buf0len, 1, &buffer, &buflen,
+		rc = MQTTPersistence_put(net->socket, buf, buf0len, count, &buffer, &buflen,
 			header.bits.type, msgId, 0);
 	}
 #endif
 
 #if defined(OPENSSL)
 	if (net->ssl)
-		rc = SSLSocket_putdatas(net->ssl, net->socket, buf, buf0len, 1, &buffer, &buflen, &freeData);
+		rc = SSLSocket_putdatas(net->ssl, net->socket, buf, buf0len, count, &buffer, &buflen, &freeData);
 	else
 #endif
-		rc = Socket_putdatas(net->socket, buf, buf0len, 1, &buffer, &buflen, &freeData);
+		rc = Socket_putdatas(net->socket, buf, buf0len, count, &buffer, &buflen, &freeData);
 		
 	if (rc == TCPSOCKET_COMPLETE)
 		time(&(net->lastSent));
-
+	
 	if (rc != TCPSOCKET_INTERRUPTED)
 	  free(buf);
 
@@ -248,10 +254,10 @@ int MQTTPacket_sends(networkHandles* net, Header header, int count, char** buffe
 	else
 #endif
 		rc = Socket_putdatas(net->socket, buf, buf0len, count, buffers, buflens, frees);
-
+		
 	if (rc == TCPSOCKET_COMPLETE)
 		time(&(net->lastSent));
-
+	
 	if (rc != TCPSOCKET_INTERRUPTED)
 	  free(buf);
 	FUNC_EXIT_RC(rc);
@@ -733,23 +739,4 @@ int MQTTPacket_send_publish(Publish* pack, int dup, int qos, int retained, netwo
 				min(20, pack->payloadlen), pack->payload);
 	FUNC_EXIT_RC(rc);
 	return rc;
-}
-
-
-/**
- * Free allocated storage for a various packet tyoes
- * @param pack pointer to the suback packet structure
- */
-void MQTTPacket_free_packet(MQTTPacket* pack)
-{
-	FUNC_ENTRY;
-	if (pack->header.bits.type == PUBLISH)
-		MQTTPacket_freePublish((Publish*)pack);
-	/*else if (pack->header.type == SUBSCRIBE)
-		MQTTPacket_freeSubscribe((Subscribe*)pack, 1);
-	else if (pack->header.type == UNSUBSCRIBE)
-		MQTTPacket_freeUnsubscribe((Unsubscribe*)pack);*/
-	else
-		free(pack);
-	FUNC_EXIT;
 }

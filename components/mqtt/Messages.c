@@ -3,11 +3,11 @@
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution.
+ * and Eclipse Distribution License v1.0 which accompany this distribution. 
  *
- * The Eclipse Public License is available at
+ * The Eclipse Public License is available at 
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at
+ * and the Eclipse Distribution License is available at 
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
@@ -28,7 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-//#include "Heap.h"
+#include "Heap.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -91,7 +91,7 @@ static const char *trace_message_list[] =
  * @param log_level the log level, used to determine which message list to use
  * @return the message format string
  */
-const char* Messages_get(int index, int log_level)
+const char* Messages_get(int index, enum LOG_LEVELS log_level)
 {
 	const char *msg = NULL;
 

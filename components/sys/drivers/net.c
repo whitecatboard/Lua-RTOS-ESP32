@@ -372,13 +372,16 @@ driver_error_t *net_reconnect() {
     return NULL;
 }
 
+int network_started() {
+    return (status_get(STATUS_WIFI_STARTED) | status_get(STATUS_SPI_ETH_STARTED) | status_get(STATUS_ETH_STARTED));
+}
 int wait_for_network(uint32_t timeout) {
     TickType_t ticks_to_wait;
 
     if (timeout == 0) {
         ticks_to_wait = portMAX_DELAY;
     } else {
-        ticks_to_wait = (timeout * 1000) / portTICK_PERIOD_MS;
+        ticks_to_wait = timeout / portTICK_PERIOD_MS;
 
     }
 

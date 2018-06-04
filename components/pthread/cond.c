@@ -169,6 +169,10 @@ int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,
 	pthread_mutex_unlock(mutex);
 	EventBits_t uxBits = xEventGroupWaitBits(scond->ev, (1 << bit), pdTRUE, pdTRUE, ticks);
 	if (!(uxBits & (1 << bit))) {
+	    pthread_mutex_lock(mutex);
+	    scond->referenced &= ~(1 << bit);
+	    pthread_mutex_unlock(mutex);
+
 		return ETIMEDOUT;
 	}
 	pthread_mutex_lock(mutex);

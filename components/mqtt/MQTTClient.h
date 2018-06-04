@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2017 IBM Corp.
+ * Copyright (c) 2009, 2018 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -175,6 +175,10 @@
  * Return code: Attempting SSL connection using non-SSL version of library
  */
 #define MQTTCLIENT_SSL_NOT_SUPPORTED -10
+/**
+ * Return code: protocol prefix in serverURI should be tcp:// or ssl://
+ */
+#define MQTTCLIENT_BAD_PROTOCOL -14
 
 /**
  * Default MQTT version to connect with.  Use 3.1.1 then fall back to 3.1
@@ -231,16 +235,6 @@ typedef void* MQTTClient;
  */
 typedef int MQTTClient_deliveryToken;
 typedef int MQTTClient_token;
-
-
-/** 
- * This function returns if a connection is established
- * @param handle A valid client handle from a successful call to
- * MQTTClient_create().
- * @return ::MQTTCLIENT_SUCCESS if the client is connected.
- * An error code is returned if there is no connection.
- */
-DLLExport int MQTTClient_connected(MQTTClient handle);
 
 /**
  * A structure representing the payload and attributes of an MQTT message. The
@@ -492,6 +486,11 @@ typedef struct
 
 #define MQTTClient_willOptions_initializer { {'M', 'Q', 'T', 'W'}, 1, NULL, NULL, 0, 0, {0, NULL} }
 
+#define MQTT_SSL_VERSION_DEFAULT 0
+#define MQTT_SSL_VERSION_TLS_1_0 1
+#define MQTT_SSL_VERSION_TLS_1_1 2
+#define MQTT_SSL_VERSION_TLS_1_2 3
+
 /**
 * MQTTClient_sslProperties defines the settings to establish an SSL/TLS connection using the
 * OpenSSL library. It covers the following scenarios:
@@ -508,7 +507,7 @@ typedef struct
 {
 	/** The eyecatcher for this structure.  Must be MQTS */
 	char struct_id[4];
-	/** The version number of this structure.  Must be 0 */
+	/** The version number of this structure.  Must be 0, or 1 to enable TLS version selection. */
 	int struct_version;
 
 	/** The file in PEM format containing the public digital certificates trusted by the client. */
@@ -539,9 +538,29 @@ typedef struct
     /** True/False option to enable verification of the server certificate **/
     int enableServerCertAuth;
 
+    /** The SSL/TLS version to use. Specify one of MQTT_SSL_VERSION_DEFAULT (0),
+    * MQTT_SSL_VERSION_TLS_1_0 (1), MQTT_SSL_VERSION_TLS_1_1 (2) or MQTT_SSL_VERSION_TLS_1_2 (3).
+    * Only used if struct_version is >= 1.
+    */
+    int sslVersion;
+
+    /**
+     * Whether to carry out post-connect checks, including that a certificate
+     * matches the given host name.
+     * Exists only if struct_version >= 2
+     */
+    int verify;
+
+    /**
+     * From the OpenSSL documentation:
+     * If CApath is not NULL, it points to a directory containing CA certificates in PEM format.
+     * Exists only if struct_version >= 2
+	 */
+	const char* CApath;
+
 } MQTTClient_SSLOptions;
 
-#define MQTTClient_SSLOptions_initializer { {'M', 'Q', 'T', 'S'}, 0, NULL, NULL, NULL, NULL, NULL, 1 }
+#define MQTTClient_SSLOptions_initializer { {'M', 'Q', 'T', 'S'}, 2, NULL, NULL, NULL, NULL, NULL, 1, MQTT_SSL_VERSION_DEFAULT, 0, NULL }
 
 /**
  * MQTTClient_connectOptions defines several settings that control the way the
@@ -973,6 +992,13 @@ DLLExport void MQTTClient_free(void* ptr);
   * structure to be freed.
   */
 DLLExport void MQTTClient_destroy(MQTTClient* handle);
+
+/**
+ * Returns a pointer to the string representation of the error or NULL.
+ *
+ * Do not free after use. Returns NULL if the error code is unknown.
+ */
+DLLExport const char* MQTTClient_strerror(int code);
 
 #endif
 #ifdef __cplusplus

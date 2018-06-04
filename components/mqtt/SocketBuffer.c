@@ -32,7 +32,7 @@
 #include <stdio.h>
 #include <string.h>
 
-//#include "Heap.h"
+#include "Heap.h"
 
 #if defined(WIN32) || defined(WIN64)
 #define iov_len len
@@ -42,12 +42,12 @@
 /**
  * Default input queue buffer
  */
-static socket_queue* def_queue = NULL;
+static socket_queue* def_queue;
 
 /**
  * List of queued input buffers
  */
-static List* queues = NULL;
+static List* queues;
 
 /**
  * List of queued write buffers
@@ -104,14 +104,9 @@ void SocketBuffer_initialize(void)
  */
 void SocketBuffer_freeDefQ(void)
 {
-	if(def_queue) {
-		if (def_queue->buf) {
-			free(def_queue->buf);
-			def_queue->buf = NULL;
-		}
-		free(def_queue);
-		def_queue = NULL;
-	}
+	free(def_queue->buf);
+	free(def_queue);
+        def_queue = NULL;
 }
 
 
@@ -124,12 +119,9 @@ void SocketBuffer_terminate(void)
 	ListEmpty(&writes);
 
 	FUNC_ENTRY;
-	if (queues) {
-		while (ListNextElement(queues, &cur))
-			free(((socket_queue*)(cur->content))->buf);
-		ListFree(queues);
-		queues = NULL;
-	}
+	while (ListNextElement(queues, &cur))
+		free(((socket_queue*)(cur->content))->buf);
+	ListFree(queues);
 	SocketBuffer_freeDefQ();
 	FUNC_EXIT;
 }
@@ -327,6 +319,7 @@ void SocketBuffer_queueChar(int socket, char c)
  * @param socket the socket for which the write was interrupted
  * @param count the number of iovec buffers
  * @param iovecs buffer array
+ * @param frees a set of flags indicating which of the iovecs array should be freed
  * @param total total data length to be written
  * @param bytes actual data length that was written
  */

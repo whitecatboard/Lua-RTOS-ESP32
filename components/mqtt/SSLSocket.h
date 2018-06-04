@@ -1,18 +1,19 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2017 IBM Corp.
+ * Copyright (c) 2009, 2018 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution.
+ * and Eclipse Distribution License v1.0 which accompany this distribution. 
  *
- * The Eclipse Public License is available at
+ * The Eclipse Public License is available at 
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at
+ * and the Eclipse Distribution License is available at 
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
- *    Ian Craggs, Allan Stockdill-Mander - initial implementation
+ *    Ian Craggs, Allan Stockdill-Mander - initial implementation 
  *    Ian Craggs - SNI support
+ *    Ian Craggs - post connect checks and CApath
  *******************************************************************************/
 #if !defined(SSLSOCKET_H)
 #define SSLSOCKET_H
@@ -21,7 +22,9 @@
 	#define ssl_mutex_type HANDLE
 #else
 	#include <pthread.h>
-	//#include <semaphore.h>
+	#if !__XTENSA__
+	#include <semaphore.h>
+	#endif
 	#define ssl_mutex_type pthread_mutex_t
 #endif
 
@@ -43,7 +46,7 @@ char *SSLSocket_getdata(SSL* ssl, int socket, size_t bytes, size_t* actual_len);
 
 int SSLSocket_close(networkHandles* net);
 int SSLSocket_putdatas(SSL* ssl, int socket, char* buf0, size_t buf0len, int count, char** buffers, size_t* buflens, int* frees);
-int SSLSocket_connect(SSL* ssl, int socket);
+int SSLSocket_connect(SSL* ssl, int sock, char* hostname, int verify);
 
 int SSLSocket_getPendingRead(void);
 int SSLSocket_continueWrite(pending_writes* pw);

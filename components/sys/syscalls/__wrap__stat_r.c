@@ -52,6 +52,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include <sys/stat.h>
 #include <sys/mount.h>
 
 extern int __real__stat_r(struct _reent *r, const char *path, int flags, int mode);
@@ -73,4 +74,8 @@ int __wrap__stat_r(struct _reent *r, const char *path, int flags, int mode) {
     } else {
         return -1;
     }
+}
+
+int lstat(const char *path, struct stat *buf) {
+    return stat(path, buf);
 }

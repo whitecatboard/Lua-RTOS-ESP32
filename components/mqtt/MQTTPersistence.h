@@ -3,11 +3,11 @@
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution.
+ * and Eclipse Distribution License v1.0 which accompany this distribution. 
  *
- * The Eclipse Public License is available at
+ * The Eclipse Public License is available at 
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at
+ * and the Eclipse Distribution License is available at 
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
@@ -41,7 +41,7 @@ int MQTTPersistence_clear(Clients* c);
 int MQTTPersistence_restore(Clients* c);
 void* MQTTPersistence_restorePacket(char* buffer, size_t buflen);
 void MQTTPersistence_insertInOrder(List* list, void* content, size_t size);
-int MQTTPersistence_put(int socket, char* buf0, size_t buf0len, int count,
+int MQTTPersistence_put(int socket, char* buf0, size_t buf0len, int count, 
 								 char** buffers, size_t* buflens, int htype, int msgId, int scr);
 int MQTTPersistence_remove(Clients* c, char* type, int qos, int msgId);
 void MQTTPersistence_wrapMsgID(Clients *c);

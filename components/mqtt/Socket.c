@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2017 IBM Corp.
+ * Copyright (c) 2009, 2018 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -17,6 +17,7 @@
  *    Juergen Kosel, Ian Craggs - fix for issue #135
  *    Ian Craggs - issue #217
  *    Ian Craggs - fix for issue #186
+ *    Ian Craggs - remove StackTrace print debugging calls
  *******************************************************************************/
 
 /**
@@ -36,24 +37,23 @@
 #include "SSLSocket.h"
 #endif
 
-#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
 #include <ctype.h>
 
-//#include "Heap.h"
+#include "Heap.h"
 
 int Socket_setnonblocking(int sock);
 int Socket_error(char* aString, int sock);
 int Socket_addSocket(int newSd);
 int isReady(int socket, fd_set* read_set, fd_set* write_set);
 int Socket_writev(int socket, iobuf* iovecs, int count, unsigned long* bytes);
-ssize_t writev(int fd, const struct iovec *iov, int iovcnt);
 int Socket_close_only(int socket);
 int Socket_continueWrite(int socket);
 int Socket_continueWrites(fd_set* pwset);
 char* Socket_getaddrname(struct sockaddr* sa, int sock);
+int Socket_abortWrite(int socket);
 
 #if defined(WIN32) || defined(WIN64)
 #define iov_len len
@@ -153,18 +153,9 @@ void Socket_outInitialize(void)
 void Socket_outTerminate(void)
 {
 	FUNC_ENTRY;
-	if (s.connect_pending) {
-		ListFree(s.connect_pending);
-		s.connect_pending = NULL;
-	}
-	if (s.write_pending) {
-		ListFree(s.write_pending);
-		s.write_pending = NULL;
-	}
-	if (s.clientsds) {
-		ListFree(s.clientsds);
-		s.clientsds = NULL;
-	}
+	ListFree(s.connect_pending);
+	ListFree(s.write_pending);
+	ListFree(s.clientsds);
 	SocketBuffer_terminate();
 #if defined(WIN32) || defined(WIN64)
 	WSACleanup();
@@ -238,7 +229,7 @@ int isReady(int socket, fd_set* read_set, fd_set* write_set)
  *  @param tp the timeout to be used for the select, unless overridden
  *  @return the socket next ready, or 0 if none is ready
  */
-int Socket_getReadySocket(int more_work, struct timeval *tp)
+int Socket_getReadySocket(int more_work, struct timeval *tp, mutex_type mutex)
 {
 	int rc = 0;
 	static struct timeval zero = {0L, 0L}; /* 0 seconds */
@@ -246,6 +237,7 @@ int Socket_getReadySocket(int more_work, struct timeval *tp)
 	struct timeval timeout = one;
 
 	FUNC_ENTRY;
+	Thread_lock_mutex(mutex);
 	if (s.clientsds->count == 0)
 		goto exit;
 
@@ -268,7 +260,11 @@ int Socket_getReadySocket(int more_work, struct timeval *tp)
 
 		memcpy((void*)&(s.rset), (void*)&(s.rset_saved), sizeof(s.rset));
 		memcpy((void*)&(pwset), (void*)&(s.pending_wset), sizeof(pwset));
-		if ((rc = select(s.maxfdp1, &(s.rset), &pwset, NULL, &timeout)) == SOCKET_ERROR)
+		/* Prevent performance issue by unlocking the socket_mutex while waiting for a ready socket. */
+		Thread_unlock_mutex(mutex);
+		rc = select(s.maxfdp1, &(s.rset), &pwset, NULL, &timeout);
+		Thread_lock_mutex(mutex);
+		if (rc == SOCKET_ERROR)
 		{
 			Socket_error("read select", 0);
 			goto exit;
@@ -311,6 +307,7 @@ int Socket_getReadySocket(int more_work, struct timeval *tp)
 		ListNextElement(s.clientsds, &s.cur_clientsds);
 	}
 exit:
+	Thread_unlock_mutex(mutex);
 	FUNC_EXIT_RC(rc);
 	return rc;
 } /* end getReadySocket */
@@ -429,6 +426,7 @@ int Socket_writev(int socket, iobuf* iovecs, int count, unsigned long* bytes)
 	int rc;
 
 	FUNC_ENTRY;
+	*bytes = 0L;
 #if defined(WIN32) || defined(WIN64)
 	rc = WSASend(socket, iovecs, count, (LPDWORD)bytes, 0, NULL, NULL);
 	if (rc == SOCKET_ERROR)
@@ -438,7 +436,34 @@ int Socket_writev(int socket, iobuf* iovecs, int count, unsigned long* bytes)
 			rc = TCPSOCKET_INTERRUPTED;
 	}
 #else
-	*bytes = 0L;
+/*#define TCPSOCKET_INTERRUPTED_TESTING
+This section forces the occasional return of TCPSOCKET_INTERRUPTED,
+for testing purposes only!
+*/
+#if defined(TCPSOCKET_INTERRUPTED_TESTING)
+  static int i = 0;
+	if (++i >= 10 && i < 21)
+	{
+		if (1)
+		{
+		  printf("Deliberately simulating TCPSOCKET_INTERRUPTED\n");
+		  rc = TCPSOCKET_INTERRUPTED; /* simulate a network wait */
+	  }
+		else
+		{
+			printf("Deliberately simulating SOCKET_ERROR\n");
+		  rc = SOCKET_ERROR;
+		}
+		/* should *bytes always be 0? */
+		if (i == 20)
+		{
+		  printf("Shutdown socket\n");
+		  shutdown(socket, SHUT_WR);
+	  }
+	}
+	else
+	{
+#endif
 	rc = writev(socket, iovecs, count);
 	if (rc == SOCKET_ERROR)
 	{
@@ -448,6 +473,9 @@ int Socket_writev(int socket, iobuf* iovecs, int count, unsigned long* bytes)
 	}
 	else
 		*bytes = rc;
+#if defined(TCPSOCKET_INTERRUPTED_TESTING)
+	}
+#endif
 #endif
 	FUNC_EXIT_RC(rc);
 	return rc;
@@ -486,7 +514,7 @@ int Socket_putdatas(int socket, char* buf0, size_t buf0len, int count, char** bu
 
 	iovecs[0].iov_base = buf0;
 	iovecs[0].iov_len = (ULONG)buf0len;
-	frees1[0] = 1;
+	frees1[0] = 1; /* this buffer should be freed by SocketBuffer if the write is interrupted */
 	for (i = 0; i < count; i++)
 	{
 		iovecs[i+1].iov_base = buffers[i];
@@ -515,6 +543,12 @@ int Socket_putdatas(int socket, char* buf0, size_t buf0len, int count, char** bu
 		}
 	}
 exit:
+#if 0
+        if (rc == TCPSOCKET_INTERRUPTED)
+        {
+            Log(LOG_ERROR, -1, "Socket_putdatas: TCPSOCKET_INTERRUPTED");
+        }
+#endif
 	FUNC_EXIT_RC(rc);
 	return rc;
 }
@@ -585,9 +619,10 @@ void Socket_close(int socket)
 		FD_CLR(socket, &(s.pending_wset));
 	if (s.cur_clientsds != NULL && *(int*)(s.cur_clientsds->content) == socket)
 		s.cur_clientsds = s.cur_clientsds->next;
+	Socket_abortWrite(socket);
+	SocketBuffer_cleanup(socket);
 	ListRemoveItem(s.connect_pending, &socket, intcompare);
 	ListRemoveItem(s.write_pending, &socket, intcompare);
-	SocketBuffer_cleanup(socket);
 
 	if (ListRemoveItem(s.clientsds, &socket, intcompare))
 		Log(TRACE_MIN, -1, "Removed socket %d", socket);
@@ -690,7 +725,19 @@ int Socket_new(char* addr, int port, int* sock)
 			if (setsockopt(*sock, SOL_SOCKET, SO_NOSIGPIPE, (void*)&opt, sizeof(opt)) != 0)
 				Log(LOG_ERROR, -1, "Could not set SO_NOSIGPIPE for socket %d", *sock);
 #endif
-
+/*#define SMALL_TCP_BUFFER_TESTING
+  This section sets the TCP send buffer to a small amount to provoke TCPSOCKET_INTERRUPTED
+	return codes from send, for testing only!
+*/
+#if defined(SMALL_TCP_BUFFER_TESTING)
+        if (1)
+				{
+					int optsend = 100; //2 * 1440;
+					printf("Setting optsend to %d\n", optsend);
+					if (setsockopt(*sock, SOL_SOCKET, SO_SNDBUF, (void*)&optsend, sizeof(optsend)) != 0)
+						Log(LOG_ERROR, -1, "Could not set SO_SNDBUF for socket %d", *sock);
+				}
+#endif
 			Log(TRACE_MIN, -1, "New socket %d for %s, port %d",	*sock, addr, port);
 			if (Socket_addSocket(*sock) == SOCKET_ERROR)
 				rc = Socket_error("addSocket", *sock);
@@ -736,17 +783,19 @@ void Socket_setWriteCompleteCallback(Socket_writeComplete* mywritecomplete)
 	writecomplete = mywritecomplete;
 }
 
+
+
 /**
  *  Continue an outstanding write for a particular socket
  *  @param socket that socket
- *  @return completion code
+ *  @return completion code: 0=incomplete, 1=complete, -1=socket error
  */
 int Socket_continueWrite(int socket)
 {
 	int rc = 0;
 	pending_writes* pw;
 	unsigned long curbuflen = 0L, /* cumulative total of buffer lengths */
-		bytes;
+		bytes = 0L;
 	int curbuf = -1, i;
 	iobuf iovecs1[5];
 
@@ -788,16 +837,68 @@ int Socket_continueWrite(int socket)
 			for (i = 0; i < pw->count; i++)
 			{
 				if (pw->frees[i])
+                                {
 					free(pw->iovecs[i].iov_base);
+                                        pw->iovecs[i].iov_base = NULL;
+                                }
 			}
+			rc = 1; /* signal complete */
 			Log(TRACE_MIN, -1, "ContinueWrite: partial write now complete for socket %d", socket);
 		}
 		else
+		{
+			rc = 0; /* signal not complete */
 			Log(TRACE_MIN, -1, "ContinueWrite wrote +%lu bytes on socket %d", bytes, socket);
+		}
+	}
+	else /* if we got SOCKET_ERROR we need to clean up anyway - a partial write is no good anymore */
+	{
+		for (i = 0; i < pw->count; i++)
+		{
+			if (pw->frees[i])
+                        {
+				free(pw->iovecs[i].iov_base);
+                                pw->iovecs[i].iov_base = NULL;
+                        }
+		}
 	}
 #if defined(OPENSSL)
 exit:
 #endif
+	FUNC_EXIT_RC(rc);
+	return rc;
+}
+
+
+
+/**
+ *  Continue an outstanding write for a particular socket
+ *  @param socket that socket
+ *  @return completion code: 0=incomplete, 1=complete, -1=socket error
+ */
+int Socket_abortWrite(int socket)
+{
+	int i = -1, rc = 0;
+	pending_writes* pw;
+
+	FUNC_ENTRY;
+	if ((pw = SocketBuffer_getWrite(socket)) == NULL)
+	  goto exit;
+
+#if defined(OPENSSL)
+	if (pw->ssl)
+		goto exit;
+#endif
+
+	for (i = 0; i < pw->count; i++)
+	{
+		if (pw->frees[i])
+		{
+			printf("cleaning in abortwrite for socket %d\n", socket);
+			free(pw->iovecs[i].iov_base);
+		}
+	}
+exit:
 	FUNC_EXIT_RC(rc);
 	return rc;
 }
@@ -817,7 +918,9 @@ int Socket_continueWrites(fd_set* pwset)
 	while (curpending)
 	{
 		int socket = *(int*)(curpending->content);
-		if (FD_ISSET(socket, pwset) && Socket_continueWrite(socket))
+		int rc = 0;
+
+		if (FD_ISSET(socket, pwset) && ((rc = Socket_continueWrite(socket)) != 0))
 		{
 			if (!SocketBuffer_writeComplete(socket))
 				Log(LOG_SEVERE, -1, "Failed to remove pending write from socket buffer list");
@@ -830,7 +933,7 @@ int Socket_continueWrites(fd_set* pwset)
 			curpending = s.write_pending->current;
 
 			if (writecomplete)
-				(*writecomplete)(socket);
+				(*writecomplete)(socket, rc);
 		}
 		else
 			ListNextElement(s.write_pending, &curpending);
@@ -870,7 +973,7 @@ char* Socket_getaddrname(struct sockaddr* sa, int sock)
 #else
 	struct sockaddr_in *sin = (struct sockaddr_in *)sa;
 	inet_ntop(sin->sin_family, &sin->sin_addr, addr_string, ADDRLEN);
-	snprintf(&addr_string[strlen(addr_string)], sizeof(addr_string)-strlen(addr_string), ":%d", ntohs(sin->sin_port));
+	sprintf(&addr_string[strlen(addr_string)], ":%d", ntohs(sin->sin_port));
 #endif
 	return addr_string;
 }

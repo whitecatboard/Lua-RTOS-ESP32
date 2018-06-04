@@ -1,13 +1,13 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2017 IBM Corp.
+ * Copyright (c) 2009, 2018 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution.
+ * and Eclipse Distribution License v1.0 which accompany this distribution. 
  *
- * The Eclipse Public License is available at
+ * The Eclipse Public License is available at 
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at
+ * and the Eclipse Distribution License is available at 
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
@@ -34,7 +34,7 @@
 
 #include "MQTTProtocolOut.h"
 #include "StackTrace.h"
-//#include "Heap.h"
+#include "Heap.h"
 
 extern ClientStates* bstate;
 
@@ -64,7 +64,7 @@ char* MQTTProtocol_addressPort(const char* uri, int* port)
 		size_t addr_len = colon_pos - uri;
 		buf = malloc(addr_len + 1);
 		*port = atoi(colon_pos + 1);
-		MQTTStrncpyInt(buf, uri, addr_len+1, 0); //don't warn - truncation intended
+		MQTTStrncpy(buf, uri, addr_len+1);
 	}
 	else
 		*port = DEFAULT_PORT;
@@ -75,7 +75,7 @@ char* MQTTProtocol_addressPort(const char* uri, int* port)
 		if (buf == (char*)uri)
 		{
 			buf = malloc(len);  /* we are stripping off the final ], so length is 1 shorter */
-			MQTTStrncpyInt(buf, uri, len, 0); //don't warn - truncation intended
+			MQTTStrncpy(buf, uri, len);
 		}
 		else
 			buf[len - 1] = '\0';
@@ -107,9 +107,8 @@ int MQTTProtocol_connect(const char* ip_address, Clients* aClient, int MQTTVersi
 
 	addr = MQTTProtocol_addressPort(ip_address, &port);
 	rc = Socket_new(addr, port, &(aClient->net.socket));
-	if (rc == EINPROGRESS || rc == EWOULDBLOCK) {
+	if (rc == EINPROGRESS || rc == EWOULDBLOCK)
 		aClient->connect_state = 1; /* TCP connect called - wait for connect completion */
-	}
 	else if (rc == 0)
 	{	/* TCP connect completed. If SSL, send SSL connect */
 #if defined(OPENSSL)
@@ -117,20 +116,21 @@ int MQTTProtocol_connect(const char* ip_address, Clients* aClient, int MQTTVersi
 		{
 			if (SSLSocket_setSocketForSSL(&aClient->net, aClient->sslopts, addr) == 1)
 			{
-				rc = SSLSocket_connect(aClient->net.ssl, aClient->net.socket);
-				if (rc == /*TCPSOCKET_INTERRUPTED*/ -1)
+				rc = SSLSocket_connect(aClient->net.ssl, aClient->net.socket,
+						addr, aClient->sslopts->verify);
+				if (rc == TCPSOCKET_INTERRUPTED)
 					aClient->connect_state = 2; /* SSL connect called - wait for completion */
 			}
 			else
 				rc = SOCKET_ERROR;
 		}
 #endif
-
+		
 		if (rc == 0)
 		{
 			/* Now send the MQTT connect packet */
 			if ((rc = MQTTPacket_send_connect(aClient, MQTTVersion)) == 0)
-				aClient->connect_state = 3; /* MQTT Connect sent - wait for CONNACK */
+				aClient->connect_state = 3; /* MQTT Connect sent - wait for CONNACK */ 
 			else
 				aClient->connect_state = 0;
 		}

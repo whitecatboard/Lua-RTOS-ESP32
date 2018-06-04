@@ -66,13 +66,13 @@
 
 #define MAX_NET_EVENT_CALLBACKS 3
 
-#define evWIFI_SCAN_END 	       	 ( 1 << 0 )
-#define evWIFI_CONNECTED 	       	 ( 1 << 1 )
-#define evWIFI_CANT_CONNECT          ( 1 << 2 )
-#define evSPI_ETH_CONNECTED 	     ( 1 << 3 )
-#define evSPI_ETH_CANT_CONNECT       ( 1 << 4 )
-#define evETH_CONNECTED		 	     ( 1 << 5 )
-#define evETH_CANT_CONNECT  	     ( 1 << 6 )
+#define evWIFI_SCAN_END         ( 1 << 0 )
+#define evWIFI_CONNECTED        ( 1 << 1 )
+#define evWIFI_CANT_CONNECT     ( 1 << 2 )
+#define evSPI_ETH_CONNECTED 	   ( 1 << 3 )
+#define evSPI_ETH_CANT_CONNECT  ( 1 << 4 )
+#define evETH_CONNECTED         ( 1 << 5 )
+#define evETH_CANT_CONNECT      ( 1 << 6 )
 
 typedef struct {
     ip4_addr_t ip;
@@ -180,11 +180,20 @@ driver_error_t *net_event_unregister_callback(net_event_register_callback_t func
  *
  * @return
  *     - 1: network is available
- *     - 0: network isn' available, or timeout
+ *     - 0: network isn't available, or timeout
  *
  */
 int wait_for_network(uint32_t timeout);
 
+/**
+ * @brief Check if network is started.
+ *
+ * @return
+ *     - 1: network is started
+ *     - 0: network isn't started
+ *
+ */
+int network_started();
 
 driver_error_t *net_ping(const char *name, int count, int interval, int size, int timeout);
 

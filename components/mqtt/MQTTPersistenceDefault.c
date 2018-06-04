@@ -1,19 +1,20 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2016 IBM Corp.
+ * Copyright (c) 2009, 2018 IBM Corp.
  *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution.
+ * and Eclipse Distribution License v1.0 which accompany this distribution. 
  *
- * The Eclipse Public License is available at
+ * The Eclipse Public License is available at 
  *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at
+ * and the Eclipse Distribution License is available at 
  *   http://www.eclipse.org/org/documents/edl-v10.php.
  *
  * Contributors:
  *    Ian Craggs - initial API and implementation and/or initial documentation
  *    Ian Craggs - async client updates
  *    Ian Craggs - fix for bug 484496
+ *    Ian Craggs - fix for issue 285
  *******************************************************************************/
 
 /**
@@ -29,7 +30,7 @@
 
 #if !defined(NO_PERSISTENCE)
 
-//#include "OsWrapper.h"
+#include "OsWrapper.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -54,7 +55,7 @@
 #include "MQTTClientPersistence.h"
 #include "MQTTPersistenceDefault.h"
 #include "StackTrace.h"
-//#include "Heap.h"
+#include "Heap.h"
 
 /** Create persistence directory for the client: context/clientID-serverURI.
  *  See ::Persistence_open
@@ -86,15 +87,25 @@ int pstopen(void **handle, const char* clientID, const char* serverURI, void* co
 	/* create clientDir directory */
 
 	/* pCrtDirName - holds the directory name we are currently trying to create.           */
-	/*               This gets built up level by level until the full path name is created.*/
+	/*               This gets built up level by level untipwdl the full path name is created.*/
 	/* pTokDirName - holds the directory name that gets used by strtok.         */
 	pCrtDirName = (char*)malloc( strlen(clientDir) + 1 );
 	pTokDirName = (char*)malloc( strlen(clientDir) + 1 );
 	strcpy( pTokDirName, clientDir );
 
-	pToken = strtok_r( pTokDirName, "\\/", &save_ptr );
+	/* If first character is directory separator, make sure it's in the created directory name #285 */
+	if (*pTokDirName == '/' || *pTokDirName == '\\')
+	{
+		*pCrtDirName = *pTokDirName;
+		pToken = strtok_r( pTokDirName + 1, "\\/", &save_ptr );
+		strcpy( pCrtDirName + 1, pToken );
+	}
+	else
+	{
+		pToken = strtok_r( pTokDirName, "\\/", &save_ptr );
+		strcpy( pCrtDirName, pToken );
+	}
 
-	strcpy( pCrtDirName, pToken );
 	rc = pstmkdir( pCrtDirName );
 	pToken = strtok_r( NULL, "\\/", &save_ptr );
 	while ( (pToken != NULL) && (rc == 0) )
@@ -260,7 +271,7 @@ int pstremove(void* handle, char* key)
 	FUNC_ENTRY;
 	if (clientDir == NULL)
 	{
-		rc = MQTTCLIENT_PERSISTENCE_ERROR;
+		return rc = MQTTCLIENT_PERSISTENCE_ERROR;
 		goto exit;
 	}
 
@@ -408,7 +419,7 @@ int containskeyUnix(char *dirname, char *key)
 		{
 			char* filename = malloc(strlen(dirname) + strlen(dir_entry->d_name) + 2);
 			sprintf(filename, "%s/%s", dirname, dir_entry->d_name);
-			stat(filename, &stat_info);
+			lstat(filename, &stat_info);
 			free(filename);
 			if(S_ISREG(stat_info.st_mode))
 			{
@@ -514,7 +525,7 @@ int clearUnix(char *dirname)
 	{
 		while((dir_entry = readdir(dp)) != NULL && rc == 0)
 		{
-			stat(dir_entry->d_name, &stat_info);
+			lstat(dir_entry->d_name, &stat_info);
 			if(S_ISREG(stat_info.st_mode))
 			{
 				if ( remove(dir_entry->d_name) != 0 )
@@ -657,7 +668,7 @@ int keysUnix(char *dirname, char ***keys, int *nkeys)
 			char* temp = malloc(strlen(dirname)+strlen(dir_entry->d_name)+2);
 
 			sprintf(temp, "%s/%s", dirname, dir_entry->d_name);
-			if (stat(temp, &stat_info) == 0 && S_ISREG(stat_info.st_mode))
+			if (lstat(temp, &stat_info) == 0 && S_ISREG(stat_info.st_mode))
 				nfkeys++;
 			free(temp);
 		}
@@ -681,7 +692,7 @@ int keysUnix(char *dirname, char ***keys, int *nkeys)
 				char* temp = malloc(strlen(dirname)+strlen(dir_entry->d_name)+2);
 	
 				sprintf(temp, "%s/%s", dirname, dir_entry->d_name);
-				if (stat(temp, &stat_info) == 0 && S_ISREG(stat_info.st_mode))
+				if (lstat(temp, &stat_info) == 0 && S_ISREG(stat_info.st_mode))
 				{
 					fkeys[i] = malloc(strlen(dir_entry->d_name) + 1);
 					strcpy(fkeys[i], dir_entry->d_name);
@@ -696,7 +707,6 @@ int keysUnix(char *dirname, char ***keys, int *nkeys)
 		} else
 		{
 			rc = MQTTCLIENT_PERSISTENCE_ERROR;
-			free(fkeys);
 			goto exit;
 		}
 	}
