@@ -70,9 +70,23 @@ thread_type Thread_start(thread_fn fn, void* parameter)
 #else
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+	if (!parameter) {
+	    pthread_attr_setstacksize(&attr, 2048);
+	} else {
+        pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE - 2048);
+	}
+
 	if (pthread_create(&thread, &attr, fn, parameter) != 0)
 		thread = 0;
 	pthread_attr_destroy(&attr);
+
+    if (!parameter) {
+        pthread_setname_np(thread,"mqtt_snd");
+    } else {
+        pthread_setname_np(thread,"mqtt_rcv");
+    }
+
 #endif
 	FUNC_EXIT;
 	return thread;
