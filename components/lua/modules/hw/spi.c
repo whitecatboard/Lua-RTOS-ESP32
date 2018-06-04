@@ -160,7 +160,7 @@ static int lspi_attach(lua_State* L) {
     clock = luaL_checkinteger(L, 4);
     data_bits = luaL_checkinteger(L, 5);
     spi_mode = luaL_checkinteger(L, 6);
-    flags = luaL_optinteger(L, 7, SPI_FLAG_WRITE | SPI_FLAG_READ | SPI_FLAG_CS_AUTO);
+    flags = luaL_optinteger(L, 7, SPI_FLAG_WRITE | SPI_FLAG_READ);
 
     // Allocate user data
     spi_userdata *spi = (spi_userdata *)lua_newuserdata(L, sizeof(spi_userdata));
