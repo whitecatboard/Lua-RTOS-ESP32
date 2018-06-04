@@ -55,20 +55,38 @@
 
 extern char currdir[];
 
-char *getcwd(char *pt, size_t size) {
-	*pt = '\0';
+char *getcwd(char *buff, size_t size) {
+    char *pt = buff;
 
-	if (*currdir != '/') {
-		strcat(pt, "/");
-	}
+    if ((pt == NULL) || ((pt != NULL) && (size == 0))) {
+        errno = EINVAL;
+        return NULL;
+    }
 
-	strcat(pt, currdir);
+    if (strlen(currdir) + 1 > PATH_MAX) {
+        errno = ENAMETOOLONG;
+        return NULL;
+    }
 
-	return pt;
+    if (size < strlen(currdir) + 1) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    *pt = '\0';
+
+    if (*currdir != '/') {
+        *pt++ = '/';
+        *pt = '\0';
+    }
+
+    strcat(pt, currdir);
+
+    return pt;
 }
 
 char *realpath(const char *path, char *resolved) {
-	strcpy(resolved,path);
+    strcpy(resolved, path);
 
-	return resolved;
+    return resolved;
 }

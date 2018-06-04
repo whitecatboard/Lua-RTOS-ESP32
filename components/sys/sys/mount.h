@@ -46,6 +46,8 @@
 #ifndef _SYSCALLS_MOUNT_H
 #define	_SYSCALLS_MOUNT_H
 
+#define MOUNT_MAX_LP_PATH 20 + PATH_MAX
+
 char *mount_normalize_path(const char *path);
 char *mount_readdir(const char *dev, const char*path, int idx, char *buf);
 const char *mount_device(const char *path);

@@ -45,6 +45,8 @@
 
 #include "luartos.h"
 
+#include "mount.h"
+
 #include <stddef.h>
 #include <limits.h>
 #include <string.h>
@@ -264,12 +266,12 @@ char *mount_normalize_path(const char *path) {
     int is_dot_dot = 0;
     int plen = 0;
 
-    if (strlen(path) > PATH_MAX) {
-    	errno = ENAMETOOLONG;
-    	return NULL;
+    if (strlen(path) > 2 * PATH_MAX) {
+        errno = ENAMETOOLONG;
+    	    return NULL;
     }
 
-    rpath = malloc(PATH_MAX + 1);
+    rpath = malloc(2 * PATH_MAX + 1);
     if (!rpath) {
         errno = ENOMEM;
         return NULL;
@@ -277,23 +279,23 @@ char *mount_normalize_path(const char *path) {
 
     // If it's a relative path preappend current working directory
     if (*path != '/') {
-        if (!getcwd(rpath, PATH_MAX)) {
+        if (!getcwd(rpath, 2 * PATH_MAX)) {
             free(rpath);
             return NULL;
         }
 
         if (*(rpath + strlen(rpath) - 1) != '/') {
-            rpath = strncat(rpath, "/", PATH_MAX);
+            rpath = strncat(rpath, "/", 2 * PATH_MAX);
         }
 
-        rpath = strncat(rpath, path, PATH_MAX);
+        rpath = strncat(rpath, path, 2 * PATH_MAX);
     } else {
-        strncpy(rpath, path, PATH_MAX);
+        strncpy(rpath, path, 2 * PATH_MAX);
     }
 
     plen = strlen(rpath);
     if (*(rpath + plen - 1) != '/') {
-        rpath = strncat(rpath, "/", PATH_MAX);
+        rpath = strncat(rpath, "/", 2 * PATH_MAX);
         plen++;
     }
 
@@ -359,6 +361,13 @@ char *mount_normalize_path(const char *path) {
     cpath--;
     if ((cpath != rpath) && (*cpath == '/')) {
         *cpath = '\0';
+    }
+
+    if (strlen(rpath) > PATH_MAX) {
+        free(rpath);
+
+        errno = ENAMETOOLONG;
+        return NULL;
     }
 
     return rpath;
@@ -481,8 +490,8 @@ char *mount_resolve_to_physical(const char *path) {
 	char *ppath;
 
     if (strlen(path) > PATH_MAX) {
-    	errno = ENAMETOOLONG;
-    	return NULL;
+        errno = ENAMETOOLONG;
+        return NULL;
     }
 
 	// Normalize path
@@ -497,32 +506,32 @@ char *mount_resolve_to_physical(const char *path) {
 		mount_get_mount_from_path(npath, &rpath);
 
 		// Allocate space for physical path, and build it
-		ppath = (char *)malloc(PATH_MAX + 1);
+		ppath = (char *)malloc(MOUNT_MAX_LP_PATH + 1);
 		if (!ppath) {
 			errno = ENOMEM;
 			free(npath);
 			return NULL;
 		}
 
-		strncpy(ppath,"/", PATH_MAX);
+		strncpy(ppath,"/", MOUNT_MAX_LP_PATH);
 
-		ppath = strncat(ppath,device, PATH_MAX);
+		ppath = strncat(ppath,device, MOUNT_MAX_LP_PATH);
 
 		if (*rpath != '/') {
-			ppath = strncat(ppath,"/", PATH_MAX);
+			ppath = strncat(ppath,"/", MOUNT_MAX_LP_PATH);
 		}
 
-		ppath = strncat(ppath,rpath, PATH_MAX);
+		ppath = strncat(ppath,rpath, MOUNT_MAX_LP_PATH);
 	} else {
 		// Allocate space for physical path, and build it
-		ppath = (char *)malloc(PATH_MAX + 1);
+		ppath = (char *)malloc(MOUNT_MAX_LP_PATH + 1);
 		if (!ppath) {
 			errno = ENOMEM;
 			free(npath);
 			return NULL;
 		}
 
-		strncpy(ppath, npath, PATH_MAX);
+		strncpy(ppath, npath, MOUNT_MAX_LP_PATH);
 	}
 
 	free(npath);
@@ -555,34 +564,34 @@ char *mount_resolve_to_logical(const char *path) {
 	if ((device = mount_get_device_from_path(path, &rpath))) {
 		mount_path = mount_device_mount_path(device);
 		if (mount_path) {
-			lpath = (char *)malloc(PATH_MAX + 1);
+			lpath = (char *)malloc(MOUNT_MAX_LP_PATH + 1);
 			if (!lpath) {
 				errno = ENOMEM;
 				free(npath);
 				return NULL;
 			}
 
-			strncpy(lpath, mount_path, PATH_MAX);
+			strncpy(lpath, mount_path, MOUNT_MAX_LP_PATH);
 
 			if (*rpath != '/') {
-				lpath = strncat(lpath,"/", PATH_MAX);
+				lpath = strncat(lpath,"/", MOUNT_MAX_LP_PATH);
 			}
 
-			lpath = strncat(lpath,rpath, PATH_MAX);
+			lpath = strncat(lpath,rpath, MOUNT_MAX_LP_PATH);
 
 			if (*(lpath + strlen(lpath) - 1) == '/') {
 				*(lpath + strlen(lpath) - 1) = '\0';
 			}
 		}
 	} else {
-		lpath = (char *)malloc(PATH_MAX + 1);
+		lpath = (char *)malloc(MOUNT_MAX_LP_PATH + 1);
 		if (!lpath) {
 			errno = ENOMEM;
 			free(npath);
 			return NULL;
 		}
 
-		strncpy(lpath, npath, PATH_MAX);
+		strncpy(lpath, npath, MOUNT_MAX_LP_PATH);
 	}
 
 	free(npath);
