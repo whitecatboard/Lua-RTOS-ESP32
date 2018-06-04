@@ -33,6 +33,7 @@ endif
 ifneq ("$(SDKCONFIG_DEFAULTS)","")
   BOARD_TYPE_REQUIRED := 0
   override SDKCONFIG_DEFAULTS := boards/$(SDKCONFIG_DEFAULTS)
+  MAKECMDGOALS += defconfig
 endif
 
 ifneq (,$(findstring restore-idf,$(MAKECMDGOALS)))
