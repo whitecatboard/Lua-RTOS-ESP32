@@ -312,6 +312,11 @@ static int lspi_rw_helper( lua_State *L, int withread ) {
     }
 
     if (withread) {
+        // Flush buffer
+        if ((error = spi_bulk_rw(spi->spi_device, spi->len, spi->buff))) {
+            goto exit;
+        }
+
         // Create a table to return data
         lua_createtable(L,data_len,0);
 
