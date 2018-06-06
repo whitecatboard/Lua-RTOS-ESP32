@@ -1,5 +1,18 @@
+diff --git a/components/lwip/port/vfs_lwip.c b/components/lwip/port/vfs_lwip.c
+index 54d71912..ff393a5b 100644
+--- a/components/lwip/port/vfs_lwip.c
++++ b/components/lwip/port/vfs_lwip.c
+@@ -64,6 +64,8 @@ void esp_vfs_lwip_sockets_register()
+         .socket_select = &lwip_select,
+         .stop_socket_select = &lwip_stop_socket_select,
+         .stop_socket_select_isr = &lwip_stop_socket_select_isr,
++        .writev = &lwip_writev,
++        .select = &lwip_select,
+     };
+     /* Non-LWIP file descriptors are from 0 to (LWIP_SOCKET_OFFSET-1). LWIP
+      * file descriptors are registered from LWIP_SOCKET_OFFSET to
 diff --git a/components/vfs/include/esp_vfs.h b/components/vfs/include/esp_vfs.h
-index d06dd223..e3148cfb 100644
+index 61b01b76..5e584881 100644
 --- a/components/vfs/include/esp_vfs.h
 +++ b/components/vfs/include/esp_vfs.h
 @@ -15,6 +15,8 @@
@@ -11,17 +24,16 @@ index d06dd223..e3148cfb 100644
  #include <stdint.h>
  #include <stddef.h>
  #include <stdarg.h>
-@@ -27,6 +29,9 @@
- #include <sys/stat.h>
- #include <sys/time.h>
+@@ -29,6 +31,8 @@
  #include <dirent.h>
-+
-+#include "lwip/sockets.h"
-+
  #include <string.h>
  
++#include "lwip/sockets.h"
++
  #ifdef __cplusplus
-@@ -174,6 +179,14 @@ typedef struct
+ extern "C" {
+ #endif
+@@ -174,6 +178,14 @@ typedef struct
          int (*access_p)(void* ctx, const char *path, int amode);
          int (*access)(const char *path, int amode);
      };
@@ -34,22 +46,21 @@ index d06dd223..e3148cfb 100644
 +        int (*select)(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
 +    };
      /** start_select is called for setting up synchronous I/O multiplexing of the desired file descriptors in the given VFS */
-     esp_err_t (*start_select)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds);
+     esp_err_t (*start_select)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, SemaphoreHandle_t *signal_sem);
      /** socket select function for socket FDs with the functionality of POSIX select(); this should be set only for the socket VFS */
 diff --git a/components/vfs/vfs.c b/components/vfs/vfs.c
-index 36944ddd..59c0d6c8 100644
+index 778db912..c9be4d62 100644
 --- a/components/vfs/vfs.c
 +++ b/components/vfs/vfs.c
-@@ -27,6 +27,8 @@
- #include "esp_vfs.h"
- #include "esp_log.h"
+@@ -12,6 +12,7 @@
+ // See the License for the specific language governing permissions and
+ // limitations under the License.
  
-+#define VFS_FD_SET_NUM 10
-+
- #define VFS_MAX_COUNT   8   /* max number of VFS entries (registered filesystems) */
- #define LEN_PATH_PREFIX_IGNORED SIZE_MAX /* special length value for VFS which is never recognised by open() */
- #define FD_TABLE_ENTRY_UNUSED   (fd_table_t) { .permanent = false, .vfs_index = -1, .local_fd = -1 }
-@@ -59,6 +61,18 @@ typedef struct {
++#include <errno.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include <assert.h>
+@@ -66,6 +67,20 @@ typedef struct {
      fd_set errorfds;
  } fds_triple_t;
  
@@ -65,11 +76,13 @@ index 36944ddd..59c0d6c8 100644
 +   const vfs_entry_t *vfs;
 +} vfs_fd_set_t;
 +
++#define VFS_FD_SET_NUM 10
++
  static vfs_entry_t* s_vfs[VFS_MAX_COUNT] = { 0 };
  static size_t s_vfs_count = 0;
  
-@@ -748,140 +762,166 @@ static int set_global_fd_sets(const fds_triple_t *vfs_fds_triple, int size, fd_s
-     return ret;
+@@ -776,172 +791,177 @@ static void esp_vfs_log_fd_set(const char *fds_name, const fd_set *fds)
+     }
  }
  
 +int __select_cancelled = 0;
@@ -100,8 +113,6 @@ index 36944ddd..59c0d6c8 100644
 +    return NULL;
 +}
 +
-+#include <errno.h>
-+
  int esp_vfs_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds, struct timeval *timeout)
  {
 -    int ret = 0;
@@ -109,15 +120,19 @@ index 36944ddd..59c0d6c8 100644
 +    // Convert the timeout to milliseconds
 +    u32_t msectimeout = 0;
  
--    if (nfds > MAX_FDS || nfds < 0) {
--        __errno_r(r) = EINVAL;
--        return -1;
+-    ESP_LOGD(TAG, "esp_vfs_select starts with nfds = %d", nfds);
+-    if (timeout) {
+-        ESP_LOGD(TAG, "timeout is %lds + %ldus", timeout->tv_sec, timeout->tv_usec);
 +    if (timeout && ((timeout->tv_sec != 0) || (timeout->tv_usec != 0))) {
 +       msectimeout = ((timeout->tv_sec * 1000) + ((timeout->tv_usec + 500)/1000));
      }
+-    esp_vfs_log_fd_set("readfds", readfds);
+-    esp_vfs_log_fd_set("writefds", writefds);
+-    esp_vfs_log_fd_set("errorfds", errorfds);
  
--    if (_lock_try_acquire(&s_one_select_lock)) {
--        __errno_r(r) = EINTR;
+-    if (nfds > MAX_FDS || nfds < 0) {
+-        ESP_LOGD(TAG, "incorrect nfds");
+-        __errno_r(r) = EINVAL;
 -        return -1;
 -    }
 +    // Initialize fd_set for each vfs
@@ -126,7 +141,7 @@ index 36944ddd..59c0d6c8 100644
 -    fds_triple_t *vfs_fds_triple;
 -    if ((vfs_fds_triple = calloc(s_vfs_count, sizeof(fds_triple_t))) == NULL) {
 -        __errno_r(r) = ENOMEM;
--        _lock_release(&s_one_select_lock);
+-        ESP_LOGD(TAG, "calloc is unsuccessful");
 -        return -1;
 +    int i;
 +
@@ -142,55 +157,61 @@ index 36944ddd..59c0d6c8 100644
 -        _lock_acquire(&s_fd_table_lock);
 -        const bool is_socket_fd = s_fd_table[fd].permanent;
 -        const int vfs_index = s_fd_table[fd].vfs_index;
--        const int local_fd = s_fd_table[fd].local_fd;
--        _lock_release(&s_fd_table_lock);
 +    // Split readset / writeset / exceptset to individuals fd_set
 +    // for each involved file system
 +    vfs_fd_set_t *fd_sets;
++
++    int fd;
++
++    for(fd = 0;fd <= nfds;fd++) {
+         const int local_fd = s_fd_table[fd].local_fd;
+-        _lock_release(&s_fd_table_lock);
  
 -        if (vfs_index < 0) {
 -            continue;
--        }
-+    int fd;
- 
--        if (!socket_select && is_socket_fd) {
--            // no socket_select found yet and the fd is for a socket so take a look
--            if ((readfds && FD_ISSET(fd, readfds)) ||
--                    (writefds && FD_ISSET(fd, writefds)) ||
--                    (errorfds && FD_ISSET(fd, errorfds))) {
--                const vfs_entry_t *vfs = s_vfs[vfs_index];
--                socket_select = vfs->vfs.socket_select;
--            }
--            continue;
--        }
-+    for(fd = 0;fd <= nfds;fd++) {
-+        const int local_fd = s_fd_table[fd].local_fd;
- 
--        fds_triple_t *item = &vfs_fds_triple[vfs_index]; // FD sets for VFS which belongs to fd
-         if (readfds && FD_ISSET(fd, readfds)) {
--            item->isset = true;
--            FD_SET(local_fd, &item->readfds);
--            FD_CLR(fd, readfds);
++        if (readfds && FD_ISSET(fd, readfds)) {
 +            fd_sets = get_vfs_fd_set_for(fd, vfs_fd_set);
 +            if (fd_sets) {
 +                FD_SET(local_fd, &fd_sets->readset);
 +            }
          }
-+
-         if (writefds && FD_ISSET(fd, writefds)) {
--            item->isset = true;
--            FD_SET(local_fd, &item->writefds);
--            FD_CLR(fd, writefds);
+ 
+-        if (is_socket_fd) {
+-            if (!socket_select) {
+-                // no socket_select found yet so take a look
+-                if (esp_vfs_safe_fd_isset(fd, readfds) ||
+-                        esp_vfs_safe_fd_isset(fd, writefds) ||
+-                        esp_vfs_safe_fd_isset(fd, errorfds)) {
+-                    const vfs_entry_t *vfs = s_vfs[vfs_index];
+-                    socket_select = vfs->vfs.socket_select;
+-                }
++        if (writefds && FD_ISSET(fd, writefds)) {
 +            fd_sets = get_vfs_fd_set_for(fd, vfs_fd_set);
 +            if (fd_sets) {
 +                FD_SET(local_fd, &fd_sets->writeset);
-+            }
+             }
+-            continue;
          }
-+
-         if (errorfds && FD_ISSET(fd, errorfds)) {
+ 
+-        fds_triple_t *item = &vfs_fds_triple[vfs_index]; // FD sets for VFS which belongs to fd
+-        if (esp_vfs_safe_fd_isset(fd, readfds)) {
+-            item->isset = true;
+-            FD_SET(local_fd, &item->readfds);
+-            FD_CLR(fd, readfds);
+-            ESP_LOGD(TAG, "removing %d from readfds and adding as local FD %d to fd_set of VFS ID %d", fd, local_fd, vfs_index);
+-        }
+-        if (esp_vfs_safe_fd_isset(fd, writefds)) {
+-            item->isset = true;
+-            FD_SET(local_fd, &item->writefds);
+-            FD_CLR(fd, writefds);
+-            ESP_LOGD(TAG, "removing %d from writefds and adding as local FD %d to fd_set of VFS ID %d", fd, local_fd, vfs_index);
+-        }
+-        if (esp_vfs_safe_fd_isset(fd, errorfds)) {
 -            item->isset = true;
 -            FD_SET(local_fd, &item->errorfds);
 -            FD_CLR(fd, errorfds);
+-            ESP_LOGD(TAG, "removing %d from errorfds and adding as local FD %d to fd_set of VFS ID %d", fd, local_fd, vfs_index);
++        if (errorfds && FD_ISSET(fd, errorfds)) {
 +            fd_sets = get_vfs_fd_set_for(fd, vfs_fd_set);
 +            if (fd_sets) {
 +                FD_SET(local_fd, &fd_sets->exceptset);
@@ -201,22 +222,27 @@ index 36944ddd..59c0d6c8 100644
 -    // all non-socket VFSs have their FD sets in vfs_fds_triple
 -    // the global readfds, writefds and errorfds contain only socket FDs (if
 -    // there any)
+-
+-    /* Semaphore used for waiting select events from other VFS drivers when socket
+-     * select is not used (not registered or socket FDs are not observed by the
+-     * given call of select)
+-     */
+-    SemaphoreHandle_t select_sem = NULL;
+-
+-    if (!socket_select) {
+-        // There is no socket VFS registered or select() wasn't called for
+-        // any socket. Therefore, we will use our own signalization.
+-        if ((select_sem = xSemaphoreCreateBinary()) == NULL) {
+-            free(vfs_fds_triple);
+-            __errno_r(r) = ENOMEM;
+-            ESP_LOGD(TAG, "cannot create select_sem");
+-            return -1;
+-        }
+-    }
 +    // Call select for each involved file system
 +    struct timeval fs_timeout = {0, 1000}; // Set a timeout of 1 millisecond for each fs
 +    struct timeval start; // Start time
 +    struct timeval now;   // Current time
- 
--    if (!socket_select) {
--        // There is no socket VFS registered or select() wasn't called for
--        // any socket. Therefore, we will use our own signalization.
--        if ((s_select_sem = xSemaphoreCreateBinary()) == NULL) {
--            free(vfs_fds_triple);
--            __errno_r(r) = ENOMEM;
--            _lock_release(&s_one_select_lock);
--            return -1;
--        }
--    }
-+    int num = 0; // Number of set file descriptors
  
 -    for (int i = 0; i < s_vfs_count; ++i) {
 -        const vfs_entry_t *vfs = get_vfs_for_index(i);
@@ -225,25 +251,38 @@ index 36944ddd..59c0d6c8 100644
 -        if (vfs && vfs->vfs.start_select && item->isset) {
 -            // call start_select for all non-socket VFSs with has at least one FD set in readfds, writefds, or errorfds
 -            // note: it can point to socket VFS but item->isset will be false for that
--            esp_err_t err = vfs->vfs.start_select(nfds, &item->readfds, &item->writefds, &item->errorfds);
+-            ESP_LOGD(TAG, "calling start_select for VFS ID %d with the following local FDs", i);
+-            esp_vfs_log_fd_set("readfds", &item->readfds);
+-            esp_vfs_log_fd_set("writefds", &item->writefds);
+-            esp_vfs_log_fd_set("errorfds", &item->errorfds);
+-            esp_err_t err = vfs->vfs.start_select(nfds, &item->readfds, &item->writefds, &item->errorfds, &select_sem);
 -
 -            if (err != ESP_OK) {
 -                call_end_selects(i, vfs_fds_triple);
 -                (void) set_global_fd_sets(vfs_fds_triple, s_vfs_count, readfds, writefds, errorfds);
--                if (s_select_sem) {
--                    vSemaphoreDelete(s_select_sem);
--                    s_select_sem = NULL;
+-                if (select_sem) {
+-                    vSemaphoreDelete(select_sem);
+-                    select_sem = NULL;
 -                }
 -                free(vfs_fds_triple);
--                __errno_r(r) = ENOMEM;
--                _lock_release(&s_one_select_lock);
+-                __errno_r(r) = EINTR;
+-                ESP_LOGD(TAG, "start_select failed");
 -                return -1;
 -            }
 -        }
 -    }
--
++    int num = 0; // Number of set file descriptors
+ 
 -    if (socket_select) {
+-        ESP_LOGD(TAG, "calling socket_select with the following FDs");
+-        esp_vfs_log_fd_set("readfds", readfds);
+-        esp_vfs_log_fd_set("writefds", writefds);
+-        esp_vfs_log_fd_set("errorfds", errorfds);
 -        ret = socket_select(nfds, readfds, writefds, errorfds, timeout);
+-        ESP_LOGD(TAG, "socket_select returned %d and the FDs are the following", ret);
+-        esp_vfs_log_fd_set("readfds", readfds);
+-        esp_vfs_log_fd_set("writefds", writefds);
+-        esp_vfs_log_fd_set("errorfds", errorfds);
 -    } else {
 -        if (readfds) {
 -            FD_ZERO(readfds);
@@ -261,8 +300,10 @@ index 36944ddd..59c0d6c8 100644
 -        if (timeout) {
 -            uint32_t timeout_ms = timeout->tv_sec * 1000 + timeout->tv_usec / 1000;
 -            ticks_to_wait = timeout_ms / portTICK_PERIOD_MS;
+-            ESP_LOGD(TAG, "timeout is %dms", timeout_ms);
 -        }
--        xSemaphoreTake(s_select_sem, ticks_to_wait);
+-        ESP_LOGD(TAG, "waiting without calling socket_select");
+-        xSemaphoreTake(select_sem, ticks_to_wait);
 -    }
 +    // Scan file descriptors for each involved file system until a file descriptor is set or
 +    // until timeout
@@ -273,13 +314,9 @@ index 36944ddd..59c0d6c8 100644
 -    if (ret >= 0) {
 -        ret += set_global_fd_sets(vfs_fds_triple, s_vfs_count, readfds, writefds, errorfds);
 -    }
--    if (s_select_sem) {
--        vSemaphoreDelete(s_select_sem);
--        s_select_sem = NULL;
--    }
--    free(vfs_fds_triple);
--    _lock_release(&s_one_select_lock);
--    return ret;
+-    if (select_sem) {
+-        vSemaphoreDelete(select_sem);
+-        select_sem = NULL;
 +    for(;;) {
 +       for(i = 0;i < VFS_FD_SET_NUM;i++) {
 +           if (vfs_fd_set[i].vfs) {
@@ -343,13 +380,7 @@ index 36944ddd..59c0d6c8 100644
 +    }
 +
 +    return num;
- }
- 
- void esp_vfs_select_triggered()
-@@ -919,3 +959,17 @@ void esp_vfs_select_triggered_isr(BaseType_t *woken)
-         }
-     }
- }
++}
 +
 +ssize_t writev(int fd, const struct iovec *iov, int iovcnt)
 +{
@@ -358,22 +389,17 @@ index 36944ddd..59c0d6c8 100644
 +    if (vfs == NULL) {
 +        __errno_r(r) = EBADF;
 +        return -1;
-+    }
+     }
+-    free(vfs_fds_triple);
+-
+-    ESP_LOGD(TAG, "esp_vfs_select returns %d", ret);
+-    esp_vfs_log_fd_set("readfds", readfds);
+-    esp_vfs_log_fd_set("writefds", writefds);
+-    esp_vfs_log_fd_set("errorfds", errorfds);
 +    int local_fd = get_local_fd(vfs, fd);
 +    ssize_t ret;
 +    CHECK_AND_CALL(ret, r, vfs, writev, local_fd, iov, iovcnt);
-+    return ret;
-+}
-diff --git a/components/lwip/port/vfs_lwip.c b/components/lwip/port/vfs_lwip.c
-index 54d71912..ff393a5b 100644
---- a/components/lwip/port/vfs_lwip.c
-+++ b/components/lwip/port/vfs_lwip.c
-@@ -64,6 +64,8 @@ void esp_vfs_lwip_sockets_register()
-         .socket_select = &lwip_select,
-         .stop_socket_select = &lwip_stop_socket_select,
-         .stop_socket_select_isr = &lwip_stop_socket_select_isr,
-+        .writev = &lwip_writev,
-+        .select = &lwip_select,
-     };
-     /* Non-LWIP file descriptors are from 0 to (LWIP_SOCKET_OFFSET-1). LWIP
-      * file descriptors are registered from LWIP_SOCKET_OFFSET to
+     return ret;
+ }
+ 
+ 

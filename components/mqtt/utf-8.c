@@ -50,7 +50,7 @@ struct
 		char upper; /**< upper limit of valid range */
 	} bytes[4];   /**< up to 4 bytes can be used per character */
 }
-valid_ranges[] = 
+valid_ranges[] =
 {
 		{1, { {00, 0x7F} } },
 		{2, { {0xC2, 0xDF}, {0x80, 0xBF} } },

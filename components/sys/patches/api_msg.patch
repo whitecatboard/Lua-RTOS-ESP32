@@ -1,8 +1,8 @@
 diff --git a/components/lwip/api/api_msg.c b/components/lwip/api/api_msg.c
-index bfb07b8..15080b9 100755
+index 32a37541..24efde15 100644
 --- a/components/lwip/api/api_msg.c
 +++ b/components/lwip/api/api_msg.c
-@@ -875,7 +875,7 @@ lwip_netconn_do_close_internal(struct netconn *conn  WRITE_DELAYED_PARAM)
+@@ -923,7 +923,7 @@ lwip_netconn_do_close_internal(struct netconn *conn  WRITE_DELAYED_PARAM SIG_CLO
          }
        }
      }
