@@ -1175,6 +1175,7 @@ driver_error_t *spi_lock_bus_resources(int unit, uint8_t flags) {
 
     return NULL;
 }
+#endif
 
 void spi_unlock_bus_resources(int unit) {
     int num_devices = 0;
@@ -1217,7 +1218,6 @@ void spi_unlock_bus_resources(int unit) {
 
     spi_unlock(unit);
 }
-#endif
 
 void spi_ll_unsetup(int deviceid) {
     int unit = (deviceid & 0xff00) >> 8;
