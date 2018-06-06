@@ -157,6 +157,28 @@ static void spi_unlock(uint8_t unit) {
     while (xSemaphoreGiveRecursive(spi_bus[spi_idx(unit)].mtx) == pdTRUE);
 }
 
+static void spi_enable_unit(uint8_t unit) {
+    switch (unit) {
+    case 2:
+        periph_module_enable(PERIPH_HSPI_MODULE);
+        break;
+    case 3:
+        periph_module_enable(PERIPH_VSPI_MODULE);
+        break;
+    }
+}
+
+static void spi_disable_unit(uint8_t unit) {
+    switch (unit) {
+    case 2:
+        periph_module_disable(PERIPH_HSPI_MODULE);
+        break;
+    case 3:
+        periph_module_disable(PERIPH_VSPI_MODULE);
+        break;
+    }
+}
+
 static int spi_get_device_by_cs(int unit, int8_t cs) {
     int i;
 
@@ -375,15 +397,8 @@ static void IRAM_ATTR spi_ll_restore_registers(int unit, int device) {
  */
 
 static void spi_setup_bus(uint8_t unit, uint8_t flags) {
-    // Enable SPI unit
-    switch (unit) {
-    case 2:
-        periph_module_enable(PERIPH_HSPI_MODULE);
-        break;
-    case 3:
-        periph_module_enable(PERIPH_VSPI_MODULE);
-        break;
-    }
+    // Enable unit
+    spi_enable_unit(unit);
 
     if (flags & SPI_FLAG_NO_DMA) {
         if (flags & SPI_FLAG_READ) {
@@ -1167,7 +1182,7 @@ void spi_unlock_bus_resources(int unit) {
 
     spi_lock(unit);
 
-    // Count active devices
+    // Count active devices in bus
     for (i = 0; i < SPI_BUS_DEVICES; i++) {
         if (spi_bus[spi_idx(unit)].device[i].setup) {
             num_devices++;
@@ -1177,6 +1192,7 @@ void spi_unlock_bus_resources(int unit) {
     if (num_devices == 0) {
         // There are not devices in bus
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
         // Remove bus locks
         if (spi_bus[spi_idx(unit)].miso >= 0) {
             driver_unlock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[spi_idx(unit)].miso);
@@ -1189,6 +1205,14 @@ void spi_unlock_bus_resources(int unit) {
         if (spi_bus[spi_idx(unit)].clk >= 0) {
             driver_unlock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[spi_idx(unit)].clk);
         }
+#endif
+
+        // Detach bus
+        spi_bus_free(unit - 1);
+        spi_bus[spi_idx(unit)].setup = 0;
+
+        // Disable unit
+        spi_disable_unit(unit);
     }
 
     spi_unlock(unit);
@@ -1212,12 +1236,10 @@ void spi_ll_unsetup(int deviceid) {
         driver_unlock(SPI_DRIVER, unit, GPIO_DRIVER, spi_bus[spi_idx(unit)].device[device].cs);
 #endif
 
-        spi_bus[spi_idx(unit)].device[unit].setup = 0;
+        spi_bus[spi_idx(unit)].device[device].setup = 0;
     }
 
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     spi_unlock_bus_resources(unit);
-#endif
 
     spi_unlock(unit);
 }

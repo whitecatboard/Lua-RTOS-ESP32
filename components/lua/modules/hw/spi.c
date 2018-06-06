@@ -384,7 +384,7 @@ static const LUA_REG_TYPE lspi_map[] = {
 };
 
 static const LUA_REG_TYPE lspi_ins_map[] = {
-    { LSTRKEY( "attach"      ),  LFUNCVAL( lspi_detach    ) },
+    { LSTRKEY( "detach"      ),  LFUNCVAL( lspi_detach    ) },
     { LSTRKEY( "select"      ),  LFUNCVAL( lspi_select    ) },
     { LSTRKEY( "deselect"    ),  LFUNCVAL( lspi_deselect  ) },
     { LSTRKEY( "write"       ),  LFUNCVAL( lspi_write     ) },
