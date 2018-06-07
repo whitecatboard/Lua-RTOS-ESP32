@@ -131,10 +131,10 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     return ret_val;
 }
 
-int luaL_deprecated(lua_State* L, const char *old, const char *new) {
+int luaL_deprecated(lua_State* L, const char *old_func, const char *new_func) {
 	// Build the deprecated message
 	luaL_where(L, 1);
-	lua_pushfstring(L, "WARNING %s is deprecated, please use %s instead\r\n", old, new);
+	lua_pushfstring(L, "WARNING %s is deprecated, please use %s instead\r\n", old_func, new_func);
 	lua_concat(L, 2);
 
 	printf(luaL_checkstring (L, -1));
