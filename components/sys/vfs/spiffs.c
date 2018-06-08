@@ -191,7 +191,7 @@ static void check_path(const char *path, uint8_t *base_is_dir,
 
         if (!strncmp(fpath, (const char *) e.name,
                 min(strlen((char * )e.name), strlen(fpath) - 1))) {
-            if (strcmp(fpath, (const char *) e.name)) {
+            if (strlen((const char *) e.name) >= strlen(fpath) && strcmp(fpath, (const char *) e.name)) {
                 file_num++;
             }
         }
