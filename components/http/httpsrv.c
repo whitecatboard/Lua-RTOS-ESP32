@@ -401,10 +401,10 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
 	} else if (is_lua(path)) {
 		fclose(file);
 
-		char ppath[PATH_MAX];
+		char ppath[PATH_MAX + 1];
 
 		strcpy(ppath, path);
-		if (strlen(ppath) < PATH_MAX - 1) {
+		if (strlen(ppath) < PATH_MAX) {
 			strcat(ppath, "p");
 
 			//on fat use the modification time
@@ -456,8 +456,10 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
 									break;
 								}
 							}
+
+							closedir(dir);
 						}
-						closedir(dir);
+
 						*dirsep = '/';
 					}
 				}
