@@ -3,6 +3,6 @@
 
 #define Heap_initialize()
 #define Heap_terminate()
-#define Heap_findItem(p) (1)
+#define Heap_findItem(p) (0)
 
 #endif
