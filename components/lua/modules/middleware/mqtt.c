@@ -350,7 +350,7 @@ static int add_subs_callback(lua_State *L, int index, mqtt_userdata *mqtt, const
     return 0;
 }
 
-static int mssgArrived(void *context, char * topicName, int topicLen, MQTTAsync_message* m) {
+static int msgArrived(void *context, char * topicName, int topicLen, MQTTAsync_message* m) {
     mqtt_userdata *mqtt = (mqtt_userdata *) context;
     if (mqtt) {
 
@@ -445,7 +445,7 @@ static int lmqtt_client(lua_State* L) {
         return mqtt_emit_exeption(L, LUA_MQTT_ERR_CANT_CREATE_CLIENT, rc);
     }
 
-    rc = MQTTAsync_setCallbacks(mqtt->client, mqtt, NULL, mssgArrived, NULL);
+    rc = MQTTAsync_setCallbacks(mqtt->client, mqtt, NULL, msgArrived, NULL);
     if (rc < 0) {
         return mqtt_emit_exeption(L, LUA_MQTT_ERR_CANT_SET_CALLBACKS, rc);
     }
