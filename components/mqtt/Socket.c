@@ -973,7 +973,12 @@ char* Socket_getaddrname(struct sockaddr* sa, int sock)
 #else
 	struct sockaddr_in *sin = (struct sockaddr_in *)sa;
 	inet_ntop(sin->sin_family, &sin->sin_addr, addr_string, ADDRLEN);
+#if !__XTENSA__
 	sprintf(&addr_string[strlen(addr_string)], ":%d", ntohs(sin->sin_port));
+#else
+	// avoid using sprintf
+	snprintf(&addr_string[strlen(addr_string)], sizeof(addr_string)-strlen(addr_string), ":%d", ntohs(sin->sin_port));
+#endif
 #endif
 	return addr_string;
 }
