@@ -353,7 +353,12 @@ char* SSLSocket_get_version_string(int version)
 
 	if (retstring == NULL)
 	{
+#if !__XTENSA__
 		sprintf(buf, "%i", version);
+#else
+		// avoid using sprintf
+		snprintf(buf, sizeof(buf), "%i", version);
+#endif
 		retstring = buf;
 	}
 	return retstring;
@@ -971,7 +976,13 @@ int SSLSocket_close(networkHandles* net)
 	FUNC_ENTRY;
 	if (net->ssl) {
 		rc = SSL_shutdown(net->ssl);
-		
+
+#if __XTENSA__
+		//nasty bug... must NOT free original net->ssl->session or there will be a
+		//Guru Meditation Error: Core  0 panic'ed (LoadProhibited) on reconnect
+		net->ssl->session = ssl_mem_zalloc(sizeof(SSL_SESSION));
+#endif
+
 		SSL_free(net->ssl);
 		net->ssl = NULL;
 	}

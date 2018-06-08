@@ -51,7 +51,12 @@ void MQTTProtocol_freeClient(Clients* client);
 void MQTTProtocol_emptyMessageList(List* msgList);
 void MQTTProtocol_freeMessageList(List* msgList);
 
+#if !__XTENSA__
 char* MQTTStrncpy(char *dest, const char* src, size_t num);
+#else
+char* MQTTStrncpyInt(char *dest, const char *src, size_t dest_size, bool warn_truncate);
+char* MQTTStrncpy(char *dest, const char* src, size_t dest_size);
+#endif
 char* MQTTStrdup(const char* src);
 
 //#define MQTTStrdup(src) MQTTStrncpy(malloc(strlen(src)+1), src, strlen(src)+1)

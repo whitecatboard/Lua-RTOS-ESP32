@@ -775,9 +775,10 @@ int process(http_request_handle *request) {
 		return 0;
 	}
 
-	request->method = strtok(reqbuf, " ");
-	request->path = strtok(NULL, " ");
-	protocol = strtok(NULL, "\r");
+	char *save_ptr = NULL;
+	request->method = strtok_r(reqbuf, " ", &save_ptr);
+	request->path = strtok_r(NULL, " ", &save_ptr);
+	protocol = strtok_r(NULL, "\r", &save_ptr);
 
 	if(!request->path) {
 		len = strlen(request->method)-1;
@@ -817,8 +818,9 @@ int process(http_request_handle *request) {
 
 				//check if the line begins with "Host:"
 				if (host==(char *)pathbuf) {
-					host = strtok(host, ":");  //Host:
-					host = strtok(NULL, "\r"); //the actual host
+					save_ptr = NULL;
+					host = strtok_r(host, ":", &save_ptr);  //Host:
+					host = strtok_r(NULL, "\r", &save_ptr); //the actual host
 					while(*host==' ') host++;  //skip spaces after the :
 
 					if (0 == strcasecmp(CAPTIVE_SERVER_NAME, host) ||
@@ -871,8 +873,9 @@ int process(http_request_handle *request) {
 
 					//check if the line begins with "Content-Length:"
 					if (contentlen==(char *)pathbuf) {
-						contentlen = strtok(contentlen, ":");  //Content-Length:
-						contentlen = strtok(NULL, "\r"); //the actual content length
+						save_ptr = NULL;
+						contentlen = strtok_r(contentlen, ":", &save_ptr);  //Content-Length:
+						contentlen = strtok_r(NULL, "\r", &save_ptr); //the actual content length
 						while(*contentlen==' ') contentlen++;  //skip spaces after the :
 						contentlength = atoi(contentlen)+1;
 					}
@@ -972,7 +975,10 @@ static void http_net_callback(system_event_t *event){
 		case SYSTEM_EVENT_STA_START:                /**< ESP32 station start */
 			//only if we have previously been in AP mode
 			if (wifi_mode == WIFI_MODE_AP) {
-				free((void*)esp_wifi_get_mode(&wifi_mode));
+				driver_error_t *error;
+				if ((error = wifi_check_error(esp_wifi_get_mode(&wifi_mode)))) {
+					free(error);
+				}
 
 				syslog(LOG_DEBUG, "http: switched to non-captive mode\n");
 				http_captiverun = captivedns_running();
@@ -989,7 +995,9 @@ static void http_net_callback(system_event_t *event){
 				driver_error_t *error;
 				ifconfig_t info;
 
-				free((void*)esp_wifi_get_mode(&wifi_mode));
+				if ((error = wifi_check_error(esp_wifi_get_mode(&wifi_mode)))) {
+					free(error);
+				}
 				if ((error = wifi_stat(&info))) {
 					free(error);
 					strcpy(ip4addr, "0.0.0.0");

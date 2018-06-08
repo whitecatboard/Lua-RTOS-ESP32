@@ -271,7 +271,11 @@ int pstremove(void* handle, char* key)
 	FUNC_ENTRY;
 	if (clientDir == NULL)
 	{
+#if !__XTENSA__
 		return rc = MQTTCLIENT_PERSISTENCE_ERROR;
+#else
+		rc = MQTTCLIENT_PERSISTENCE_ERROR; // make sure FUNC_EXIT_RC is being called
+#endif
 		goto exit;
 	}
 
@@ -370,7 +374,12 @@ int containskeyWin32(char *dirname, char *key)
 	HANDLE hDir;
 
 	FUNC_ENTRY;
+#if !__XTENSA__
 	sprintf(dir, "%s/*", dirname);
+#else
+	// avoid using sprintf
+	snprintf(dir, MAX_PATH+1, "%s/*", dirname);
+#endif
 
 	hDir = FindFirstFileA(dir, &FileData);
 	if (hDir != INVALID_HANDLE_VALUE)
@@ -480,7 +489,12 @@ int clearWin32(char *dirname)
 	HANDLE hDir;
 
 	FUNC_ENTRY;
+#if !__XTENSA__
 	sprintf(dir, "%s/*", dirname);
+#else
+	// avoid using sprintf
+	snprintf(dir, MAX_PATH+1, "%s/*", dirname);
+#endif
 
 	hDir = FindFirstFileA(dir, &FileData);
 	if (hDir != INVALID_HANDLE_VALUE)
@@ -583,7 +597,12 @@ int keysWin32(char *dirname, char ***keys, int *nkeys)
 	int i;
 
 	FUNC_ENTRY;
+#if !__XTENSA__
 	sprintf(dir, "%s/*", dirname);
+#else
+	// avoid using sprintf
+	snprintf(dir, MAX_PATH+1, "%s/*", dirname);
+#endif
 
 	/* get number of keys */
 	hDir = FindFirstFileA(dir, &FileData);
@@ -707,6 +726,12 @@ int keysUnix(char *dirname, char ***keys, int *nkeys)
 		} else
 		{
 			rc = MQTTCLIENT_PERSISTENCE_ERROR;
+#if __XTENSA__
+			// make sure fkeys is being free'd
+			// this bug in the upstream implementation
+			// some day should be reported
+			free(fkeys);
+#endif
 			goto exit;
 		}
 	}
