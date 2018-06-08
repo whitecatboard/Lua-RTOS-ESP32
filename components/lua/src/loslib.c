@@ -485,14 +485,15 @@ static const LUA_REG_TYPE syslib[] =
   { LSTRKEY( "exit" ),        LFUNCVAL( os_exit ) },
   { LSTRKEY( "execute" ),     LFUNCVAL( os_execute ) },
   { LSTRKEY( "setlocale" ),   LFUNCVAL( os_setlocale ) },
-  { LSTRKEY( "getenv" ),  	  LFUNCVAL( os_getenv ) },
+  { LSTRKEY( "getenv" ),      LFUNCVAL( os_getenv ) },
   { LSTRKEY( "factoryreset"), LFUNCVAL( os_factory_reset ) },
+  { LSTRKEY( "partitions"),   LFUNCVAL( os_partitions ) },
   { LSTRKEY( "passwd"),       LFUNCVAL( os_passwd ) },
   { LSTRKEY( "uptime"),       LFUNCVAL( os_uptime ) },
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-  { LSTRKEY( "locks" ),  	  LFUNCVAL( os_locks ) },
+  { LSTRKEY( "locks" ),       LFUNCVAL( os_locks ) },
 #endif
-  { LSTRKEY( "exists" ),  	  LFUNCVAL( os_exists ) },
+  { LSTRKEY( "exists" ),      LFUNCVAL( os_exists ) },
   { LSTRKEY( "stdout" ),      LFUNCVAL( os_stdout ) },
   { LSTRKEY( "clear" ),       LFUNCVAL( os_clear ) },
   { LSTRKEY( "cpu" ),         LFUNCVAL( os_cpu ) }, //deprecated
