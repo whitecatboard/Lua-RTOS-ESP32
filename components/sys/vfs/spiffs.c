@@ -856,7 +856,6 @@ static int vfs_piffs_closedir(DIR* pdir) {
 
     if ((res = SPIFFS_closedir(&dir->spiffs_dir)) < 0) {
         errno = spiffs_result(fs.err_code);
-        ;
         return -1;
     }
 
