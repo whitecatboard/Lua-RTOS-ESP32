@@ -80,6 +80,8 @@ void app_main() {
 	_sys_init();
 
 	#if (CONFIG_LUA_RTOS_LED_ACT >= 0)
+	driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_LED_ACT, DRIVER_ALL_FLAGS, "Activity LED");
+
 	// Init leds
 	gpio_pin_output(CONFIG_LUA_RTOS_LED_ACT);
 	gpio_pin_clr(CONFIG_LUA_RTOS_LED_ACT);
