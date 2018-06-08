@@ -64,7 +64,11 @@ char* MQTTProtocol_addressPort(const char* uri, int* port)
 		size_t addr_len = colon_pos - uri;
 		buf = malloc(addr_len + 1);
 		*port = atoi(colon_pos + 1);
+#if !__XTENSA__
 		MQTTStrncpy(buf, uri, addr_len+1);
+#else
+		MQTTStrncpyInt(buf, uri, addr_len+1, 0); //don't warn - truncation intended
+#endif
 	}
 	else
 		*port = DEFAULT_PORT;
@@ -75,7 +79,11 @@ char* MQTTProtocol_addressPort(const char* uri, int* port)
 		if (buf == (char*)uri)
 		{
 			buf = malloc(len);  /* we are stripping off the final ], so length is 1 shorter */
+#if !__XTENSA__
 			MQTTStrncpy(buf, uri, len);
+#else
+			MQTTStrncpyInt(buf, uri, len, 0); //don't warn - truncation intended
+#endif
 		}
 		else
 			buf[len - 1] = '\0';
