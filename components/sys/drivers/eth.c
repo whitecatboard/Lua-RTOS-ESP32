@@ -185,9 +185,11 @@ driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1
         return driver_lock_error(ETH_DRIVER, lock_error);
     }
 
+#if CONFIG_PHY_POWER_PIN >= 0
     if ((lock_error = driver_lock(ETH_DRIVER, 0, GPIO_DRIVER, CONFIG_PHY_POWER_PIN, DRIVER_ALL_FLAGS, "POWER"))) {
         return driver_lock_error(ETH_DRIVER, lock_error);
     }
+#endif
 #endif
 
     esp_err_t ret = ESP_OK;

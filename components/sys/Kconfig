@@ -547,6 +547,7 @@ menu "Lua RTOS"
             config PHY_POWER_PIN
                 depends on LUA_RTOS_ETH_HW_TYPE_RMII
                 int "PHY Power GPIO"
+                range -1 39
                 default 2
                 help
                     GPIO number to use for powering on/off the PHY.
@@ -554,6 +555,7 @@ menu "Lua RTOS"
             config PHY_SMI_MDC_PIN
                 depends on LUA_RTOS_ETH_HW_TYPE_RMII
                 int "SMI MDC Pin"
+                range 0 39
                 default 23
                 help
                     GPIO number to use for SMI clock output MDC to PHY.
@@ -561,6 +563,7 @@ menu "Lua RTOS"
             config PHY_SMI_MDIO_PIN
                 depends on LUA_RTOS_ETH_HW_TYPE_RMII
                 int "SMI MDIO Pin"
+                range 0 39
                 default 18
                 help
                    GPIO number to use for SMI data pin MDIO to/from PHY.
@@ -639,7 +642,7 @@ menu "Lua RTOS"
             config LUA_RTOS_LORA_CS
                 depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272 || LUA_RTOS_LORA_HW_TYPE_SX1301
                 int "LoRa SPI CS GPIO number"
-                    range -1 39
+                    range 0 39
                     default 5
                     help
                         The GPIO port number used to select the LoRa hardware. Set -1 to use the default CS assigned to the SPI port.
