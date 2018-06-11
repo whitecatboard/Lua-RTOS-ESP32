@@ -51,7 +51,9 @@
 #include <stdio.h>
 #include <esp_wps.h>
 
+#if CONFIG_ESP32_WIFI_NVS_ENABLED
 static int wps_callback = LUA_NOREF;
+#endif
 static int sc_callback = LUA_NOREF;
 static lua_State* LL;
 
@@ -306,6 +308,7 @@ static int lwifi_stat(lua_State* L) {
     return table;
 }
 
+#if CONFIG_ESP32_WIFI_NVS_ENABLED
 static void lwifi_wps_pin(char* pin) {
     if (wps_callback != LUA_NOREF) {
         lua_rawgeti(LL, LUA_REGISTRYINDEX, wps_callback);
@@ -340,6 +343,7 @@ static int lwifi_wps(lua_State* L) {
 
     return 0;
 }
+#endif
 
 static void lwifi_sc_config(char* ssid, char* password) {
     if (sc_callback != LUA_NOREF) {

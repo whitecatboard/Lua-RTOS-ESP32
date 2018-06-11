@@ -70,6 +70,11 @@
 const char *client_timestamp_eye = "MQTTAsyncV3_Timestamp " BUILD_TIMESTAMP;
 const char *client_version_eye = "MQTTAsyncV3_Version " CLIENT_VERSION;
 
+#if __XTENSA__
+int SSL_set_session(SSL *ssl, SSL_SESSION *session);
+SSL_SESSION *SSL_get1_session(SSL *ssl);
+#endif
+
 void MQTTAsync_global_init(MQTTAsync_init_options* inits)
 {
 #if defined(OPENSSL)
