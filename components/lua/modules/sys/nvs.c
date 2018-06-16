@@ -226,24 +226,24 @@ static int l_nvs_read(lua_State *L) {
 		    return 1;
 			}
 
-    	nvs_error(L, err);
     	nvs_close(handle_to_settings);
+    	nvs_error(L, err);
     	return 0;
     }
 
     // Alloc space for retrieve key value
     val_val = malloc(key_size);
     if (!val_val) {
-    	nvs_error(L, ESP_ERR_NO_MEM);
     	nvs_close(handle_to_settings);
+    	nvs_error(L, ESP_ERR_NO_MEM);
     	return 0;
     }
 
     // Read key value
     err = nvs_get_blob(handle_to_settings, key,val_val, &key_size);
     if (err != ESP_OK) {
-    	nvs_error(L, err);
     	nvs_close(handle_to_settings);
+    	nvs_error(L, err);
     	return 0;
     }
 
@@ -274,10 +274,56 @@ static int l_nvs_read(lua_State *L) {
     return 1;
 }
 
+static int l_nvs_exists(lua_State *L) {
+    int total = lua_gettop(L); // Get number of arguments
+    nvs_handle handle_to_settings;
+    esp_err_t err;
+    const char *key = NULL;
+    const char *nspace = NULL;
+
+    // Sanity checks, and check arguments
+    if (total < 2 ) {
+    	return luaL_error(L, "missing arguments");
+    }
+
+    nspace = luaL_checkstring(L, 1);
+    if (!nspace) {
+    	return luaL_error(L, "namespace missing");
+    }
+
+    key = luaL_checkstring(L, 2);
+    if (!key) {
+    	return luaL_error(L, "key missing");
+    }
+
+    // Try to open
+    err = nvs_open(nspace, NVS_READWRITE, &handle_to_settings);
+    if (err != ESP_OK) {
+	    lua_pushboolean(L, 0);
+    	return 1;
+    }
+    
+    // Try to read key size
+    size_t key_size = 0;
+    err = nvs_get_blob(handle_to_settings, key, NULL, &key_size);
+    if (err != ESP_OK) {
+    	nvs_close(handle_to_settings);
+			lua_pushboolean(L, 0);
+	    return 1;
+    }
+
+    // Close
+    nvs_close(handle_to_settings);
+
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
 static const LUA_REG_TYPE nvs_map[] =
 {
   { LSTRKEY( "write" ),      LFUNCVAL( l_nvs_write ) },
   { LSTRKEY( "read" ),       LFUNCVAL( l_nvs_read ) },
+  { LSTRKEY( "exists" ),     LFUNCVAL( l_nvs_exists ) },
   { LNILKEY, LNILVAL }
 };
 
