@@ -3,7 +3,7 @@
 #
 
 ifdef TEST_COMPONENTS
-TEST_LIBS := -lpthread_test
+TEST_LIBS := $(addprefix -l,$(addsuffix _test,$(TEST_COMPONENTS)))
 else
 TEST_LIBS := 
 endif

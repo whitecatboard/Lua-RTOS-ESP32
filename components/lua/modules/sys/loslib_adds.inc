@@ -423,8 +423,6 @@ static int os_ls (lua_State *L) {
         return luaL_fileresult(L, 0, path);
     }
 
-    //tty_lock();
-
     // Read entries
     while ((ent = readdir(dir)) != NULL) {
         strcpy(tpath, path);
@@ -432,8 +430,8 @@ static int os_ls (lua_State *L) {
         strcat(tpath,ent->d_name);
         tbuffer[0] = '\0';
 
-        if (strcmp((const char *)mount_device(tpath),"fat") == 0) {
-            if (stat(tpath, &sb) == 0) {
+        if (stat(tpath, &sb) == 0) {
+            if (sb.st_atime > 0) {
                 tm_info = localtime(&sb.st_atime);
                 strftime(tbuffer, 250, "%c", tm_info);
             }
@@ -443,9 +441,6 @@ static int os_ls (lua_State *L) {
         if (ent->d_type == DT_REG) {
             type = 'f';
             snprintf(size, sizeof(size),"%8d", ent->d_fsize);
-        //} else if (ent->d_type == DT_LNK) {
-        //  type = 'l';
-        //  snprintf(size, sizeof(size),"%8d", ent->d_fsize);
         } else {
             strcpy(size, "       -");
         }
@@ -454,8 +449,6 @@ static int os_ls (lua_State *L) {
             printf("%c\t%s\t%s\t%s\n", type, size, tbuffer, ent->d_name);
         }
     }
-
-    //tty_unlock();
 
     closedir(dir);
 
@@ -629,52 +622,53 @@ static int os_history(lua_State *L) {
 static int os_cp(lua_State *L) {
     const char *src = luaL_optstring(L, 1, NULL);
     const char *dst = luaL_optstring(L, 2, NULL);
-    FILE *fsrc, *fdst;
-    char c;
-    int res1, res2;
-    struct stat sb;
 
-    //make sure not to damage files if src file is dst file
-    //currently only works on fat...
-    if (strcmp((const char *)mount_device(src),"fat") == 0 ||
-        strcmp((const char *)mount_device(dst),"fat") == 0) {
-        dev_t src_dev;
-        ino_t src_ino;
-
-        if (stat(src, &sb) != 0) {
-            return luaL_fileresult(L, 0, src);
-        }
-        src_dev = sb.st_dev;
-        src_ino = sb.st_ino;
-
-        if (stat(dst, &sb) == 0) {
-            if (sb.st_dev == src_dev && sb.st_ino == src_ino) {
-                //if src file is dst file just exit successful
-                lua_pushboolean(L, 1);
-                return 1;
-            }
-        }
+    // Check that source and destination are not the same file
+    char *nsrc = mount_normalize_path(src);
+    if (!nsrc) {
+        errno = ENOMEM;
+        return luaL_fileresult(L, 0, dst);
     }
 
-    fsrc = fopen(src,"r");
+    char *ndst = mount_normalize_path(dst);
+    if (!ndst) {
+        errno = ENOMEM;
+        free(nsrc);
+        return luaL_fileresult(L, 0, dst);
+    }
+
+    // If src and dst file are the same, do noting and exit
+    if (strcmp(nsrc, ndst) == 0) {
+        free(nsrc);
+        free(ndst);
+
+        lua_pushboolean(L, 1);
+        return 1;
+    }
+
+    free(nsrc);
+    free(ndst);
+
+    // Copy file
+    FILE* fsrc = fopen(src,"r");
     if (!fsrc) {
         return luaL_fileresult(L, 0, src);
     }
 
-    fdst = fopen(dst,"w");
+    FILE *fdst = fopen(dst,"w");
     if (!fdst) {
         fclose(fsrc);
         return luaL_fileresult(L, 0, dst);
     }
 
-    c = fgetc(fsrc);
+    char c = fgetc(fsrc);
     while (!feof(fsrc)) {
         fputc(c, fdst);
         c = fgetc(fsrc);
     }
 
-    res1 = fclose(fsrc);
-    res2 = fclose(fdst);
+    int res1 = fclose(fsrc);
+    int res2 = fclose(fdst);
 
     if (res1 != 0) {
         return luaL_fileresult(L, 0, src);

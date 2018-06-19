@@ -39,42 +39,99 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS, chdir implementation
+ * Lua RTOS, sys mount test cases
  *
  */
 
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "unity.h"
+
 #include <string.h>
-#include <limits.h>
-#include <errno.h>
+#include <stdio.h>
 #include <unistd.h>
 
 #include <sys/mount.h>
-#include <sys/fcntl.h>
 
-char currdir[PATH_MAX + 1] = "/";
+struct mount_path {
+    const char *cwd;
+    const char *a;
+    const char *b;
+};
 
-int chdir(const char *path) {
-    struct stat statb;
+static const struct mount_path norm_test[] = {
+    {"/","","/"},
+    {"/",".","/"},
+    {"/","..","/"},
+    {"/","./","/"},
+    {"/","../","/"},
+    {"/","//","/"},
+    {"/","./a","/a"},
+    {"/","./a/","/a"},
+    {"/","a","/a"},
+    {"/","a/b","/a/b"},
+    {"/","a/../b","/b"},
+    {"/","a/../b/c/../d","/b/d"},
+    {"/","a/..///b/c/..///d","/b/d"},
+    {"/","a/..///b/c/..///d//","/b/d"},
+    {"/","a/./","/a"},
+    {"/","a/.a/","/a/.a"},
+    {"/","a/..a/","/a/..a"},
+    {"/","a/.a./","/a/.a."},
+    {"/","a/..a./","/a/..a."},
+    {"/lib","","/lib"},
+    {"/lib",".","/lib"},
+    {"/lib","..","/"},
+    {"/lib","./","/lib"},
+    {"/lib","../","/"},
+    {"/lib","//","/"},
+    {"/lib","./a","/lib/a"},
+    {"/lib","a","/lib/a"},
+    {"/lib","a/","/lib/a"},
+    {"/lib","a/b","/lib/a/b"},
+    {"/lib","a/../b","/lib/b"},
+    {"/lib","a/../b/c/../d","/lib/b/d"},
+    {"/lib","a/..///b/c/..///d","/lib/b/d"},
+    {"/lib","a/..///b/c/..///d//","/lib/b/d"},
+    {"/lib","a/./","/lib/a"},
+    {"/lib","a/.a/","/lib/a/.a"},
+    {"/lib","a/..a/","/lib/a/..a"},
+    {"/lib","a/.a./","/lib/a/.a."},
+    {"/lib","a/..a./","/lib/a/..a."},
+    {NULL, NULL, NULL}
+};
 
-    if (!path || !*path) {
-        errno = ENOENT;
-        return -1;
-    }
+static const struct mount_path physical_test[] = {
+    {"/","","/spiffs"},
+    {"/","a/b","/spiffs/a/b"},
+    {"/","sd","/fat"},
+    {"/","sd/","/fat"},
+    {"/","sd/a/b","/fat/a/b"},
+    {NULL, NULL, NULL}
+};
 
-    char *npath = mount_normalize_path(path);
+TEST_CASE("sys", "[mount_normalize_path]") {
+    const struct mount_path *ctest;
+    char *npath;
+    char tmp[1024];
 
-    if (stat(npath, &statb) || !S_ISDIR(statb.st_mode)) {
+    // mount_normalize_path test
+    ctest = norm_test;
+    while (ctest->cwd) {
+        chdir(ctest->cwd);
+        npath = mount_normalize_path(ctest->a);
+        sprintf(tmp, "[%s|%s|%s] => %s", ctest->cwd, ctest->a, ctest->b, npath);
+        TEST_ASSERT_MESSAGE(strcmp(npath,ctest->b) == 0, tmp);
         free(npath);
-        errno = ENOTDIR;
-        return -1;
+        ctest++;
     }
 
-    strncpy(currdir, npath, PATH_MAX);
-
-    free(npath);
-
-    return 0;
+    // mount_resolve_to_physical test
+    ctest = physical_test;
+    while (ctest->cwd) {
+        chdir(ctest->cwd);
+        npath = mount_resolve_to_physical(ctest->a);
+        sprintf(tmp, "[%s|%s|%s] => %s", ctest->cwd, ctest->a, ctest->b, npath);
+        TEST_ASSERT_MESSAGE(strcmp(npath,ctest->b) == 0, tmp);
+        free(npath);
+        ctest++;
+    }
 }

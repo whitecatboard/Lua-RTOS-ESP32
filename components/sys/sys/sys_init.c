@@ -98,13 +98,13 @@ uint8_t flash_unique_id[8];
 void testTask(void *pvParameters) {
     vTaskDelay(2);
 
-	printf("Running tests ...\r\n\r\n");
+    printf("Running tests ...\r\n\r\n");
 
-	unity_run_all_tests();
+    unity_run_all_tests();
 
-	printf("\r\nTests done!");
+    printf("\r\nTests done!");
 
-	vTaskDelete(NULL);
+    vTaskDelete(NULL);
 }
 
 #endif
@@ -125,63 +125,63 @@ void testTask(void *pvParameters) {
       Lua RTOS, Lua, and copyright notices that may appear in the future.
 */
 void __attribute__((weak)) firmware_copyright_notice() {
-	printf("  /\\       /\\\r\n");
+    printf("  /\\       /\\\r\n");
     printf(" /  \\_____/  \\\r\n");
     printf("/_____________\\\r\n");
     printf("W H I T E C A T\r\n\r\n");
 }
 
 void _sys_init() {
-	nvs_flash_init();
+    nvs_flash_init();
 
-	#if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
-	#if CONFIG_PHY_POWER_PIN > 0
-		//gpio_pin_output(CONFIG_PHY_POWER_PIN);
-		//gpio_pin_clr(CONFIG_PHY_POWER_PIN);
-	#endif
-	#endif
+    #if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
+    #if CONFIG_PHY_POWER_PIN > 0
+        //gpio_pin_output(CONFIG_PHY_POWER_PIN);
+        //gpio_pin_clr(CONFIG_PHY_POWER_PIN);
+    #endif
+    #endif
 
-	// Set default power down mode for all RTC power domains in deep sleep
-	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
-	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
-	#else
-	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
-	#endif
+    // Set default power down mode for all RTC power domains in deep sleep
+    #if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+    #else
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
+    #endif
 
-	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_SLOW_MEM
-	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
-	#else
-	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
-	#endif
+    #if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_SLOW_MEM
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+    #else
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+    #endif
 
-	#if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_FAST_MEM
-	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
-	#else
-	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
-	#endif
+    #if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_FAST_MEM
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
+    #else
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
+    #endif
 
-	// Increment bootcount
-	boot_count++;
+    // Increment bootcount
+    boot_count++;
 
-	esp_log_level_set("*", ESP_LOG_ERROR);
+    esp_log_level_set("*", ESP_LOG_ERROR);
 
-	// set the current time only if RTC has not already been set
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	if (tv.tv_sec < BUILD_TIME) {
-		tv.tv_sec = BUILD_TIME;
-		tv.tv_usec = 0;
-		settimeofday(&tv, NULL);
-	}
+    // set the current time only if RTC has not already been set
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    if (tv.tv_sec < BUILD_TIME) {
+        tv.tv_sec = BUILD_TIME;
+        tv.tv_usec = 0;
+        settimeofday(&tv, NULL);
+    }
 
-	#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
-	// Get flash unique id
-	uint8_t command[13] = {0x4b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	uint8_t response[13];
+    #if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
+    // Get flash unique id
+    uint8_t command[13] = {0x4b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t response[13];
 
-	spi_flash_send_cmd(sizeof(command), command, response);
-	memcpy(flash_unique_id, response + 5, sizeof(flash_unique_id));
-	#endif
+    spi_flash_send_cmd(sizeof(command), command, response);
+    memcpy(flash_unique_id, response + 5, sizeof(flash_unique_id));
+    #endif
 
     // Disable hardware modules modules
     periph_module_disable(PERIPH_LEDC_MODULE);
@@ -189,10 +189,10 @@ void _sys_init() {
     periph_module_disable(PERIPH_I2C0_MODULE);
     periph_module_disable(PERIPH_I2C1_MODULE);
 
-	// Init important things for Lua RTOS
+    // Init important things for Lua RTOS
     _status_init();
-	_clock_init();
-	_cpu_init();
+    _clock_init();
+    _cpu_init();
     _driver_init();
     _signal_init();
 
@@ -201,31 +201,25 @@ void _sys_init() {
     status_set(STATUS_LUA_HISTORY, 0x00000000);
 
     esp_vfs_lwip_sockets_register();
-	esp_vfs_unregister("/dev/uart");
+    esp_vfs_unregister("/dev/uart");
 
-	vfs_tty_register();
+    vfs_tty_register();
 
-	printf("Booting Lua RTOS...\r\n");
-	delay(100);
+    printf("Booting Lua RTOS...\r\n");
+    delay(100);
 
-	console_clear();
+    console_clear();
 
-	firmware_copyright_notice();
+    firmware_copyright_notice();
 
     const esp_partition_t *running = esp_ota_get_running_partition();
 
     printf(
-		"Lua RTOS %s. Copyright (C) 2015 - 2018 whitecatboard.org\r\n\r\nbuild %d\r\ncommit %s\r\nRunning from %s partition\r\n",
-		LUA_OS_VER, BUILD_TIME, BUILD_COMMIT, running->label
-	);
+        "Lua RTOS %s. Copyright (C) 2015 - 2018 whitecatboard.org\r\n\r\nbuild %d\r\ncommit %s\r\nRunning from %s partition\r\n",
+        LUA_OS_VER, BUILD_TIME, BUILD_COMMIT, running->label
+    );
 
     printf("board type %s\r\n", LUA_RTOS_BOARD);
-
-	#ifdef RUN_TESTS
-    		xTaskCreatePinnedToCore(testTask, "testTask", 8192, NULL, UNITY_FREERTOS_PRIORITY, NULL, UNITY_FREERTOS_CPU);
-
-		vTaskDelete(NULL);
-	#endif
 
     openlog(__progname, LOG_CONS | LOG_NDELAY, LOG_LOCAL1);
 
@@ -234,21 +228,27 @@ void _sys_init() {
 
     //Init filesystems
     #if CONFIG_LUA_RTOS_USE_SPIFFS
-    	vfs_spiffs_register();
+        vfs_spiffs_register();
     #endif
 
-	#if CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI
-    	vfs_fat_register();
+    #if CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI
+        vfs_fat_register();
 
-    	if (mount_is_mounted("fat")) {
+        if (mount_is_mounted("fat")) {
             // Redirect console messages to /log/messages.log ...
             closelog();
             syslog(LOG_INFO, "redirecting console messages to file system ...");
             openlog(__progname, LOG_NDELAY , LOG_LOCAL1);
         } else {
-        	syslog(LOG_ERR, "can't redirect console messages to file system, an SDCARD is needed");
+            syslog(LOG_ERR, "can't redirect console messages to file system, an SDCARD is needed");
         }
     #endif
+
+#ifdef RUN_TESTS
+    xTaskCreatePinnedToCore(testTask, "testTask", 8192, NULL, UNITY_FREERTOS_PRIORITY, NULL, UNITY_FREERTOS_CPU);
+
+    vTaskDelete(NULL);
+#endif
 
     // Continue init ...
     printf("\n");

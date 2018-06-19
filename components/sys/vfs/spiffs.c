@@ -189,8 +189,7 @@ static void check_path(const char *path, uint8_t *base_is_dir,
             *is_file = 1;
         }
 
-        if (!strncmp(fpath, (const char *) e.name,
-                min(strlen((char * )e.name), strlen(fpath) - 1))) {
+        if (!strncmp(fpath, (const char *) e.name, min(strlen((char * )e.name), strlen(fpath) - 1))) {
             if (strlen((const char *) e.name) >= strlen(fpath) && strcmp(fpath, (const char *) e.name)) {
                 file_num++;
             }
@@ -398,6 +397,11 @@ static int vfs_spiffs_fstat(int fd, struct stat * st) {
         errno = EBADF;
         return -1;
     }
+
+    // We have not time in SPIFFS
+    st->st_mtime = 0;
+    st->st_atime = 0;
+    st->st_ctime = 0;
 
     // Set block size for this file system
     st->st_blksize = CONFIG_LUA_RTOS_SPIFFS_LOG_PAGE_SIZE;
@@ -608,7 +612,6 @@ static int vfs_spiffs_rename(const char *src, const char *dst) {
 
         SPIFFS_opendir(&fs, "/", &d);
         while (SPIFFS_readdir(&d, &e)) {
-//            if (!strncmp(src, (const char *)e.name, min(strlen((char *)e.name), strlen(src)))) {
             if (!strncmp(src, (const char *) e.name, strlen(src))
                     && e.name[strlen(src)] == '/') {
                 strlcpy(dpath, dst, PATH_MAX);
@@ -747,7 +750,7 @@ static struct dirent* vfs_spiffs_readdir(DIR* pdir) {
         if (strcmp(dir->path, "/") == 0) {
             char mdir[PATH_MAX + 1];
 
-            if (mount_readdir("spiffs", dir->path, 0, mdir)) {
+            if (mount_readdir(dir->path, mdir)) {
                 strlcpy(ent->d_name, mdir, PATH_MAX);
                 ent->d_type = DT_DIR;
                 ent->d_fsize = 0;
