@@ -30,7 +30,11 @@
 #define FUNC_EXIT_NOLOG
 #define FUNC_EXIT_MED
 #define FUNC_EXIT_MAX
+#if !__XTENSA__
 #define FUNC_EXIT_RC(x)
+#else
+#define FUNC_EXIT_RC(x) (void)(x)
+#endif
 #define FUNC_EXIT_MED_RC(x)
 #define FUNC_EXIT_MAX_RC(x)
 #else

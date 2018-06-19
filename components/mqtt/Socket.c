@@ -36,6 +36,9 @@
 #if defined(OPENSSL)
 #include "SSLSocket.h"
 #endif
+#if __XTENSA__
+ssize_t writev(int fd, const struct iovec *iov, int iovcnt);
+#endif
 
 #include <stdlib.h>
 #include <string.h>

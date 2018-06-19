@@ -75,7 +75,7 @@ void lstinit(struct list *list, int first_index, uint8_t flags);
 int lstadd(struct list *list, void *item, int *item_index);
 int lstget(struct list *list, int index, void **item);
 int lstremove(struct list *list, int index, int destroy);
-int lstremoveC(struct list *list, int index, int destroy, bool compact);
+int lstremovec(struct list *list, int index, int destroy, bool compact);
 int lstfirst(struct list *list);
 int lstlast(struct list *list);
 int lstnext(struct list *list, int index);

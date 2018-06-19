@@ -57,6 +57,9 @@ char* MQTTProtocol_addressPort(const char* uri, int* port);
 #include "mbedtls/error.h"
 #include "mbedtls/certs.h"
 #endif
+#if __XTENSA__
+#include <platform/ssl_port.h>
+#endif
 
 extern Sockets s;
 
