@@ -56,10 +56,8 @@ extern int captivedns_start(lua_State* L);
 extern void captivedns_stop();
 
 static int lcaptivedns_start(lua_State* L) {
-	driver_error_t *error;
-
-	if ((error = net_check_connectivity())) {
-    	return luaL_driver_error(L, error);
+	if (!wait_for_network(20000)) {
+	    luaL_exception(L, NET_ERR_NOT_AVAILABLE);
 	}
 
 	return captivedns_start(L);

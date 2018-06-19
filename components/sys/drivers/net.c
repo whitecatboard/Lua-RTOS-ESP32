@@ -380,6 +380,7 @@ driver_error_t *net_reconnect() {
 int network_started() {
     return (status_get(STATUS_WIFI_STARTED) | status_get(STATUS_SPI_ETH_STARTED) | status_get(STATUS_ETH_STARTED));
 }
+
 int wait_for_network(uint32_t timeout) {
     TickType_t ticks_to_wait;
 
