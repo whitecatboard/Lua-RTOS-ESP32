@@ -117,8 +117,6 @@ static int gen_local_conf() {
 }
 
 static void *lora_gw(void *arg) {
-	driver_error_t *error;
-
 	// Create lora directory structure if not exist
 	mkpath("/etc/lora");
 

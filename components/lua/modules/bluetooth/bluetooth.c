@@ -87,7 +87,7 @@ static void scan_cb(int callback, bt_adv_frame_t *data) {
 		lua_pushinteger(TL, data->rssi);
 		lua_settable(TL, -3);
 
-		val_to_hex_string(buff, data->raw, data->len, 0);
+		val_to_hex_string(buff, (char *)data->raw, data->len, 0);
 		lua_pushstring(TL, "raw");
 		lua_pushstring(TL, buff);
 		lua_settable(TL, -3);
@@ -98,12 +98,12 @@ static void scan_cb(int callback, bt_adv_frame_t *data) {
 
 		switch (data->frame_type) {
 			case BTAdvEddystoneUID:
-				val_to_hex_string(buff, data->data.eddystone_uid.namespace, sizeof(data->data.eddystone_uid.namespace), 0);
+				val_to_hex_string(buff, (char *)data->data.eddystone_uid.namespace, sizeof(data->data.eddystone_uid.namespace), 0);
 				lua_pushstring(TL, "namespace");
 				lua_pushstring(TL, buff);
 				lua_settable(TL, -3);
 
-				val_to_hex_string(buff, data->data.eddystone_uid.instance, sizeof(data->data.eddystone_uid.instance), 0);
+				val_to_hex_string(buff, (char *)data->data.eddystone_uid.instance, sizeof(data->data.eddystone_uid.instance), 0);
 				lua_pushstring(TL, "instance");
 				lua_pushstring(TL, buff);
 				lua_settable(TL, -3);
