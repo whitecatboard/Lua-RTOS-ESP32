@@ -56,6 +56,9 @@
 #include "MQTTPersistenceDefault.h"
 #include "StackTrace.h"
 #include "Heap.h"
+#if __XTENSA__
+int lstat(const char *pathname, struct stat *buf);
+#endif
 
 /** Create persistence directory for the client: context/clientID-serverURI.
  *  See ::Persistence_open
