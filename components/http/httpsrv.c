@@ -470,15 +470,16 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
 			}
 			else {
 				lua_State *L = pvGetLuaState();  /* get state */
-				if (L == NULL) {
-					send_error(request, 500, "Internal Server Error", NULL, "Cannot get state.");
+				lua_State* TL = L ? lua_newthread(L) : NULL;
+				if (L == NULL || TL == NULL) {
+					send_error(request, 500, "Internal Server Error", NULL, L ? "Cannot create thread.":"Cannot get state.");
 				}
 				else {
-					if (luaL_loadfile(L, ppath)) {
+					if (luaL_loadfile(TL, ppath)) {
 						char* error = (char *)malloc(2048);
 						if (error) {
 							*error = '\0';
-							snprintf(error, 2048, "FATAL ERROR: %s", lua_tostring(L, -1));
+							snprintf(error, 2048, "FATAL ERROR: %s", lua_tostring(TL, -1));
 							send_error(request, 500, "Internal Server Error", NULL, error);
 							free(error);
 						}
@@ -511,45 +512,45 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
 							}
 						}
 
-						lua_pushstring(L, (strcasecmp(request->method, "GET") == 0) ? "GET":"POST");
-						lua_setglobal(L, "http_method");
-						lua_pushstring(L, request->path);
-						lua_setglobal(L, "http_uri");
-						lua_pushstring(L, (request->data && *request->data) ? request->data:"");
-						lua_setglobal(L, "http_request");
-						lua_pushinteger(L, request->config->port);
-						lua_setglobal(L, "http_port");
-						lua_pushinteger(L, request->config->secure);
-						lua_setglobal(L, "http_secure");
-						lua_pushstring(L, buffer ? buffer:"");
-						lua_setglobal(L, "http_remote_addr");
-						lua_pushinteger(L, request->client->ss_family==AF_INET6 ? ((struct sockaddr_in6*)request->client)->sin6_port : ((struct sockaddr_in*)request->client)->sin_port);
-						lua_setglobal(L, "http_remote_port");
-						lua_pushstring(L, path);
-						lua_setglobal(L, "http_script_name");
-						lua_pushlightuserdata(L, (void*)request);
-						lua_setglobal(L, "http_internal_handle");
+						lua_pushstring(TL, (strcasecmp(request->method, "GET") == 0) ? "GET":"POST");
+						lua_setglobal(TL, "http_method");
+						lua_pushstring(TL, request->path);
+						lua_setglobal(TL, "http_uri");
+						lua_pushstring(TL, (request->data && *request->data) ? request->data:"");
+						lua_setglobal(TL, "http_request");
+						lua_pushinteger(TL, request->config->port);
+						lua_setglobal(TL, "http_port");
+						lua_pushinteger(TL, request->config->secure);
+						lua_setglobal(TL, "http_secure");
+						lua_pushstring(TL, buffer ? buffer:"");
+						lua_setglobal(TL, "http_remote_addr");
+						lua_pushinteger(TL, request->client->ss_family==AF_INET6 ? ((struct sockaddr_in6*)request->client)->sin6_port : ((struct sockaddr_in*)request->client)->sin_port);
+						lua_setglobal(TL, "http_remote_port");
+						lua_pushstring(TL, path);
+						lua_setglobal(TL, "http_script_name");
+						lua_pushlightuserdata(TL, (void*)request);
+						lua_setglobal(TL, "http_internal_handle");
 
-						lua_pcall(L, 0, 0, 0);
+						lua_pcall(TL, 0, 0, 0);
 
-						lua_pushnil(L);
-						lua_setglobal(L, "http_method");
-						lua_pushnil(L);
-						lua_setglobal(L, "http_uri");
-						lua_pushnil(L);
-						lua_setglobal(L, "http_request");
-						lua_pushnil(L);
-						lua_setglobal(L, "http_port");
-						lua_pushnil(L);
-						lua_setglobal(L, "http_secure");
-						lua_pushnil(L);
-						lua_setglobal(L, "http_remote_addr");
-						lua_pushnil(L);
-						lua_setglobal(L, "http_remote_port");
-						lua_pushnil(L);
-						lua_setglobal(L, "http_script_name");
-						lua_pushnil(L);
-						lua_setglobal(L, "http_internal_handle");
+						lua_pushnil(TL);
+						lua_setglobal(TL, "http_method");
+						lua_pushnil(TL);
+						lua_setglobal(TL, "http_uri");
+						lua_pushnil(TL);
+						lua_setglobal(TL, "http_request");
+						lua_pushnil(TL);
+						lua_setglobal(TL, "http_port");
+						lua_pushnil(TL);
+						lua_setglobal(TL, "http_secure");
+						lua_pushnil(TL);
+						lua_setglobal(TL, "http_remote_addr");
+						lua_pushnil(TL);
+						lua_setglobal(TL, "http_remote_port");
+						lua_pushnil(TL);
+						lua_setglobal(TL, "http_script_name");
+						lua_pushnil(TL);
+						lua_setglobal(TL, "http_internal_handle");
 
 						free(buffer);
 
