@@ -1300,15 +1300,15 @@ menu "Lua RTOS"
                default y
                
             config LUA_RTOS_LUA_USE_TOUCH
-               bool "Include touch module in build"
-               default y
+               bool "Include capacitive touch module in build"
+               default n
 
             config LUA_RTOS_LUA_USE_UART
                bool "Include uart module in build"
                default y
                
             config LUA_RTOS_LUA_USE_ULP
-               bool "Include ULP module in build"
+               bool "Include ULP (Ultra Low Power coprocessor) module in build"
                default y
          endmenu
       endmenu
