@@ -1263,7 +1263,6 @@ int http_start(lua_State* L) {
 
 		// Set CPU
 		cpu_set_t cpu_set = CPU_INITIALIZER;
-
 		CPU_SET(CONFIG_LUA_RTOS_HTTP_SERVER_TASK_CPU, &cpu_set);
 
 		pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);

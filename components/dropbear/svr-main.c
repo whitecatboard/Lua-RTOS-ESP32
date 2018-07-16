@@ -276,11 +276,17 @@ void dropbear_server_start() {
 
 	// Start a new thread to launch the dropbear server
 	pthread_attr_init(&attr);
-	pthread_attr_setstacksize(&attr, 12288);
+	pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_SSH_SERVER_STACK_SIZE);
 
 	// Set priority
-	sched.sched_priority = MAX(CONFIG_LUA_RTOS_LUA_TASK_PRIORITY / 2, 10);
+	sched.sched_priority = CONFIG_LUA_RTOS_SSH_SERVER_TASK_PRIORITY;
 	pthread_attr_setschedparam(&attr, &sched);
+
+	// Set CPU
+	cpu_set_t cpu_set = CPU_INITIALIZER;
+	CPU_SET(CONFIG_LUA_RTOS_SSH_SERVER_TASK_CPU, &cpu_set);
+
+	pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	if (pthread_create(&thread, &attr, dropbear_thread, NULL)) {

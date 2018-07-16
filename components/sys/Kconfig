@@ -209,6 +209,30 @@ menu "Lua RTOS"
             config LUA_RTOS_USE_SSH_SERVER
                bool "Enable SSH server"
                default y
+
+            config LUA_RTOS_SSH_SERVER_STACK_SIZE
+                depends on LUA_RTOS_USE_SSH_SERVER
+                int "SSH thread stack size"
+                range 10240 20480
+                default 12288
+                help
+                    Default stack size assigned to SSH thread.
+
+            config LUA_RTOS_SSH_SERVER_TASK_PRIORITY
+                depends on LUA_RTOS_USE_SSH_SERVER
+                int "SSH thread priority"
+                range 3 25
+                default 10
+                help
+                    Task priority assigned to SSH thread.
+
+            config LUA_RTOS_SSH_SERVER_TASK_CPU
+                depends on !FREERTOS_UNICORE
+                int "SSH task CPU affinity"
+                range 0 1
+                default 1
+                help
+                    CPU affinity for the task assigned to the SSH server.              
          endmenu
       endmenu
 
@@ -1271,6 +1295,10 @@ menu "Lua RTOS"
    
             config LUA_RTOS_LUA_USE_TMR
                bool "Include tmr (timer) module in build"
+               default y
+               
+            config LUA_RTOS_LUA_USE_TOUCH
+               bool "Include touch module in build"
                default y
 
             config LUA_RTOS_LUA_USE_UART
