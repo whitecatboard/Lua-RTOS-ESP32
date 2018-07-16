@@ -39,61 +39,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS rename wrapper
+ * Lua RTOS, system params
  *
  */
 
-#include "esp_attr.h"
+#ifndef _SYS_PARAM_H_
+#define _SYS_PARAM_H_
 
-#include <limits.h>
-#include <reent.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <errno.h>
+#include "esp_vfs.h"
 
-#include <sys/mount.h>
+#define CONFIG_VFS_PATH_MAX ESP_VFS_PATH_MAX
 
-extern int __real__rename_r(struct _reent *r, const char *src, const char *dst);
-
-int __wrap__rename_r(struct _reent *r, const char *src, const char *dst) {
-    char *ppath_src;
-    char *ppath_dst;
-    int res;
-
-    if (!src || !*src) {
-        errno = ENOENT;
-        return -1;
-    }
-
-    if (!dst || !*dst) {
-        errno = ENOENT;
-        return -1;
-    }
-
-    ppath_src = mount_resolve_to_physical(src);
-    if (!ppath_src) {
-        return -1;
-    }
-
-    ppath_dst = mount_resolve_to_physical(dst);
-    if (!ppath_dst) {
-        free(ppath_src);
-        return -1;
-    }
-
-    // If src and dst file are the same, do noting and exit
-    if (strcmp(ppath_src, ppath_dst) == 0) {
-        free(ppath_src);
-        free(ppath_dst);
-
-        return 0;
-    }
-
-    res = __real__rename_r(r, ppath_src, ppath_dst);
-
-    free(ppath_src);
-    free(ppath_dst);
-
-    return res;
-}
+#endif /* _SYS_PARAM_H_ */

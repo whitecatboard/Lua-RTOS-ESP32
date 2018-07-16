@@ -48,6 +48,7 @@
 #if CONFIG_LUA_RTOS_LUA_USE_BT
 
 #include <sys/driver.h>
+#include <sys/misc/hex_string.h>
 
 typedef struct {
 	int instance;

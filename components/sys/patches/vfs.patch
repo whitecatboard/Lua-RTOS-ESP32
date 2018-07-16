@@ -12,7 +12,7 @@ index 54d71912..ff393a5b 100644
      /* Non-LWIP file descriptors are from 0 to (LWIP_SOCKET_OFFSET-1). LWIP
       * file descriptors are registered from LWIP_SOCKET_OFFSET to
 diff --git a/components/vfs/include/esp_vfs.h b/components/vfs/include/esp_vfs.h
-index 61b01b76..5e584881 100644
+index 4d847274..9c3606df 100644
 --- a/components/vfs/include/esp_vfs.h
 +++ b/components/vfs/include/esp_vfs.h
 @@ -15,6 +15,8 @@
@@ -33,9 +33,9 @@ index 61b01b76..5e584881 100644
  #ifdef __cplusplus
  extern "C" {
  #endif
-@@ -174,6 +178,14 @@ typedef struct
-         int (*access_p)(void* ctx, const char *path, int amode);
-         int (*access)(const char *path, int amode);
+@@ -178,6 +182,14 @@ typedef struct
+         int (*truncate_p)(void* ctx, const char *path, off_t length);
+         int (*truncate)(const char *path, off_t length);
      };
 +    union {
 +        int (*writev_p)(void* ctx, int fd, const struct iovec *iov, int iovcnt);
@@ -49,7 +49,7 @@ index 61b01b76..5e584881 100644
      esp_err_t (*start_select)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, SemaphoreHandle_t *signal_sem);
      /** socket select function for socket FDs with the functionality of POSIX select(); this should be set only for the socket VFS */
 diff --git a/components/vfs/vfs.c b/components/vfs/vfs.c
-index 778db912..c9be4d62 100644
+index f0a19599..3f134ef0 100644
 --- a/components/vfs/vfs.c
 +++ b/components/vfs/vfs.c
 @@ -12,6 +12,7 @@
@@ -81,7 +81,7 @@ index 778db912..c9be4d62 100644
  static vfs_entry_t* s_vfs[VFS_MAX_COUNT] = { 0 };
  static size_t s_vfs_count = 0;
  
-@@ -776,172 +791,177 @@ static void esp_vfs_log_fd_set(const char *fds_name, const fd_set *fds)
+@@ -790,172 +805,177 @@ static void esp_vfs_log_fd_set(const char *fds_name, const fd_set *fds)
      }
  }
  
@@ -401,5 +401,4 @@ index 778db912..c9be4d62 100644
 +    CHECK_AND_CALL(ret, r, vfs, writev, local_fd, iov, iovcnt);
      return ret;
  }
- 
  

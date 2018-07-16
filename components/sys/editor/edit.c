@@ -1029,13 +1029,9 @@ void display_message(struct editor *ed, char *fmt, ...) {
 
 void draw_full_statusline(struct editor *ed) {
   struct env *env = ed->env;
-  char *lname;
   int namewidth = env->cols - 28 - 4;
   gotoxy(0, env->lines);
-
-  lname = mount_resolve_to_logical(ed->filename);
-  sprintf((char *)env->linebuf, STATUS_COLOR "%*.*sCtrl+Y=Help %c Ln %-6dCol %-4d" CLREOL TEXT_COLOR, -namewidth, namewidth, lname, ed->dirty ? '*' : ' ', ed->line + 1, column(ed, ed->linepos, ed->col) + 1);
-  free(lname);
+  sprintf((char *)env->linebuf, STATUS_COLOR "%*.*sCtrl+Y=Help %c Ln %-6dCol %-4d" CLREOL TEXT_COLOR, -namewidth, namewidth, ed->filename, ed->dirty ? '*' : ' ', ed->line + 1, column(ed, ed->linepos, ed->col) + 1);
   outstr((char *)env->linebuf);
 }
 

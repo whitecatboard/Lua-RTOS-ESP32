@@ -55,16 +55,15 @@
 #include <sys/driver.h>
 #include <sys/delay.h>
 
+#include <drivers/net.h>
+
 int openvpn(int argc, char *argv[]);
 
 static void *openvpn_thread(void *arg) {
-	driver_error_t *error;
-
 	// Wait for network
-	while ((error = net_check_connectivity())) {
-		free(error);
-		delay(100);
-	}
+    if (!wait_for_network(20000)) {
+        luaL_exception(L, NET_ERR_NOT_AVAILABLE);
+    }
 
 	delay(1000);
 

@@ -39,55 +39,51 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS minimal mount capabilities
+ * Lua RTOS, file system mount functions
  *
  */
 
 #include "luartos.h"
-
 #include "mount.h"
+#include "params.h"
 
+#include <unistd.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <limits.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 
-char *getcwd(char *buf, size_t size);
-
-// Mount device structure
-struct mountd {
-    const char *device;
-    unsigned int mounted;
+// File system mount structure
+struct moun_fs {
+    const char *fs;  // File system name
+    uint8_t mounted; // Is the file system mounted?
 };
 
 // Mount point structure
-struct mountp {
+struct mount_pt {
     const char *path;  // mount path
     const char *name;  // mount entry name
     const char *fpath; // mount full path (path + entry name)
-    const char *odev;  // origin device
-    const char *ddev;  // destination device
+    const char *fs;    // target file system
 };
 
-// Current mount points.
-//
-// Take note that we only describe secundary mount points.
-//
-// Primary file system is always mount to the / directory.
-static const struct mountp mountps[] = {
-#if CONFIG_LUA_RTOS_USE_SPIFFS
+// Current mount points
+static const struct mount_pt mountps[] = {
 #if CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI
-    {"/", "sd", "/sd", "spiffs", "fat"},
+    {"/", "sd", "/sd", "fat"},
 #endif
-    {"/", "dev", "/dev", "spiffs", "dev"},
+    {"/", "dev", "/dev", NULL},
+#if CONFIG_LUA_RTOS_USE_SPIFFS
+    {"/", "", "/", "spiffs"},
 #endif
     {NULL, NULL, NULL, NULL, NULL}
 };
 
-// Current mounted devices
-struct mountd mountds[] = {
+// Current mounted file systems
+struct moun_fs mount_fs[] = {
 #if CONFIG_LUA_RTOS_USE_SPIFFS
     {"spiffs", 0},
 #endif
@@ -97,504 +93,417 @@ struct mountd mountds[] = {
     {NULL, 0}
 };
 
-// Get the mounted device that corresponds to path (supposed to be a physical path)
-//
-// Path has format [/]xxx[/]yyyyy, where xxx is the device name.
-//
-// When xxx path's part is extracted function search into mountds structure where
-// mounted devices are defined, and if some entry matches with xxx, xxx is
-// returned as a device name, and [/]yyyyy is returned in rpath.
-const char *mount_get_device_from_path(const char *path, char **rpath) {
-	const char *cpath;
-	const char *devices;
-	const char *devicee;
-	struct mountd *cmount;
+static char *dot_dot(char *rpath, char *cpath) {
+    char *last;
 
-	// Extract the device from path
-	cpath = path;
-	if (*cpath == '/') {
-		cpath++;
-	}
+    if (cpath >= rpath + strlen(rpath)) {
+        last = rpath + strlen(rpath);
+    } else {
+        last = cpath + 1;
+    }
 
-	devices = cpath;
-	devicee = cpath;
-	while (*devicee && (*devicee != '/')) {
-		devicee++;
-	}
+    while ((cpath - 1 >= rpath) && (*--cpath != '/'));
+    while ((cpath - 1 >= rpath) && (*--cpath != '/'));
 
-	if (*devicee) {
-		devicee--;
-	}
+    char *tpath = ++cpath;
+    while (*last) {
+        *tpath++ = *last++;
+    }
+    *tpath = '\0';
 
-	// Device name is beetween devicee and devices
-	// Check if it's a mounted device
-	cmount = mountds;
-	while (cmount->device) {
-		if (strncmp(cmount->device, devices, devicee - devices + 1) == 0) {
-			*rpath = (char *)(devicee + 1);
-			return cmount->device;
-		}
-		cmount++;
-	}
-
-	*rpath = (char *)path;
-
-	return NULL;
+    return cpath;
 }
 
-// Get the mounted path that corresponds to path (supposed to be a logical path)
-//
-// Path has format [/]xxx[/]yyyyy, where xxx is the mount path.
-//
-// When xxx path's part is extracted function search into mountps structure where
-// mounted paths are defined, and if some entry matches with xxx, xxx is
-// returned as the mount path, and [/]yyyyy is returned in rpath.
-const char *mount_get_mount_from_path(const char *path, char **rpath) {
-	const char *cpath;
-	const char *mounts;
-	const char *mounte;
-	const struct mountp *cmountp;
+static char *dot(char *rpath, char *cpath) {
+    char *last;
 
-	// Extract the device from path
-	cpath = path;
+    if (cpath >= rpath + strlen(rpath)) {
+        last = rpath + strlen(rpath);
+    } else {
+        last = cpath + 1;
+    }
 
-	if (*cpath == '/') {
-		cpath++;
-	}
+    while ((cpath - 1 >= rpath) && (*--cpath != '/'));
 
-	mounts = cpath;
-	mounte = cpath;
-	while (*mounte && (*mounte != '/')) {
-		mounte++;
-	}
+    char *tpath = ++cpath;
+    while (*last) {
+        *tpath++ = *last++;
+    }
+    *tpath = '\0';
 
-	if (*mounte) {
-		mounte--;
-	}
-
-	// Device name is beetween devicee and devices
-	// Check if it's a mounted device
-	cmountp = mountps;
-	while (cmountp->path) {
-		if (strncmp(cmountp->fpath + 1, mounts, mounte - mounts + 1) == 0) {
-			*rpath = (char *)(mounte + 1);
-			return cmountp->fpath;
-		}
-		cmountp++;
-	}
-
-	*rpath = (char *)path;
-
-	return NULL;
+    return cpath;
 }
 
-// Gets the mount path for a device
-//
-// This function searches into the mountp struct, where mount points
-// are defined.
-const char *mount_device_mount_path(const char *device) {
-    const struct mountp *cmount = &mountps[0];
+static char *slash_slash(char *rpath, char *cpath) {
+    char *last = cpath + 1;
+
+    while ((cpath - 1 >= rpath) && (*--cpath != '/'));
+
+    char *tpath = ++cpath;
+    while (*last) {
+        *tpath++ = *last++;
+    }
+    *tpath = '\0';
+
+    return cpath;
+
+}
+
+static const char *mount_get_mount_path(const char *fs) {
+    const struct mount_pt *cmount = &mountps[0];
 
     while (cmount->path) {
-    	if (strcmp(device,cmount->ddev) == 0) {
-    		return cmount->fpath;
-    	}
+        if (strcmp(fs, cmount->fs) == 0) {
+            return cmount->fpath;
+        }
+
         cmount++;
     }
 
-    return "";
+    return NULL;
 }
 
-// Sets the mounted state of a device
-void mount_set_mounted(const char *device, unsigned int mounted) {
-    struct mountd *cmountd= &mountds[0];
-
-    while (cmountd->device) {
-        if (strcmp(cmountd->device, device) == 0) {
-            cmountd->mounted = mounted;
-        }
-
-        cmountd++;
-    }
-}
-
-// Get the default mounted device. This device is the first mounted
-// device. It's mounted on the / directory.
-const char *mount_default_device() {
-    struct mountd *cmountd= &mountds[0];
-
-    while (cmountd->device) {
-        if (cmountd->mounted) {
-            return cmountd->device;
-        }
-
-        cmountd++;
-    }
-
-    return "";
-}
-
-// This function normalize a path passed as an argument, doing the
-// following normalization actions:
-//
-// 1) If path is a relative path, preapend the current working directory
-//
-//    example:
-//
-//		if path = "blink.lua", and current working directory is "/examples", path to
-//      normalize is "/examples/blink.lua"
-//
-// 2) Process ".." (parent directory) elements in path
-//
-//    example:
-//
-//		if path = "/examples/../autorun.lua" normalized path is "/autorun.lua"
-//
-// 3) Process "." (current directory) elements in path
-//
-//    example:
-//
-//		if path = "/./autorun.lua" normalized path is "/autorun.lua"
-char *mount_normalize_path(const char *path) {
+static char *mount_normalize_path_internal(const char *path, uint8_t check) {
     char *rpath;
     char *cpath;
-    char *tpath;
-    char *last;
     int maybe_is_dot = 0;
     int maybe_is_dot_dot = 0;
     int is_dot = 0;
     int is_dot_dot = 0;
-    int plen = 0;
+    int is_slash = 0;
+    int is_slash_slash = 0;
 
-    if (strlen(path) > 2 * PATH_MAX) {
-        errno = ENAMETOOLONG;
-    	    return NULL;
-    }
+    // We need as many characters as the initial path + PATH_MAX + 1
+    // to prepend the current directory + 1 additional character for
+    // the end of the string.
+    //
+    // We can use strcpy / strcat functions because destination string has enough
+    // allocated space.
+    size_t size = strlen(path) + PATH_MAX + 2;
 
-    rpath = malloc(2 * PATH_MAX + 1);
+    // Allocate space
+    rpath = calloc(1, size);
     if (!rpath) {
         errno = ENOMEM;
         return NULL;
     }
 
-    // If it's a relative path preappend current working directory
     if (*path != '/') {
-        if (!getcwd(rpath, 2 * PATH_MAX)) {
+        // It's a relative path, so prepend the current working directory
+        if (!getcwd(rpath, PATH_MAX)) {
             free(rpath);
             return NULL;
         }
 
+        // Append / if the current working directory doesn't end with /
         if (*(rpath + strlen(rpath) - 1) != '/') {
-            rpath = strncat(rpath, "/", 2 * PATH_MAX);
+            strcat(rpath, "/");
         }
 
-        rpath = strncat(rpath, path, 2 * PATH_MAX);
+        // Append initial path
+        strcat(rpath, path);
     } else {
-        strncpy(rpath, path, 2 * PATH_MAX);
-    }
-
-    plen = strlen(rpath);
-    if (*(rpath + plen - 1) != '/') {
-        rpath = strncat(rpath, "/", 2 * PATH_MAX);
-        plen++;
+        strcpy(rpath, path);
     }
 
     cpath = rpath;
     while (*cpath) {
         if (*cpath == '.') {
-            if (maybe_is_dot) {
-                maybe_is_dot_dot = 1;
-                maybe_is_dot = 0;
-            } else {
-                maybe_is_dot = 1;
-            }
+            maybe_is_dot_dot = is_slash && maybe_is_dot;
+            maybe_is_dot = is_slash && !maybe_is_dot_dot;
+        } else if (*cpath == '/') {
+            is_dot_dot = maybe_is_dot_dot;
+            is_dot = maybe_is_dot && !is_dot_dot;
+            is_slash = 1;
         } else {
-            if (*cpath == '/') {
-                is_dot_dot = maybe_is_dot_dot;
-                is_dot = maybe_is_dot && !is_dot_dot;
-            } else {
-                maybe_is_dot_dot = 0;
-                maybe_is_dot = 0;
-            }
+            maybe_is_dot = 0;
+            maybe_is_dot_dot = 0;
+            is_slash = 0;
         }
 
         if (is_dot_dot) {
-            last = cpath + 1;
+            cpath = dot_dot(rpath, cpath);
 
-            while (*--cpath != '/');
-            while (*--cpath != '/');
-
-            tpath = ++cpath;
-            while (*last) {
-                *tpath++ = *last++;
-            }
-            *tpath = '\0';
-
-            is_dot_dot = 0;
             is_dot = 0;
+            is_dot_dot = 0;
             maybe_is_dot = 0;
             maybe_is_dot_dot = 0;
+            is_slash = 0;
+
             continue;
-        }
+        } else if (is_dot) {
+            cpath = dot(rpath, cpath);
 
-        if (is_dot) {
-            last = cpath + 1;
-
-            while (*--cpath != '/');
-
-            tpath = ++cpath;
-            while (*last) {
-                *tpath++ = *last++;
-            }
-            *tpath = '\0';
-
-            is_dot_dot = 0;
             is_dot = 0;
+            is_dot_dot = 0;
             maybe_is_dot = 0;
             maybe_is_dot_dot = 0;
+            is_slash = 0;
+
             continue;
         }
 
         cpath++;
     }
 
-    cpath--;
-    if ((cpath != rpath) && (*cpath == '/')) {
+    // End case
+    is_dot_dot = maybe_is_dot_dot;
+    is_dot = maybe_is_dot && !is_dot_dot;
+
+    if (is_dot_dot) {
+        cpath = dot_dot(rpath, cpath);
+    } else if (is_dot || maybe_is_dot) {
+        cpath = dot(rpath, cpath);
+    }
+
+    // Normalize //
+    cpath = rpath;
+    while (*cpath) {
+        if (*cpath == '/') {
+            is_slash_slash = is_slash;
+            is_slash = 1;
+        } else {
+            is_slash = 0;
+            is_slash_slash = 0;
+        }
+
+        if (is_slash_slash) {
+            cpath = slash_slash(rpath, cpath);
+
+            is_slash = 1;
+            is_slash_slash = 0;
+
+            continue;
+        }
+        cpath++;
+    }
+
+    // End case
+    if (is_slash_slash) {
+        cpath = slash_slash(rpath, cpath);
+    }
+
+    // A normalized path must never end by /, except if it is the
+    // root folder
+    cpath = (strlen(rpath) > 1)?(rpath + strlen(rpath) - 1):NULL;
+    if (cpath && (*cpath == '/')) {
         *cpath = '\0';
     }
 
-    if (strlen(rpath) > PATH_MAX) {
+    // Check that fits in PATH_MAX
+    if (check && (strlen(rpath) > PATH_MAX)) {
         free(rpath);
 
         errno = ENAMETOOLONG;
         return NULL;
+    } else {
+        char *tmp = strdup(rpath);
+        if (tmp) {
+            free(rpath);
+            rpath = tmp;
+        }
     }
 
     return rpath;
 }
 
-int mount_is_mounted(const char *device) {
-    struct mountd *cmountd= &mountds[0];
-    
-    while (cmountd->device) {
-        if (strcmp(cmountd->device, device) == 0) {
-            return cmountd->mounted;
-        }
-        
-        cmountd++;
-    }    
-    
-    return 0;
-}
-
-// Get idx mounted directory entry for a device in a path
-char *mount_readdir(const char *dev, const char*path, int idx, char *buf) {
-    const struct mountp *cmount = &mountps[0];
-    int actual = 0;
-
-    while (cmount->path) {
-        if (mount_is_mounted(cmount->ddev) && (strcmp(dev, cmount->odev) == 0)) {
-            if (strcmp(path, cmount->path) == 0) {
-                if (actual == idx) {
-                    strcpy(buf, cmount->name);
-                    return buf;
-                }
-                actual++;
-            }
-        }
-
-        cmount++;
-    }    
-    
-    return NULL;
-}
-
-// Get the device name where path is mounted. Path is an absolute path.
-const char *mount_device(const char *path) {
-    const struct mountp *cmount = &mountps[0];
-    const char *device = NULL;
-    const char *cpath;
-    const char *cfpath;
-    
-    while (cmount->path) {
-        cpath = path;
-        cfpath = cmount->fpath;
-
-        while (*cpath && *cfpath && (*cpath == *cfpath)) {
-            cpath++;
-            cfpath++;
-        }
-        
-        if (!*cfpath) {
-            if ((!*cpath) || (*cpath == '/')) {
-                device = cmount->ddev;
-                break;
-            }
-        }
-        
-        cmount++;
-    }
-
-    if (!device) {
-        device = mount_default_device();
-    }
-
-    return device;    
-}
-
-// Get the mount path where path is mounted. Path is an absolute path.
-const char *mount_path(const char *path) {
-    const struct mountp *cmount = &mountps[0];
-    const char *device = NULL;
-    const char *cpath;
-    const char *cfpath;
-
-    while (cmount->path) {
-        cpath = path;
-        cfpath = cmount->fpath;
-
-        while (*cpath && *cfpath && (*cpath == *cfpath)) {
-            cpath++;
-            cfpath++;
-        }
-
-        if (!*cfpath) {
-            if ((!*cpath) || (*cpath == '/')) {
-                device = cmount->fpath;
-                break;
-            }
-        }
-
-        cmount++;
-    }
-
-    if (!device) {
-        device = mount_default_device();
-    }
-
-    return device;
-}
-
-// Resolve a path (supposed to be a logical path) to a physical path.
-// First path is normalized for get a path started with / and no reference to .. and . folders.
-// Once normalized we determine the device in which path is mounted and physical path is builded.
-//
-// Example:
-//
-// If path is /sd/examples/lua/.., function returns /fat/examples
-char *mount_resolve_to_physical(const char *path) {
-	const char*device;
-
-	char *npath;
-	char *rpath;
-	char *ppath;
-
-    if (strlen(path) > PATH_MAX) {
-        errno = ENAMETOOLONG;
+static const char *mount_get_fs_from_physical_path(const char *path, char **rpath) {
+    // Extract the file system from the physical path
+    const char *cpath = path;
+    if (*cpath++ != '/') {
         return NULL;
     }
 
-	// Normalize path
-	npath = mount_normalize_path(path);
-	if (!npath){
-		return NULL;
-	}
+    const char *fs_s = cpath;
+    const char *fs_e = cpath;
+    while (*fs_e && (*fs_e != '/')) {
+        fs_e++;
+    }
 
-	// Get the device where path is mounted
-	if ((device = mount_device(npath))) {
-		// Remove mount device from path, if any
-		mount_get_mount_from_path(npath, &rpath);
+    fs_e--;
 
-		// Allocate space for physical path, and build it
-		ppath = (char *)malloc(MOUNT_MAX_LP_PATH + 1);
-		if (!ppath) {
-			errno = ENOMEM;
-			free(npath);
-			return NULL;
-		}
+    // File system name is between fs_e and fs_s
+    struct moun_fs *cmount = mount_fs;
+    while (cmount->fs) {
+        if (strncmp(cmount->fs, fs_s, fs_e - fs_s + 1) == 0) {
+            *rpath = (char *)(fs_e + 1);
 
-		strncpy(ppath,"/", MOUNT_MAX_LP_PATH);
+            return cmount->fs;
+        }
+        cmount++;
+    }
 
-		ppath = strncat(ppath,device, MOUNT_MAX_LP_PATH);
+    *rpath = (char *)path;
 
-		if (*rpath != '/') {
-			ppath = strncat(ppath,"/", MOUNT_MAX_LP_PATH);
-		}
-
-		ppath = strncat(ppath,rpath, MOUNT_MAX_LP_PATH);
-	} else {
-		// Allocate space for physical path, and build it
-		ppath = (char *)malloc(MOUNT_MAX_LP_PATH + 1);
-		if (!ppath) {
-			errno = ENOMEM;
-			free(npath);
-			return NULL;
-		}
-
-		strncpy(ppath, npath, MOUNT_MAX_LP_PATH);
-	}
-
-	free(npath);
-
-	return ppath;
+    return NULL;
 }
 
-// Resolve a path (supposed to be a physical path) to a logical path.
-// First path is normalized for get a path started with / and no reference to .. and . folders.
-// Once normalized we determine the mount point and logical path is builded.
-//
-// Example:
-//
-// If path is /fat/examples/lua/.., function returns /sd/examples
+static const char *mount_get_fs_from_logical_path(const char *path, char **rpath) {
+    const struct mount_pt *cmount = &mountps[0];
+    const char *fs_e = NULL;
+    const char *cpath;
+    const char *cfpath;
+
+    while (cmount->path) {
+        cpath = path;
+        cfpath = cmount->fpath;
+
+        while (*cpath && *cfpath && (*cpath == *cfpath)) {
+            cpath++;
+            cfpath++;
+        }
+
+        if ((!*cfpath) && ((*cpath == '/') || (!*cpath) || (strlen(cmount->fpath) == 1))) {
+            fs_e = cmount->fs;
+
+            if (rpath) {
+                *rpath = (char *)cpath;
+            }
+
+            break;
+        }
+
+        cmount++;
+    }
+
+    return fs_e;
+}
+
+char *mount_normalize_path(const char *path) {
+    return mount_normalize_path_internal(path, 1);
+}
+
+char *mount_resolve_to_physical(const char *path) {
+    const char *fs;
+
+    char *npath;
+    char *rpath;
+    char *ppath;
+
+    // Normalize path
+    npath = mount_normalize_path_internal(path, 0);
+    if (!npath){
+        return NULL;
+    }
+
+    // We need as many characters as the normalized path + CONFIG_VFS_PATH_MAX + 1
+    // to prepend the file system were path is physically mounted + 1 additional
+    // character for the end of the string.
+    //
+    // We can use strcpy / strcat functions because destination string has enough
+    // allocated space.
+    size_t size = strlen(npath) + CONFIG_VFS_PATH_MAX + 2;
+
+    // Allocate space for physical path, and build it
+    ppath = calloc(1, size);
+    if (!ppath) {
+        errno = ENOMEM;
+        free(npath);
+        return NULL;
+    }
+
+    // Get the file system where path is mounted
+    if ((fs = mount_get_fs_from_logical_path(npath, &rpath))) {
+        if (*fs != '/') {
+            strcpy(ppath, "/");
+            strcat(ppath, fs);
+        }
+
+        if (*rpath != '/') {
+            strcat(ppath, "/");
+        }
+
+        strcat(ppath, rpath);
+    } else {
+        strcpy(ppath, npath);
+    }
+
+    // A physical path must never end by /, except if it is the
+    // root folder
+    char * cpath = (strlen(ppath) > 1)?(ppath + strlen(ppath) - 1):NULL;
+    if (cpath && (*cpath == '/')) {
+        *cpath = '\0';
+    }
+
+    free(npath);
+
+    return ppath;
+}
+
 char *mount_resolve_to_logical(const char *path) {
-	const char *device;
-	char *rpath;
-	const char *mount_path;
-	char *lpath;
-	char *npath;
+    // Normalize path
+    char *npath = mount_normalize_path_internal(path, 0);
+    if (!npath) {
+        return NULL;
+    }
 
-	lpath = NULL;
+    const char *fs;
+    char *rpath;
+    char *lpath;
 
-	// Normalize path
-	npath = mount_normalize_path(path);
-	if (!npath) {
-		return NULL;
-	}
+    lpath = NULL;
+    if ((fs = mount_get_fs_from_physical_path(npath, &rpath))) {
+        // Get mount path for file system
+        const char *mount_path = mount_get_mount_path(fs);
+        if (mount_path) {
+            if (!(lpath = (char *)calloc(1, strlen(mount_path) + strlen(rpath) + 1))) {
+                errno = ENOMEM;
+                free(npath);
+                return NULL;
+            }
 
-	if ((device = mount_get_device_from_path(path, &rpath))) {
-		mount_path = mount_device_mount_path(device);
-		if (mount_path) {
-			lpath = (char *)malloc(MOUNT_MAX_LP_PATH + 1);
-			if (!lpath) {
-				errno = ENOMEM;
-				free(npath);
-				return NULL;
-			}
+            if ((*(mount_path + strlen(mount_path) - 1) != '/') || (strlen(rpath) == 0)) {
+                strcat(lpath, mount_path);
+            }
 
-			strncpy(lpath, mount_path, MOUNT_MAX_LP_PATH);
+            strcat(lpath, rpath);
+        }
+    }
 
-			if (*rpath != '/') {
-				lpath = strncat(lpath,"/", MOUNT_MAX_LP_PATH);
-			}
+    free(npath);
 
-			lpath = strncat(lpath,rpath, MOUNT_MAX_LP_PATH);
+    return lpath;;
+}
 
-			if (*(lpath + strlen(lpath) - 1) == '/') {
-				*(lpath + strlen(lpath) - 1) = '\0';
-			}
-		}
-	} else {
-		lpath = (char *)malloc(MOUNT_MAX_LP_PATH + 1);
-		if (!lpath) {
-			errno = ENOMEM;
-			free(npath);
-			return NULL;
-		}
+int mount_is_mounted(const char *fs) {
+    struct moun_fs *cmount= &mount_fs[0];
 
-		strncpy(lpath, npath, MOUNT_MAX_LP_PATH);
-	}
+    while (cmount->fs) {
+        if (strcmp(cmount->fs, fs) == 0) {
+            return cmount->mounted;
+        }
 
-	free(npath);
+        cmount++;
+    }
 
-	return lpath;
+    return 0;
+}
+
+void mount_set_mounted(const char *fs, unsigned int mounted) {
+    struct moun_fs *cmount= &mount_fs[0];
+
+    while (cmount->fs) {
+        if (strcmp(cmount->fs, fs) == 0) {
+            cmount->mounted = mounted;
+        }
+
+        cmount++;
+    }
+}
+
+char *mount_readdir(const char *path, char *buf) {
+    const struct mount_pt *cmount = &mountps[0];
+
+    if (!buf) return NULL;
+
+    while (cmount->path) {
+        if (strcmp(path, cmount->path) == 0) {
+            strcpy(buf, cmount->name);
+            return buf;
+        }
+
+        cmount++;
+    }
+
+    return NULL;
 }
