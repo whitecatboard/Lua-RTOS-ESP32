@@ -168,6 +168,7 @@ static int lcpu_wakeup_on(lua_State *L) {
 				}
 				break;
 		case ESP_SLEEP_WAKEUP_TOUCHPAD:
+				// needs the FSM mode of the touch button to be configured in the timer trigger mode.
 				if ((error = esp_sleep_enable_touchpad_wakeup())) {
 					return luaL_exception(L, LUA_CPU_ERR_CANT_WAKEON_TOUCH);
 				}
