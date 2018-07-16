@@ -78,23 +78,25 @@ static void *shell(void *arg) {
 
 	firmware_copyright_notice();
 
-    const esp_partition_t *running = esp_ota_get_running_partition();
+	const esp_partition_t *running = esp_ota_get_running_partition();
 
-    printf(
+	printf(
 		"Lua RTOS %s. Copyright (C) 2015 - 2018 whitecatboard.org\r\n\r\nbuild %d\r\ncommit %s\r\nRunning from %s partition\r\n",
 		LUA_OS_VER, BUILD_TIME, BUILD_COMMIT, running->label
 	);
 
-    printf("board type %s\r\n\r\n", LUA_RTOS_BOARD);
+	printf("board type %s\r\n\r\n", LUA_RTOS_BOARD);
 
-    // Run lua in interpreter mode
-    doREPL(pvGetLuaState());
+	// Run lua in interpreter mode
+	lua_State *L = pvGetLuaState();  /* get state */
+	lua_State* TL = L ? lua_newthread(L) : NULL;
+	doREPL(TL ? TL : L);
 
 	printf("thread %d\r\n", config->parent_thread);
 
-    // The lua interpreter exit when the user enters the Ctrl-C key
-    // This situation must be interpreted as a SIGINT signal
-    pthread_kill(config->parent_thread, SIGINT);
+	// The lua interpreter exit when the user enters the Ctrl-C key
+	// This situation must be interpreted as a SIGINT signal
+	pthread_kill(config->parent_thread, SIGINT);
 
 	return NULL;
 }
@@ -103,41 +105,36 @@ int create_shell(shell_config_t *config) {
 	pthread_attr_t attr;
 	struct sched_param sched;
 	pthread_t thread;
-    int res;
+	int res;
 
 	// Init thread attributes
 	pthread_attr_init(&attr);
 
 	// Set stack size
-    pthread_attr_setstacksize(&attr, 4096);
+	pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_SSH_SHELL_STACK_SIZE);
 
-    // Set priority
-    sched.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
-    pthread_attr_setschedparam(&attr, &sched);
-
-    // Set CPU
-    cpu_set_t cpu_set = CPU_INITIALIZER;
-
-    CPU_SET(CONFIG_LUA_RTOS_LUA_TASK_CPU, &cpu_set);
-
-    pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
-
-	sched.sched_priority = MAX(CONFIG_LUA_RTOS_LUA_TASK_PRIORITY / 2, 10);
+	// Set priority
+	sched.sched_priority = CONFIG_LUA_RTOS_SSH_SHELL_TASK_PRIORITY;
 	pthread_attr_setschedparam(&attr, &sched);
+
+	// Set CPU
+	cpu_set_t cpu_set = CPU_INITIALIZER;
+	CPU_SET(CONFIG_LUA_RTOS_SSH_SHELL_TASK_CPU, &cpu_set);
+
+	pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-    // Create thread
-    res = pthread_create(&thread, &attr, shell, (void *)config);
-    if (res) {
-    		errno = ENOMEM;
-    		return -1;
+	// Create thread
+	res = pthread_create(&thread, &attr, shell, (void *)config);
+	if (res) {
+		errno = ENOMEM;
+		return -1;
 	}
 
-    pthread_setname_np(thread, "shell");
-
+	pthread_setname_np(thread, "shell");
 	delay(1000);
 
-    return 0;
+	return 0;
 }
 
 
