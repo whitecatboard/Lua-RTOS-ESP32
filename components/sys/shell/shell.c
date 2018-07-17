@@ -44,8 +44,10 @@
  */
 
 #include "lua.h"
-#include "shell.h"
 
+#if CONFIG_LUA_RTOS_USE_SSH_SERVER
+
+#include "shell.h"
 #include "esp_ota_ops.h"
 
 #include <signal.h>
@@ -137,4 +139,5 @@ int create_shell(shell_config_t *config) {
 	return 0;
 }
 
+#endif
 
