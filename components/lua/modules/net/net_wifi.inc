@@ -52,10 +52,9 @@
 #include <esp_wps.h>
 
 #if CONFIG_ESP32_WIFI_NVS_ENABLED
-static int wps_callback = LUA_NOREF;
+static lua_callback_t *wps_callback = NULL;
 #endif
-static int sc_callback = LUA_NOREF;
-static lua_State* LL;
+static lua_callback_t *sc_callback = NULL;
 
 static int lwifi_setup(lua_State* L) {
     driver_error_t *error;
@@ -310,10 +309,10 @@ static int lwifi_stat(lua_State* L) {
 
 #if CONFIG_ESP32_WIFI_NVS_ENABLED
 static void lwifi_wps_pin(char* pin) {
-    if (wps_callback != LUA_NOREF) {
-        lua_rawgeti(LL, LUA_REGISTRYINDEX, wps_callback);
-        lua_pushstring(LL, pin);
-        lua_call(LL, 1, 0);
+    if (wps_callback != NULL) {
+        lua_State *state = luaS_callback_state(wps_callback);
+        lua_pushstring(state, pin);
+        luaS_callback_call(wps_callback, 1);
     }
     free(pin);
 }
@@ -321,20 +320,15 @@ static void lwifi_wps_pin(char* pin) {
 static int lwifi_wps(lua_State* L) {
     driver_error_t *error;
 
-    LL = L;
-    if (wps_callback != LUA_NOREF) {
-        luaL_unref(L, LUA_REGISTRYINDEX, wps_callback);
-        wps_callback = LUA_NOREF;
+    if (wps_callback != NULL) {
+        luaS_callback_destroy(wps_callback);
+        wps_callback = NULL;
     }
 
     int wpsmode = luaL_optinteger(L, 1, WPS_TYPE_PBC);
     if (wpsmode != WPS_TYPE_PBC) {
-
         luaL_checktype(L, 2, LUA_TFUNCTION);
-        // Copy argument (function) to the top of stack
-        lua_pushvalue(L, 2);
-        // Copy function reference
-        wps_callback = luaL_ref(L, LUA_REGISTRYINDEX);
+        wps_callback = luaS_callback_create(L, 2);
     }
 
     if ((error = wifi_wps(wpsmode, lwifi_wps_pin))) {
@@ -346,11 +340,11 @@ static int lwifi_wps(lua_State* L) {
 #endif
 
 static void lwifi_sc_config(char* ssid, char* password) {
-    if (sc_callback != LUA_NOREF) {
-        lua_rawgeti(LL, LUA_REGISTRYINDEX, sc_callback);
-        lua_pushstring(LL, ssid);
-        lua_pushstring(LL, password);
-        lua_call(LL, 2, 0);
+    if (sc_callback != NULL) {
+        lua_State *state = luaS_callback_state(sc_callback);
+        lua_pushstring(state, ssid);
+        lua_pushstring(state, password);
+        luaS_callback_call(sc_callback, 2);
     }
     /* ssid and password are allocated (and freed) by esp_smartconfig_... */
 }
@@ -358,17 +352,13 @@ static void lwifi_sc_config(char* ssid, char* password) {
 static int lwifi_smartconfig(lua_State* L) {
     driver_error_t *error;
 
-    LL = L;
-    if (sc_callback != LUA_NOREF) {
-        luaL_unref(L, LUA_REGISTRYINDEX, sc_callback);
-        sc_callback = LUA_NOREF;
+    if (sc_callback != NULL) {
+        luaS_callback_destroy(sc_callback);
+        sc_callback = NULL;
     }
 
     luaL_checktype(L, 1, LUA_TFUNCTION);
-    // Copy argument (function) to the top of stack
-    lua_pushvalue(L, 1);
-    // Copy function reference
-    sc_callback = luaL_ref(L, LUA_REGISTRYINDEX);
+    sc_callback = luaS_callback_create(L, 1);
 
     if ((error = wifi_smartconfig(lwifi_sc_config))) {
         return luaL_driver_error(L, error);

@@ -86,7 +86,7 @@ typedef union {
     uint16_t ipwords[2];
 } net_ip;
 
-static lua_callback_t *callback;
+static lua_callback_t *callback = NULL;
 
 static void callback_func(system_event_t *event) {
     uint8_t for_us = 0; // The event is for us?
@@ -143,7 +143,7 @@ static void callback_func(system_event_t *event) {
             break;
     }
 
-    if (for_us) {
+    if (for_us != 0 && callback != NULL) {
         lua_State *state = luaS_callback_state(callback);
 
         lua_createtable(state, 0, 0);
@@ -352,6 +352,11 @@ static int lnet_ota(lua_State *L) {
 
 static int lnet_callback(lua_State *L) {
     driver_error_t *error;
+
+    if (callback != NULL) {
+        luaS_callback_destroy(callback);
+        callback = NULL;
+    }
 
     callback = luaS_callback_create(L, 1);
     if (callback == NULL) {
