@@ -147,6 +147,10 @@ int CAN_write_frame(const CAN_frame_t* p_frame){
 	//byte iterator
 	uint8_t __byte_i;
 
+	// Blocking wait for buffer status
+        while( ! MODULE_CAN->SR.B.TBS)
+            ; /* TODO: no busy lock check how task switched can be called */
+
 	//copy frame information record
 	MODULE_CAN->MBX_CTRL.FCTRL.FIR.U=p_frame->FIR.U;
 
