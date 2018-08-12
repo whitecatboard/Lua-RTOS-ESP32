@@ -264,42 +264,39 @@ driver_error_t *can_setup(int32_t unit, uint32_t speed, uint16_t rx_size) {
 		return driver_error(CAN_DRIVER, CAN_ERR_INVALID_UNIT, NULL);
 	}
 
-	if (!setup) {
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-		// Lock TX pin
-	    if ((lock_error = driver_lock(CAN_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_CAN_TX, DRIVER_ALL_FLAGS, "TX"))) {
-	    	// Revoked lock on pin
-	    	return driver_lock_error(CAN_DRIVER, lock_error);
-	    }
-
-	    // Lock RX pin
-	    if ((lock_error = driver_lock(CAN_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_CAN_RX, DRIVER_ALL_FLAGS, "RX"))) {
-	    	// Revoked lock on pin
-	    	return driver_lock_error(CAN_DRIVER, lock_error);
-	    }
-#endif
-	}
-
 	// Set CAN configuration
 	CAN_cfg.speed = speed;
 	CAN_cfg.tx_pin_id = CONFIG_LUA_RTOS_CAN_TX;
 	CAN_cfg.rx_pin_id = CONFIG_LUA_RTOS_CAN_RX;
 
 	if (!setup) {
-		CAN_cfg.rx_queue = xQueueCreate(rx_size,sizeof(CAN_frame_t));;
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+		// Lock TX pin
+	    if ((lock_error = driver_lock(CAN_DRIVER, 0, GPIO_DRIVER, CAN_cfg.tx_pin_id, DRIVER_ALL_FLAGS, "TX"))) {
+	    	// Revoked lock on pin
+	    	return driver_lock_error(CAN_DRIVER, lock_error);
+	    }
 
-		// Init filters
-		uint8_t i;
-		for(i=0;i < CAN_NUM_FILTERS;i++) {
-			can_filter[i].fromID = -1;
-			can_filter[i].toID = -1;
-		}
+	    // Lock RX pin
+	    if ((lock_error = driver_lock(CAN_DRIVER, 0, GPIO_DRIVER, CAN_cfg.rx_pin_id, DRIVER_ALL_FLAGS, "RX"))) {
+	    	// Revoked lock on pin
+	    	return driver_lock_error(CAN_DRIVER, lock_error);
+	    }
+#endif
+	    CAN_cfg.rx_queue = xQueueCreate(rx_size,sizeof(CAN_frame_t));;
 
-		filters = 0;
+	    // Init filters
+	    uint8_t i;
+	    for(i=0;i < CAN_NUM_FILTERS;i++) {
+		    can_filter[i].fromID = -1;
+		    can_filter[i].toID = -1;
+	    }
 
-		if (!CAN_cfg.rx_queue) {
-			return driver_error(CAN_DRIVER, CAN_ERR_NOT_ENOUGH_MEMORY, NULL);
-		}
+	    filters = 0;
+
+	    if (!CAN_cfg.rx_queue) {
+		    return driver_error(CAN_DRIVER, CAN_ERR_NOT_ENOUGH_MEMORY, NULL);
+	    }
 	}
 
 	// Start CAN module
@@ -309,8 +306,8 @@ driver_error_t *can_setup(int32_t unit, uint32_t speed, uint16_t rx_size) {
 	    mtx_init(&mtx, NULL, NULL, 0);
 
 		syslog(LOG_INFO, "can%d at pins tx=%s%d, rx=%s%d", 0,
-			gpio_portname(CONFIG_LUA_RTOS_CAN_TX), gpio_name(CONFIG_LUA_RTOS_CAN_TX),
-			gpio_portname(CONFIG_LUA_RTOS_CAN_RX), gpio_name(CONFIG_LUA_RTOS_CAN_RX)
+			gpio_portname(CAN_cfg.tx_pin_id), gpio_name(CAN_cfg.tx_pin_id),
+			gpio_portname(CAN_cfg.rx_pin_id), gpio_name(CAN_cfg.rx_pin_id)
 		);
 	}
 
