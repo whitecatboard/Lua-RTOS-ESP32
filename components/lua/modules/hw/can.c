@@ -273,7 +273,7 @@ MODULE_REGISTER_ROM(CAN, can, lcan_map, luaopen_can, 1);
 
 /*
 
-can.setup(can.CAN0, 1000)
+can.attach(can.CAN0, 1000)
 while true do
     frame = string.pack(
     	"BBBBBBBB",
