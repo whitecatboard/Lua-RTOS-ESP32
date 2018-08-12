@@ -86,8 +86,11 @@ static int lcan_send(lua_State* L) {
 	int msg_id = luaL_checkinteger(L, 2);
 	int msg_id_type = luaL_checkinteger(L, 3);
 	int len = luaL_checkinteger(L, 4);
-	const char *data = luaL_checkstring(L, 5);
+        size_t dlen;
+	const char *data = luaL_checklstring(L, 5,&dlen);
 
+        if ( dlen < len )
+		len = dlen;
     if ((error = can_tx(id, msg_id, msg_id_type, (uint8_t *)data, len))) {
     	return luaL_driver_error(L, error);
     }
