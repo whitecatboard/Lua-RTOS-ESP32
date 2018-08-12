@@ -214,33 +214,16 @@ menu "Lua RTOS"
 
       menu "Hardware"
       menu "CAN pin map"
-         choice LUA_RTOS_CAN_TX_CHOICE
-            prompt "TX"
-            default LUA_RTOS_CAN_TX_GPIO12
-      
-            config LUA_RTOS_CAN_TX_GPIO5
-               bool "GPIO5"
+            config LUA_RTOS_CAN_TX
+            int "CAN TX"
+            range 0 39
+            default 12
             
-            config LUA_RTOS_CAN_TX_GPIO12
-               bool "GPIO12"
-
-            config LUA_RTOS_CAN_TX_GPIO25
-               bool "GPIO25"
-         endchoice
-         
-         choice LUA_RTOS_CAN_RX_CHOICE
-            prompt "RX"
-            default LUA_RTOS_CAN_RX_GPIO14
-
-            config LUA_RTOS_CAN_RX_GPIO4
-               bool "GPIO4"
+            config LUA_RTOS_CAN_RX
+            int "CAN RX"
+            range 0 39
+            default 14
             
-            config LUA_RTOS_CAN_RX_GPIO14
-               bool "GPIO14"
-
-            config LUA_RTOS_CAN_RX_GPIO35
-               bool "GPIO35"
-         endchoice
       endmenu
       
       menu "I2C pin map"

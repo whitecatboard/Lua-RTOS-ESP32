@@ -90,32 +90,6 @@ struct can_frame {
 	uint8_t    data[CAN_MAX_DLEN] __attribute__((aligned(8)));
 };
 
-// Get the TX GPIO from Kconfig
-#if CONFIG_LUA_RTOS_CAN_TX_GPIO5
-#define CONFIG_LUA_RTOS_CAN_TX 5
-#endif
-
-#if CONFIG_LUA_RTOS_CAN_TX_GPIO12
-#define CONFIG_LUA_RTOS_CAN_TX 12
-#endif
-
-#if CONFIG_LUA_RTOS_CAN_TX_GPIO25
-#define CONFIG_LUA_RTOS_CAN_TX 25
-#endif
-
-// Get the RX GPIO from Kconfig
-#if CONFIG_LUA_RTOS_CAN_RX_GPIO4
-#define CONFIG_LUA_RTOS_CAN_RX 4
-#endif
-
-#if CONFIG_LUA_RTOS_CAN_RX_GPIO14
-#define CONFIG_LUA_RTOS_CAN_RX 14
-#endif
-
-#if CONFIG_LUA_RTOS_CAN_RX_GPIO35
-#define CONFIG_LUA_RTOS_CAN_RX 35
-#endif
-
 // CAN errors
 #define CAN_ERR_NOT_ENOUGH_MEMORY           	(DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  0)
 #define CAN_ERR_INVALID_FRAME_LENGTH			(DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  1)
