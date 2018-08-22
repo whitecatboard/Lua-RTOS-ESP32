@@ -100,6 +100,7 @@ CODE prioritynames[] = {
 #define LOG_CRON        (9<<3)  /* clock daemon */
 #define LOG_AUTHPRIV    (10<<3) /* security/authorization messages (private) */
 #define LOG_FTP         (11<<3) /* ftp daemon */
+#define LOG_NTP         (12<<3) /* NTP subsystem */
 
     /* other codes through 15 reserved for system use */
 #define LOG_LOCAL0      (16<<3) /* reserved for local use */
@@ -128,6 +129,7 @@ CODE facilitynames[] = {
     "mail",     LOG_MAIL,
     "mark",     INTERNAL_MARK,      /* INTERNAL */
     "news",     LOG_NEWS,
+    "ntp",      LOG_NTP,
     "security", LOG_AUTH,           /* DEPRECATED */
     "syslog",   LOG_SYSLOG,
     "user",     LOG_USER,
@@ -173,3 +175,6 @@ void syslog(int, const char *, ...);
 void vsyslog(int, const char *, va_list);
 int getlogmask();
 int getlogstat();
+
+const char *syslog_setloghost (const char *host);
+
