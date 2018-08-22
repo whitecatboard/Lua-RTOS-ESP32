@@ -97,6 +97,8 @@ static int l_scp_get(lua_State* L) {
 		return luaL_error(L, "can't connect");
 	}
 
+	freeaddrinfo(res);
+
 	// Create a session instance
 	LIBSSH2_SESSION *session;
 	session = libssh2_session_init();
@@ -105,7 +107,7 @@ static int l_scp_get(lua_State* L) {
 	}
 
 	rc = libssh2_session_handshake(session, sock);
-	if(rc) {
+	if(rc!=LIBSSH2_ERROR_NONE) {
 		libssh2_session_free(session);
 		return luaL_error(L, "can't establish ssh session");
 	}
@@ -217,6 +219,8 @@ static int l_scp_put(lua_State* L) {
 		return luaL_error(L, "can't connect");
 	}
 
+	freeaddrinfo(res);
+
 	// Create a session instance
 	LIBSSH2_SESSION *session;
 	session = libssh2_session_init();
@@ -225,7 +229,7 @@ static int l_scp_put(lua_State* L) {
 	}
 
 	rc = libssh2_session_handshake(session, sock);
-	if(rc) {
+	if(rc!=LIBSSH2_ERROR_NONE) {
 		libssh2_session_free(session);
 		return luaL_error(L, "can't establish ssh session");
 	}
@@ -364,6 +368,8 @@ static int l_ssh_exec(lua_State* L) {
 		return luaL_error(L, "can't connect");
 	}
 
+	freeaddrinfo(res);
+
 	// Create a session instance
 	LIBSSH2_SESSION *session;
 	session = libssh2_session_init();
@@ -372,7 +378,7 @@ static int l_ssh_exec(lua_State* L) {
 	}
 
 	rc = libssh2_session_handshake(session, sock);
-	if(rc) {
+	if(rc!=LIBSSH2_ERROR_NONE) {
 		libssh2_session_free(session);
 		return luaL_error(L, "can't establish ssh session");
 	}
