@@ -129,6 +129,7 @@ driver_error_t *net_http_create_client(const char *server, const char *port, net
 
 		close(client->socket);
 	}
+	freeaddrinfo(result);
 
 	if (!connected) {
     	net_http_destroy_client(client);
