@@ -529,8 +529,14 @@ static int os_syslog(lua_State *L) {
 }
 
 static int os_setrsyslog(lua_State *L) {
-    const char *host = luaL_checkstring(L, 1);
-    const char *ret = syslog_setloghost(host);
+    if (lua_gettop(L) == 1) {
+        const char *host = luaL_checkstring(L, 1);
+        const char *ret = syslog_setloghost(host);
+        if (ret == NULL) return 0;
+        lua_pushstring(L, ret);
+        return 1;
+    }
+    const char *ret = syslog_getloghost();
     if (ret == NULL) return 0;
     lua_pushstring(L, ret);
     return 1;

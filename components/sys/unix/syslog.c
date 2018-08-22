@@ -358,3 +358,7 @@ const char *syslog_setloghost (const char *host)
   return logHost;
 }
 
+const char *syslog_getloghost ()
+{
+  return logHost;
+}
