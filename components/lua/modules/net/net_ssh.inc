@@ -87,6 +87,7 @@ static int l_scp_get(lua_State* L) {
 	// Init ssh
 	int rc = libssh2_init (0);
 	if (rc != 0) {
+		freeaddrinfo(res);
 		return luaL_error(L, "can't init ssh");
 	}
 
@@ -94,6 +95,7 @@ static int l_scp_get(lua_State* L) {
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
 
 	if(connect(sock, res->ai_addr, res->ai_addrlen) != 0) {
+		freeaddrinfo(res);
 		return luaL_error(L, "can't connect");
 	}
 
@@ -133,7 +135,6 @@ static int l_scp_get(lua_State* L) {
 	fp = fopen(dst, "w");
 	if (!fp) {
 		l_ssh_shutdown(session);
-		fclose(fp);
 		libssh2_channel_free(channel);
 		close(sock);
 		libssh2_exit();
@@ -201,6 +202,7 @@ static int l_scp_put(lua_State* L) {
 	// Init ssh
 	int rc = libssh2_init (0);
 	if (rc != 0) {
+		freeaddrinfo(res);
 		return luaL_error(L, "can't init ssh");
 	}
 
@@ -208,7 +210,7 @@ static int l_scp_put(lua_State* L) {
 	FILE *fp;
 	fp = fopen(src, "rb");
 	if (!fp) {
-		fclose(fp);
+		freeaddrinfo(res);
 		return luaL_fileresult(L, 0, src);
 	}
 
@@ -216,6 +218,8 @@ static int l_scp_put(lua_State* L) {
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
 
 	if(connect(sock, res->ai_addr, res->ai_addrlen) != 0) {
+		fclose(fp);
+		freeaddrinfo(res);
 		return luaL_error(L, "can't connect");
 	}
 
@@ -225,11 +229,15 @@ static int l_scp_put(lua_State* L) {
 	LIBSSH2_SESSION *session;
 	session = libssh2_session_init();
 	if (!session) {
+		fclose(fp);
+		close(sock);
 		return luaL_error(L, "can't create ssh session");
 	}
 
 	rc = libssh2_session_handshake(session, sock);
 	if(rc!=LIBSSH2_ERROR_NONE) {
+		fclose(fp);
+		close(sock);
 		libssh2_session_free(session);
 		return luaL_error(L, "can't establish ssh session");
 	}
@@ -358,6 +366,7 @@ static int l_ssh_exec(lua_State* L) {
 	// Init ssh
 	int rc = libssh2_init (0);
 	if (rc != 0) {
+		freeaddrinfo(res);
 		return luaL_error(L, "can't init ssh");
 	}
 
@@ -365,6 +374,7 @@ static int l_ssh_exec(lua_State* L) {
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
 
 	if(connect(sock, res->ai_addr, res->ai_addrlen) != 0) {
+		freeaddrinfo(res);
 		return luaL_error(L, "can't connect");
 	}
 

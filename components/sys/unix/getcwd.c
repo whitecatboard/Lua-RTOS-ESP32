@@ -56,9 +56,7 @@
 extern char currdir[];
 
 char *getcwd(char *buff, size_t size) {
-    char *pt = buff;
-
-    if ((pt == NULL) || ((pt != NULL) && (size == 0))) {
+    if ((buff == NULL) || ((buff != NULL) && (size == 0))) {
         errno = EINVAL;
         return NULL;
     }
@@ -73,6 +71,7 @@ char *getcwd(char *buff, size_t size) {
         return NULL;
     }
 
+    char *pt = buff;
     *pt = '\0';
 
     if (*currdir != '/') {

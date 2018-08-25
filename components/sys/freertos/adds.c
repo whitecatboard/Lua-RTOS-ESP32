@@ -225,6 +225,7 @@ task_info_t *GetTaskInfo() {
 
 #ifndef CONFIG_FREERTOS_USE_TRACE_FACILITY
 #warning Please enable CONFIG_FREERTOS_USE_TRACE_FACILITY to support thread.list
+	free(status_array);
 	return NULL;
 #else
 	task_num = uxTaskGetSystemState(status_array, (start_task_num), &total_runtime);

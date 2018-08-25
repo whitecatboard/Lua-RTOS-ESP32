@@ -810,7 +810,7 @@ int process(http_request_handle *request) {
 		int contentlength = HTTP_BUFF_SIZE;
 		//skip headers to the actual request data
 		while (do_gets(pathbuf, HTTP_BUFF_SIZE, request) && strlen(pathbuf)>0 ) {
-			if (pathbuf && strlen(pathbuf)<3) {
+			if (strlen(pathbuf)<3) {
 				skip = pathbuf;
 				while (*skip=='\r' || *skip=='\n') skip++;
 				if (strlen(skip)==0) {
