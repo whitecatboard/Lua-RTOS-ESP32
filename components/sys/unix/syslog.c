@@ -60,6 +60,7 @@ static char sccsid[] = "@(#)syslog.c	8.5 (Berkeley) 4/29/95";
 #include "lwip/ip_addr.h"
 #include <sys/fcntl.h>
 #include <drivers/net.h>
+#include "esp_log.h"
 
 #include <stdlib.h>
 #include <errno.h>
@@ -211,16 +212,34 @@ vsyslog(pri, fmt, ap)
 	free(tbuf);
 }
 
+static int syslog_logging_vprintf( const char *str, va_list l ) {
+	// Allocate space
+	char* tbuf = (char *)malloc(MAX_BUFF + 20);
+	if (tbuf) {
+		int len = vsprintf((char*)tbuf, str, l);
+
+		if (0 != logSock) {
+			sendto(logSock,tbuf,len,0,(struct sockaddr *)&logAddr,sizeof(logAddr));
+		}
+
+		free(tbuf);
+	}
+
+	return vprintf( str, l );
+}
+
 static void reconnect_syslog() {
 	if (0 != logSock) {
 		close(logSock);
 	}
 	logSock = 0;
 
+	esp_log_set_vprintf(vprintf);
+
 	if (NETWORK_AVAILABLE()) {
 		if (!logHost) logHost = strdup("10.0.0.10");
 		if (0 == strcmp(logHost,"0.0.0.0"))
-		   return; //user wants to disable remote logging
+			return; //user wants to disable remote logging
 
 		// Resolve name
 		const struct addrinfo hints = {
@@ -237,16 +256,16 @@ static void reconnect_syslog() {
 			(void)memset((void *)&logAddr, 0x00,sizeof(logAddr));
 
 			if (result->ai_family == AF_INET) {
-			    struct sockaddr_in *p = (struct sockaddr_in *)result->ai_addr;
-			    p->sin_port = htons(PORT);
-			    memcpy(&logAddr, p, sizeof(struct sockaddr_in));
+				struct sockaddr_in *p = (struct sockaddr_in *)result->ai_addr;
+				p->sin_port = htons(PORT);
+				memcpy(&logAddr, p, sizeof(struct sockaddr_in));
 			} else if (result->ai_family == AF_INET6) {
-			    struct sockaddr_in6 *p = (struct sockaddr_in6 *)result->ai_addr;
-			    p->sin6_port = htons(PORT);
-			    p->sin6_family = AF_INET6;
-			    memcpy(&logAddr, p, sizeof(struct sockaddr_in6));
+				struct sockaddr_in6 *p = (struct sockaddr_in6 *)result->ai_addr;
+				p->sin6_port = htons(PORT);
+				p->sin6_family = AF_INET6;
+				memcpy(&logAddr, p, sizeof(struct sockaddr_in6));
 			} else {
-			    printf("Unsupported protocol family %d", result->ai_family);
+				printf("Unsupported protocol family %d", result->ai_family);
 			}
 
 			freeaddrinfo(result);
@@ -257,6 +276,8 @@ static void reconnect_syslog() {
 					fcntl(logSock, F_SETFL, O_NONBLOCK);
 					int reuse = 1;
 					setsockopt(logSock,SOL_SOCKET,SO_REUSEADDR,(void *)&reuse,sizeof(reuse));
+
+					esp_log_set_vprintf(syslog_logging_vprintf);
 				}
 			}
 		}
@@ -347,10 +368,10 @@ int getlogstat() {
 const char *syslog_setloghost (const char *host)
 {
   if (logHost)
-     free (logHost);
+		free (logHost);
   logHost = NULL;
   if (!host)
-     return (NULL);
+		return (NULL);
 
   logHost = strdup (host);
 	reconnect_syslog();
