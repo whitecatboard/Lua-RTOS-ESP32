@@ -101,7 +101,7 @@ driver_error_t *guva_s12sd_acquire(sensor_instance_t *unit, sensor_value_t *valu
 	}
 
 	// Calculate uv index
-	float uvIndex;
+	float uvIndex = 0.0;
 
 	// Find index into uv index table
 	for (i = 0; i < 12; i++) {

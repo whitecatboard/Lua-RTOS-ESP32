@@ -429,7 +429,7 @@ static int lsensor_list( lua_State* L ) {
 
     uint16_t count = 0, i = 0, j, idx, len;
     uint8_t table = 0, exit;
-    char interface[7];
+    char interface[9];
     char type[7];
     char buff[31];
     char interfaces[31];

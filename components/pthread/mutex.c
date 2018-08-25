@@ -87,9 +87,9 @@ int pthread_mutex_init(pthread_mutex_t *mut, const pthread_mutexattr_t *attr) {
     }
 
     if (attr) {
-    	mutex->type = attr->type;
+        mutex->type = attr->type;
     } else {
-    	mutex->type = PTHREAD_MUTEX_NORMAL;
+        mutex->type = PTHREAD_MUTEX_NORMAL;
     }
     // Create semaphore
     if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
@@ -120,9 +120,9 @@ int IRAM_ATTR pthread_mutex_lock(pthread_mutex_t *mut) {
     }
 
     if ((intptr_t) *mut == PTHREAD_MUTEX_INITIALIZER) {
-    	if ((res = pthread_mutex_init(mut, NULL))) {
-    		return res;
-    	}
+        if ((res = pthread_mutex_init(mut, NULL))) {
+            return res;
+        }
     }
 
     mutex = (struct pthread_mutex *)(*mut);
@@ -144,11 +144,11 @@ int IRAM_ATTR pthread_mutex_lock(pthread_mutex_t *mut) {
 }
 
 int IRAM_ATTR pthread_mutex_unlock(pthread_mutex_t *mut) {
-	struct pthread_mutex *mutex = ( struct pthread_mutex *)(*mut);
-
     if (!mut) {
         return EINVAL;
     }
+
+    struct pthread_mutex *mutex = ( struct pthread_mutex *)(*mut);
 
     // Unlock
     if (mutex->type == PTHREAD_MUTEX_RECURSIVE) {
@@ -161,17 +161,17 @@ int IRAM_ATTR pthread_mutex_unlock(pthread_mutex_t *mut) {
 }
 
 int pthread_mutex_trylock(pthread_mutex_t *mut) {
-	struct pthread_mutex *mutex;
-	int res;
+    struct pthread_mutex *mutex;
+    int res;
 
     if (!mut) {
         return EINVAL;
     }
 
     if ((intptr_t) *mut == PTHREAD_MUTEX_INITIALIZER) {
-    	if ((res = pthread_mutex_init(mut, NULL))) {
-    		return res;
-    	}
+        if ((res = pthread_mutex_init(mut, NULL))) {
+            return res;
+        }
     }
 
     mutex = ( struct pthread_mutex *)(*mut);

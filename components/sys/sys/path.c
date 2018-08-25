@@ -103,6 +103,8 @@ int mkfile(const char *path) {
 
     FILE *fp = fopen(npath, "r");
     if (fp) {
+        fclose(fp);
+        free(npath);
         errno = EEXIST;
         return -1;
     } else {

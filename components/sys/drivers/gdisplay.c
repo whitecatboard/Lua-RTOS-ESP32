@@ -381,17 +381,16 @@ uint32_t gdisplay_ll_get_pixel(int x, int y, uint8_t *buffer, int buffw, int buf
 	if (buffer == NULL) {
 		return 0;
 	} else {
-		// Take care about endianness
-		uint32_t wd;
 
 		color = ((uint16_t *)buffer)[y * (buffw!=-1?buffw:caps.width) + x];
 
+		// Take care about endianness
 		if (BYTE_ORDER == LITTLE_ENDIAN) {
+			uint32_t wd;
 			wd = (uint32_t)(color >> 8);
 			wd |= (uint32_t)(color & 0xff) << 8;
+			color = wd;
 		}
-
-		color = wd;
 	}
 
 	return color;

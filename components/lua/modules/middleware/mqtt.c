@@ -134,13 +134,6 @@ typedef struct {
     TaskHandle_t task;
 } mqtt_conn_ctx_t;
 
-// MQTT subscription context
-typedef struct {
-    mqtt_userdata *mqtt;
-    char *topic;
-    int qos;
-} mqtt_subs_ctx_t;
-
 // Emit a Lua exception using the result code (rc) provided by the MQTT library
 static int mqtt_emit_exeption(lua_State* L, int exception, int rc) {
     switch (rc) {
@@ -551,16 +544,6 @@ static int lmqtt_subscribe(lua_State* L) {
     if ((qos > 0) && (mqtt->persistence == MQTTCLIENT_PERSISTENCE_NONE)) {
         return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_SUBSCRIBE, "enable persistence for a qos > 0");
     }
-
-    // Allocate space for subscription context
-    mqtt_subs_ctx_t *ctx = malloc(sizeof(mqtt_subs_ctx_t));
-    if (!ctx) {
-        return luaL_exception(L, LUA_MQTT_ERR_NOT_ENOUGH_MEMORY);
-    }
-
-    ctx->mqtt = mqtt;
-    ctx->topic = strdup(topic);
-    ctx->qos = qos;
 
     // Add callback
     add_subs_callback(L, 4, mqtt, topic, qos);

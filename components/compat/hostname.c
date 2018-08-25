@@ -62,14 +62,14 @@ int gethostname(char *name, size_t len) {
 		return -1;
 	}
 
-	if (strlen(host_name) > len - 1) {
-		errno = ENAMETOOLONG;
-		return -1;
-	}
-
 	// If hostname is not set, create the default hostname
 	if (host_name == NULL) {
 		host_name = strdup("lua-rtos-esp32.local");
+	}
+
+	if (strlen(host_name) > len - 1) {
+		errno = ENAMETOOLONG;
+		return -1;
 	}
 
 	strncpy(name, host_name, len - 1);
