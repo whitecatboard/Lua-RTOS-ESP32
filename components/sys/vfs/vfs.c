@@ -268,7 +268,7 @@ ssize_t vfs_generic_writev(vfs_fd_local_storage_t *local_storage, vfs_put_byte p
     return bytes;
 }
 
-int vfs_generic_select(vfs_fd_local_storage_t *local_storage, vfs_has_bytes has_bytes, vfs_free_bytes free, int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout) {
+int vfs_generic_select(vfs_fd_local_storage_t *local_storage, vfs_has_bytes has_bytes, vfs_free_bytes free_bytes, int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout) {
     int to = 0xffffffff; // Default timeout
 
     // Get the timeout
@@ -290,7 +290,7 @@ int vfs_generic_select(vfs_fd_local_storage_t *local_storage, vfs_has_bytes has_
         }
 
         if (writeset && FD_ISSET(fd, writeset)) {
-            if (free(fd) > 0) {
+            if (free_bytes(fd) > 0) {
                 num++;
             } else {
                 FD_CLR(fd, writeset);
