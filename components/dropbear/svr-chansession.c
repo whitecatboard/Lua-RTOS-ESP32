@@ -301,11 +301,11 @@ static void closechansess(struct Channel *channel) {
 
 	send_exitsignalstatus(channel);
 
-	m_free(chansess->cmd);
+	if (chansess->cmd) m_free(chansess->cmd);
 	m_free(chansess->term);
 
 #ifdef ENABLE_SVR_PUBKEY_OPTIONS
-	m_free(chansess->original_command);
+	if (chansess->original_command) m_free(chansess->original_command);
 #endif
 
 	if (chansess->tty) {

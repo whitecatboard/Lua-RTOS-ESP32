@@ -220,7 +220,7 @@ static void abInit(struct abuf *ab) {
 }
 
 static void abAppend(struct abuf *ab, const char *s, int len) {
-    char *new = realloc(ab->b,ab->len+len);
+    char *new = (ab->b ? realloc(ab->b,ab->len+len) : malloc(ab->len+len));
 
     if (new == NULL) return;
     memcpy(new+ab->len,s,len);
