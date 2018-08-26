@@ -117,10 +117,12 @@ typedef struct {
 	char *path;
 	char *method;
 	char *data;
+	char *chunk_buffer;
+	char *printf_buffer;
 } http_request_handle;
 
-#define HTTP_Request_Normal_initializer { config, client, NULL, 0, NULL, 0, NULL, NULL, NULL };
-#define HTTP_Request_Secure_initializer { config, client, ssl,  0, NULL, 0, NULL, NULL, NULL };
+#define HTTP_Request_Normal_initializer { config, client, NULL, 0, NULL, 0, NULL, NULL, NULL, NULL, NULL };
+#define HTTP_Request_Secure_initializer { config, client, ssl,  0, NULL, 0, NULL, NULL, NULL, NULL, NULL };
 
 static http_server_config http_normal = HTTP_Normal_initializer;
 static http_server_config http_secure = HTTP_Secure_initializer;
@@ -160,25 +162,40 @@ static int request_write(http_request_handle *request, char *buffer, int length)
 	return (request->config->secure) ? SSL_write(request->ssl, buffer, length) : send(request->socket, buffer, length, MSG_DONTWAIT);
 }
 
+#define BUFFER_SIZE_INITIAL 256
+#define BUFFER_SIZE_MAX 2048
 static int do_printf(http_request_handle *request, const char *fmt, ...) {
 	int ret = 0;
-	char *buffer;
 	va_list args;
 
-	buffer = (char *)malloc(2048);
-	if (buffer) {
-		*buffer = '\0';
+	if (request->printf_buffer == NULL)
+		request->printf_buffer = (char *)malloc(BUFFER_SIZE_INITIAL);
 
+	if (request->printf_buffer) {
+		*(request->printf_buffer) = '\0';
 		va_start(args, fmt);
-		vsnprintf(buffer, 2048, fmt, args);
-
-		int length = strlen(buffer);
-		if(length) { //don't try to transfer "nothing"
-			ret = request_write(request, buffer, length);
+		int length = vsnprintf(request->printf_buffer, BUFFER_SIZE_INITIAL, fmt, args);
+		va_end(args);
+		if (length>=0 && length<BUFFER_SIZE_INITIAL) {
+			if(length) { //don't try to transfer "nothing"
+				ret = request_write(request, request->printf_buffer, length);
+			}
+		}
+		else {
+			// retry with a bigger buffer...
+			char *buffer = (char *)malloc(BUFFER_SIZE_MAX);
+			if (buffer) {
+				*buffer = '\0';
+				va_start(args, fmt);
+				length = vsnprintf(buffer, BUFFER_SIZE_MAX, fmt, args);
+				va_end(args);
+				if(length) { //don't try to transfer "nothing"
+					ret = request_write(request, buffer, length);
+				}
+				free(buffer);
+			}
 		}
 
-		va_end(args);
-		free(buffer);
 	}
 	return ret;
 }
@@ -303,26 +320,40 @@ void send_error(http_request_handle *request, int status, char *title, char *ext
 	do_printf(request, HTTP_ERROR_LINE_4);
 }
 
+#define CHUNK_SIZE_INITIAL (BUFFER_SIZE_INITIAL-2)
+#define CHUNK_SIZE_MAX  (BUFFER_SIZE_MAX-2)
 static void chunk(http_request_handle *request, const char *fmt, ...) {
-	char *buffer;
 	va_list args;
 
-	buffer = (char *)malloc(2048);
-	if (buffer) {
-		*buffer = '\0';
+	if (request->chunk_buffer == NULL)
+		request->chunk_buffer = (char *)malloc(CHUNK_SIZE_INITIAL);
 
+	if (request->chunk_buffer) {
+		*(request->chunk_buffer) = '\0';
 		va_start(args, fmt);
-
-		vsnprintf(buffer, 2048, fmt, args);
-
-		int length = strlen(buffer);
-		if(length) { //a length of zero would end our whole transfer
-			do_printf(request, "%x\r\n", length);
-			do_printf(request, "%s\r\n", buffer);
-		}
-
+		int length = vsnprintf(request->chunk_buffer, CHUNK_SIZE_INITIAL, fmt, args);
 		va_end(args);
-		free(buffer);
+		if (length>=0 && length<CHUNK_SIZE_INITIAL) {
+			if(length) { //a length of zero would end our whole transfer
+				do_printf(request, "%x\r\n", length);
+				do_printf(request, "%s\r\n", request->chunk_buffer);
+			}
+		}
+		else {
+			// retry with a bigger buffer...
+			char *buffer = (char *)malloc(CHUNK_SIZE_MAX);
+			if (buffer) {
+				*buffer = '\0';
+				va_start(args, fmt);
+				length = vsnprintf(buffer, CHUNK_SIZE_MAX, fmt, args);
+				va_end(args);
+				if(length) { //a length of zero would end our whole transfer
+					do_printf(request, "%x\r\n", length);
+					do_printf(request, "%s\r\n", buffer);
+				}
+				free(buffer);
+			}
+		}
 	}
 }
 
@@ -918,6 +949,15 @@ int process(http_request_handle *request) {
 	if (databuf) free(databuf);
 	request->path = NULL;
 	request->data = NULL;
+
+	if (request->chunk_buffer) {
+		free(request->chunk_buffer);
+		request->chunk_buffer = NULL;
+	}
+	if (request->printf_buffer) {
+		free(request->printf_buffer);
+		request->printf_buffer = NULL;
+	}
 
 	return 0;
 }
