@@ -97,26 +97,26 @@ static int socket_server_normal = 0;
 static int socket_server_secure = 0;
 
 typedef struct {
-  int port;
-  int *server; //socket
-  const int secure;
-  char *certificate;
-  char *private_key;
+	int port;
+	int *server; //socket
+	const int secure;
+	char *certificate;
+	char *private_key;
 } http_server_config;
 
 #define HTTP_Normal_initializer { CONFIG_LUA_RTOS_HTTP_SERVER_PORT, &socket_server_normal, 0, NULL, NULL }
 #define HTTP_Secure_initializer { CONFIG_LUA_RTOS_HTTP_SERVER_PORT_SSL, &socket_server_secure, 1, NULL, NULL } //cert and privkey need to be supplied from lua
 
 typedef struct {
-  http_server_config *config;
-  int socket;
-  SSL *ssl;
-  int headers_sent;
-  struct sockaddr_storage *client;
-  socklen_t client_len;
-  char *path;
-  char *method;
-  char *data;
+	http_server_config *config;
+	int socket;
+	SSL *ssl;
+	int headers_sent;
+	struct sockaddr_storage *client;
+	socklen_t client_len;
+	char *path;
+	char *method;
+	char *data;
 } http_request_handle;
 
 #define HTTP_Request_Normal_initializer { config, client, NULL, 0, NULL, 0, NULL, NULL, NULL };
@@ -410,19 +410,19 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
 			time_t src_mtime = statbuf->st_mtime;
 
 			// Get .luap file modified time
-            if (stat(ppath, statbuf) == 0) {
-                if (src_mtime > statbuf->st_mtime)  {
-                    http_preprocess_lua_page(path,ppath);
-                }
-            } else {
-                http_preprocess_lua_page(path,ppath);
-            }
+			if (stat(ppath, statbuf) == 0) {
+				if (src_mtime > statbuf->st_mtime) {
+					http_preprocess_lua_page(path,ppath);
+				}
+			} else {
+				http_preprocess_lua_page(path,ppath);
+			}
 
 			if (S_ISDIR(statbuf->st_mode)) {
 				send_error(request, 500, "Internal Server Error", NULL, "Folder found where a precompiled file is expected.");
 			}
 			else {
-				lua_State *L = pvGetLuaState();  /* get state */
+				lua_State *L = pvGetLuaState(); /* get state */
 				lua_State* TL = L ? lua_newthread(L) : NULL;
 				if (L == NULL || TL == NULL) {
 					send_error(request, 500, "Internal Server Error", NULL, L ? "Cannot create thread.":"Cannot get state.");
@@ -773,9 +773,9 @@ int process(http_request_handle *request) {
 				//check if the line begins with "Host:"
 				if (host==(char *)pathbuf) {
 					save_ptr = NULL;
-					host = strtok_r(host, ":", &save_ptr);  //Host:
+					host = strtok_r(host, ":", &save_ptr); //Host:
 					host = strtok_r(NULL, "\r", &save_ptr); //the actual host
-					while(*host==' ') host++;  //skip spaces after the :
+					while(*host==' ') host++; //skip any spaces after the colon
 
 					if (0 == strcasecmp(CAPTIVE_SERVER_NAME, host) ||
 							0 == strcasecmp(ip4addr, host)) {
@@ -828,9 +828,9 @@ int process(http_request_handle *request) {
 					//check if the line begins with "Content-Length:"
 					if (contentlen==(char *)pathbuf) {
 						save_ptr = NULL;
-						contentlen = strtok_r(contentlen, ":", &save_ptr);  //Content-Length:
+						contentlen = strtok_r(contentlen, ":", &save_ptr); //Content-Length:
 						contentlen = strtok_r(NULL, "\r", &save_ptr); //the actual content length
-						while(*contentlen==' ') contentlen++;  //skip spaces after the :
+						while(*contentlen==' ') contentlen++; //skip any spaces after the colon
 						contentlength = atoi(contentlen)+1;
 					}
 				}
@@ -1035,13 +1035,13 @@ static void *http_thread(void *arg) {
 		if (!SSL_CTX_use_certificate_ASN1(ctx, certificate_bytes, certificate_buf)) {
 			syslog(LOG_ERR, "couldn't set SSL certificate\n");
 			mbedtls_zeroize( certificate_buf, certificate_bytes );
-			mbedtls_free( certificate_buf );
+			//MUST NOT free certificate_buf !!!
 			SSL_CTX_free(ctx);
 			ctx = NULL;
 			return NULL;
 		}
 		mbedtls_zeroize( certificate_buf, certificate_bytes );
-		mbedtls_free( certificate_buf );
+		//MUST NOT free certificate_buf !!!
 
 		//load privkey
 		size_t private_key_bytes;
@@ -1055,13 +1055,13 @@ static void *http_thread(void *arg) {
 		if (!SSL_CTX_use_PrivateKey_ASN1(0, ctx, private_key_buf, private_key_bytes)) {
 			syslog(LOG_ERR, "couldn't load SSL private key\n");
 			mbedtls_zeroize( private_key_buf, private_key_bytes );
-			mbedtls_free( private_key_buf );
+			//MUST NOT free private_key_buf !!!
 			SSL_CTX_free(ctx);
 			ctx = NULL;
 			return NULL;
 		}
 		mbedtls_zeroize( private_key_buf, private_key_bytes );
-		mbedtls_free( private_key_buf );
+		//MUST NOT free private_key_buf !!!
 	}
 
 	syslog(LOG_INFO, "http: server listening on port %d\n", config->port);
