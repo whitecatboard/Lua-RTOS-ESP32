@@ -500,6 +500,35 @@ static int lmqtt_connect(lua_State* L) {
 #ifdef OPENSSL
     conn_opts.ssl = &mqtt->ssl_opts;
 #endif
+
+    //if calling connect() twice in a row, make sure the subscription callbacks are properly free'd mqtt_subs_callback *callback;
+    mqtt_subs_callback *callback;
+    mqtt_subs_callback *nextcallback;
+
+    callback = mqtt->callbacks;
+    while (callback) {
+        luaS_callback_destroy(callback->callback);
+
+        nextcallback = callback->next;
+        if (callback->topic){
+          free(callback->topic);
+          callback->topic = NULL;
+        }
+
+        free(callback);
+        callback = nextcallback;
+    }
+    mqtt->callbacks = NULL;
+
+    //if calling connect() twice in a row, make sure user and password are properly free'd
+    if (mqtt->conn_opts.username) {
+        free((char*) mqtt->conn_opts.username);
+        mqtt->conn_opts.username = NULL;
+    }
+    if (mqtt->conn_opts.password) {
+        free((char*) mqtt->conn_opts.password);
+        mqtt->conn_opts.password = NULL;
+    }
     bcopy(&conn_opts, &mqtt->conn_opts, sizeof(MQTTAsync_connectOptions));
 
     // Try to connect
@@ -628,6 +657,35 @@ static int lmqtt_disconnect(lua_State* L) {
         return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_CONNECT, "timeout");
     }
 
+    //make sure the subscription callbacks are properly free'd
+    mqtt_subs_callback *callback;
+    mqtt_subs_callback *nextcallback;
+
+    callback = mqtt->callbacks;
+    while (callback) {
+        luaS_callback_destroy(callback->callback);
+
+        nextcallback = callback->next;
+        if (callback->topic){
+          free(callback->topic);
+          callback->topic = NULL;
+        }
+
+        free(callback);
+        callback = nextcallback;
+    }
+    mqtt->callbacks = NULL;
+
+    //make sure user and password are properly free'd
+    if (mqtt->conn_opts.username) {
+        free((char*) mqtt->conn_opts.username);
+        mqtt->conn_opts.username = NULL;
+    }
+    if (mqtt->conn_opts.password) {
+        free((char*) mqtt->conn_opts.password);
+        mqtt->conn_opts.password = NULL;
+    }
+
     mtx_unlock(&mqtt->mtx);
     return 0;
 }
@@ -648,6 +706,10 @@ static int lmqtt_client_gc(lua_State *L) {
             luaS_callback_destroy(callback->callback);
 
             nextcallback = callback->next;
+            if (callback->topic){
+              free(callback->topic);
+              callback->topic = NULL;
+            }
 
             free(callback);
             callback = nextcallback;
