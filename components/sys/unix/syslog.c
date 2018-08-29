@@ -78,6 +78,7 @@ static char sccsid[] = "@(#)syslog.c	8.5 (Berkeley) 4/29/95";
 #endif
 
 #define PORT 514
+#define MAX_BUFF 128
 
 static int   logSock = 0;
 static char *logHost = NULL;
@@ -135,7 +136,6 @@ vsyslog(pri, fmt, ap)
 
 	int has_cr_lf = 0;
 
-	#define MAX_BUFF 128
 	register int size;
 
 	cnt = strlen(fmt) - 1;
@@ -189,12 +189,13 @@ vsyslog(pri, fmt, ap)
 	}
 
 	if (NULL != logFile) {
-		char *t = tbuf + strlen(tbuf) - 1;
+		char *t = tbuf + strlen(tbuf);
 
 		// Remove end \r | \n
 		while ((*t == '\r') || (*t == '\n')) {
 			*t = '\0';
 			t--;
+			cnt--;
 		}
 
 		(void)strcat(tbuf, "\n");
@@ -206,11 +207,12 @@ vsyslog(pri, fmt, ap)
 	}
 
 	if (0 != logSock) {
-		sendto(logSock,tbuf,strlen(tbuf)+1,0,(struct sockaddr *)&logAddr,sizeof(logAddr));
+		sendto(logSock,tbuf,cnt,0,(struct sockaddr *)&logAddr,sizeof(logAddr));
 	}
 
 	free(tbuf);
 }
+
 
 static int syslog_logging_vprintf( const char *str, va_list l ) {
 	// Allocate space
@@ -237,7 +239,7 @@ static void reconnect_syslog() {
 	esp_log_set_vprintf(vprintf);
 
 	if (NETWORK_AVAILABLE()) {
-		if (!logHost) logHost = strdup("10.0.0.10");
+		if (!logHost) logHost = strdup("10.0.0.1");
 		if (0 == strcmp(logHost,"0.0.0.0"))
 			return; //user wants to disable remote logging
 
