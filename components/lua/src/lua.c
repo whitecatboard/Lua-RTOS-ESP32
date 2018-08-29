@@ -156,17 +156,14 @@ static void print_usage (const char *badoption) {
 */
 static void l_message (const char *pname, const char *msg) {
   if (pname)
-  	syslog(LOG_ERR, "%s: %s\n", pname, msg);
+    syslog(LOG_ERR, "%s: %s\n", pname, msg);
   else
-  	syslog(LOG_ERR, "%s\n", msg);
+    syslog(LOG_ERR, "%s\n", msg);
 
-	if (! (getlogstat() & LOG_CONS)) {
-		if (pname) lua_writestringerror("%s: ", pname);
-		lua_writestringerror("%s\n", msg);
+  if (! (getlogstat() & LOG_CONS)) {
+    if (pname) lua_writestringerror("%s: ", pname);
+    lua_writestringerror("%s\n", msg);
   }
-  else {
-		lua_writestringerror("%s\n","");
-	}
 }
 
 

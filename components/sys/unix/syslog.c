@@ -128,20 +128,13 @@ vsyslog(pri, fmt, ap)
 	register int cnt;
 	register char *p;
 	char *tbuf;
-
-	if (!fmt) return;
-
 	time_t now;
 	int fd;
-
 	int has_cr_lf = 0;
 
-	register int size;
-
-	cnt = strlen(fmt) - 1;
-	has_cr_lf = ((fmt[cnt] == '\n') || (fmt[cnt - 1] == '\r'));
-
 	#define	INTERNALLOG LOG_ERR|LOG_CONS|LOG_PERROR|LOG_PID
+
+	if (!fmt) return;
 
 	/* Check for invalid bits. */
 	if (pri & ~(LOG_PRIMASK|LOG_FACMASK)) {
@@ -153,7 +146,7 @@ vsyslog(pri, fmt, ap)
 		return;
 
 	// Allocate space
-	tbuf = (char *)malloc(MAX_BUFF + 20);
+	tbuf = (char *)malloc(MAX_BUFF + 3);
 	if (!tbuf) return;
 
 	/* Set default facility if none specified. */
@@ -161,20 +154,22 @@ vsyslog(pri, fmt, ap)
 		pri |= logFacility;
 
 	/* Build the message. */
-	size = MAX_BUFF;
 
 	(void)time(&now);
-	p = tbuf + snprintf(tbuf, size, "<%d>", pri);
-	if ((size = MAX_BUFF - (p - tbuf)) < 0) size = 0;
-
+	p = tbuf + snprintf(tbuf, MAX_BUFF, "<%d>", pri);
 	if (logStat & LOG_PID) {
-		p += snprintf(p, size, "[%d]", getpid());
-		if ((size = MAX_BUFF - (p - tbuf)) < 0) size = 0;
+		p += snprintf(p, MAX_BUFF - (p - tbuf), "[%d]", getpid());
+	}
+	cnt = vsnprintf(p, MAX_BUFF - (p - tbuf), fmt, ap);
+	if (cnt > MAX_BUFF - (p - tbuf)) {
+		p += (MAX_BUFF - (p - tbuf)) - 1;
+	}
+	else {
+		p += cnt;
 	}
 
-	p += vsnprintf(p, size, fmt, ap);
-	if ((size = MAX_BUFF - (p - tbuf)) < 0) size = 0;
 	cnt = p - tbuf;
+	has_cr_lf = ((tbuf[cnt-1] == '\n') && (tbuf[cnt-2] == '\r'));
 
 	if (logStat & LOG_CONS) {
 		fd = fileno(_GLOBAL_REENT->_stdout);
@@ -213,12 +208,11 @@ vsyslog(pri, fmt, ap)
 	free(tbuf);
 }
 
-
 static int syslog_logging_vprintf( const char *str, va_list l ) {
 	// Allocate space
-	char* tbuf = (char *)malloc(MAX_BUFF + 20);
+	char* tbuf = (char *)malloc(MAX_BUFF+1);
 	if (tbuf) {
-		int len = vsprintf((char*)tbuf, str, l);
+		int len = vsnprintf((char*)tbuf, MAX_BUFF, str, l);
 
 		if (0 != logSock) {
 			sendto(logSock,tbuf,len,0,(struct sockaddr *)&logAddr,sizeof(logAddr));
@@ -369,19 +363,19 @@ int getlogstat() {
 
 const char *syslog_setloghost (const char *host)
 {
-  if (logHost)
+	if (logHost)
 		free (logHost);
-  logHost = NULL;
-  if (!host)
+	logHost = NULL;
+	if (!host)
 		return (NULL);
 
-  logHost = strdup (host);
+	logHost = strdup (host);
 	reconnect_syslog();
 
-  return logHost;
+	return logHost;
 }
 
 const char *syslog_getloghost ()
 {
-  return logHost;
+	return logHost;
 }
