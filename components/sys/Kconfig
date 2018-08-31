@@ -54,6 +54,9 @@ menu "Lua RTOS"
       config LUA_RTOS_BOARD_FIPY
          bool "FIPY"
 
+      config LUA_RTOS_BOARD_WESP32
+         bool "WESP32"
+
       config LUA_RTOS_BOARD_OTHER
          bool "GENERIC"
    endchoice

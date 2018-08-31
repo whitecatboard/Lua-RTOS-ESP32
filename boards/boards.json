@@ -180,6 +180,24 @@
 		"filesystem": "default"
 	},
 	{
+		"id": "WESP32",
+		"description": "Silicognition wESP32",
+		"manufacturer": "Silicognition LLC",
+		"brand": "",
+		"type": "WESP32",
+		"subtype": "",
+		"filesystem": "default"
+	},
+	{
+		"id": "WESP32-OTA",
+		"description": "Silicognition wESP32 with OTA",
+		"manufacturer": "Silicognition LLC",
+		"brand": "",
+		"type": "WESP32",
+		"subtype": "OTA",
+		"filesystem": "default"
+	},
+	{
 		"id": "GENERIC",
 		"description": "Generic ESP32 board",
 		"manufacturer": "Generic",
