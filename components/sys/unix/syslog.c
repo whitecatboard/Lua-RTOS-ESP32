@@ -174,6 +174,8 @@ vsyslog(pri, fmt, ap)
 	if (logStat & LOG_CONS) {
 		fd = fileno(_GLOBAL_REENT->_stdout);
 		if (!has_cr_lf) {
+			while(cnt && tbuf[cnt-1] == '\n') cnt--;
+
 			(void)strcat(tbuf, "\r\n");
 			cnt += 2;
 			has_cr_lf = 1;
