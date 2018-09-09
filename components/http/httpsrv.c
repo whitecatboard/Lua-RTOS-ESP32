@@ -1038,7 +1038,7 @@ static void *http_thread(void *arg) {
 		sin.sin6_family = AF_INET6;
 		memcpy(&sin.sin6_addr.un.u32_addr, &in6addr_any, sizeof(in6addr_any));
 		sin.sin6_port   = htons(config->port);
-		int rc = bind(*config->server, (struct sockaddr *) &sin, sizeof (sin));
+		rc = bind(*config->server, (struct sockaddr *) &sin, sizeof (sin));
 		if(0 != rc) {
 			syslog(LOG_ERR, "couldn't bind to port %d\n", config->port);
 			return NULL;
