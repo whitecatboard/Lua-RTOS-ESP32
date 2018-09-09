@@ -155,14 +155,14 @@ static void dir_path(char *npath, uint8_t base) {
 }
 
 static void check_path(const char *path, uint8_t *base_is_dir,
-        uint8_t *full_is_dir, uint8_t *is_file, int *files) {
+        uint8_t *full_is_dir, uint8_t *is_file, int *filenum) {
     char bpath[PATH_MAX + 1]; // Base path
     char fpath[PATH_MAX + 1]; // Full path
     struct spiffs_dirent e;
     spiffs_DIR d;
     int file_num = 0;
 
-    *files = 0;
+    *filenum = 0;
     *base_is_dir = 0;
     *full_is_dir = 0;
     *is_file = 0;
@@ -197,7 +197,7 @@ static void check_path(const char *path, uint8_t *base_is_dir,
     }
     SPIFFS_closedir(&d);
 
-    *files = file_num;
+    *filenum = file_num;
 }
 
 /*
@@ -249,26 +249,26 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
     strlcpy(file->path, path, MAXNAMLEN);
 
     // Open file
-    spiffs_flags spiffs_mode = 0;
+    spiffs_flags spiffs_flgs = 0;
 
     // Translate flags to SPIFFS flags
     if (flags == O_RDONLY)
-        spiffs_mode |= SPIFFS_RDONLY;
+        spiffs_flgs |= SPIFFS_RDONLY;
 
     if (flags & O_WRONLY)
-        spiffs_mode |= SPIFFS_WRONLY;
+        spiffs_flgs |= SPIFFS_WRONLY;
 
     if (flags & O_RDWR)
-        spiffs_mode = SPIFFS_RDWR;
+        spiffs_flgs = SPIFFS_RDWR;
 
     if (flags & O_EXCL)
-        spiffs_mode |= SPIFFS_EXCL;
+        spiffs_flgs |= SPIFFS_EXCL;
 
     if (flags & O_CREAT)
-        spiffs_mode |= SPIFFS_CREAT;
+        spiffs_flgs |= SPIFFS_CREAT;
 
     if (flags & O_TRUNC)
-        spiffs_mode |= SPIFFS_TRUNC;
+        spiffs_flgs |= SPIFFS_TRUNC;
 
     // Check path
     uint8_t base_is_dir = 0;
@@ -282,7 +282,7 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
         // We want to open a directory.
         // If in flags are set some write access mode this is an error, because we only
         // can open a directory in read mode.
-        if (spiffs_mode & (SPIFFS_WRONLY | SPIFFS_CREAT | SPIFFS_TRUNC)) {
+        if (spiffs_flgs & (SPIFFS_WRONLY | SPIFFS_CREAT | SPIFFS_TRUNC)) {
             lstremove(&files, fd, 1);
             errno = EISDIR;
             return -1;
@@ -308,7 +308,7 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
             return -1;
         } else {
             // Open SPIFFS file
-            file->spiffs_file = SPIFFS_open(&fs, path, spiffs_mode, 0);
+            file->spiffs_file = SPIFFS_open(&fs, path, spiffs_flgs, 0);
             if (file->spiffs_file < 0) {
                 result = spiffs_result(fs.err_code);
             }

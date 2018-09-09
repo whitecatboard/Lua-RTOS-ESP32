@@ -3187,8 +3187,13 @@ int MQTTAsync_getPendingTokens(MQTTAsync handle, MQTTAsync_token **tokens)
 		current = NULL;
 		while (ListNextElement(m->c->outboundMsgs, &current))
 		{
+#if __XTENSA__
+			Messages* msg = (Messages*)(current->content);
+			(*tokens)[count++] = msg->msgid;
+#else
 			Messages* m = (Messages*)(current->content);
 			(*tokens)[count++] = m->msgid;
+#endif
 		}
 	}
 	(*tokens)[count] = -1; /* indicate end of list */
@@ -3231,8 +3236,13 @@ int MQTTAsync_isComplete(MQTTAsync handle, MQTTAsync_token dt)
 		current = NULL;
 		while (ListNextElement(m->c->outboundMsgs, &current))
 		{
+#if __XTENSA__
+			Messages* msg = (Messages*)(current->content);
+			if (msg->msgid == dt)
+#else
 			Messages* m = (Messages*)(current->content);
 			if (m->msgid == dt)
+#endif
 				goto exit;
 		}
 	}
