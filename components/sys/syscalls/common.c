@@ -64,10 +64,14 @@ int __garbage_collector() {
         // Execute the garbage collector 2 times, and
         // wait 1 msec to get time to the idle task to
         // free memory
-        luaC_fullgc(L, 0);
+        lua_lock(L);
+        luaC_fullgc(L, 1);
+        lua_unlock(L);
         vTaskDelay(1 / portTICK_PERIOD_MS);
 
-        luaC_fullgc(L, 0);
+        lua_lock(L);
+        luaC_fullgc(L, 1);
+        lua_unlock(L);
         vTaskDelay(1 / portTICK_PERIOD_MS);
     } else {
         // Not a Lua thread
