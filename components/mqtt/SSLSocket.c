@@ -1047,7 +1047,9 @@ int SSLSocket_putdatas(SSL* ssl, int socket, char* buf0, size_t buf0len, int cou
 		free(iovec.iov_base);
 	else
 	{
+#if !__XTENSA__
 		int i;
+#endif
 		free(buf0);
 		for (i = 0; i < count; ++i)
 		{
