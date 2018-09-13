@@ -93,8 +93,6 @@ void _pthread_unlock() {
 }
 
 void _pthread_init() {
-    _mtx_init();
-
     if (!inited) {
         // Create mutexes
         mtx_init(&thread_mtx, NULL, NULL, 0);

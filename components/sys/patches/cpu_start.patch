@@ -1,0 +1,23 @@
+diff --git a/components/esp32/cpu_start.c b/components/esp32/cpu_start.c
+index bf044bd7..88dde5b7 100644
+--- a/components/esp32/cpu_start.c
++++ b/components/esp32/cpu_start.c
+@@ -307,18 +307,10 @@ void start_cpu0_default(void)
+     esp_efuse_disable_basic_rom_console();
+ #endif
+     rtc_gpio_force_hold_dis_all();
+-    esp_vfs_dev_uart_register();
+     esp_reent_init(_GLOBAL_REENT);
+-#ifndef CONFIG_CONSOLE_UART_NONE
+-    const char* default_uart_dev = "/dev/uart/" STRINGIFY(CONFIG_CONSOLE_UART_NUM);
+-    _GLOBAL_REENT->_stdin  = fopen(default_uart_dev, "r");
+-    _GLOBAL_REENT->_stdout = fopen(default_uart_dev, "w");
+-    _GLOBAL_REENT->_stderr = fopen(default_uart_dev, "w");
+-#else
+     _GLOBAL_REENT->_stdin  = (FILE*) &__sf_fake_stdin;
+     _GLOBAL_REENT->_stdout = (FILE*) &__sf_fake_stdout;
+     _GLOBAL_REENT->_stderr = (FILE*) &__sf_fake_stderr;
+-#endif
+     esp_timer_init();
+     esp_set_time_from_rtc();
+ #if CONFIG_ESP32_APPTRACE_ENABLE

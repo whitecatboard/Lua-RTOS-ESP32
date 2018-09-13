@@ -2,8 +2,8 @@
  * Copyright (c) 1983, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
- * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * Copyright (C) 2015 - 2018
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
@@ -50,6 +50,7 @@ static char sccsid[] = "@(#)syslog.c	8.5 (Berkeley) 4/29/95";
 #include <sys/types.h>
 #include <sys/syslog.h>
 #include <sys/mount.h>
+#include <sys/path.h>
 
 #include <stdlib.h>
 #include <errno.h>
@@ -59,6 +60,7 @@ static char sccsid[] = "@(#)syslog.c	8.5 (Berkeley) 4/29/95";
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <limits.h>
 
 #if __STDC__
 #include <stdarg.h>
@@ -69,10 +71,8 @@ static char sccsid[] = "@(#)syslog.c	8.5 (Berkeley) 4/29/95";
 static FILE *LogFile;
 static int 	 connected;		/* have done connect */
 static int	 LogStat = 0;		/* status bits, set by openlog() */
-static const char *LogTag = NULL;	/* string to tag the entry with */
 static int	LogFacility = LOG_USER;	/* default facility code */
 static int	LogMask = 0b11111111;		/* mask of priorities to be logged */
-extern char	*__progname;		/* Program name, from crt0. */
 
 void vsyslog(int pri, register const char *fmt, va_list app);
 	
@@ -195,13 +195,9 @@ vsyslog(pri, fmt, ap)
         free(tbuf);
 }
 
-void openlog(ident, logstat, logfac)
-	const char *ident;
+int openlog(logstat, logfac)
 	int logstat, logfac;
 {
-    if (ident != NULL)
-        LogTag = ident;
-
     LogStat = logstat;
     if (logfac != 0 && (logfac &~ LOG_FACMASK) == 0)
         LogFacility = logfac;
@@ -212,18 +208,20 @@ void openlog(ident, logstat, logfac)
     
     LogFile = NULL;
 
-    if (mount_is_mounted("fat")) {
-    	if (mount_is_mounted("spiffs")) {
-        	LogFile = fopen("/sd/log/messages.log","a+");
-    	} else {
-        	LogFile = fopen("/log/messages.log","a+");
-    	}
+    char file[PATH_MAX + 1];
+
+    if (mount_messages_file(file, sizeof(file))) {
+        mkfile(file);
+
+        LogFile = fopen(file,"a+");
     }
     
     connected = (LogFile != NULL);	
     if (connected) {
         fflush(LogFile);
     }
+
+    return (LogFile == NULL);
 }
 
 void closelog() {

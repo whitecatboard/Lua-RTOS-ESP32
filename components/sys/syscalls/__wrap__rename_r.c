@@ -61,12 +61,22 @@ int __wrap__rename_r(struct _reent *r, const char *src, const char *dst) {
     char *ppath_dst;
     int res;
 
-    if (!src || !*src) {
+    if (!src) {
+        errno = EFAULT;
+        return -1;
+    }
+
+    if (!*src) {
         errno = ENOENT;
         return -1;
     }
 
-    if (!dst || !*dst) {
+    if (!dst) {
+        errno = EFAULT;
+        return -1;
+    }
+
+    if (!*dst) {
         errno = ENOENT;
         return -1;
     }

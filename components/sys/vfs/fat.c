@@ -45,9 +45,11 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI
+#if (CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI) && CONFIG_LUA_RTOS_USE_FAT
 
 #include <stdio.h>
+
+#include "esp_vfs.h"
 
 #include "esp_err.h"
 #include "esp_log.h"
@@ -57,14 +59,16 @@
 #include "sdmmc_cmd.h"
 #include "driver/sdmmc_defs.h"
 
+#include <drivers/gpio.h>
+#include <drivers/spi.h>
+
 #include <sys/driver.h>
 #include <sys/mount.h>
 #include <sys/syslog.h>
 
-#include <drivers/gpio.h>
-#include <drivers/spi.h>
+#include <sys/vfs/vfs.h>
 
-void vfs_fat_register() {
+void vfs_fat_mount() {
 #if CONFIG_SD_CARD_SPI
 	 spi_bus_t *spi_bus = get_spi_info();
 
@@ -79,12 +83,11 @@ void vfs_fat_register() {
 	}
 #endif
 
-	#if (CONFIG_LUA_RTOS_SD_SPI == 2)
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
-
-    host.slot = HSPI_HOST;
-
     sdspi_slot_config_t slot_config = SDSPI_SLOT_CONFIG_DEFAULT();
+
+	#if (CONFIG_LUA_RTOS_SD_SPI == 2)
+    host.slot = HSPI_HOST;
 
     slot_config.gpio_miso = CONFIG_LUA_RTOS_SPI2_MISO;
     slot_config.gpio_mosi = CONFIG_LUA_RTOS_SPI2_MOSI;
@@ -93,11 +96,7 @@ void vfs_fat_register() {
 	#endif
 
 	#if (CONFIG_LUA_RTOS_SD_SPI == 3)
-    sdmmc_host_t host = SDSPI_HOST_DEFAULT();
-
     host.slot = VSPI_HOST;
-
-    sdspi_slot_config_t slot_config = SDSPI_SLOT_CONFIG_DEFAULT();
 
     slot_config.gpio_miso = CONFIG_LUA_RTOS_SPI3_MISO;
     slot_config.gpio_mosi = CONFIG_LUA_RTOS_SPI3_MOSI;
@@ -163,14 +162,14 @@ void vfs_fat_register() {
     };
 
 #if CONFIG_SD_CARD_SPI
-    syslog(LOG_INFO, "sd%u is at spi%d, cs=%s%d", 0,
+    syslog(LOG_INFO, "sd is at spi%d, cs=%s%d",
 			CONFIG_LUA_RTOS_SD_SPI,
 			gpio_portname(CONFIG_LUA_RTOS_SD_CS), gpio_name(CONFIG_LUA_RTOS_SD_CS)
 	);
 #endif
 
 #if CONFIG_SD_CARD_MMC
-    syslog(LOG_INFO, "sd%u is at mmc0", 0);
+    syslog(LOG_INFO, "sd is at mmc0");
 #endif
 
     gpio_pin_pullup(2);
@@ -180,48 +179,207 @@ void vfs_fat_register() {
     sdmmc_card_t* card;
     esp_err_t ret = esp_vfs_fat_sdmmc_mount("/fat", &host, &slot_config, &mount_config, &card);
     if (ret != ESP_OK) {
-            esp_vfs_fat_sdmmc_unmount();
-            syslog(LOG_INFO, "fat%d can't mounted (error %d)", 0, ret);
-    #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-            driver_unlock_all(SYSTEM_DRIVER, 0);
-    #endif
-
-    #if CONFIG_SD_CARD_SPI
-    #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-        #if (CONFIG_LUA_RTOS_SD_SPI == 2)
-        spi_unlock_bus_resources(2);
-        spi_bus[spi_idx(2)].setup &= ~SPI_DMA_SETUP;
-        #endif
-
-        #if (CONFIG_LUA_RTOS_SD_SPI == 3)
-        spi_unlock_bus_resources(3);
-        spi_bus[spi_idx(3)].setup &= ~SPI_DMA_SETUP;
-        #endif
-    #endif
-    #endif
-            return;
+        syslog(LOG_INFO, "fat can't mounted (error %d)", ret);
+        vfs_fat_umount();
+        return;
     }
 
-	syslog(LOG_INFO, "sd%u name %s", 0, card->cid.name);
-	syslog(LOG_INFO, "sd%u type %s", 0, (card->ocr & SD_OCR_SDHC_CAP)?"SDHC/SDXC":"SDSC");
-	syslog(LOG_INFO, "sd%u speed %s", 0, (card->csd.tr_speed > 25000000)?"high speed":"default speed");
-	syslog(LOG_INFO, "sd%u size %.2f GB", 0,
+	syslog(LOG_INFO, "sd name %s", card->cid.name);
+	syslog(LOG_INFO, "sd type %s", (card->ocr & SD_OCR_SDHC_CAP)?"SDHC/SDXC":"SDSC");
+	syslog(LOG_INFO, "sd working at %s", (card->csd.tr_speed > 25000000)?"high speed":"default speed");
+	syslog(LOG_INFO, "sd size %.2f GB",
 		((((double)card->csd.capacity) * ((double)card->csd.sector_size)) / 1073741824.0)
 	);
 
-	syslog(LOG_INFO, "sd%u CSD ver=%d, sector_size=%d, capacity=%d read_bl_len=%d", 0,
+	syslog(LOG_INFO, "sd CSD ver=%d, sector_size=%d, capacity=%d read_bl_len=%d",
 		card->csd.csd_ver,
 		card->csd.sector_size, card->csd.capacity, card->csd.read_block_len
 	);
 
-	syslog(LOG_INFO, "sd%u SCR sd_spec=%d, bus_width=%d", 0, card->scr.sd_spec, card->scr.bus_width);
+	syslog(LOG_INFO, "sd SCR sd_spec=%d, bus_width=%d", card->scr.sd_spec, card->scr.bus_width);
+
+    syslog(LOG_INFO, "fat mounted on %s", mount_get_mount_point_for_fs("fat")->fpath);
 
     mount_set_mounted("fat", 1);
+}
 
-    syslog(LOG_INFO, "fat%d mounted", 0);
+void vfs_fat_umount() {
+    // Unmount
+    esp_vfs_fat_sdmmc_unmount();
+
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    #if CONFIG_SD_CARD_SPI
+         spi_bus_t *spi_bus = get_spi_info();
+
+        // Unlock resources
+        spi_unlock_bus_resources(CONFIG_LUA_RTOS_SD_SPI);
+        driver_unlock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_SD_CS);
+        spi_bus[spi_idx(CONFIG_LUA_RTOS_SD_SPI)].setup &= ~SPI_DMA_SETUP;
+    #endif
+
+    #if CONFIG_SD_CARD_MMC
+        // Unlock resources
+        driver_unlock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 15);
+        driver_unlock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 14);
+        driver_unlock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 2);
+
+    #if !CONFIG_LUA_RTOS_MCC_1_LINE
+        driver_unlock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 14);
+        driver_unlock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 12);
+    #endif
+
+    #if CONFIG_LUA_RTOS_MCC_CD != -1
+        driver_unlock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_MCC_CD);
+    #endif
+
+    #if CONFIG_LUA_RTOS_MCC_WP != -1
+        driver_unlock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_MCC_WP);
+    #endif
+
+    #endif
+#endif
+
+    mount_set_mounted("fat", 0);
+
+    syslog(LOG_INFO, "fat unmounted");
 }
 
 void vfs_fat_format() {
+    vfs_fat_umount();
+
+#if CONFIG_SD_CARD_SPI
+     spi_bus_t *spi_bus = get_spi_info();
+
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    // Lock resources
+    if (spi_lock_bus_resources(CONFIG_LUA_RTOS_SD_SPI, DRIVER_ALL_FLAGS)) {
+        return;
+    }
+
+    if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_SD_CS, DRIVER_ALL_FLAGS, "SD Card - CS")) {
+        return;
+    }
+#endif
+
+    sdmmc_host_t host = SDSPI_HOST_DEFAULT();
+    sdspi_slot_config_t slot_config = SDSPI_SLOT_CONFIG_DEFAULT();
+
+    #if (CONFIG_LUA_RTOS_SD_SPI == 2)
+    host.slot = HSPI_HOST;
+
+    slot_config.gpio_miso = CONFIG_LUA_RTOS_SPI2_MISO;
+    slot_config.gpio_mosi = CONFIG_LUA_RTOS_SPI2_MOSI;
+    slot_config.gpio_sck  = CONFIG_LUA_RTOS_SPI2_CLK;
+    slot_config.gpio_cs   = CONFIG_LUA_RTOS_SD_CS;
+    #endif
+
+    #if (CONFIG_LUA_RTOS_SD_SPI == 3)
+    host.slot = VSPI_HOST;
+
+    slot_config.gpio_miso = CONFIG_LUA_RTOS_SPI3_MISO;
+    slot_config.gpio_mosi = CONFIG_LUA_RTOS_SPI3_MOSI;
+    slot_config.gpio_sck  = CONFIG_LUA_RTOS_SPI3_CLK;
+    slot_config.gpio_cs   = CONFIG_LUA_RTOS_SD_CS;
+    #endif
+
+    spi_bus[spi_idx(CONFIG_LUA_RTOS_SD_SPI)].setup |= SPI_DMA_SETUP;
+#endif
+
+#if CONFIG_SD_CARD_MMC
+    sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+    sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
+
+    #if CONFIG_LUA_RTOS_MCC_1_LINE
+    host.flags = SDMMC_HOST_FLAG_1BIT;
+    #endif
+
+    slot_config.gpio_cd = CONFIG_LUA_RTOS_MCC_CD;
+    slot_config.gpio_wp = CONFIG_LUA_RTOS_MCC_WP;
+
+    // Lock resources
+    if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 15, DRIVER_ALL_FLAGS, "SD Card - CMD")) {
+        return;
+    }
+
+    if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 14, DRIVER_ALL_FLAGS, "SD Card - CLK")) {
+        return;
+    }
+
+    if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 2, DRIVER_ALL_FLAGS, "SD Card - DAT0")) {
+        return;
+    }
+
+#if !CONFIG_LUA_RTOS_MCC_1_LINE
+    if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 14, DRIVER_ALL_FLAGS, "SD Card - DAT1")) {
+        return;
+    }
+
+    if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 12, DRIVER_ALL_FLAGS, "SD Card - DAT2")) {
+        return;
+    }
+#endif
+
+#if CONFIG_LUA_RTOS_MCC_CD != -1
+    if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_MCC_CD, DRIVER_ALL_FLAGS, "SD Card - CD")) {
+        return;
+    }
+#endif
+
+#if CONFIG_LUA_RTOS_MCC_WP != -1
+    if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_MCC_WP, DRIVER_ALL_FLAGS, "SD Card - WP")) {
+        return;
+    }
+#endif
+
+    slot_config.width = 4;
+#endif
+
+    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+        .format_if_mount_failed = false,
+        .max_files = 5
+    };
+
+#if CONFIG_SD_CARD_SPI
+    syslog(LOG_INFO, "sd is at spi%d, cs=%s%d",
+            CONFIG_LUA_RTOS_SD_SPI,
+            gpio_portname(CONFIG_LUA_RTOS_SD_CS), gpio_name(CONFIG_LUA_RTOS_SD_CS)
+    );
+#endif
+
+#if CONFIG_SD_CARD_MMC
+    syslog(LOG_INFO, "sd is at mmc0");
+#endif
+
+    gpio_pin_pullup(2);
+    gpio_pin_pullup(14);
+    gpio_pin_pullup(15);
+
+    sdmmc_card_t* card;
+    esp_err_t ret = esp_vfs_fat_sdmmc_format("/fat", &host, &slot_config, &mount_config, &card);
+    if (ret != ESP_OK) {
+        syslog(LOG_INFO, "fat can't mounted (error %d)", ret);
+        vfs_fat_umount();
+        return;
+    }
+
+    syslog(LOG_INFO, "sd name %s", card->cid.name);
+    syslog(LOG_INFO, "sd type %s", (card->ocr & SD_OCR_SDHC_CAP)?"SDHC/SDXC":"SDSC");
+    syslog(LOG_INFO, "sd working at %s", (card->csd.tr_speed > 25000000)?"high speed":"default speed");
+    syslog(LOG_INFO, "sd size %.2f GB",
+        ((((double)card->csd.capacity) * ((double)card->csd.sector_size)) / 1073741824.0)
+    );
+
+    syslog(LOG_INFO, "sd CSD ver=%d, sector_size=%d, capacity=%d read_bl_len=%d",
+        card->csd.csd_ver,
+        card->csd.sector_size, card->csd.capacity, card->csd.read_block_len
+    );
+
+    syslog(LOG_INFO, "sd SCR sd_spec=%d, bus_width=%d", card->scr.sd_spec, card->scr.bus_width);
+
+    syslog(LOG_INFO, "fat mounted on %s", mount_get_mount_point_for_fs("fat")->fpath);
+
+    vfs_fat_umount();
+    vfs_fat_mount();
 }
 
 #endif

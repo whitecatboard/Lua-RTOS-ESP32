@@ -184,16 +184,6 @@ void vfs_tty_register() {
 	local_storage = vfs_create_fd_local_storage(3);
 	assert(local_storage != NULL);
 
-    // Close previous standard streams
-	if (_GLOBAL_REENT->_stdin)
-		fclose(_GLOBAL_REENT->_stdin);
-
-	if (_GLOBAL_REENT->_stdout)
-		fclose(_GLOBAL_REENT->_stdout);
-
-	if (_GLOBAL_REENT->_stderr)
-		fclose(_GLOBAL_REENT->_stderr);
-	
 	// Open standard streams, using defined tty for console
 	if (CONSOLE_UART == 0) {
 		_GLOBAL_REENT->_stdin  = fopen("/dev/tty/0", "r");
@@ -217,4 +207,10 @@ void vfs_tty_register() {
 	setvbuf(_GLOBAL_REENT->_stdin , NULL, _IONBF, 0);
 	setvbuf(_GLOBAL_REENT->_stdout, NULL, _IONBF, 0);
 	setvbuf(_GLOBAL_REENT->_stderr, NULL, _IONBF, 0);
+
+    // As vfs_tty_register can be called from a thread, update the
+    // standard thread streams
+    __getreent()->_stdin  = _GLOBAL_REENT->_stdin;
+    __getreent()->_stdout = _GLOBAL_REENT->_stdout;
+    __getreent()->_stderr = _GLOBAL_REENT->_stderr;
 }

@@ -87,13 +87,6 @@ menu "Lua RTOS"
                default n
       endmenu
 
-      config LUA_RTOS_USE_EVENT_GROUP_IN_MTX
-            bool "Use event group in mtx implementation"
-         default n
-            help
-               Lua RTOS can use a binary semaphore to implement mtx (if disabled), or
-               event groups (if enabled). Enabling this option saves arround 2 Kb of RAM memory.
-      
       config LUA_RTOS_READ_FLASH_UNIQUE_ID
             bool "Read SPI flash EUI"
          default n
@@ -162,37 +155,94 @@ menu "Lua RTOS"
       endmenu
 
       menu "File Systems"
-         menu "SPIFFS"
-               config LUA_RTOS_USE_SPIFFS
-                  bool "Use spiffs"
-                  default y
-                  help
-                     Select for enable SPIFFS file system support. SPIFFS uses the ESP32 board flash memory.
-      
-            config LUA_RTOS_SPIFFS_LOG_PAGE_SIZE
-               depends on LUA_RTOS_USE_SPIFFS
-                  int "Logical page size"
-                  range 256 2048
-                  default 256
+         choice LUA_RTOS_ROOT_FS
+            prompt "Root file system"
+            default LUA_RTOS_SPIFFS_ROOT_FS
+   
+            config LUA_RTOS_RAM_FS_ROOT_FS
+               bool "RAM file system"
 
-            config LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE
-               depends on LUA_RTOS_USE_SPIFFS
-                  int "Logical block size"
-                  range 4098 65536
-                  default 8192
-            
-            config LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE
-               depends on LUA_RTOS_USE_SPIFFS
-                  int "Logical block size"
-                  range 4098 65536
-                  default 8192
+            config LUA_RTOS_SPIFFS_ROOT_FS
+               bool "SPIFFS  file system"
 
-            config LUA_RTOS_SPIFFS_ERASE_SIZE
-               depends on LUA_RTOS_USE_SPIFFS
-                  int "Erase size"
-                  range 4096 65536
-                  default 4096
-         endmenu
+            config LUA_RTOS_LFS_ROOT_FS
+               bool "LFS (little file system)"
+
+            config LUA_RTOS_FAT_ROOT_FS
+               bool "FAT file system"
+        endchoice
+        
+		config LUA_RTOS_USE_RAM_FS
+		   bool "Enable RAM file system support"
+		   default y
+		   help
+		      Select to enable the RAM file system support.
+		      
+		config LUA_RTOS_RAM_FS_SIZE
+ 		   depends on LUA_RTOS_USE_RAM_FS
+ 		   int "RAM file system size"
+		      range 4096 1048576
+		      default 4096
+
+		config LUA_RTOS_RAM_FS_BLOCK_SIZE
+ 		   depends on LUA_RTOS_USE_RAM_FS
+ 		   int "RAM file system block size"
+		      range 64 1024
+		      default 128
+
+		config LUA_RTOS_USE_SPIFFS
+		   bool "Enable SPIFFS file system support"
+		   default y
+		   help
+		      Select to enable SPIFFS file system support.
+
+		config LUA_RTOS_SPIFFS_LOG_PAGE_SIZE
+		   depends on LUA_RTOS_USE_SPIFFS
+		      int "SPIFFS file system logical page size"
+		      range 256 2048
+		      default 256
+			
+		config LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE
+		   depends on LUA_RTOS_USE_SPIFFS
+		      int "SPIFFS file system logical block size"
+		      range 4096 65536
+		      default 4096
+			        
+		config LUA_RTOS_SPIFFS_ERASE_SIZE
+		   depends on LUA_RTOS_USE_SPIFFS
+		      int "SPIFFS file system erase size"
+		      range 4096 65536
+		      default 4096
+
+		config LUA_RTOS_USE_LFS
+		   bool "Enable LFS file system support"
+	       default y
+		   help
+		      Select to enable little file system support.      
+
+		config LUA_RTOS_LFS_BLOCK_SIZE
+		   depends on LUA_RTOS_USE_LFS
+		      int "LFS file system block size"
+		      range 4096 65536
+		      default 4096
+
+		config LUA_RTOS_LFS_READ_SIZE
+		   depends on LUA_RTOS_USE_LFS
+		      int "LFS file system read size"
+		      range 1024 65536
+		      default 1024
+
+		config LUA_RTOS_LFS_PROG_SIZE
+		   depends on LUA_RTOS_USE_LFS
+		      int "LFS file system prog size"
+		      range 1024 65536
+		      default 1024
+
+		config LUA_RTOS_USE_FAT
+		   bool "Enable FAT file system support"
+		   default y
+		   help
+		      Select to enable the FAT file system support.      
       endmenu
 
       menu "Network services"
@@ -1161,6 +1211,10 @@ menu "Lua RTOS"
                default y
          endmenu
          menu "Lua RTOS Modules"    
+            config LUA_RTOS_LUA_USE_FS
+               bool "Include fs module in build"
+               default y
+
             config LUA_RTOS_LUA_USE_ADC
                bool "Include adc module in build"
                default y   

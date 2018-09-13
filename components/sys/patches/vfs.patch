@@ -12,7 +12,7 @@ index 54d71912..ff393a5b 100644
      /* Non-LWIP file descriptors are from 0 to (LWIP_SOCKET_OFFSET-1). LWIP
       * file descriptors are registered from LWIP_SOCKET_OFFSET to
 diff --git a/components/vfs/include/esp_vfs.h b/components/vfs/include/esp_vfs.h
-index 4d847274..9c3606df 100644
+index 4d847274..c0045aa5 100644
 --- a/components/vfs/include/esp_vfs.h
 +++ b/components/vfs/include/esp_vfs.h
 @@ -15,6 +15,8 @@
@@ -33,10 +33,14 @@ index 4d847274..9c3606df 100644
  #ifdef __cplusplus
  extern "C" {
  #endif
-@@ -178,6 +182,14 @@ typedef struct
+@@ -178,6 +182,18 @@ typedef struct
          int (*truncate_p)(void* ctx, const char *path, off_t length);
          int (*truncate)(const char *path, off_t length);
      };
++    union {
++        int (*ftruncate_p)(void* ctx, int fd, off_t length);
++        int (*ftruncate)(int fd, off_t length);
++    };
 +    union {
 +        int (*writev_p)(void* ctx, int fd, const struct iovec *iov, int iovcnt);
 +        int (*writev)(int fd, const struct iovec *iov, int iovcnt);
@@ -49,7 +53,7 @@ index 4d847274..9c3606df 100644
      esp_err_t (*start_select)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, SemaphoreHandle_t *signal_sem);
      /** socket select function for socket FDs with the functionality of POSIX select(); this should be set only for the socket VFS */
 diff --git a/components/vfs/vfs.c b/components/vfs/vfs.c
-index f0a19599..3f134ef0 100644
+index f0a19599..85a2597f 100644
 --- a/components/vfs/vfs.c
 +++ b/components/vfs/vfs.c
 @@ -12,6 +12,7 @@
@@ -81,7 +85,28 @@ index f0a19599..3f134ef0 100644
  static vfs_entry_t* s_vfs[VFS_MAX_COUNT] = { 0 };
  static size_t s_vfs_count = 0;
  
-@@ -790,172 +805,177 @@ static void esp_vfs_log_fd_set(const char *fds_name, const fd_set *fds)
+@@ -731,6 +746,20 @@ int truncate(const char *path, off_t length)
+     return ret;
+ }
+ 
++int ftruncate(int fd, off_t length)
++{
++    const vfs_entry_t* vfs = get_vfs_for_fd(fd);
++    const int local_fd = get_local_fd(vfs, fd);
++    struct _reent* r = __getreent();
++    if (vfs == NULL || local_fd < 0) {
++        __errno_r(r) = EBADF;
++        return -1;
++    }
++    int ret;
++    CHECK_AND_CALL(ret, r, vfs, ftruncate, local_fd, length);
++    return ret;
++}
++
+ static void call_end_selects(int end_index, const fds_triple_t *vfs_fds_triple)
+ {
+     for (int i = 0; i < end_index; ++i) {
+@@ -790,172 +819,177 @@ static void esp_vfs_log_fd_set(const char *fds_name, const fd_set *fds)
      }
  }
  
@@ -317,6 +342,8 @@ index f0a19599..3f134ef0 100644
 -    if (select_sem) {
 -        vSemaphoreDelete(select_sem);
 -        select_sem = NULL;
+-    }
+-    free(vfs_fds_triple);
 +    for(;;) {
 +       for(i = 0;i < VFS_FD_SET_NUM;i++) {
 +           if (vfs_fd_set[i].vfs) {
@@ -381,7 +408,11 @@ index f0a19599..3f134ef0 100644
 +
 +    return num;
 +}
-+
+ 
+-    ESP_LOGD(TAG, "esp_vfs_select returns %d", ret);
+-    esp_vfs_log_fd_set("readfds", readfds);
+-    esp_vfs_log_fd_set("writefds", writefds);
+-    esp_vfs_log_fd_set("errorfds", errorfds);
 +ssize_t writev(int fd, const struct iovec *iov, int iovcnt)
 +{
 +    const vfs_entry_t* vfs = get_vfs_for_fd(fd);
@@ -389,13 +420,7 @@ index f0a19599..3f134ef0 100644
 +    if (vfs == NULL) {
 +        __errno_r(r) = EBADF;
 +        return -1;
-     }
--    free(vfs_fds_triple);
--
--    ESP_LOGD(TAG, "esp_vfs_select returns %d", ret);
--    esp_vfs_log_fd_set("readfds", readfds);
--    esp_vfs_log_fd_set("writefds", writefds);
--    esp_vfs_log_fd_set("errorfds", errorfds);
++    }
 +    int local_fd = get_local_fd(vfs, fd);
 +    ssize_t ret;
 +    CHECK_AND_CALL(ret, r, vfs, writev, local_fd, iov, iovcnt);

@@ -167,7 +167,7 @@ CODE facilitynames[] = {
 
 void syslog(int pri, const char *fmt, ...);
 void closelog(void);
-void openlog(const char *, int, int);
+int openlog(int, int);
 int  setlogmask(int);
 void syslog(int, const char *, ...);
 void vsyslog(int, const char *, va_list);

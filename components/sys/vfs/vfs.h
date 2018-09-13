@@ -48,6 +48,24 @@
 #include <stdarg.h>
 #include <unistd.h>
 
+#include <sys/mount.h>
+
+typedef struct {
+    void *fs_file;
+    char *path;
+    uint8_t is_dir;
+} vfs_file_t;
+
+typedef struct {
+    DIR dir;
+    long offset;
+    void *fs_dir;
+    void *fs_info;
+    char *path;
+    struct dirent ent;
+    const struct mount_pt *mount;
+} vfs_dir_t;
+
 typedef struct {
 	int flags; // FD flags
 } vfs_fd_local_storage_t;
@@ -68,17 +86,28 @@ typedef int(*vfs_get_byte)(int,char *);
 // This function is blocking.
 typedef void(*vfs_put_byte)(int,char *);
 
-void vfs_fat_register();
-void vfs_net_register();
-void vfs_spiffs_register();
-void vfs_tty_register();
-void vfs_spiffs_format();
+void vfs_fat_mount();
+void vfs_fat_umount();
 void vfs_fat_format();
 
-vfs_fd_local_storage_t *vfs_create_fd_local_storage(int num);
-void vfs_destroy_fd_local_storage(vfs_fd_local_storage_t *ptr);
+void vfs_spiffs_mount();
+void vfs_spiffs_umount();
+void vfs_spiffs_format();
+
+void vfs_lfs_mount();
+void vfs_lfs_umount();
+void vfs_lfs_format();
+
+void vfs_ramfs_mount();
+void vfs_ramfs_umount();
+void vfs_ramfs_format();
+
 int vfs_generic_fcntl(vfs_fd_local_storage_t *local_storage, int fd, int cmd, va_list args);
 ssize_t vfs_generic_read(vfs_fd_local_storage_t *local_storage, vfs_has_bytes has_bytes, vfs_get_byte get, int fd, void * dst, size_t size);
 ssize_t vfs_generic_write(vfs_fd_local_storage_t *local_storage, vfs_put_byte put, int fd, const void *data, size_t size);
 ssize_t vfs_generic_writev(vfs_fd_local_storage_t *local_storage, vfs_put_byte put, int fd, const struct iovec *iov, int iovcnt);
 int vfs_generic_select(vfs_fd_local_storage_t *local_storage, vfs_has_bytes has_bytes, vfs_free_bytes free, int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
+
+vfs_dir_t *vfs_allocate_dir(const char *vfs, const char *name);
+void vfs_free_dir(vfs_dir_t *dir);
+vfs_fd_local_storage_t *vfs_create_fd_local_storage(int num);

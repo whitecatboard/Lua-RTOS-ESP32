@@ -59,7 +59,12 @@ char currdir[PATH_MAX + 1] = "/";
 int chdir(const char *path) {
     struct stat statb;
 
-    if (!path || !*path) {
+    if (!path) {
+        errno = EFAULT;
+        return -1;
+    }
+
+    if (!*path) {
         errno = ENOENT;
         return -1;
     }

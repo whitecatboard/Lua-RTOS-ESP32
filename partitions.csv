@@ -3,4 +3,4 @@
 nvs,      data, nvs,     0x9000,  0x6000
 phy_init, data, phy,     0xf000,  0x1000
 factory,  0,    0,       0x10000, 3M
-spiffs,   data, 254,        	, 512K
+filesys,  data, 254,        	, 512K

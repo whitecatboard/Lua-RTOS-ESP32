@@ -1,55 +1,55 @@
-SPIFFS_IMAGE_COMPONENT_PATH := $(COMPONENT_PATH)
+FS_IMAGE_COMPONENT_PATH := $(COMPONENT_PATH)
 
 .PHONY: flashfs
 
 ifneq (foo$(SPIFFS_IMAGE), foo)
-SPIFFS_IMAGE := $(SPIFFS_IMAGE)
+FS_IMAGE := $(SPIFFS_IMAGE)
 else
-SPIFFS_IMAGE := default
+FS_IMAGE := default
 endif
 
 # This part gets the information for the spiffs partition
 ifneq ("$(wildcard $(PROJECT_PATH)/build/partitions.bin)","")
 comma := ,
 
-SPIFFS_PARTITION_INFO := $(shell $(IDF_PATH)/components/partition_table/gen_esp32part.py --quiet $(PROJECT_PATH)/build/partitions.bin | grep "spiffs")
+FS_PARTITION_INFO := $(shell $(IDF_PATH)/components/partition_table/gen_esp32part.py --quiet $(PROJECT_PATH)/build/partitions.bin | grep "filesys")
 
-SPIFFS_BASE_ADDR   := $(word 4, $(subst $(comma), , $(SPIFFS_PARTITION_INFO)))
-SPIFFS_SIZE_INFO   := $(word 5, $(subst $(comma), , $(SPIFFS_PARTITION_INFO)))
-SPIFFS_SIZE_UNITS  := $(word 1, $(subst M, M, $(subst K, K, $(word 5, $(subst $(comma), , $(SPIFFS_PARTITION_INFO))))))
-SPIFFS_SIZE_UNIT   := $(word 2, $(subst M, M, $(subst K, K, $(word 5, $(subst $(comma), , $(SPIFFS_PARTITION_INFO))))))
+FS_BASE_ADDR   := $(word 4, $(subst $(comma), , $(FS_PARTITION_INFO)))
+FS_SIZE_INFO   := $(word 5, $(subst $(comma), , $(FS_PARTITION_INFO)))
+FS_SIZE_UNITS  := $(word 1, $(subst M, M, $(subst K, K, $(word 5, $(subst $(comma), , $(FS_PARTITION_INFO))))))
+FS_SIZE_UNIT   := $(word 2, $(subst M, M, $(subst K, K, $(word 5, $(subst $(comma), , $(FS_PARTITION_INFO))))))
 
-SPIFFS_SIZE_FACTOR := 1
-ifeq ($(SPIFFS_SIZE_UNIT),K)
-SPIFFS_SIZE_FACTOR := 1024
+FS_SIZE_FACTOR := 1
+ifeq ($(FS_SIZE_UNIT),K)
+FS_SIZE_FACTOR := 1024
 endif
 
-ifeq ($(SPIFFS_SIZE_UNIT),M)
-SPIFFS_SIZE_FACTOR := 1048576
+ifeq ($(FS_SIZE_UNIT),M)
+FS_SIZE_FACTOR := 1048576
 endif
 
-ifeq ("foo$(SPIFFS_SIZE_UNIT)", "foo")
-SPIFFS_SIZE_UNITS := 512
-SPIFFS_SIZE_FACTOR := 1024
+ifeq ("foo$(FS_SIZE_UNIT)", "foo")
+FS_SIZE_UNITS := 512
+FS_SIZE_FACTOR := 1024
 endif
 
-SPIFFS_SIZE := $(shell expr $(SPIFFS_SIZE_UNITS) \* $(SPIFFS_SIZE_FACTOR))
+FS_SIZE := $(shell expr $(FS_SIZE_UNITS) \* $(FS_SIZE_FACTOR))
 endif
 
 fs: $(SDKCONFIG_MAKEFILE) mkspiffs fs-prepare
 	@$(IDF_PATH)/components/partition_table/gen_esp32part.py --quiet $(PROJECT_PATH)/partitions.csv $(PROJECT_PATH)/build/partitions.bin
 	@echo "Making spiffs image $(SPIFFS_IMAGE) $(COMPONENT_FS)..."
-	@echo "Basse address $(SPIFFS_BASE_ADDR), size $(SPIFFS_SIZE) bytes"
-	$(MKSPIFFS_COMPONENT_PATH)/../mkspiffs/src/mkspiffs -c $(PROJECT_PATH)/build/tmp-fs -b $(CONFIG_LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE) -p $(CONFIG_LUA_RTOS_SPIFFS_LOG_PAGE_SIZE) -s $(SPIFFS_SIZE) $(BUILD_DIR_BASE)/spiffs_image.img
+	@echo "Basse address $(FS_BASE_ADDR), size $(FS_SIZE) bytes"
+	$(MKSPIFFS_COMPONENT_PATH)/../mkspiffs/src/mkspiffs -c $(PROJECT_PATH)/build/tmp-fs -b $(CONFIG_LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE) -p $(CONFIG_LUA_RTOS_SPIFFS_LOG_PAGE_SIZE) -s $(FS_SIZE) $(BUILD_DIR_BASE)/spiffs_image.img
 	
 flashfs: fs
-	$(ESPTOOLPY_WRITE_FLASH) $(SPIFFS_BASE_ADDR) $(BUILD_DIR_BASE)/spiffs_image.img
+	$(ESPTOOLPY_WRITE_FLASH) $(FS_BASE_ADDR) $(BUILD_DIR_BASE)/spiffs_image.img
 
 flashfs-args:
 	@echo $(subst $(PROJECT_PATH)/build/,, \
 			$(subst --port $(ESPPORT),, \
 				$(subst python /components/esptool_py/esptool/esptool.py,, \
-					$(subst $(IDF_PATH),, $(ESPTOOLPY_WRITE_FLASH) $(SPIFFS_BASE_ADDR) $(BUILD_DIR_BASE)/spiffs_image.img)\
+					$(subst $(IDF_PATH),, $(ESPTOOLPY_WRITE_FLASH) $(FS_BASE_ADDR) $(BUILD_DIR_BASE)/spiffs_image.img)\
 				)\
 	 	  	) \
 	 	  )

@@ -56,7 +56,8 @@
 int mkpath(const char *path);
 
 /**
- * @brief Make a file if not exists.
+ * @brief Make a file if not exists, and create missing directories in file
+ *        path.
  *
  * @return
  *    Returns the value 0 if file doesn't exist and is created successfully;

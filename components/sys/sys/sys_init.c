@@ -79,8 +79,7 @@ extern void _cpu_init();
 extern void _clock_init();
 extern void _signal_init();
 extern void _status_init();
-
-extern const char *__progname;
+extern void vfs_tty_register();
 
 // Boot count
 RTC_DATA_ATTR uint32_t boot_count = 0;
@@ -190,6 +189,7 @@ void _sys_init() {
     periph_module_disable(PERIPH_I2C1_MODULE);
 
     // Init important things for Lua RTOS
+    _mount_init();
     _status_init();
     _clock_init();
     _cpu_init();
@@ -201,7 +201,6 @@ void _sys_init() {
     status_set(STATUS_LUA_HISTORY, 0x00000000);
 
     esp_vfs_lwip_sockets_register();
-    esp_vfs_unregister("/dev/uart");
 
     vfs_tty_register();
 
@@ -221,32 +220,23 @@ void _sys_init() {
 
     printf("board type %s\r\n", LUA_RTOS_BOARD);
 
-    openlog(__progname, LOG_CONS | LOG_NDELAY, LOG_LOCAL1);
+    // Open log
+    setlogmask(LOG_UPTO(LOG_INFO));
+    openlog(LOG_CONS | LOG_NDELAY, LOG_LOCAL1);
 
     cpu_show_info();
     cpu_show_flash_info();
 
-    //Init filesystems
-    #if CONFIG_LUA_RTOS_USE_SPIFFS
-        vfs_spiffs_register();
-    #endif
+    // Mount the root file system
+    mount("/", CONFIG_LUA_RTOS_ROOT_FS);
 
-    #if CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI
-        vfs_fat_register();
-
-        if (mount_is_mounted("fat")) {
-            // Redirect console messages to /log/messages.log ...
-            closelog();
-            syslog(LOG_INFO, "redirecting console messages to file system ...");
-            openlog(__progname, LOG_NDELAY , LOG_LOCAL1);
-        } else {
-            syslog(LOG_ERR, "can't redirect console messages to file system, an SDCARD is needed");
-        }
-    #endif
+    // After mounting the file systems, open log again, to allow log messages redirection
+    // to messages.log file.
+    closelog();
+    openlog(LOG_CONS | LOG_NDELAY, LOG_LOCAL1);
 
 #ifdef RUN_TESTS
     xTaskCreatePinnedToCore(testTask, "testTask", 8192, NULL, UNITY_FREERTOS_PRIORITY, NULL, UNITY_FREERTOS_CPU);
-
     vTaskDelete(NULL);
 #endif
 

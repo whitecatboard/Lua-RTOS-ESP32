@@ -54,7 +54,7 @@
 #include "path.h"
 #include "mount.h"
 
-int mkpath(const char *path) {
+static int mkpath_internal(const char *path, int last_is_file) {
     char current[PATH_MAX + 1]; // Current path
     char *dir;   // Current directory
     char *npath; // Normalized path
@@ -71,25 +71,33 @@ int mkpath(const char *path) {
     // Get the first directory in path
     dir = strtok(npath, "/");
     while (dir) {
+        if (strstr(dir,".") != NULL) break;
+
         // Append current directory to current path
         strncat(current, "/", PATH_MAX);
         strncat(current, dir, PATH_MAX);
 
-        // Check the existence of the current path and create
-        // it if it doesn't exists
-        struct stat sb;
-
-        if (stat(current, &sb) != 0 || !S_ISDIR(sb.st_mode)) {
-            mkdir(current, 0755);
-        }
-
         // Get next directory in path
         dir = strtok(NULL, "/");
+
+        if (!last_is_file || dir) {
+            // Check the existence of the current path and create
+            // it if it doesn't exists
+            struct stat sb;
+
+            if (stat(current, &sb) != 0 || !S_ISDIR(sb.st_mode)) {
+                mkdir(current, 0755);
+            }
+        }
     }
 
     free(npath);
 
     return 0;
+}
+
+int mkpath(const char *path) {
+    return mkpath_internal(path, 0);
 }
 
 int mkfile(const char *path) {
@@ -100,6 +108,8 @@ int mkfile(const char *path) {
     if (!npath) {
         return -1;
     }
+
+    mkpath_internal(path, 1);
 
     FILE *fp = fopen(npath, "r");
     if (fp) {
