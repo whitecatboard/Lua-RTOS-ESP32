@@ -344,9 +344,16 @@ static int lnet_connected(lua_State* L) {
 }
 
 static int lnet_ota(lua_State *L) {
+    const char *server = luaL_optstring( L, 1, NULL );
+    const char *project = luaL_optstring( L, 2, NULL );
     driver_error_t *error;
+    int reboot = 1;
+    if (lua_gettop(L) > 2) {
+        luaL_checktype(L, 3, LUA_TBOOLEAN);
+        reboot = lua_toboolean( L, 3 );
+    }
 
-    if ((error = net_ota())) {
+    if ((error = net_ota(server, project, reboot))) {
         return luaL_driver_error(L, error);
     }
 

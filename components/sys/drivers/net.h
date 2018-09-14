@@ -198,7 +198,7 @@ int network_started();
 driver_error_t *net_ping(const char *name, int count, int interval, int size, int timeout);
 
 driver_error_t *net_reconnect();
-driver_error_t *net_ota();
+driver_error_t *net_ota(const char *server, const char *project, int reboot);
 
 #endif
 
