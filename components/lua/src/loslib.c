@@ -457,7 +457,7 @@ static int os_setlocale (lua_State *L) {
   return 1;
 }
 
-
+extern __NOINIT_ATTR uint32_t backtrace_count;
 static int os_exit (lua_State *L) {
   int status;
   if (lua_isboolean(L, 1))
@@ -466,6 +466,10 @@ static int os_exit (lua_State *L) {
     status = (int)luaL_optinteger(L, 1, EXIT_SUCCESS);
   if (lua_toboolean(L, 2))
     lua_close(L);
+  if (EXIT_SUCCESS==status) {
+      backtrace_count = 0;
+      esp_restart(); /* restart without panic'ing */
+  }
   if (L) exit(status);  /* 'if' to avoid warnings for unreachable 'return' */
   return 0;
 }
