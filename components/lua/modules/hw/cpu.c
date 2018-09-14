@@ -272,6 +272,41 @@ static int lcpu_speed(lua_State *L) {
 	return 1;
 }
 
+#define MAX_BACKTRACE 100
+extern __NOINIT_ATTR uint32_t backtrace_count;
+extern __NOINIT_ATTR uint32_t backtrace_pc[MAX_BACKTRACE];
+extern __NOINIT_ATTR uint32_t backtrace_sp[MAX_BACKTRACE];
+
+static int lcpu_backtrace(lua_State *L) {
+	printf("\r\nBacktrace:");
+
+	int reason = cpu_reset_reason();
+	if (POWERON_RESET == reason || RTCWDT_RTC_RESET == reason || EXT_CPU_RESET == reason) {
+		printf(" none\r\n");
+		return 0;
+	}
+
+	lua_newtable(L);
+	for (uint32_t idx = 0; idx < MAX_BACKTRACE && idx < backtrace_count; idx++) {
+		printf(" 0x%08x:0x%08x", backtrace_pc[idx], backtrace_sp[idx]);
+
+		lua_pushnumber(L, idx); //row index
+		lua_newtable(L);
+
+		lua_pushinteger(L, backtrace_pc[idx]);
+		lua_setfield (L, -2, "pc");
+
+		lua_pushinteger(L, backtrace_sp[idx]);
+		lua_setfield (L, -2, "sp");
+
+		lua_settable( L, -3 );
+	}
+	printf("\r\n");
+
+	return 1; //one table
+}
+
+
 static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "model" ),                  LFUNCVAL( lcpu_model ) },
   { LSTRKEY( "board" ),                  LFUNCVAL( lcpu_board ) },
@@ -285,6 +320,7 @@ static const LUA_REG_TYPE lcpu_map[] = {
   { LSTRKEY( "watchpoint" ),             LFUNCVAL( lcpu_watchpoint ) },
   { LSTRKEY( "temperature" ),            LFUNCVAL( lcpu_temperature ) },
   { LSTRKEY( "speed" ),                  LFUNCVAL( lcpu_speed ) },
+  { LSTRKEY( "backtrace" ),              LFUNCVAL( lcpu_backtrace ) },
 
   { LSTRKEY( "RESET_POWERON" ),          LINTVAL( POWERON_RESET          ) },
   { LSTRKEY( "RESET_SW" ),               LINTVAL( SW_RESET               ) },

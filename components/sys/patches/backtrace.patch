@@ -1,0 +1,57 @@
+diff --git a/components/esp32/panic.c b/components/esp32/panic.c
+index 8edb70b..7074501 100644
+--- a/components/esp32/panic.c
++++ b/components/esp32/panic.c
+@@ -59,6 +59,10 @@
+ /*
+   Note: The linker script will put everything in this file in IRAM/DRAM, so it also works with flash cache disabled.
+ */
++#define MAX_BACKTRACE 100
++__NOINIT_ATTR uint32_t backtrace_count;
++__NOINIT_ATTR uint32_t backtrace_pc[MAX_BACKTRACE];
++__NOINIT_ATTR uint32_t backtrace_sp[MAX_BACKTRACE];
+ 
+ #if !CONFIG_ESP32_PANIC_SILENT_REBOOT
+ //printf may be broken, so we fix our own printing fns...
+@@ -425,18 +429,26 @@ static void putEntry(uint32_t pc, uint32_t sp)
+     panicPutHex(pc);
+     panicPutStr(":0x");
+     panicPutHex(sp);
++
++    if (backtrace_count < MAX_BACKTRACE) {
++        backtrace_pc[backtrace_count] = pc;
++        backtrace_sp[backtrace_count] = sp;
++        backtrace_count++;
++    }
+ }
+ 
+ static void doBacktrace(XtExcFrame *frame)
+ {
+     uint32_t i = 0, pc = frame->pc, sp = frame->a1;
++    backtrace_count = 0;
++
+     panicPutStr("\r\nBacktrace:");
+     /* Do not check sanity on first entry, PC could be smashed. */
+     putEntry(pc, sp);
+     pc = frame->a0;
+-    while (i++ < 100) {
++    while (i++ < MAX_BACKTRACE) {
+         uint32_t psp = sp;
+-        if (!esp_stack_ptr_is_sane(sp) || i++ > 100) {
++        if (!esp_stack_ptr_is_sane(sp) || i++ > MAX_BACKTRACE) {
+             break;
+         }
+         sp = *((uint32_t *) (sp - 0x10 + 4));
+@@ -446,6 +458,12 @@ static void doBacktrace(XtExcFrame *frame)
+             break;
+         }
+     }
++
++    if (backtrace_count <= MAX_BACKTRACE) {
++		  backtrace_pc[backtrace_count] = 0;
++		  backtrace_sp[backtrace_count] = 0;
++    }
++
+     panicPutStr("\r\n\r\n");
+ }
+ 
