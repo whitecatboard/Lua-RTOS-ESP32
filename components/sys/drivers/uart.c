@@ -106,29 +106,29 @@ extern pthread_t lua_thread;
 
 // Register drivers and errors
 DRIVER_REGISTER_BEGIN(UART,uart,CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS * NUART,NULL,uart_lock_resources);
-	DRIVER_REGISTER_ERROR(UART, uart, CannotSetup, "can't setup", UART_ERR_CANT_INIT);
-	DRIVER_REGISTER_ERROR(UART, uart, InvalidUnit, "invalid unit", UART_ERR_INVALID_UNIT);
-	DRIVER_REGISTER_ERROR(UART, uart, InvalidDataBits, "invalid data bits", UART_ERR_INVALID_DATA_BITS);
-	DRIVER_REGISTER_ERROR(UART, uart, InvalidParity, "invalid parity", UART_ERR_INVALID_PARITY);
-	DRIVER_REGISTER_ERROR(UART, uart, InvalidStopBits, "invalid stop bits", UART_ERR_INVALID_STOP_BITS);
-	DRIVER_REGISTER_ERROR(UART, uart, NotEnoughtMemory, "not enough memory", UART_ERR_NOT_ENOUGH_MEMORY);
-	DRIVER_REGISTER_ERROR(UART, uart, NotSetup, "is not setup", UART_ERR_IS_NOT_SETUP);
-	DRIVER_REGISTER_ERROR(UART, uart, PinNowAllowed, "pin not allowed", UART_ERR_PIN_NOT_ALLOWED);
-	DRIVER_REGISTER_ERROR(UART, uart, CannotChangePinMap, "cannot change pin map once the UART unit has an attached device", UART_ERR_CANNOT_CHANGE_PINMAP);
+    DRIVER_REGISTER_ERROR(UART, uart, CannotSetup, "can't setup", UART_ERR_CANT_INIT);
+    DRIVER_REGISTER_ERROR(UART, uart, InvalidUnit, "invalid unit", UART_ERR_INVALID_UNIT);
+    DRIVER_REGISTER_ERROR(UART, uart, InvalidDataBits, "invalid data bits", UART_ERR_INVALID_DATA_BITS);
+    DRIVER_REGISTER_ERROR(UART, uart, InvalidParity, "invalid parity", UART_ERR_INVALID_PARITY);
+    DRIVER_REGISTER_ERROR(UART, uart, InvalidStopBits, "invalid stop bits", UART_ERR_INVALID_STOP_BITS);
+    DRIVER_REGISTER_ERROR(UART, uart, NotEnoughtMemory, "not enough memory", UART_ERR_NOT_ENOUGH_MEMORY);
+    DRIVER_REGISTER_ERROR(UART, uart, NotSetup, "is not setup", UART_ERR_IS_NOT_SETUP);
+    DRIVER_REGISTER_ERROR(UART, uart, PinNowAllowed, "pin not allowed", UART_ERR_PIN_NOT_ALLOWED);
+    DRIVER_REGISTER_ERROR(UART, uart, CannotChangePinMap, "cannot change pin map once the UART unit has an attached device", UART_ERR_CANNOT_CHANGE_PINMAP);
 DRIVER_REGISTER_END(UART,uart,CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS * NUART,NULL,uart_lock_resources);
 
 // Flags for determine some UART states
-#define UART_FLAG_INIT		(1 << 0)
-#define UART_FLAG_IRQ_INIT	(1 << 1)
+#define UART_FLAG_INIT        (1 << 0)
+#define UART_FLAG_IRQ_INIT    (1 << 1)
 
 #define ETS_UART_INUM  5
 #define UART_INTR_SOURCE(u) ((u==0)?ETS_UART0_INTR_SOURCE:( (u==1)?ETS_UART1_INTR_SOURCE:((u==2)?ETS_UART2_INTR_SOURCE:0)))
 
 // UART names
 static const char *names[] = {
-	"uart0",
-	"uart1",
-	"uart2",
+    "uart0",
+    "uart1",
+    "uart2",
 };
 
 // UART array
@@ -152,29 +152,29 @@ static xQueueHandle deferred_q = NULL;
 static uint8_t console_raw = 0;
 
 typedef struct {
-	uint8_t type;
-	uint8_t data;
+    uint8_t type;
+    uint8_t data;
 } uart_deferred_data;
 
 static void uart_deferred_intr_handler(void *args) {
-	uart_deferred_data data;
+    uart_deferred_data data;
 
-	for (;;) {
-		xQueueReceive(deferred_q, &data, portMAX_DELAY);
-		if (data.type == 0) {
-			_signal_queue(lua_thread, data.data);
-		} else {
-			if (data.data == 1) {
-				uart_ll_lock(CONSOLE_UART);
-				uart_writes(CONSOLE_UART, "Lua RTOS-booting-ESP32\r\n");
-				uart_ll_unlock(CONSOLE_UART);
-			} else if (data.data == 2) {
-				uart_ll_lock(CONSOLE_UART);
-				uart_writes(CONSOLE_UART, "Lua RTOS-running-ESP32\r\n");
-				uart_ll_unlock(CONSOLE_UART);
-			}
-		}
-	}
+    for (;;) {
+        xQueueReceive(deferred_q, &data, portMAX_DELAY);
+        if (data.type == 0) {
+            _signal_queue(lua_thread, data.data);
+        } else {
+            if (data.data == 1) {
+                uart_ll_lock(CONSOLE_UART);
+                uart_writes(CONSOLE_UART, "Lua RTOS-booting-ESP32\r\n");
+                uart_ll_unlock(CONSOLE_UART);
+            } else if (data.data == 2) {
+                uart_ll_lock(CONSOLE_UART);
+                uart_writes(CONSOLE_UART, "Lua RTOS-running-ESP32\r\n");
+                uart_ll_unlock(CONSOLE_UART);
+            }
+        }
+    }
 }
 
 /*
@@ -183,9 +183,9 @@ static void uart_deferred_intr_handler(void *args) {
 
 // Configure the UART comm parameters
 static void uart_comm_param_config(int8_t unit, UartBautRate brg, UartBitsNum4Char data, UartParityMode parity, UartStopBitsNum stop) {
-	wait_tx_empty(unit);
+    wait_tx_empty(unit);
 
-	uart_set_baudrate(unit, brg);
+    uart_set_baudrate(unit, brg);
 
     WRITE_PERI_REG(UART_CONF0_REG(unit),
                    ((parity == NONE_BITS) ? 0x0 : (UART_PARITY_EN | parity))
@@ -199,9 +199,9 @@ static void uart_comm_param_config(int8_t unit, UartBautRate brg, UartBitsNum4Ch
 
 // Configure the UART pins
 static void uart_pin_config(int8_t unit, uint8_t flags) {
-	wait_tx_empty(unit);
+    wait_tx_empty(unit);
 
-	int tx_sig, rx_sig;
+    int tx_sig, rx_sig;
 
     switch(unit) {
         case UART_NUM_0:
@@ -241,39 +241,39 @@ static void uart_pin_config(int8_t unit, uint8_t flags) {
 
 // Determine if byte must be queued
 static int IRAM_ATTR queue_byte(int8_t unit, uint8_t byte, uint8_t *status, int *signal) {
-	*signal = 0;
-	*status = 0;
+    *signal = 0;
+    *status = 0;
 
     if (unit == CONSOLE_UART) {
         if ((byte == 0x04) && (!console_raw)) {
             if (!status_get(STATUS_LUA_RUNNING)) {
-            	*status = 1;
+                *status = 1;
             } else {
-            	*status = 2;
+                *status = 2;
             }
 
-			status_set(STATUS_LUA_ABORT_BOOT_SCRIPTS, 0x00000000);
+            status_set(STATUS_LUA_ABORT_BOOT_SCRIPTS, 0x00000000);
 
             return 0;
         } else if ((byte == 0x03) && (!console_raw)) {
-        	if (status_get(STATUS_LUA_RUNNING)) {
-				*signal = SIGINT;
-				if (_pthread_has_signal(lua_thread, *signal)) {
-					return 0;
-				}
+            if (status_get(STATUS_LUA_RUNNING)) {
+                *signal = SIGINT;
+                if (_pthread_has_signal(lua_thread, *signal)) {
+                    return 0;
+                }
 
-				return 1;
-        	} else {
-        		return 0;
-        	}
+                return 1;
+            } else {
+                return 0;
+            }
         }
     }
-	
-	if (status_get(STATUS_LUA_RUNNING) || console_raw) {
-		return 1;
-	} else {
-		return 0;
-	}
+
+    if (status_get(STATUS_LUA_RUNNING) || console_raw) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 /*
@@ -281,45 +281,45 @@ static int IRAM_ATTR queue_byte(int8_t unit, uint8_t byte, uint8_t *status, int 
  */
 
 void IRAM_ATTR uart_ll_lock(int unit) {
-	pthread_mutex_lock(&uart[unit].mtx);
+    pthread_mutex_lock(&uart[unit].mtx);
 }
 
 void IRAM_ATTR uart_ll_unlock(int unit) {
-	pthread_mutex_unlock(&uart[unit].mtx);
+    pthread_mutex_unlock(&uart[unit].mtx);
 }
 
 driver_error_t *uart_lock(int unit) {
-	// Sanity checks
-	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
-		return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
-	}
+    // Sanity checks
+    if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
+        return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
+    }
 
-	if (!((uart[unit].flags & UART_FLAG_INIT) && (uart[unit].flags & UART_FLAG_IRQ_INIT))) {
-		return driver_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
-	}
+    if (!((uart[unit].flags & UART_FLAG_INIT) && (uart[unit].flags & UART_FLAG_IRQ_INIT))) {
+        return driver_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
+    }
 
-	uart_ll_lock(unit);
+    uart_ll_lock(unit);
 
-	return NULL;
+    return NULL;
 }
 
 driver_error_t *uart_unlock(int unit) {
-	// Sanity checks
-	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
-		return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
-	}
+    // Sanity checks
+    if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
+        return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
+    }
 
-	if (!((uart[unit].flags & UART_FLAG_INIT) && (uart[unit].flags & UART_FLAG_IRQ_INIT))) {
-		return driver_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
-	}
+    if (!((uart[unit].flags & UART_FLAG_INIT) && (uart[unit].flags & UART_FLAG_IRQ_INIT))) {
+        return driver_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
+    }
 
-	uart_ll_unlock(unit);
+    uart_ll_unlock(unit);
 
-	return NULL;
+    return NULL;
 }
 
 void IRAM_ATTR uart_ll_set_raw(uint8_t raw) {
-	console_raw = raw;
+    console_raw = raw;
 }
 
 void IRAM_ATTR uart_rx_intr_handler(void *args) {
@@ -327,69 +327,69 @@ void IRAM_ATTR uart_rx_intr_handler(void *args) {
     uint32_t uart_intr_status = 0;
     uart_deferred_data data;
 
-	uint8_t byte, status;
-	int signal = 0;
-	int unit = (int)args;
+    uint8_t byte, status;
+    int signal = 0;
+    int unit = (int)args;
 
-	uart_intr_status = READ_PERI_REG(UART_INT_ST_REG(unit));
+    uart_intr_status = READ_PERI_REG(UART_INT_ST_REG(unit));
 
-	while (uart_intr_status != 0x0) {
-		if (UART_FRM_ERR_INT_ST == (uart_intr_status & UART_FRM_ERR_INT_ST)) {
-			WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_FRM_ERR_INT_CLR);
-		} else if (UART_RXFIFO_FULL_INT_ST == (uart_intr_status & UART_RXFIFO_FULL_INT_ST)) {
-			WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_RXFIFO_FULL_INT_CLR);
+    while (uart_intr_status != 0x0) {
+        if (UART_FRM_ERR_INT_ST == (uart_intr_status & UART_FRM_ERR_INT_ST)) {
+            WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_FRM_ERR_INT_CLR);
+        } else if (UART_RXFIFO_FULL_INT_ST == (uart_intr_status & UART_RXFIFO_FULL_INT_ST)) {
+            WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_RXFIFO_FULL_INT_CLR);
 
-			while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT) {
-				byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
-				if (queue_byte(unit, byte, &status, &signal)) {
-					// Put byte to UART queue
-					xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
-				} else {
-					if (signal) {
-						data.type = 0;
-						data.data = signal;
+            while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT) {
+                byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
+                if (queue_byte(unit, byte, &status, &signal)) {
+                    // Put byte to UART queue
+                    xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
+                } else {
+                    if (signal) {
+                        data.type = 0;
+                        data.data = signal;
 
-						xQueueSendFromISR(deferred_q, &data, &xHigherPriorityTaskWoken);
-					}
+                        xQueueSendFromISR(deferred_q, &data, &xHigherPriorityTaskWoken);
+                    }
 
-					if (status) {
-						data.type = 1;
-						data.data = status;
+                    if (status) {
+                        data.type = 1;
+                        data.data = status;
 
-						xQueueSendFromISR(deferred_q, &data, &xHigherPriorityTaskWoken);
-					}
-				}
-			}
-		} else if (UART_RXFIFO_TOUT_INT_ST == (uart_intr_status & UART_RXFIFO_TOUT_INT_ST)) {
-			WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_RXFIFO_TOUT_INT_CLR);
+                        xQueueSendFromISR(deferred_q, &data, &xHigherPriorityTaskWoken);
+                    }
+                }
+            }
+        } else if (UART_RXFIFO_TOUT_INT_ST == (uart_intr_status & UART_RXFIFO_TOUT_INT_ST)) {
+            WRITE_PERI_REG(UART_INT_CLR_REG(unit), UART_RXFIFO_TOUT_INT_CLR);
 
-			while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT) {
-				byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
-				if (queue_byte(unit, byte, &status, &signal)) {
-					// Put byte to UART queue
-					xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
-				} else {
-					if (signal) {
-						data.type = 0;
-						data.data = signal;
+            while ((READ_PERI_REG(UART_STATUS_REG(unit)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT) {
+                byte = READ_PERI_REG(UART_FIFO_REG(unit)) & 0xFF;
+                if (queue_byte(unit, byte, &status, &signal)) {
+                    // Put byte to UART queue
+                    xQueueSendFromISR(uart[unit].q, &byte, &xHigherPriorityTaskWoken);
+                } else {
+                    if (signal) {
+                        data.type = 0;
+                        data.data = signal;
 
-						xQueueSendFromISR(deferred_q, &data, &xHigherPriorityTaskWoken);
-					}
+                        xQueueSendFromISR(deferred_q, &data, &xHigherPriorityTaskWoken);
+                    }
 
-					if (status) {
-						data.type = 1;
-						data.data = status;
+                    if (status) {
+                        data.type = 1;
+                        data.data = status;
 
-						xQueueSendFromISR(deferred_q, &data, &xHigherPriorityTaskWoken);
-					}
-				}
-			}
-		}
+                        xQueueSendFromISR(deferred_q, &data, &xHigherPriorityTaskWoken);
+                    }
+                }
+            }
+        }
 
-		uart_intr_status = READ_PERI_REG(UART_INT_ST_REG(unit));
-	}
+        uart_intr_status = READ_PERI_REG(UART_INT_ST_REG(unit));
+    }
 
-	portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
+    portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
 }
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
@@ -400,15 +400,15 @@ driver_error_t *uart_lock_resources(int unit, uint8_t flags, void *resources) {
     // Lock this pins
     if ((flags & UART_FLAG_READ) && (uart[unit].rx >= 0)) {
         if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart[unit].rx, flags, "RX"))) {
-        	// Revoked lock on pin
-        	return driver_lock_error(UART_DRIVER, lock_error);
+            // Revoked lock on pin
+            return driver_lock_error(UART_DRIVER, lock_error);
         }
     }
 
     if ((flags & UART_FLAG_WRITE) && (uart[unit].tx >= 0)) {
         if ((lock_error = driver_lock(UART_DRIVER, unit, GPIO_DRIVER, uart[unit].tx, flags, "TX"))) {
-        	// Revoked lock on pin
-        	return driver_lock_error(UART_DRIVER, lock_error);
+            // Revoked lock on pin
+            return driver_lock_error(UART_DRIVER, lock_error);
         }
     }
 
@@ -418,87 +418,87 @@ driver_error_t *uart_lock_resources(int unit, uint8_t flags, void *resources) {
 
 driver_error_t *uart_pin_map(int unit, int rx, int tx) {
     // Sanity checks
-	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
-		return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
-	}
+    if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
+        return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
+    }
 
     if (uart[unit].flags & UART_FLAG_INIT) {
-		return driver_error(SPI_DRIVER, UART_ERR_CANNOT_CHANGE_PINMAP, NULL);
+        return driver_error(SPI_DRIVER, UART_ERR_CANNOT_CHANGE_PINMAP, NULL);
     }
 
     if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << rx))) && (rx >= 0)) {
-		return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, selected pin cannot be input");
+        return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, selected pin cannot be input");
     }
 
     if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << tx))) && (tx >= 0)) {
-		return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "tx, selected pin cannot be input");
+        return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "tx, selected pin cannot be input");
     }
 
     if (!TEST_UNIQUE2(rx, tx)) {
-		return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, and tx must be different");
+        return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, and tx must be different");
     }
 
     // Update rx
     if (rx >= 0) {
-    	uart[unit].rx  = rx;
+        uart[unit].rx  = rx;
     }
 
     // Update tx
     if (tx >= 0) {
-    	uart[unit].tx  = tx;
+        uart[unit].tx  = tx;
     }
 
-	return NULL;
+    return NULL;
 }
 
 // Init UART. Interrupts are not enabled.
 driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t parity, uint8_t stop_bits, uint8_t flags, uint32_t qs) {
-	// Sanity checks
-	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
-		return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
-	}
+    // Sanity checks
+    if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
+        return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
+    }
 
     if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << uart[unit].rx))) && (uart[unit].rx >= 0)) {
-		return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, selected pin cannot be input");
+        return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, selected pin cannot be input");
     }
 
     if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << uart[unit].tx))) && (uart[unit].tx >= 0)) {
-		return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "tx, selected pin cannot be input");
+        return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "tx, selected pin cannot be input");
     }
 
     if (!TEST_UNIQUE2(uart[unit].rx, uart[unit].tx)) {
-		return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, and tx must be different");
+        return driver_error(UART_DRIVER, UART_ERR_PIN_NOT_ALLOWED, "rx, and tx must be different");
     }
 
     // Get data bits, and sanity checks
     UartBitsNum4Char esp_databits = EIGHT_BITS;
     switch (databits) {
-    	case 5: esp_databits = FIVE_BITS ; break;
-    	case 6: esp_databits = SIX_BITS  ; break;
-    	case 7: esp_databits = SEVEN_BITS; break;
-    	case 8: esp_databits = EIGHT_BITS; break;
-    	default:
-    		return driver_error(UART_DRIVER, UART_ERR_INVALID_DATA_BITS, NULL);
+        case 5: esp_databits = FIVE_BITS ; break;
+        case 6: esp_databits = SIX_BITS  ; break;
+        case 7: esp_databits = SEVEN_BITS; break;
+        case 8: esp_databits = EIGHT_BITS; break;
+        default:
+            return driver_error(UART_DRIVER, UART_ERR_INVALID_DATA_BITS, NULL);
     }
 
     // Get parity, and sanity checks
     UartParityMode esp_parity = NONE_BITS;
     switch (parity) {
-    	case 0: esp_parity = NONE_BITS;break;
-    	case 1: esp_parity = EVEN_BITS;break;
-    	case 2: esp_parity = ODD_BITS ;break;
-    	default:
-    		return driver_error(UART_DRIVER, UART_ERR_INVALID_PARITY, NULL);
+        case 0: esp_parity = NONE_BITS;break;
+        case 1: esp_parity = EVEN_BITS;break;
+        case 2: esp_parity = ODD_BITS ;break;
+        default:
+            return driver_error(UART_DRIVER, UART_ERR_INVALID_PARITY, NULL);
     }
 
     // Get stop bits, and sanity checks
     UartStopBitsNum esp_stop_bits = ONE_STOP_BIT;
     switch (stop_bits) {
-    	case 0: esp_stop_bits = ONE_HALF_STOP_BIT; break;
-    	case 1: esp_stop_bits = ONE_STOP_BIT; break;
-    	case 2: esp_stop_bits = TWO_STOP_BIT; break;
-    	default:
-    		return driver_error(UART_DRIVER, UART_ERR_INVALID_STOP_BITS, NULL);
+        case 0: esp_stop_bits = ONE_HALF_STOP_BIT; break;
+        case 1: esp_stop_bits = ONE_STOP_BIT; break;
+        case 2: esp_stop_bits = TWO_STOP_BIT; break;
+        default:
+            return driver_error(UART_DRIVER, UART_ERR_INVALID_STOP_BITS, NULL);
     }
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
@@ -506,31 +506,31 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
     driver_error_t *error;
 
     if ((error = uart_lock_resources(unit, flags, NULL))) {
-		return error;
-	}
+        return error;
+    }
 #endif
 
-	// There are not errors, continue with init ...
+    // There are not errors, continue with init ...
 
     // Enable module
     switch (unit) {
-    	case 0: periph_module_enable(PERIPH_UART0_MODULE); break;
-    	case 1: periph_module_enable(PERIPH_UART1_MODULE); break;
-    	case 2: periph_module_enable(PERIPH_UART2_MODULE); break;
+        case 0: periph_module_enable(PERIPH_UART0_MODULE); break;
+        case 1: periph_module_enable(PERIPH_UART1_MODULE); break;
+        case 2: periph_module_enable(PERIPH_UART2_MODULE); break;
     }
 
     // If the requested queue size is greater than current queue size,
-	// delete it and create a new one
+    // delete it and create a new one
     if (qs > uart[unit].qs) {
-		if (uart[unit].q) {
-			vQueueDelete(uart[unit].q);
-		}
+        if (uart[unit].q) {
+            vQueueDelete(uart[unit].q);
+        }
 
-		uart[unit].q  = xQueueCreate(qs, sizeof(uint8_t));
-		if (!uart[unit].q) {
-			driver_error(UART_DRIVER, UART_ERR_NOT_ENOUGH_MEMORY, NULL);
-		}
-	}
+        uart[unit].q  = xQueueCreate(qs, sizeof(uint8_t));
+        if (!uart[unit].q) {
+            driver_error(UART_DRIVER, UART_ERR_NOT_ENOUGH_MEMORY, NULL);
+        }
+    }
 
     // Init mutex, if needed
     if (uart[unit].mtx == PTHREAD_MUTEX_INITIALIZER) {
@@ -542,36 +542,36 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
         pthread_mutex_init(&uart[unit].mtx, &attr);
     }
 
-	// For the console, create the queue signal, and start a task for process signals
+    // For the console, create the queue signal, and start a task for process signals
     // received from the console
-	#if CONFIG_LUA_RTOS_USE_CONSOLE
-		if (unit == CONSOLE_UART) {
-			if (!deferred_q) {
-				deferred_q = xQueueCreate(1, sizeof(uart_deferred_data));
-				xTaskCreatePinnedToCore(uart_deferred_intr_handler, "uart", configMINIMAL_STACK_SIZE, NULL, 21, NULL, 0);
-			}
-		}
-	#endif
+    #if CONFIG_LUA_RTOS_USE_CONSOLE
+        if (unit == CONSOLE_UART) {
+            if (!deferred_q) {
+                deferred_q = xQueueCreate(1, sizeof(uart_deferred_data));
+                xTaskCreatePinnedToCore(uart_deferred_intr_handler, "uart", /*configMINIMAL_STACK_SIZE*/ 4096, NULL, 21, NULL, 0);
+            }
+        }
+    #endif
 
-	uart_pin_config(unit, flags);
-	uart_comm_param_config(unit, brg, esp_databits, esp_parity, esp_stop_bits);
+    uart_pin_config(unit, flags);
+    uart_comm_param_config(unit, brg, esp_databits, esp_parity, esp_stop_bits);
 
-    uart[unit].brg = brg; 
-    uart[unit].qs  = qs; 
+    uart[unit].brg = brg;
+    uart[unit].qs  = qs;
 
     uart[unit].flags |= UART_FLAG_INIT;
 
     if ((flags & (UART_FLAG_READ | UART_FLAG_WRITE)) == (UART_FLAG_READ | UART_FLAG_WRITE)) {
-	    syslog(LOG_INFO, "%s: at pins rx=%s%d/tx=%s%d",names[unit],
-	            gpio_portname(uart[unit].rx), gpio_name(uart[unit].rx),
-	            gpio_portname(uart[unit].tx), gpio_name(uart[unit].tx));
-	} else if ((flags & (UART_FLAG_READ | UART_FLAG_WRITE)) == UART_FLAG_WRITE) {
-	    syslog(LOG_INFO, "%s: at pins tx=%s%d",names[unit],
-	            gpio_portname(uart[unit].tx), gpio_name(uart[unit].tx));
-	} else if ((flags & (UART_FLAG_READ | UART_FLAG_WRITE)) == UART_FLAG_READ) {
-	    syslog(LOG_INFO, "%s: at pins rx=%s%d",names[unit],
-	            gpio_portname(uart[unit].rx), gpio_name(uart[unit].rx));
-	}
+        syslog(LOG_INFO, "%s: at pins rx=%s%d/tx=%s%d",names[unit],
+                gpio_portname(uart[unit].rx), gpio_name(uart[unit].rx),
+                gpio_portname(uart[unit].tx), gpio_name(uart[unit].tx));
+    } else if ((flags & (UART_FLAG_READ | UART_FLAG_WRITE)) == UART_FLAG_WRITE) {
+        syslog(LOG_INFO, "%s: at pins tx=%s%d",names[unit],
+                gpio_portname(uart[unit].tx), gpio_name(uart[unit].tx));
+    } else if ((flags & (UART_FLAG_READ | UART_FLAG_WRITE)) == UART_FLAG_READ) {
+        syslog(LOG_INFO, "%s: at pins rx=%s%d",names[unit],
+                gpio_portname(uart[unit].rx), gpio_name(uart[unit].rx));
+    }
 
     syslog(LOG_INFO, "%s: speed %d bauds", names[unit],brg);
 
@@ -580,22 +580,22 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
 
 // Enable UART interrupts
 driver_error_t *uart_setup_interrupts(int8_t unit) {
-	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
-		return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
-	}
+    if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
+        return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
+    }
 
-	if (uart[unit].flags & UART_FLAG_IRQ_INIT) {
+    if (uart[unit].flags & UART_FLAG_IRQ_INIT) {
         return NULL;
     }
 
     uint32_t reg_val = 0;
-	uint32_t mask = UART_RXFIFO_TOUT_INT_ENA_M | UART_FRM_ERR_INT_ENA_M | UART_RXFIFO_FULL_INT_ENA_M;
+    uint32_t mask = UART_RXFIFO_TOUT_INT_ENA_M | UART_FRM_ERR_INT_ENA_M | UART_RXFIFO_FULL_INT_ENA_M;
 
-	esp_intr_alloc(UART_INTR_SOURCE(unit), ESP_INTR_FLAG_IRAM, uart_rx_intr_handler, (void *)((uint32_t)unit), NULL);
+    esp_intr_alloc(UART_INTR_SOURCE(unit), ESP_INTR_FLAG_IRAM, uart_rx_intr_handler, (void *)((uint32_t)unit), NULL);
 
-	WRITE_PERI_REG(UART_INT_CLR_REG(unit), 0x1ff);
+    WRITE_PERI_REG(UART_INT_CLR_REG(unit), 0x1ff);
 
-	// Update CONF1 register
+    // Update CONF1 register
     reg_val = READ_PERI_REG(UART_CONF1_REG(unit)) & ~((UART_RX_FLOW_THRHD << UART_RX_FLOW_THRHD_S) | UART_RX_FLOW_EN) ;
 
     reg_val |= ((mask & UART_RXFIFO_TOUT_INT_ENA_M) ?
@@ -611,12 +611,12 @@ driver_error_t *uart_setup_interrupts(int8_t unit) {
 
     // Update INT_ENA register
     WRITE_PERI_REG(UART_INT_ENA_REG(unit), mask);
-	
-	syslog(LOG_INFO, "%s: interrupts enabled",names[unit]);
+
+    syslog(LOG_INFO, "%s: interrupts enabled",names[unit]);
 
     uart[unit].flags |= UART_FLAG_IRQ_INIT;
 
-	return NULL;
+    return NULL;
 }
 
 // Writes a byte to the UART
@@ -628,8 +628,8 @@ void IRAM_ATTR uart_write(int8_t unit, char byte) {
 // Writes a null-terminated string to the UART
 void IRAM_ATTR uart_writes(int8_t unit, char *s) {
     while (*s) {
-	    while (((READ_PERI_REG(UART_STATUS_REG(unit)) & (UART_TXFIFO_CNT << UART_TXFIFO_CNT_S)) >> UART_TXFIFO_CNT_S & UART_TXFIFO_CNT) >= 126);
-	    WRITE_PERI_REG(UART_FIFO_REG(unit) , *s++);
+        while (((READ_PERI_REG(UART_STATUS_REG(unit)) & (UART_TXFIFO_CNT << UART_TXFIFO_CNT_S)) >> UART_TXFIFO_CNT_S & UART_TXFIFO_CNT) >= 126);
+        WRITE_PERI_REG(UART_FIFO_REG(unit) , *s++);
    }
 }
 
@@ -638,7 +638,7 @@ uint8_t IRAM_ATTR uart_read(int8_t unit, char *c, uint32_t timeout) {
     if (timeout != portMAX_DELAY) {
         timeout = timeout / portTICK_PERIOD_MS;
     }
-	
+
     if (xQueueReceive(uart[unit].q, c, (TickType_t)(timeout)) == pdTRUE) {
         return 1;
     } else {
@@ -650,19 +650,19 @@ uint8_t IRAM_ATTR uart_read(int8_t unit, char *c, uint32_t timeout) {
 driver_error_t *uart_consume(int8_t unit) {
     char tmp;
 
-	// Sanity checks
-	if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
-		return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
-	}
+    // Sanity checks
+    if ((unit > CPU_LAST_UART) || (unit < CPU_FIRST_UART)) {
+        return driver_error(UART_DRIVER, UART_ERR_INVALID_UNIT, NULL);
+    }
 
-	if (!((uart[unit].flags & UART_FLAG_INIT) && (uart[unit].flags & UART_FLAG_IRQ_INIT))) {
-		return driver_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
-	}
+    if (!((uart[unit].flags & UART_FLAG_INIT) && (uart[unit].flags & UART_FLAG_IRQ_INIT))) {
+        return driver_error(UART_DRIVER, UART_ERR_IS_NOT_SETUP, NULL);
+    }
 
     while(uart_read(unit,&tmp,1));
 
-	return NULL;
-} 
+    return NULL;
+}
 
 // Reads a string from the UART, ended by the CR + LF character
 uint8_t uart_reads(int8_t unit, char *buff, uint8_t crlf, uint32_t timeout) {
@@ -672,26 +672,26 @@ uint8_t uart_reads(int8_t unit, char *buff, uint8_t crlf, uint32_t timeout) {
     for (;;) {
         if (uart_read(unit, &c, timeout)) {
             if (c == '\0') {
-            	*buff = 0;
+                *buff = 0;
                 return 1;
             } else if (c == '\n') {
-            	n++;
+                n++;
                 *buff = 0;
                 return 1;
             } else {
                 if ((c == '\r') && !crlf) {
-                	n++;
+                    n++;
                     *buff = 0;
                     return 1;
                 } else {
                     if (c != '\r') {
-                    	n++;
+                        n++;
                         *buff++ = c;
                     }
                 }
             }
         } else {
-        	*buff = 0;
+            *buff = 0;
             return (n > 0);
         }
     }
@@ -704,7 +704,7 @@ static uint8_t _uart_wait_response(int8_t unit, char *command, uint8_t echo, cha
     int ok = 1;
 
     va_list args;
-    
+
     char buffer[80];
     char *arg;
 
@@ -810,7 +810,7 @@ int uart_get_br(int unit) {
 //    divisor = reg->brg;
 
 //    return ((double)PBCLK2_HZ / (double)(16 * (divisor + 1)));
-	return 0;
+    return 0;
 }
 
 int uart_is_setup(int unit) {
@@ -818,11 +818,11 @@ int uart_is_setup(int unit) {
 }
 
 void uart_stop(int unit) {
-	int cunit = 0;
+    int cunit = 0;
 
-	for(cunit = 0;cunit < NUART; cunit++) {
-		if ((unit == -1) || (cunit == unit)) {
-		    WRITE_PERI_REG(UART_CONF0_REG(unit), 0);
-		}
-	}
+    for(cunit = 0;cunit < NUART; cunit++) {
+        if ((unit == -1) || (cunit == unit)) {
+            WRITE_PERI_REG(UART_CONF0_REG(unit), 0);
+        }
+    }
 }

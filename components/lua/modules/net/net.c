@@ -191,9 +191,10 @@ static int lnet_lookup(lua_State* L) {
 
 static int lnet_packip(lua_State *L) {
     net_ip ip;
-    unsigned i, temp;
+    unsigned i;
 
-    if (lua_isnumber(L, 1))
+    if (lua_isnumber(L, 1)) {
+        unsigned temp;
         for (i = 0; i < 4; i++) {
             temp = luaL_checkinteger(L, i + 1);
             if ((int)temp < 0 || temp > 255)
@@ -201,9 +202,11 @@ static int lnet_packip(lua_State *L) {
 
             ip.ipbytes[i] = temp;
         }
+    }
     else {
         const char* pip = luaL_checkstring(L, 1);
-        unsigned len, temp[4];
+        unsigned temp[4];
+        signed len;
 
         if (sscanf(pip, "%u.%u.%u.%u%n", temp, temp + 1, temp + 2, temp + 3,
                 &len) != 4 || len != strlen(pip))

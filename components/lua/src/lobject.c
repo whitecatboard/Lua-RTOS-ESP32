@@ -249,7 +249,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
 #endif
 
 static const char *l_str2dloc (const char *s, lua_Number *result, int mode) {
-  char *endptr;
+  char *endptr = NULL;
   *result = (mode == 'x') ? lua_strx2number(s, &endptr)  /* try to convert */
                           : lua_str2number(s, &endptr);
   if (endptr == s) return NULL;  /* nothing recognized? */

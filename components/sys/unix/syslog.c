@@ -78,7 +78,7 @@ static char sccsid[] = "@(#)syslog.c	8.5 (Berkeley) 4/29/95";
 #endif
 
 #define PORT 514
-#define MAX_BUFF 128
+#define MAX_BUFF 256
 
 static int   logSock = 0;
 static char *logHost = NULL;
