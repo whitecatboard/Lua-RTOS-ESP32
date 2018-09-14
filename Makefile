@@ -316,8 +316,7 @@ endef
 fs-prepare:
 	$(foreach componentpath,$(EXTRA_COMPONENT_PATHS), \
 		$(eval $(call includeComponentFS,$(componentpath))))
-	$(info  $(COMPONENT_FS))
 	@rm -f -r $(PROJECT_PATH)/build/tmp-fs
 	@mkdir -p $(PROJECT_PATH)/build/tmp-fs
 	@cp -f -r $(COMPONENT_FS) $(PROJECT_PATH)/build/tmp-fs
-	@cp -f -r $(PROJECT_PATH)/components/spiffs_image/$(SPIFFS_IMAGE)/* $(PROJECT_PATH)/build/tmp-fs
+	@cp -f -r $(PROJECT_PATH)/components/flashfs_image/$(SPIFFS_IMAGE)/* $(PROJECT_PATH)/build/tmp-fs

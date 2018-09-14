@@ -1,0 +1,14 @@
+MKLFS_COMPONENT_PATH := $(COMPONENT_PATH)
+MKLFS_BUILD_DIR=$(abspath $(MKLFS_COMPONENT_PATH)/mklfs)
+
+# Custom recursive make for mklfs sub-project
+MKLFS_MAKE=+$(MAKE) -C $(MKLFS_COMPONENT_PATH)/src
+
+.PHONY: mklfs mklfs-clean
+
+mklfs: $(SDKCONFIG_MAKEFILE)
+	$(MKLFS_MAKE) all
+
+mklfs-clean: $(SDKCONFIG_MAKEFILE)
+	$(MKLFS_MAKE) clean
+
