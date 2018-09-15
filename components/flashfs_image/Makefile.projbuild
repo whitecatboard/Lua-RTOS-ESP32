@@ -8,7 +8,15 @@ else
 FS_IMAGE := default
 endif
 
+ifndef CONFIG_LUA_RTOS_SPIFFS_ROOT_FS
+ifndef CONFIG_LUA_RTOS_LFS_ROOT_FS
+FS_IMAGE_FILE := spiffs
+else
 FS_IMAGE_FILE := 
+endif
+else
+FS_IMAGE_FILE := 
+endif
 
 ifeq (foo$(CONFIG_LUA_RTOS_SPIFFS_ROOT_FS), fooy)
 FS_IMAGE_FILE := spiffs
