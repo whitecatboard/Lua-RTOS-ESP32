@@ -352,8 +352,13 @@ static int lnet_ota(lua_State *L) {
         luaL_checktype(L, 3, LUA_TBOOLEAN);
         reboot = lua_toboolean( L, 3 );
     }
+    int check = 1;
+    if (lua_gettop(L) > 3) {
+        luaL_checktype(L, 4, LUA_TBOOLEAN);
+        reboot = lua_toboolean( L, 4 );
+    }
 
-    if ((error = net_ota(server, project, reboot))) {
+    if ((error = net_ota(server, project, check, reboot))) {
         return luaL_driver_error(L, error);
     }
 

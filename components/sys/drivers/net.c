@@ -56,6 +56,8 @@
 #include "esp_event.h"
 #include "esp_event_loop.h"
 #include "esp_ota_ops.h"
+#include "esp_partition.h"
+#include "esp_image_format.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_MDNS
 #include <mdns.h>
@@ -416,13 +418,14 @@ int wait_for_network(uint32_t timeout) {
     return 1;
 }
 
-driver_error_t *net_ota(const char *server, const char *project, int reboot) {
+driver_error_t *net_ota(const char *server, const char *project, int verify, int reboot) {
     driver_error_t *error;
     net_http_client_t client = HTTP_CLIENT_INITIALIZER;
     net_http_response_t response;
     esp_ota_handle_t update_handle = 0 ;
     uint8_t buffer[1024];
     char *firmware;
+    esp_err_t err;
 
     const esp_partition_t *running = esp_ota_get_running_partition();
     const esp_partition_t *update_partition = esp_ota_get_next_update_partition(NULL);
@@ -478,14 +481,15 @@ driver_error_t *net_ota(const char *server, const char *project, int reboot) {
         );
 
         printf(
-            "Writing to   %s at offset 0x%08x\r\n",
-            update_partition->label, update_partition->address
+            "Writing to   %s at offset 0x%08x - capacity is %.2f MB\r\n",
+            update_partition->label, update_partition->address,
+            (((float)update_partition->size)/(1024.0*1024.0))
         );
 
         float total = (float)response.size;
 
-        printf("Starting OTA update, downloading %.2f MB ...\r\n", (total/(1024.0*1024.0)) );
-        esp_err_t err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
+        printf("Starting OTA update, downloading partition image with %.2f MB\r\n", (total/(1024.0*1024.0)) );
+        err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
         if (err != ESP_OK) {
             printf("OTA update failed, error %d\r\n", err);
             return NULL;
@@ -514,25 +518,43 @@ driver_error_t *net_ota(const char *server, const char *project, int reboot) {
         if (esp_ota_end(update_handle) != ESP_OK) {
             printf("OTA transfer complete, update failed\r\n");
             return NULL;
-        } else {
-            printf("OTA update finished\r\n");
-            err = esp_ota_set_boot_partition(update_partition);
-            if (err != ESP_OK) {
-                printf("Changing boot partition failed, error %d\r\n", err);
-            } else {
-                printf("Successfully changed boot partition\r\n");
-            }
         }
     } else if (response.code == 470) {
         printf("Missing or bad arguments\r\n");
+        return NULL;
     } else if (response.code == 471) {
         printf("No new firmware available\r\n");
+        return NULL;
     } else {
         printf("Unexpected error, response code %i, size %i\r\n", response.code, response.size);
+        return NULL;
     }
 
     if ((error = net_http_destroy_client(&client))) {
         return error;
+    }
+
+    if (0 != verify) {
+        esp_image_metadata_t data = { 0 };
+        const esp_partition_pos_t partition_pos  = {
+            .offset = update_partition->address,
+            .size = update_partition->size,
+        };
+        err = esp_image_load(ESP_IMAGE_VERIFY, &partition_pos, &data);
+        if (err != ESP_OK) {
+            printf("OTA update finished but the written image is not valid, error %d\r\n", err);
+            return NULL;
+        }
+    }
+
+    printf("OTA update finished\r\n");
+
+    err = esp_ota_set_boot_partition(update_partition);
+    if (err != ESP_OK) {
+        printf("Changing the boot partition failed, error %d\r\n", err);
+        return NULL;
+    } else {
+        printf("Successfully changed boot partition\r\n");
     }
 
     if (response.code == 200) {
