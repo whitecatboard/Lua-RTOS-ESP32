@@ -1020,13 +1020,24 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
 static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
   (void)ud; (void)osize;  /* not used */
   if (nsize == 0) {
+#if LUA_USE_ROTABLE
+    if(ptr)
+#endif
     free(ptr);
     return NULL;
   }
   else
+#if LUA_USE_ROTABLE
+  if (ptr)
+#endif
     return realloc(ptr, nsize);
+#if LUA_USE_ROTABLE
+  else {
+    ptr = malloc(nsize);
+    return ptr;
+  }
+#endif
 }
-
 
 static int panic (lua_State *L) {
   lua_writestringerror("PANIC: unprotected error in call to Lua API (%s)\n",
