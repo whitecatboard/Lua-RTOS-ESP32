@@ -345,7 +345,7 @@ LUA_API size_t lua_stringtonumber (lua_State *L, const char *s) {
 
 
 LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *pisnum) {
-  lua_Number n = 0;
+  lua_Number n;
   const TValue *o = index2addr(L, idx);
   int isnum = tonumber(o, &n);
   if (!isnum)
@@ -356,7 +356,7 @@ LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *pisnum) {
 
 
 LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *pisnum) {
-  lua_Integer res = 0;
+  lua_Integer res;
   const TValue *o = index2addr(L, idx);
   int isnum = tointeger(o, &res);
   if (!isnum)
