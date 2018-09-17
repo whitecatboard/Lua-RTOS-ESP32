@@ -107,6 +107,7 @@ int file_tails(const char *name, int length) {
     fwrite(buffer, 1, current, fp);
 
     if ((res = ftruncate(fileno(fp), size - tail_pos)) < 0) {
+        free(buffer);
         return -1;
     }
 
