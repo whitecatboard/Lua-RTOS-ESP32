@@ -46,7 +46,7 @@
 #include "net.h"
 
 #include "lwip/err.h"
-#include "apps/sntp/sntp.h"
+#include "lwip/apps/sntp.h"
 
 #include <drivers/net.h>
 

@@ -1,7 +1,7 @@
-diff --git a/components/lwip/include/lwip/posix/netdb.h b/components/lwip/include/lwip/posix/netdb.h
+diff --git a/components/lwip/lwip/src/include/posix/netdb.h b/components/lwip/lwip/src/include/posix/netdb.h
 index 363154f6..78afd770 100644
---- a/components/lwip/include/lwip/posix/netdb.h
-+++ b/components/lwip/include/lwip/posix/netdb.h
+--- a/components/lwip/lwip/src/include/posix/netdb.h
++++ b/components/lwip/lwip/src/include/posix/netdb.h
 @@ -30,6 +30,9 @@
   *
   */

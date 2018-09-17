@@ -1,7 +1,7 @@
-diff --git a/components/lwip/port/freertos/sys_arch.c b/components/lwip/port/freertos/sys_arch.c
+diff --git a/components/lwip/port/esp32/freertos/sys_arch.c b/components/lwip/port/esp32/freertos/sys_arch.c
 index 2c56969a..9dcb28aa 100644
---- a/components/lwip/port/freertos/sys_arch.c
-+++ b/components/lwip/port/freertos/sys_arch.c
+--- a/components/lwip/port/esp32/freertos/sys_arch.c
++++ b/components/lwip/port/esp32/freertos/sys_arch.c
 @@ -450,7 +450,7 @@ sys_init(void)
      // Create the pthreads key for the per-thread semaphore storage
      pthread_key_create(&sys_thread_sem_key, sys_thread_sem_free);
