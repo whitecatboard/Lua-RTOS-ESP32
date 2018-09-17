@@ -52,6 +52,8 @@
 
 #include <sys/mutex.h>
 
+#define SPI_FLASH_ALIGN 0
+
 void spiffs_lock(spiffs *fs) {
     mtx_lock(fs->user_data);
 }
@@ -61,6 +63,7 @@ void spiffs_unlock(spiffs *fs) {
 }
 
 s32_t esp32_spi_flash_read(u32_t addr, u32_t size, u8_t *dst) {
+#if SPI_FLASH_ALIGN
     u32_t aaddr;
     u8_t *buff = NULL;
     u8_t *abuff = NULL;
@@ -96,15 +99,18 @@ s32_t esp32_spi_flash_read(u32_t addr, u32_t size, u8_t *dst) {
 
         free(buff);
     } else {
+#endif
         if (spi_flash_read(addr, (void *) dst, size) != 0) {
             return SPIFFS_ERR_INTERNAL;
         }
+#if SPI_FLASH_ALIGN
     }
-
+#endif
     return SPIFFS_OK;
 }
 
 s32_t esp32_spi_flash_write(u32_t addr, u32_t size, const u8_t *src) {
+#if SPI_FLASH_ALIGN
     u32_t aaddr;
     u8_t *buff = NULL;
     u8_t *abuff = NULL;
@@ -145,11 +151,13 @@ s32_t esp32_spi_flash_write(u32_t addr, u32_t size, const u8_t *src) {
 
         free(buff);
     } else {
+#endif
         if (spi_flash_write(addr, (uint32_t *) src, size) != 0) {
             return SPIFFS_ERR_INTERNAL;
         }
+#if SPI_FLASH_ALIGN
     }
-
+#endif
     return SPIFFS_OK;
 }
 

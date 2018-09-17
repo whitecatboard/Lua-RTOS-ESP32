@@ -44,7 +44,27 @@
  */
 
 #ifndef _SYS_MOUNT_H
-#define	_SYS_MOUNT_H
+#define _SYS_MOUNT_H
+
+#include <dirent.h>
+#include <stdint.h>
+#include <stddef.h>
+
+// Mount point structure
+struct mount_pt {
+    char *fpath;           // mount path
+    const char *fs;        // target file system
+    void (*mount)(void);   // mount function
+    void (*umount)(void);  // unmount function
+    void (*format)(void);  // format function
+    uint8_t mounted;       // Is the file system mounted?
+};
+
+/**
+ * @brief Initialize the mount functions. Must be called before calling any mount
+ *        function.
+ */
+void _mount_init();
 
 /**
  * @brief In Lua RTOS each virtual file system is mounted into a logical file system,
@@ -52,8 +72,9 @@
  *        is known as the mount point.
  *
  *        For example, if support for SPIFFS and FAT file systems are enabled,
- *        SPIFFS can be mounted into the / folder, and the FAT can be mounted into
- *        the /sd folder.
+ *        SPIFFS can be mounted into the / folder, and FAT can be mounted into
+ *        the /sd folder, while they are physically mounted into the /spiffs and
+ *        /fat folders respectively.
  *
  *        A set of functions are provided to deal with logical (the used by the
  *        programmer) and physical paths (the used by Lua RTOS). For example:
@@ -110,32 +131,6 @@ char *mount_normalize_path(const char *path);
 char *mount_resolve_to_physical(const char *path);
 
 /**
- * @brief Resolve a physical path to a logical path.
- *
- * @param path The physical path to be resolved. This path can be a relative or an
- *             absolute path.
- *
- * @return
- *     - A pointer to the logical path, that is allocated into the heap. The
- *       programmer has the responsibility to free this pointer where no longer is
- *       needed.
- *
- *     - If an error occurs NULL is returned and errno is set to indicate the error.
- *
- *       ENOMEM: the is not enough space to allocate the logical path.
- */
-char *mount_resolve_to_logical(const char *path);
-
-/**
- * @brief Check if a given file system is mounted.
- *
- * @param fs The file system name.
- *
- * @return 1 if it is mounted, or 0 if it is not mounted.
- */
-int mount_is_mounted(const char *fs);
-
-/**
  * @brief Mark the mount status (mounted or not mounted) of a given file system.
  *
  * @param fs The file system name.
@@ -155,7 +150,63 @@ void mount_set_mounted(const char *fs, unsigned int mounted);
  *     - NULL if there is not any point name for the given path.
  *     - The buff pointer.
  */
-char *mount_readdir(const char *path, char *buf);
+struct dirent* mount_readdir(DIR* pdir) ;
+
+/*
+ * @brief Get the location of the history file.
+ */
+char *mount_history_file(char *location, size_t loc_size);
+
+/*
+ * @brief Get the location of the messages.log file.
+ */
+char *mount_messages_file(char *location, size_t loc_size);
+
+/*
+ * @brief Get the root mount point.
+ *
+ * @return
+ *     - A pointer to a mount_pt structure with the mount information
+ *       for the file system which is mounter in the root folder.
+ *
+ *     - NULL if no file system is mounted in the root folder.
+ */
+struct mount_pt *mount_get_root();
+
+/*
+ * @brief Get the mount path for a given file system.
+ *
+ * @param fs The name of the file system.
+ *
+ * @return
+ *     - The mount path.
+ *     - NULL if the file system doesn't exists.
+ */
+const char *mount_get_mount_path(const char *fs);
+
+/*
+ * @brief Get the mount point for a given file path.
+ *
+ * @param path The path.
+ *
+ * @return
+ *     - The mount point.
+ *     - NULL if no file system matches.
+ */
+struct mount_pt *mount_get_mount_point_for_path(const char *path);
+
+/*
+ * @brief Get the mount point for a given file system.
+ *
+ * @param fs The file system.
+ *
+ * @return
+ *     - The mount point.
+ *     - NULL if no file system matches.
+ */
+struct mount_pt *mount_get_mount_point_for_fs(const char *fs);
+
+int mount(const char *target, const char *fs);
+int umount(const char *target);
 
 #endif
-

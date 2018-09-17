@@ -79,7 +79,6 @@
 #include <drivers/uart.h>
 #include <drivers/net.h>
 
-extern const char *__progname;
 extern uint32_t boot_count;
 extern uint8_t flash_unique_id[8];
 extern const driver_t drivers[];
@@ -134,6 +133,15 @@ static int os_shell(lua_State *L) {
 
 static int os_edit (lua_State *L) {
     const char *path = luaL_checkstring(L, 1);
+
+    struct stat st;
+
+    if (stat(path, &st) == 0) {
+        if ((st.st_mode & S_IFMT) == S_IFDIR) {
+            errno = EISDIR;
+            return luaL_fileresult(L, 0, path);
+        }
+    }
 
     // Create file if does not exists
     FILE *fp = fopen(path, "a");
@@ -201,6 +209,14 @@ static int more(const char *path, int stop) {
     int c;
     char ch;
     int lines;
+    struct stat st;
+
+    if (stat(path, &st) < 0) {
+        if ((st.st_mode & S_IFMT) == S_IFDIR) {
+            errno = EISDIR;
+            return -1;
+        }
+    }
 
     fp = fopen(path,"r");
     if (!fp) {
@@ -263,18 +279,11 @@ static int os_more(lua_State *L) {
 
 static int os_dmesg(lua_State *L) {
     int res;
-    const char *fname = NULL;
 
-    if (mount_is_mounted("fat")) {
-        if (mount_is_mounted("spiffs")) {
-            fname = "/sd/log/messages.log";
-        } else {
-            fname = "/log/messages.log";
-        }
-    }
+    char fname[PATH_MAX + 1];
 
-    if (fname == NULL) {
-        return luaL_error(L, "logging disabled on flash-only devices");
+    if (!mount_messages_file(fname, sizeof(fname))) {
+        return luaL_error(L, "logging disabled or not available");
     }
 
     if ((res = more(fname, 1)) < 0) {
@@ -379,35 +388,6 @@ static int os_ls (lua_State *L) {
     struct stat sb;
     struct tm *tm_info;
 
-    if (path) {
-        dir = opendir(path);
-        if (!dir) {
-            //search back to the last dir name
-            filename = (char*)path + strlen(path) - 1;
-            while (filename > path && *filename!=0 && *filename!='/') {
-                filename--;
-            }
-            //string given is not a valid path
-            //so try to find a matching file
-            if (*filename == '/') {
-                *filename = 0; //will cut off the filename from the path
-                filename++;
-                if(strlen(path)==0) {
-                    path = "/";
-                }
-            }
-            //try to find a matching file
-            //in the current folder
-            if (filename==path) {
-                filename = (char*)path;
-                path = NULL;
-            }
-        }
-        else {
-            closedir(dir);
-        }
-    }
-
     // If path is not present (at all or any more) get the current directory as path
     if (!path) {
         if (!getcwd(cpath, PATH_MAX)) {
@@ -434,7 +414,11 @@ static int os_ls (lua_State *L) {
             if (sb.st_atime > 0) {
                 tm_info = localtime(&sb.st_atime);
                 strftime(tbuffer, 250, "%c", tm_info);
+            } else {
+                strcpy(tbuffer, "                        ");
             }
+        } else {
+            strcpy(tbuffer, "                        ");
         }
 
         type = 'd';
@@ -510,7 +494,7 @@ static int os_logcons(lua_State *L) {
         }
 
         closelog();
-        openlog(__progname, mask , LOG_LOCAL1);
+        openlog(mask , LOG_LOCAL1);
 
         return 0;
     } else {
@@ -562,51 +546,37 @@ static int os_stats(lua_State *L) {
 }
 
 static int os_format(lua_State *L) {
-    const char *device = luaL_checkstring(L, 1);
-    char response = ' ';
+    const char *path = luaL_checkstring(L, 1);
 
-    // This if check is for future use, to determine drive number
-    if (strcmp(device,"spiffs") == 0) {
-#if !CONFIG_LUA_RTOS_USE_SPIFFS
-        return luaL_error(L, "device %s not exists for format", device);
-#endif
-    } else if (strcmp(device,"fat") == 0) {
-#if !(CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI)
-        return luaL_error(L, "device %s not exists for format", device);
-#endif
-    } else {
-        return luaL_error(L, "device %s not exists for format", device);
-    }
+    const struct mount_pt *mountp;
 
-    if (!mount_is_mounted(device)) {
-         return luaL_error(L, "device %s is not mounted", device);
-    }
+    if ((mountp = mount_get_mount_point_for_path(path))) {
+        if (mountp->format) {
+            char response = ' ';
 
-    // Confirmation
-    while ((response != 'y') && (response != 'Y') && (response != 'n') && (response != 'N')) {
-        printf("\r");
-        console_erase_l();
-        printf("All data in %s will be deleted. Continue? [y/n]: ", device);
-        response = fgetc(stdin);
-    }
+            // Confirmation
+            while ((response != 'y') && (response != 'Y') && (response != 'n') && (response != 'N')) {
+                printf("\r");
+                console_erase_l();
+                printf("All data in %s will be erased. Continue? [y/n]: ", path);
+                response = fgetc(stdin);
+            }
 
-    printf("\n");
+            printf("\n");
 
-    if ((response == 'y') || (response == 'Y')) {
-        printf("Formatting...\r\n");
+            if ((response == 'y') || (response == 'Y')) {
+                printf("Formatting %s as %s file system ...\r\n", path, mountp->fs);
 
-        if (strcmp(device,"spiffs") == 0) {
-#if CONFIG_LUA_RTOS_USE_SPIFFS
-            vfs_spiffs_format();
-#endif
-        } else if (strcmp(device,"fat") == 0) {
-#if CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI
-             vfs_fat_format();
-#endif
+                mountp->format();
+            } else {
+                printf("Formatting canceled\r\n");
+            }
+
+            return 0;
         }
-    } else {
-        printf("Format cancelled\n");
     }
+
+    printf("%s can't be formatted\r\n", path);
 
     return 0;
 }

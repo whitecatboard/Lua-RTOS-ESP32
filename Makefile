@@ -58,7 +58,7 @@ define n
 endef
 
 # Use this esp-idf commit in build
-CURRENT_IDF := 4b91c82cc447640e5b61407e810f1d6f3eabd233
+CURRENT_IDF := b14e87a60575f895c2ce897ae970b2acfc58a934
 
 # Project name
 PROJECT_NAME := lua_rtos
@@ -316,8 +316,7 @@ endef
 fs-prepare:
 	$(foreach componentpath,$(EXTRA_COMPONENT_PATHS), \
 		$(eval $(call includeComponentFS,$(componentpath))))
-	$(info  $(COMPONENT_FS))
 	@rm -f -r $(PROJECT_PATH)/build/tmp-fs
 	@mkdir -p $(PROJECT_PATH)/build/tmp-fs
 	@cp -f -r $(COMPONENT_FS) $(PROJECT_PATH)/build/tmp-fs
-	@cp -f -r $(PROJECT_PATH)/components/spiffs_image/$(SPIFFS_IMAGE)/* $(PROJECT_PATH)/build/tmp-fs
+	@cp -f -r $(PROJECT_PATH)/components/flashfs_image/$(SPIFFS_IMAGE)/* $(PROJECT_PATH)/build/tmp-fs

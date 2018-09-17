@@ -1,26 +1,24 @@
 diff --git a/components/driver/include/driver/rmt.h b/components/driver/include/driver/rmt.h
-index 7abf63ec..6dbbdba8 100644
+index 7abf63ec..b965086f 100644
 --- a/components/driver/include/driver/rmt.h
 +++ b/components/driver/include/driver/rmt.h
-@@ -787,6 +787,7 @@ esp_err_t rmt_write_sample(rmt_channel_t channel, const uint8_t *src, size_t src
+@@ -817,7 +817,7 @@ rmt_tx_end_callback_t rmt_register_tx_end_callback(rmt_tx_end_fn_t function, voi
+  *--------------------------END OF EXAMPLE --------------------------
   */
- rmt_tx_end_callback_t rmt_register_tx_end_callback(rmt_tx_end_fn_t function, void *arg);
  
+-
 +esp_err_t rmt_config_one(const rmt_config_t* rmt_param, uint8_t *chan);
  
- /*
-  * ----------------EXAMPLE OF RMT INTERRUPT ------------------
+ #ifdef __cplusplus
+ }
 diff --git a/components/driver/rmt.c b/components/driver/rmt.c
-index 9460cefa..5eba95b4 100644
+index 8ee1640c..69e10c23 100644
 --- a/components/driver/rmt.c
 +++ b/components/driver/rmt.c
-@@ -929,4 +929,112 @@ esp_err_t rmt_write_sample(rmt_channel_t channel, const uint8_t *src, size_t src
-         xSemaphoreGive(p_rmt->tx_sem);
+@@ -930,3 +930,111 @@ esp_err_t rmt_write_sample(rmt_channel_t channel, const uint8_t *src, size_t src
      }
      return ESP_OK;
--}
-\ No newline at end of file
-+}
+ }
 +
 +esp_err_t rmt_config_one(const rmt_config_t* rmt_param, uint8_t *chan)
 +{

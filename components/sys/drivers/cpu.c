@@ -141,7 +141,7 @@ void cpu_show_info() {
 
 	cpu_model(buffer, sizeof(buffer));
 	if (!*buffer) {
-		syslog(LOG_ERR, "cpu unknown CPU");
+		syslog(LOG_INFO, "cpu unknown CPU");
 	} else {
 		syslog(LOG_INFO, "cpu %s at %d Mhz", buffer, cpu_speed() / 1000000);
 	}

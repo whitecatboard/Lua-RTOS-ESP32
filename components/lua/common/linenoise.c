@@ -119,7 +119,8 @@
 #include <reent.h>
 
 #include <sys/mount.h>
-#include <sys/syslog.h>
+#include <sys/path.h>
+#include <sys/history.h>
 
 #include "linenoise.h"
 #include "lua.h"
@@ -144,8 +145,6 @@ struct linenoiseState {
     int history_index;  /* The history index we are currently editing. */
     bool password;      /* A password is being entered. */
 };
-
-static struct list *ram_history = 0;
 
 enum KEY_ACTION{
 	KEY_NULL = 0,	    /* NULL */
@@ -589,204 +588,31 @@ static int linenoiseRaw(char *buf, size_t buflen, const char *prompt, bool passw
 static void linenoiseHistoryAdd(struct linenoiseState *l) {
     if (!status_get(STATUS_LUA_HISTORY)) return;
 
-    FILE *fp;
-    const char *fname;
-    
-    if (mount_is_mounted("fat")) {
-    	if (mount_is_mounted("spiffs")) {
-    		fname = "/sd/history";
-    	} else {
-    		fname = "/history";
-    	}
-    } else {
-			if(!ram_history) {
-				ram_history = malloc(sizeof(struct list));
-				assert(ram_history != NULL);
-				lstinit(ram_history, 0, LIST_DEFAULT);
-			}
-
-			int id = 0;
-  		char *buf = 0;
-
-		 	if(l->history_index>=0 && l->history_index <= (ram_history->indexes-1)) {
-				// if we're at a known history index, check if the user
-				// modified the string or has just hit [Enter]
-				int err = lstget(ram_history, l->history_index, (void **)&buf);
-				if (!err) {
-					if(0 == strcmp(l->buf, buf)) {
-						err = lstremovec(ram_history, l->history_index, 0, true); //compact
-					}
-				}
-			}
-			else {
-				// if the user manually entered the current command,
-				// search all the history if it had been entered before
-				int index = lstfirst(ram_history);
-				while (index >= 0) {
-					int err = lstget(ram_history, index, (void **)&buf);
-					if (!err) {
-						if(0 == strcmp(l->buf, buf)) {
-							err = lstremovec(ram_history, index, 0, true); //compact
-							break;
-						}
-						buf = 0;
-					}
-					index = lstnext(ram_history, index);
-				}
-			}
-
-			if (!buf) {
-				buf = strndup(l->buf, l->len);
-			}
-
-		 	if (buf) {
-		  	int err = lstadd(ram_history, buf, &id);
-				if (!err) {
-					l->history_index = id;
-		  	}
-			}
-
-			l->history_index++;
-			return;
-		}
-
-    fp = fopen(fname,"a");
-    if (!fp) {
-        return;
-    }
-    
-    fputs("\n", fp);
-    fputs(l->buf, fp);
-    fclose(fp);
+    history_add(l->buf);
     
     l->history_index = -1;
 }
 
 static void linenoiseHistoryGet(struct linenoiseState *l, int up) {
     if (!status_get(STATUS_LUA_HISTORY)) return;
-
-    int pos, len, c;
-    FILE *fp;
-    const char *fname;
     
-    if (mount_is_mounted("fat")) {
-    	if (mount_is_mounted("spiffs")) {
-    		fname = "/sd/history";
-    	} else {
-    		fname = "/history";
-    	}
-    } else {
-    	if(!ram_history) {
-    		return;
-    	}
-  		char *buf = 0;
-  		int lastcmd = ram_history->indexes - 1;
-
-  		if (l->history_index == -1) {
-  			l->history_index = lastcmd + 1;
-  		}
-
-  		l->history_index += (up ? -1 : +1);
-
-  		if (l->history_index < 0) {
-  			l->history_index = 0;
-  		} else if (l->history_index > lastcmd) {
-  			l->history_index = lastcmd + 1;
-				l->buf[0] = l->len = l->pos = 0;
-		  	refreshLine(l);
-				return;
-			}
-  		
-  		int err = lstget(ram_history, l->history_index, (void **)&buf);
-  		if (err) {
-  			l->buf[0] = '\0';
-  		}
-  		else {
-  			memcpy(l->buf,buf,strlen(buf)+1);
-  		}
-  		l->len = l->pos = strlen(l->buf);
-    	refreshLine(l);
-    	return;
-    }
-
-    fp = fopen(fname,"r");
- 
-    if (!fp) {
-        return;
-    }
-    
-    if (l->history_index == -1) {
-        fseek(fp, 0, SEEK_END);
-        pos = ftell(fp);
-    } else {       
-        pos = l->history_index;
-    }
-    
-    if ((pos == 0) && (up)) {
-        refreshLine(l);
-        fclose(fp);
-        return;
-    }
-
-    l->history_index = pos;
-    
-    while ((pos >= 0) && !feof(fp)) {
-        if (up)
-            fseek(fp, --pos, SEEK_SET);
-        else
-            fseek(fp, ++pos, SEEK_SET);
-        
-        c = fgetc(fp);
-        if (c == '\n') {
-            break;
-        }
-    }
-        
-    l->history_index = pos;
- 
-    if  ((pos >= 0) && !feof(fp)) {
-        // Get line
-        fgets(l->buf,l->cols, fp);
-        len = strlen(l->buf);
-
-        // Strip \r \n chars at the end, if present
-        while ((l->buf[len - 1] == '\r') || (l->buf[len - 1] == '\n')) {
-            len--;
-        }
-
-        l->buf[len] = '\0';
-
-        l->len = l->pos = len;
-    } else {
-        if (feof(fp))
-            l->history_index = -1;
-        else 
-            l->history_index = 0;
-        
-				l->buf[0] = l->len = l->pos = 0;
+    int res = history_get(l->history_index, up, l->buf, l->cols);
+    if (res >= -1) {
+        l->history_index = res;
+        l->len = strlen(l->buf);
+        l->pos = l->len;
     }
 
     refreshLine(l);
-    fclose(fp);
 }
 
 void linenoiseHistoryClear() {
     if (status_get(STATUS_LUA_HISTORY)) return;
 
-    const char *fname;
+    char fname[PATH_MAX + 1];
 
-    if (mount_is_mounted("fat")) {
-    	if (mount_is_mounted("spiffs")) {
-    		fname = "/sd/history";
-    	} else {
-    		fname = "/history";
-    	}
-    } else {
-    	if(ram_history) {
-	    	lstdestroy(ram_history, 1);
-    	}
-    	
-    	return;
+    if (!mount_history_file(fname, sizeof(fname))) {
+        return;
     }
 
     remove(fname);

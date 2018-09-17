@@ -26,10 +26,23 @@
 
 #include "lauxlib.h"
 
-#include <sys/syslog.h>
-
 #if LUA_USE_ROTABLE
 #include "lrotable.h"
+#include <sys/syslog.h>
+
+void lua_writestringerror(const char * fmt, ...) { \
+    va_list ap;
+    va_start(ap, fmt);
+    vsyslog(LOG_ERR, fmt, ap);
+    va_end(ap);
+
+    if (! (getlogstat() & LOG_CONS)) {
+        va_start(ap, fmt);
+        vfprintf(stderr, fmt, ap);
+        va_end(ap);
+        fflush(stderr);
+    }
+}
 #endif
 
 /*
@@ -1043,13 +1056,8 @@ static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
 
 
 static int panic (lua_State *L) {
-  syslog(LOG_ERR, "PANIC: unprotected error in call to Lua API (%s)\n",
-                          lua_tostring(L, -1));
-
-  if (! (getlogstat() & LOG_CONS)) {
-    lua_writestringerror("PANIC: unprotected error in call to Lua API (%s)\n",
-                          lua_tostring(L, -1));
-  }
+  lua_writestringerror("PANIC: unprotected error in call to Lua API (%s)\n",
+                        lua_tostring(L, -1));
   return 0;  /* return to Lua to abort */
 }
 

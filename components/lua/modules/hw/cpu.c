@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume OlivÃ© Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
  * Copyright (C) 2015 - 2018, Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.

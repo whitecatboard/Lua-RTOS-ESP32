@@ -68,6 +68,8 @@ void _sys_init();
 
 pthread_t lua_thread;
 
+#include <stdio.h>
+
 void *lua_start(void *arg) {
 	for(;;) {
 		luaos_main();

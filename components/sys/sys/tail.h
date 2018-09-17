@@ -39,42 +39,25 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS readdir wrapper
+ * Lua RTOS, file tail utilities
  *
  */
 
-#include "esp_attr.h"
+#ifndef _TAIL_H_
+#define _TAIL_H_
 
-#include <limits.h>
-#include <reent.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <errno.h>
+/**
+ * @brief Tail a file, discarding at least the first length bytes of the file. Once
+ *        the first length bytes are discarded, the function continues discarding
+ *        bytes until the \n character is found.
+ *
+ * @param name The name of the file.
+ * @param length Number of bytes to discard.
+ *
+ * @return
+ *    Returns the value 0 if successful; otherwise the value -1 is returned and errno
+ *    is set to indicate the error.
+ */
+int file_tails(const char *name, int length);
 
-#include <dirent.h>
-
-#include <sys/mount.h>
-
-DIR* __real_readdir(const char* name);
-
-DIR* __wrap_readdir(const char* name) {
-    char *ppath;
-    DIR *dir;
-
-    if (!name || !*name) {
-        errno = ENOENT;
-        return (DIR*)NULL;
-    }
-
-    ppath = mount_resolve_to_physical(name);
-    if (ppath) {
-        dir = __real_readdir(ppath);
-
-        free(ppath);
-
-        return dir;
-    } else {
-        return (DIR*)NULL;
-    }
-}
+#endif /* _TAIL_H_ */

@@ -60,9 +60,31 @@ int __wrap_rmdir(const char* path) {
     char *ppath;
     int res;
 
-    if (!path || !*path) {
+    if (!path) {
+        errno = EFAULT;
+        return -1;
+    }
+
+    if (!*path) {
         errno = ENOENT;
         return -1;
+    }
+
+    int lpath = strlen(path);
+    const char *cpath = path + lpath - 1;
+    if (lpath >= 3) {
+        if (((*(cpath - 2)) == '/') && ((*(cpath - 1)) == '.') && (*cpath == '.')) {
+            errno = EACCES;
+            return -1;
+        } else if (((*(cpath - 1)) == '/') && (*cpath == '.')) {
+            errno = EINVAL;
+            return -1;
+        }
+    } else if (lpath >= 2) {
+        if (((*(cpath - 1)) == '/') && (*cpath == '.')) {
+            errno = EINVAL;
+            return -1;
+        }
     }
 
     ppath = mount_resolve_to_physical(path);

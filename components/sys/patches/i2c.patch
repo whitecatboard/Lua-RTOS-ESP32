@@ -1,5 +1,5 @@
 diff --git a/components/driver/i2c.c b/components/driver/i2c.c
-index 1d904fdc..c253779a 100644
+index e21c137c..6d7753a7 100644
 --- a/components/driver/i2c.c
 +++ b/components/driver/i2c.c
 @@ -144,7 +144,7 @@ typedef struct {

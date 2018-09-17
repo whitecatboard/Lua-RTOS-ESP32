@@ -230,8 +230,12 @@ LUALIB_API void (luaL_openlib) (lua_State *L, const char *libname,
 
 /* print an error message */
 #if !defined(lua_writestringerror)
+#if !LUA_USE_ROTABLE
 #define lua_writestringerror(s,p) \
         (fprintf(stderr, (s), (p)), fflush(stderr))
+#else
+void lua_writestringerror(const char *, ...);
+#endif
 #endif
 
 /* }================================================================== */

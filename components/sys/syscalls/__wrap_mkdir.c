@@ -60,7 +60,12 @@ int __wrap_mkdir(const char* name, mode_t mode) {
     char *ppath;
     int res;
 
-    if (!name || !*name) {
+    if (!name) {
+        errno = EFAULT;
+        return -1;
+    }
+
+    if (!*name) {
         errno = ENOENT;
         return -1;
     }

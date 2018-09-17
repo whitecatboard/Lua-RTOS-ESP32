@@ -61,7 +61,12 @@ int __wrap__stat_r(struct _reent *r, const char *path, int flags, int mode) {
     char *ppath;
     int res;
 
-    if (!path || !*path) {
+    if (!path) {
+        errno = EFAULT;
+        return -1;
+    }
+
+    if (!*path) {
         errno = ENOENT;
         return -1;
     }

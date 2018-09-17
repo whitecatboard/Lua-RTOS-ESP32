@@ -19,7 +19,6 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
-#include <sys/syslog.h>
 
 
 #if !defined(LUA_PROMPT)
@@ -155,15 +154,13 @@ static void print_usage (const char *badoption) {
 ** (if present)
 */
 static void l_message (const char *pname, const char *msg) {
-  if (pname)
-    syslog(LOG_ERR, "%s: %s\n", pname, msg);
+#if !LUA_USE_ROTABLE
+  if (pname) lua_writestringerror("%s: ", pname);
+#else
+  if (pname) lua_writestringerror("%s: %s\n", pname, msg);
   else
-    syslog(LOG_ERR, "%s\n", msg);
-
-  if (! (getlogstat() & LOG_CONS)) {
-    if (pname) lua_writestringerror("%s: ", pname);
-    lua_writestringerror("%s\n", msg);
-  }
+#endif
+  lua_writestringerror("%s\n", msg);
 }
 
 

@@ -1,6 +1,8 @@
+diff --git a/components/lwip/include/lwip/posix/netdb.h b/components/lwip/include/lwip/posix/netdb.h
+index 363154f6..78afd770 100644
 --- a/components/lwip/include/lwip/posix/netdb.h
 +++ b/components/lwip/include/lwip/posix/netdb.h
-@@ -30,4 +30,63 @@
+@@ -30,6 +30,9 @@
   *
   */
  
@@ -8,6 +10,12 @@
 +#define _LWIP_NETDB_H
 +
  #include "lwip/netdb.h"
+ 
+ #ifdef ESP_PLATFORM
+@@ -38,3 +41,61 @@ int getnameinfo(const struct sockaddr *addr, socklen_t addrlen,
+                 char *serv, socklen_t servlen, int flags);
+ 
+ #endif
 +
 +// Lua RTOS additions
 +struct hostent *gethostbyname(const char *name);
@@ -16,8 +24,6 @@
 +
 +#include "lwip/sockets.h"
 +
-+#define EAI_AGAIN 206
-+#define EAI_BADFLAGS 207
 +#define EAI_OVERFLOW 208
 +
 + struct servent {
@@ -54,6 +60,10 @@
 +#define    NI_DGRAM    0x00000010
 +#define NI_WITHSCOPEID 0x00000020
 +
++#ifndef AF_UNIX
++#define    AF_UNIX     1
++#endif
++
 +int
 + getnameinfo(const struct sockaddr *sa, socklen_t salen,
 +           char *host, size_t hostlen,
@@ -78,3 +88,4 @@ index d7b6612d..55fec5a4 100644
  #ifdef __cplusplus
  }
  #endif
+ 

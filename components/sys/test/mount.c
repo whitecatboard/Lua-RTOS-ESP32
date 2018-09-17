@@ -43,6 +43,8 @@
  *
  */
 
+#include "sdkconfig.h"
+
 #include "unity.h"
 
 #include <string.h>
@@ -50,6 +52,7 @@
 #include <unistd.h>
 
 #include <sys/mount.h>
+#include <sys/stat.h>
 
 struct mount_path {
     const char *cwd;
@@ -63,6 +66,8 @@ static const struct mount_path norm_test[] = {
     {"/","..","/"},
     {"/","./","/"},
     {"/","../","/"},
+    {"/","../..","/"},
+    {"/","../../","/"},
     {"/","//","/"},
     {"/","./a","/a"},
     {"/","./a/","/a"},
@@ -77,34 +82,25 @@ static const struct mount_path norm_test[] = {
     {"/","a/..a/","/a/..a"},
     {"/","a/.a./","/a/.a."},
     {"/","a/..a./","/a/..a."},
-    {"/lib","","/lib"},
-    {"/lib",".","/lib"},
-    {"/lib","..","/"},
-    {"/lib","./","/lib"},
-    {"/lib","../","/"},
-    {"/lib","//","/"},
-    {"/lib","./a","/lib/a"},
-    {"/lib","a","/lib/a"},
-    {"/lib","a/","/lib/a"},
-    {"/lib","a/b","/lib/a/b"},
-    {"/lib","a/../b","/lib/b"},
-    {"/lib","a/../b/c/../d","/lib/b/d"},
-    {"/lib","a/..///b/c/..///d","/lib/b/d"},
-    {"/lib","a/..///b/c/..///d//","/lib/b/d"},
-    {"/lib","a/./","/lib/a"},
-    {"/lib","a/.a/","/lib/a/.a"},
-    {"/lib","a/..a/","/lib/a/..a"},
-    {"/lib","a/.a./","/lib/a/.a."},
-    {"/lib","a/..a./","/lib/a/..a."},
-    {NULL, NULL, NULL}
-};
-
-static const struct mount_path physical_test[] = {
-    {"/","","/spiffs"},
-    {"/","a/b","/spiffs/a/b"},
-    {"/","sd","/fat"},
-    {"/","sd/","/fat"},
-    {"/","sd/a/b","/fat/a/b"},
+    {"/e","","/e"},
+    {"/e",".","/e"},
+    {"/e","..","/"},
+    {"/e","./","/e"},
+    {"/e","../","/"},
+    {"/e","//","/"},
+    {"/e","./a","/e/a"},
+    {"/e","a","/e/a"},
+    {"/e","a/","/e/a"},
+    {"/e","a/b","/e/a/b"},
+    {"/e","a/../b","/e/b"},
+    {"/e","a/../b/c/../d","/e/b/d"},
+    {"/e","a/..///b/c/..///d","/e/b/d"},
+    {"/e","a/..///b/c/..///d//","/e/b/d"},
+    {"/e","a/./","/e/a"},
+    {"/e","a/.a/","/e/a/.a"},
+    {"/e","a/..a/","/e/a/..a"},
+    {"/e","a/.a./","/e/a/.a."},
+    {"/e","a/..a./","/e/a/..a."},
     {NULL, NULL, NULL}
 };
 
@@ -112,6 +108,8 @@ TEST_CASE("sys", "[mount_normalize_path]") {
     const struct mount_path *ctest;
     char *npath;
     char tmp[1024];
+
+    mkdir("/e",0755);
 
     // mount_normalize_path test
     ctest = norm_test;
@@ -124,14 +122,5 @@ TEST_CASE("sys", "[mount_normalize_path]") {
         ctest++;
     }
 
-    // mount_resolve_to_physical test
-    ctest = physical_test;
-    while (ctest->cwd) {
-        chdir(ctest->cwd);
-        npath = mount_resolve_to_physical(ctest->a);
-        sprintf(tmp, "[%s|%s|%s] => %s", ctest->cwd, ctest->a, ctest->b, npath);
-        TEST_ASSERT_MESSAGE(strcmp(npath,ctest->b) == 0, tmp);
-        free(npath);
-        ctest++;
-    }
+    rmdir("/e");
 }

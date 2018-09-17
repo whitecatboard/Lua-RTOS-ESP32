@@ -548,7 +548,7 @@ driver_error_t *uart_init(int8_t unit, uint32_t brg, uint8_t databits, uint8_t p
         if (unit == CONSOLE_UART) {
             if (!deferred_q) {
                 deferred_q = xQueueCreate(1, sizeof(uart_deferred_data));
-                xTaskCreatePinnedToCore(uart_deferred_intr_handler, "uart", /*configMINIMAL_STACK_SIZE*/ 4096, NULL, 21, NULL, 0);
+                xTaskCreatePinnedToCore(uart_deferred_intr_handler, "uart", configMINIMAL_STACK_SIZE, NULL, 21, NULL, 0);
             }
         }
     #endif

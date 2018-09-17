@@ -62,7 +62,12 @@ DIR* __wrap_opendir(const char* name) {
     char *ppath;
     DIR *dir;
 
-    if (!name || *name == 0x00) {
+    if (!name) {
+        errno = EFAULT;
+        return (DIR*)NULL;
+    }
+
+    if (!*name) {
         errno = ENOENT;
         return (DIR*)NULL;
     }

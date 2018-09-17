@@ -58,7 +58,12 @@ int __wrap_access(const char *path, int amode) {
     char *ppath;
     int res;
 
-    if (!path || !*path) {
+    if (!path) {
+        errno = EFAULT;
+        return -1;
+    }
+
+    if (!*path) {
         errno = ENOENT;
         return -1;
     }

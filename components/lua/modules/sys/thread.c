@@ -68,7 +68,6 @@
 #include <drivers/uart.h>
 #include <sys/console.h>
 #include <sys/fcntl.h>
-#include <sys/syslog.h>
 
 // Module errors
 #define LUA_THREAD_ERR_NOT_ENOUGH_MEMORY    	(DRIVER_EXCEPTION_BASE(THREAD_DRIVER_ID) |  0)
@@ -134,10 +133,7 @@ void *lthread_start_task(void *arg) {
 	// Create and populate cleanup info
 	lcleanup_info_t *info = malloc(sizeof(lcleanup_info_t));
 	if (!info) {
-		syslog(LOG_ERR, "%s\n", "not enough memory");
-		if (! (getlogstat() & LOG_CONS)) {
-			lua_writestringerror("%s\n", "not enough memory");
-		}
+		lua_writestringerror("%s\n", "not enough memory");
 		pthread_exit(NULL);
 	}
 
@@ -151,10 +147,7 @@ void *lthread_start_task(void *arg) {
 	int status = lua_pcall(thread->L, 0, 0, 0);
 	if (status != LUA_OK) {
 		const char *msg = lua_tostring(thread->L, -1);
-		syslog(LOG_ERR, "%s\n", msg);
-		if (! (getlogstat() & LOG_CONS)) {
-			lua_writestringerror("%s\n", msg);
-		}
+		lua_writestringerror("%s\n", msg);
 		lua_pop(thread->L, 1);
 
 		pthread_exit(NULL);

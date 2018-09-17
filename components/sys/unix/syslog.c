@@ -2,10 +2,10 @@
  * Copyright (c) 1983, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
- * Copyright (C) 2015 - 2017
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * Copyright (C) 2015 - 2018
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
- * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ * Author: Jaume Oliv� (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  * 
  * All rights reserved.
  *   
@@ -70,6 +70,7 @@ static char sccsid[] = "@(#)syslog.c	8.5 (Berkeley) 4/29/95";
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <limits.h>
 
 #if __STDC__
 #include <stdarg.h>
@@ -85,10 +86,8 @@ static char *logHost = NULL;
 struct sockaddr_in logAddr;
 static FILE *logFile = NULL;
 static int	 logStat = 0;		/* status bits, set by openlog() */
-static const char *LogTag = NULL;	/* string to tag the entry with */
 static int	logFacility = LOG_USER;	/* default facility code */
 static int	logMask = 0b11111111;		/* mask of priorities to be logged */
-extern char	*__progname;		/* Program name, from crt0. */
 
 void vsyslog(int pri, register const char *fmt, va_list app);
 
@@ -289,13 +288,9 @@ static void syslog_net_callback(system_event_t *event){
 	}
 }
 
-void openlog(ident, logstat, logfac)
-	const char *ident;
+int openlog(logstat, logfac)
 	int logstat, logfac;
 {
-	if (ident != NULL)
-		LogTag = ident;
-
 	logStat = logstat;
 	if (logfac != 0 && (logfac &~ LOG_FACMASK) == 0)
 		logFacility = logfac;
@@ -306,13 +301,13 @@ void openlog(ident, logstat, logfac)
 
 	logFile = NULL;
 
-	if (mount_is_mounted("fat")) {
-		if (mount_is_mounted("spiffs")) {
-			logFile = fopen("/sd/log/messages.log","a+");
-		} else {
-			logFile = fopen("/log/messages.log","a+");
-		}
-	}
+    char file[PATH_MAX + 1];
+
+    if (mount_messages_file(file, sizeof(file))) {
+        mkfile(file);
+
+        logFile = fopen(file,"a+");
+    }
 
 	if (NULL != logFile) {
 		fflush(logFile);
@@ -325,6 +320,8 @@ void openlog(ident, logstat, logfac)
 		printf("couldn't register net callback, please restart syslog service from lua using after changing connectivity\n");
 		printf("you may use the command 'os.logcons(os.logcons())' to restart the syslog service from lua\n");
 	}
+	
+	return (logFile == NULL);
 }
 
 void closelog() {
