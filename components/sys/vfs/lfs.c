@@ -609,7 +609,6 @@ again:
 
 static long vfs_lfs_telldir(DIR *dirp) {
     vfs_dir_t *dir = (vfs_dir_t *)dirp;
-    int result;
 
     lfs_soff_t offset;
 
@@ -620,7 +619,7 @@ static long vfs_lfs_telldir(DIR *dirp) {
     offset = lfs_dir_tell(&lfs, dir->fs_dir);
     if (offset < 0) {
         mtx_unlock(&ctx->lock);
-        errno = lfs_to_errno(result);
+        errno = lfs_to_errno(LFS_ERR_INVAL);
         return -1;
     }
 
