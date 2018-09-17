@@ -6,5 +6,5 @@ factory,  0,    0,       0x10000, 0x0
 ota_0,    0,    ota_0,   0x10000, 1728K
 ota_1,    0,    ota_1,          , 1728K
 otadata,  data, ota,            , 0x2000
-spiffs,   data, 254,            , 512K
+filesys,  data, 254,            , 512K
 
