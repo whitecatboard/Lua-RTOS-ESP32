@@ -1,7 +1,7 @@
-diff --git a/components/lwip/port/vfs_lwip.c b/components/lwip/port/vfs_lwip.c
+diff --git a/components/lwip/port/esp32/vfs_lwip.c b/components/lwip/port/esp32/vfs_lwip.c
 index 54d71912..ff393a5b 100644
---- a/components/lwip/port/vfs_lwip.c
-+++ b/components/lwip/port/vfs_lwip.c
+--- a/components/lwip/port/esp32/vfs_lwip.c
++++ b/components/lwip/port/esp32/vfs_lwip.c
 @@ -64,6 +64,8 @@ void esp_vfs_lwip_sockets_register()
          .socket_select = &lwip_select,
          .stop_socket_select = &lwip_stop_socket_select,
@@ -11,47 +11,6 @@ index 54d71912..ff393a5b 100644
      };
      /* Non-LWIP file descriptors are from 0 to (LWIP_SOCKET_OFFSET-1). LWIP
       * file descriptors are registered from LWIP_SOCKET_OFFSET to
-diff --git a/components/vfs/include/esp_vfs.h b/components/vfs/include/esp_vfs.h
-index 4d847274..c0045aa5 100644
---- a/components/vfs/include/esp_vfs.h
-+++ b/components/vfs/include/esp_vfs.h
-@@ -15,6 +15,8 @@
- #ifndef __ESP_VFS_H__
- #define __ESP_VFS_H__
- 
-+#include "luartos.h"
-+
- #include <stdint.h>
- #include <stddef.h>
- #include <stdarg.h>
-@@ -29,6 +31,8 @@
- #include <dirent.h>
- #include <string.h>
- 
-+#include "lwip/sockets.h"
-+
- #ifdef __cplusplus
- extern "C" {
- #endif
-@@ -178,6 +182,18 @@ typedef struct
-         int (*truncate_p)(void* ctx, const char *path, off_t length);
-         int (*truncate)(const char *path, off_t length);
-     };
-+    union {
-+        int (*ftruncate_p)(void* ctx, int fd, off_t length);
-+        int (*ftruncate)(int fd, off_t length);
-+    };
-+    union {
-+        int (*writev_p)(void* ctx, int fd, const struct iovec *iov, int iovcnt);
-+        int (*writev)(int fd, const struct iovec *iov, int iovcnt);
-+    };
-+    union {
-+        int (*select_p)(void* ctx, int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
-+        int (*select)(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
-+    };
-     /** start_select is called for setting up synchronous I/O multiplexing of the desired file descriptors in the given VFS */
-     esp_err_t (*start_select)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, SemaphoreHandle_t *signal_sem);
-     /** socket select function for socket FDs with the functionality of POSIX select(); this should be set only for the socket VFS */
 diff --git a/components/vfs/vfs.c b/components/vfs/vfs.c
 index f0a19599..85a2597f 100644
 --- a/components/vfs/vfs.c

@@ -142,7 +142,7 @@ static void ping_prepare_echo(struct icmp_echo_hdr *iecho, uint16_t len) {
     iecho->chksum = inet_chksum(iecho, len);
 }
 
-static err_t ping_send(int s, ip4_addr_t *addr, int size) {
+static err_t ping_send(int s, ip_addr_t *addr, int size) {
     struct icmp_echo_hdr *iecho;
     struct sockaddr_in to;
     size_t ping_size = sizeof(struct icmp_echo_hdr) + size;
@@ -157,7 +157,7 @@ static err_t ping_send(int s, ip4_addr_t *addr, int size) {
 
     to.sin_len = sizeof(to);
     to.sin_family = AF_INET;
-    inet_addr_from_ipaddr(&to.sin_addr, addr);
+    inet_addr_from_ip4addr(&to.sin_addr, ip_2_ip4(addr));
 
     if ((err = sendto(s, iecho, ping_size, 0, (struct sockaddr*) &to,
             sizeof(to)))) {
@@ -195,7 +195,7 @@ static void ping_recv(int s) {
 
             /// Get from IP address
             ip4_addr_t fromaddr;
-            inet_addr_to_ipaddr(&fromaddr, &from.sin_addr);
+            inet_addr_to_ip4addr(&fromaddr, &from.sin_addr);
 
             strcpy(ipa, inet_ntoa(fromaddr));
 
@@ -266,7 +266,7 @@ driver_error_t *ping(const char *name, int count, int interval, int size,
         int timeout) {
     driver_error_t *error;
     struct sockaddr_in address;
-    ip4_addr_t ping_target;
+    ip_addr_t ping_target;
     int s;
 
     // Get default values if argument are not provided
@@ -296,7 +296,7 @@ driver_error_t *ping(const char *name, int count, int interval, int size,
         return driver_error(NET_DRIVER, NET_ERR_NAME_CANNOT_BE_RESOLVED, NULL);
     }
 
-    ping_target.addr = address.sin_addr.s_addr;
+    inet_addr_to_ip4addr(ip_2_ip4(&ping_target), &address.sin_addr);
 
     // Setup socket
     struct timeval tout;

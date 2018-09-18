@@ -636,6 +636,23 @@ int mount(const char *target, const char *fs) {
     		return -1;
     }
 
+    char *cnpath = npath;
+    int count = 0;
+
+    while (*cnpath) {
+        if (*cnpath == '/') {
+            count++;
+        }
+
+        cnpath++;
+    }
+
+    if (count != 1) {
+        free(npath);
+        errno = ENOTDIR;
+        return -1;
+    }
+
     if (!(mount = mount_get_mount_point_for_fs(fs))) {
     		free(npath);
 
@@ -715,6 +732,23 @@ int umount(const char *target) {
 		mtx_unlock(&mtx);
 
 		return -1;
+    }
+
+    char *cnpath = npath;
+    int count = 0;
+
+    while (*cnpath) {
+        if (*cnpath == '/') {
+            count++;
+        }
+
+        cnpath++;
+    }
+
+    if (count != 1) {
+        free(npath);
+        errno = ENOTDIR;
+        return -1;
     }
 
     if (!(mount = mount_get_mount_point_for_path(npath))) {
