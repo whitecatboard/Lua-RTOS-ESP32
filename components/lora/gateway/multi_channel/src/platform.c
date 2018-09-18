@@ -3,7 +3,9 @@
 #include <stddef.h>
 #include <sys/time.h>
 
+#ifndef CLOCK_MONOTONIC
 #define CLOCK_MONOTONIC 1
+#endif
 
 int clock_gettime(clockid_t clk_id, struct timespec *tp) {
 	struct timeval tv;

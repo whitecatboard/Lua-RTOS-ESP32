@@ -609,7 +609,6 @@ again:
 
 static long vfs_lfs_telldir(DIR *dirp) {
     vfs_dir_t *dir = (vfs_dir_t *)dirp;
-    int result;
 
     lfs_soff_t offset;
 

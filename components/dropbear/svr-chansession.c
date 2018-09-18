@@ -564,7 +564,9 @@ static void get_termmodes(struct ChanSess *chansess) {
 static int sessionpty(struct ChanSess * chansess) {
 	unsigned int termlen;
 	char namebuf[65];
+#if !__XTENSA__
 	struct passwd * pw = NULL;
+#endif
 
 	TRACE(("enter sessionpty"))
 
@@ -644,7 +646,9 @@ static void make_connection_string(struct ChanSess *chansess) {
 static int sessioncommand(struct Channel *channel, struct ChanSess *chansess,
 		int iscmd, int issubsys) {
 
+#if !__XTENSA__
 	unsigned int cmdlen;
+#endif
 	int ret;
 
 	TRACE(("enter sessioncommand"))
