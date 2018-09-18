@@ -460,7 +460,7 @@ static long vfs_ramfs_telldir(DIR *dirp) {
 
     offset = ramfs_telldir(&fs, dir->fs_dir);
     if (offset < 0) {
-        errno = ramfs_to_errno(LFS_ERR_INVAL);
+        errno = EBADF;
         return -1;
     }
 
