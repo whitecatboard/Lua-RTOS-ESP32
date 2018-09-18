@@ -1156,6 +1156,9 @@ void luaC_step (lua_State *L) {
 ** changed, nothing will be collected).
 */
 void luaC_fullgc (lua_State *L, int isemergency) {
+#if LUA_USE_ROTABLE
+  lua_lock(L);
+#endif
   global_State *g = G(L);
   lua_assert(g->gckind == KGC_NORMAL);
   if (isemergency) g->gckind = KGC_EMERGENCY;  /* set flag */
@@ -1171,6 +1174,9 @@ void luaC_fullgc (lua_State *L, int isemergency) {
   luaC_runtilstate(L, bitmask(GCSpause));  /* finish collection */
   g->gckind = KGC_NORMAL;
   setpause(g);
+#if LUA_USE_ROTABLE
+  lua_unlock(L);
+#endif
 }
 
 /* }====================================================== */
