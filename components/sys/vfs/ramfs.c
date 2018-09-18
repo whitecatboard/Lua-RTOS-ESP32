@@ -455,12 +455,11 @@ static struct dirent *vfs_ramfs_readdir(DIR *pdir) {
 
 static long vfs_ramfs_telldir(DIR *dirp) {
     vfs_dir_t *dir = (vfs_dir_t *)dirp;
-
     ramfs_off_t offset;
 
     offset = ramfs_telldir(&fs, dir->fs_dir);
     if (offset < 0) {
-        errno = EBADF;
+        errno = ramfs_to_errno(offset);
         return -1;
     }
 

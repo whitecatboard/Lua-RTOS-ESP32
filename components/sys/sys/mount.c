@@ -440,6 +440,26 @@ char *mount_resolve_to_physical(const char *path) {
     return ppath;
 }
 
+static int mount_num() {
+	int count = 0;
+
+	mtx_lock(&mtx);
+
+	struct mount_pt *cmount = mountps;
+
+    while (cmount->fs) {
+    		if (cmount->mounted) {
+    			count++;
+    		}
+
+        cmount++;
+    }
+
+	mtx_unlock(&mtx);
+
+    return count;
+}
+
 static int mount_is_mounted(const char *fs) {
 	mtx_lock(&mtx);
 
@@ -758,6 +778,12 @@ int umount(const char *target) {
 
     		errno = EINVAL;
     		return -1;
+    }
+
+    if ((strcmp(npath, "/") == 0) && (mount_num() > 1)) {
+		// If path is the root folder, check that no other file systems are mounted
+		errno = EPERM;
+		return -1;
     }
 
     if (mount->mounted) {
