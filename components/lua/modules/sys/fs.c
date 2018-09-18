@@ -102,6 +102,8 @@ static int l_umount(lua_State *L) {
 			return luaL_error(L, "target is empty");
 		} else if (errno == EINVAL) {
 			return luaL_error(L, "target is not a mount point");
+		} else if (errno == EPERM) {
+			return luaL_error(L, "not allowed");
 		} else {
 			return luaL_error(L, strerror(errno));
 		}
