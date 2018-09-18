@@ -472,3 +472,23 @@ index e06a2205d..5ccd8f626 100644
      }
  
      return ESP_IF_MAX;
+diff --git a/components/lwip/port/esp32/netif/dhcp_state.c b/components/lwip/port/esp32/netif/dhcp_state.c
+index 9301ff3b0..542f48ba6 100644
+--- a/components/lwip/port/esp32/netif/dhcp_state.c
++++ b/components/lwip/port/esp32/netif/dhcp_state.c
+@@ -26,7 +26,7 @@
+ #define VALID_NETIF_ID(id) ((id < ESP_IF_MAX) && (id != ESP_IF_WIFI_AP))
+ 
+ static uint32_t restored_ip_addr[TCPIP_ADAPTER_IF_MAX];
+-static const char *interface_key[] = {"IF_STA", "IF_AP", "IF_ETH"};
++static const char *interface_key[] = {"IF_STA", "IF_AP", "IF_ETH", "IF_SPI_ETH", "IF_TUN"};
+ 
+ _Static_assert(sizeof(interface_key) / sizeof(char*) == TCPIP_ADAPTER_IF_MAX,
+                "Number interface keys differs from number of interfaces");
+@@ -84,4 +84,4 @@ void dhcp_ip_addr_erase(void *netif)
+             nvs_close(nvs);
+         }
+     }
+-}
+\ No newline at end of file
++}
