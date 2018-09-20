@@ -6,7 +6,9 @@
 		"brand": "",
 		"type": "N1ESP32",
 		"subtype": "",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "10C4:EA60",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "WHITECAT-ESP32-N1-OTA",
@@ -15,7 +17,9 @@
 		"brand": "",
 		"type": "N1ESP32",
 		"subtype": "OTA",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "10C4:EA60",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "WHITECAT-ESP32-N1-DEVKIT",
@@ -24,7 +28,9 @@
 		"brand": "",
 		"type": "N1ESP32-DEVKIT",
 		"subtype": "",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "10C4:EA60",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "WHITECAT-ESP32-N1-DEVKIT-OTA",
@@ -33,7 +39,9 @@
 		"brand": "",
 		"type": "N1ESP32-DEVKIT",
 		"subtype": "OTA",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "10C4:EA60",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "WHITECAT-ESP32-LORA-GW",
@@ -42,7 +50,9 @@
 		"brand": "",
 		"type": "",
 		"subtype": "",
-		"filesystem": "g1"
+		"filesystem": "g1",
+		"usb_vid_pid": "10C4:EA60",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "WHITECAT-ESP32-LORA-GW-OTA",
@@ -51,7 +61,9 @@
 		"brand": "",
 		"type": "ESP32-LORA-GW-OTA",
 		"subtype": "OTA",
-		"filesystem": "g1"
+		"filesystem": "g1",
+		"usb_vid_pid": "10C4:EA60",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "ESP32-CORE-BOARD",
@@ -60,7 +72,9 @@
 		"brand": "",
 		"type": "ESP32COREBOARD",
 		"subtype": "",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "ESP32-CORE-BOARD-OTA",
@@ -69,7 +83,9 @@
 		"brand": "",
 		"type": "ESP32COREBOARD",
 		"subtype": "OTA",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "ESP-WROVER-KIT",
@@ -78,7 +94,9 @@
 		"brand": "",
 		"type": "ESP-WROVER-KIT",
 		"subtype": "",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "0403:6010",
+		"usb_port_exp": "^.*B$"
 	},
 	{
 		"id": "ESP-WROVER-KIT-OTA",
@@ -87,7 +105,9 @@
 		"brand": "",
 		"type": "ESP-WROVER-KIT",
 		"subtype": "OTA",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "ESP32-THING",
@@ -96,7 +116,9 @@
 		"brand": "",
 		"type": "ESP32THING",
 		"subtype": "",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "ADAFRUIT-HUZZAH32",
@@ -105,7 +127,9 @@
 		"brand": "",
 		"type": "HUZZAH32",
 		"subtype": "",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "PYCOM-FIPY",
@@ -114,16 +138,20 @@
 		"brand": "",
 		"type": "FIPY",
 		"subtype": "",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "",
+		"usb_port_exp": ""
 	},
 	{
-		"id": "PYCOM-FIPY",
+		"id": "PYCOM-FIPY-OTA",
 		"description": "Pycom FIPY with OTA",
 		"manufacturer": "Pycom",
 		"brand": "",
 		"type": "FIPY",
 		"subtype": "OTA",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "ESP32-THING-OTA",
@@ -132,7 +160,9 @@
 		"brand": "",
 		"type": "ESP32THING",
 		"subtype": "OTA",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "ESP32-GATEWAY",
@@ -141,7 +171,9 @@
 		"brand": "",
 		"type": "ESP32-GATEWAY",
 		"subtype": "",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "1A86:7523",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "ESP32-GATEWAY-OTA",
@@ -150,7 +182,9 @@
 		"brand": "",
 		"type": "ESP32-GATEWAY",
 		"subtype": "OTA",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "1A86:7523",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "ESP32-EVB",
@@ -159,7 +193,9 @@
 		"brand": "",
 		"type": "ESP32-EVB",
 		"subtype": "",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "ESP32-EVB-OTA",
@@ -168,7 +204,9 @@
 		"brand": "",
 		"type": "ESP32-EVB",
 		"subtype": "OTA",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "WEMOS-ESP32-OLED",
@@ -177,7 +215,9 @@
 		"brand": "WeMos",
 		"type": "ESP32",
 		"subtype": "OLED",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "GENERIC",
@@ -186,7 +226,9 @@
 		"brand": "",
 		"type": "GENERIC",
 		"subtype": "",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "",
+		"usb_port_exp": ""
 	},
 	{
 		"id": "GENERIC-OTA",
@@ -195,6 +237,8 @@
 		"brand": "",
 		"type": "GENERIC",
 		"subtype": "OTA",
-		"filesystem": "default"
+		"filesystem": "default",
+		"usb_vid_pid": "",
+		"usb_port_exp": ""
 	}
 ]

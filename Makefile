@@ -16,6 +16,8 @@ EXTRA_COMPONENT_PATHS := $(foreach comp,$(EXTRA_COMPONENTS),$(firstword $(foreac
 
 BOARD_TYPE_REQUIRED := 1
 VERSION_CHECK_REQUIRED := 1
+BOARD_USB_VID_PID :=
+BOARD_USB_EXP :=
 
 ifneq (,$(findstring clean,$(MAKECMDGOALS)))
   BOARD_TYPE_REQUIRED := 0
@@ -33,6 +35,8 @@ endif
 ifneq ("$(SDKCONFIG_DEFAULTS)","")
   BOARDN := $(shell python boards/boards.py $(SDKCONFIG_DEFAULTS) number)
   TMP := $(shell echo $(BOARDN) > .board)
+  BOARD_USB_VID_PID := $(shell python boards/boards.py $(BOARDN) usb_vid_pid)
+  BOARD_USB_EXP := $(shell python boards/boards.py $(BOARDN) usb_port_exp)
 
   BOARD_TYPE_REQUIRED := 0
   override SDKCONFIG_DEFAULTS := boards/$(SDKCONFIG_DEFAULTS)
@@ -83,7 +87,7 @@ SPIFFS_IMAGE := default
 # Lua RTOS has support for a lot of ESP32-based boards, but each board
 # can have different configurations, such as the PIN MAP.
 #
-# This part ensures that the first time that Lua RTOS is build the user specifies
+# This part ensures that the first time that Lua RTOS is build, the user specifies
 # the board type with "make SDKCONFIG_DEFAULTS=board defconfig" or entering
 # the board type through a keyboard option
 ifeq ($(BOARD_TYPE_REQUIRED),1)
@@ -118,13 +122,78 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
     endif      
     SPIFFS_IMAGE := $(shell python boards/boards.py $(BOARDN) filesystem)
     TMP := $(shell echo $(BOARDN) > .board)
+    BOARD_USB_VID_PID := $(shell python boards/boards.py $(BOARDN) usb_vid_pid)    
+    BOARD_USB_EXP := $(shell python boards/boards.py $(BOARDN) usb_port_exp)
   else
     ifneq ("$(SDKCONFIG_DEFAULTS)","")
       override SDKCONFIG_DEFAULTS := boards/$(SDKCONFIG_DEFAULTS)
     endif
     BOARDN := $(shell cat .board)
     SPIFFS_IMAGE := $(shell python boards/boards.py $(BOARDN) filesystem)
+    BOARD_USB_VID_PID := $(shell python boards/boards.py $(BOARDN) usb_vid_pid)
+    BOARD_USB_EXP := $(shell python boards/boards.py $(BOARDN) usb_port_exp)
   endif  
+endif
+
+# Although each board configuration has set the ESPTOOLPY_PORT variable in KConfig,
+# the serial port name can vary for each build platform. This part, tries to find
+# the serial port in which the board is connected inspecting the available serial
+# ports, and matching the USB VID:PID, defined in the boards.json file with the 
+# USB VID:PID expected for the board.
+ifneq ("foo$(BOARD_USB_VID_PID)","foo")
+  $(info Finding a serial port with USB VID:PID $(BOARD_USB_VID_PID) ...)
+  # Get all the available serial ports that corresponds to the board USB VID:PID
+  SERIAL_PORTS := $(shell python -m serial.tools.list_ports "$(BOARD_USB_VID_PID)" -q)
+  ifneq ("foo$(SERIAL_PORTS)","foo")
+    SERIAL_PORTS_FINDED := 0
+    SERIAL_PORT := 
+    ifneq ("foo$(BOARD_USB_EXP)","foo")
+      # Some boards, like ESP-WROVER-KIT mount dual USB2UART adapters, so we need to inspect
+      # the serial port device name to find the port. For example, ESP-WROVER-KIT exposes
+      # two serial ports: /dev/.....A (JTAG), and /dev/.....B (UART). To inspect the
+      # serial port device name, we use a regular expression defined in boards.json.
+      
+      # Count how many serial port device names match with the regular expression   
+      $(foreach USB_PORT,$(SERIAL_PORTS), \
+        $(if $(filter 1, $(shell python boards/test.py $(BOARD_USB_EXP) $(USB_PORT))), $(eval SERIAL_PORTS_FINDED=$(shell echo $$(($(SERIAL_PORTS_FINDED)+1))))) \
+      )
+      
+      ifeq ("foo$(SERIAL_PORTS_FINDED)","foo1")
+        # Only one serial port matches, so use this port
+        $(foreach USB_PORT,$(SERIAL_PORTS), \
+          $(if $(filter 1, $(shell python boards/test.py $(BOARD_USB_EXP) $(USB_PORT))), $(eval SERIAL_PORT=$(shell echo $(USB_PORT)))) \
+        )
+        $(info Finded $(SERIAL_PORT))
+        ESPPORT ?= $(SERIAL_PORT)
+      else
+        # There are more that 1 matching, maybe 2 boards are connected, so use the defined in the board configuration  
+        $(info 0 or more than 1 board attached, using the serial port defined in ESPTOOLPY_PORT)
+      endif
+    else
+      # There is no need to inspect the serial port device name
+      
+      # Count how many serial port device names match with the regular expression
+      $(foreach USB_PORT,$(SERIAL_PORTS), \
+        $(eval SERIAL_PORTS_FINDED=$(shell echo $$(($(SERIAL_PORTS_FINDED)+1)))) \
+      )
+      
+      ifeq ("foo$(SERIAL_PORTS_FINDED)","foo1")
+        # Only one serial port matches, so use this port
+        $(foreach USB_PORT,$(SERIAL_PORTS), \
+          $(eval SERIAL_PORT=$(shell echo $(USB_PORT))) \
+        )
+        $(info Finded $(SERIAL_PORT))
+        ESPPORT ?= $(SERIAL_PORT)
+      else
+        # There are more that 1 matching, maybe 2 boards are connected, so use the defined in the board configuration  
+        $(info 0 or more than 1 board attached, using the serial port defined in ESPTOOLPY_PORT)
+      endif
+    endif
+  else
+    # No USB VID:PID defined in boards.json, so use the defined in the
+    # board configuration
+    $(info No serial ports defined in boards.json, using the serial port defined in ESPTOOLPY_PORT)
+  endif
 endif
 
 ifeq ("$(VERSION_CHECK_REQUIRED)","1")
