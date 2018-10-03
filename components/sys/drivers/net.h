@@ -69,7 +69,7 @@
 #define evWIFI_SCAN_END         ( 1 << 0 )
 #define evWIFI_CONNECTED        ( 1 << 1 )
 #define evWIFI_CANT_CONNECT     ( 1 << 2 )
-#define evSPI_ETH_CONNECTED 	   ( 1 << 3 )
+#define evSPI_ETH_CONNECTED        ( 1 << 3 )
 #define evSPI_ETH_CANT_CONNECT  ( 1 << 4 )
 #define evETH_CONNECTED         ( 1 << 5 )
 #define evETH_CANT_CONNECT      ( 1 << 6 )
@@ -90,16 +90,17 @@ typedef struct {
 #define NET_ERR_INVALID_IP                 (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  1)
 #define NET_ERR_NO_MORE_CALLBACKS          (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  2)
 #define NET_ERR_NO_CALLBACK_NOT_FOUND      (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  3)
-#define NET_ERR_NAME_CANNOT_BE_RESOLVED	   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  4)
+#define NET_ERR_NAME_CANNOT_BE_RESOLVED    (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  4)
 #define NET_ERR_NAME_CANNOT_CREATE_SOCKET  (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  5)
 #define NET_ERR_NAME_CANNOT_SETUP_SOCKET   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  6)
-#define NET_ERR_NAME_CANNOT_CONNECT	  	   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  7)
-#define NET_ERR_CANNOT_CREATE_SSL	  	   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  8)
-#define NET_ERR_CANNOT_CONNECT_SSL		   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  9)
-#define NET_ERR_NOT_ENOUGH_MEMORY		   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  10)
-#define NET_ERR_INVALID_RESPONSE		   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  11)
-#define NET_ERR_INVALID_CONTENT		   	   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  12)
-#define NET_ERR_NO_OTA		   	   		   (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  13)
+#define NET_ERR_NAME_CANNOT_CONNECT        (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  7)
+#define NET_ERR_CANNOT_CREATE_SSL          (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  8)
+#define NET_ERR_CANNOT_CONNECT_SSL         (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  9)
+#define NET_ERR_NOT_ENOUGH_MEMORY          (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  10)
+#define NET_ERR_INVALID_RESPONSE           (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  11)
+#define NET_ERR_INVALID_CONTENT            (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  12)
+#define NET_ERR_NO_OTA                     (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  13)
+#define NET_ERR_OTA_NOT_ENABLED            (DRIVER_EXCEPTION_BASE(NET_DRIVER_ID) |  14)
 
 extern const int net_errors;
 extern const int net_error_map;
@@ -125,7 +126,7 @@ driver_error_t *net_init();
  *     - NULL success, the network is available
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 NET_ERR_NOT_AVAILABLE
+ *          NET_ERR_NOT_AVAILABLE
  */
 driver_error_t *net_check_connectivity();
 
@@ -140,7 +141,7 @@ driver_error_t *net_check_connectivity();
  *     - NULL success, the host name where find by the DNS
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 NET_ERR_NOT_AVAILABLE
+ *          NET_ERR_NOT_AVAILABLE
  */
 driver_error_t *net_lookup(const char *name, int port, struct sockaddr_in *address);
 
@@ -155,7 +156,7 @@ driver_error_t *net_lookup(const char *name, int port, struct sockaddr_in *addre
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 NET_ERR_NO_MORE_CALLBACKS
+ *          NET_ERR_NO_MORE_CALLBACKS
  */
 driver_error_t *net_event_register_callback(net_event_register_callback_t func);
 
@@ -169,7 +170,7 @@ driver_error_t *net_event_register_callback(net_event_register_callback_t func);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
- *     	 NET_ERR_NO_MORE_CALLBACKS
+ *          NET_ERR_NO_MORE_CALLBACKS
  */
 driver_error_t *net_event_unregister_callback(net_event_register_callback_t func);
 

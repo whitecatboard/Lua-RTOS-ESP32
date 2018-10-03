@@ -44,19 +44,19 @@
  */
 
 /**
- * @brief RAM file system (RFS)
+ * @brief RAM file system (RAMFS)
  *
- * The RFS is a POSIX-compliance file system entirely stored in RAM, without
+ * The RAMFS is a POSIX-compliance file system entirely stored in RAM, without
  * persistence, which means that all the data stored in the file system is
  * lost on each reboot.
  *
- * In RFS, the file system is stored in a tree structure, in which there are
+ * In RAMFS, the file system is stored in a tree structure, in which there are
  * 2 types of nodes (entries): directories, and files.
  *
- * RFS structure overview:
+ * RAMFS structure overview:
  *
  * ----------
- * - RFS    -
+ * - RAMFS  -
  * ----------
  *      |
  *      | child

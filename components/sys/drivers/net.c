@@ -96,6 +96,7 @@ DRIVER_REGISTER_BEGIN(NET,net,0,NULL,NULL);
     DRIVER_REGISTER_ERROR(NET, net, InvalidResponse, "invalid response", NET_ERR_INVALID_RESPONSE);
     DRIVER_REGISTER_ERROR(NET, net, InvalidContent, "invalid content", NET_ERR_INVALID_CONTENT);
     DRIVER_REGISTER_ERROR(NET, net, NoOTA, "OTA partition not found", NET_ERR_NO_OTA);
+    DRIVER_REGISTER_ERROR(NET, net, OTANotEnabled, "OTA is not enabled in this build", NET_ERR_OTA_NOT_ENABLED);
 DRIVER_REGISTER_END(NET,net,0,NULL,NULL);
 
 // FreeRTOS events used by driver
@@ -417,6 +418,7 @@ int wait_for_network(uint32_t timeout) {
 }
 
 driver_error_t *net_ota() {
+#if CONFIG_LUA_RTOS_USE_OTA
     driver_error_t *error;
     net_http_client_t client = HTTP_CLIENT_INITIALIZER;
     net_http_response_t response;
@@ -473,7 +475,7 @@ driver_error_t *net_ota() {
         );
 
         printf(
-            "Writing partition is %s, at offset 0x%x\r\n",
+            "Writing partition is %s, at offset 0x%08x\r\n",
             update_partition->label, update_partition->address
         );
 
@@ -533,6 +535,9 @@ driver_error_t *net_ota() {
     }
 
     return NULL;
+#else
+    return driver_error(NET_DRIVER, NET_ERR_OTA_NOT_ENABLED,NULL);
+#endif
 }
 
 #endif

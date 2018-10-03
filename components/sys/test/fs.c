@@ -467,10 +467,10 @@ TEST_CASE("sys", "[file system]") {
 #endif
 
 #if CONFIG_LUA_RTOS_USE_RAM_FS
-   printf("Testing rfs ...\r\n");
-   mount("/rfs", "rfs");
-   do_test("/rfs");
-   umount("/rfs");
+   printf("Testing ramfs ...\r\n");
+   mount("/ramfs", "ramfs");
+   do_test("/ramfs");
+   umount("/ramfs");
 #endif
 
 #if CONFIG_LUA_RTOS_USE_LFS

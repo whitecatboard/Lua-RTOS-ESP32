@@ -68,18 +68,18 @@
 
 #include <sys/vfs/vfs.h>
 
-void vfs_fat_mount() {
+int vfs_fat_mount(const char *target) {
 #if CONFIG_SD_CARD_SPI
 	 spi_bus_t *spi_bus = get_spi_info();
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock resources
 	if (spi_lock_bus_resources(CONFIG_LUA_RTOS_SD_SPI, DRIVER_ALL_FLAGS)) {
-		return;
+		return -1;
 	}
 
 	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_SD_CS, DRIVER_ALL_FLAGS, "SD Card - CS")) {
-		return;
+		return -1;
 	}
 #endif
 
@@ -120,36 +120,36 @@ void vfs_fat_mount() {
 
     // Lock resources
 	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 15, DRIVER_ALL_FLAGS, "SD Card - CMD")) {
-		return;
+		return -1;
 	}
 
 	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 14, DRIVER_ALL_FLAGS, "SD Card - CLK")) {
-		return;
+		return -1;
 	}
 
 	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 2, DRIVER_ALL_FLAGS, "SD Card - DAT0")) {
-		return;
+		return -1;
 	}
 
 #if !CONFIG_LUA_RTOS_MCC_1_LINE
 	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 14, DRIVER_ALL_FLAGS, "SD Card - DAT1")) {
-		return;
+		return -1;
 	}
 
 	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 12, DRIVER_ALL_FLAGS, "SD Card - DAT2")) {
-		return;
+		return -1;
 	}
 #endif
 
 #if CONFIG_LUA_RTOS_MCC_CD != -1
 	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_MCC_CD, DRIVER_ALL_FLAGS, "SD Card - CD")) {
-		return;
+		return -1;
 	}
 #endif
 
 #if CONFIG_LUA_RTOS_MCC_WP != -1
 	if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_MCC_WP, DRIVER_ALL_FLAGS, "SD Card - WP")) {
-		return;
+		return -1;
 	}
 #endif
 
@@ -180,8 +180,8 @@ void vfs_fat_mount() {
     esp_err_t ret = esp_vfs_fat_sdmmc_mount("/fat", &host, &slot_config, &mount_config, &card);
     if (ret != ESP_OK) {
         syslog(LOG_INFO, "fat can't mounted (error %d)", ret);
-        vfs_fat_umount();
-        return;
+        vfs_fat_umount(target);
+        return -1;
     }
 
 	syslog(LOG_INFO, "sd name %s", card->cid.name);
@@ -198,12 +198,12 @@ void vfs_fat_mount() {
 
 	syslog(LOG_INFO, "sd SCR sd_spec=%d, bus_width=%d", card->scr.sd_spec, card->scr.bus_width);
 
-    syslog(LOG_INFO, "fat mounted on %s", mount_get_mount_point_for_fs("fat")->fpath);
+    syslog(LOG_INFO, "fat mounted on %s", target);
 
-    mount_set_mounted("fat", 1);
+    return 0;
 }
 
-void vfs_fat_umount() {
+int vfs_fat_umount(const char *target) {
     // Unmount
     esp_vfs_fat_sdmmc_unmount();
 
@@ -239,13 +239,13 @@ void vfs_fat_umount() {
     #endif
 #endif
 
-    mount_set_mounted("fat", 0);
-
     syslog(LOG_INFO, "fat unmounted");
+
+    return 0;
 }
 
-void vfs_fat_format() {
-    vfs_fat_umount();
+int vfs_fat_format(const char *target) {
+    vfs_fat_umount(target);
 
 #if CONFIG_SD_CARD_SPI
      spi_bus_t *spi_bus = get_spi_info();
@@ -253,11 +253,11 @@ void vfs_fat_format() {
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     // Lock resources
     if (spi_lock_bus_resources(CONFIG_LUA_RTOS_SD_SPI, DRIVER_ALL_FLAGS)) {
-        return;
+        return -1;
     }
 
     if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_SD_CS, DRIVER_ALL_FLAGS, "SD Card - CS")) {
-        return;
+        return .1;
     }
 #endif
 
@@ -298,36 +298,36 @@ void vfs_fat_format() {
 
     // Lock resources
     if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 15, DRIVER_ALL_FLAGS, "SD Card - CMD")) {
-        return;
+        return -1;
     }
 
     if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 14, DRIVER_ALL_FLAGS, "SD Card - CLK")) {
-        return;
+        return -1;
     }
 
     if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 2, DRIVER_ALL_FLAGS, "SD Card - DAT0")) {
-        return;
+        return -1;
     }
 
 #if !CONFIG_LUA_RTOS_MCC_1_LINE
     if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 14, DRIVER_ALL_FLAGS, "SD Card - DAT1")) {
-        return;
+        return -1;
     }
 
     if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, 12, DRIVER_ALL_FLAGS, "SD Card - DAT2")) {
-        return;
+        return -1;
     }
 #endif
 
 #if CONFIG_LUA_RTOS_MCC_CD != -1
     if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_MCC_CD, DRIVER_ALL_FLAGS, "SD Card - CD")) {
-        return;
+        return -1;
     }
 #endif
 
 #if CONFIG_LUA_RTOS_MCC_WP != -1
     if (driver_lock(SYSTEM_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_MCC_WP, DRIVER_ALL_FLAGS, "SD Card - WP")) {
-        return;
+        return -1;
     }
 #endif
 
@@ -358,8 +358,8 @@ void vfs_fat_format() {
     esp_err_t ret = esp_vfs_fat_sdmmc_format("/fat", &host, &slot_config, &mount_config, &card);
     if (ret != ESP_OK) {
         syslog(LOG_INFO, "fat can't mounted (error %d)", ret);
-        vfs_fat_umount();
-        return;
+        vfs_fat_umount(target);
+        return -1;
     }
 
     syslog(LOG_INFO, "sd name %s", card->cid.name);
@@ -376,10 +376,12 @@ void vfs_fat_format() {
 
     syslog(LOG_INFO, "sd SCR sd_spec=%d, bus_width=%d", card->scr.sd_spec, card->scr.bus_width);
 
-    syslog(LOG_INFO, "fat mounted on %s", mount_get_mount_point_for_fs("fat")->fpath);
+    syslog(LOG_INFO, "fat mounted on %s", target);
 
-    vfs_fat_umount();
-    vfs_fat_mount();
+    vfs_fat_umount(target);
+    vfs_fat_mount(target);
+
+    return 0;
 }
 
 #endif

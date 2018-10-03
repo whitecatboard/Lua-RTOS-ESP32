@@ -78,9 +78,11 @@ static int l_mount(lua_State *L) {
     		} else if (errno == EBUSY) {
         		return luaL_error(L, "target is mounted");
     		} else if (errno == EINVAL) {
-        		return luaL_error(L, "target is used by other file system");
+        		return luaL_error(L, "target is used by other file system, or the file system has an invalid superblock");
     		} else if (errno == EPERM) {
         		return luaL_error(L, "not allowed");
+    		} else if (errno == ENOMEM) {
+        		return luaL_error(L, "not enough memory or resources");
     		} else {
     			return luaL_error(L, strerror(errno));
     		}

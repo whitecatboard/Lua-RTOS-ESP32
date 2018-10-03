@@ -1124,7 +1124,16 @@ static int vfs_spiffs_fsync(int fd) {
     return 0;
 }
 
-void vfs_spiffs_mount() {
+static void vfs_spiffs_free_resources() {
+    if (my_spiffs_work_buf) free(my_spiffs_work_buf);
+    if (my_spiffs_fds) free(my_spiffs_fds);
+    if (my_spiffs_cache) free(my_spiffs_cache);
+
+    mtx_destroy(&vfs_mtx);
+    mtx_destroy(&ll_mtx);
+}
+
+int vfs_spiffs_mount(const char *target) {
     esp_vfs_t vfs = {
         .flags = ESP_VFS_FLAG_DEFAULT,
         .write = &vfs_spiffs_write,
@@ -1147,18 +1156,18 @@ void vfs_spiffs_mount() {
 		.telldir = &vfs_spiffs_telldir,
     };
 
-    ESP_ERROR_CHECK(esp_vfs_register("/spiffs", &vfs, NULL));
-
     // Mount spiffs file system
     spiffs_config cfg;
     int res = 0;
     int retries = 0;
 
     // Find partition
-    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, 0xfe, "filesys");
+    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, LUA_RTOS_SPIFFS_PART, NULL);
 
     if (!partition) {
+        vfs_spiffs_free_resources();
         syslog(LOG_ERR, "spiffs can't find a valid partition");
+        return -1;
     } else {
         cfg.phys_addr = partition->address;
         cfg.phys_size = partition->size;
@@ -1183,25 +1192,25 @@ void vfs_spiffs_mount() {
 
     my_spiffs_work_buf = malloc(cfg.log_page_size * 2);
     if (!my_spiffs_work_buf) {
+        vfs_spiffs_free_resources();
         syslog(LOG_ERR, "spiffs can't allocate memory for file system");
-        return;
+        return -1;
     }
 
     int fds_len = sizeof(spiffs_fd) * 5;
     my_spiffs_fds = malloc(fds_len);
     if (!my_spiffs_fds) {
-        free(my_spiffs_work_buf);
+        vfs_spiffs_free_resources();
         syslog(LOG_ERR, "spiffs can't allocate memory for file system");
-        return;
+        return -1;
     }
 
     int cache_len = cfg.log_page_size * 5;
     my_spiffs_cache = malloc(cache_len);
     if (!my_spiffs_cache) {
-        free(my_spiffs_work_buf);
-        free(my_spiffs_fds);
+        vfs_spiffs_free_resources();
         syslog(LOG_ERR, "spiffs can't allocate memory for file system");
-        return;
+        return -1;
     }
 
     // Init mutex
@@ -1220,19 +1229,15 @@ void vfs_spiffs_mount() {
                 SPIFFS_unmount(&fs);
                 res = SPIFFS_format(&fs);
                 if (res < 0) {
-                    free(my_spiffs_work_buf);
-                    free(my_spiffs_fds);
-                    free(my_spiffs_cache);
+                    vfs_spiffs_free_resources();
                     syslog(LOG_ERR, "spiffs format error");
-                    return;
+                    return -1;
                 }
             } else {
-                free(my_spiffs_work_buf);
-                free(my_spiffs_fds);
-                free(my_spiffs_cache);
+                vfs_spiffs_free_resources();
                 syslog(LOG_ERR, "spiff can't mount file system (%s)",
                         strerror(spiffs_result(fs.err_code)));
-                return;
+                return -1;
             }
         } else {
             break;
@@ -1247,70 +1252,74 @@ void vfs_spiffs_mount() {
         // Create the root folder
         spiffs_file fd = SPIFFS_open(&fs, "/.", SPIFFS_CREAT | SPIFFS_RDWR, 0);
         if (fd < 0) {
-            vfs_spiffs_umount();
+            vfs_spiffs_umount(target);
             syslog(LOG_ERR, "spiffs can't create root folder (%s)",
                     strerror(spiffs_result(fs.err_code)));
-            return;
+            return -1;
         }
 
         if (SPIFFS_close(&fs, fd) < 0) {
-            vfs_spiffs_umount();
+            vfs_spiffs_umount(target);
             syslog(LOG_ERR, "spiffs can't create root folder (%s)",
                     strerror(spiffs_result(fs.err_code)));
-            return;
+            return -1;
         }
     }
 
     lstinit(&files, 0, LIST_DEFAULT);
-    mount_set_mounted("spiffs", 1);
 
-    syslog(LOG_INFO, "spiffs mounted on %s", mount_get_mount_point_for_fs("spiffs")->fpath);
+    ESP_ERROR_CHECK(esp_vfs_register("/spiffs", &vfs, NULL));
+
+    syslog(LOG_INFO, "spiffs mounted on %s", target);
+
+    return 0;
 }
 
-void vfs_spiffs_umount() {
+int vfs_spiffs_umount(const char *target) {
     esp_vfs_unregister("/spiffs");
     SPIFFS_unmount(&fs);
 
-    if (my_spiffs_work_buf) free(my_spiffs_work_buf);
-    if (my_spiffs_fds) free(my_spiffs_fds);
-    if (my_spiffs_cache) free(my_spiffs_cache);
-
-    mount_set_mounted("spiffs", 0);
+    vfs_spiffs_free_resources();
 
     syslog(LOG_INFO, "spiffs unmounted");
 
-    mtx_destroy(&vfs_mtx);
-    mtx_destroy(&ll_mtx);
+    return 0;
 }
 
-void vfs_spiffs_format() {
-    vfs_spiffs_umount();
+int vfs_spiffs_format(const char *target) {
+    vfs_spiffs_umount(target);
+
+    mtx_init(&ll_mtx, NULL, NULL, 0);
 
     int res = SPIFFS_format(&fs);
     if (res < 0) {
         syslog(LOG_ERR, "spiffs format error");
-        return;
+        return -1;
     }
 
-    vfs_spiffs_mount();
+    mtx_destroy(&ll_mtx);
+
+    vfs_spiffs_mount(target);
 
     syslog(LOG_INFO, "spiffs creating root folder");
 
     // Create the root folder
     spiffs_file fd = SPIFFS_open(&fs, "/.", SPIFFS_CREAT | SPIFFS_RDWR, 0);
     if (fd < 0) {
-        vfs_spiffs_mount();
+        vfs_spiffs_umount(target);
         syslog(LOG_ERR, "spiffs can't create root folder (%s)",
                 strerror(spiffs_result(fs.err_code)));
-        return;
+        return -1;
     }
 
     if (SPIFFS_close(&fs, fd) < 0) {
-        vfs_spiffs_mount();
+        vfs_spiffs_umount(target);
         syslog(LOG_ERR, "spiffs can't create root folder (%s)",
                 strerror(spiffs_result(fs.err_code)));
-        return;
+        return -1;
     }
+
+    return 0;
 }
 
 #endif

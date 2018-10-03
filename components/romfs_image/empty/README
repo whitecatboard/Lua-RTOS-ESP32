@@ -1,0 +1,3 @@
+To make a ROMFS and flash it use:
+
+make ROMFS_ROOT=path flash
