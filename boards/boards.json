@@ -198,17 +198,6 @@
 		"usb_port_exp": ""
 	},
 	{
-		"id": "ESP32-THING-OTA",
-		"description": "SparkFun ESP32 Thing with OTA",
-		"manufacturer": "SparkFun",
-		"brand": "",
-		"type": "ESP32THING",
-		"subtype": "OTA",
-		"filesystem": "default",
-		"usb_vid_pid": "",
-		"usb_port_exp": ""
-	},
-	{
 		"id": "ESP32-GATEWAY",
 		"description": "Olimex ESP32-Gateway",
 		"manufacturer": "Olimex",
