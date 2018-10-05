@@ -8,7 +8,8 @@
 		"subtype": "",
 		"filesystem": "default",
 		"usb_vid_pid": "",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/whitecatn1.png"
 	},
 	{
 		"id": "WHITECAT-ESP32-N1-OTA",
@@ -19,7 +20,8 @@
 		"subtype": "OTA",
 		"filesystem": "default",
 		"usb_vid_pid": "",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/whitecatn1.png"
 	},
 	{
 		"id": "WHITECAT-ESP32-N1-DEVKIT",
@@ -30,7 +32,8 @@
 		"subtype": "",
 		"filesystem": "default",
 		"usb_vid_pid": "10C4:EA60",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": ""
 	},
 	{
 		"id": "WHITECAT-ESP32-N1-DEVKIT-OTA",
@@ -41,7 +44,8 @@
 		"subtype": "OTA",
 		"filesystem": "default",
 		"usb_vid_pid": "10C4:EA60",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": ""
 	},
 	{
 		"id": "WHITECAT-ESP32-LORA-GW",
@@ -52,7 +56,8 @@
 		"subtype": "",
 		"filesystem": "g1",
 		"usb_vid_pid": "10C4:EA60",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/gw-1.png"
 	},
 	{
 		"id": "WHITECAT-ESP32-LORA-GW-OTA",
@@ -63,7 +68,8 @@
 		"subtype": "OTA",
 		"filesystem": "g1",
 		"usb_vid_pid": "10C4:EA60",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/gw-1.png"
 	},
 	{
 		"id": "ESP32-CORE-BOARD",
@@ -74,7 +80,8 @@
 		"subtype": "",
 		"filesystem": "default",
 		"usb_vid_pid": "10C4:EA60",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/esp32-pico-kit.jpg"
 	},
 	{
 		"id": "ESP32-CORE-BOARD-OTA",
@@ -85,7 +92,8 @@
 		"subtype": "OTA",
 		"filesystem": "default",
 		"usb_vid_pid": "10C4:EA60",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/esp32-pico-kit.jpg"
 	},
 	{
 		"id": "ESP32-PICO-KIT",
@@ -96,7 +104,8 @@
 		"subtype": "",
 		"filesystem": "default",
 		"usb_vid_pid": "10C4:EA60",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/esp32-pico-kit.jpg"
 	},
 	{
 		"id": "ESP32-PICO-KIT-OTA",
@@ -107,7 +116,8 @@
 		"subtype": "OTA",
 		"filesystem": "default",
 		"usb_vid_pid": "10C4:EA60",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/esp32-pico-kit.jpg"
 	},
 	{
 		"id": "ESP-WROVER-KIT",
@@ -118,7 +128,8 @@
 		"subtype": "",
 		"filesystem": "default",
 		"usb_vid_pid": "0403:6010",
-		"usb_port_exp": "^.*B$"
+		"usb_port_exp": "^.*B$",
+		"image": "http://git.whitecatboard.org/esp-wrover-kit.jpg"
 	},
 	{
 		"id": "ESP-WROVER-KIT-OTA",
@@ -129,7 +140,8 @@
 		"subtype": "OTA",
 		"filesystem": "default",
 		"usb_vid_pid": "0403:6010",
-		"usb_port_exp": "^.*B$"
+		"usb_port_exp": "^.*B$",
+		"image": "http://git.whitecatboard.org/esp-wrover-kit.jpg"
 	},
 	{
 		"id": "ESP32-THING",
@@ -140,7 +152,8 @@
 		"subtype": "",
 		"filesystem": "default",
 		"usb_vid_pid": "0403:6015",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/esp32-thing.jpg"
 	},
 	{
 		"id": "ESP32-THING-OTA",
@@ -151,7 +164,8 @@
 		"subtype": "OTA",
 		"filesystem": "default",
 		"usb_vid_pid": "0403:6015",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/esp32-thing.jpg"
 	},
 	{
 		"id": "ADAFRUIT-HUZZAH32",
@@ -162,7 +176,8 @@
 		"subtype": "",
 		"filesystem": "default",
 		"usb_vid_pid": "",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/adafruit_huzzah32.png"
 	},
 	{
 		"id": "ADAFRUIT-HUZZAH32-OTA",
@@ -173,7 +188,8 @@
 		"subtype": "OTA",
 		"filesystem": "default",
 		"usb_vid_pid": "",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/adafruit_huzzah32.png"
 	},
 	{
 		"id": "PYCOM-FIPY",
@@ -184,7 +200,8 @@
 		"subtype": "",
 		"filesystem": "default",
 		"usb_vid_pid": "",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/fipy.png"
 	},
 	{
 		"id": "PYCOM-FIPY-OTA",
@@ -195,7 +212,8 @@
 		"subtype": "OTA",
 		"filesystem": "default",
 		"usb_vid_pid": "",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/fipy.png"
 	},
 	{
 		"id": "ESP32-GATEWAY",
@@ -206,7 +224,8 @@
 		"subtype": "",
 		"filesystem": "default",
 		"usb_vid_pid": "1A86:7523",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/ESP32-GATEWAY.png"
 	},
 	{
 		"id": "ESP32-GATEWAY-OTA",
@@ -217,7 +236,8 @@
 		"subtype": "OTA",
 		"filesystem": "default",
 		"usb_vid_pid": "1A86:7523",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/ESP32-GATEWAY.png"
 	},
 	{
 		"id": "ESP32-EVB",
@@ -228,7 +248,8 @@
 		"subtype": "",
 		"filesystem": "default",
 		"usb_vid_pid": "1A86:7523",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/ESP32-EVB.png"
 	},
 	{
 		"id": "ESP32-EVB-OTA",
@@ -239,7 +260,8 @@
 		"subtype": "OTA",
 		"filesystem": "default",
 		"usb_vid_pid": "1A86:7523",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/ESP32-EVB.png"
 	},
 	{
 		"id": "DOIT-ESP32-DEVKIT-V1",
@@ -250,7 +272,8 @@
 		"subtype": "",
 		"filesystem": "default",
 		"usb_vid_pid": "10C4:EA60",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/doitesp32.jpg"
 	},
 	{
 		"id": "DOIT-ESP32-DEVKIT-V1-OTA",
@@ -261,7 +284,8 @@
 		"subtype": "OTA",
 		"filesystem": "default",
 		"usb_vid_pid": "10C4:EA60",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": "http://git.whitecatboard.org/doitesp32.jpg"
 	},
 	{
 		"id": "WEMOS-ESP32-OLED",
@@ -272,7 +296,8 @@
 		"subtype": "",
 		"filesystem": "default",
 		"usb_vid_pid": "10C4:EA60",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": ""
 	},
 	{
 		"id": "WEMOS-ESP32-OLED-OTA",
@@ -283,7 +308,8 @@
 		"subtype": "OTA",
 		"filesystem": "default",
 		"usb_vid_pid": "10C4:EA60",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": ""
 	},
 	{
 		"id": "GENERIC",
@@ -294,7 +320,8 @@
 		"subtype": "",
 		"filesystem": "default",
 		"usb_vid_pid": "",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": ""
 	},
 	{
 		"id": "GENERIC-OTA",
@@ -305,6 +332,7 @@
 		"subtype": "OTA",
 		"filesystem": "default",
 		"usb_vid_pid": "",
-		"usb_port_exp": ""
+		"usb_port_exp": "",
+		"image": ""
 	}
 ]
