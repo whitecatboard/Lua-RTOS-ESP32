@@ -81,7 +81,7 @@
 		"filesystem": "default",
 		"usb_vid_pid": "10C4:EA60",
 		"usb_port_exp": "",
-		"image": "http://git.whitecatboard.org/esp32-pico-kit.jpg"
+		"image": "http://git.whitecatboard.org/esp32-core-board.png"
 	},
 	{
 		"id": "ESP32-CORE-BOARD-OTA",
@@ -93,7 +93,7 @@
 		"filesystem": "default",
 		"usb_vid_pid": "10C4:EA60",
 		"usb_port_exp": "",
-		"image": "http://git.whitecatboard.org/esp32-pico-kit.jpg"
+		"image": "http://git.whitecatboard.org/esp32-core-board.png"
 	},
 	{
 		"id": "ESP32-PICO-KIT",
@@ -301,7 +301,7 @@
 	},
 	{
 		"id": "WEMOS-ESP32-OLED-OTA",
-		"description": "WeMos ESP32 with 128x64 OLED and OTA",
+		"description": "WeMos ESP32 with 128x64 OLED with OTA",
 		"manufacturer": "WeMos",
 		"brand": "",
 		"type": "WEMOS-ESP32-OLED",
