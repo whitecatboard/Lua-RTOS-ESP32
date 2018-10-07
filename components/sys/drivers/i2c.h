@@ -134,7 +134,7 @@ driver_error_t *i2c_attach(int unit, int mode, int speed, int addr10_en, int add
 /**
  * @brief Attach an I2C device from an I2C bus. This function is thread safe.
  *
- * @param deviceid Device identifier.
+ * @param deviceid A device identifier returned by the i2c_attach function.
  *
  * @return
  *     - NULL success
@@ -145,13 +145,24 @@ driver_error_t *i2c_attach(int unit, int mode, int speed, int addr10_en, int add
  */
 driver_error_t *i2c_detach(int deviceid);
 
-driver_error_t *i2c_setspeed(int unit, int speed);
+/**
+ * @brief Set the speed for a given I2C device.
+ *
+ * @param deviceid A device identifier returned by the i2c_attach function.
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs.
+ *          I2C_ERR_INVALID_UNIT
+ *          I2C_ERR_IS_NOT_SETUP
+ */
+driver_error_t *i2c_setspeed(int deviceid, int speed);
 
 /**
  * @brief Start an I2C transaction, if configured in master mode. This function is thread safe.
  *        The transaction stores all the I2C in a buffer until i2c_stop or i2c_flush is called.
  *
- * @param deviceid Device identifier.
+ * @param deviceid A device identifier returned by the i2c_attach function.
  * @param transaction A pointer to an integer used to store the transaction's id.
  *
  * @return
@@ -167,7 +178,7 @@ driver_error_t *i2c_start(int deviceid, int *transaction);
 /**
  * @brief Stop an I2C transaction, if configured in master mode. This function is thread safe.
  *
- * @param deviceid Device identifier.
+ * @param deviceid A device identifier returned by the i2c_attach function.
  * @param transaction A pointer to an integer which stores the transaction's id.
  *
  * @return
@@ -184,7 +195,7 @@ driver_error_t *i2c_stop(int deviceid, int *transaction);
 /**
  * @brief Write an adress for read, or write, if configured in master mode. This function is thread safe.
  *
- * @param deviceid Device identifier.
+ * @param deviceid A device identifier returned by the i2c_attach function.
  * @param transaction A pointer to an integer which stores the transaction's id.
  * @param adress The address.
  * @param read Can be either 0 (write) or 1 (read).
@@ -203,7 +214,7 @@ driver_error_t *i2c_write_address(int deviceid, int *transaction, char address, 
 /**
  * @brief Write data, if configured in master mode. This function is thread safe.
  *
- * @param deviceid Device identifier.
+ * @param deviceid A device identifier returned by the i2c_attach function.
  * @param transaction A pointer to an integer which stores the transaction's id.
  * @param data A pointer to the data buffer to send.
  * @param len Length of data to send, in bytes.
@@ -222,7 +233,7 @@ driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len);
 /**
  * @brief Read data, if configured in master mode. This function is thread safe.
  *
- * @param deviceid Device identifier.
+ * @param deviceid A device identifier returned by the i2c_attach function.
  * @param transaction A pointer to an integer which stores the transaction's id.
  * @param data A pointer to the data buffer to read.
  * @param len Length of data to read, in bytes.
@@ -241,7 +252,7 @@ driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len);
 /**
  * @brief Flush all operations. This function is thread safe.
  *
- * @param deviceid Device identifier.
+ * @param deviceid A device identifier returned by the i2c_attach function.
  * @param transaction A pointer to an integer which stores the transaction's id.
  * @param new_transaction If 1 creates a new transaction.
  *
