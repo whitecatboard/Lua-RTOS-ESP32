@@ -473,8 +473,10 @@ driver_error_t *i2c_detach(int deviceid) {
     return NULL;
 }
 
-driver_error_t *i2c_setspeed(int unit, int speed) {
+driver_error_t *i2c_setspeed(int deviceid, int speed) {
     driver_error_t *error;
+
+    int unit = (deviceid & 0xff00) >> 8;
 
     // Sanity checks
     if ((error = i2c_check(unit))) {
