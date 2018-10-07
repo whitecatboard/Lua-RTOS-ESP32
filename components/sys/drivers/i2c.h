@@ -73,6 +73,7 @@ typedef struct i2c {
     uint8_t setup;
     int8_t sda;
     int8_t scl;
+    int speed;
     SemaphoreHandle_t mtx;
     i2c_device_t device[I2C_BUS_DEVICES];
 } i2c_t;

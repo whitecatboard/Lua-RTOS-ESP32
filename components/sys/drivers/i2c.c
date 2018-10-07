@@ -485,13 +485,19 @@ driver_error_t *i2c_setspeed(int deviceid, int speed) {
 
     i2c_lock(unit);
 
+    if (i2c[unit].speed == speed) {
+        i2c_unlock(unit);
+        return NULL;
+    }
+
     int half_cycle = (I2C_APB_CLK_FREQ / speed) / 2;
 
-    i2c_set_period(unit, (I2C_APB_CLK_FREQ / speed) - half_cycle - 1,
-            half_cycle - 1);
+    i2c_set_period(unit, (I2C_APB_CLK_FREQ / speed) - half_cycle - 1, half_cycle - 1);
     i2c_set_start_timing(unit, half_cycle, half_cycle);
     i2c_set_stop_timing(unit, half_cycle, half_cycle);
     i2c_set_data_timing(unit, half_cycle / 2, half_cycle / 2);
+
+    i2c[unit].speed = speed;
 
     i2c_unlock(unit);
 
@@ -517,7 +523,9 @@ driver_error_t *i2c_start(int deviceid, int *transaction) {
 
     i2c_lock(unit);
 
-    i2c_setspeed(unit, i2c[unit].device[device].speed);
+    if (i2c[unit].speed != i2c[unit].device[device].speed) {
+        i2c_setspeed(deviceid, i2c[unit].device[device].speed);
+    }
 
     if ((error = i2c_create_or_get_command(unit, transaction, &cmd))) {
         i2c_unlock(unit);
