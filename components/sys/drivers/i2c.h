@@ -59,7 +59,7 @@
 
 #include <drivers/cpu.h>
 
-#define I2C_BUS_DEVICES 3
+#define I2C_BUS_DEVICES CONFIG_LUA_RTOS_I2C_DEVICES_PER_BUS
 #define I2C_TRANSACTION_INITIALIZER -1
 
 typedef struct i2c_device {

@@ -474,6 +474,11 @@ menu "Lua RTOS"
       endmenu
       
       menu "I2C pin map"
+         config LUA_RTOS_I2C_DEVICES_PER_BUS
+            int "Max number of I2C devices per bus"
+            range 1 10
+            default 3
+         
          config LUA_RTOS_I2C0_SCL
             int "I2C0 SCL"
             range 0 39
