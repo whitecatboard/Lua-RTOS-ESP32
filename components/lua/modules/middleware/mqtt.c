@@ -108,6 +108,7 @@ typedef struct {
     char *topic;              // Topic
     int qos;                  // QOS
     lua_callback_t *callback; // Lua callback
+    void *luafunc;            // For comparison *only*
     void *next;               // Next callback
 } mqtt_subs_callback;
 
@@ -315,14 +316,32 @@ static int topic_matches_sub(const char *sub, const char *topic) {
 }
 
 static int add_subs_callback(lua_State *L, int index, mqtt_userdata *mqtt, const char *topic, int qos) {
+
+    // make sure that the exact same callback has not yet been added
+    void *luafunc = (void*)lua_topointer(L, index);
+    mtx_lock(&mqtt->mtx);
+    mqtt_subs_callback *callback = mqtt->callbacks;
+    while (callback) {
+        //if (callback->qos == check->qos && callback->callback->callback == check->callback->callback && 0 == strcmp(callback->topic, check->topic)) break;
+        if (callback->qos == qos && 0 == strcmp(callback->topic, topic)) {
+            if (callback->luafunc == luafunc) {
+                mtx_unlock(&mqtt->mtx);
+                return 0; //return zero to indicate all is good
+            }
+        }
+        callback = callback->next;
+    }
+    mtx_unlock(&mqtt->mtx);
+
     // Create and populate callback structure
-    mqtt_subs_callback *callback = (mqtt_subs_callback *)calloc(1, sizeof(mqtt_subs_callback));
+    callback = (mqtt_subs_callback *)calloc(1, sizeof(mqtt_subs_callback));
     if (!callback) {
         return luaL_exception_extended(L, LUA_MQTT_ERR_NOT_ENOUGH_MEMORY, NULL);
     }
 
     callback->topic = strdup(topic);
     callback->qos = qos;
+    callback->luafunc = luafunc;
 
     if (!callback->topic) {
         free(callback);
@@ -337,8 +356,10 @@ static int add_subs_callback(lua_State *L, int index, mqtt_userdata *mqtt, const
         return luaL_exception_extended(L, LUA_MQTT_ERR_NOT_ENOUGH_MEMORY, NULL);
     }
 
+    mtx_lock(&mqtt->mtx);
     callback->next = mqtt->callbacks;
     mqtt->callbacks = callback;
+    mtx_unlock(&mqtt->mtx);
 
     return 0;
 }
