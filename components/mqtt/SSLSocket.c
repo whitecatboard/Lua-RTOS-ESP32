@@ -135,7 +135,7 @@ int SSL_CTX_load_verify_locations(SSL_CTX *ctx, const char *CAfile,
     // no need to free ctx->client_CA before calling SSL_CTX_add_client_CA
     X509* server_CA = d2i_X509(NULL, buf, n);
     mbedtls_zeroize( buf, n );
-    mbedtls_free( buf );
+    // MUST NOT !!! FREE THIS BUFFER: mbedtls_free( buf );
 
     //SSL_CTX_add_client_CA(ctx, server_CA) <- will load a cert into ctx->client_CA
     //SSL_CTX_use_certificate(ctx, server_CA) <- will load a cert into ctx->cert->x509
