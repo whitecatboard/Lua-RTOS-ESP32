@@ -72,9 +72,9 @@ thread_type Thread_start(thread_fn fn, void* parameter)
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	if (!parameter) {
-	    pthread_attr_setstacksize(&attr, 2048);
+	    pthread_attr_setstacksize(&attr, 3072);
 	} else {
-        pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE - 2048);
+        pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE - 3072);
 	}
 
 	if (pthread_create(&thread, &attr, fn, parameter) != 0)
