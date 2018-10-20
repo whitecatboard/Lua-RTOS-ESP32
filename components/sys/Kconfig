@@ -265,7 +265,7 @@ menu "Lua RTOS"
                 depends on LUA_RTOS_USE_SSH_SERVER
                 int "SSH thread stack size"
                 range 10240 20480
-                default 12288
+                default 10240
                 help
                     Default stack size assigned to SSH thread.
 
