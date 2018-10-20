@@ -567,7 +567,7 @@ static int os_format(lua_State *L) {
             if ((response == 'y') || (response == 'Y')) {
                 printf("Formatting %s as %s file system ...\r\n", path, mountp->fs);
 
-                mountp->format();
+                mountp->format(path);
             } else {
                 printf("Formatting canceled\r\n");
             }
@@ -900,9 +900,12 @@ static int os_factory_reset(lua_State *L) {
 
     if (partition) {
         esp_partition_erase_range(partition, partition->address, partition->size);
+
+        esp_restart();
+    } else {
+        return luaL_error(L, "OTA partition not found, reset to factory settings is not possible");
     }
 
-    esp_restart();
     return 0;
 }
 

@@ -75,7 +75,10 @@ struct mount_pt mountps[] = {
     {NULL, "lfs", &vfs_lfs_mount, &vfs_lfs_umount, &vfs_lfs_format, 0},
 #endif
 #if CONFIG_LUA_RTOS_USE_RAM_FS
-    {NULL, "rfs", &vfs_ramfs_mount, &vfs_ramfs_umount, &vfs_ramfs_format, 0},
+    {NULL, "ramfs", &vfs_ramfs_mount, &vfs_ramfs_umount, &vfs_ramfs_format, 0},
+#endif
+#if CONFIG_LUA_RTOS_USE_ROM_FS
+    {NULL, "romfs", &vfs_romfs_mount, &vfs_romfs_umount, NULL, 0},
 #endif
 #if CONFIG_LUA_RTOS_USE_SPIFFS
    {NULL, "spiffs", &vfs_spiffs_mount, &vfs_spiffs_umount, &vfs_spiffs_format, 0},
@@ -478,22 +481,6 @@ static int mount_is_mounted(const char *fs) {
     return 0;
 }
 
-void mount_set_mounted(const char *fs, unsigned int mounted) {
-	mtx_lock(&mtx);
-
-    struct mount_pt *cmount = mountps;
-
-    while (cmount->fs) {
-        if (strcmp(cmount->fs, fs) == 0) {
-            cmount->mounted = mounted;
-        }
-
-        cmount++;
-    }
-
-    mtx_unlock(&mtx);
-}
-
 struct dirent* mount_readdir(DIR* pdir) {
     vfs_dir_t* dir = (vfs_dir_t*) pdir;
     struct dirent *ent = &dir->ent;
@@ -527,8 +514,8 @@ char *mount_history_file(char *location, size_t loc_size) {
 
     if (mount_is_mounted("fat")) {
         path = mount_get_mount_path("fat");
-    } else if (mount_is_mounted("rfs")) {
-        path = mount_get_mount_path("rfs");
+    } else if (mount_is_mounted("ramfs")) {
+        path = mount_get_mount_path("ramfs");
     }
 
     if (path) {
@@ -566,7 +553,6 @@ struct mount_pt *mount_get_mount_point_for_path(const char *path) {
 	mtx_lock(&mtx);
 
 	struct mount_pt *cmount = &mountps[0];
-
     if (!path) {
 		mtx_unlock(&mtx);
 
@@ -587,7 +573,6 @@ struct mount_pt *mount_get_mount_point_for_path(const char *path) {
         while (cmount->fs) {
             if (strcmp(ppath, cmount->fs) == 0) {
                 free(--ppath);
-
                 mtx_unlock(&mtx);
                 return cmount;
             }
@@ -693,7 +678,7 @@ int mount(const char *target, const char *fs) {
 		return -1;
     }
 
-    if (mount_get_mount_point_for_path(npath)) {
+    if (mount_get_mount_point_for_path(npath) != NULL) {
 		free(npath);
 
 		mtx_unlock(&mtx);
@@ -704,15 +689,6 @@ int mount(const char *target, const char *fs) {
     }
 
     if (mount->mount) {
-    		if (!(mount->fpath = strdup(npath))) {
-        		free(npath);
-
-        		mtx_unlock(&mtx);
-
-        		errno = ENOMEM;
-    			return -1;
-    		}
-
     		// Avoid mounting spiffs when lfs is mounted and vice-versa
     		if (	((strcmp(fs,"spiffs") == 0) && mount_is_mounted("lfs")) ||
     			((strcmp(fs,"lfs") == 0) && mount_is_mounted("spiffs"))) {
@@ -721,8 +697,18 @@ int mount(const char *target, const char *fs) {
     			return -1;
     		}
 
-    		mount->mount();
-    		mount->mounted = 1;
+    		if (mount->mount(npath) == 0) {
+            if (!(mount->fpath = strdup(npath))) {
+                free(npath);
+
+                mtx_unlock(&mtx);
+
+                errno = ENOMEM;
+                return -1;
+            }
+
+            mount->mounted = 1;
+    		}
     }
 
 	free(npath);
@@ -788,7 +774,7 @@ int umount(const char *target) {
 
     if (mount->mounted) {
     		if (mount->umount) {
-        		mount->umount();
+        		mount->umount(target);
         		mount->mounted = 0;
 
         		free(mount->fpath);

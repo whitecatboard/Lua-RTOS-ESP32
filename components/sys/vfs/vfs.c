@@ -62,7 +62,13 @@
 #include <ff.h>
 #endif
 
+#if CONFIG_LUA_RTOS_USE_RAM_FS
 #include <ramfs.h>
+#endif
+
+#if CONFIG_LUA_RTOS_USE_ROM_FS
+#include <romfs.h>
+#endif
 
 #include <sys/fcntl.h>
 
@@ -108,10 +114,19 @@ vfs_dir_t *vfs_allocate_dir(const char *vfs, const char *name) {
     }
 #endif
 
-    if (strcmp(vfs,"rfs") == 0) {
+#if CONFIG_LUA_RTOS_USE_RAM_FS
+    if (strcmp(vfs,"ramfs") == 0) {
         size_dir = sizeof(ramfs_dir_t);
         size_info = sizeof(ramfs_info_t);
     }
+#endif
+
+#if CONFIG_LUA_RTOS_USE_ROM_FS
+    if (strcmp(vfs,"romfs") == 0) {
+        size_dir = sizeof(romfs_dir_t);
+        size_info = sizeof(romfs_info_t);
+    }
+#endif
 
 #if CONFIG_LUA_RTOS_USE_FAT
     if (strcmp(vfs,"fat") == 0) {

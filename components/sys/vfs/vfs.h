@@ -50,6 +50,9 @@
 
 #include <sys/mount.h>
 
+#define LUA_RTOS_SPIFFS_PART 0x40
+#define LUA_RTOS_LFS_PART 0x41
+
 typedef struct {
     void *fs_file;
     char *path;
@@ -86,21 +89,24 @@ typedef int(*vfs_get_byte)(int,char *);
 // This function is blocking.
 typedef void(*vfs_put_byte)(int,char *);
 
-void vfs_fat_mount();
-void vfs_fat_umount();
-void vfs_fat_format();
+int vfs_fat_mount(const char *target);
+int vfs_fat_umount(const char *target);
+int vfs_fat_format(const char *target);
 
-void vfs_spiffs_mount();
-void vfs_spiffs_umount();
-void vfs_spiffs_format();
+int vfs_spiffs_mount(const char *target);
+int vfs_spiffs_umount(const char *target);
+int vfs_spiffs_format(const char *target);
 
-void vfs_lfs_mount();
-void vfs_lfs_umount();
-void vfs_lfs_format();
+int vfs_lfs_mount(const char *target);
+int vfs_lfs_umount(const char *target);
+int vfs_lfs_format(const char *target);
 
-void vfs_ramfs_mount();
-void vfs_ramfs_umount();
-void vfs_ramfs_format();
+int vfs_ramfs_mount(const char *target);
+int vfs_ramfs_umount(const char *target);
+int vfs_ramfs_format(const char *target);
+
+int vfs_romfs_mount(const char *target);
+int vfs_romfs_umount(const char *target);
 
 int vfs_generic_fcntl(vfs_fd_local_storage_t *local_storage, int fd, int cmd, va_list args);
 ssize_t vfs_generic_read(vfs_fd_local_storage_t *local_storage, vfs_has_bytes has_bytes, vfs_get_byte get, int fd, void * dst, size_t size);

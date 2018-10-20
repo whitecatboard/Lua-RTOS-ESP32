@@ -50,14 +50,18 @@
 #include <stdint.h>
 #include <stddef.h>
 
+typedef int (*mount_mount_f_t)(const char *);
+typedef int (*mount_umount_f_t)(const char *);
+typedef int (*mount_format_f_t)(const char *);
+
 // Mount point structure
 struct mount_pt {
-    char *fpath;           // mount path
-    const char *fs;        // target file system
-    void (*mount)(void);   // mount function
-    void (*umount)(void);  // unmount function
-    void (*format)(void);  // format function
-    uint8_t mounted;       // Is the file system mounted?
+    char *fpath;              // mount path
+    const char *fs;           // target file system
+    mount_mount_f_t mount;    // mount function
+    mount_umount_f_t umount;  // unmount function
+    mount_format_f_t format;  // format function
+    uint8_t mounted;          // Is the file system mounted?
 };
 
 /**
@@ -129,15 +133,6 @@ char *mount_normalize_path(const char *path);
  *       ENOMEM: the is not enough space to allocate the physical path.
  */
 char *mount_resolve_to_physical(const char *path);
-
-/**
- * @brief Mark the mount status (mounted or not mounted) of a given file system.
- *
- * @param fs The file system name.
- * @param mounted The file system mount status: 1 for mounted, 0 for not mounted.
- *
- */
-void mount_set_mounted(const char *fs, unsigned int mounted);
 
 /**
  * @brief Get the mount point name that corresponds to a given path into the logical

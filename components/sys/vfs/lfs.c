@@ -760,7 +760,8 @@ static struct lfs_config *lfs_config() {
     uint32_t base_address = 0;
     uint32_t fs_size = 0;
 
-    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, 0xfe, "filesys");
+    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, LUA_RTOS_LFS_PART, NULL);
+
     if (!partition) {
         syslog(LOG_ERR, "lfs can't find a valid partition");
         return NULL;
@@ -802,7 +803,7 @@ static struct lfs_config *lfs_config() {
     return cfg;
 }
 
-void vfs_lfs_mount() {
+int vfs_lfs_mount(const char *target) {
     esp_vfs_t vfs = {
         .flags = ESP_VFS_FLAG_DEFAULT,
         .write = &vfs_lfs_write,
@@ -826,13 +827,10 @@ void vfs_lfs_mount() {
         .telldir = &vfs_lfs_telldir,
     };
 
-    // Register the file system
-    ESP_ERROR_CHECK(esp_vfs_register("/lfs", &vfs, NULL));
-
     // Get configuration
     struct lfs_config *cfg = lfs_config();
     if (!cfg) {
-        return;
+        return -1;
     }
 
     struct vfs_lfs_context *ctx = (struct vfs_lfs_context *)(cfg->context);
@@ -859,21 +857,26 @@ void vfs_lfs_mount() {
         err = lfs_mount(&lfs, cfg);
     }
 
-    mount_set_mounted("lfs", (err == LFS_ERR_OK));
-
     if (err == LFS_ERR_OK) {
         lstinit(&files, 0, LIST_DEFAULT);
 
-        syslog(LOG_INFO, "lfs mounted on %s", mount_get_mount_point_for_fs("lfs")->fpath);
+        // Register the file system
+        ESP_ERROR_CHECK(esp_vfs_register("/lfs", &vfs, NULL));
+
+        syslog(LOG_INFO, "lfs mounted on %s", target);
+
+        return 0;
     } else {
         free(cfg);
         free(ctx);
 
         syslog(LOG_INFO, "lfs mount error");
     }
+
+    return -1;
 }
 
-void vfs_lfs_umount() {
+int vfs_lfs_umount(const char *target) {
     // Unmount
     lfs_umount(&lfs);
 
@@ -892,20 +895,19 @@ void vfs_lfs_umount() {
     // Unregister vfs
     esp_vfs_unregister("/lfs");
 
-    // Mark as nor mounted
-    mount_set_mounted("lfs", 0);
-
     syslog(LOG_INFO, "lfs unmounted");
+
+    return 0;
 }
 
-void vfs_lfs_format() {
+int vfs_lfs_format(const char *target) {
     // Unmount first
-    vfs_lfs_umount();
+    vfs_lfs_umount(target);
 
     // Get configuration
     struct lfs_config *cfg = lfs_config();
     if (!cfg) {
-        return;
+        return -1;
     }
 
     // Format
@@ -927,8 +929,10 @@ void vfs_lfs_format() {
 
     if (err == LFS_ERR_OK) {
         // Mount again
-        vfs_lfs_mount();
+        vfs_lfs_mount(target);
     }
+
+    return -1;
 }
 
 #endif

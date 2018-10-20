@@ -36,6 +36,9 @@ menu "Lua RTOS"
       config LUA_RTOS_BOARD_ESP32_CORE_BOARD
          bool "ESP32 CORE BOARD"
 
+      config LUA_RTOS_BOARD_ESP32_PICO_KIT
+         bool "ESP32 PICO KIT"
+
       config LUA_RTOS_BOARD_ESP32_WROVER_KIT
          bool "ESP32 WROVER KIT"
 
@@ -51,6 +54,12 @@ menu "Lua RTOS"
       config LUA_RTOS_BOARD_ESP32_EVB
          bool "ESP32 EVB"
 
+      config LUA_RTOS_BOARD_DOIT_DEVKIT_V1
+         bool "DOIT ESP32 DEVKIT V1"
+
+      config LUA_RTOS_BOARD_WEMOS_ESP32_OLED
+         bool "WeMos ESP32 with 128x64 OLED"
+
       config LUA_RTOS_BOARD_FIPY
          bool "FIPY"
 
@@ -65,11 +74,27 @@ menu "Lua RTOS"
          to determine the firmware to be used in the update.
 
    menu "OTA"
+      config LUA_RTOS_USE_OTA
+          bool "Include OTA support in build"
+          default n
+          
       config LUA_RTOS_OTA_SERVER_NAME
           string "OTA server name"
           default "ota.whitecatboard.org"
+          depends on LUA_RTOS_USE_OTA
           help
             OTA server name. Only OTA SSL servers are allowed.
+
+      config LUA_RTOS_USE_FACTORY_PARTITION
+          bool "Include factory partition"
+          default n
+          depends on LUA_RTOS_USE_OTA
+          help
+            The factory partition is the default app partition, which is used when not OTA updates have been
+            done in the device. The OTA update never updates the factory partition, so the user can reset the
+            device to the factory settings in case of problems. When this option is enabled the device stores
+            a minimum of 3 copies of the app, so the FLASH memory must have a lot of space to enable this
+            option. We recommend to enable this option only in devices with a 8 MB FLASH, or greater.
    endmenu
    
    menu "General"
@@ -154,95 +179,146 @@ menu "Lua RTOS"
       endmenu
       endmenu
 
+      menu "Partition Table"
+         config LUA_RTOS_PART_NVS_SIZE
+            int "NVS partition size"
+            range 1024 4194304
+            default 24576
+            help
+                  Size of the NVS partition (in bytes). Currently this partition is
+                  always included in the partition table.
+
+         config LUA_RTOS_PART_STORAGE_SIZE
+            int "FLASH storage partition size"
+            range 1024 4194304
+            default 524288   
+            help
+                  Size of the storage partition (in bytes), which it's used by
+                  SPIFFS and LFS file systems to store its data. This partition is
+                  only included in the partition table if the support for SPIFFS
+                  or LFS file systems is enabled.
+      endmenu
+      
       menu "File Systems"
+         choice LUA_RTOS_ROM_STORAGE_FS
+            prompt "ROM storage"
+            default LUA_RTOS_USE_NONE_ROM_STORAGE_FS
+
+            config LUA_RTOS_USE_NONE_ROM_STORAGE_FS
+               bool "None"
+
+            config LUA_RTOS_USE_ROM_FS
+               bool "ROM file system"
+         endchoice 
+
+         choice LUA_RTOS_RAM_FS
+            prompt "RAM storage"
+            default LUA_RTOS_USE_RAM_FS
+
+            config LUA_RTOS_USE_NONE_RAM_FLASH_FS
+               bool "None"
+
+            config LUA_RTOS_USE_RAM_FS
+               bool "RAM file system"
+         endchoice 
+
+         choice LUA_RTOS_FLASH_STORAGE_FS
+            prompt "FLASH storage"
+            default LUA_RTOS_USE_SPIFFS
+
+            config LUA_RTOS_USE_NONE_FLASH_STORAGE_FS
+               bool "None"
+
+            config LUA_RTOS_USE_SPIFFS
+               bool "SPIFFS file system"
+
+            config LUA_RTOS_USE_LFS
+               bool "LFS (little file system)"
+         endchoice 
+
+         choice LUA_RTOS_SD_CRD_FS
+            prompt "SD Card storage"
+            default LUA_RTOS_USE_NONE_SD_CARD_FS
+
+            config LUA_RTOS_USE_NONE_SD_CARD_FS
+               bool "None"
+
+            config LUA_RTOS_USE_FAT
+               bool "FAT"
+         endchoice 
+         
          choice LUA_RTOS_ROOT_FS
             prompt "Root file system"
             default LUA_RTOS_SPIFFS_ROOT_FS
    
             config LUA_RTOS_RAM_FS_ROOT_FS
                bool "RAM file system"
+               depends on LUA_RTOS_USE_RAM_FS
+
+            config LUA_RTOS_ROM_FS_ROOT_FS
+               bool "ROM file system"
+               depends on LUA_RTOS_USE_ROM_FS
 
             config LUA_RTOS_SPIFFS_ROOT_FS
                bool "SPIFFS  file system"
+               depends on LUA_RTOS_USE_SPIFFS
 
             config LUA_RTOS_LFS_ROOT_FS
                bool "LFS (little file system)"
+               depends on LUA_RTOS_USE_LFS
 
             config LUA_RTOS_FAT_ROOT_FS
                bool "FAT file system"
+               depends on LUA_RTOS_USE_FAT
         endchoice
         
-		config LUA_RTOS_USE_RAM_FS
-		   bool "Enable RAM file system support"
-		   default y
-		   help
-		      Select to enable the RAM file system support.
-		      
-		config LUA_RTOS_RAM_FS_SIZE
- 		   depends on LUA_RTOS_USE_RAM_FS
- 		   int "RAM file system size"
-		      range 4096 1048576
-		      default 4096
+        config LUA_RTOS_RAM_FS_SIZE
+           depends on LUA_RTOS_USE_RAM_FS
+           int "RAM file system size"
+           range 4096 1048576
+           default 4096
 
-		config LUA_RTOS_RAM_FS_BLOCK_SIZE
- 		   depends on LUA_RTOS_USE_RAM_FS
- 		   int "RAM file system block size"
-		      range 64 1024
-		      default 128
+        config LUA_RTOS_RAM_FS_BLOCK_SIZE
+           depends on LUA_RTOS_USE_RAM_FS
+           int "RAM file system block size"
+           range 64 1024
+           default 128
 
-		config LUA_RTOS_USE_SPIFFS
-		   bool "Enable SPIFFS file system support"
-		   default y
-		   help
-		      Select to enable SPIFFS file system support.
+        config LUA_RTOS_SPIFFS_LOG_PAGE_SIZE
+           depends on LUA_RTOS_USE_SPIFFS
+           int "SPIFFS file system logical page size"
+           range 256 2048
+           default 256
+         
+        config LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE
+           depends on LUA_RTOS_USE_SPIFFS
+           int "SPIFFS file system logical block size"
+           range 4096 65536
+           default 4096
+                 
+        config LUA_RTOS_SPIFFS_ERASE_SIZE
+           depends on LUA_RTOS_USE_SPIFFS
+           int "SPIFFS file system erase size"
+           range 4096 65536
+           default 4096
 
-		config LUA_RTOS_SPIFFS_LOG_PAGE_SIZE
-		   depends on LUA_RTOS_USE_SPIFFS
-		      int "SPIFFS file system logical page size"
-		      range 256 2048
-		      default 256
-			
-		config LUA_RTOS_SPIFFS_LOG_BLOCK_SIZE
-		   depends on LUA_RTOS_USE_SPIFFS
-		      int "SPIFFS file system logical block size"
-		      range 4096 65536
-		      default 4096
-			        
-		config LUA_RTOS_SPIFFS_ERASE_SIZE
-		   depends on LUA_RTOS_USE_SPIFFS
-		      int "SPIFFS file system erase size"
-		      range 4096 65536
-		      default 4096
+        config LUA_RTOS_LFS_BLOCK_SIZE
+           depends on LUA_RTOS_USE_LFS
+           int "LFS file system block size"
+           range 64 65536
+           default 4096
 
-		config LUA_RTOS_USE_LFS
-		   bool "Enable LFS file system support"
-	       default y
-		   help
-		      Select to enable little file system support.      
+        config LUA_RTOS_LFS_READ_SIZE
+           depends on LUA_RTOS_USE_LFS
+           int "LFS file system read size"
+           range 64 65536
+           default 1024
 
-		config LUA_RTOS_LFS_BLOCK_SIZE
-		   depends on LUA_RTOS_USE_LFS
-		      int "LFS file system block size"
-		      range 4096 65536
-		      default 4096
-
-		config LUA_RTOS_LFS_READ_SIZE
-		   depends on LUA_RTOS_USE_LFS
-		      int "LFS file system read size"
-		      range 1024 65536
-		      default 1024
-
-		config LUA_RTOS_LFS_PROG_SIZE
-		   depends on LUA_RTOS_USE_LFS
-		      int "LFS file system prog size"
-		      range 1024 65536
-		      default 1024
-
-		config LUA_RTOS_USE_FAT
-		   bool "Enable FAT file system support"
-		   default y
-		   help
-		      Select to enable the FAT file system support.      
+        config LUA_RTOS_LFS_PROG_SIZE
+           depends on LUA_RTOS_USE_LFS
+           int "LFS file system prog size"
+           range 64 65536
+           default 1024
       endmenu
 
       menu "Network services"
@@ -398,6 +474,11 @@ menu "Lua RTOS"
       endmenu
       
       menu "I2C pin map"
+         config LUA_RTOS_I2C_DEVICES_PER_BUS
+            int "Max number of I2C devices per bus"
+            range 1 10
+            default 3
+         
          config LUA_RTOS_I2C0_SCL
             int "I2C0 SCL"
             range 0 39

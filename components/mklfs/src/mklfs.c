@@ -120,6 +120,7 @@ static void create_file(char *src) {
 			ret = lfs_file_write(&lfs, &dstf, &c, 1);
 			if (ret < 0) {
 				fprintf(stderr,"can't write to destination file %s: error=%d\r\n", path, ret);
+				exit(1);
 			}
 			c = fgetc(srcf);
 		}
@@ -167,6 +168,51 @@ static void compact(char *src) {
 void usage() {
 	fprintf(stdout, "usage: mklfs -c <pack-dir> -b <block-size> -r <read-size> -p <prog-size> -s <filesystem-size> -i <image-file-path>\r\n");
 }
+
+static int is_number(const char *s) {
+	const char *c = s;
+
+	while (*c) {
+		if ((*c < '0') || (*c > '9')) {
+			return 0;
+		}
+		c++;
+	}
+
+	return 1;
+}
+
+static int is_hex(const char *s) {
+	const char *c = s;
+
+	if (*c++ != '0') {
+		return 0;
+	}
+
+	if (*c++ != 'x') {
+		return 0;
+	}
+
+	while (*c) {
+		if (((*c < '0') || (*c > '9')) && ((*c < 'A') || (*c > 'F')) && ((*c < 'a') || (*c > 'f'))) {
+			return 0;
+		}
+		c++;
+	}
+
+	return 1;
+}
+
+static int to_int(const char *s) {
+	if (is_number(s)) {
+		return atoi(s);
+	} else if (is_hex(s)) {
+		return (int)strtol(s, NULL, 16);
+	}
+
+	return -1;
+}
+
 int main(int argc, char **argv) {
     char *src = NULL;   // Source directory
     char *dst = NULL;   // Destination image
@@ -188,25 +234,25 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'b':
-			block_size = atoi(optarg);
+			block_size = to_int(optarg);
 			break;
 
 		case 'p':
-			prog_size = atoi(optarg);
+			prog_size = to_int(optarg);
 			break;
 
 		case 'r':
-			read_size = atoi(optarg);
+			read_size = to_int(optarg);
 			break;
 
 		case 's':
-			fs_size = atoi(optarg);
+			fs_size = to_int(optarg);
 			break;
 		}
 	}
 
-    if ((src == NULL) || (dst == NULL) || (block_size == 0) || (prog_size == 0) ||
-        (read_size == 0) || (fs_size == 0)) {
+    if ((src == NULL) || (dst == NULL) || (block_size <= 0) || (prog_size <= 0) ||
+        (read_size <= 0) || (fs_size <= 0)) {
     		usage();
         exit(1);
     }

@@ -1,0 +1,14 @@
+MKROMFS_COMPONENT_PATH := $(COMPONENT_PATH)
+MKROMFS_BUILD_DIR=$(abspath $(MKROMFS_COMPONENT_PATH)/mkromfs)
+
+# Custom recursive make for mkromfs sub-project
+MKROMFS_MAKE=+$(MAKE) -C $(MKROMFS_COMPONENT_PATH)/src
+
+.PHONY: mkromfs mkromfs-clean
+
+mkromfs: $(SDKCONFIG_MAKEFILE)
+	$(MKROMFS_MAKE) all
+
+mkromfs-clean: $(SDKCONFIG_MAKEFILE)
+	$(MKROMFS_MAKE) clean
+

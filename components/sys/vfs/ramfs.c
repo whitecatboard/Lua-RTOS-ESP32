@@ -394,7 +394,7 @@ static int vfs_ramfs_rename(const char *src, const char *dst) {
 static DIR* vfs_ramfs_opendir(const char *name) {
     int result;
 
-    vfs_dir_t *dir = vfs_allocate_dir("rfs", name);
+    vfs_dir_t *dir = vfs_allocate_dir("ramfs", name);
     if (!dir) {
         return NULL;
     }
@@ -553,7 +553,7 @@ static int vfs_ramfs_truncate(const char *path, off_t length) {
     return 0;
 }
 
-void vfs_ramfs_mount() {
+int vfs_ramfs_mount(const char *target) {
     esp_vfs_t vfs = {
         .flags = ESP_VFS_FLAG_DEFAULT,
         .write = &vfs_ramfs_write,
@@ -578,9 +578,6 @@ void vfs_ramfs_mount() {
         .ftruncate = &vfs_ramfs_ftruncate,
     };
 
-    // Register the file system
-    ESP_ERROR_CHECK(esp_vfs_register("/rfs", &vfs, NULL));
-
     int res;
     ramfs_config_t config;
 
@@ -589,30 +586,36 @@ void vfs_ramfs_mount() {
 
     syslog(LOG_INFO, "ramfs size %d Kb, block size %d bytes", config.size / 1024, config.block_size);
 
-    res = ramfs_mount(&fs, &config);
-
-    mount_set_mounted("rfs", (res == RAMFS_ERR_OK));
-
-    if (res == RAMFS_ERR_OK) {
+    if ((res = ramfs_mount(&fs, &config)) == RAMFS_ERR_OK) {
         lstinit(&files, 0, LIST_DEFAULT);
 
-        syslog(LOG_INFO, "ramfs mounted on %s", mount_get_mount_point_for_fs("rfs")->fpath);
+        // Register the file system
+        ESP_ERROR_CHECK(esp_vfs_register("/ramfs", &vfs, NULL));
+
+        syslog(LOG_INFO, "ramfs mounted on %s", target);
+
+        return 0;
     } else {
-        syslog(LOG_INFO, "rfs mount error");
+        syslog(LOG_INFO, "ramfs mount error");
     }
+
+    return -1;
 }
 
-void vfs_ramfs_umount() {
+int vfs_ramfs_umount(const char *target) {
 	ramfs_umount(&fs);
-	esp_vfs_unregister("/rfs");
-    mount_set_mounted("rfs", 0);
+	esp_vfs_unregister("/ramfs");
 
-    syslog(LOG_INFO, "rfs unmounted");
+    syslog(LOG_INFO, "ramfs unmounted");
+
+    return 0;
 }
 
-void vfs_ramfs_format() {
-    vfs_ramfs_umount();
-    vfs_ramfs_mount();
+int vfs_ramfs_format(const char *target) {
+    vfs_ramfs_umount(target);
+    vfs_ramfs_mount(target);
+
+    return 0;
 }
 
 #endif

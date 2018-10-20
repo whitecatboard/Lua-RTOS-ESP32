@@ -123,6 +123,8 @@ void IRAM_ATTR mtx_unlock(struct mtx *mutex) {
 }
 
 void mtx_destroy(struct mtx *mutex) {
+	if (!mutex->lock) return;
+
 	if (mutex->opts == MTX_DEF) {
 		if (xPortInIsrContext()) {
 			BaseType_t xHigherPriorityTaskWoken = pdFALSE;
