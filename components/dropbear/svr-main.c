@@ -263,7 +263,16 @@ static void *dropbear_thread(void *arg) {
 
 	dropbear_server_main(1, (char **)argv);
 
+	syslog(LOG_INFO, "dropbear: stopped");
 	return NULL;
+}
+
+static int file_exists(const char *filename) {
+	FILE * file;
+	file = fopen(filename, "r");
+	int retval = (file ? 1 : 0);
+	fclose(file);
+	return retval;
 }
 
 void dropbear_server_start() {
@@ -274,9 +283,15 @@ void dropbear_server_start() {
 	ssh_shutdown = 0;
 	syslog(LOG_INFO, "dropbear: starting ...");
 
+	// By making sure the keys have already been created, we can
+	// spare one K of stack from the LUA_RTOS_SSH_SERVER_STACK_SIZE
+	size_t stacksize = CONFIG_LUA_RTOS_SSH_SERVER_STACK_SIZE;
+	if (!file_exists(RSA_PRIV_FILENAME) || !file_exists(DSS_PRIV_FILENAME))
+		stacksize += 1024;
+
 	// Start a new thread to launch the dropbear server
 	pthread_attr_init(&attr);
-	pthread_attr_setstacksize(&attr, CONFIG_LUA_RTOS_SSH_SERVER_STACK_SIZE);
+	pthread_attr_setstacksize(&attr, stacksize);
 
 	// Set priority
 	sched.sched_priority = CONFIG_LUA_RTOS_SSH_SERVER_TASK_PRIORITY;
@@ -298,5 +313,19 @@ void dropbear_server_start() {
 
 void dropbear_server_stop() {
 	ssh_shutdown = 1;
+
+	// Without this call, dropbear would hang in it's call to select()
+	// until the next connection attempt from the outside world.
+	// But we want back all our stack NOW so we fake a connection:
+	int sock = socket(AF_INET, SOCK_STREAM, 0);
+	struct sockaddr_in address;
+	memset((void*)&address, 0x0, sizeof(address));
+	address.sin_family = AF_INET;
+	address.sin_port = htons(atoi(DROPBEAR_DEFPORT));
+	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	connect(sock, (struct sockaddr*)&address, sizeof(address));
+	close(sock);
+
+	syslog(LOG_INFO, "dropbear: stopping ...");
 }
 
