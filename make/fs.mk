@@ -71,7 +71,9 @@ define includeComponentFS
     $(if $(filter $(FS_EXCLUDE_COMPONENTS), $(notdir $(1))),,\
       COMPONENT_ADD_FS :=\
       $(eval include $(1)/component.mk)\
-      COMPONENT_FS += $(addsuffix /*,$(addprefix $(1)/, $(COMPONENT_ADD_FS)))\
+      $(if $(filter "$(COMPONENT_ADD_FS)",""),,      
+        COMPONENT_FS += $(addsuffix /*,$(addprefix $(1)/, $(COMPONENT_ADD_FS)))\
+      )\
     )
   )
 endef
