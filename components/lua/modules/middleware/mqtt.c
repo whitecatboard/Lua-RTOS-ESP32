@@ -200,8 +200,6 @@ static int mqtt_emit_exeption(lua_State* L, int exception, int rc) {
 // Connection failure callback, called by the MQTT client when the connection can't
 // be established.
 static void connFailure(void *context, MQTTAsync_failureData *response) {
-    return;
-
     mqtt_conn_ctx_t *ctx = (mqtt_conn_ctx_t *)context;
 
     if (response) {
