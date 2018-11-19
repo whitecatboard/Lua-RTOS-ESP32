@@ -489,8 +489,15 @@ static int lmqtt_connect(lua_State* L) {
     conn_opts.connectTimeout = MQTT_CONNECT_TIMEOUT;
     conn_opts.keepAliveInterval = 20;
     conn_opts.cleansession = 0;
-    conn_opts.username = strdup(user); //needs to be strdup'd here for connectionLost usage
-    conn_opts.password = strdup(password); // //needs to be strdup'd here for connectionLost usage
+
+    if (strlen(user) > 0) {
+        conn_opts.username = strdup(user); //needs to be strdup'd here for connectionLost usage
+    }
+
+    if (strlen(password) > 0) {
+        conn_opts.password = strdup(password); // //needs to be strdup'd here for connectionLost usage
+    }
+
     conn_opts.onSuccess = connSuccess;
     conn_opts.onFailure = connFailure;
     conn_opts.automaticReconnect = 1;
