@@ -1,0 +1,33 @@
+diff --git a/components/vfs/include/esp_vfs.h b/components/vfs/include/esp_vfs.h
+index e54a3e983..c7185df64 100644
+--- a/components/vfs/include/esp_vfs.h
++++ b/components/vfs/include/esp_vfs.h
+@@ -30,6 +30,9 @@
+ #include <sys/termios.h>
+ #include <dirent.h>
+ #include <string.h>
++
++#include "lwip/sockets.h"
++
+ #include "sdkconfig.h"
+ 
+ #ifdef __cplusplus
+@@ -185,6 +188,18 @@ typedef struct
+         int (*utime_p)(void* ctx, const char *path, const struct utimbuf *times);
+         int (*utime)(const char *path, const struct utimbuf *times);
+     };
++    union {
++        int (*ftruncate_p)(void* ctx, int fd, off_t length);
++        int (*ftruncate)(int fd, off_t length);
++    };
++    union {
++        int (*writev_p)(void* ctx, int fd, const struct iovec *iov, int iovcnt);
++        int (*writev)(int fd, const struct iovec *iov, int iovcnt);
++    };
++    union {
++        int (*select_p)(void* ctx, int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
++        int (*select)(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
++    };
+ #ifdef CONFIG_SUPPORT_TERMIOS
+     union {
+         int (*tcsetattr_p)(void *ctx, int fd, int optional_actions, const struct termios *p);
