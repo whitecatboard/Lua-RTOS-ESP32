@@ -282,8 +282,6 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
  */
 driver_error_t *net_init() {
     if (!status_get(STATUS_TCPIP_INITED)) {
-        status_set(STATUS_TCPIP_INITED, 0x00000000);
-
         retries = 0;
 
         netEvent = xEventGroupCreate();
@@ -291,6 +289,8 @@ driver_error_t *net_init() {
         tcpip_adapter_init();
 
         esp_event_loop_init(event_handler, NULL);
+
+        status_set(STATUS_TCPIP_INITED, 0x00000000);
     }
 
     return NULL;
@@ -380,6 +380,24 @@ driver_error_t *net_reconnect() {
 
 int network_started() {
     return (status_get(STATUS_WIFI_STARTED) | status_get(STATUS_SPI_ETH_STARTED) | status_get(STATUS_ETH_STARTED));
+}
+
+int wait_for_network_init(uint32_t timeout) {
+    TickType_t ticks_to_wait;
+
+    if (timeout == 0) {
+        ticks_to_wait = portMAX_DELAY;
+    } else {
+        ticks_to_wait = timeout / portTICK_PERIOD_MS;
+
+    }
+
+    while ((timeout > 0) && (!status_get(STATUS_TCPIP_INITED))) {
+    		vTaskDelay(1/portTICK_PERIOD_MS);
+    		timeout--;
+    }
+
+    return status_get(STATUS_TCPIP_INITED);
 }
 
 int wait_for_network(uint32_t timeout) {

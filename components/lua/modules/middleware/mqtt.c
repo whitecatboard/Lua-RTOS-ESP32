@@ -549,6 +549,14 @@ static int lmqtt_connect(lua_State* L) {
     bcopy(&conn_opts, &mqtt->conn_opts, sizeof(MQTTAsync_connectOptions));
 
     // Try to connect
+    if (!wait_for_network_init(10)) {
+        mtx_lock(&mqtt->mtx);
+        mqtt->connTask = NULL;
+        mtx_unlock(&mqtt->mtx);
+
+    		return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_CONNECT, "network not started");
+    }
+
     MQTTAsync_connect(mqtt->client, &mqtt->conn_opts);
 
     // Wait for connection
