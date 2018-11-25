@@ -24,11 +24,15 @@ menu "Lua RTOS"
    
       config LUA_RTOS_BOARD_WHITECAT_N1ESP32
          bool "WHITECAT ESP32 N1"
-         select LUA_RTOS_USE_POWER_BUS if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+         select LUA_RTOS_USE_POWER_BUS if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
 
       config LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT
          bool "WHITECAT ESP32 N1 DEVKIT"
-         select LUA_RTOS_USE_POWER_BUS if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+         select LUA_RTOS_USE_POWER_BUS if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
+
+      config LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT
+         bool "WHITECAT ESP32 N2 DEVKIT"
+         select LUA_RTOS_USE_POWER_BUS if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
       
       config LUA_RTOS_BOARD_WHITECAT_ESP32_LORA_GW
          bool "WHITECAT ESP32 LORA GATEWAY"
@@ -886,8 +890,8 @@ menu "Lua RTOS"
                 depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272 || LUA_RTOS_LORA_HW_TYPE_SX1301
                 int "LoRa RST GPIO number"
                     range -1 39
-                    default -1 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
-                    default 27 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+                    default -1 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
+                    default 27 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
                     help
                         The GPIO port number used to select the LoRa hardware. Use -1 if RST pin is not used.
                         
@@ -895,8 +899,8 @@ menu "Lua RTOS"
                 depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
                 int "LoRa DIO0 GPIO number"
                     range -1 39
-                    default 4 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
-                    default 26 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+                    default 4 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
+                    default 26 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
                     help
                         The GPIO port number used for the DIO0 signal. Use -1 if DIO0 pin is not used.
         
@@ -904,8 +908,8 @@ menu "Lua RTOS"
                 depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
                 int "LoRa DIO1 GPIO number"
                     range -1 39
-                    default 16 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
-                    default 25 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+                    default 16 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
+                    default 25 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
                     help
                         The GPIO port number used for the DIO1 signal. Use -1 if DIO1 pin is not used.
 
@@ -913,8 +917,8 @@ menu "Lua RTOS"
                 depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
                 int "LoRa DIO2 GPIO number"
                     range -1 39
-                    default 17 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
-                    default 33 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT)
+                    default 17 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
+                    default 33 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
                     help
                         The GPIO port number used for the DIO2 signal. Use -1 if DIO2 pin is not used.
 

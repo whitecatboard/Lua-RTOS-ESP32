@@ -48,6 +48,30 @@
 		"image": ""
 	},
 	{
+		"id": "WHITECAT-ESP32-N2-DEVKIT",
+		"description": "Whitecat N2 ESP32 DEVKIT",
+		"manufacturer": "whitecatboard.org",
+		"brand": "",
+		"type": "N2ESP32-DEVKIT",
+		"subtype": "",
+		"filesystem": "default",
+		"usb_vid_pid": "10C4:EA60",
+		"usb_port_exp": "",
+		"image": ""
+	},
+	{
+		"id": "WHITECAT-ESP32-N2-DEVKIT-OTA",
+		"description": "Whitecat N2 ESP32 DEVKIT with OTA",
+		"manufacturer": "whitecatboard.org",
+		"brand": "",
+		"type": "N2ESP32-DEVKIT",
+		"subtype": "OTA",
+		"filesystem": "default",
+		"usb_vid_pid": "10C4:EA60",
+		"usb_port_exp": "",
+		"image": ""
+	},
+	{
 		"id": "WHITECAT-ESP32-LORA-GW",
 		"description": "Whitecat ESP32 LORA GW",
 		"manufacturer": "whitecatboard.org",

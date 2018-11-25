@@ -2,4 +2,5 @@
 # Name,Type,SubType,Offset,Size
 nvs,data,nvs,0x9000,0x6000
 storage,data,64,0xf000,0x80000
+phy_init,data,phy,0x8f000,0x1000
 factory,0,0,0x90000,0x370000
