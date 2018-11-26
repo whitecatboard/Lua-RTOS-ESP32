@@ -383,15 +383,6 @@ int network_started() {
 }
 
 int wait_for_network_init(uint32_t timeout) {
-    TickType_t ticks_to_wait;
-
-    if (timeout == 0) {
-        ticks_to_wait = portMAX_DELAY;
-    } else {
-        ticks_to_wait = timeout / portTICK_PERIOD_MS;
-
-    }
-
     while ((timeout > 0) && (!status_get(STATUS_TCPIP_INITED))) {
     		vTaskDelay(1/portTICK_PERIOD_MS);
     		timeout--;
