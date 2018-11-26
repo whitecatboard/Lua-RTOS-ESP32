@@ -86,8 +86,7 @@ void MQTTAsync_init(void);
 #define LUA_MQTT_ERR_CANT_SUBSCRIBE     (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  3)
 #define LUA_MQTT_ERR_CANT_PUBLISH       (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  4)
 #define LUA_MQTT_ERR_CANT_DISCONNECT    (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  5)
-#define LUA_MQTT_ERR_LOST_CONNECTION    (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  6)
-#define LUA_MQTT_ERR_NOT_ENOUGH_MEMORY  (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  7)
+#define LUA_MQTT_ERR_NOT_ENOUGH_MEMORY  (DRIVER_EXCEPTION_BASE(MQTT_DRIVER_ID) |  6)
 
 // Register driver and messages
 DRIVER_REGISTER_BEGIN(MQTT,mqtt,0,NULL,NULL);
@@ -97,7 +96,6 @@ DRIVER_REGISTER_BEGIN(MQTT,mqtt,0,NULL,NULL);
     DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotSubscribeToTopic, "can't subscribe to topic", LUA_MQTT_ERR_CANT_SUBSCRIBE);
     DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotPublishToTopic, "can't publish to topic", LUA_MQTT_ERR_CANT_PUBLISH);
     DRIVER_REGISTER_ERROR(MQTT, mqtt, CannotDisconnect, "can't disconnect", LUA_MQTT_ERR_CANT_DISCONNECT);
-    DRIVER_REGISTER_ERROR(MQTT, mqtt, LostConnection, "lost connection", LUA_MQTT_ERR_LOST_CONNECTION);
     DRIVER_REGISTER_ERROR(MQTT, mqtt, NotEnoughMemory, "not enough memory", LUA_MQTT_ERR_NOT_ENOUGH_MEMORY);
 DRIVER_REGISTER_END(MQTT,mqtt,0,NULL,NULL);
 
@@ -637,7 +635,6 @@ static int lmqtt_connect(lua_State* L) {
             case 3: return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_CONNECT, "connection refused, server unavailable");
             case 4: return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_CONNECT, "connection refused, bad username or password");
             case 5: return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_CONNECT, "connection refused, not authorized");
-            case 0xffffffff: return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_CONNECT, "network not started");
         }
     } else {
         mtx_lock(&mqtt->mtx);
@@ -741,15 +738,7 @@ static int lmqtt_disconnect(lua_State* L) {
     uint32_t rc_val;
 
     if (MQTTAsync_isConnected(mqtt->client)) {
-        if (xTaskNotifyWait(ULONG_MAX, ULONG_MAX, &rc_val, MQTT_CONNECT_TIMEOUT / portTICK_PERIOD_MS) == pdTRUE) {
-            if (rc_val == 0xffffffff) {
-                mtx_lock(&mqtt->mtx);
-                mqtt->discTask = NULL;
-                mtx_unlock(&mqtt->mtx);
-
-                return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_DISCONNECT, "network not started");
-            }
-        } else {
+        if (xTaskNotifyWait(ULONG_MAX, ULONG_MAX, &rc_val, MQTT_CONNECT_TIMEOUT / portTICK_PERIOD_MS) == pdFALSE) {
             mtx_lock(&mqtt->mtx);
             mqtt->discTask = NULL;
             mtx_unlock(&mqtt->mtx);
