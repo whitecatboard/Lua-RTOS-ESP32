@@ -722,25 +722,25 @@ static int lmqtt_disconnect(lua_State* L) {
     mqtt_userdata *mqtt = (mqtt_userdata *) luaL_checkudata(L, 1, "mqtt.cli");
     luaL_argcheck(L, mqtt, 1, "mqtt expected");
 
+    // Set connection context
+    mtx_lock(&mqtt->mtx);
+    mqtt->discTask = xTaskGetCurrentTaskHandle();
+    mtx_unlock(&mqtt->mtx);
+
+    // Prepare disconnection
+    MQTTAsync_disconnectOptions opts = MQTTAsync_disconnectOptions_initializer;
+    opts.onSuccess = discSuccess;
+    opts.onFailure = discFailure;
+    opts.context = mqtt;
+
+    // Try to disconnect
+
+    MQTTAsync_disconnect(mqtt->client, &opts);
+
+    // Wait for disconnection
+    uint32_t rc_val;
+
     if (MQTTAsync_isConnected(mqtt->client)) {
-        // Set connection context
-        mtx_lock(&mqtt->mtx);
-        mqtt->discTask = xTaskGetCurrentTaskHandle();
-        mtx_unlock(&mqtt->mtx);
-
-        // Prepare disconnection
-        MQTTAsync_disconnectOptions opts = MQTTAsync_disconnectOptions_initializer;
-        opts.onSuccess = discSuccess;
-        opts.onFailure = discFailure;
-        opts.context = mqtt;
-
-        // Try to disconnect
-
-        MQTTAsync_disconnect(mqtt->client, &opts);
-
-        // Wait for disconnection
-        uint32_t rc_val;
-
         if (xTaskNotifyWait(ULONG_MAX, ULONG_MAX, &rc_val, MQTT_CONNECT_TIMEOUT / portTICK_PERIOD_MS) == pdTRUE) {
             if (rc_val == 0xffffffff) {
                 mtx_lock(&mqtt->mtx);
@@ -756,12 +756,10 @@ static int lmqtt_disconnect(lua_State* L) {
 
             return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_DISCONNECT, "timeout");
         }
-
-        mtx_lock(&mqtt->mtx);
-        mqtt->discTask = NULL;
-    } else {
-        mtx_lock(&mqtt->mtx);
     }
+
+    mtx_lock(&mqtt->mtx);
+    mqtt->discTask = NULL;
 
     // Mark all subscribed topics as not subscribed to the broker. We don't destroy anything related to
     // topics when disconnect.
