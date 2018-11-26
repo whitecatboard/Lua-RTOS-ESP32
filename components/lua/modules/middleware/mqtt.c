@@ -342,35 +342,6 @@ static int subs_subscribe(mqtt_userdata *mqtt) {
     return rc;
 }
 
-// Remove all the subscripted topics, and free resources
-static int remove_subs(mqtt_userdata *mqtt) {
-    mqtt_subs *subs;
-    mqtt_subs *next_subs;
-    int rc = 0;
-
-    mtx_lock(&mqtt->mtx);
-
-    subs = mqtt->subs;
-    while (subs) {
-        luaS_callback_destroy(subs->callback);
-
-        next_subs = subs->next;
-        if (subs->topic){
-          free(subs->topic);
-          subs->topic = NULL;
-        }
-
-        free(subs);
-        subs = next_subs;
-    }
-
-    mqtt->subs = NULL;
-
-    mtx_unlock(&mqtt->mtx);
-
-    return rc;
-}
-
 // Connection failure callback, called by the MQTT client when the connection can't
 // be established.
 static void connFailure(void *context, MQTTAsync_failureData *response) {
@@ -751,11 +722,11 @@ static int lmqtt_disconnect(lua_State* L) {
     mqtt_userdata *mqtt = (mqtt_userdata *) luaL_checkudata(L, 1, "mqtt.cli");
     luaL_argcheck(L, mqtt, 1, "mqtt expected");
 
-    mtx_lock(&mqtt->mtx);
-
     if (MQTTAsync_isConnected(mqtt->client)) {
         // Set connection context
+        mtx_lock(&mqtt->mtx);
         mqtt->discTask = xTaskGetCurrentTaskHandle();
+        mtx_unlock(&mqtt->mtx);
 
         // Prepare disconnection
         MQTTAsync_disconnectOptions opts = MQTTAsync_disconnectOptions_initializer;
@@ -764,6 +735,7 @@ static int lmqtt_disconnect(lua_State* L) {
         opts.context = mqtt;
 
         // Try to disconnect
+
         MQTTAsync_disconnect(mqtt->client, &opts);
 
         // Wait for disconnection
@@ -771,19 +743,24 @@ static int lmqtt_disconnect(lua_State* L) {
 
         if (xTaskNotifyWait(ULONG_MAX, ULONG_MAX, &rc_val, MQTT_CONNECT_TIMEOUT / portTICK_PERIOD_MS) == pdTRUE) {
             if (rc_val == 0xffffffff) {
+                mtx_lock(&mqtt->mtx);
                 mqtt->discTask = NULL;
                 mtx_unlock(&mqtt->mtx);
 
                 return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_DISCONNECT, "network not started");
             }
         } else {
+            mtx_lock(&mqtt->mtx);
             mqtt->discTask = NULL;
             mtx_unlock(&mqtt->mtx);
 
             return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_DISCONNECT, "timeout");
         }
 
+        mtx_lock(&mqtt->mtx);
         mqtt->discTask = NULL;
+    } else {
+        mtx_lock(&mqtt->mtx);
     }
 
     // Mark all subscribed topics as not subscribed to the broker. We don't destroy anything related to
@@ -801,6 +778,7 @@ static int lmqtt_disconnect(lua_State* L) {
         free((char*) mqtt->conn_opts.username);
         mqtt->conn_opts.username = NULL;
     }
+
     if (mqtt->conn_opts.password) {
         free((char*) mqtt->conn_opts.password);
         mqtt->conn_opts.password = NULL;
