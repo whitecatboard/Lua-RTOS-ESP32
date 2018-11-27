@@ -2833,6 +2833,7 @@ int MQTTAsync_send(MQTTAsync handle, const char* destinationName, int payloadlen
 	int msgid = 0;
 
 	FUNC_ENTRY;
+
 	if (m == NULL || m->c == NULL)
 		rc = MQTTASYNC_FAILURE;
 	else if (m->c->connected == 0 && (m->createOptions == NULL ||

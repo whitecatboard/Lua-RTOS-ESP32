@@ -505,7 +505,11 @@ static int lmqtt_client(lua_State* L) {
     }
 
     //url is being strdup'd in MQTTClient_create
-    rc = MQTTAsync_create(&mqtt->client, url, clientId, persistence, (char*)persistence_folder);
+    MQTTAsync_createOptions create_opts = MQTTAsync_createOptions_initializer;
+
+    create_opts.sendWhileDisconnected = (persistence == MQTTCLIENT_PERSISTENCE_DEFAULT);
+
+    rc = MQTTAsync_createWithOptions(&mqtt->client, url, clientId, persistence, (char*)persistence_folder, &create_opts);
     if (rc < 0) {
         return mqtt_emit_exeption(L, LUA_MQTT_ERR_CANT_CREATE_CLIENT, rc);
     }
