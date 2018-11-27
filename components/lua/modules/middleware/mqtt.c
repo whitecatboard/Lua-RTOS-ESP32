@@ -687,6 +687,7 @@ static int lmqtt_publish(lua_State* L) {
     size_t payload_len;
     const char *topic;
     char *payload;
+    int retained = 0;
 
     // Get user data
     mqtt_userdata *mqtt = (mqtt_userdata *) luaL_checkudata(L, 1, "mqtt.cli");
@@ -702,13 +703,18 @@ static int lmqtt_publish(lua_State* L) {
         return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_PUBLISH, "enable persistence for a qos > 0");
     }
 
+    if (lua_gettop(L) >= 5) {
+        luaL_checktype(L, 5, LUA_TBOOLEAN);
+        retained = lua_toboolean(L, 5);
+    }
+
     // Prepare message
     MQTTAsync_message msg = MQTTAsync_message_initializer;
 
     msg.payload = payload;
     msg.payloadlen = strlen(payload);
     msg.qos = qos;
-    msg.retained = 0;
+    msg.retained = retained;
 
     // Send message
     if ((rc = MQTTAsync_sendMessage(mqtt->client, topic, &msg, NULL)) != MQTTASYNC_SUCCESS) {
