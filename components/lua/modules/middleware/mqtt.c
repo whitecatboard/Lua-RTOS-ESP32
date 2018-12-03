@@ -547,6 +547,13 @@ static int lmqtt_connect(lua_State* L) {
     user = luaL_checkstring(L, 2);
     password = luaL_checkstring(L, 3);
 
+    int clean = 0;
+    if (lua_gettop(L) >= 4) {
+        luaL_checktype(L, 4, LUA_TBOOLEAN);
+        clean = lua_toboolean(L, 4);
+    }
+
+
 #ifdef OPENSSL
     MQTTAsync_SSLOptions ssl_opts = MQTTAsync_SSLOptions_initializer;
     ssl_opts.trustStore = mqtt->ca_file; //has been strdup'd already
@@ -560,8 +567,8 @@ static int lmqtt_connect(lua_State* L) {
     // Prepare connection
     MQTTAsync_connectOptions conn_opts = MQTTAsync_connectOptions_initializer;
     conn_opts.connectTimeout = MQTT_CONNECT_TIMEOUT;
+    conn_opts.cleansession = clean;
     conn_opts.keepAliveInterval = 20;
-    conn_opts.cleansession = 0;
 
     if (strlen(user) > 0) {
         conn_opts.username = strdup(user); //needs to be strdup'd here for connectionLost usage
