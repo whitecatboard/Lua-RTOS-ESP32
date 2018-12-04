@@ -114,11 +114,11 @@ struct pwm pwm[CPU_LAST_PWM + 1][CPU_LAST_PWM_CH + 1] = {
  */
 
 // Gets timer related to pwm channel
-static int8_t pwm_timer(uint8_t unit, uint8_t channel) {
+static int8_t pwm_timer(int8_t unit, int8_t channel) {
 	return pwm[unit][channel].timer;
 }
 
-static driver_error_t *pwm_check_unit(uint8_t unit, uint8_t setup) {
+static driver_error_t *pwm_check_unit(int8_t unit, int8_t setup) {
 	if ((unit < CPU_FIRST_PWM) || (unit > CPU_LAST_PWM)) {
 		if (setup) {
 			return driver_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid unit");
@@ -130,7 +130,7 @@ static driver_error_t *pwm_check_unit(uint8_t unit, uint8_t setup) {
 	return NULL;
 }
 
-static driver_error_t *pwm_check_channel(uint8_t unit, uint8_t channel, uint8_t setup) {
+static driver_error_t *pwm_check_channel(int8_t unit, int8_t channel, int8_t setup) {
 	switch (unit) {
 		case 0:
 			if (!((1 << channel) & (CPU_PWM0_ALL)) && (channel != -1)) {
@@ -146,7 +146,7 @@ static driver_error_t *pwm_check_channel(uint8_t unit, uint8_t channel, uint8_t 
 	return NULL;
 }
 
-static driver_error_t *pwm_check_duty(double duty, uint8_t setup) {
+static driver_error_t *pwm_check_duty(double duty, int8_t setup) {
 	if ((duty < 0) || (duty > 1)) {
 		if (setup) {
 			return driver_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid duty");
@@ -157,7 +157,7 @@ static driver_error_t *pwm_check_duty(double duty, uint8_t setup) {
 	return NULL;
 }
 
-static driver_error_t *pwm_check_freq(int32_t freq, uint8_t setup) {
+static driver_error_t *pwm_check_freq(int32_t freq, int8_t setup) {
 	if ((freq <= 0)) {
 		if (setup) {
 			return driver_error(PWM_DRIVER, PWM_ERR_CANT_INIT, "invalid frequency");
@@ -173,7 +173,7 @@ static driver_error_t *pwm_check_freq(int32_t freq, uint8_t setup) {
  *
  */
 // Lock resources needed by ADC
-driver_error_t *pwm_lock_resources(uint8_t unit, uint8_t channel, void *resources) {
+driver_error_t *pwm_lock_resources(int8_t unit, int8_t channel, void *resources) {
 	pwm_resources_t tmp_pwm_resources;
 
 	if (!resources) {
@@ -199,7 +199,7 @@ driver_error_t *pwm_lock_resources(uint8_t unit, uint8_t channel, void *resource
     return NULL;
 }
 
-driver_error_t *pwm_setup(uint8_t unit, uint8_t channel, int8_t pin, int32_t freq, double duty, int8_t *achannel) {
+driver_error_t *pwm_setup(int8_t unit, int8_t channel, int8_t pin, int32_t freq, double duty, int8_t *achannel) {
 	driver_error_t *error = NULL;
 
 	// Sanity checks
@@ -300,7 +300,7 @@ driver_error_t *pwm_setup(uint8_t unit, uint8_t channel, int8_t pin, int32_t fre
      return NULL;
 }
 
-driver_error_t *pwm_start(uint8_t unit, uint8_t channel) {
+driver_error_t *pwm_start(int8_t unit, int8_t channel) {
 	driver_error_t *error = NULL;
 
 	// Sanity checks
@@ -320,7 +320,7 @@ driver_error_t *pwm_start(uint8_t unit, uint8_t channel) {
 	return NULL;
 }
 
-driver_error_t *pwm_stop(uint8_t unit, uint8_t channel) {
+driver_error_t *pwm_stop(int8_t unit, int8_t channel) {
 	driver_error_t *error = NULL;
 
 	// Sanity checks
@@ -343,7 +343,7 @@ driver_error_t *pwm_stop(uint8_t unit, uint8_t channel) {
 }
 
 // Set new frequency
-driver_error_t *pwm_set_freq(uint8_t unit, uint8_t channel, int32_t freq) {
+driver_error_t *pwm_set_freq(int8_t unit, int8_t channel, int32_t freq) {
 	driver_error_t *error = NULL;
 
 	// Sanity checks
@@ -396,7 +396,7 @@ driver_error_t *pwm_set_freq(uint8_t unit, uint8_t channel, int32_t freq) {
 }
 
 // Set new duty cycle
-driver_error_t *pwm_set_duty(uint8_t unit, uint8_t channel, double duty) {
+driver_error_t *pwm_set_duty(int8_t unit, int8_t channel, double duty) {
 	driver_error_t *error = NULL;
 
 	// Sanity checks
@@ -417,7 +417,7 @@ driver_error_t *pwm_set_duty(uint8_t unit, uint8_t channel, double duty) {
 	return NULL;
 }
 
-driver_error_t *pwm_unsetup(uint8_t unit, uint8_t channel) {
+driver_error_t *pwm_unsetup(int8_t unit, int8_t channel) {
 	driver_error_t *error = NULL;
 
 	// Sanity checks
