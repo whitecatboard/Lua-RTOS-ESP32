@@ -154,10 +154,10 @@ index 6b127e60..48e1f876 100644
  esp_err_t system_event_eth_start_handle_default(system_event_t *event)
  {
      tcpip_adapter_ip_info_t eth_ip;
-diff --git a/components/esp32/include/esp_event.h b/components/esp32/include/esp_event.h
+diff --git a/components/esp32/include/esp_event.h b/components/esp32/include/esp_event_legacy.h
 index 53c416c2..766ad14d 100644
---- a/components/esp32/include/esp_event.h
-+++ b/components/esp32/include/esp_event.h
+--- a/components/esp32/include/esp_event_legacy.h
++++ b/components/esp32/include/esp_event_legacy.h
 @@ -51,6 +51,16 @@ typedef enum {
      SYSTEM_EVENT_ETH_CONNECTED,            /**< ESP32 ethernet phy link up */
      SYSTEM_EVENT_ETH_DISCONNECTED,         /**< ESP32 ethernet phy link down */
@@ -198,19 +198,19 @@ index 950c05bb..08e5a232 100644
  } esp_interface_t;
  
 diff --git a/components/tcpip_adapter/include/tcpip_adapter.h b/components/tcpip_adapter/include/tcpip_adapter.h
-index 4777f160..2053a1ab 100644
+index 7d9e4ad8c..6f04fe954 100644
 --- a/components/tcpip_adapter/include/tcpip_adapter.h
 +++ b/components/tcpip_adapter/include/tcpip_adapter.h
-@@ -110,6 +110,8 @@ typedef enum {
+@@ -104,6 +104,8 @@ typedef enum {
      TCPIP_ADAPTER_IF_STA = 0,     /**< ESP32 station interface */
      TCPIP_ADAPTER_IF_AP,          /**< ESP32 soft-AP interface */
      TCPIP_ADAPTER_IF_ETH,         /**< ESP32 ethernet interface */
-+   TCPIP_ADAPTER_IF_SPI_ETH,     /**< ESP32 spi ethernet interface */
-+   TCPIP_ADAPTER_IF_TUN,         /**< ESP32 tun interface */
++    TCPIP_ADAPTER_IF_SPI_ETH,     /**< ESP32 spi ethernet interface */
++    TCPIP_ADAPTER_IF_TUN,         /**< ESP32 tun interface */
      TCPIP_ADAPTER_IF_MAX
  } tcpip_adapter_if_t;
  
-@@ -412,11 +414,9 @@ esp_err_t tcpip_adapter_create_ip6_linklocal(tcpip_adapter_if_t tcpip_if);
+@@ -406,11 +408,9 @@ esp_err_t tcpip_adapter_create_ip6_linklocal(tcpip_adapter_if_t tcpip_if);
   */
  esp_err_t tcpip_adapter_get_ip6_linklocal(tcpip_adapter_if_t tcpip_if, ip6_addr_t *if_ip6);
  
@@ -222,9 +222,9 @@ index 4777f160..2053a1ab 100644
  
  /**
   * @brief  Get DHCP server's status
-@@ -615,6 +615,8 @@ esp_err_t tcpip_adapter_get_hostname(tcpip_adapter_if_t tcpip_if, const char **h
+@@ -628,6 +628,8 @@ esp_err_t tcpip_adapter_get_netif(tcpip_adapter_if_t tcpip_if, void ** netif);
   */
- esp_err_t tcpip_adapter_get_netif(tcpip_adapter_if_t tcpip_if, void ** netif);
+ bool tcpip_adapter_is_netif_up(tcpip_adapter_if_t tcpip_if);
  
 +esp_err_t tcpip_adapter_tun_start(uint8_t *mac, tcpip_adapter_ip_info_t *ip_info);
 +

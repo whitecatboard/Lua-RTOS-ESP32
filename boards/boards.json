@@ -48,6 +48,30 @@
 		"image": ""
 	},
 	{
+		"id": "WHITECAT-ESP32-N2-DEVKIT",
+		"description": "Whitecat N2 ESP32 DEVKIT",
+		"manufacturer": "whitecatboard.org",
+		"brand": "",
+		"type": "N2ESP32-DEVKIT",
+		"subtype": "",
+		"filesystem": "default",
+		"usb_vid_pid": "10C4:EA60",
+		"usb_port_exp": "",
+		"image": ""
+	},
+	{
+		"id": "WHITECAT-ESP32-N2-DEVKIT-OTA",
+		"description": "Whitecat N2 ESP32 DEVKIT with OTA",
+		"manufacturer": "whitecatboard.org",
+		"brand": "",
+		"type": "N2ESP32-DEVKIT",
+		"subtype": "OTA",
+		"filesystem": "default",
+		"usb_vid_pid": "10C4:EA60",
+		"usb_port_exp": "",
+		"image": ""
+	},
+	{
 		"id": "WHITECAT-ESP32-LORA-GW",
 		"description": "Whitecat ESP32 LORA GW",
 		"manufacturer": "whitecatboard.org",
@@ -214,6 +238,30 @@
 		"usb_vid_pid": "",
 		"usb_port_exp": "",
 		"image": "http://git.whitecatboard.org/fipy.png"
+	},
+	{
+		"id": "ESP32-POE",
+		"description": "Olimex ESP32-POE",
+		"manufacturer": "Olimex",
+		"brand": "",
+		"type": "ESP32-POE",
+		"subtype": "",
+		"filesystem": "default",
+		"usb_vid_pid": "1A86:7523",
+		"usb_port_exp": "",
+		"image": "https://www.olimex.com/Products/IoT/ESP32/ESP32-POE/images/ESP32-POE-1.jpg"
+	},
+	{
+		"id": "ESP32-POE-OTA",
+		"description": "Olimex ESP32-POE with OTA",
+		"manufacturer": "Olimex",
+		"brand": "",
+		"type": "ESP32-POE",
+		"subtype": "OTA",
+		"filesystem": "default",
+		"usb_vid_pid": "1A86:7523",
+		"usb_port_exp": "",
+		"image": "https://www.olimex.com/Products/IoT/ESP32/ESP32-POE/images/ESP32-POE-1.jpg"
 	},
 	{
 		"id": "ESP32-GATEWAY",

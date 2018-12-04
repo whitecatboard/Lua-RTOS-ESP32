@@ -174,6 +174,20 @@ driver_error_t *net_event_register_callback(net_event_register_callback_t func);
  */
 driver_error_t *net_event_unregister_callback(net_event_register_callback_t func);
 
+
+/**
+ * @brief Wait for network init. The network is init when the TCP/IP stack is
+ *        started.
+ *
+ * @param timeout Number of seconds to wait for network init.
+ *
+ * @return
+ *     - 1: network is init
+ *     - 0: network isn't init, or timeout
+ *
+ */
+int wait_for_network_init(uint32_t timeout);
+
 /**
  * @brief Wait for network availability.
  *

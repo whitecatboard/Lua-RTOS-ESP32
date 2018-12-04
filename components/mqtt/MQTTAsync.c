@@ -2470,12 +2470,22 @@ int MQTTAsync_connect(MQTTAsync handle, const MQTTAsync_connectOptions* options)
 	}
 #endif
 
-	if (m->c->username)
+	if (m->c->username) {
 		free((void*)m->c->username);
+		// WHITECAT
+		// Set username to NULL in case of calling MQTTAsync_connect again to set
+		// the right credentials.
+		m->c->username = NULL;
+	}
 	if (options->username)
 		m->c->username = MQTTStrdup(options->username);
-	if (m->c->password)
+	if (m->c->password) {
 		free((void*)m->c->password);
+        // WHITECAT
+        // Set password to NULL in case of calling MQTTAsync_connect again to set
+        // the right credentials.
+		m->c->password = NULL;
+	}
 	if (options->password)
 	{
 		m->c->password = MQTTStrdup(options->password);
@@ -2823,6 +2833,7 @@ int MQTTAsync_send(MQTTAsync handle, const char* destinationName, int payloadlen
 	int msgid = 0;
 
 	FUNC_ENTRY;
+
 	if (m == NULL || m->c == NULL)
 		rc = MQTTASYNC_FAILURE;
 	else if (m->c->connected == 0 && (m->createOptions == NULL ||

@@ -81,10 +81,10 @@ driver_error_t *dht23_acquire(sensor_instance_t *unit, sensor_value_t *values) {
     		return error;
     }
 
-    values[0].floatd.value = (float)(((uint16_t)data[2]) << 8 | (uint16_t)data[3]) / 10.0;
+    values[0].floatd.value = (float)(((uint16_t)(data[2] & 0b01111111)) << 8 | (uint16_t)data[3]) / 10.0;
 
 	// Apply temperature sing
-	if (data[2] & 0b1000000) {
+	if (data[2] & 0b10000000) {
 		values[0].floatd.value = -1 * values[0].floatd.value;
 	}
 

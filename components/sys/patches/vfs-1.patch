@@ -585,36 +585,3 @@ index f31790e0..dfd548ad 100644
 +    s_card = NULL;
 +    return err;
 +}
-diff --git a/components/vfs/include/esp_vfs.h b/components/vfs/include/esp_vfs.h
-index d7467d227..02da3a428 100644
---- a/components/vfs/include/esp_vfs.h
-+++ b/components/vfs/include/esp_vfs.h
-@@ -29,6 +29,9 @@
- #include <sys/termios.h>
- #include <dirent.h>
- #include <string.h>
-+
-+#include "lwip/sockets.h"
-+
- #include "sdkconfig.h"
- 
- #ifdef __cplusplus
-@@ -180,6 +183,18 @@ typedef struct
-         int (*truncate_p)(void* ctx, const char *path, off_t length);
-         int (*truncate)(const char *path, off_t length);
-     };
-+    union {
-+        int (*ftruncate_p)(void* ctx, int fd, off_t length);
-+        int (*ftruncate)(int fd, off_t length);
-+    };
-+    union {
-+        int (*writev_p)(void* ctx, int fd, const struct iovec *iov, int iovcnt);
-+        int (*writev)(int fd, const struct iovec *iov, int iovcnt);
-+    };
-+    union {
-+        int (*select_p)(void* ctx, int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
-+        int (*select)(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
-+    };
- #ifdef CONFIG_SUPPORT_TERMIOS
-     union {
-         int (*tcsetattr_p)(void *ctx, int fd, int optional_actions, const struct termios *p);

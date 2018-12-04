@@ -46,18 +46,21 @@
 #ifndef _LUA_TMR_H
 #define	_LUA_TMR_H
 
+#include "sys.h"
+
 #include <drivers/cpu.h>
 
 typedef enum {
-	TmrHW,
-	TmrSW
+	TmrHW = 1,
+	TmrSW = 2
 } tmr_type_t;
 
 typedef struct {
 	tmr_type_t type;
+	int8_t std;
 	int8_t unit;
 	TimerHandle_t h;
-	int callback;
+	lua_callback_t *callback;
 } tmr_userdata;
 
 #ifdef CPU_TIMER0

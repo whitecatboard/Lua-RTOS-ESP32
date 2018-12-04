@@ -147,7 +147,7 @@ index f0a19599..85a2597f 100644
 +
 +    int fd;
 +
-+    for(fd = 0;fd <= nfds;fd++) {
++    for(fd = 0;fd < nfds;fd++) {
          const int local_fd = s_fd_table[fd].local_fd;
 -        _lock_release(&s_fd_table_lock);
  
