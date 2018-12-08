@@ -200,7 +200,7 @@ static int do_printf(http_request_handle *request, const char *fmt, ...) {
 	return ret;
 }
 
-char *do_gets(char *s, int size, http_request_handle *request) {
+static char *do_gets(char *s, int size, http_request_handle *request) {
 
 	int socket = request->config->secure ? SSL_get_fd(request->ssl) : request->socket;
 
@@ -386,6 +386,7 @@ int http_status(lua_State* L) {
 		lua_pushinteger(L, 0);
 	}
 
+	lua_pop(L, 1);
 	return 1;
 }
 
@@ -417,6 +418,7 @@ int http_print(lua_State* L) {
 		}
 	}
 
+	lua_pop(L, 1);
 	return 0;
 }
 
@@ -730,7 +732,7 @@ static void list_dir(http_request_handle *request, char *pathbuf, struct stat *s
 	do_printf(request, "0\r\n\r\n");
 }
 
-int process(http_request_handle *request) {
+static int process(http_request_handle *request) {
 	char *reqbuf;
 	char *databuf = NULL;
 	char *host = NULL;
