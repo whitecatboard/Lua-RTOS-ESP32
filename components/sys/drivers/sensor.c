@@ -250,10 +250,6 @@ static driver_error_t *sensor_owire_setup(uint8_t interface, sensor_instance_t *
     // By default we always can get sensor data
     gettimeofday(&unit->next, NULL);
 
-    #if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
-    pwbus_on();
-    #endif
-
     // Check if owire interface is setup on the given gpio
     int dev = owire_checkpin(unit->setup[interface].owire.gpio);
     if (dev < 0) {
@@ -289,10 +285,6 @@ static driver_error_t *sensor_owire_setup(uint8_t interface, sensor_instance_t *
 static driver_error_t *sensor_i2c_setup(uint8_t interface, sensor_instance_t *unit) {
     driver_error_t *error;
     int i2cdevice;
-
-    #if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
-    pwbus_on();
-    #endif
 
     if ((error = i2c_attach(unit->setup[interface].i2c.id, I2C_MASTER, unit->setup[interface].i2c.speed, 0, 0, &i2cdevice))) {
         return error;
@@ -486,6 +478,10 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 
     attached++;
 
+#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
+    pwbus_on();
+#endif
+
     return NULL;
 }
 
@@ -554,6 +550,10 @@ driver_error_t *sensor_unsetup(sensor_instance_t *unit) {
     mtx_destroy(&unit->mtx);
     free(unit);
 
+#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
+    pwbus_off();
+#endif
+
     portENABLE_INTERRUPTS();
 
     return NULL;
@@ -574,10 +574,6 @@ driver_error_t *sensor_acquire(sensor_instance_t *unit) {
     if (now_usec < next_available_data) {
         return NULL;
     }
-
-    #if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
-    pwbus_on();
-    #endif
 
     // Allocate space for sensor data
     if (!(value = calloc(1, sizeof(sensor_value_t) * SENSOR_MAX_PROPERTIES))) {

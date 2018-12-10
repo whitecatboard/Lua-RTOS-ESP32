@@ -109,7 +109,7 @@ driver_error_t *pwbus_off() {
 
     power--;
 
-    if (power > 0) {
+    if (power == 0) {
         mtx_unlock(&mtx);
         return NULL;
     }
