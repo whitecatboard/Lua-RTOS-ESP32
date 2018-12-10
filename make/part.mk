@@ -75,9 +75,9 @@ erase-ota-data:
 # Check that FLASH have enough space to fit the app
 app-check-space:
 	$(eval APP_SIZE := $(shell $(FILE_SIZE_CMD) $(APP_BIN)))
-	$(eval APP_PART_SIZE := $(shell $(GET_PART_INFO) --partition-name factory --size $(PARTITION_TABLE_BIN)))
+	$(eval APP_PART_SIZE := $(shell $(GET_PART_INFO) -q --partition-table-file $(PARTITION_TABLE_BIN) --partition-name factory get_partition_info --info size))
 	$(if $(filter "foo","foo$(APP_PART_SIZE)"),\
-		$(eval APP_PART_SIZE := $(shell $(GET_PART_INFO) --partition-name ota_0 --size $(PARTITION_TABLE_BIN)))\
+	    $(eval APP_PART_SIZE := $(shell $(GET_PART_INFO) -q --partition-table-file $(PARTITION_TABLE_BIN) --partition-name ota_0 get_partition_info --info size))\
 	)
 	$(if $(filter "foo","foo$(APP_PART_SIZE)"),,\
 		$(eval APP_PART_SIZE := $(shell python -c 'print(int("$(APP_PART_SIZE)", 16))'))\

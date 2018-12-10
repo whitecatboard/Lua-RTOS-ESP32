@@ -1,8 +1,8 @@
 diff --git a/components/driver/include/driver/rmt.h b/components/driver/include/driver/rmt.h
-index 7abf63ec..b965086f 100644
+index 741c7cd7d..d8d729396 100644
 --- a/components/driver/include/driver/rmt.h
 +++ b/components/driver/include/driver/rmt.h
-@@ -817,7 +817,7 @@ rmt_tx_end_callback_t rmt_register_tx_end_callback(rmt_tx_end_fn_t function, voi
+@@ -844,7 +844,7 @@ rmt_tx_end_callback_t rmt_register_tx_end_callback(rmt_tx_end_fn_t function, voi
   *--------------------------END OF EXAMPLE --------------------------
   */
  
@@ -12,13 +12,16 @@ index 7abf63ec..b965086f 100644
  #ifdef __cplusplus
  }
 diff --git a/components/driver/rmt.c b/components/driver/rmt.c
-index 8ee1640c..69e10c23 100644
+index f3f2ba8b6..7916dae24 100644
 --- a/components/driver/rmt.c
 +++ b/components/driver/rmt.c
-@@ -930,3 +930,111 @@ esp_err_t rmt_write_sample(rmt_channel_t channel, const uint8_t *src, size_t src
+@@ -949,4 +949,112 @@ esp_err_t rmt_get_channel_status(rmt_channel_status_result_t *channel_status)
+         }
      }
      return ESP_OK;
- }
+-}
+\ No newline at end of file
++}
 +
 +esp_err_t rmt_config_one(const rmt_config_t* rmt_param, uint8_t *chan)
 +{
