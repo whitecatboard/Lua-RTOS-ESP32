@@ -24,15 +24,12 @@ menu "Lua RTOS"
    
       config LUA_RTOS_BOARD_WHITECAT_N1ESP32
          bool "WHITECAT ESP32 N1"
-         select LUA_RTOS_USE_POWER_BUS if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
 
       config LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT
          bool "WHITECAT ESP32 N1 DEVKIT"
-         select LUA_RTOS_USE_POWER_BUS if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
 
       config LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT
          bool "WHITECAT ESP32 N2 DEVKIT"
-         select LUA_RTOS_USE_POWER_BUS if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
       
       config LUA_RTOS_BOARD_WHITECAT_ESP32_LORA_GW
          bool "WHITECAT ESP32 LORA GATEWAY"
@@ -125,9 +122,14 @@ menu "Lua RTOS"
                stack to set the DevEUI.
    
          config LUA_RTOS_POWER_BUS_PIN
-            int "Power bus GPIO number"
+            int "Power BUS GPIO number"
             range -1 39
             default 27
+            help
+               Some Lua RTOS compatible boards, such as WHITECAT N2 DEVKIT, have a load switch that can turn on and
+               off power rails through a GPIO. In Lua RTOS this feature is know as Power BUS, on which you can connect
+               devices that can be turn on and off on-demand, such as sensors and transceivers that are turn off when
+               ther are not needed to save power consumption.
          
       config LUA_RTOS_LED_ACT
             int "Activity led GPIO number"
@@ -668,6 +670,17 @@ menu "Lua RTOS"
                         MCP3208 is an ADC converter with SPI interface. 8 channels, resolution of 12 bits.
             endchoice    
 
+         config LUA_RTOS_EXTERNAL_ADC_CONNECTED_TO_POWER_BUS
+             bool "Connected to Power BUS"
+             depends on (ADC_ADS1015 || ADC_ADS1115 || ADC_MCP3008 || ADC_MCP3208)
+             default n
+             help
+               Some Lua RTOS compatible boards, such as WHITECAT N2 DEVKIT, have a load switch that can turn on and
+               off power rails through a GPIO. In Lua RTOS this feature is know as Power BUS, on which you can connect
+               devices that can be turn on and off on-demand, such as sensors and transceivers that are turn off when
+               they are not needed, to save power consumption. If the external ADC device is connected to Power BUS,
+               enable this option.
+                
          config ADC_I2C
             depends on (ADC_ADS1115 || ADC_ADS1015)
                int "ADS1115 I2C port"
