@@ -273,6 +273,10 @@ static int lsensor_set( lua_State* L ) {
 
     const char *property = luaL_checkstring( L, 2 );
 
+    if (!udata->instance) {
+        return luaL_exception(L, SENSOR_ERR_DETACHED);
+    }
+
     // Prepare property value
     if ((ret = lsensor_set_prepare(L, udata->instance->sensor, property, &property_value))) {
         return ret;
@@ -295,6 +299,10 @@ static int lsensor_get( lua_State* L ) {
     luaL_argcheck(L, udata, 1, "sensor expected");
 
     const char *property = luaL_checkstring( L, 2 );
+
+    if (!udata->instance) {
+        return luaL_exception(L, SENSOR_ERR_DETACHED);
+    }
 
     // Get sensor
     if ((error = sensor_get(udata->instance, property, &value))) {
@@ -336,6 +344,10 @@ static int lsensor_acquire( lua_State* L ) {
     udata = (sensor_userdata *)luaL_checkudata(L, 1, "sensor.ins");
     luaL_argcheck(L, udata, 1, "sensor expected");
 
+    if (!udata->instance) {
+        return luaL_exception(L, SENSOR_ERR_DETACHED);
+    }
+
     // Acquire data from sensor
     if ((error = sensor_acquire(udata->instance))) {
         return luaL_driver_error(L, error);
@@ -355,6 +367,10 @@ static int lsensor_read( lua_State* L ) {
     luaL_argcheck(L, udata, 1, "sensor expected");
 
     const char *id = luaL_checkstring( L, 2 );
+
+    if (!udata->instance) {
+        return luaL_exception(L, SENSOR_ERR_DETACHED);
+    }
 
     // If data is not acquired acquire data
     if (!udata->adquired) {
