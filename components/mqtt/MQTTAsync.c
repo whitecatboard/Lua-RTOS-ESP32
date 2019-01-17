@@ -2848,6 +2848,25 @@ int MQTTAsync_send(MQTTAsync handle, const char* destinationName, int payloadlen
 	else if (m->createOptions && (MQTTAsync_countBufferedMessages(m) >= m->createOptions->maxBufferedMessages))
 		rc = MQTTASYNC_MAX_BUFFERED_MESSAGES;
 
+#if __XTENSA__
+	if (rc == MQTTASYNC_MAX_BUFFERED_MESSAGES) {
+	    int timeout = 4000;
+
+	    // Wait some time to get space in the message buffer, so message buffer can be full when sending messages quickly over a slow
+	    // network or a slow broker
+	    while ((m->createOptions && (MQTTAsync_countBufferedMessages(m) >= m->createOptions->maxBufferedMessages)) && (timeout > 0)) {
+	        // Sleep 10 msecs
+	        usleep(10000);
+
+	        timeout -= 10;
+	    }
+
+	    if (timeout > 0) {
+	        rc = MQTTASYNC_SUCCESS;
+	    }
+	}
+#endif
+
 	if (rc != MQTTASYNC_SUCCESS)
 		goto exit;
 
