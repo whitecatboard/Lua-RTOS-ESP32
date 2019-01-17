@@ -12,7 +12,7 @@ thread.start(function()
 	local line_spacing
 
 	-- Init TFT
-	gdisplay.attach(gdisplay.ST7735G, gdisplay.LANDSCAPE_FLIP, true)
+	gdisplay.attach(gdisplay.ST7735G, gdisplay.LANDSCAPE_FLIP, false)
 	gdisplay.setfont(gdisplay.UBUNTU16_FONT)
 	gdisplay.setforeground(gdisplay.WHITE)
 	gdisplay.clear()
@@ -20,7 +20,7 @@ thread.start(function()
 	line_spacing = gdisplay.getfontheight() + 2
 	
 	-- Instantiate the sensor
-	s1 = sensor.attach("BME280", i2c.I2C0, 400, 0x76)
+	s1 = sensor.attach("BME280", i2c.I2C0, 0x76, 400)
 
 	while true do
 	  -- Read temperature
