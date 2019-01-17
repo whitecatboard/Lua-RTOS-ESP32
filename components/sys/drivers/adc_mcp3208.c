@@ -85,7 +85,7 @@ driver_error_t *adc_mcp3208_setup(adc_chann_t *chan) {
 
 	chan->max = chan->vref;
 
-#if (config_LUA_RTOS_EXTERNAL_ADC_CONNECTED_TO_POWER_BUS >= 0)
+#if CONFIG_LUA_RTOS_EXTERNAL_ADC_CONNECTED_TO_POWER_BUS
     pwbus_on();
 #endif
 

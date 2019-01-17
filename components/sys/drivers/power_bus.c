@@ -97,7 +97,7 @@ driver_error_t *pwbus_on() {
 	power++;
 
 	// Wait some time for power stabilization
-	delay(100);
+	delay(CONFIG_LUA_RTOS_POWER_BUS_DELAY);
 
     mtx_unlock(&mtx);
 
@@ -116,7 +116,10 @@ driver_error_t *pwbus_off() {
 
 	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
 
-	mtx_unlock(&mtx);
+    // Wait some time for power stabilization
+    delay(CONFIG_LUA_RTOS_POWER_BUS_DELAY);
+
+    mtx_unlock(&mtx);
 
 	return NULL;
 }

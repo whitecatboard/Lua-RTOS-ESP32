@@ -139,7 +139,7 @@ driver_error_t *adc_ads1115_setup(adc_chann_t *chan) {
 		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_RESOLUTION, NULL);
 	}
 
-#if (config_LUA_RTOS_EXTERNAL_ADC_CONNECTED_TO_POWER_BUS >= 0)
+#if CONFIG_LUA_RTOS_EXTERNAL_ADC_CONNECTED_TO_POWER_BUS
     pwbus_on();
 #endif
 
