@@ -12,9 +12,10 @@ thread.start(function()
 	local line_spacing
 
 	-- Init TFT
-	gdisplay.attach(gdisplay.ST7735G, gdisplay.LANDSCAPE_FLIP, false)
+	gdisplay.attach(gdisplay.ST7735G, gdisplay.LANDSCAPE_FLIP, true)
 	gdisplay.setfont(gdisplay.UBUNTU16_FONT)
 	gdisplay.setforeground(gdisplay.WHITE)
+	gdisplay.settransp(false)
 	gdisplay.clear()
 	
 	line_spacing = gdisplay.getfontheight() + 2
