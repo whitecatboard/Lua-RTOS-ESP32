@@ -81,6 +81,7 @@ static void nvs_error(lua_State* L, int code) {
     }
 }
 
+// Lua: nvs.write(namespace, key) return: nothing|exception
 static int l_nvs_write(lua_State *L) {
     int total = lua_gettop(L); // Get number of arguments
     nvs_handle handle_to_settings;
@@ -184,6 +185,7 @@ static int l_nvs_write(lua_State *L) {
     return 0;
 }
 
+// Lua: nvs.rm(namespace, key) return: true|exception
 static int l_nvs_read(lua_State *L) {
     int total = lua_gettop(L); // Get number of arguments
     nvs_handle handle_to_settings;
@@ -209,7 +211,7 @@ static int l_nvs_read(lua_State *L) {
     }
 
     // Open
-    err = nvs_open(nspace, NVS_READWRITE, &handle_to_settings);
+    err = nvs_open(nspace, NVS_READONLY, &handle_to_settings);
     if (err != ESP_OK) {
     	nvs_error(L, err);
     }
@@ -274,7 +276,54 @@ static int l_nvs_read(lua_State *L) {
     return 1;
 }
 
+// Lua: nvs.exists(namespace, key) return: true|false
 static int l_nvs_exists(lua_State *L) {
+    int total = lua_gettop(L); // Get number of arguments
+    nvs_handle handle_to_settings;
+    esp_err_t err;
+    const char *key = NULL;
+    const char *nspace = NULL;
+
+    // Sanity checks, and check arguments
+    if (total < 2 ) {
+    	return luaL_error(L, "missing arguments");
+    }
+
+    nspace = luaL_checkstring(L, 1);
+    if (!nspace) {
+    	return luaL_error(L, "namespace missing");
+    }
+
+    key = luaL_checkstring(L, 2);
+    if (!key) {
+    	return luaL_error(L, "key missing");
+    }
+
+    // Try to open
+    err = nvs_open(nspace, NVS_READONLY, &handle_to_settings);
+    if (err != ESP_OK) {
+	    lua_pushboolean(L, 0);
+    	return 1;
+    }
+    
+    // Try to read key size
+    size_t key_size = 0;
+    err = nvs_get_blob(handle_to_settings, key, NULL, &key_size);
+    if (err != ESP_OK) {
+    	nvs_close(handle_to_settings);
+			lua_pushboolean(L, 0);
+	    return 1;
+    }
+
+    // Close
+    nvs_close(handle_to_settings);
+
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+// Lua: nvs.rm(namespace, key) return: true|false
+static int l_nvs_rm(lua_State *L) {
     int total = lua_gettop(L); // Get number of arguments
     nvs_handle handle_to_settings;
     esp_err_t err;
@@ -304,12 +353,17 @@ static int l_nvs_exists(lua_State *L) {
     }
     
     // Try to read key size
-    size_t key_size = 0;
-    err = nvs_get_blob(handle_to_settings, key, NULL, &key_size);
+    err = nvs_erase_key(handle_to_settings, key);
     if (err != ESP_OK) {
     	nvs_close(handle_to_settings);
 			lua_pushboolean(L, 0);
 	    return 1;
+    }
+
+    // Commit changes
+    err = nvs_commit(handle_to_settings);
+    if (err != ESP_OK) {
+    	nvs_error(L, err);
     }
 
     // Close
@@ -324,6 +378,7 @@ static const LUA_REG_TYPE nvs_map[] =
   { LSTRKEY( "write" ),      LFUNCVAL( l_nvs_write ) },
   { LSTRKEY( "read" ),       LFUNCVAL( l_nvs_read ) },
   { LSTRKEY( "exists" ),     LFUNCVAL( l_nvs_exists ) },
+  { LSTRKEY( "rm" ),     	 LFUNCVAL( l_nvs_rm ) },
   { LNILKEY, LNILVAL }
 };
 
