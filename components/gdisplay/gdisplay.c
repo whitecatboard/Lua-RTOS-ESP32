@@ -52,6 +52,7 @@
 #include <gdisplay/gdisplay.h>
 
 #include <drivers/gpio.h>
+#include <drivers/power_bus.h>
 
 #include <pthread.h>
 
@@ -257,6 +258,10 @@ driver_error_t *gdisplay_init(uint8_t chipset, uint8_t orient, uint8_t buffered,
 
 	cursorx = 0;
 	cursory = 0;
+
+#if CONFIG_LUA_RTOS_GDISPLAY_CONNECTED_TO_POWER_BUS || CONFIG_LUA_RTOS_GDISPLAY_I2C_CONNECTED_TO_POWER_BUS
+    pwbus_on();
+#endif
 
 	error = (display->init)(chipset, orient, address);
 	if (error) {

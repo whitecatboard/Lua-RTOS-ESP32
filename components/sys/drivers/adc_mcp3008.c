@@ -53,6 +53,7 @@
 #include <drivers/spi.h>
 #include <drivers/adc.h>
 #include <drivers/adc_mcp3008.h>
+#include <drivers/power_bus.h>
 
 static int spi_device = -1;
 
@@ -85,6 +86,9 @@ driver_error_t *adc_mcp3008_setup(adc_chann_t *chan) {
 	chan->max = chan->vref;
 
 	// Setup
+#if CONFIG_LUA_RTOS_EXTERNAL_ADC_CONNECTED_TO_POWER_BUS
+    pwbus_on();
+#endif
 
     // Init SPI bus
 	if (spi_device == -1) {

@@ -1,5 +1,21 @@
+diff --git a/components/fatfs/src/esp_vfs_fat.h b/components/fatfs/src/esp_vfs_fat.h
+index a2a05951e..db60e9b36 100644
+--- a/components/fatfs/src/esp_vfs_fat.h
++++ b/components/fatfs/src/esp_vfs_fat.h
+@@ -245,6 +245,11 @@ esp_err_t esp_vfs_fat_rawflash_mount(const char* base_path,
+  */
+  esp_err_t esp_vfs_fat_rawflash_unmount(const char* base_path, const char* partition_label);
+ 
++ esp_err_t esp_vfs_fat_sdmmc_format(const char* base_path,
++     const sdmmc_host_t* host_config,
++     const void* slot_config,
++     const esp_vfs_fat_mount_config_t* mount_config,
++     sdmmc_card_t** out_card);
+ 
+ #ifdef __cplusplus
+ }
 diff --git a/components/fatfs/src/ff.c b/components/fatfs/src/ff.c
-index 5ebdf491..cb5bc4b3 100644
+index 5ebdf4919..cb5bc4b3e 100644
 --- a/components/fatfs/src/ff.c
 +++ b/components/fatfs/src/ff.c
 @@ -3104,7 +3104,7 @@ FRESULT follow_path (	/* FR_OK(0): successful, !=0: error code */
@@ -173,7 +189,7 @@ index 5ebdf491..cb5bc4b3 100644
  					res = (djn.obj.sclust == djo.obj.sclust && djn.dptr == djo.dptr) ? FR_NO_FILE : FR_EXIST;
  				}
 diff --git a/components/fatfs/src/ff.h b/components/fatfs/src/ff.h
-index 55c13298..cfd2a0b8 100644
+index 55c132982..cfd2a0b88 100644
 --- a/components/fatfs/src/ff.h
 +++ b/components/fatfs/src/ff.h
 @@ -236,7 +236,10 @@ typedef enum {
@@ -189,7 +205,7 @@ index 55c13298..cfd2a0b8 100644
  
  
 diff --git a/components/fatfs/src/vfs_fat.c b/components/fatfs/src/vfs_fat.c
-index 6d7019a1..68db474a 100644
+index ea74c82ee..96b436835 100644
 --- a/components/fatfs/src/vfs_fat.c
 +++ b/components/fatfs/src/vfs_fat.c
 @@ -24,6 +24,8 @@
@@ -216,7 +232,7 @@ index 6d7019a1..68db474a 100644
  /* Date and time storage formats in FAT */
  typedef union {
      struct {
-@@ -267,6 +261,9 @@ static int fresult_to_errno(FRESULT fr)
+@@ -269,6 +263,9 @@ static int fresult_to_errno(FRESULT fr)
          case FR_NOT_ENOUGH_CORE: return ENOMEM;
          case FR_TOO_MANY_OPEN_FILES: return ENFILE;
          case FR_INVALID_PARAMETER: return EINVAL;
@@ -226,7 +242,7 @@ index 6d7019a1..68db474a 100644
          case FR_OK: return 0;
      }
      assert(0 && "unhandled FRESULT");
-@@ -484,7 +481,7 @@ static int vfs_fat_stat(void* ctx, const char * path, struct stat * st)
+@@ -485,7 +482,7 @@ static int vfs_fat_stat(void* ctx, const char * path, struct stat * st)
          .tm_hour = ftime.hour
      };
      st->st_mtime = mktime(&tm);
@@ -235,7 +251,7 @@ index 6d7019a1..68db474a 100644
      st->st_ctime = 0;
      return 0;
  }
-@@ -494,7 +491,26 @@ static int vfs_fat_unlink(void* ctx, const char *path)
+@@ -495,7 +492,26 @@ static int vfs_fat_unlink(void* ctx, const char *path)
      vfs_fat_ctx_t* fat_ctx = (vfs_fat_ctx_t*) ctx;
      _lock_acquire(&fat_ctx->lock);
      prepend_drive_to_path(fat_ctx, &path, NULL);
@@ -263,17 +279,17 @@ index 6d7019a1..68db474a 100644
      _lock_release(&fat_ctx->lock);
      if (res != FR_OK) {
          ESP_LOGD(TAG, "%s: fresult=%d", __func__, res);
-@@ -590,17 +606,19 @@ static DIR* vfs_fat_opendir(void* ctx, const char* name)
+@@ -590,14 +606,17 @@ static DIR* vfs_fat_opendir(void* ctx, const char* name)
  {
      vfs_fat_ctx_t* fat_ctx = (vfs_fat_ctx_t*) ctx;
      _lock_acquire(&fat_ctx->lock);
 -    prepend_drive_to_path(fat_ctx, &name, NULL);
--    vfs_fat_dir_t* fat_dir = calloc(1, sizeof(vfs_fat_dir_t));
+-    vfs_fat_dir_t* fat_dir = ff_memcalloc(1, sizeof(vfs_fat_dir_t));
 +
 +    vfs_dir_t *fat_dir = vfs_allocate_dir("fat", name);
      if (!fat_dir) {
          _lock_release(&fat_ctx->lock);
--        errno = ENOMEM;
+         errno = ENOMEM;
          return NULL;
      }
 -    FRESULT res = f_opendir(&fat_dir->ffdir, name);
@@ -283,12 +299,8 @@ index 6d7019a1..68db474a 100644
 +    FRESULT res = f_opendir((FF_DIR *)fat_dir->fs_dir, name);
      _lock_release(&fat_ctx->lock);
      if (res != FR_OK) {
--        free(fat_dir);
-+        vfs_free_dir(fat_dir);
-         ESP_LOGD(TAG, "%s: fresult=%d", __func__, res);
-         errno = fresult_to_errno(res);
-         return NULL;
-@@ -611,9 +629,9 @@ static DIR* vfs_fat_opendir(void* ctx, const char* name)
+         free(fat_dir);
+@@ -611,9 +630,9 @@ static DIR* vfs_fat_opendir(void* ctx, const char* name)
  static int vfs_fat_closedir(void* ctx, DIR* pdir)
  {
      assert(pdir);
@@ -301,7 +313,7 @@ index 6d7019a1..68db474a 100644
      if (res != FR_OK) {
          ESP_LOGD(TAG, "%s: fresult=%d", __func__, res);
          errno = fresult_to_errno(res);
-@@ -624,13 +642,23 @@ static int vfs_fat_closedir(void* ctx, DIR* pdir)
+@@ -624,13 +643,23 @@ static int vfs_fat_closedir(void* ctx, DIR* pdir)
  
  static struct dirent* vfs_fat_readdir(void* ctx, DIR* pdir)
  {
@@ -327,7 +339,7 @@ index 6d7019a1..68db474a 100644
      return out_dirent;
  }
  
-@@ -638,25 +666,37 @@ static int vfs_fat_readdir_r(void* ctx, DIR* pdir,
+@@ -638,25 +667,37 @@ static int vfs_fat_readdir_r(void* ctx, DIR* pdir,
          struct dirent* entry, struct dirent** out_dirent)
  {
      assert(pdir);
@@ -370,7 +382,7 @@ index 6d7019a1..68db474a 100644
              sizeof(entry->d_name));
      fat_dir->offset++;
      *out_dirent = entry;
-@@ -666,17 +706,17 @@ static int vfs_fat_readdir_r(void* ctx, DIR* pdir,
+@@ -666,17 +707,17 @@ static int vfs_fat_readdir_r(void* ctx, DIR* pdir,
  static long vfs_fat_telldir(void* ctx, DIR* pdir)
  {
      assert(pdir);
@@ -391,7 +403,7 @@ index 6d7019a1..68db474a 100644
          if (res != FR_OK) {
              ESP_LOGD(TAG, "%s: rewinddir fresult=%d", __func__, res);
              errno = fresult_to_errno(res);
-@@ -685,7 +725,7 @@ static void vfs_fat_seekdir(void* ctx, DIR* pdir, long offset)
+@@ -685,7 +726,7 @@ static void vfs_fat_seekdir(void* ctx, DIR* pdir, long offset)
          fat_dir->offset = 0;
      }
      while (fat_dir->offset < offset) {
@@ -400,7 +412,7 @@ index 6d7019a1..68db474a 100644
          if (res != FR_OK) {
              ESP_LOGD(TAG, "%s: f_readdir fresult=%d", __func__, res);
              errno = fresult_to_errno(res);
-@@ -715,8 +755,34 @@ static int vfs_fat_rmdir(void* ctx, const char* name)
+@@ -715,8 +756,34 @@ static int vfs_fat_rmdir(void* ctx, const char* name)
  {
      vfs_fat_ctx_t* fat_ctx = (vfs_fat_ctx_t*) ctx;
      _lock_acquire(&fat_ctx->lock);
@@ -436,27 +448,11 @@ index 6d7019a1..68db474a 100644
      _lock_release(&fat_ctx->lock);
      if (res != FR_OK) {
          ESP_LOGD(TAG, "%s: fresult=%d", __func__, res);
-diff --git a/components/fatfs/src/esp_vfs_fat.h b/components/fatfs/src/esp_vfs_fat.h
-index a2a05951..db60e9b3 100644
---- a/components/fatfs/src/esp_vfs_fat.h
-+++ b/components/fatfs/src/esp_vfs_fat.h
-@@ -245,6 +245,11 @@ esp_err_t esp_vfs_fat_rawflash_mount(const char* base_path,
-  */
-  esp_err_t esp_vfs_fat_rawflash_unmount(const char* base_path, const char* partition_label);
- 
-+ esp_err_t esp_vfs_fat_sdmmc_format(const char* base_path,
-+     const sdmmc_host_t* host_config,
-+     const void* slot_config,
-+     const esp_vfs_fat_mount_config_t* mount_config,
-+     sdmmc_card_t** out_card);
- 
- #ifdef __cplusplus
- }
 diff --git a/components/fatfs/src/vfs_fat_sdmmc.c b/components/fatfs/src/vfs_fat_sdmmc.c
-index f31790e0..dfd548ad 100644
+index b667aa19f..fe51a6a6c 100644
 --- a/components/fatfs/src/vfs_fat_sdmmc.c
 +++ b/components/fatfs/src/vfs_fat_sdmmc.c
-@@ -179,3 +179,128 @@ esp_err_t esp_vfs_fat_sdmmc_unmount()
+@@ -180,3 +180,128 @@ esp_err_t esp_vfs_fat_sdmmc_unmount()
      s_base_path = NULL;
      return err;
  }

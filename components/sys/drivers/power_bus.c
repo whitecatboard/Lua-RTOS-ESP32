@@ -49,10 +49,15 @@
 
 #include <sys/delay.h>
 #include <sys/driver.h>
+#include <sys/mutex.h>
 
 #include <drivers/gpio.h>
 #include <drivers/power_bus.h>
 
+static struct mtx mtx;
+
+// How many devices are connected to the power bus? When no devices are connected the power bus can
+// turn off.
 static int power = 0;
 
 // Register driver and errors
@@ -70,6 +75,8 @@ static void _pwbus_init() {
 	driver_lock(PWBUS_DRIVER, 0, GPIO_DRIVER, CONFIG_LUA_RTOS_POWER_BUS_PIN, DRIVER_ALL_FLAGS, NULL);
 #endif
 
+	mtx_init(&mtx, NULL, NULL, 0);
+
 	gpio_pin_output(CONFIG_LUA_RTOS_POWER_BUS_PIN);
 	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
 	power = 0;
@@ -79,22 +86,40 @@ static void _pwbus_init() {
  * Operation functions
  */
 driver_error_t *pwbus_on() {
-	if (power) return NULL;
+    mtx_lock(&mtx);
+
+	if (power > 0) {
+	    mtx_unlock(&mtx);
+	    return NULL;
+	}
 
 	gpio_pin_set(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	power = 1;
+	power++;
 
 	// Wait some time for power stabilization
-	delay(100);
+	delay(CONFIG_LUA_RTOS_POWER_BUS_DELAY);
+
+    mtx_unlock(&mtx);
 
 	return NULL;
 }
 
 driver_error_t *pwbus_off() {
-	if (!power) return NULL;
+    mtx_lock(&mtx);
+
+    power--;
+
+    if (power == 0) {
+        mtx_unlock(&mtx);
+        return NULL;
+    }
 
 	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-	power = 0;
+
+    // Wait some time for power stabilization
+    delay(CONFIG_LUA_RTOS_POWER_BUS_DELAY);
+
+    mtx_unlock(&mtx);
 
 	return NULL;
 }

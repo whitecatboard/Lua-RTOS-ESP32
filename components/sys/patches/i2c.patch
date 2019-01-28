@@ -1,8 +1,8 @@
 diff --git a/components/driver/i2c.c b/components/driver/i2c.c
-index e21c137c..6d7753a7 100644
+index ad67b1639..652915e68 100644
 --- a/components/driver/i2c.c
 +++ b/components/driver/i2c.c
-@@ -144,7 +144,7 @@ typedef struct {
+@@ -147,7 +147,7 @@ typedef struct {
  
  static i2c_obj_t *p_i2c_obj[I2C_NUM_MAX] = {0};
  static void i2c_isr_handler_default(void* arg);
@@ -11,8 +11,8 @@ index e21c137c..6d7753a7 100644
  static esp_err_t IRAM_ATTR i2c_hw_fsm_reset(i2c_port_t i2c_num);
  
  /*
-@@ -1073,17 +1073,19 @@ esp_err_t i2c_master_read(i2c_cmd_handle_t cmd_handle, uint8_t* data, size_t dat
-     }   
+@@ -1110,17 +1110,19 @@ esp_err_t i2c_master_read(i2c_cmd_handle_t cmd_handle, uint8_t* data, size_t dat
+     }
  }
  
 -static void IRAM_ATTR i2c_master_cmd_begin_static(i2c_port_t i2c_num)
@@ -34,7 +34,7 @@ index e21c137c..6d7753a7 100644
      } else if ((p_i2c->status == I2C_STATUS_ACK_ERROR)
              || (p_i2c->status == I2C_STATUS_TIMEOUT)) {
          I2C[i2c_num]->int_ena.end_detect = 0;
-@@ -1097,7 +1099,7 @@ static void IRAM_ATTR i2c_master_cmd_begin_static(i2c_port_t i2c_num)
+@@ -1134,7 +1136,7 @@ static void IRAM_ATTR i2c_master_cmd_begin_static(i2c_port_t i2c_num)
          if (HPTaskAwoken == pdTRUE) {
              portYIELD_FROM_ISR();
          }
@@ -43,7 +43,7 @@ index e21c137c..6d7753a7 100644
      } else if (p_i2c->cmd_link.head != NULL && p_i2c->status == I2C_STATUS_READ) {
          i2c_cmd_t *cmd = &p_i2c->cmd_link.head->cmd;
          while (p_i2c->rx_cnt-- > 0) {
-@@ -1119,7 +1121,7 @@ static void IRAM_ATTR i2c_master_cmd_begin_static(i2c_port_t i2c_num)
+@@ -1156,7 +1158,7 @@ static void IRAM_ATTR i2c_master_cmd_begin_static(i2c_port_t i2c_num)
          }
          // Return to the IDLE status after cmd_eve_done signal were send out.
          p_i2c->status = I2C_STATUS_IDLE;
@@ -52,7 +52,7 @@ index e21c137c..6d7753a7 100644
      }
      while (p_i2c->cmd_link.head) {
          i2c_cmd_t *cmd = &p_i2c->cmd_link.head->cmd;
-@@ -1130,6 +1132,7 @@ static void IRAM_ATTR i2c_master_cmd_begin_static(i2c_port_t i2c_num)
+@@ -1167,6 +1169,7 @@ static void IRAM_ATTR i2c_master_cmd_begin_static(i2c_port_t i2c_num)
          I2C[i2c_num]->command[p_i2c->cmd_idx].byte_num = cmd->byte_num;
          I2C[i2c_num]->command[p_i2c->cmd_idx].op_code = cmd->op_code;
          if (cmd->op_code == I2C_CMD_WRITE) {
@@ -60,7 +60,7 @@ index e21c137c..6d7753a7 100644
              uint32_t wr_filled = 0;
              //TODO: to reduce interrupt number
              if (cmd->data) {
-@@ -1158,6 +1161,7 @@ static void IRAM_ATTR i2c_master_cmd_begin_static(i2c_port_t i2c_num)
+@@ -1195,6 +1198,7 @@ static void IRAM_ATTR i2c_master_cmd_begin_static(i2c_port_t i2c_num)
              p_i2c->status = I2C_STATUS_WRITE;
              break;
          } else if(cmd->op_code == I2C_CMD_READ) {
@@ -68,7 +68,7 @@ index e21c137c..6d7753a7 100644
              //TODO: to reduce interrupt number
              p_i2c->rx_cnt = cmd->byte_num > p_i2c->rx_fifo_remain ? p_i2c->rx_fifo_remain : cmd->byte_num;
              cmd->byte_num -= p_i2c->rx_cnt;
-@@ -1181,7 +1185,7 @@ static void IRAM_ATTR i2c_master_cmd_begin_static(i2c_port_t i2c_num)
+@@ -1218,7 +1222,7 @@ static void IRAM_ATTR i2c_master_cmd_begin_static(i2c_port_t i2c_num)
      I2C[i2c_num]->int_ena.end_detect = 1;
      I2C[i2c_num]->ctr.trans_start = 0;
      I2C[i2c_num]->ctr.trans_start = 1;
@@ -77,7 +77,7 @@ index e21c137c..6d7753a7 100644
  }
  
  #if CONFIG_SPIRAM_USE_MALLOC
-@@ -1251,7 +1255,7 @@ esp_err_t i2c_master_cmd_begin(i2c_port_t i2c_num, i2c_cmd_handle_t cmd_handle,
+@@ -1288,7 +1292,7 @@ esp_err_t i2c_master_cmd_begin(i2c_port_t i2c_num, i2c_cmd_handle_t cmd_handle,
      I2C[i2c_num]->int_ena.ack_err = 1;
      I2C[i2c_num]->int_ena.time_out = 1;
      //start send commands, at most 32 bytes one time, isr handler will process the remaining commands.
@@ -86,7 +86,7 @@ index e21c137c..6d7753a7 100644
  
      // Wait event bits
      i2c_cmd_evt_t evt;
-@@ -1265,6 +1269,11 @@ esp_err_t i2c_master_cmd_begin(i2c_port_t i2c_num, i2c_cmd_handle_t cmd_handle,
+@@ -1302,6 +1306,11 @@ esp_err_t i2c_master_cmd_begin(i2c_port_t i2c_num, i2c_cmd_handle_t cmd_handle,
                  wait_time = I2C_CMD_ALIVE_INTERVAL_TICK;
              }
          }
@@ -98,7 +98,7 @@ index e21c137c..6d7753a7 100644
          // In master mode, since we don't have an interrupt to detective bus error or FSM state, what we do here is to make
          // sure the interrupt mechanism for master mode is still working.
          // If the command sending is not finished and there is no interrupt any more, the bus is probably dead caused by external noise.
-@@ -1292,11 +1301,15 @@ esp_err_t i2c_master_cmd_begin(i2c_port_t i2c_num, i2c_cmd_handle_t cmd_handle,
+@@ -1329,11 +1338,15 @@ esp_err_t i2c_master_cmd_begin(i2c_port_t i2c_num, i2c_cmd_handle_t cmd_handle,
              if (evt.type == I2C_CMD_EVT_ALIVE) {
              }
          } else {

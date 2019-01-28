@@ -55,6 +55,7 @@
 #include <drivers/i2c.h>
 #include <drivers/adc.h>
 #include <drivers/adc_ads1015.h>
+#include <drivers/power_bus.h>
 
 static int i2cdevice;
 
@@ -137,6 +138,10 @@ driver_error_t *adc_ads1015_setup(adc_chann_t *chan) {
 	if (chan->resolution != 12) {
 		return driver_error(ADC_DRIVER, ADC_ERR_INVALID_RESOLUTION, NULL);
 	}
+
+#if CONFIG_LUA_RTOS_EXTERNAL_ADC_CONNECTED_TO_POWER_BUS
+pwbus_on();
+#endif
 
 	// Attach
 	if ((error = i2c_attach(i2c, I2C_MASTER, CONFIG_ADC_SPEED, 0, 0, &i2cdevice))) {

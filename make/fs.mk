@@ -88,9 +88,9 @@ ifeq ("$(CONFIG_LUA_RTOS_USE_LFS)", "y")
 endif
 
 # Gets required information from the file system's storage partition
-fs-info:
-	$(eval FS_BASE_ADDR:=$(shell $(GET_PART_INFO) --partition-name $(FS_PARTITION) --offset $(PARTITION_TABLE_BIN)))
-	$(eval FS_SIZE:=$(shell $(GET_PART_INFO) --partition-name $(FS_PARTITION) --size $(PARTITION_TABLE_BIN)))
+fs-info:	
+	$(eval FS_BASE_ADDR := $(shell $(GET_PART_INFO) -q --partition-table-file $(PARTITION_TABLE_BIN) --partition-name $(FS_PARTITION) get_partition_info --info offset))
+	$(eval FS_SIZE := $(shell $(GET_PART_INFO) -q --partition-table-file $(PARTITION_TABLE_BIN) --partition-name $(FS_PARTITION) get_partition_info --info size))
 	
 # Copy all the file system content into a temporal directory, which is used in other rules
 # to create the file system

@@ -61,6 +61,7 @@
 
 #include <drivers/gpio.h>
 #include <drivers/spi.h>
+#include <drivers/power_bus.h>
 
 #include <sys/driver.h>
 #include <sys/mount.h>
@@ -174,6 +175,10 @@ int vfs_fat_mount(const char *target) {
 	#endif // CONFIG_LUA_RTOS_MCC_WP
 #endif // CONFIG_SD_CARD_MMC
 
+#if CONFIG_LUA_RTOS_SD_CONNECTED_TO_POWER_BUS
+    pwbus_on();
+#endif
+
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
         .format_if_mount_failed = false,
         .max_files = 5
@@ -252,6 +257,10 @@ int vfs_fat_umount(const char *target) {
 		#endif
     #endif // CONFIG_SD_CARD_MMC
 #endif // CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+
+#if CONFIG_LUA_RTOS_SD_CONNECTED_TO_POWER_BUS
+    pwbus_off();
+#endif
 
     syslog(LOG_INFO, "fat unmounted");
 
