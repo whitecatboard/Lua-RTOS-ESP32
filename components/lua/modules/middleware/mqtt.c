@@ -273,18 +273,13 @@ static int add_subs(lua_State *L, int index, mqtt_userdata *mqtt, const char *to
 
     // make sure that the exact same callback has not yet been added
     void *luafunc = (void*)lua_topointer(L, index);
-    mtx_lock(&mqtt->mtx);
     mqtt_subs *subs = mqtt->subs;
     while (subs) {
-        if (subs->qos == qos && 0 == strcmp(subs->topic, topic)) {
-            if (subs->luafunc == luafunc) {
-                mtx_unlock(&mqtt->mtx);
-                return 0; //return zero to indicate all is good
-            }
+        if (subs->qos == qos && 0 == strcmp(subs->topic, topic) && subs->luafunc == luafunc) {
+            return 0; //return zero to indicate all is good
         }
         subs = subs->next;
     }
-    mtx_unlock(&mqtt->mtx);
 
     // Create and populate subscription structure
     subs = (mqtt_subs *)calloc(1, sizeof(mqtt_subs));
