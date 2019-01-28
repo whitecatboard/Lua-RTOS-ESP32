@@ -91,6 +91,7 @@ static lua_State *LL=NULL;
 static wifi_mode_t wifi_mode = WIFI_MODE_STA;
 static u8_t http_refcount = 0;
 static u8_t volatile http_shutdown = 0;
+static u8_t volatile script_wants_reboot = 0;
 static u8_t http_captiverun = 0;
 static char ip4addr[IP4ADDR_STRLEN_MAX];
 static int socket_server_normal = 0;
@@ -111,7 +112,7 @@ typedef struct {
 	http_server_config *config;
 	int socket;
 	SSL *ssl;
-	int headers_sent;
+	uint8_t headers_sent;
 	struct sockaddr_storage *client;
 	socklen_t client_len;
 	char *path;
@@ -418,7 +419,24 @@ int http_print(lua_State* L) {
 		}
 	}
 
-	lua_pop(L, 1);
+	lua_pop(L, 1); //possible leak if more than one parameter was provided?
+	return 0;
+}
+
+int http_reboot(lua_State* L) {
+
+	lua_getglobal(L, "http_internal_handle");
+	if (!lua_islightuserdata(L, -1)) {
+		return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
+	}
+	http_request_handle *request = (http_request_handle*)lua_touserdata(L, -1);
+
+	if (!request) {
+		return luaL_error(L, "this function may only be called inside a lua script served by httpsrv");
+	}
+
+	script_wants_reboot = 1;
+
 	return 0;
 }
 
@@ -1018,6 +1036,7 @@ static void mbedtls_zeroize( void *v, size_t n ) {
 	volatile unsigned char *p = v; while( n-- ) *p++ = 0;
 }
 
+extern __NOINIT_ATTR uint32_t backtrace_count;
 static void *http_thread(void *arg) {
 	http_server_config *config = (http_server_config*) arg;
 	struct sockaddr_in6 sin;
@@ -1166,6 +1185,12 @@ static void *http_thread(void *arg) {
 
 			close(client);
 			client = -1;
+		}
+
+		if (script_wants_reboot) {
+			delay(2); //probably required for data to be sent
+			backtrace_count = 0;
+			esp_restart(); /* restart without panic'ing */
 		}
 	}
 
