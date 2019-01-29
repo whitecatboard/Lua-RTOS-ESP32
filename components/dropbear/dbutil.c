@@ -533,6 +533,9 @@ void * m_malloc(size_t size) {
 	}
 	ret = calloc(1, size);
 	if (ret == NULL) {
+#if __XTENSA__
+		syslog(EXIT_FAILURE, "dropbear: m_malloc Out of memory! System is likely to crash soon...");
+#endif
 		dropbear_exit("m_malloc failed");
 	}
 	return ret;
@@ -544,6 +547,9 @@ void * m_strdup(const char * str) {
 
 	ret = strdup(str);
 	if (ret == NULL) {
+#if __XTENSA__
+		syslog(EXIT_FAILURE, "dropbear: m_strdup Out of memory! System is likely to crash soon...");
+#endif
 		dropbear_exit("m_strdup failed");
 	}
 	return ret;
@@ -558,6 +564,9 @@ void * m_realloc(void* ptr, size_t size) {
 	}
 	ret = realloc(ptr, size);
 	if (ret == NULL) {
+#if __XTENSA__
+		syslog(EXIT_FAILURE, "dropbear: m_realloc Out of memory! System is likely to crash soon...");
+#endif
 		dropbear_exit("m_realloc failed");
 	}
 	return ret;
