@@ -401,7 +401,11 @@ void lstdestroy(struct list *list, int items) {
             }
         }
 
-        free(list->index);
+        if (0 != list->index) {
+            free(list->index);
+            list->index = 0;
+        }
+
     } else if (list->flags & LIST_NOT_INDEXED) {
         struct lstindex *cindex = NULL;
         struct lstindex *pindex = NULL;

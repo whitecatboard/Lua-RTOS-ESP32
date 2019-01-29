@@ -344,12 +344,12 @@ static int lmdns_add_service( lua_State* L ) {
 
 	rc = lmdns_init();
 	if (rc != 0) {
-		free(txt_data);
+		if (0 != txt_data) free(txt_data);
 		return luaL_exception(L, LUA_MDNS_ERR_CANT_START);
 	}
 
 	rc = mdns_service_add(instance, service, protocol, port, txt_data, txt_items);
-	free(txt_data);
+	if (0 != txt_data) free(txt_data);
 	if (rc != 0) {
 		return luaL_exception(L, LUA_MDNS_ERR_CANT_ADD_SERVICE);
 	}
