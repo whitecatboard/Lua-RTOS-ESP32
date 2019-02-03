@@ -822,6 +822,10 @@ static int process(http_request_handle *request) {
 						free(pathbuf);
 						request->path = NULL;
 						request->data = NULL;
+						if (request->printf_buffer) {
+							free(request->printf_buffer);
+							request->printf_buffer = NULL;
+						}
 						return 0;
 					}
 				}
