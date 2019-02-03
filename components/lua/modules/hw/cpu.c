@@ -267,8 +267,7 @@ static int lcpu_speed(lua_State *L) {
 	}
 #endif
 
-	rtc_cpu_freq_t current_frequency = rtc_clk_cpu_freq_get();
-	lua_pushinteger(L, rtc_clk_cpu_freq_value(current_frequency));
+	lua_pushinteger(L, cpu_speed());
 	return 1;
 }
 

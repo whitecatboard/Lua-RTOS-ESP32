@@ -125,7 +125,10 @@ void cpu_model(char *buffer, int buflen) {
 }
 
 uint32_t cpu_speed() {
-	return rtc_clk_cpu_freq_value(rtc_clk_cpu_freq_get());
+  rtc_cpu_freq_config_t config;
+  rtc_clk_cpu_freq_get_config(&config);
+
+  return config.freq_mhz;
 }
 
 int cpu_revision() {
