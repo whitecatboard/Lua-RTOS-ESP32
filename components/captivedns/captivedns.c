@@ -92,8 +92,8 @@ captivedns_inc_pcb_refcount(void)
     LOCK_TCPIP_CORE()
 
     /* allocate UDP PCB */
-    captivedns_pcb = udp_new(); // note regarding possible crashes with TCP: https://github.com/espressif/esp-idf/issues/2113#issuecomment-405777313
-                                // not 100% sure about UDP but to be safe let's use TCPIP_CORE locking
+    captivedns_pcb = udp_new(); // NOTE regarding possible crashes with TCP: https://github.com/espressif/esp-idf/issues/2113#issuecomment-405777313
+                                // not 100% sure about UDP - but to be safe let's use TCPIP_CORE locking
 
     if(captivedns_pcb == NULL) {
       UNLOCK_TCPIP_CORE()
@@ -101,9 +101,14 @@ captivedns_inc_pcb_refcount(void)
     }
 
     /* set up local port for the pcb -> listen on all interfaces on all src/dest IPs */
-    udp_bind(captivedns_pcb, IP_ADDR_ANY, PORT);
-    udp_recv(captivedns_pcb, captivedns_recv, NULL);
+    if (udp_bind(captivedns_pcb, IP_ADDR_ANY, PORT) != 0) {
+      udp_remove(captivedns_pcb);
+      captivedns_pcb = NULL;
+      UNLOCK_TCPIP_CORE()
+      return ESP_ERR_INVALID_STATE;
+    }
 
+    udp_recv(captivedns_pcb, captivedns_recv, NULL);
     UNLOCK_TCPIP_CORE()
 
     //we only need one captivedns pcb
@@ -122,9 +127,8 @@ captivedns_dec_pcb_refcount(void)
 
     LOCK_TCPIP_CORE()
     udp_remove(captivedns_pcb);
-    UNLOCK_TCPIP_CORE()
-
     captivedns_pcb = NULL;
+    UNLOCK_TCPIP_CORE()
   }
 }
 
