@@ -58,6 +58,7 @@
 #include <drivers/net.h>
 
 int openvpn(int argc, char *argv[]);
+static u8_t volatile _openvpn_running = 0;
 
 static void *openvpn_thread(void *arg) {
 	// Wait for network
@@ -74,7 +75,9 @@ static void *openvpn_thread(void *arg) {
 			"--single-session"
 	};
 
+	_openvpn_running = 1;
 	openvpn(5, argv);
+	_openvpn_running = 0;
 
 	return NULL;
 }
@@ -101,9 +104,15 @@ static int lopenvpn_service_stop(lua_State* L) {
 	return 0;
 }
 
+static int lopenvpn_service_running( lua_State* L ) {
+	lua_pushboolean(L, _openvpn_running);
+	return 1;
+}
+
 static const LUA_REG_TYPE openvpn_map[] = {
-	{ LSTRKEY("start"), LFUNCVAL(lopenvpn_service_start) },
-	{ LSTRKEY("stop") , LFUNCVAL(lopenvpn_service_stop ) },
+	{ LSTRKEY("start"  ), LFUNCVAL( lopenvpn_service_start   ) },
+	{ LSTRKEY("stop"   ), LFUNCVAL( lopenvpn_service_stop    ) },
+	{ LSTRKEY("running"), LFUNCVAL( lopenvpn_service_running ) },
 	{ LNILKEY,LNILVAL }
 };
 

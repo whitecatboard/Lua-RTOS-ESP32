@@ -50,6 +50,8 @@
 
 #include <drivers/net.h>
 
+static u8_t _sntp_running = 0;
+
 static int lsntp_start(lua_State* L) {
 	const char* ntp_server = luaL_optstring(L, 1, "pool.ntp.org");
 
@@ -57,14 +59,25 @@ static int lsntp_start(lua_State* L) {
 	sntp_setservername(0, (char*)ntp_server);
 	sntp_init();
 
+	_sntp_running = 1;
 	return 0;
 }
 
 static int lsntp_stop(lua_State* L) {
 	sntp_stop();
+	_sntp_running = 0;
 	return 0;
 }
 
-static const LUA_REG_TYPE sntp_map[] = { { LSTRKEY( "start" ),
-		LFUNCVAL( lsntp_start ) }, { LSTRKEY( "stop" ),
-		LFUNCVAL( lsntp_stop ) }, { LNILKEY, LNILVAL } };
+static int lsntp_running( lua_State* L ) {
+	lua_pushboolean(L, _sntp_running);
+	return 1;
+}
+
+static const LUA_REG_TYPE sntp_map[] = {
+	{ LSTRKEY("start"  ), LFUNCVAL( lsntp_start   ) },
+	{ LSTRKEY("stop"   ), LFUNCVAL( lsntp_stop    ) },
+	{ LSTRKEY("running"), LFUNCVAL( lsntp_running ) },
+	{ LNILKEY,LNILVAL }
+};
+

@@ -54,10 +54,11 @@
 
 extern int captivedns_start(lua_State* L);
 extern void captivedns_stop();
+extern int captivedns_running();
 
 static int lcaptivedns_start(lua_State* L) {
 	if (!wait_for_network(20000)) {
-	    luaL_exception(L, NET_ERR_NOT_AVAILABLE);
+		luaL_exception(L, NET_ERR_NOT_AVAILABLE);
 	}
 
 	return captivedns_start(L);
@@ -68,9 +69,15 @@ static int lcaptivedns_stop(lua_State* L) {
 	return 0;
 }
 
+static int lcaptivedns_running( lua_State* L ) {
+	lua_pushboolean(L, captivedns_running());
+	return 1;
+}
+
 static const LUA_REG_TYPE captivedns_map[] = {
-    { LSTRKEY( "start" ),	 LFUNCVAL( lcaptivedns_start   ) },
-    { LSTRKEY( "stop"  ),	 LFUNCVAL( lcaptivedns_stop    ) },
+	{ LSTRKEY( "start"  ),	 LFUNCVAL( lcaptivedns_start   ) },
+	{ LSTRKEY( "stop"   ),	 LFUNCVAL( lcaptivedns_stop    ) },
+	{ LSTRKEY( "running"),	 LFUNCVAL( lcaptivedns_running ) },
 	{ LNILKEY, LNILVAL }
 };
 

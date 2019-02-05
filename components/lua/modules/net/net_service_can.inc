@@ -50,6 +50,8 @@
 
 #include <drivers/can.h>
 
+static u8_t _can_running = 0;
+
 static int lcan_service_start(lua_State* L) {
 	driver_error_t *error;
 
@@ -61,6 +63,7 @@ static int lcan_service_start(lua_State* L) {
 		return luaL_driver_error(L, error);
 	}
 
+	_can_running = 1;
 	return 0;
 }
 
@@ -71,12 +74,19 @@ static int lcan_service_stop(lua_State* L) {
 		return luaL_driver_error(L, error);
 	}
 
+	_can_running = 0;
 	return 0;
 }
 
+static int lcan_service_running( lua_State* L ) {
+	lua_pushboolean(L, _can_running);
+	return 1;
+}
+
 static const LUA_REG_TYPE can_map[] = {
-	{ LSTRKEY("start"), LFUNCVAL(lcan_service_start) },
-	{ LSTRKEY("stop") , LFUNCVAL(lcan_service_stop ) },
+	{ LSTRKEY( "start"   ),	 LFUNCVAL( lcan_service_start   ) },
+	{ LSTRKEY( "stop"    ),	 LFUNCVAL( lcan_service_stop    ) },
+	{ LSTRKEY( "running" ),	 LFUNCVAL( lcan_service_running ) },
 	{ LNILKEY,LNILVAL }
 };
 
