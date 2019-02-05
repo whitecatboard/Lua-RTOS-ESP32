@@ -315,15 +315,13 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_
     // Attach wifi driver
     if ((error = wifi_init(mode))) return error;
 
-    if (mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA) {
+    if (mode == WIFI_MODE_STA) {
         // Setup mode and config related to desired mode
         wifi_config_t wifi_config;
         memset(&wifi_config, 0, sizeof(wifi_config_t));
 
-        if (mode != WIFI_MODE_APSTA) {
-            strncpy((char *)wifi_config.sta.ssid, ssid, 32);
-            strncpy((char *)wifi_config.sta.password, password, 64);
-        }
+        strncpy((char *)wifi_config.sta.ssid, ssid, 32);
+        strncpy((char *)wifi_config.sta.password, password, 64);
 
         wifi_config.sta.channel = (channel ? channel : 0);
 
