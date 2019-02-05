@@ -1344,4 +1344,8 @@ void http_stop() {
 	}
 }
 
+int http_running() {
+	return (http_refcount>0 ? 1 : 0);
+}
+
 #endif
