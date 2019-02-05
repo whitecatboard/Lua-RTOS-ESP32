@@ -57,19 +57,32 @@
 extern void dropbear_server_start();
 extern void dropbear_server_stop();
 
+//FIXME possibly check existence of dropbear thread
+//      to make sure dropbear is actually still ok,
+//      e.g. check process list by name, currently "ssh"
+static u8_t _sshd_running = 0;
+
 static int lssh_service_start(lua_State* L) {
 	dropbear_server_start();
+	_sshd_running = 1;
 	return 0;
 }
 
 static int lssh_service_stop(lua_State* L) {
 	dropbear_server_stop();
+	_sshd_running = 0;
 	return 0;
 }
 
+static int lssh_service_running( lua_State* L ) {
+	lua_pushboolean(L, _sshd_running);
+	return 1;
+}
+
 static const LUA_REG_TYPE sshs_map[] = {
-	{ LSTRKEY("start"), LFUNCVAL(lssh_service_start) },
-	{ LSTRKEY("stop") , LFUNCVAL(lssh_service_stop ) },
+	{ LSTRKEY( "start"   ), LFUNCVAL( lssh_service_start   ) },
+	{ LSTRKEY( "stop"    ), LFUNCVAL( lssh_service_stop    ) },
+  { LSTRKEY( "running" ), LFUNCVAL( lssh_service_running ) },
 	{ LNILKEY,LNILVAL }
 };
 
