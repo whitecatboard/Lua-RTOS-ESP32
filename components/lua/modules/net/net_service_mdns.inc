@@ -65,6 +65,7 @@
 
 #define DEFAULT_TIMEOUT_SECONDS 3
 #define DEFAULT_MAXIMUM_RESULTS 20
+#define MDNS_NAME_MAX_LEN           64                      // Maximum string length of hostname, instance, service and proto
 
 // Module errors
 #define LUA_MDNS_ERR_CANT_START          (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  0)
@@ -73,6 +74,10 @@
 #define LUA_MDNS_ERR_CANT_FIND_SERVICE   (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  3)
 #define LUA_MDNS_ERR_CANT_ADD_SERVICE    (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  4)
 #define LUA_MDNS_ERR_CANT_REMOVE_SERVICE (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  5)
+#define LUA_MDNS_ERR_HOSTNAME_TOO_LONG   (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  6)
+#define LUA_MDNS_ERR_INSTANCE_TOO_LONG   (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  7)
+#define LUA_MDNS_ERR_SERVICE_TOO_LONG    (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  8)
+#define LUA_MDNS_ERR_PROTOCOL_TOO_LONG   (DRIVER_EXCEPTION_BASE(MDNS_DRIVER_ID) |  9)
 
 // Register drivers and errors
 DRIVER_REGISTER_BEGIN(MDNS,mdns,0,NULL,NULL);
@@ -82,24 +87,24 @@ DRIVER_REGISTER_BEGIN(MDNS,mdns,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(MDNS, mdns, CannotFindService, "can't find service", LUA_MDNS_ERR_CANT_FIND_SERVICE);
 	DRIVER_REGISTER_ERROR(MDNS, mdns, CannotAddService, "can't add service", LUA_MDNS_ERR_CANT_ADD_SERVICE);
 	DRIVER_REGISTER_ERROR(MDNS, mdns, CannotRemoveService, "can't remove service", LUA_MDNS_ERR_CANT_REMOVE_SERVICE);
+	DRIVER_REGISTER_ERROR(MDNS, mdns, HostnameTooLong, "hostname too long", LUA_MDNS_ERR_HOSTNAME_TOO_LONG);
+	DRIVER_REGISTER_ERROR(MDNS, mdns, InstanceTooLong, "instance name too long", LUA_MDNS_ERR_INSTANCE_TOO_LONG);
+	DRIVER_REGISTER_ERROR(MDNS, mdns, ServiceTooLong, "service name too long", LUA_MDNS_ERR_SERVICE_TOO_LONG);
+	DRIVER_REGISTER_ERROR(MDNS, mdns, ProtocolTooLong, "protocol name too long", LUA_MDNS_ERR_PROTOCOL_TOO_LONG);
 DRIVER_REGISTER_END(MDNS,mdns,0,NULL,NULL);
 
-static int _mdns_initialized = 0;
+static u8_t _mdns_initialized = 0;
+static char *_mdns_hostname = NULL;
+static u8_t _mdns_running = 0;
 
-static int lmdns_init()
+static int lmdns_ensure_init()
 {
-	if (_mdns_initialized) return 0;
+	if (1 == _mdns_initialized) return 0;
 	esp_err_t err = mdns_init();
 	if (err == ESP_OK) {
-		_mdns_initialized = true;
+		_mdns_initialized = 1;
 	}
 	return (err != ESP_OK);
-}
-
-static void lmdns_deinit()
-{
-	mdns_free();
-	_mdns_initialized = false;
 }
 
 static int lmdns_start( lua_State* L ){
@@ -107,12 +112,24 @@ static int lmdns_start( lua_State* L ){
 	const char *hostname = luaL_optstring( L, 1, "ESP32" );
 	const char *instance = luaL_optstring( L, 2, NULL );
 
-	rc = lmdns_init();
+	rc = lmdns_ensure_init();
 	if (rc != 0) {
 		return luaL_exception(L, LUA_MDNS_ERR_CANT_START);
 	}
 
 	if(hostname != 0) {
+		if (strlen(hostname) > MDNS_NAME_MAX_LEN) {
+			return luaL_exception(L, LUA_MDNS_ERR_HOSTNAME_TOO_LONG);
+		}
+
+		if (NULL != _mdns_hostname) free(_mdns_hostname);
+		_mdns_hostname = (char*)malloc(strlen(hostname)+1);
+		if (NULL == _mdns_hostname) {
+			printf( "mdns: could not allocate memory for hostname\n");
+		}
+		else {
+			strcpy(_mdns_hostname, hostname);
+		}
 		rc = mdns_hostname_set(hostname);
 		if (rc != 0) {
 			printf( "mdns: could not set hostname\n");
@@ -120,12 +137,17 @@ static int lmdns_start( lua_State* L ){
 	}
 
 	if(instance != 0) {
+		if (strlen(hostname) > MDNS_NAME_MAX_LEN) {
+			return luaL_exception(L, LUA_MDNS_ERR_HOSTNAME_TOO_LONG);
+		}
+
 		rc = mdns_instance_name_set(instance);
 		if (rc != 0) {
 			printf( "mdns: could not set instance name\n");
 		}
 	}
 
+	_mdns_running = 1;
 	return 0;
 }
 
@@ -239,20 +261,24 @@ static int lmdns_resolve_host( lua_State* L ) {
 	int seconds = luaL_optinteger(L, 2, DEFAULT_TIMEOUT_SECONDS);
 	if(seconds == 0) seconds = DEFAULT_TIMEOUT_SECONDS;
 
+	if (strlen(hostname) > MDNS_NAME_MAX_LEN) {
+		return luaL_exception(L, LUA_MDNS_ERR_HOSTNAME_TOO_LONG);
+	}
+
 	int ipv6 = 0;
 	if (lua_gettop(L) > 2) {
 		luaL_checktype(L, 3, LUA_TBOOLEAN);
 		ipv6 = lua_toboolean( L, 3 );
 	}
 
-	int rc = lmdns_init();
+	int rc = lmdns_ensure_init();
 	if (rc != 0) {
 		return luaL_exception(L, LUA_MDNS_ERR_CANT_START);
 	}
 
 	if (ipv6) {
 		ip6_addr_t addr;
-		esp_err_t err = mdns_query_aaaa(hostname, 1000*seconds,  &addr);
+		esp_err_t err = mdns_query_aaaa(hostname, 1000*seconds, &addr);
 		if(err){
 			if(err == ESP_ERR_NOT_FOUND){
 				return 0;
@@ -264,7 +290,7 @@ static int lmdns_resolve_host( lua_State* L ) {
 	else {
 		struct ip4_addr addr;
 		addr.addr = 0;
-		esp_err_t err = mdns_query_a(hostname, 1000*seconds,  &addr);
+		esp_err_t err = mdns_query_a(hostname, 1000*seconds, &addr);
 		if(err){
 			if(err == ESP_ERR_NOT_FOUND){
 				return 0;
@@ -288,7 +314,14 @@ static int lmdns_find_service( lua_State* L ) {
 	int maxresult = luaL_optinteger(L, 4, DEFAULT_MAXIMUM_RESULTS);
 	if(maxresult == 0) maxresult = DEFAULT_MAXIMUM_RESULTS;
 
-	rc = lmdns_init();
+	if (strlen(service) > MDNS_NAME_MAX_LEN) {
+		return luaL_exception(L, LUA_MDNS_ERR_SERVICE_TOO_LONG);
+	}
+	if (strlen(protocol) > MDNS_NAME_MAX_LEN) {
+		return luaL_exception(L, LUA_MDNS_ERR_PROTOCOL_TOO_LONG);
+	}
+
+	rc = lmdns_ensure_init();
 	if (rc != 0) {
 		return luaL_exception(L, LUA_MDNS_ERR_CANT_START);
 	}
@@ -310,13 +343,23 @@ static int lmdns_add_service( lua_State* L ) {
 	int rc;
 	const char *service = luaL_checkstring( L, 1 );
 	const char *protocol = luaL_checkstring( L, 2 );
-	int port = luaL_checkinteger( L, 3 );
+	uint16_t port = luaL_checkinteger( L, 3 );
 	const char *instance = 0;
 	size_t txt_items = 0;
 	mdns_txt_item_t * txt_data = 0;
 
+	if (strlen(service) > MDNS_NAME_MAX_LEN) {
+		return luaL_exception(L, LUA_MDNS_ERR_SERVICE_TOO_LONG);
+	}
+	if (strlen(protocol) > MDNS_NAME_MAX_LEN) {
+		return luaL_exception(L, LUA_MDNS_ERR_PROTOCOL_TOO_LONG);
+	}
+
 	if (lua_gettop(L) > 3) {
 		instance = luaL_checkstring( L, 4 );
+		if (strlen(instance) > MDNS_NAME_MAX_LEN) {
+			return luaL_exception(L, LUA_MDNS_ERR_INSTANCE_TOO_LONG);
+		}
 
 		if (lua_gettop(L) > 4 && lua_istable(L, 5)) {
 
@@ -325,7 +368,7 @@ static int lmdns_add_service( lua_State* L ) {
 			txt_items = 0; //restart counting as we may need to discard some non-string items below
 
 			/* table is in the stack at index '5' */
-			lua_pushnil(L);  /* first key */
+			lua_pushnil(L); /* first key */
 			while (lua_next(L, 5) != 0) {
 				/* uses 'key' (at index -2) and 'value' (at index -1) */
 				if (LUA_TSTRING == lua_type(L, -2) && LUA_TSTRING == lua_type(L, -1)) {
@@ -342,7 +385,12 @@ static int lmdns_add_service( lua_State* L ) {
 		}
 	}
 
-	rc = lmdns_init();
+	if (0 == _mdns_running) {
+		if (0 != txt_data) free(txt_data);
+		return luaL_exception(L, LUA_MDNS_ERR_CANT_ADD_SERVICE);
+	}
+
+	rc = lmdns_ensure_init();
 	if (rc != 0) {
 		if (0 != txt_data) free(txt_data);
 		return luaL_exception(L, LUA_MDNS_ERR_CANT_START);
@@ -351,6 +399,7 @@ static int lmdns_add_service( lua_State* L ) {
 	rc = mdns_service_add(instance, service, protocol, port, txt_data, txt_items);
 	if (0 != txt_data) free(txt_data);
 	if (rc != 0) {
+		printf( "mdns: mdns_service_add returned %s\n", esp_err_to_name(rc));
 		return luaL_exception(L, LUA_MDNS_ERR_CANT_ADD_SERVICE);
 	}
 
@@ -362,7 +411,18 @@ static int lmdns_remove_service( lua_State* L ) {
 	const char *service = luaL_checkstring( L, 1 );
 	const char *protocol = luaL_checkstring( L, 2 );
 
-	rc = lmdns_init();
+	if (strlen(service) > MDNS_NAME_MAX_LEN) {
+		return luaL_exception(L, LUA_MDNS_ERR_SERVICE_TOO_LONG);
+	}
+	if (strlen(protocol) > MDNS_NAME_MAX_LEN) {
+		return luaL_exception(L, LUA_MDNS_ERR_PROTOCOL_TOO_LONG);
+	}
+
+	if (0 == _mdns_running) {
+		return luaL_exception(L, LUA_MDNS_ERR_CANT_REMOVE_SERVICE);
+	}
+
+	rc = lmdns_ensure_init();
 	if (rc != 0) {
 		return luaL_exception(L, LUA_MDNS_ERR_CANT_START);
 	}
@@ -376,16 +436,31 @@ static int lmdns_remove_service( lua_State* L ) {
 
 static int lmdns_stop( lua_State* L ) {
 	int rc = mdns_service_remove_all();
+
+	mdns_free();
+	if (NULL != _mdns_hostname) {
+		free(_mdns_hostname);
+		_mdns_hostname = NULL;
+	}
+	_mdns_running = 0;
+	_mdns_initialized = 0;
+
 	if (rc != 0) {
 		return luaL_exception(L, LUA_MDNS_ERR_CANT_STOP);
 	}
-	lmdns_deinit();
+
 	return 0;
+}
+
+static int lmdns_running( lua_State* L ) {
+	lua_pushboolean(L, _mdns_running);
+	return 1;
 }
 
 static const LUA_REG_TYPE mdns_map[] = {
 	{ LSTRKEY( "start"         ), LFUNCVAL( lmdns_start            ) },
 	{ LSTRKEY( "stop"          ), LFUNCVAL( lmdns_stop             ) },
+	{ LSTRKEY( "running"       ), LFUNCVAL( lmdns_running          ) },
 	{ LSTRKEY( "resolvehost"   ), LFUNCVAL( lmdns_resolve_host     ) },
 	{ LSTRKEY( "findservice"   ), LFUNCVAL( lmdns_find_service     ) },
 	{ LSTRKEY( "addservice"    ), LFUNCVAL( lmdns_add_service      ) },
