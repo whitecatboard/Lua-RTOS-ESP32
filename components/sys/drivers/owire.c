@@ -78,13 +78,13 @@ driver_error_t *owire_lock_resources(int8_t pin, void *resources) {
 		return driver_error(OWIRE_DRIVER, OWIRE_ERR_CANT_INIT, "max devices reached");
 	}
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	owire_resources_t tmp_owire_resources;
 
 	if (!resources) {
 		resources = &tmp_owire_resources;
 	}
 
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	owire_resources_t *owire_resources = (owire_resources_t *)resources;
     driver_unit_lock_error_t *lock_error = NULL;
 
