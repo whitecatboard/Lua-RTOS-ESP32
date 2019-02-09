@@ -174,13 +174,14 @@ static driver_error_t *pwm_check_freq(int32_t freq, int8_t setup) {
  */
 // Lock resources needed by ADC
 driver_error_t *pwm_lock_resources(int8_t unit, int8_t channel, void *resources) {
+
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	pwm_resources_t tmp_pwm_resources;
 
 	if (!resources) {
 		resources = &tmp_pwm_resources;
 	}
 
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	pwm_resources_t *pwm_resources = (pwm_resources_t *)resources;
 
 	driver_unit_lock_error_t *lock_error = NULL;
