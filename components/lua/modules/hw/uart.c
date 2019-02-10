@@ -274,27 +274,33 @@ static int luart_read( lua_State* L ) {
     // Read ...
     if (strcmp("*l", format) == 0) {
         char *str = (char *)malloc(sizeof(char) * LUAL_BUFFERSIZE);
+        if (NULL == str) {
+            return luaL_error(L, "could not allocate memory to read *l");
+        }
 
         res = uart_reads(id, str, 0, timeout);
         if (res) {
             lua_pushlstring(L, str, strlen(str));
-            free(str);
         } else {
             lua_pushnil(L);
         }
-        
+
+        free(str);
         return 1;
     } else if (strcmp("*el", format) == 0) {
         char *str = (char *)malloc(sizeof(char) * LUAL_BUFFERSIZE);
+        if (NULL == str) {
+            return luaL_error(L, "could not allocate memory to read *el");
+        }
         
         res = uart_reads(id, str, 1, timeout);
         if (res) {
             lua_pushlstring(L, str, strlen(str));
-            free(str);
         } else {
-            lua_pushnil(L);            
+            lua_pushnil(L);
         }
-        
+
+        free(str);
         return 1;
     } else if (strcmp("*c", format) == 0) {
         res = uart_read(id, (char *)&c, timeout);
@@ -306,7 +312,7 @@ static int luart_read( lua_State* L ) {
         
         return 1;
     } else {
-        return luaL_error(L, "invalid format");        
+        return luaL_error(L, "invalid format");
     }
     
     
