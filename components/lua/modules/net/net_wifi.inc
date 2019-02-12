@@ -50,11 +50,29 @@
 #include <string.h>
 #include <stdio.h>
 #include <esp_wps.h>
+#include <esp_wpa2.h>
+#include <sys/syslog.h>
 
 #if CONFIG_ESP32_WIFI_NVS_ENABLED
 static lua_callback_t *wps_callback = NULL;
 #endif
 static lua_callback_t *sc_callback = NULL;
+
+driver_error_t *wifi_check_error(esp_err_t error);
+
+typedef struct {
+    unsigned char *cacert;
+    int cacert_len;
+    unsigned char *certificate;
+    int certificate_len;
+    unsigned char *privkey;
+    int privkey_len;
+    unsigned char *privpwd;
+    int privpwd_len;
+} lenterprise_cert_t;
+
+#define WPA2_CERT_initializer { NULL, 0, NULL, 0, NULL, 0, NULL, 0 }
+static lenterprise_cert_t enterprise_cert_info = WPA2_CERT_initializer;
 
 static int lwifi_setup(lua_State* L) {
     driver_error_t *error;
@@ -96,6 +114,135 @@ static int lwifi_setup(lua_State* L) {
 
     // Setup wifi
     if ((error = wifi_setup(mode, (char *)ssid, (char *)password, ip, mask, gw, dns1, dns2, powersave, channel, hidden))) {
+        return luaL_driver_error(L, error);
+    }
+
+    return 0;
+}
+
+static int get_file_content(const char* filename, unsigned char **buffer, int* buflen) {
+    int rc = ESP_OK;
+
+    FILE *fp = fopen(filename, "rb");
+    if ( fp != NULL )
+    {
+        fseek(fp, 0, SEEK_END);
+        unsigned long fileLen = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+        unsigned char *buf=(unsigned char *)malloc(fileLen+1);
+        if (buf) {
+            memset(buf, 0, fileLen+1); //make sure certs are properly delimited
+            unsigned long bytesRead = (int)fread(buf, sizeof(char), fileLen, fp);
+            *buffer = buf;
+            // see esp_wpa2.h - The client_cert, private_key and private_key_passwd should be zero terminated.
+            *buflen = bytesRead+1; // resp. https://gist.github.com/me-no-dev/2d2b51b17226f5e9c5a4d9a78bdc0720
+            // The strlen() function does return the length of the certificate without the terminating 0x00.
+            // The esp_wifi_sta_wpa2_ent_set_ca_cert() does need the terminating 0x00, so you must add +1 .
+            if ( bytesRead != fileLen ) {
+                rc = ESP_FAIL;
+            }
+        } else {
+            rc = ESP_ERR_NO_MEM;
+        }
+        fclose(fp);
+        fp = NULL;
+    } else {
+        rc = ESP_ERR_INVALID_ARG;
+    }
+
+    return rc;
+}
+
+static int lwifi_setup_enterprise(lua_State* L) {
+    driver_error_t *error;
+
+    int powersave = 0;
+    int channel = 0;
+
+    uint32_t ip = 0;
+    uint32_t mask = 0;
+    uint32_t gw = 0;
+    uint32_t dns1 = 0;
+    uint32_t dns2 = 0;
+
+    const char *ssid = luaL_checkstring(L, 1);
+    const char *identity = luaL_checkstring(L, 2);
+    const char *username = luaL_checkstring(L, 3);
+    const char *password = luaL_checkstring(L, 4);
+
+    const char *cacert_file = luaL_checkstring(L, 5);
+    const char *certificate_file = luaL_checkstring(L, 6);
+    const char *privkey_file = luaL_checkstring(L, 7);
+    const char *privkey_password = luaL_checkstring(L, 8);
+
+    int disabletimecheck = luaL_optinteger(L, 9, 2); //default = 2 = don't explicitly enable or disable
+
+    // Get IP info, if present
+    ip = luaL_optinteger(L, 10, 0);
+    mask = luaL_optinteger(L, 11, 0);
+    gw = luaL_optinteger(L, 12, 0);
+    dns1 = luaL_optinteger(L, 13, 0);
+    dns2 = luaL_optinteger(L, 14, 0);
+    powersave = luaL_optinteger(L, 15, 0);
+    channel = luaL_optinteger(L, 16, 0);
+
+    esp_wifi_sta_wpa2_ent_clear_ca_cert(); //make sure the memory is no longer referenced
+    esp_wifi_sta_wpa2_ent_clear_cert_key(); //make sure the memory is no longer referenced
+
+    if (enterprise_cert_info.cacert) {
+        free(enterprise_cert_info.cacert);
+        enterprise_cert_info.cacert = NULL;
+        enterprise_cert_info.cacert_len = 0;
+    }
+    if (*cacert_file != 0) { // check for *empty* string
+        int rc = get_file_content(cacert_file, &enterprise_cert_info.cacert, &enterprise_cert_info.cacert_len);
+        if (ESP_OK != rc) {
+            syslog(LOG_ERR, "wifi_setup_enterprise: get_file_content(cacert) error %s\n", esp_err_to_name(rc));
+            return luaL_driver_error(L, wifi_check_error(rc));
+        }
+    }
+    if (enterprise_cert_info.certificate) {
+        free(enterprise_cert_info.certificate);
+        enterprise_cert_info.certificate = NULL;
+        enterprise_cert_info.certificate_len = 0;
+    }
+    if (*certificate_file != 0) { // check for *empty* string
+        int rc = get_file_content(certificate_file, &enterprise_cert_info.certificate, &enterprise_cert_info.certificate_len);
+        if (ESP_OK != rc) {
+            syslog(LOG_ERR, "wifi_setup_enterprise: get_file_content(certificate) error %s\n", esp_err_to_name(rc));
+            return luaL_driver_error(L, wifi_check_error(rc));
+        }
+    }
+    if (enterprise_cert_info.privkey) {
+        free(enterprise_cert_info.privkey);
+        enterprise_cert_info.privkey = NULL;
+        enterprise_cert_info.privkey_len = 0;
+    }
+    if (*privkey_file != 0) { // check for *empty* string
+        int rc = get_file_content(privkey_file, &enterprise_cert_info.privkey, &enterprise_cert_info.privkey_len);
+        if (ESP_OK != rc) {
+            syslog(LOG_ERR, "wifi_setup_enterprise: get_file_content(privkey) error %s\n", esp_err_to_name(rc));
+            return luaL_driver_error(L, wifi_check_error(rc));
+        }
+    }
+    if (enterprise_cert_info.privpwd) {
+        free(enterprise_cert_info.privpwd);
+        enterprise_cert_info.privpwd = NULL;
+        enterprise_cert_info.privpwd_len = 0;
+    }
+    if (privkey_password != NULL && *privkey_password != 0) {
+        enterprise_cert_info.privpwd = (unsigned char *)strdup(privkey_password);
+        // see esp_wpa2.h - The client_cert, private_key and private_key_passwd should be zero terminated.
+        enterprise_cert_info.privpwd_len = strlen(privkey_password)+1;
+    }
+
+    // Setup wifi
+    if ((error = wifi_setup_enterprise((char *)ssid, (char *)identity, (char *)username, (char *)password,
+                                       enterprise_cert_info.cacert, enterprise_cert_info.cacert_len,
+                                       enterprise_cert_info.certificate, enterprise_cert_info.certificate_len,
+                                       enterprise_cert_info.privkey, enterprise_cert_info.privkey_len,
+                                       enterprise_cert_info.privpwd, enterprise_cert_info.privpwd_len,
+                                       disabletimecheck, ip, mask, gw, dns1, dns2, powersave, channel))) {
         return luaL_driver_error(L, error);
     }
 
@@ -395,12 +542,19 @@ static const LUA_REG_TYPE wifi_wpstype_map[] = {
     { LSTRKEY( "PIN"           ), LINTVAL( WPS_TYPE_PIN ) },
 };
 
+static const LUA_REG_TYPE wifi_timecheck_map[] = {
+    { LSTRKEY( "DEFAULT"       ), LINTVAL( 2 ) },
+    { LSTRKEY( "ENABLE"        ), LINTVAL( 0 ) },
+    { LSTRKEY( "DISABLE"       ), LINTVAL( 1 ) },
+};
+
 static const LUA_REG_TYPE wifi_map[] = {
-    { LSTRKEY( "setup"     ),     LFUNCVAL( lwifi_setup        ) },
-    { LSTRKEY( "scan"      ),     LFUNCVAL( lwifi_scan         ) },
-    { LSTRKEY( "start"     ),     LFUNCVAL( lwifi_start        ) },
-    { LSTRKEY( "stop"      ),     LFUNCVAL( lwifi_stop         ) },
-    { LSTRKEY( "stat"      ),     LFUNCVAL( lwifi_stat         ) },
+    { LSTRKEY( "setup"      ),     LFUNCVAL( lwifi_setup            ) },
+    { LSTRKEY( "enterprise" ),     LFUNCVAL( lwifi_setup_enterprise ) },
+    { LSTRKEY( "scan"       ),     LFUNCVAL( lwifi_scan             ) },
+    { LSTRKEY( "start"      ),     LFUNCVAL( lwifi_start            ) },
+    { LSTRKEY( "stop"       ),     LFUNCVAL( lwifi_stop             ) },
+    { LSTRKEY( "stat"       ),     LFUNCVAL( lwifi_stat             ) },
 #if CONFIG_ESP32_WIFI_NVS_ENABLED
     // wps ssid+auth can only be stored to nvs
     // so if nvs is disabled, wps would have to be repeated on every boot
@@ -411,6 +565,8 @@ static const LUA_REG_TYPE wifi_map[] = {
     { LSTRKEY( "mode"      ),     LROVAL  ( wifi_mode_map      ) },
     { LSTRKEY( "powersave" ),     LROVAL  ( wifi_powersave_map ) },
     { LSTRKEY( "wpstype"   ),     LROVAL  ( wifi_wpstype_map   ) },
+    { LSTRKEY( "timecheck" ),     LROVAL  ( wifi_timecheck_map ) },
+
     DRIVER_REGISTER_LUA_ERRORS(wifi)
     { LNILKEY, LNILVAL }
 };
