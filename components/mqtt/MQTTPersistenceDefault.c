@@ -242,11 +242,19 @@ int pstget(void* handle, char* key, char** buffer, int* buflen)
 		fileLen = ftell(fp);
 		fseek(fp, 0, SEEK_SET);
 		buf=(char *)malloc(fileLen);
+#if __XTENSA__
+		if (buf) {
+#endif
 		bytesRead = (int)fread(buf, sizeof(char), fileLen, fp);
 		*buffer = buf;
 		*buflen = bytesRead;
 		if ( bytesRead != fileLen )
 			rc = MQTTCLIENT_PERSISTENCE_ERROR;
+#if __XTENSA__
+		} else {
+			rc = MQTTCLIENT_PERSISTENCE_ERROR;
+		}
+#endif
 		fclose(fp);
 		fp = NULL;
 	} else
