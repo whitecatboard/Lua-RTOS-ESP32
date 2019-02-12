@@ -62,6 +62,7 @@
 #include "tcpip_adapter.h"
 
 #include <sys/status.h>
+#include <sys/syslog.h>
 
 #define DEFAULT_TIMEOUT_SECONDS 3
 #define DEFAULT_MAXIMUM_RESULTS 20
@@ -125,14 +126,14 @@ static int lmdns_start( lua_State* L ){
 		if (NULL != _mdns_hostname) free(_mdns_hostname);
 		_mdns_hostname = (char*)malloc(strlen(hostname)+1);
 		if (NULL == _mdns_hostname) {
-			printf( "mdns: could not allocate memory for hostname\n");
+			syslog(LOG_ERR, "mdns: could not allocate memory for hostname\n");
 		}
 		else {
 			strcpy(_mdns_hostname, hostname);
 		}
 		rc = mdns_hostname_set(hostname);
 		if (rc != 0) {
-			printf( "mdns: could not set hostname\n");
+			syslog(LOG_ERR, "mdns: could not set hostname\n");
 		}
 	}
 
@@ -143,7 +144,7 @@ static int lmdns_start( lua_State* L ){
 
 		rc = mdns_instance_name_set(instance);
 		if (rc != 0) {
-			printf( "mdns: could not set instance name\n");
+			syslog(LOG_ERR, "mdns: could not set instance name\n");
 		}
 	}
 
@@ -175,7 +176,7 @@ static inline void interface_to_table(lua_State* L, char* key, tcpip_adapter_if_
 			value_to_table(L, key, "TUN");
 			break;
 		default:
-			printf( "mdns: unhandled interface type %i\n", (int)value);
+			syslog(LOG_ERR, "mdns: unhandled interface type %i\n", (int)value);
 	}
 }
 
@@ -188,7 +189,7 @@ static inline void protocol_to_table(lua_State* L, char* key, mdns_ip_protocol_t
 			value_to_table(L, key, "IPv6");
 			break;
 		default:
-			printf( "mdns: unhandled protocol type %i\n", (int)value);
+			syslog(LOG_ERR, "mdns: unhandled protocol type %i\n", (int)value);
 	}
 }
 
@@ -377,7 +378,7 @@ static int lmdns_add_service( lua_State* L ) {
 					txt_items++;
 				}
 				else {
-					printf( "mdns: ignoring txt entry with non-string key and/or value\n");
+					syslog(LOG_WARNING, "mdns: ignoring txt entry with non-string key and/or value\n");
 				}
 				/* removes 'value'; keeps 'key' for next iteration */
 				lua_pop(L, 1);
@@ -399,7 +400,7 @@ static int lmdns_add_service( lua_State* L ) {
 	rc = mdns_service_add(instance, service, protocol, port, txt_data, txt_items);
 	if (0 != txt_data) free(txt_data);
 	if (rc != 0) {
-		printf( "mdns: mdns_service_add returned %s\n", esp_err_to_name(rc));
+		syslog(LOG_ERR, "mdns: mdns_service_add returned %s\n", esp_err_to_name(rc));
 		return luaL_exception(L, LUA_MDNS_ERR_CANT_ADD_SERVICE);
 	}
 
