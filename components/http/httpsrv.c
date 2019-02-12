@@ -449,6 +449,7 @@ int http_reboot(lua_State* L) {
 	return 0;
 }
 
+#define LUA_INTERPRETER_ERROR_LENGTH 256
 void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
 	int n;
 	char *data;
@@ -490,10 +491,10 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
 				}
 				else {
 					if (luaL_loadfile(TL, ppath)) {
-						char* error = (char *)malloc(2048);
+						char* error = (char *)malloc(LUA_INTERPRETER_ERROR_LENGTH+1);
 						if (error) {
 							*error = '\0';
-							snprintf(error, 2048, "FATAL ERROR: %s", lua_tostring(TL, -1));
+							snprintf(error, LUA_INTERPRETER_ERROR_LENGTH, "FATAL ERROR: %s", lua_tostring(TL, -1));
 							send_error(request, 500, "Internal Server Error", NULL, error);
 							free(error);
 						}
