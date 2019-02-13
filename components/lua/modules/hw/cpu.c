@@ -267,7 +267,7 @@ static int lcpu_speed(lua_State *L) {
 	}
 #endif
 
-	lua_pushinteger(L, cpu_speed());
+	lua_pushinteger(L, cpu_speed() / 1000000);
 	return 1;
 }
 
