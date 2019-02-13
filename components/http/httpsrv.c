@@ -449,6 +449,7 @@ int http_reboot(lua_State* L) {
 	return 0;
 }
 
+int __garbage_collector();
 #define LUA_INTERPRETER_ERROR_LENGTH 256
 void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
 	int n;
@@ -480,7 +481,10 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
 			}
 
 			if (S_ISDIR(statbuf->st_mode)) {
-				send_error(request, 500, "Internal Server Error", NULL, "Folder found where a precompiled file is expected.");
+				send_error(request, 500, "Internal Server Error", NULL, "Folder found where a precompiled file was expected.");
+			}
+			else if (!S_ISREG(statbuf->st_mode)) {
+				send_error(request, 500, "Internal Server Error", NULL, "Special file found where a regular precompiled file was expected.");
 			}
 			else {
 				lua_State *L = pvGetLuaState(); // Get the thread's Lua state
@@ -490,6 +494,12 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
 					send_error(request, 500, "Internal Server Error", NULL, L ? "Cannot create thread.":"Cannot get state.");
 				}
 				else {
+
+					if (heap_caps_get_free_size(MALLOC_CAP_DEFAULT) < statbuf->st_size*3) {
+						//free heap might be too low to load the file, so call GC before trying to load
+						__garbage_collector();
+					}
+
 					if (luaL_loadfile(TL, ppath)) {
 						char* error = (char *)malloc(LUA_INTERPRETER_ERROR_LENGTH+1);
 						if (error) {
@@ -518,8 +528,9 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
 										request->client_len=sizeof(sa4);
 								}
 						}
+
 						// -> now convert the address to human-readable form
-						char *buffer = (char *)malloc(INET6_ADDRSTRLEN);
+						char *buffer = (char *)malloc(INET6_ADDRSTRLEN+1);
 						if (buffer) {
 							int err=getnameinfo((struct sockaddr*)request->client,request->client_len,buffer,INET6_ADDRSTRLEN,0,0,NI_NUMERICHOST);
 							if (err!=0) {
@@ -546,7 +557,10 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
 						lua_pushlightuserdata(TL, (void*)request);
 						lua_setglobal(TL, "http_internal_handle");
 
-						lua_pcall(TL, 0, 0, 0);
+						int rc = lua_pcall(TL, 0, 0, 0);
+						if (0 != rc) {
+							syslog(LOG_ERR, "http: couldn't execute lua script, error %i\n", rc);
+						}
 
 						lua_pushnil(TL);
 						lua_setglobal(TL, "http_method");
@@ -573,8 +587,8 @@ void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
 						do_printf(request, "0\r\n\r\n");
 					}
 				}
-
 				luaL_unref(TL, LUA_REGISTRYINDEX, tref);
+
 			}
 		}
 		else {
@@ -826,7 +840,7 @@ static int process(http_request_handle *request) {
 	}
 
 	//only in AP mode we redirect arbitrary host names to our own host name
-	if (wifi_mode == WIFI_MODE_AP || wifi_mode == WIFI_MODE_APSTA) {
+	if (captivedns_running() && (wifi_mode == WIFI_MODE_AP || wifi_mode == WIFI_MODE_APSTA)) { //FIXME in APSTA make sure the request interface is the AP !!!
 		//find the Host: header and check if it matches our IP or captive server name
 		while (do_gets(pathbuf, HTTP_BUFF_SIZE, request) && strlen(pathbuf)>0 ) {
 
@@ -1065,7 +1079,7 @@ static void *http_thread(void *arg) {
 	if(0 == *config->server) {
 		*config->server = socket(AF_INET6, SOCK_STREAM, 0);
 		if(0 > *config->server) {
-			syslog(LOG_ERR, "couldn't create server socket\n");
+			syslog(LOG_ERR, "http: couldn't create server socket\n");
 			return NULL;
 		}
 
@@ -1078,14 +1092,14 @@ static void *http_thread(void *arg) {
 		sin.sin6_port   = htons(config->port);
 		rc = bind(*config->server, (struct sockaddr *) &sin, sizeof (sin));
 		if(0 != rc) {
-			syslog(LOG_ERR, "couldn't bind to port %d\n", config->port);
+			syslog(LOG_ERR, "http: couldn't bind to port %d\n", config->port);
 			return NULL;
 		}
 
 		listen(*config->server, 5);
 		LWIP_ASSERT("httpd_init: listen failed", *config->server >= 0);
 		if(0 > *config->server) {
-			syslog(LOG_ERR, "couldn't listen on port %d\n", config->port);
+			syslog(LOG_ERR, "http: couldn't listen on port %d\n", config->port);
 			return NULL;
 		}
 
@@ -1097,7 +1111,7 @@ static void *http_thread(void *arg) {
 	if (config->secure) {
 		ctx = SSL_CTX_new(TLS_server_method());
 		if (!ctx) {
-			syslog(LOG_ERR, "couldn't create SSL context\n");
+			syslog(LOG_ERR, "http: couldn't create SSL context\n");
 			return NULL;
 		}
 
@@ -1105,13 +1119,13 @@ static void *http_thread(void *arg) {
 		size_t certificate_bytes;
 		unsigned char *certificate_buf;
 		if( mbedtls_pk_load_file( config->certificate, &certificate_buf, &certificate_bytes ) != 0 ) {
-			syslog(LOG_ERR, "couldn't load SSL certificate\n");
+			syslog(LOG_ERR, "http: couldn't load SSL certificate\n");
 			SSL_CTX_free(ctx);
 			ctx = NULL;
 			return NULL;
 		}
 		if (!SSL_CTX_use_certificate_ASN1(ctx, certificate_bytes, certificate_buf)) {
-			syslog(LOG_ERR, "couldn't set SSL certificate\n");
+			syslog(LOG_ERR, "http: couldn't set SSL certificate\n");
 			mbedtls_zeroize( certificate_buf, certificate_bytes );
 			//MUST NOT free certificate_buf !!!
 			SSL_CTX_free(ctx);
@@ -1125,13 +1139,13 @@ static void *http_thread(void *arg) {
 		size_t private_key_bytes;
 		unsigned char *private_key_buf;
 		if( mbedtls_pk_load_file( config->private_key, &private_key_buf, &private_key_bytes ) != 0 ) {
-			syslog(LOG_ERR, "couldn't load SSL certificate\n");
+			syslog(LOG_ERR, "http: couldn't load SSL certificate\n");
 			SSL_CTX_free(ctx);
 			ctx = NULL;
 			return NULL;
 		}
 		if (!SSL_CTX_use_PrivateKey_ASN1(0, ctx, private_key_buf, private_key_bytes)) {
-			syslog(LOG_ERR, "couldn't load SSL private key\n");
+			syslog(LOG_ERR, "http: couldn't load SSL private key\n");
 			mbedtls_zeroize( private_key_buf, private_key_bytes );
 			//MUST NOT free private_key_buf !!!
 			SSL_CTX_free(ctx);
@@ -1167,7 +1181,7 @@ static void *http_thread(void *arg) {
 			if (config->secure) {
 				ssl = SSL_new(ctx);
 				if (!ssl) {
-					syslog(LOG_ERR, "couldn't create SSL session\n");
+					syslog(LOG_ERR, "http: couldn't create SSL session\n");
 					break; //exit the loop to shutdown the server
 				}
 
@@ -1177,10 +1191,10 @@ static void *http_thread(void *arg) {
 					int err_SSL_get_error = SSL_get_error(ssl, rc);
 					if (err_SSL_get_error == SSL_ERROR_SYSCALL) {
 						if (errno != EAGAIN && errno != ECONNRESET) {
-							syslog(LOG_ERR, "couldn't accept SSL connection - RC %d errno %d %s\n", rc, errno, strerror(errno));
+							syslog(LOG_ERR, "http: couldn't accept SSL connection - RC %d errno %d %s\n", rc, errno, strerror(errno));
 						}
 					} else {
-						syslog(LOG_ERR, "couldn't accept SSL connection - SSL_get_error() returned: %i\n", err_SSL_get_error);
+						syslog(LOG_ERR, "http: couldn't accept SSL connection - SSL_get_error() returned: %i\n", err_SSL_get_error);
 					}
 				} else {
 					http_request_handle request = HTTP_Request_Secure_initializer;
@@ -1243,7 +1257,7 @@ static void *http_thread(void *arg) {
 		//last one needs to unregister the callback
 		driver_error_t *error;
 		if ((error = net_event_unregister_callback(http_net_callback))) {
-			syslog(LOG_WARNING, "couldn't unregister net callback\n");
+			syslog(LOG_WARNING, "http: couldn't unregister net callback\n");
 		}
 	}
 
@@ -1285,7 +1299,7 @@ int http_start(lua_State* L) {
 		esp_log_level_set("wifi", ESP_LOG_ERROR);
 
 		if ((error = net_event_register_callback(http_net_callback))) {
-			syslog(LOG_WARNING, "couldn't register net callback, please restart http service from lua after changing connectivity\n");
+			syslog(LOG_WARNING, "http: couldn't register net callback, please restart http service from lua after changing connectivity\n");
 		}
 
 		// Init thread attributes
