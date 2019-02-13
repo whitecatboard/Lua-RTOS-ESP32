@@ -50,6 +50,9 @@
 
 #include <lua/src/lgc.h>
 
+static uint8_t mtx_initialized = 0;
+static struct mtx mtx_gc;
+
 int __garbage_collector() {
     if (xPortInIsrContext()) {
         // We are in an interrupt, and we can't
@@ -57,9 +60,16 @@ int __garbage_collector() {
         return -1;
     }
 
+    if (mtx_initialized == 0) {
+        mtx_init(&mtx_gc, NULL, NULL, 0);
+        mtx_initialized = 1;
+    }
+
     // Get the thread's Lua state
     lua_State *L = pvGetLuaState();
     if (L) {
+        mtx_lock(&mtx_gc);
+
         // Lua thread
         // Execute the garbage collector 2 times, and
         // wait 1 msec to get time to the idle task to
@@ -73,6 +83,8 @@ int __garbage_collector() {
         luaC_fullgc(L, 1);
         lua_unlock(L);
         vTaskDelay(1 / portTICK_PERIOD_MS);
+
+        mtx_unlock(&mtx_gc);
     } else {
         // Not a Lua thread
         return -1;
