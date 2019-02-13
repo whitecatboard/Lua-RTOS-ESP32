@@ -551,7 +551,7 @@ driver_error_t *net_ota(const char *server, const char *project, int verify, int
             .offset = update_partition->address,
             .size = update_partition->size,
         };
-        err = esp_image_load(ESP_IMAGE_VERIFY, &partition_pos, &data);
+        err = esp_image_verify(ESP_IMAGE_VERIFY, &partition_pos, &data);
         if (err != ESP_OK) {
             printf("OTA update finished but the written image is not valid, error %d\r\n", err);
             return NULL;

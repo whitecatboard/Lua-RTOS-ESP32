@@ -51,6 +51,7 @@ static char sccsid[] = "@(#)syslog.c	8.5 (Berkeley) 4/29/95";
 #include <sys/syslog.h>
 #include <sys/mount.h>
 #include <sys/status.h>
+#include <sys/path.h>
 
 #include "lwip/err.h"
 #include "lwip/sockets.h"
