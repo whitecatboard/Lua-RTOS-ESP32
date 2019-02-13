@@ -49,20 +49,23 @@ menu "Lua RTOS"
       config LUA_RTOS_BOARD_ADAFRUIT_HUZZAH32
          bool "ADAFRUIT HUZZAH32"
 
+      config LUA_RTOS_BOARD_DOIT_DEVKIT_V1
+         bool "DOIT ESP32 DEVKIT V1"
+
       config LUA_RTOS_BOARD_ESP32_GATEWAY
          bool "ESP32 GATEWAY"
 
       config LUA_RTOS_BOARD_ESP32_EVB
          bool "ESP32 EVB"
 
-      config LUA_RTOS_BOARD_DOIT_DEVKIT_V1
-         bool "DOIT ESP32 DEVKIT V1"
-
-      config LUA_RTOS_BOARD_WEMOS_ESP32_OLED
-         bool "WeMos ESP32 with 128x64 OLED"
+      config LUA_EVK_NINA_WY
+         bool "EVK-NINA-W"
 
       config LUA_RTOS_BOARD_FIPY
          bool "FIPY"
+
+      config LUA_RTOS_BOARD_WEMOS_ESP32_OLED
+         bool "WeMos ESP32 with 128x64 OLED"
 
       config LUA_RTOS_BOARD_OTHER
          bool "GENERIC"
