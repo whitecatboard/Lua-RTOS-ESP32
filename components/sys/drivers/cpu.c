@@ -133,9 +133,7 @@ uint32_t cpu_speed() {
 
 int cpu_revision() {
     esp_chip_info_t info;
-
     esp_chip_info(&info);
-
     return info.revision;
 }
 
@@ -146,7 +144,14 @@ void cpu_show_info() {
 	if (!*buffer) {
 		syslog(LOG_INFO, "cpu unknown CPU");
 	} else {
-		syslog(LOG_INFO, "cpu %s at %d Mhz", buffer, cpu_speed() / 1000000);
+		esp_chip_info_t info;
+		esp_chip_info(&info);
+
+		syslog(LOG_INFO, "cpu %s at %d Mhz, %i %s%s%s%s%s", buffer, cpu_speed(), info.cores, info.cores>1 ? "Cores":"Core",
+					info.features & CHIP_FEATURE_EMB_FLASH ? ", flash memory":"",
+					info.features & CHIP_FEATURE_WIFI_BGN ? ", 2.4GHz WiFi":"",
+					info.features & CHIP_FEATURE_BLE ? ", Bluetooth LE":"",
+					info.features & CHIP_FEATURE_BT ? ", Bluetooth Classic":"");
 	}
 }
 
