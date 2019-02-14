@@ -360,6 +360,18 @@
 		"image": ""
 	},
 	{
+		"id": "EVK-NINA-W",
+		"description": "EVK-NINA-W",
+		"manufacturer": "u-blox",
+		"brand": "",
+		"type": "EVK-NINA-W",
+		"subtype": "",
+		"filesystem": "default",
+		"usb_vid_pid": "0403:6011",
+		"usb_port_exp": "",
+		"image": ""
+	}, 
+	{
 		"id": "GENERIC",
 		"description": "Generic ESP32 board",
 		"manufacturer": "Generic",
