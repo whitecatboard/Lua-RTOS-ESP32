@@ -128,7 +128,7 @@ uint32_t cpu_speed() {
   rtc_cpu_freq_config_t config;
   rtc_clk_cpu_freq_get_config(&config);
 
-  return config.freq_mhz * 1000000;
+  return config.freq_mhz;
 }
 
 int cpu_revision() {
