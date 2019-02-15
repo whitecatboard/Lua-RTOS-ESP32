@@ -73,6 +73,8 @@ typedef struct {
 
 #define WPA2_CERT_initializer { NULL, 0, NULL, 0, NULL, 0, NULL, 0 }
 static lenterprise_cert_t enterprise_cert_info = WPA2_CERT_initializer;
+#define WIFI_MODE_STA_ENTERPRISE 999
+static int lwifi_setup_enterprise(lua_State* L);
 
 static int lwifi_setup(lua_State* L) {
     driver_error_t *error;
@@ -110,6 +112,8 @@ static int lwifi_setup(lua_State* L) {
                 hidden = 1;
             }
         }
+    } else if (mode == WIFI_MODE_STA_ENTERPRISE) {
+        return lwifi_setup_enterprise(L);
     }
 
     // Setup wifi
@@ -165,36 +169,36 @@ static int lwifi_setup_enterprise(lua_State* L) {
     uint32_t dns1 = 0;
     uint32_t dns2 = 0;
 
-    const char *ssid = luaL_checkstring(L, 1);
-    const char *identity = luaL_checkstring(L, 2);
-    const char *username = luaL_checkstring(L, 3);
-    const char *password = luaL_checkstring(L, 4);
+    const char *ssid = luaL_checkstring(L, 2);
+    const char *identity = luaL_optstring(L, 3, NULL);
+    const char *username = luaL_optstring(L, 4, NULL);
+    const char *password = luaL_optstring(L, 5, NULL);
 
-    const char *cacert_file = luaL_checkstring(L, 5);
-    const char *certificate_file = luaL_checkstring(L, 6);
-    const char *privkey_file = luaL_checkstring(L, 7);
-    const char *privkey_password = luaL_checkstring(L, 8);
+    const char *cacert_file = luaL_optstring(L, 6, NULL);
+    const char *certificate_file = luaL_optstring(L, 7, NULL);
+    const char *privkey_file = luaL_optstring(L, 8, NULL);
+    const char *privkey_password = luaL_optstring(L, 9, NULL);
 
-    int disabletimecheck = luaL_optinteger(L, 9, 2); //default = 2 = don't explicitly enable or disable
+    int disabletimecheck = luaL_optinteger(L, 10, 2); //default = 2 = don't explicitly enable or disable
 
     // Get IP info, if present
-    ip = luaL_optinteger(L, 10, 0);
-    mask = luaL_optinteger(L, 11, 0);
-    gw = luaL_optinteger(L, 12, 0);
-    dns1 = luaL_optinteger(L, 13, 0);
-    dns2 = luaL_optinteger(L, 14, 0);
-    powersave = luaL_optinteger(L, 15, 0);
-    channel = luaL_optinteger(L, 16, 0);
+    ip = luaL_optinteger(L, 11, 0);
+    mask = luaL_optinteger(L, 12, 0);
+    gw = luaL_optinteger(L, 13, 0);
+    dns1 = luaL_optinteger(L, 14, 0);
+    dns2 = luaL_optinteger(L, 15, 0);
+    powersave = luaL_optinteger(L, 16, 0);
+    channel = luaL_optinteger(L, 17, 0);
 
-    esp_wifi_sta_wpa2_ent_clear_ca_cert(); //make sure the memory is no longer referenced
-    esp_wifi_sta_wpa2_ent_clear_cert_key(); //make sure the memory is no longer referenced
+    esp_wifi_sta_wpa2_ent_clear_ca_cert(); //make sure our memory is no longer referenced by the espressif layer
+    esp_wifi_sta_wpa2_ent_clear_cert_key(); //make sure our memory is no longer referenced by the espressif layer
 
     if (enterprise_cert_info.cacert) {
         free(enterprise_cert_info.cacert);
         enterprise_cert_info.cacert = NULL;
         enterprise_cert_info.cacert_len = 0;
     }
-    if (*cacert_file != 0) { // check for *empty* string
+    if (cacert_file != NULL && *cacert_file != 0) { // also checking for *empty* string
         int rc = get_file_content(cacert_file, &enterprise_cert_info.cacert, &enterprise_cert_info.cacert_len);
         if (ESP_OK != rc) {
             syslog(LOG_ERR, "wifi_setup_enterprise: get_file_content(cacert) error %s\n", esp_err_to_name(rc));
@@ -206,7 +210,7 @@ static int lwifi_setup_enterprise(lua_State* L) {
         enterprise_cert_info.certificate = NULL;
         enterprise_cert_info.certificate_len = 0;
     }
-    if (*certificate_file != 0) { // check for *empty* string
+    if (certificate_file != NULL && *certificate_file != 0) { // also checking for *empty* string
         int rc = get_file_content(certificate_file, &enterprise_cert_info.certificate, &enterprise_cert_info.certificate_len);
         if (ESP_OK != rc) {
             syslog(LOG_ERR, "wifi_setup_enterprise: get_file_content(certificate) error %s\n", esp_err_to_name(rc));
@@ -218,7 +222,7 @@ static int lwifi_setup_enterprise(lua_State* L) {
         enterprise_cert_info.privkey = NULL;
         enterprise_cert_info.privkey_len = 0;
     }
-    if (*privkey_file != 0) { // check for *empty* string
+    if (privkey_file != NULL && *privkey_file != 0) { // also checking for *empty* string
         int rc = get_file_content(privkey_file, &enterprise_cert_info.privkey, &enterprise_cert_info.privkey_len);
         if (ESP_OK != rc) {
             syslog(LOG_ERR, "wifi_setup_enterprise: get_file_content(privkey) error %s\n", esp_err_to_name(rc));
@@ -527,6 +531,7 @@ static const LUA_REG_TYPE wifi_mode_map[] = {
     { LSTRKEY( "STA"          ), LINTVAL( WIFI_MODE_STA ) },
     { LSTRKEY( "AP"           ), LINTVAL( WIFI_MODE_AP ) },
     { LSTRKEY( "APSTA"        ), LINTVAL( WIFI_MODE_APSTA ) },
+    { LSTRKEY( "STAENT"       ), LINTVAL( WIFI_MODE_STA_ENTERPRISE ) },
 };
 
 static const LUA_REG_TYPE wifi_powersave_map[] = {
@@ -550,7 +555,6 @@ static const LUA_REG_TYPE wifi_timecheck_map[] = {
 
 static const LUA_REG_TYPE wifi_map[] = {
     { LSTRKEY( "setup"      ),     LFUNCVAL( lwifi_setup            ) },
-    { LSTRKEY( "enterprise" ),     LFUNCVAL( lwifi_setup_enterprise ) },
     { LSTRKEY( "scan"       ),     LFUNCVAL( lwifi_scan             ) },
     { LSTRKEY( "start"      ),     LFUNCVAL( lwifi_start            ) },
     { LSTRKEY( "stop"       ),     LFUNCVAL( lwifi_stop             ) },
