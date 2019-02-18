@@ -372,6 +372,30 @@
 		"image": ""
 	}, 
 	{
+		"id": "WESP32",
+		"description": "Silicognition wESP32",
+		"manufacturer": "Silicognition LLC",
+		"brand": "",
+		"type": "WESP32",
+		"subtype": "",
+		"filesystem": "default",
+		"usb_vid_pid": "10C4:EA60",
+		"usb_port_exp": "",
+		"image": "https://wesp32.com/images/wesp32-iso-4-prog.jpg"
+	},
+	{
+		"id": "WESP32-OTA",
+		"description": "Silicognition wESP32 with OTA",
+		"manufacturer": "Silicognition LLC",
+		"brand": "",
+		"type": "WESP32",
+		"subtype": "OTA",
+		"filesystem": "default",
+		"usb_vid_pid": "10C4:EA60",
+		"usb_port_exp": "",
+		"image": "https://wesp32.com/images/wesp32-iso-4-prog.jpg"
+	},
+	{
 		"id": "GENERIC",
 		"description": "Generic ESP32 board",
 		"manufacturer": "Generic",

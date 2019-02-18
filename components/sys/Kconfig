@@ -67,6 +67,9 @@ menu "Lua RTOS"
       config LUA_RTOS_BOARD_WEMOS_ESP32_OLED
          bool "WeMos ESP32 with 128x64 OLED"
 
+      config LUA_RTOS_BOARD_WESP32
+         bool "WESP32"
+
       config LUA_RTOS_BOARD_OTHER
          bool "GENERIC"
    endchoice
