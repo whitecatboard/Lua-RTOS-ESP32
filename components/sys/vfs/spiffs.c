@@ -361,7 +361,7 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
     // Add file to file list. List index is file descriptor.
     int res = lstadd(&files, file, &fd);
     if (res) {
-    		free(file->fs_file);
+        free(file->fs_file);
         free(file);
         errno = res;
         return -1;
@@ -404,6 +404,7 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
         // If in flags are set some write access mode this is an error, because we only
         // can open a directory in read mode.
         if (spiffs_flgs & (SPIFFS_WRONLY | SPIFFS_CREAT | SPIFFS_TRUNC)) {
+            free(file->fs_file);
             lstremove(&files, fd, 1);
             mtx_unlock(&vfs_mtx);
             errno = EISDIR;
@@ -424,8 +425,8 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
     } else {
         if (!base_is_dir) {
             // If base path is not a directory we return an error
+            free(file->fs_file);
             lstremove(&files, fd, 1);
-
             mtx_unlock(&vfs_mtx);
             errno = ENOENT;
             return -1;
@@ -439,6 +440,7 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
     }
 
     if (result != 0) {
+        free(file->fs_file);
         lstremove(&files, fd, 1);
         mtx_unlock(&vfs_mtx);
         errno = result;
