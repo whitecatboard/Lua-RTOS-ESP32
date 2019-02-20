@@ -85,7 +85,7 @@ lua_State *luaS_callback_state(lua_callback_t *callback);
  *                 function.
  * @param args Number of argument of the function.
  */
-void luaS_callback_call(lua_callback_t *callback, int args);
+int luaS_callback_call(lua_callback_t *callback, int args);
 
 /**
  * @brief Destroy a callback.

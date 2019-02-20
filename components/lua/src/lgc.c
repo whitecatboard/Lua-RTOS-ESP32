@@ -11,6 +11,7 @@
 
 
 #include <string.h>
+#include <pthread.h>
 
 #include "lua.h"
 
@@ -1155,7 +1156,18 @@ void luaC_step (lua_State *L) {
 ** to sweep all objects to turn them back to white (as white has not
 ** changed, nothing will be collected).
 */
+static uint8_t mtx_initialized = 0;
+static struct mtx mtx_gc;
+
 void luaC_fullgc (lua_State *L, int isemergency) {
+
+  if (mtx_initialized == 0) {
+    mtx_init(&mtx_gc, NULL, NULL, 0);
+    mtx_initialized = 1;
+  }
+
+  mtx_lock(&mtx_gc);
+
 #if LUA_USE_ROTABLE
   lua_lock(L);
 #endif
@@ -1177,6 +1189,8 @@ void luaC_fullgc (lua_State *L, int isemergency) {
 #if LUA_USE_ROTABLE
   lua_unlock(L);
 #endif
+
+  mtx_unlock(&mtx_gc);
 }
 
 /* }====================================================== */
