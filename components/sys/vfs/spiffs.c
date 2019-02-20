@@ -72,6 +72,7 @@
 #include <sys/vfs/vfs.h>
 #include <dirent.h>
 
+
 static int vfs_spiffs_open(const char *path, int flags, int mode);
 static ssize_t vfs_spiffs_write(int fd, const void *data, size_t size);
 static ssize_t vfs_spiffs_read(int fd, void * dst, size_t size);
@@ -404,8 +405,9 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
         // If in flags are set some write access mode this is an error, because we only
         // can open a directory in read mode.
         if (spiffs_flgs & (SPIFFS_WRONLY | SPIFFS_CREAT | SPIFFS_TRUNC)) {
+            lstremove(&files, fd, 0);
             free(file->fs_file);
-            lstremove(&files, fd, 1);
+            free(file);
             mtx_unlock(&vfs_mtx);
             errno = EISDIR;
             return -1;
@@ -425,8 +427,9 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
     } else {
         if (!base_is_dir) {
             // If base path is not a directory we return an error
+            lstremove(&files, fd, 0);
             free(file->fs_file);
-            lstremove(&files, fd, 1);
+            free(file);
             mtx_unlock(&vfs_mtx);
             errno = ENOENT;
             return -1;
@@ -440,8 +443,9 @@ static int vfs_spiffs_open(const char *path, int flags, int mode) {
     }
 
     if (result != 0) {
+        lstremove(&files, fd, 0);
         free(file->fs_file);
-        lstremove(&files, fd, 1);
+        free(file);
         mtx_unlock(&vfs_mtx);
         errno = result;
         return -1;
