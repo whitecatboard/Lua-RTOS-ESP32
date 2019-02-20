@@ -75,6 +75,8 @@
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
+#include "lgc.h"
+#include "sys.h"
 #include <drivers/net.h>
 #include <drivers/spi_eth.h>
 
@@ -87,7 +89,8 @@ extern int captivedns_start(lua_State* L);
 extern void captivedns_stop();
 extern int captivedns_running();
 
-static lua_State *LL=NULL;
+static lua_callback_t* http_callback = NULL;
+
 static wifi_mode_t wifi_mode = WIFI_MODE_STA;
 static u8_t http_refcount = 0;
 static u8_t volatile http_shutdown = 0;
@@ -450,147 +453,226 @@ int http_reboot(lua_State* L) {
 }
 
 #define LUA_INTERPRETER_ERROR_LENGTH 256
-void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
-	int n;
-	char *data;
+int __garbage_collector();
+static int http_execute_lua (lua_State *L) {
+		if (!lua_islightuserdata(L, 2)) {
+			syslog(LOG_ERR, "THOR got wrong param...");
+			return 0;
+		}
+		http_request_handle *request = (http_request_handle*)lua_touserdata(L, 2);
+		const char *path = luaL_checkstring( L, 3);
 
-	FILE *file = fopen(path, "r");
-
-	if (!file) {
-		send_error(request, 403, "Forbidden", NULL, "Access denied.");
-	} else if (is_lua(path)) {
-		fclose(file);
+		struct stat statbuf;
+		stat(path, &statbuf);
 
 		char ppath[PATH_MAX + 1];
-
 		strcpy(ppath, path);
+
 		if (strlen(ppath) < PATH_MAX) {
 			strcat(ppath, "p");
 
 			// Store .lua file modified time
-			time_t src_mtime = statbuf->st_mtime;
+			time_t src_mtime = statbuf.st_mtime;
 
 			// Get .luap file modified time
-			if (stat(ppath, statbuf) == 0) {
-				if (src_mtime > statbuf->st_mtime) {
+			if (stat(ppath, &statbuf) == 0) {
+				if (src_mtime > statbuf.st_mtime) {
 					http_preprocess_lua_page(path,ppath);
 				}
 			} else {
 				http_preprocess_lua_page(path,ppath);
 			}
 
-			if (S_ISDIR(statbuf->st_mode)) {
-				send_error(request, 500, "Internal Server Error", NULL, "Folder found where a precompiled file is expected.");
+			if (S_ISDIR(statbuf.st_mode)) {
+				send_error(request, 500, "Internal Server Error", NULL, "Folder found where a precompiled file was expected.");
+			}
+			else if (!S_ISREG(statbuf.st_mode)) {
+				send_error(request, 500, "Internal Server Error", NULL, "Special file found where a regular precompiled file was expected.");
 			}
 			else {
-				lua_State *L = pvGetLuaState(); // Get the thread's Lua state
-				lua_State *TL = lua_newthread(L);
-				int tref = luaL_ref(L, LUA_REGISTRYINDEX);
-				if (L == NULL || TL == NULL) {
-					send_error(request, 500, "Internal Server Error", NULL, L ? "Cannot create thread.":"Cannot get state.");
+				if (heap_caps_get_free_size(MALLOC_CAP_DEFAULT) < statbuf.st_size*3) {
+					//free heap might be too low to load the file, so call GC before trying to load
+					luaC_fullgc(L, 0);
+					lua_unlock(L);
+					vTaskDelay(1 / portTICK_PERIOD_MS);
+					lua_lock(L);
+					luaC_fullgc(L, 0);
+					lua_unlock(L);
+					vTaskDelay(1 / portTICK_PERIOD_MS);
 				}
-				else {
-					if (luaL_loadfile(TL, ppath)) {
-						char* error = (char *)malloc(LUA_INTERPRETER_ERROR_LENGTH+1);
-						if (error) {
-							*error = '\0';
-							snprintf(error, LUA_INTERPRETER_ERROR_LENGTH, "FATAL ERROR: %s", lua_tostring(TL, -1));
-							send_error(request, 500, "Internal Server Error", NULL, error);
-							free(error);
-						}
-						else {
-							send_error(request, 500, "Internal Server Error", NULL, "FATAL ERROR occurred");
-						}
+
+				if (heap_caps_get_free_size(MALLOC_CAP_DEFAULT) < statbuf.st_size*3) {
+					//free heap might still be too low to load the file, so call the emergency GC before trying to load
+					__garbage_collector();
+				}
+
+				lua_lock(L);
+				int ret = luaL_loadfile(L, ppath);
+				lua_unlock(L);
+
+				if (LUA_OK != ret) {
+					char* error = (char *)malloc(LUA_INTERPRETER_ERROR_LENGTH+1);
+					if (error) {
+						*error = '\0';
+						snprintf(error, LUA_INTERPRETER_ERROR_LENGTH, "FATAL ERROR: %s", lua_tostring(L, -1));
+						send_error(request, 500, "Internal Server Error", NULL, error);
+						free(error);
 					}
 					else {
-
-						//as we execute a lua script let's prepare the remote ip address
-						// -> first clean a possible IP4 addr from its leading '::ffff:'
-						if (request->client->ss_family==AF_INET6) {
-								struct sockaddr_in6* sa6=(struct sockaddr_in6*)request->client;
-								if (IN6_IS_ADDR_V4MAPPED(&sa6->sin6_addr)) {
-										struct sockaddr_in sa4;
-										memset(&sa4,0,sizeof(sa4));
-										sa4.sin_family=AF_INET;
-										sa4.sin_port=sa6->sin6_port;
-										memcpy(&sa4.sin_addr.s_addr,sa6->sin6_addr.s6_addr+12,4);
-										memcpy(request->client,&sa4,sizeof(sa4));
-										request->client_len=sizeof(sa4);
-								}
-						}
-						// -> now convert the address to human-readable form
-						char *buffer = (char *)malloc(INET6_ADDRSTRLEN);
-						if (buffer) {
-							int err=getnameinfo((struct sockaddr*)request->client,request->client_len,buffer,INET6_ADDRSTRLEN,0,0,NI_NUMERICHOST);
-							if (err!=0) {
-									snprintf(buffer,INET6_ADDRSTRLEN,"invalid address");
-							}
-						}
-
-						lua_pushstring(TL, (strcasecmp(request->method, "GET") == 0) ? "GET":"POST");
-						lua_setglobal(TL, "http_method");
-						lua_pushstring(TL, request->path);
-						lua_setglobal(TL, "http_uri");
-						lua_pushstring(TL, (request->data && *request->data) ? request->data:"");
-						lua_setglobal(TL, "http_request");
-						lua_pushinteger(TL, request->config->port);
-						lua_setglobal(TL, "http_port");
-						lua_pushinteger(TL, request->config->secure);
-						lua_setglobal(TL, "http_secure");
-						lua_pushstring(TL, buffer ? buffer:"");
-						lua_setglobal(TL, "http_remote_addr");
-						lua_pushinteger(TL, request->client->ss_family==AF_INET6 ? ((struct sockaddr_in6*)request->client)->sin6_port : ((struct sockaddr_in*)request->client)->sin_port);
-						lua_setglobal(TL, "http_remote_port");
-						lua_pushstring(TL, path);
-						lua_setglobal(TL, "http_script_name");
-						lua_pushlightuserdata(TL, (void*)request);
-						lua_setglobal(TL, "http_internal_handle");
-
-						lua_pcall(TL, 0, 0, 0);
-
-						lua_pushnil(TL);
-						lua_setglobal(TL, "http_method");
-						lua_pushnil(TL);
-						lua_setglobal(TL, "http_uri");
-						lua_pushnil(TL);
-						lua_setglobal(TL, "http_request");
-						lua_pushnil(TL);
-						lua_setglobal(TL, "http_port");
-						lua_pushnil(TL);
-						lua_setglobal(TL, "http_secure");
-						lua_pushnil(TL);
-						lua_setglobal(TL, "http_remote_addr");
-						lua_pushnil(TL);
-						lua_setglobal(TL, "http_remote_port");
-						lua_pushnil(TL);
-						lua_setglobal(TL, "http_script_name");
-						lua_pushnil(TL);
-						lua_setglobal(TL, "http_internal_handle");
-
-						free(buffer);
-
-						if (!request->config->secure) fsync(request->socket);
-						do_printf(request, "0\r\n\r\n");
+						send_error(request, 500, "Internal Server Error", NULL, "FATAL ERROR occurred");
 					}
 				}
+				else {
 
-				luaL_unref(TL, LUA_REGISTRYINDEX, tref);
+					//as we execute a lua script let's prepare the remote ip address
+					// -> first clean a possible IP4 addr from its leading '::ffff:'
+					if (request->client->ss_family==AF_INET6) {
+							struct sockaddr_in6* sa6=(struct sockaddr_in6*)request->client;
+							if (IN6_IS_ADDR_V4MAPPED(&sa6->sin6_addr)) {
+									struct sockaddr_in sa4;
+									memset(&sa4,0,sizeof(sa4));
+									sa4.sin_family=AF_INET;
+									sa4.sin_port=sa6->sin6_port;
+									memcpy(&sa4.sin_addr.s_addr,sa6->sin6_addr.s6_addr+12,4);
+									memcpy(request->client,&sa4,sizeof(sa4));
+									request->client_len=sizeof(sa4);
+							}
+					}
+
+					// -> now convert the address to human-readable form
+					char *buffer = (char *)malloc(INET6_ADDRSTRLEN+1);
+					if (buffer) {
+						int err=getnameinfo((struct sockaddr*)request->client,request->client_len,buffer,INET6_ADDRSTRLEN,0,0,NI_NUMERICHOST);
+						if (err!=0) {
+								snprintf(buffer,INET6_ADDRSTRLEN,"invalid address");
+						}
+					}
+
+					lua_lock(L);
+					lua_pushstring(L, (strcasecmp(request->method, "GET") == 0) ? "GET":"POST");
+					lua_setglobal(L, "http_method");
+					lua_pushstring(L, request->path);
+					lua_setglobal(L, "http_uri");
+					lua_pushstring(L, (request->data && *request->data) ? request->data:"");
+					lua_setglobal(L, "http_request");
+					lua_pushinteger(L, request->config->port);
+					lua_setglobal(L, "http_port");
+					lua_pushinteger(L, request->config->secure);
+					lua_setglobal(L, "http_secure");
+					lua_pushstring(L, buffer ? buffer:"");
+					lua_setglobal(L, "http_remote_addr");
+					lua_pushinteger(L, request->client->ss_family==AF_INET6 ? ((struct sockaddr_in6*)request->client)->sin6_port : ((struct sockaddr_in*)request->client)->sin_port);
+					lua_setglobal(L, "http_remote_port");
+					lua_pushstring(L, path);
+					lua_setglobal(L, "http_script_name");
+					lua_pushlightuserdata(L, (void*)request);
+					lua_setglobal(L, "http_internal_handle");
+					lua_unlock(L);
+
+					int rc = lua_pcall(L, 0, 0, 0);
+					if (LUA_OK != rc) {
+						if (LUA_ERRRUN != rc) {
+							syslog(LOG_ERR, "http: couldn't execute lua script, error %i\n", rc);
+						}
+						else {
+							char* error = (char *)malloc(LUA_INTERPRETER_ERROR_LENGTH+1);
+							if (error) {
+								*error = '\0';
+								snprintf(error, LUA_INTERPRETER_ERROR_LENGTH, "FATAL ERROR: %s", lua_tostring(L, -1));
+								send_error(request, 500, "Internal Server Error", NULL, error);
+								syslog(LOG_ERR, "http: couldn't execute lua script, %s\n", error);
+								free(error);
+							}
+							else {
+								send_error(request, 500, "Internal Server Error", NULL, "FATAL ERROR occurred");
+							}
+						}
+					}
+
+					lua_lock(L);
+					lua_pushnil(L);
+					lua_setglobal(L, "http_method");
+					lua_pushnil(L);
+					lua_setglobal(L, "http_uri");
+					lua_pushnil(L);
+					lua_setglobal(L, "http_request");
+					lua_pushnil(L);
+					lua_setglobal(L, "http_port");
+					lua_pushnil(L);
+					lua_setglobal(L, "http_secure");
+					lua_pushnil(L);
+					lua_setglobal(L, "http_remote_addr");
+					lua_pushnil(L);
+					lua_setglobal(L, "http_remote_port");
+					lua_pushnil(L);
+					lua_setglobal(L, "http_script_name");
+					lua_pushnil(L);
+					lua_setglobal(L, "http_internal_handle");
+					lua_unlock(L);
+
+					free(buffer);
+
+					if (!request->config->secure) fsync(request->socket);
+					do_printf(request, "0\r\n\r\n");
+				}
+
+				//free the heap again by calling GC
+				lua_lock(L);
+				luaC_fullgc(L, 0);
+				lua_unlock(L);
+				vTaskDelay(1 / portTICK_PERIOD_MS);
+
 			}
 		}
 		else {
 			send_error(request, 500, "Internal Server Error", NULL, "Path too long.");
 		}
 
+	return 0;
+}
+
+void send_file(http_request_handle *request, char *path, struct stat *statbuf) {
+
+	FILE *file = fopen(path, "r");
+	if (!file) {
+		send_error(request, 403, "Forbidden", NULL, "Access denied.");
+	} else if (is_lua(path)) {
+		fclose(file);
+
+		lua_State *L = luaS_callback_state(http_callback);
+		lua_pushcfunction(L, &http_execute_lua);  /* to call 'http_execute_lua' in protected mode */
+		lua_pushlightuserdata(L, (void*)request);
+		lua_pushstring(L, path);
+		int rc = luaS_callback_call(http_callback, 3);
+		if (LUA_OK != rc) {
+			if (LUA_ERRRUN != rc) {
+				syslog(LOG_ERR, "http: couldn't execute http_callback, error %i\n", rc);
+			}
+			else {
+				char* error = (char *)malloc(LUA_INTERPRETER_ERROR_LENGTH+1);
+				if (error) {
+					*error = '\0';
+					snprintf(error, LUA_INTERPRETER_ERROR_LENGTH, "FATAL ERROR: %s", lua_tostring(L, -2));
+					send_error(request, 500, "Internal Server Error", NULL, error);
+					syslog(LOG_ERR, "http: couldn't execute http_callback, %s\n", error);
+					free(error);
+				}
+				else {
+					send_error(request, 500, "Internal Server Error", NULL, "FATAL ERROR occurred");
+				}
+			}
+		}
+		//NOTE: no need to "clean up" the stack here!
 	} else {
-		data = calloc(1, HTTP_BUFF_SIZE);
+		char *data = calloc(1, HTTP_BUFF_SIZE);
 		if (data) {
 			int length = S_ISREG(statbuf->st_mode) ? statbuf->st_size : -1;
 			send_headers(request, 200, "OK", NULL, get_mime_type(path), length);
-			while ((n = fread(data, 1, sizeof (data), file)) > 0) request_write(request, data, n);
-			fclose(file);
-
+			int read = 0;
+			while ((read = fread(data, 1, sizeof (data), file)) > 0) request_write(request, data, read);
 			free(data);
 		}
+		fclose(file);
 	}
 }
 
@@ -826,7 +908,7 @@ static int process(http_request_handle *request) {
 	}
 
 	//only in AP mode we redirect arbitrary host names to our own host name
-	if (wifi_mode == WIFI_MODE_AP || wifi_mode == WIFI_MODE_APSTA) {
+	if (captivedns_running() && (wifi_mode == WIFI_MODE_AP || wifi_mode == WIFI_MODE_APSTA)) { //FIXME in APSTA make sure the request interface is the AP !!!
 		//find the Host: header and check if it matches our IP or captive server name
 		while (do_gets(pathbuf, HTTP_BUFF_SIZE, request) && strlen(pathbuf)>0 ) {
 
@@ -1039,7 +1121,7 @@ static void http_net_callback(system_event_t *event){
 				syslog(LOG_DEBUG, "http: switched to captive mode on %s\n", ip4addr);
 				if (http_captiverun) {
 					syslog(LOG_DEBUG, "http: auto-restarting captive dns service\n");
-					captivedns_start(LL);
+					captivedns_start(luaS_callback_state(http_callback));
 				}
 			}
 			break;
@@ -1065,7 +1147,7 @@ static void *http_thread(void *arg) {
 	if(0 == *config->server) {
 		*config->server = socket(AF_INET6, SOCK_STREAM, 0);
 		if(0 > *config->server) {
-			syslog(LOG_ERR, "couldn't create server socket\n");
+			syslog(LOG_ERR, "http: couldn't create server socket\n");
 			return NULL;
 		}
 
@@ -1078,14 +1160,14 @@ static void *http_thread(void *arg) {
 		sin.sin6_port   = htons(config->port);
 		rc = bind(*config->server, (struct sockaddr *) &sin, sizeof (sin));
 		if(0 != rc) {
-			syslog(LOG_ERR, "couldn't bind to port %d\n", config->port);
+			syslog(LOG_ERR, "http: couldn't bind to port %d\n", config->port);
 			return NULL;
 		}
 
 		listen(*config->server, 5);
 		LWIP_ASSERT("httpd_init: listen failed", *config->server >= 0);
 		if(0 > *config->server) {
-			syslog(LOG_ERR, "couldn't listen on port %d\n", config->port);
+			syslog(LOG_ERR, "http: couldn't listen on port %d\n", config->port);
 			return NULL;
 		}
 
@@ -1097,7 +1179,7 @@ static void *http_thread(void *arg) {
 	if (config->secure) {
 		ctx = SSL_CTX_new(TLS_server_method());
 		if (!ctx) {
-			syslog(LOG_ERR, "couldn't create SSL context\n");
+			syslog(LOG_ERR, "http: couldn't create SSL context\n");
 			return NULL;
 		}
 
@@ -1105,13 +1187,13 @@ static void *http_thread(void *arg) {
 		size_t certificate_bytes;
 		unsigned char *certificate_buf;
 		if( mbedtls_pk_load_file( config->certificate, &certificate_buf, &certificate_bytes ) != 0 ) {
-			syslog(LOG_ERR, "couldn't load SSL certificate\n");
+			syslog(LOG_ERR, "http: couldn't load SSL certificate\n");
 			SSL_CTX_free(ctx);
 			ctx = NULL;
 			return NULL;
 		}
 		if (!SSL_CTX_use_certificate_ASN1(ctx, certificate_bytes, certificate_buf)) {
-			syslog(LOG_ERR, "couldn't set SSL certificate\n");
+			syslog(LOG_ERR, "http: couldn't set SSL certificate\n");
 			mbedtls_zeroize( certificate_buf, certificate_bytes );
 			//MUST NOT free certificate_buf !!!
 			SSL_CTX_free(ctx);
@@ -1125,13 +1207,13 @@ static void *http_thread(void *arg) {
 		size_t private_key_bytes;
 		unsigned char *private_key_buf;
 		if( mbedtls_pk_load_file( config->private_key, &private_key_buf, &private_key_bytes ) != 0 ) {
-			syslog(LOG_ERR, "couldn't load SSL certificate\n");
+			syslog(LOG_ERR, "http: couldn't load SSL certificate\n");
 			SSL_CTX_free(ctx);
 			ctx = NULL;
 			return NULL;
 		}
 		if (!SSL_CTX_use_PrivateKey_ASN1(0, ctx, private_key_buf, private_key_bytes)) {
-			syslog(LOG_ERR, "couldn't load SSL private key\n");
+			syslog(LOG_ERR, "http: couldn't load SSL private key\n");
 			mbedtls_zeroize( private_key_buf, private_key_bytes );
 			//MUST NOT free private_key_buf !!!
 			SSL_CTX_free(ctx);
@@ -1144,11 +1226,12 @@ static void *http_thread(void *arg) {
 
 	syslog(LOG_INFO, "http: server listening on port %d\n", config->port);
 
+	int client;
+	struct sockaddr_storage client_addr;
+	socklen_t client_addr_len = sizeof(client_addr);
+
 	http_refcount++;
 	while (!http_shutdown) {
-		int client;
-		struct sockaddr_storage client_addr;
-		socklen_t client_addr_len = sizeof(client_addr);
 
 		// Wait for a request ...
 		if ((client = accept(*config->server, (struct sockaddr *)&client_addr, &client_addr_len)) != -1) {
@@ -1167,7 +1250,7 @@ static void *http_thread(void *arg) {
 			if (config->secure) {
 				ssl = SSL_new(ctx);
 				if (!ssl) {
-					syslog(LOG_ERR, "couldn't create SSL session\n");
+					syslog(LOG_ERR, "http: couldn't create SSL session\n");
 					break; //exit the loop to shutdown the server
 				}
 
@@ -1177,10 +1260,10 @@ static void *http_thread(void *arg) {
 					int err_SSL_get_error = SSL_get_error(ssl, rc);
 					if (err_SSL_get_error == SSL_ERROR_SYSCALL) {
 						if (errno != EAGAIN && errno != ECONNRESET) {
-							syslog(LOG_ERR, "couldn't accept SSL connection - RC %d errno %d %s\n", rc, errno, strerror(errno));
+							syslog(LOG_ERR, "http: couldn't accept SSL connection - RC %d errno %d %s\n", rc, errno, strerror(errno));
 						}
 					} else {
-						syslog(LOG_ERR, "couldn't accept SSL connection - SSL_get_error() returned: %i\n", err_SSL_get_error);
+						syslog(LOG_ERR, "http: couldn't accept SSL connection - SSL_get_error() returned: %i\n", err_SSL_get_error);
 					}
 				} else {
 					http_request_handle request = HTTP_Request_Secure_initializer;
@@ -1202,6 +1285,9 @@ static void *http_thread(void *arg) {
 
 			close(client);
 			client = -1;
+
+			//make sure external systems can't occupy our whole cpu...
+			vTaskDelay(1 / portTICK_PERIOD_MS);
 		}
 
 		if (script_wants_reboot) {
@@ -1240,10 +1326,16 @@ static void *http_thread(void *arg) {
 	http_refcount--;
 
 	if (0 == http_refcount) {
-		//last one needs to unregister the callback
+		//last one needs to unregister the net callback
 		driver_error_t *error;
 		if ((error = net_event_unregister_callback(http_net_callback))) {
-			syslog(LOG_WARNING, "couldn't unregister net callback\n");
+			syslog(LOG_WARNING, "http: couldn't unregister net callback\n");
+		}
+
+		//last one needs to unregister the lua execution callback
+		if (http_callback != NULL) {
+			luaS_callback_destroy(http_callback);
+			http_callback = NULL;
 		}
 	}
 
@@ -1266,7 +1358,15 @@ int http_start(lua_State* L) {
 		// Create document root directory if not exist
 		mkpath(CONFIG_LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT);
 
-		LL=L;
+		// Prepare a callback to execute lua code
+		if (http_callback != NULL) {
+			luaS_callback_destroy(http_callback);
+			http_callback = NULL;
+		}
+		lua_pushcfunction(L, &http_execute_lua);  /* to call 'http_execute_lua' in protected mode */
+		http_callback = luaS_callback_create(L, 1);
+		lua_pop(L, 1);
+
 		strcpy(ip4addr, "0.0.0.0");
 
 		esp_log_level_set("wifi", ESP_LOG_NONE);
@@ -1285,7 +1385,7 @@ int http_start(lua_State* L) {
 		esp_log_level_set("wifi", ESP_LOG_ERROR);
 
 		if ((error = net_event_register_callback(http_net_callback))) {
-			syslog(LOG_WARNING, "couldn't register net callback, please restart http service from lua after changing connectivity\n");
+			syslog(LOG_WARNING, "http: couldn't register net callback, please restart http service from lua after changing connectivity\n");
 		}
 
 		// Init thread attributes
