@@ -125,8 +125,8 @@ typedef struct {
 	char *printf_buffer;
 } http_request_handle;
 
-#define HTTP_Request_Normal_initializer { config, client, NULL, 0, NULL, 0, NULL, NULL, NULL, NULL, NULL };
-#define HTTP_Request_Secure_initializer { config, client, ssl,  0, NULL, 0, NULL, NULL, NULL, NULL, NULL };
+#define HTTP_Request_Normal_initializer { config, client, NULL, 0, &client_addr, client_addr_len, NULL, NULL, NULL, NULL, NULL };
+#define HTTP_Request_Secure_initializer { config, client, ssl,  0, &client_addr, client_addr_len, NULL, NULL, NULL, NULL, NULL };
 
 static http_server_config http_normal = HTTP_Normal_initializer;
 static http_server_config http_secure = HTTP_Secure_initializer;
@@ -1267,7 +1267,6 @@ static void *http_thread(void *arg) {
 					}
 				} else {
 					http_request_handle request = HTTP_Request_Secure_initializer;
-					request.client = &client_addr;
 					process(&request);
 				}
 
@@ -1278,7 +1277,6 @@ static void *http_thread(void *arg) {
 			else
 			{
 				http_request_handle request = HTTP_Request_Normal_initializer;
-				request.client = &client_addr;
 				process(&request);
 				shutdown(client, SHUT_RDWR);
 			}
