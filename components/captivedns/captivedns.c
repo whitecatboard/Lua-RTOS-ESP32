@@ -36,6 +36,7 @@
 #include "lwip/udp.h"
 #include "lwip/pbuf.h"
 #include "lwip/tcpip.h"
+#include "lwip/priv/tcpip_priv.h"
 
 #include "esp_wifi_types.h"
 #include "tcpip_adapter.h"
@@ -82,10 +83,17 @@ static u8_t captivedns_pcb_refcount;
 static void captivedns_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, u16_t port);
 driver_error_t *wifi_check_error(esp_err_t error);
 
+typedef struct {
+    struct tcpip_api_call_data call;
+    esp_err_t err;
+} captive_api_call_t;
+
 /** Ensure captivedns PCB is allocated and bound */
 static err_t
-captivedns_inc_pcb_refcount(void)
+captivedns_inc_pcb_refcount(struct tcpip_api_call_data *api_call_msg)
 {
+  captive_api_call_t * msg = (captive_api_call_t *)api_call_msg;
+
   if(captivedns_pcb_refcount == 0) {
     LWIP_ASSERT("captivedns_inc_pcb_refcount(): memory leak", captivedns_pcb == NULL);
 
@@ -97,6 +105,7 @@ captivedns_inc_pcb_refcount(void)
 
     if(captivedns_pcb == NULL) {
       UNLOCK_TCPIP_CORE()
+      msg->err = ERR_MEM;
       return ERR_MEM;
     }
 
@@ -105,6 +114,7 @@ captivedns_inc_pcb_refcount(void)
       udp_remove(captivedns_pcb);
       captivedns_pcb = NULL;
       UNLOCK_TCPIP_CORE()
+      msg->err = ESP_ERR_INVALID_STATE;
       return ESP_ERR_INVALID_STATE;
     }
 
@@ -115,12 +125,13 @@ captivedns_inc_pcb_refcount(void)
     captivedns_pcb_refcount++;
   }
 
+  msg->err = ESP_OK;
   return ERR_OK;
 }
 
 /** Free captivedns PCB if the last netif stops using it */
 static void
-captivedns_dec_pcb_refcount(void)
+captivedns_dec_pcb_refcount(struct tcpip_api_call_data *api_call_msg)
 {
   if(captivedns_pcb_refcount) {
     captivedns_pcb_refcount--;
@@ -210,7 +221,11 @@ int captivedns_start(lua_State* L) {
     return luaL_error(L, "couldn't get interface information");
   }
   
-  if(captivedns_inc_pcb_refcount()!=ERR_OK) {
+  captive_api_call_t msg = {
+  };
+  tcpip_api_call(captivedns_inc_pcb_refcount, (struct tcpip_api_call_data*)&msg);
+
+  if(msg.err!=ERR_OK) {
     return luaL_error(L, "couldn't start captivedns service");
   }
   
@@ -218,7 +233,9 @@ int captivedns_start(lua_State* L) {
 }
 
 void captivedns_stop() {
-  captivedns_dec_pcb_refcount();
+  captive_api_call_t msg = {
+  };
+  tcpip_api_call(captivedns_dec_pcb_refcount, (struct tcpip_api_call_data*)&msg);
 }
 
 int captivedns_running() {
