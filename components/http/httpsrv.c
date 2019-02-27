@@ -82,7 +82,6 @@
 
 
 char *strcasestr(const char *haystack, const char *needle);
-driver_error_t *wifi_stat(ifconfig_t *info);
 driver_error_t *wifi_check_error(esp_err_t error);
 
 extern int captivedns_start(lua_State* L);
@@ -96,7 +95,8 @@ static u8_t http_refcount = 0;
 static u8_t volatile http_shutdown = 0;
 static u8_t volatile script_wants_reboot = 0;
 static u8_t http_captiverun = 0;
-static char ip4addr[IP4ADDR_STRLEN_MAX];
+static u32_t ap_ip4addr = 0;
+static char  ap_ip4addr_str[IP4ADDR_STRLEN_MAX];
 static int socket_server_normal = 0;
 static int socket_server_secure = 0;
 
@@ -456,7 +456,7 @@ int http_reboot(lua_State* L) {
 int __garbage_collector();
 static int http_execute_lua (lua_State *L) {
 		if (!lua_islightuserdata(L, 2)) {
-			syslog(LOG_ERR, "THOR got wrong param...");
+			syslog(LOG_ERR, "http: FATAL ERROR, got wrong param...");
 			return 0;
 		}
 		http_request_handle *request = (http_request_handle*)lua_touserdata(L, 2);
@@ -845,6 +845,37 @@ static void list_dir(http_request_handle *request, char *pathbuf, struct stat *s
 	do_printf(request, "0\r\n\r\n");
 }
 
+/* we need this as the lwip implementation of
+ * getsockname(request->socket, (struct sockaddr*)&addr, &addr_len)
+ * returns an ip-address of 0 */
+static bool remote_matches_ap_subnet(http_request_handle *request) {
+
+	// -> first clean a possible IP4 addr from its leading '::ffff:'
+	if (request->client->ss_family==AF_INET6) {
+			struct sockaddr_in6* sa6=(struct sockaddr_in6*)request->client;
+			if (IN6_IS_ADDR_V4MAPPED(&sa6->sin6_addr)) {
+					struct sockaddr_in sa4;
+					memset(&sa4,0,sizeof(sa4));
+					sa4.sin_family=AF_INET;
+					sa4.sin_port=sa6->sin6_port;
+					memcpy(&sa4.sin_addr.s_addr,sa6->sin6_addr.s6_addr+12,4);
+					memcpy(request->client,&sa4,sizeof(sa4));
+					request->client_len=sizeof(sa4);
+			}
+	}
+
+	if (request->client->ss_family==AF_INET) {
+		u32_t addr_client = ((struct sockaddr_in*)request->client)->sin_addr.s_addr & IP_CLASSA_HOST; //use IP_CLASSA_HOST instead of IP_CLASSC_NET as the IP address is "reversed"
+		return (ap_ip4addr == addr_client);
+	}
+	else if (request->client->ss_family==AF_INET6) {
+		//FIXME find out how to properly compare remote IPv6 with local AP's IPv6
+		//FIXME if they match on the right "class" then return true here
+	}
+
+	return false;
+}
+
 static int process(http_request_handle *request) {
 	char *reqbuf;
 	char *databuf = NULL;
@@ -908,7 +939,8 @@ static int process(http_request_handle *request) {
 	}
 
 	//only in AP mode we redirect arbitrary host names to our own host name
-	if (captivedns_running() && (wifi_mode == WIFI_MODE_AP || wifi_mode == WIFI_MODE_APSTA)) { //FIXME in APSTA make sure the request interface is the AP !!!
+	if (captivedns_running() && (wifi_mode == WIFI_MODE_AP || wifi_mode == WIFI_MODE_APSTA) && remote_matches_ap_subnet(request)) {
+
 		//find the Host: header and check if it matches our IP or captive server name
 		while (do_gets(pathbuf, HTTP_BUFF_SIZE, request) && strlen(pathbuf)>0 ) {
 
@@ -924,7 +956,7 @@ static int process(http_request_handle *request) {
 					while(*host==' ') host++; //skip any spaces after the colon
 
 					if (0 == strcasecmp(CAPTIVE_SERVER_NAME, host) ||
-							0 == strcasecmp(ip4addr, host)) {
+							0 == strcasecmp(ap_ip4addr_str, host)) {
 						break; //done parsing headers
 					}
 					else {
@@ -1106,19 +1138,22 @@ static void http_net_callback(system_event_t *event){
 			//only if we have previously been in STA mode
 			if (wifi_mode == WIFI_MODE_STA) {
 				driver_error_t *error;
-				ifconfig_t info;
-
 				if ((error = wifi_check_error(esp_wifi_get_mode(&wifi_mode)))) {
 					free(error);
 				}
-				if ((error = wifi_stat(&info))) {
+
+				ap_ip4addr = 0;
+				//get the IP address of the AP explicitly
+				tcpip_adapter_ip_info_t esp_info;
+				if ((error = wifi_check_error(tcpip_adapter_get_ip_info(ESP_IF_WIFI_AP, &esp_info)))) {
 					free(error);
-					strcpy(ip4addr, "0.0.0.0");
 				}
 				else {
-					strcpy(ip4addr, inet_ntoa(info.ip));
+					ap_ip4addr = esp_info.ip.addr & IP_CLASSA_HOST; //use IP_CLASSA_HOST instead of IP_CLASSC_NET as the IP address is "reversed"
 				}
-				syslog(LOG_DEBUG, "http: switched to captive mode on %s\n", ip4addr);
+				strcpy(ap_ip4addr_str, inet_ntoa(esp_info.ip.addr));
+
+				syslog(LOG_DEBUG, "http: switched to captive mode on %s\n", ap_ip4addr_str);
 				if (http_captiverun) {
 					syslog(LOG_DEBUG, "http: auto-restarting captive dns service\n");
 					captivedns_start(luaS_callback_state(http_callback));
@@ -1349,7 +1384,6 @@ int http_start(lua_State* L) {
 		struct sched_param sched;
 		pthread_t thread_normal;
 		pthread_t thread_secure;
-		ifconfig_t info;
 		int res;
 		driver_error_t *error;
 
@@ -1365,19 +1399,24 @@ int http_start(lua_State* L) {
 		http_callback = luaS_callback_create(L, 1);
 		lua_pop(L, 1);
 
-		strcpy(ip4addr, "0.0.0.0");
+		ap_ip4addr = 0;
+		strcpy(ap_ip4addr_str, "0.0.0.0");
 
 		esp_log_level_set("wifi", ESP_LOG_NONE);
-
 		if ((error = wifi_check_error(esp_wifi_get_mode(&wifi_mode)))) {
 			esp_log_level_set("wifi", ESP_LOG_ERROR);
 			free(error);
 		} else {
-			if ((error = wifi_stat(&info))) {
+			//get the IP address of the AP explicitly
+			tcpip_adapter_ip_info_t esp_info;
+			if ((error = wifi_check_error(tcpip_adapter_get_ip_info(ESP_IF_WIFI_AP, &esp_info)))) {
 				esp_log_level_set("wifi", ESP_LOG_ERROR);
 				free(error);
 			}
-			strcpy(ip4addr, inet_ntoa(info.ip));
+			else {
+				ap_ip4addr = esp_info.ip.addr & IP_CLASSA_HOST; //use IP_CLASSA_HOST instead of IP_CLASSC_NET as the IP address is "reversed"
+			}
+			strcpy(ap_ip4addr_str, inet_ntoa(esp_info.ip.addr));
 		}
 
 		esp_log_level_set("wifi", ESP_LOG_ERROR);
