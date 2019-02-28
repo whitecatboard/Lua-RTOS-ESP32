@@ -24,10 +24,9 @@ ifeq ("$(SDKCONFIG_DEFAULTS)","sdkconfig.defaults")
 endif
 
 ifneq ("$(SDKCONFIG_DEFAULTS)","")
-  BOARDN := $(shell python boards/boards.py $(SDKCONFIG_DEFAULTS) number)
-  TMP := $(shell echo $(BOARDN) > .board)
-  BOARD_USB_VID_PID := $(shell python boards/boards.py $(BOARDN) usb_vid_pid)
-  BOARD_USB_EXP := $(shell python boards/boards.py $(BOARDN) usb_port_exp)
+  TMP := $(shell echo $(SDKCONFIG_DEFAULTS) > .board)
+  BOARD_USB_VID_PID := $(shell python boards/selection.py $(SDKCONFIG_DEFAULTS) usb_vid_pid)
+  BOARD_USB_EXP := $(shell python boards/selection.py $(SDKCONFIG_DEFAULTS) usb_port_exp)
 
   BOARD_TYPE_REQUIRED := 0
   override SDKCONFIG_DEFAULTS := boards/$(SDKCONFIG_DEFAULTS)
@@ -86,40 +85,38 @@ ifeq ($(BOARD_TYPE_REQUIRED),1)
     endif
   endif
 
-  # Check if sdkconfig file exists. If this file exists means that at some point the user
-  # has specified SDKCONFIG_DEFAULTS. It it don't exists we ask the the user to specify his board
-  # type
+  # Check if sdkconfig file exists. If this file exists, means that at some point
+  # the user has set SDKCONFIG_DEFAULTS. If it don't exists, we ask the user to
+  # select a valid board and firmware to get the right sdkconfig file
   ifneq ("$(shell test -e sdkconfig && echo ex)","ex")
-    $(info Please, enter your board type:)
-    $(info )
-    BOARDS := $(subst \,$(n),$(shell python boards/boards.py))
-    $(info $(BOARDS))
-    ifeq ("$(UNAME)", "Linux")
-      BOARDN := $(shell read -p "Board type: " REPLY;echo $$REPLY)
-    else
-      BOARDN := $(shell read -p "Board type: ";echo $$REPLY)
-    endif
-
-    BOARD := $(subst \,$(n),$(shell python boards/boards.py $(BOARDN)))
+    # Select a board and firmware and get the sdkconfig file
+    BOARD_CONFIG := $(shell python boards/selection.py)
     
-    # Check if board exists
-    ifneq ("$(shell test -e boards/$(BOARD) && echo ex)","ex")
-      $(error "Invalid board type boards/$(BOARD)")
+    ifeq ("foo$(BOARD_CONFIG)","foo")
+      $(error "No sdkconfig file")
+    endif
+        
+    # Check if sdkconfig file exists
+    ifneq ("$(shell test -e boards/$(BOARD_CONFIG) && echo ex)","ex")
+      $(error "Invalid board selection, boards/$(BOARD_CONFIG) doesn't exist")
     else
-      override SDKCONFIG_DEFAULTS := boards/$(BOARD)
+      override SDKCONFIG_DEFAULTS := boards/$(BOARD_CONFIG)
       MAKECMDGOALS += defconfig
-    endif      
-    TMP := $(shell echo $(BOARDN) > .board)
-    BOARD_USB_VID_PID := $(shell python boards/boards.py $(BOARDN) usb_vid_pid)    
-    BOARD_USB_EXP := $(shell python boards/boards.py $(BOARDN) usb_port_exp)
+    endif
+    
+    TMP := $(shell echo $(BOARD_CONFIG) > .board)
+    
+    BOARD_USB_VID_PID := $(shell python boards/selection.py $(BOARD_CONFIG) usb_vid_pid)    
+    BOARD_USB_EXP := $(shell python boards/selection.py $(BOARD_CONFIG) usb_port_exp)
   else
     ifneq ("$(SDKCONFIG_DEFAULTS)","")
       override SDKCONFIG_DEFAULTS := boards/$(SDKCONFIG_DEFAULTS)
     endif
-    BOARDN := $(shell cat .board)
-    BOARD_USB_VID_PID := $(shell python boards/boards.py $(BOARDN) usb_vid_pid)
-    BOARD_USB_EXP := $(shell python boards/boards.py $(BOARDN) usb_port_exp)
-  endif  
+    BOARD_CONFIG := $(shell cat .board)
+    BOARD_USB_VID_PID := $(shell python boards/selection.py $(BOARD_CONFIG) usb_vid_pid)
+    BOARD_USB_EXP := $(shell python boards/selection.py $(BOARD_CONFIG) usb_port_exp)
+  endif
+  $(info Using $(SDKCONFIG_DEFAULTS) sdkconfig file) 
 endif
 
 # Although each board configuration has set the ESPTOOLPY_PORT variable in KConfig,
@@ -142,13 +139,13 @@ ifneq ("foo$(BOARD_USB_VID_PID)","foo")
       
       # Count how many serial port device names match with the regular expression   
       $(foreach USB_PORT,$(SERIAL_PORTS), \
-        $(if $(filter 1, $(shell python boards/test.py $(BOARD_USB_EXP) $(USB_PORT))), $(eval SERIAL_PORTS_FINDED=$(shell echo $$(($(SERIAL_PORTS_FINDED)+1))))) \
+        $(if $(filter 1, $(shell python boards/test.py "$(BOARD_USB_EXP)" "$(USB_PORT)")), $(eval SERIAL_PORTS_FINDED=$(shell echo $$(($(SERIAL_PORTS_FINDED)+1))))) \
       )
       
       ifeq ("foo$(SERIAL_PORTS_FINDED)","foo1")
         # Only one serial port matches, so use this port
         $(foreach USB_PORT,$(SERIAL_PORTS), \
-          $(if $(filter 1, $(shell python boards/test.py $(BOARD_USB_EXP) $(USB_PORT))), $(eval SERIAL_PORT=$(shell echo $(USB_PORT)))) \
+          $(if $(filter 1, $(shell python boards/test.py "$(BOARD_USB_EXP)" "$(USB_PORT)")), $(eval SERIAL_PORT=$(shell echo $(USB_PORT)))) \
         )
         $(info Finded $(SERIAL_PORT))
         ESPPORT ?= $(SERIAL_PORT)

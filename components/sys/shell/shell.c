@@ -87,7 +87,7 @@ static void *shell(void *arg) {
 		LUA_OS_VER, BUILD_TIME, BUILD_COMMIT, running->label
 	);
 
-	printf("board type %s\r\n\r\n", LUA_RTOS_BOARD);
+	printf("board type %s\r\n\r\n", CONFIG_LUA_RTOS_BOARD_TYPE);
 
 	// Run lua in interpreter mode
 	lua_State *L = pvGetLuaState();  /* get state */

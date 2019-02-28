@@ -1,0 +1,177 @@
+[
+	{
+		"id": "WHITECAT-ESP32-N1",
+		"type": "N1ESP32",
+		"subtype": ""
+	},
+	{
+		"id": "WHITECAT-ESP32-N1-OTA",
+		"type": "N1ESP32",
+		"subtype": "OTA"
+	},
+	{
+		"id": "WHITECAT-ESP32-N1-DEVKIT",
+		"type": "N1ESP32-DEVKIT",
+		"subtype": ""
+	},
+	{
+		"id": "WHITECAT-ESP32-N1-DEVKIT-OTA",
+		"type": "N1ESP32-DEVKIT",
+		"subtype": "OTA"
+	},
+	{
+		"id": "WHITECAT-ESP32-N2-DEVKIT",
+		"type": "N2ESP32-DEVKIT",
+		"subtype": ""
+	},
+	{
+		"id": "WHITECAT-ESP32-N2-DEVKIT-OTA",
+		"type": "N2ESP32-DEVKIT",
+		"subtype": "OTA"
+	},
+	{
+		"id": "WHITECAT-ESP32-LORA-GW",
+		"type": "",
+		"subtype": ""
+	},
+	{
+		"id": "WHITECAT-ESP32-LORA-GW-OTA",
+		"type": "ESP32-LORA-GW-OTA",
+		"subtype": "OTA"
+	},
+	{
+		"id": "ESP32-CORE-BOARD",
+		"type": "ESP32COREBOARD",
+		"subtype": ""
+	},
+	{
+		"id": "ESP32-CORE-BOARD-OTA",
+		"type": "ESP32COREBOARD",
+		"subtype": "OTA"
+	},
+	{
+		"id": "ESP32-PICO-KIT",
+		"type": "ESP32-PICO-KIT",
+		"subtype": ""
+	},
+	{
+		"id": "ESP32-PICO-KIT-OTA",
+		"type": "ESP32-PICO-KIT",
+		"subtype": "OTA"
+	},
+	{
+		"id": "ESP-WROVER-KIT",
+		"type": "ESP-WROVER-KIT",
+		"subtype": ""
+	},
+	{
+		"id": "ESP-WROVER-KIT-OTA",
+		"type": "ESP-WROVER-KIT",
+		"subtype": "OTA"
+	},
+	{
+		"id": "ESP32-THING",
+		"type": "ESP32THING",
+		"subtype": ""
+	},
+	{
+		"id": "ESP32-THING-OTA",
+		"type": "ESP32THING",
+		"subtype": "OTA"
+	},
+	{
+		"id": "ADAFRUIT-HUZZAH32",
+		"type": "HUZZAH32",
+		"subtype": ""
+	},
+	{
+		"id": "ADAFRUIT-HUZZAH32-OTA",
+		"type": "HUZZAH32",
+		"subtype": "OTA"
+	},
+	{
+		"id": "PYCOM-FIPY",
+		"type": "FIPY",
+		"subtype": ""
+	},
+	{
+		"id": "PYCOM-FIPY-OTA",
+		"type": "FIPY",
+		"subtype": "OTA"
+	},
+	{
+		"id": "ESP32-POE",
+		"type": "ESP32-POE",
+		"subtype": ""
+	},
+	{
+		"id": "ESP32-POE-OTA",
+		"type": "ESP32-POE",
+		"subtype": "OTA"
+	},
+	{
+		"id": "ESP32-GATEWAY",
+		"type": "ESP32-GATEWAY",
+		"subtype": ""
+	},
+	{
+		"id": "ESP32-GATEWAY-OTA",
+		"type": "ESP32-GATEWAY",
+		"subtype": "OTA"
+	},
+	{
+		"id": "ESP32-EVB",
+		"type": "ESP32-EVB",
+		"subtype": ""
+	},
+	{
+		"id": "ESP32-EVB-OTA",
+		"type": "ESP32-EVB",
+		"subtype": "OTA"
+	},
+	{
+		"id": "DOIT-ESP32-DEVKIT-V1",
+		"type": "DOIT-ESP32-DEVKIT-V1",
+		"subtype": ""
+	},
+	{
+		"id": "DOIT-ESP32-DEVKIT-V1-OTA",
+		"type": "DOIT-ESP32-DEVKIT-V1",
+		"subtype": "OTA"
+	},
+	{
+		"id": "WEMOS-ESP32-OLED",
+		"type": "WEMOS-ESP32-OLED",
+		"subtype": ""
+	},
+	{
+		"id": "WEMOS-ESP32-OLED-OTA",
+		"type": "WEMOS-ESP32-OLED",
+		"subtype": "OTA"
+	},
+	{
+		"id": "EVK-NINA-W",
+		"type": "EVK-NINA-W",
+		"subtype": ""
+	}, 
+	{
+		"id": "WESP32",
+		"type": "WESP32",
+		"subtype": ""
+	},
+	{
+		"id": "WESP32-OTA",
+		"type": "WESP32",
+		"subtype": "OTA"
+	},
+	{
+		"id": "GENERIC",
+		"type": "GENERIC",
+		"subtype": ""
+	},
+	{
+		"id": "GENERIC-OTA",
+		"type": "GENERIC",
+		"subtype": "OTA"
+	}
+]

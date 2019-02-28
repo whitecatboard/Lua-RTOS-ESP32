@@ -433,7 +433,6 @@ driver_error_t *net_ota() {
     net_http_response_t response;
     esp_ota_handle_t update_handle = 0 ;
     uint8_t buffer[1024];
-    char *firmware;
 
     const esp_partition_t *running = esp_ota_get_running_partition();
     const esp_partition_t *update_partition = esp_ota_get_next_update_partition(NULL);
@@ -452,26 +451,7 @@ driver_error_t *net_ota() {
 
     printf("Current firmware commit is %s\r\n", BUILD_COMMIT);
 
-    firmware = calloc(1, 3 + strlen(CONFIG_LUA_RTOS_BOARD_BRAND) + strlen(LUA_RTOS_BOARD) + strlen(CONFIG_LUA_RTOS_BOARD_SUBTYPE));
-    if (!firmware) {
-        return driver_error(NET_DRIVER, NET_ERR_NOT_ENOUGH_MEMORY,NULL);
-    }
-
-    if (strlen(CONFIG_LUA_RTOS_BOARD_BRAND) > 0) {
-        firmware = strcat(firmware, CONFIG_LUA_RTOS_BOARD_BRAND);
-        firmware = strcat(firmware, "-");
-    }
-
-    firmware = strcat(firmware, LUA_RTOS_BOARD);
-
-    if (strlen(CONFIG_LUA_RTOS_BOARD_SUBTYPE) > 0) {
-        firmware = strcat(firmware, "-");
-        firmware = strcat(firmware, CONFIG_LUA_RTOS_BOARD_SUBTYPE);
-    }
-
-    sprintf((char *)buffer, "/?firmware=%s&commit=%s", firmware, BUILD_COMMIT);
-
-    free(firmware);
+    sprintf((char *)buffer, "/?firmware=%s&commit=%s", CONFIG_LUA_RTOS_FIRMWARE, BUILD_COMMIT);
 
     if ((error = net_http_get(&client, (const char *)buffer, &response))) {
         return error;

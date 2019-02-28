@@ -506,9 +506,9 @@ static int os_cpu(lua_State *L) {
 }
 
 static int os_board(lua_State *L) {
-    lua_pushstring(L, LUA_RTOS_BOARD);
+    lua_pushstring(L, CONFIG_LUA_RTOS_BOARD_TYPE);
     lua_pushstring(L, CONFIG_LUA_RTOS_BOARD_SUBTYPE);
-    lua_pushstring(L, CONFIG_LUA_RTOS_BOARD_BRAND);
+    lua_pushstring(L, "");
     return 3;
 }
 

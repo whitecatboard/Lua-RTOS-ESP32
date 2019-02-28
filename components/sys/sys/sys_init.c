@@ -218,7 +218,7 @@ void _sys_init() {
         LUA_OS_VER, BUILD_TIME, BUILD_COMMIT, running->label
     );
 
-    printf("board type %s\r\n", LUA_RTOS_BOARD);
+    printf("board type %s\r\n", CONFIG_LUA_RTOS_BOARD_TYPE);
 
     // Open log
     setlogmask(LOG_UPTO(LOG_INFO));

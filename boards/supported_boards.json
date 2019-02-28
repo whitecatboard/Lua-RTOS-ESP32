@@ -1,0 +1,353 @@
+[
+    {
+        "description": "Whitecat ESP32N1",
+        "manufacturer": "whitecatboard.org",
+        "image": "http://git.whitecatboard.org/whitecatn1.png",
+        "usb_vid_pid": "",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "WHITECAT-ESP32-N1",
+                "description": "Whitecat ESP32N1",
+                "filesystem": "default"
+            },
+            {
+                "id": "WHITECAT-ESP32-N1-OTA",
+                "description": "Whitecat ESP32N1 with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "Whitecat ESP32N1 DEVKIT",
+        "manufacturer": "whitecatboard.org",
+        "image": "",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "WHITECAT-ESP32-N1-DEVKIT",
+                "description": "Whitecat ESP32N1 DEVKIT",
+                "filesystem": "default"
+            },
+            {
+                "id": "WHITECAT-ESP32-N1-DEVKIT-OTA",
+                "description": "Whitecat ESP32N1 DEVKIT with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "Whitecat ESP32N2 DEVKIT",
+        "manufacturer": "whitecatboard.org",
+        "image": "http://git.whitecatboard.org/whitecat-n2-devkit.png",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "WHITECAT-ESP32-N2-DEVKIT",
+                "description": "Whitecat ESP32N2 DEVKIT",
+                "filesystem": "default"
+            },
+            {
+                "id": "WHITECAT-ESP32-N2-DEVKIT-OTA",
+                "description": "Whitecat ESP32N2 DEVKIT with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "Whitecat ESP32 LORA GW",
+        "manufacturer": "whitecatboard.org",
+        "image": "http://git.whitecatboard.org/gw-1.png",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "WHITECAT-ESP32-LORA-GW",
+                "description": "Whitecat ESP32 LORA GW",
+                "filesystem": "g1"
+            },
+            {
+                "id": "WHITECAT-ESP32-LORA-GW-OTA",
+                "description": "Whitecat ESP32 LORA GW with OTA",
+                "filesystem": "g1"
+            }
+        ]
+    },
+    {
+        "description": "Espressif Systems ESP32-CoreBoard",
+        "manufacturer": "Espressif Systems",
+        "image": "http://git.whitecatboard.org/esp32-core-board.png",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "ESP32-CORE-BOARD",
+                "description": "Espressif Systems ESP32-CoreBoard",
+                "filesystem": "default"
+            },
+            {
+                "id": "ESP32-CORE-BOARD-OTA",
+                "description": "Espressif Systems ESP32-CoreBoard with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "Espressif Systems ESP32 PICO KIT",
+        "manufacturer": "Espressif Systems",
+        "image": "http://git.whitecatboard.org/esp32-pico-kit.jpg",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "ESP32-PICO-KIT",
+                "description": "Espressif Systems ESP32 PICO KIT",
+                "filesystem": "default"
+            },
+            {
+                "id": "ESP32-PICO-KIT-OTA",
+                "description": "Espressif Systems ESP32 PICO KIT with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "Espressif Systems ESP-WROVER-KIT",
+        "manufacturer": "Espressif Systems",
+        "image": "http://git.whitecatboard.org/esp-wrover-kit.jpg",
+        "usb_vid_pid": "0403:6010",
+        "usb_port_exp": "^.*B$|^.*1$",
+        "firmwares": [
+            {
+                "id": "ESP-WROVER-KIT",
+                "description": "Espressif Systems ESP-WROVER-KIT",
+                "filesystem": "default"
+            },
+            {
+                "id": "ESP-WROVER-KIT-OTA",
+                "description": "Espressif Systems ESP-WROVER-KIT with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "SparkFun ESP32 Thing",
+        "manufacturer": "SparkFun",
+        "image": "http://git.whitecatboard.org/esp32-thing.jpg",
+        "usb_vid_pid": "0403:6015",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "ESP32-THING",
+                "description": "SparkFun ESP32 Thing",
+                "filesystem": "default"
+            },
+            {
+                "id": "ESP32-THING-OTA",
+                "description": "SparkFun ESP32 Thing with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "Adafruit HUZZAH32",
+        "manufacturer": "Adafruit",
+        "image": "http://git.whitecatboard.org/adafruit_huzzah32.png",
+        "usb_vid_pid": "",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "ADAFRUIT-HUZZAH32",
+                "description": "Adafruit HUZZAH32",
+                "filesystem": "default"
+            },
+            {
+                "id": "ADAFRUIT-HUZZAH32-OTA",
+                "description": "Adafruit HUZZAH32 with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "Pycom FIPY",
+        "manufacturer": "Pycom",
+        "image": "http://git.whitecatboard.org/fipy.png",
+        "usb_vid_pid": "",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "PYCOM-FIPY",
+                "description": "Pycom FIPY",
+                "filesystem": "default"
+            },
+            {
+                "id": "PYCOM-FIPY-OTA",
+                "description": "Pycom FIPY with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "Olimex ESP32-POE",
+        "manufacturer": "Olimex",
+        "image": "https://www.olimex.com/Products/IoT/ESP32/ESP32-POE/images/ESP32-POE-1.jpg",
+        "usb_vid_pid": "1A86:7523",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "ESP32-POE",
+                "description": "Olimex ESP32-POE",
+                "filesystem": "default"
+            },
+            {
+                "id": "ESP32-POE-OTA",
+                "description": "Olimex ESP32-POE with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "Olimex ESP32-Gateway",
+        "manufacturer": "Olimex",
+        "image": "http://git.whitecatboard.org/ESP32-GATEWAY.png",
+        "usb_vid_pid": "1A86:7523",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "ESP32-GATEWAY",
+                "description": "Olimex ESP32-Gateway",
+                "filesystem": "default"
+            },
+            {
+                "id": "ESP32-GATEWAY-OTA",
+                "description": "Olimex ESP32-Gateway with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "Olimex ESP32-EVB",
+        "manufacturer": "OTAlimex",
+        "image": "http://git.whitecatboard.org/ESP32-EVB.png",
+        "usb_vid_pid": "1A86:7523",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "ESP32-EVB",
+                "description": "Olimex ESP32-EVB",
+                "filesystem": "default"
+            },
+            {
+                "id": "ESP32-EVB-OTA",
+                "description": "Olimex ESP32-EVB with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "DOIT ESP32 DEVKIT V1",
+        "manufacturer": "doit.am",
+        "image": "http://git.whitecatboard.org/doitesp32.jpg",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "DOIT-ESP32-DEVKIT-V1",
+                "description": "DOIT ESP32 DEVKIT V1",
+                "filesystem": "default"
+            },
+            {
+                "id": "DOIT-ESP32-DEVKIT-V1-OTA",
+                "description": "DOIT ESP32 DEVKIT V1 with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "WeMos ESP32 with 128x64 OLED",
+        "manufacturer": "WeMos",
+        "image": "",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "WEMOS-ESP32-OLED",
+                "description": "WeMos ESP32 with 128x64 OLED",
+                "filesystem": "default"
+            },
+            {
+                "id": "WEMOS-ESP32-OLED-OTA",
+                "description": "WeMos ESP32 with 128x64 OLED with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "EVK-NINA-W",
+        "manufacturer": "u-blox",
+        "image": "",
+        "usb_vid_pid": "0403:6011",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "EVK-NINA-W",
+                "description": "EVK-NINA-W",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "Silicognition wESP32",
+        "manufacturer": "Silicognition LLC",
+        "image": "https://wesp32.com/images/wesp32-iso-4-prog.jpg",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "WESP32",
+                "description": "Silicognition wESP32",
+                "filesystem": "default"
+            },
+            {
+                "id": "WESP32-OTA",
+                "description": "Silicognition wESP32 with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "Generic ESP32 board",
+        "manufacturer": "Generic",
+        "image": "",
+        "usb_vid_pid": "",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "GENERIC",
+                "description": "Generic ESP32 board",
+                "filesystem": "default"
+            },
+            {
+                "id": "GENERIC-OTA",
+                "description": "Generic ESP32 board with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "New board description",
+        "manufacturer": "New board manufacturer",
+        "image": "http://...../board.png",
+        "usb_vid_pid": "",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "NEW-BOARD",
+                "description": "New board description",
+                "filesystem": "default"
+            }
+        ]
+    }
+]
