@@ -67,6 +67,8 @@
 static void adc_pins(int8_t channel, uint8_t *pin) {
 	switch (channel) {
 		case 0: *pin = GPIO36; break;
+        case 1: *pin = GPIO37; break;
+        case 2: *pin = GPIO38; break;
 		case 3: *pin = GPIO39; break;
 		case 4: *pin = GPIO32; break;
 		case 5: *pin = GPIO33; break;
@@ -106,6 +108,8 @@ static driver_error_t *adc_lock_resources(int8_t channel, void *resources) {
 driver_error_t * adc_internal_pin_to_channel(uint8_t pin, uint8_t *chan) {
 	switch (pin) {
 		case GPIO36: *chan = 0; break;
+        case GPIO37: *chan = 1; break;
+        case GPIO38: *chan = 2; break;
 		case GPIO39: *chan = 3; break;
 		case GPIO32: *chan = 4; break;
 		case GPIO33: *chan = 5; break;

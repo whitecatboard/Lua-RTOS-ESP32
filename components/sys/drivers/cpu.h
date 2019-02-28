@@ -280,6 +280,8 @@ typedef uint64_t gpio_pin_mask_t;
 
 // ESP32 available ADC channels
 #define CPU_ADC_CH0  0
+#define CPU_ADC_CH1  1
+#define CPU_ADC_CH2  2
 #define CPU_ADC_CH3  3
 #define CPU_ADC_CH4  4
 #define CPU_ADC_CH5  5
@@ -288,13 +290,15 @@ typedef uint64_t gpio_pin_mask_t;
 
 // ESP32 available ADC channel names
 #define CPU_ADC_CH0_NAME  "ADC_CH0"
+#define CPU_ADC_CH1_NAME  "ADC_CH1"
+#define CPU_ADC_CH2_NAME  "ADC_CH2"
 #define CPU_ADC_CH3_NAME  "ADC_CH3"
 #define CPU_ADC_CH4_NAME  "ADC_CH4"
 #define CPU_ADC_CH5_NAME  "ADC_CH5"
 #define CPU_ADC_CH6_NAME  "ADC_CH6"
 #define CPU_ADC_CH7_NAME  "ADC_CH7"
 
-#define CPU_ADC_ALL 0b11111001
+#define CPU_ADC_ALL 0b11111111
 
 /*
  * ----------------------------------------------------------------
