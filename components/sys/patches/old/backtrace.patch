@@ -1,8 +1,8 @@
 diff --git a/components/esp32/panic.c b/components/esp32/panic.c
-index 64383f562..701cc318e 100644
+index 8edb70b..7074501 100644
 --- a/components/esp32/panic.c
 +++ b/components/esp32/panic.c
-@@ -61,6 +61,10 @@
+@@ -59,6 +59,10 @@
  /*
    Note: The linker script will put everything in this file in IRAM/DRAM, so it also works with flash cache disabled.
  */
@@ -13,7 +13,7 @@ index 64383f562..701cc318e 100644
  
  #if !CONFIG_ESP32_PANIC_SILENT_REBOOT
  //printf may be broken, so we fix our own printing fns...
-@@ -453,18 +457,26 @@ static void putEntry(uint32_t pc, uint32_t sp)
+@@ -425,18 +429,26 @@ static void putEntry(uint32_t pc, uint32_t sp)
      panicPutHex(pc);
      panicPutStr(":0x");
      panicPutHex(sp);
@@ -42,16 +42,16 @@ index 64383f562..701cc318e 100644
              break;
          }
          sp = *((uint32_t *) (sp - 0x10 + 4));
-@@ -474,6 +486,12 @@ static void doBacktrace(XtExcFrame *frame)
+@@ -446,6 +458,12 @@ static void doBacktrace(XtExcFrame *frame)
              break;
          }
      }
 +
 +    if (backtrace_count <= MAX_BACKTRACE) {
-+         backtrace_pc[backtrace_count] = 0;
-+         backtrace_sp[backtrace_count] = 0;
++		  backtrace_pc[backtrace_count] = 0;
++		  backtrace_sp[backtrace_count] = 0;
 +    }
 +
-     panicPutStr("\r\n");
+     panicPutStr("\r\n\r\n");
  }
  

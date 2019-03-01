@@ -1,17 +1,18 @@
 diff --git a/components/vfs/include/esp_vfs.h b/components/vfs/include/esp_vfs.h
-index e383c4363..deb50b5e7 100644
+index e54a3e983..c7185df64 100644
 --- a/components/vfs/include/esp_vfs.h
 +++ b/components/vfs/include/esp_vfs.h
-@@ -33,6 +33,8 @@
+@@ -30,6 +30,9 @@
+ #include <sys/termios.h>
+ #include <dirent.h>
  #include <string.h>
- #include "sdkconfig.h"
- 
++
 +#include "lwip/sockets.h"
 +
+ #include "sdkconfig.h"
+ 
  #ifdef __cplusplus
- extern "C" {
- #endif
-@@ -186,6 +188,18 @@ typedef struct
+@@ -185,6 +188,18 @@ typedef struct
          int (*utime_p)(void* ctx, const char *path, const struct utimbuf *times);
          int (*utime)(const char *path, const struct utimbuf *times);
      };

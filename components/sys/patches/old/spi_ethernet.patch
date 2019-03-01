@@ -197,8 +197,42 @@ index 950c05bb..08e5a232 100644
      ESP_IF_MAX
  } esp_interface_t;
  
+diff --git a/components/tcpip_adapter/include/tcpip_adapter.h b/components/tcpip_adapter/include/tcpip_adapter.h
+index 7d9e4ad8c..6f04fe954 100644
+--- a/components/tcpip_adapter/include/tcpip_adapter.h
++++ b/components/tcpip_adapter/include/tcpip_adapter.h
+@@ -104,6 +104,8 @@ typedef enum {
+     TCPIP_ADAPTER_IF_STA = 0,     /**< ESP32 station interface */
+     TCPIP_ADAPTER_IF_AP,          /**< ESP32 soft-AP interface */
+     TCPIP_ADAPTER_IF_ETH,         /**< ESP32 ethernet interface */
++    TCPIP_ADAPTER_IF_SPI_ETH,     /**< ESP32 spi ethernet interface */
++    TCPIP_ADAPTER_IF_TUN,         /**< ESP32 tun interface */
+     TCPIP_ADAPTER_IF_MAX
+ } tcpip_adapter_if_t;
+ 
+@@ -406,11 +408,9 @@ esp_err_t tcpip_adapter_create_ip6_linklocal(tcpip_adapter_if_t tcpip_if);
+  */
+ esp_err_t tcpip_adapter_get_ip6_linklocal(tcpip_adapter_if_t tcpip_if, ip6_addr_t *if_ip6);
+ 
+-#if 0
+ esp_err_t tcpip_adapter_get_mac(tcpip_adapter_if_t tcpip_if, uint8_t *mac);
+ 
+ esp_err_t tcpip_adapter_set_mac(tcpip_adapter_if_t tcpip_if, uint8_t *mac);
+-#endif
+ 
+ /**
+  * @brief  Get DHCP server's status
+@@ -628,6 +628,8 @@ esp_err_t tcpip_adapter_get_netif(tcpip_adapter_if_t tcpip_if, void ** netif);
+  */
+ bool tcpip_adapter_is_netif_up(tcpip_adapter_if_t tcpip_if);
+ 
++esp_err_t tcpip_adapter_tun_start(uint8_t *mac, tcpip_adapter_ip_info_t *ip_info);
++
+ #ifdef __cplusplus
+ }
+ #endif
 diff --git a/components/tcpip_adapter/tcpip_adapter_lwip.c b/components/tcpip_adapter/tcpip_adapter_lwip.c
-index 70ea3830c..58a8c8da0 100644
+index e06a2205d..5ccd8f626 100644
 --- a/components/tcpip_adapter/tcpip_adapter_lwip.c
 +++ b/components/tcpip_adapter/tcpip_adapter_lwip.c
 @@ -32,6 +32,8 @@
@@ -294,7 +328,7 @@ index 70ea3830c..58a8c8da0 100644
          if (esp_netif[tcpip_if] == NULL) {
              return ESP_ERR_TCPIP_ADAPTER_IF_NOT_READY;
          }
-@@ -404,10 +431,10 @@ esp_err_t tcpip_adapter_set_ip_info(tcpip_adapter_if_t tcpip_if, const tcpip_ada
+@@ -404,10 +431,10 @@ esp_err_t tcpip_adapter_set_ip_info(tcpip_adapter_if_t tcpip_if, tcpip_adapter_i
      if (tcpip_if == TCPIP_ADAPTER_IF_AP) {
          tcpip_adapter_dhcps_get_status(tcpip_if, &status);
  
@@ -309,7 +343,7 @@ index 70ea3830c..58a8c8da0 100644
          tcpip_adapter_dhcpc_get_status(tcpip_if, &status);
  
          if (status != TCPIP_ADAPTER_DHCP_STOPPED) {
-@@ -433,6 +460,10 @@ esp_err_t tcpip_adapter_set_ip_info(tcpip_adapter_if_t tcpip_if, const tcpip_ada
+@@ -433,6 +460,10 @@ esp_err_t tcpip_adapter_set_ip_info(tcpip_adapter_if_t tcpip_if, tcpip_adapter_i
                      evt.event_id = SYSTEM_EVENT_STA_GOT_IP;
                  } else if (tcpip_if == TCPIP_ADAPTER_IF_ETH) {
                      evt.event_id = SYSTEM_EVENT_ETH_GOT_IP;
@@ -334,9 +368,9 @@ index 70ea3830c..58a8c8da0 100644
  }
 -#endif
  
- esp_err_t tcpip_adapter_dhcps_option(tcpip_adapter_dhcp_option_mode_t opt_op, tcpip_adapter_dhcp_option_id_t opt_id, void *opt_val, uint32_t opt_len)
+ esp_err_t tcpip_adapter_dhcps_option(tcpip_adapter_option_mode_t opt_op, tcpip_adapter_option_id_t opt_id, void *opt_val, uint32_t opt_len)
  {
-@@ -677,7 +706,7 @@ esp_err_t tcpip_adapter_dhcps_option(tcpip_adapter_dhcp_option_mode_t opt_op, tc
+@@ -677,7 +706,7 @@ esp_err_t tcpip_adapter_dhcps_option(tcpip_adapter_option_mode_t opt_op, tcpip_a
              }
              break;
          }
@@ -427,7 +461,7 @@ index 70ea3830c..58a8c8da0 100644
          ESP_LOGD(TAG, "dhcp client invalid if=%d", tcpip_if);
          return ESP_ERR_TCPIP_ADAPTER_INVALID_PARAMS;
      }
-@@ -1121,6 +1154,10 @@ esp_interface_t tcpip_adapter_get_esp_if(void *dev)
+@@ -1118,6 +1151,10 @@ esp_interface_t tcpip_adapter_get_esp_if(void *dev)
          return ESP_IF_WIFI_AP;
      } else if (p_netif == esp_netif[TCPIP_ADAPTER_IF_ETH]) {
          return ESP_IF_ETH;
@@ -458,37 +492,3 @@ index 9301ff3b0..542f48ba6 100644
 -}
 \ No newline at end of file
 +}
-diff --git a/components/tcpip_adapter/include/tcpip_adapter.h b/components/tcpip_adapter/include/tcpip_adapter.h
-index 6850f23a4..e663397ba 100644
---- a/components/tcpip_adapter/include/tcpip_adapter.h
-+++ b/components/tcpip_adapter/include/tcpip_adapter.h
-@@ -96,6 +96,8 @@ typedef enum {
-     TCPIP_ADAPTER_IF_STA = 0,     /**< Wi-Fi STA (station) interface */
-     TCPIP_ADAPTER_IF_AP,          /**< Wi-Fi soft-AP interface */
-     TCPIP_ADAPTER_IF_ETH,         /**< Ethernet interface */
-+    TCPIP_ADAPTER_IF_SPI_ETH,     /**< ESP32 spi ethernet interface */
-+    TCPIP_ADAPTER_IF_TUN,         /**< ESP32 tun interface */
-     TCPIP_ADAPTER_IF_MAX
- } tcpip_adapter_if_t;
- 
-@@ -406,11 +408,9 @@ esp_err_t tcpip_adapter_create_ip6_linklocal(tcpip_adapter_if_t tcpip_if);
-  */
- esp_err_t tcpip_adapter_get_ip6_linklocal(tcpip_adapter_if_t tcpip_if, ip6_addr_t *if_ip6);
- 
--#if 0
- esp_err_t tcpip_adapter_get_mac(tcpip_adapter_if_t tcpip_if, uint8_t *mac);
- 
- esp_err_t tcpip_adapter_set_mac(tcpip_adapter_if_t tcpip_if, uint8_t *mac);
--#endif
- 
- /**
-  * @brief  Get DHCP Server status
-@@ -661,6 +661,8 @@ esp_err_t tcpip_adapter_get_netif(tcpip_adapter_if_t tcpip_if, void ** netif);
-  */
- bool tcpip_adapter_is_netif_up(tcpip_adapter_if_t tcpip_if);
- 
-+esp_err_t tcpip_adapter_tun_start(uint8_t *mac, tcpip_adapter_ip_info_t *ip_info);
-+
- #ifdef __cplusplus
- }
- #endif
