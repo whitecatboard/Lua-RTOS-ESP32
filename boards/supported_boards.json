@@ -335,19 +335,5 @@
                 "filesystem": "default"
             }
         ]
-    },
-    {
-        "description": "New board description",
-        "manufacturer": "New board manufacturer",
-        "image": "http://...../board.png",
-        "usb_vid_pid": "",
-        "usb_port_exp": "",
-        "firmwares": [
-            {
-                "id": "NEW-BOARD",
-                "description": "New board description",
-                "filesystem": "default"
-            }
-        ]
     }
 ]
