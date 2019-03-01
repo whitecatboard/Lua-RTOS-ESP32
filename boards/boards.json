@@ -418,17 +418,5 @@
         "usb_vid_pid": "",
         "usb_port_exp": "",
         "image": ""
-    },
-    {
-        "id": "NEW-BOARD",
-        "description": "New board description",
-        "manufacturer": "New board manufacturer",
-        "brand": "",
-        "type": "NEW-BOARD",
-        "subtype": "",
-        "filesystem": "default",
-        "usb_vid_pid": "",
-        "usb_port_exp": "",
-        "image": "http://...../board.png"
     }
 ]
