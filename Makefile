@@ -52,7 +52,7 @@ define n
 endef
 
 # Use this esp-idf commit in build
-CURRENT_IDF := 6c49f19247cc95d364b54718e4c29b7d345267af
+CURRENT_IDF := ff020c3a18788d13f9dc8e853424d0067e79a357
 
 # Project name
 PROJECT_NAME := lua_rtos
