@@ -106,7 +106,7 @@ captivedns_inc_pcb_refcount(struct tcpip_api_call_data *api_call_msg)
     if(captivedns_pcb == NULL) {
       UNLOCK_TCPIP_CORE()
       msg->err = ERR_MEM;
-      return ERR_MEM;
+      return msg->err;
     }
 
     /* set up local port for the pcb -> listen on all interfaces on all src/dest IPs */
@@ -115,7 +115,7 @@ captivedns_inc_pcb_refcount(struct tcpip_api_call_data *api_call_msg)
       captivedns_pcb = NULL;
       UNLOCK_TCPIP_CORE()
       msg->err = ESP_ERR_INVALID_STATE;
-      return ESP_ERR_INVALID_STATE;
+      return msg->err;
     }
 
     udp_recv(captivedns_pcb, captivedns_recv, NULL);
@@ -130,9 +130,11 @@ captivedns_inc_pcb_refcount(struct tcpip_api_call_data *api_call_msg)
 }
 
 /** Free captivedns PCB if the last netif stops using it */
-static void
+static err_t
 captivedns_dec_pcb_refcount(struct tcpip_api_call_data *api_call_msg)
 {
+  captive_api_call_t * msg = (captive_api_call_t *)api_call_msg;
+
   if(captivedns_pcb_refcount) {
     captivedns_pcb_refcount--;
 
@@ -141,6 +143,9 @@ captivedns_dec_pcb_refcount(struct tcpip_api_call_data *api_call_msg)
     captivedns_pcb = NULL;
     UNLOCK_TCPIP_CORE()
   }
+
+  msg->err = ESP_OK;
+  return ERR_OK;
 }
 
 /**
