@@ -267,7 +267,7 @@ static int lcpu_speed(lua_State *L) {
 	}
 #endif
 
-	lua_pushinteger(L, cpu_speed() / 1000000);
+	lua_pushinteger(L, cpu_speed_mhz());
 	return 1;
 }
 
@@ -277,10 +277,11 @@ extern __NOINIT_ATTR uint32_t backtrace_pc[MAX_BACKTRACE];
 extern __NOINIT_ATTR uint32_t backtrace_sp[MAX_BACKTRACE];
 
 static int lcpu_backtrace(lua_State *L) {
-	printf("\r\nBacktrace:");
+	printf("Backtrace:");
 
 	int reason = cpu_reset_reason();
-	if (POWERON_RESET == reason || RTCWDT_RTC_RESET == reason || EXT_CPU_RESET == reason) {
+	if (0 == backtrace_count || POWERON_RESET == reason ||
+	    RTCWDT_RTC_RESET == reason || EXT_CPU_RESET == reason) {
 		printf(" none\r\n");
 		return 0;
 	}
