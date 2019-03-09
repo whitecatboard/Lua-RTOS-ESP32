@@ -506,6 +506,10 @@ static const LUA_REG_TYPE syslib[] =
   { LSTRKEY( "mkdir" ),       LFUNCVAL( os_mkdir ) },
   { LSTRKEY( "logcons" ),     LFUNCVAL( os_logcons ) },
   { LSTRKEY( "loglevel" ),    LFUNCVAL( os_loglevel ) },
+  { LSTRKEY( "syslog" ),      LFUNCVAL( os_syslog ) },
+#if CONFIG_LUA_RTOS_USE_RSYSLOG
+  { LSTRKEY( "rsyslog" ),     LFUNCVAL( os_setrsyslog ) },
+#endif
   { LSTRKEY( "stats" ),       LFUNCVAL( os_stats ) },
   { LSTRKEY( "format" ),      LFUNCVAL( os_format ) },
   { LSTRKEY( "history" ),     LFUNCVAL( os_history ) },
