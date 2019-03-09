@@ -60,6 +60,7 @@
 #include "net_spi_eth.inc"
 #include "net_service_sntp.inc"
 #include "net_service_http.inc"
+#include "net_service_telnet.inc"
 #include "net_service_curl.inc"
 #include "net_service_captivedns.inc"
 #include "net_service_mdns.inc"
@@ -378,6 +379,9 @@ static const LUA_REG_TYPE service_map[] = {
 #if CONFIG_LUA_RTOS_USE_HTTP_SERVER
     { LSTRKEY( "http" ), LROVAL ( http_map ) },
     { LSTRKEY( "captivedns" ), LROVAL ( captivedns_map ) },
+#endif
+#if CONFIG_LUA_RTOS_USE_TELNET_SERVER
+    { LSTRKEY( "telnet" ), LROVAL ( telnet_map ) },
 #endif
 #if CONFIG_LUA_RTOS_LUA_USE_CAN
     { LSTRKEY( "can" ), LROVAL ( can_map ) },
