@@ -921,6 +921,8 @@ static int os_partitions(lua_State *L) {
     char address[9];
     char size[9];
     esp_partition_iterator_t it;
+    const esp_partition_t* boot = esp_ota_get_boot_partition();
+    const esp_partition_t* running = esp_ota_get_running_partition();
 
     printf("TYPE:SUB\t ADDRESS\t  LENGTH\tENC\tLABEL\n");
 
@@ -930,7 +932,7 @@ static int os_partitions(lua_State *L) {
 
         snprintf(address, sizeof(address),"%8d", p->address);
         snprintf(size, sizeof(size),"%8d", p->size);
-        printf("0x%02x:0x%02x\t%s\t%s\t%c\t%s\n", p->type, p->subtype, address, size, p->encrypted ? 'Y':'N', p->label);
+        printf("0x%02x:0x%02x\t%s\t%s\t%c\t%s%s%s\n", p->type, p->subtype, address, size, p->encrypted ? 'Y':'N', p->label, p==boot ? " < boot":"", p==running ? " < running":"");
     }
     esp_partition_iterator_release(it);
 
