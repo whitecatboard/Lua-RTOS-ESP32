@@ -1238,7 +1238,7 @@ static int lgdisplay_qrcode( lua_State* L ) {
 	else {
 		free(qrcode);
 		free(tempBuffer);
-		return driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_QR_ENCODING_ERROR);
+		return luaL_driver_error(L, driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_QR_ENCODING_ERROR, NULL));
 	}
 
 	free(qrcode);
