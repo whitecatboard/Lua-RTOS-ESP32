@@ -124,18 +124,24 @@ void cpu_model(char *buffer, int buflen) {
 	snprintf(buffer, buflen, "ESP32 rev %d", cpu_revision());
 }
 
-uint32_t cpu_speed() {
+uint32_t cpu_speed_mhz() {
   rtc_cpu_freq_config_t config;
   rtc_clk_cpu_freq_get_config(&config);
 
-  return config.freq_mhz * 1000000;
+  return config.freq_mhz;
+}
+
+uint32_t cpu_speed_hz() {
+  return cpu_speed_mhz() * 1000000;
+}
+
+uint32_t cpu_speed() {
+  return cpu_speed_hz();
 }
 
 int cpu_revision() {
     esp_chip_info_t info;
-
     esp_chip_info(&info);
-
     return info.revision;
 }
 
@@ -146,7 +152,14 @@ void cpu_show_info() {
 	if (!*buffer) {
 		syslog(LOG_INFO, "cpu unknown CPU");
 	} else {
-		syslog(LOG_INFO, "cpu %s at %d Mhz", buffer, cpu_speed() / 1000000);
+		esp_chip_info_t info;
+		esp_chip_info(&info);
+
+		syslog(LOG_INFO, "cpu %s at %d Mhz, %i %s%s%s%s%s", buffer, cpu_speed_mhz(), info.cores, info.cores>1 ? "Cores":"Core",
+					info.features & CHIP_FEATURE_EMB_FLASH ? ", flash memory":"",
+					info.features & CHIP_FEATURE_WIFI_BGN ? ", 2.4GHz WiFi":"",
+					info.features & CHIP_FEATURE_BLE ? ", Bluetooth LE":"",
+					info.features & CHIP_FEATURE_BT ? ", Bluetooth Classic":"");
 	}
 }
 

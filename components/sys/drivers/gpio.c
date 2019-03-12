@@ -1101,7 +1101,7 @@ int IRAM_ATTR gpio_get_pulse_time(uint8_t pin, uint8_t level, uint32_t timeout) 
 
         // Any RMT channel is available. Detect pulse by software
         // Convert timeout to xthal_get_ccount units (ticks)
-        timeout = timeout * (cpu_speed() / 500000.0);
+        timeout = timeout * (cpu_speed_hz() / 500000.0);
 
         portDISABLE_INTERRUPTS();
 
@@ -1137,7 +1137,7 @@ int IRAM_ATTR gpio_get_pulse_time(uint8_t pin, uint8_t level, uint32_t timeout) 
 
         portENABLE_INTERRUPTS();
 
-        elapsed = ((double)end - (double)start) / (double)((cpu_speed() / 500000.0));
+        elapsed = ((double)end - (double)start) / (double)((cpu_speed_hz() / 500000.0));
     } else {
         // RMT channel is available
         size_t rx_size = 0;
