@@ -84,21 +84,21 @@ void sx1276_reset(uint8_t val) {
 	#endif
 }
 
-void stx1276_read_reg(int spi_device, uint8_t addr, uint8_t *data) {
+void IRAM_ATTR stx1276_read_reg(int spi_device, uint8_t addr, uint8_t *data) {
 	spi_ll_select(spi_device);
 	spi_ll_transfer(spi_device, addr & 0x7f, NULL);
 	spi_ll_transfer(spi_device, 0xff, data);
 	spi_ll_deselect(spi_device);
 }
 
-void stx1276_write_reg(int spi_device, uint8_t addr, uint8_t data) {
+void IRAM_ATTR stx1276_write_reg(int spi_device, uint8_t addr, uint8_t data) {
 	spi_ll_select(spi_device);
 	spi_ll_transfer(spi_device, addr | 0x80, NULL);
 	spi_ll_transfer(spi_device, data, NULL);
 	spi_ll_deselect(spi_device);
 }
 
-void stx1276_read_buff(int spi_device, uint8_t addr, uint8_t *data, uint8_t len) {
+void IRAM_ATTR stx1276_read_buff(int spi_device, uint8_t addr, uint8_t *data, uint8_t len) {
 	spi_ll_select(spi_device);
 	spi_ll_transfer(spi_device, addr & 0x7f, NULL);
 	spi_ll_bulk_read(spi_device, len, data);

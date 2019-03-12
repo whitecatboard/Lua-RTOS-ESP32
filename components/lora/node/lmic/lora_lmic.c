@@ -72,6 +72,7 @@ DRIVER_REGISTER_BEGIN(LORA,lora, 0,_lora_init,NULL);
 	DRIVER_REGISTER_ERROR(LORA, lora, InvalidDataRate, "invalid data rate for your location", LORA_ERR_INVALID_DR);
 	DRIVER_REGISTER_ERROR(LORA, lora, InvalidBand, "invalid band for your location", LORA_ERR_INVALID_BAND);
 	DRIVER_REGISTER_ERROR(LORA, lora, NotAllowed, "not allowed", LORA_ERR_NOT_ALLOWED);
+    DRIVER_REGISTER_ERROR(LORA, lora, InvalidFreq, "invalid frequency for your location", LORA_ERR_INVALID_FREQ);
 DRIVER_REGISTER_END(LORA,lora, 0,_lora_init,NULL);
 
 #define evLORA_INITED 	       	 ( 1 << 0 )

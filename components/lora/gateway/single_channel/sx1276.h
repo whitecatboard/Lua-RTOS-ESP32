@@ -96,10 +96,12 @@
 #define SX1276_REG_INVERT_IQ               0x33
 #define SX1276_REG_DETECTION_THRESHOLD     0x37
 #define SX1276_REG_SYNC_WORD               0x39
+#define SX1276_REG_DIO_MAPPING_1           0x40
+#define SX1276_REG_DIO_MAPPING_2           0x41
 #define SX1276_REG_VERSION                 0x42
+#define SX1276_REG_PADAC				   0x4d
 
 #define OPMODE_LORA      0x80
-#define OPMODE_CONTINOUS 0X85
 #define OPMODE_MASK      0x07
 #define OPMODE_SLEEP     0x00
 #define OPMODE_STANDBY   0x01
@@ -109,6 +111,34 @@
 #define OPMODE_RX        0x05
 #define OPMODE_RX_SINGLE 0x06
 #define OPMODE_CAD       0x07
+
+#define MAP_DIO0_LORA_RXDONE   0x00 // RxDone
+#define MAP_DIO0_LORA_TXDONE   0x40 // TxDone
+#define MAP_DIO0_LORA_CADDONE  0x80 // CadDone
+#define MAP_DIO0_LORA_NOP      0xc0 // NOP
+
+#define MAP_DIO1_LORA_RXTOUT   0x00 // RxTimeout
+#define MAP_DIO1_LORA_FCC      0x10 // FhssChangeChannel
+#define MAP_DIO1_LORA_CADDET   0x20 // CadDetected
+#define MAP_DIO1_LORA_NOP      0x30 // NOP
+
+#define MAP_DIO1_LORA_FCC0     0x00 // FhssChangeChannel
+#define MAP_DIO1_LORA_FCC1     0x04 // FhssChangeChannel
+#define MAP_DIO1_LORA_FCC2     0x08 // FhssChangeChannel
+#define MAP_DIO2_LORA_NOP      0x0c // NOP
+
+#define MAP_DIO3_LORA_CADDONE  		0x00  // ------00 bit 1 and 0
+#define MAP_DIO3_LORA_NOP      		0x03  // ------11
+
+#define IRQ_LORA_RXTOUT_MASK 0x80
+#define IRQ_LORA_RXDONE_MASK 0x40
+#define IRQ_LORA_CRCERR_MASK 0x20
+#define IRQ_LORA_HEADER_MASK 0x10
+#define IRQ_LORA_TXDONE_MASK 0x08
+#define IRQ_LORA_CDDONE_MASK 0x04
+#define IRQ_LORA_FHSSCH_MASK 0x02
+#define IRQ_LORA_CDDETD_MASK 0x01
+
 
 void sx1276_reset(uint8_t val);
 void stx1276_read_reg(int spi_device, uint8_t addr, uint8_t *data);

@@ -307,8 +307,12 @@ driver_error_t *net_check_connectivity() {
 driver_error_t *net_lookup(const char *name, int port, struct sockaddr_in *address) {
     driver_error_t *error;
     int rc = 0;
+    int retries = 0;
 
-    if ((error = net_check_connectivity())) return error;
+retry:
+	if (!wait_for_network(20000)) {
+        return driver_error(NET_DRIVER, NET_ERR_NOT_AVAILABLE,NULL);
+	}
 
     sa_family_t family = AF_INET;
     struct addrinfo *result = NULL;
@@ -332,6 +336,13 @@ driver_error_t *net_lookup(const char *name, int port, struct sockaddr_in *addre
 
         freeaddrinfo(result);
     } else {
+    	retries++;
+    	if (retries < 4) {
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+
+    		goto retry;
+    	}
+
         return driver_error(NET_DRIVER, NET_ERR_NAME_CANNOT_BE_RESOLVED,NULL);
     }
 
@@ -401,26 +412,32 @@ int wait_for_network(uint32_t timeout) {
 
     }
 
+    uint32_t elapsed = 0;
+    while ((!status_get(STATUS_TCPIP_INITED)) && (elapsed < timeout)) {
+        delay(1);
+        elapsed++;
+    }
+
+    if (!status_get(STATUS_TCPIP_INITED)) {
+        return 0;
+    }
+
     if (!NETWORK_AVAILABLE()) {
-        if (status_get(STATUS_WIFI_STARTED) | status_get(STATUS_SPI_ETH_STARTED) | status_get(STATUS_ETH_STARTED)) {
-            EventBits_t uxBits = xEventGroupWaitBits(
-                    netEvent,
-                    evWIFI_CONNECTED | evWIFI_CANT_CONNECT |
-                    evSPI_ETH_CONNECTED | evSPI_ETH_CANT_CONNECT |
-                    evETH_CONNECTED | evETH_CANT_CONNECT,
-                    pdTRUE, pdFALSE, ticks_to_wait
-            );
+		EventBits_t uxBits = xEventGroupWaitBits(
+				netEvent,
+				evWIFI_CONNECTED | evWIFI_CANT_CONNECT |
+				evSPI_ETH_CONNECTED | evSPI_ETH_CANT_CONNECT |
+				evETH_CONNECTED | evETH_CANT_CONNECT,
+				pdTRUE, pdFALSE, ticks_to_wait
+		);
 
-            if (uxBits & (evWIFI_CONNECTED | evSPI_ETH_CONNECTED | evETH_CONNECTED)) {
-                return 1;
-            }
+		if (uxBits & (evWIFI_CONNECTED | evSPI_ETH_CONNECTED | evETH_CONNECTED)) {
+			return 1;
+		}
 
-            if (uxBits & (evWIFI_CANT_CONNECT | evSPI_ETH_CANT_CONNECT | evETH_CANT_CONNECT)) {
-                return 0;
-            }
-        } else {
-            return 0;
-        }
+		if (uxBits & (evWIFI_CANT_CONNECT | evSPI_ETH_CANT_CONNECT | evETH_CANT_CONNECT)) {
+			return 0;
+		}
     }
 
     return 1;
