@@ -481,6 +481,7 @@ static const LUA_REG_TYPE syslib[] =
   { LSTRKEY( "remove" ),      LFUNCVAL( os_remove ) },
   { LSTRKEY( "rename" ),      LFUNCVAL( os_rename ) },
   { LSTRKEY( "time" ),        LFUNCVAL( os_time ) },
+  { LSTRKEY( "settime" ),     LFUNCVAL( os_settime ) },
   { LSTRKEY( "tmpname" ),     LFUNCVAL( os_tmpname ) },
   { LSTRKEY( "exit" ),        LFUNCVAL( os_exit ) },
   { LSTRKEY( "execute" ),     LFUNCVAL( os_execute ) },
