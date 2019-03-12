@@ -116,7 +116,7 @@ static void IRAM_ATTR flow_isr(void* arg) {
         }
 
         // Convert CPU cycles to microseconds
-        double micros = ((double)(cycles)) / ((double)cpu_speed() / (double)1000000);
+        double micros = ((double)(cycles)) / ((double)cpu_speed_hz() / (double)1000000);
 
         // Get frequency
         double freq = ((double)data->count * (double)1000000) / (double)micros;
