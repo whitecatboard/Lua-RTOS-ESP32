@@ -67,6 +67,7 @@
 #include <vfs/vfs.h>
 #include <sys/driver.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/times.h>
 #include <sys/syslog.h>
 #include <sys/status.h>
@@ -1121,6 +1122,41 @@ static int os_uptime(lua_State *L) {
     }
 
     return table;
+}
+
+static int os_time (lua_State *L);
+static int os_settime(lua_State *L) {
+    time_t t = (time_t)-1;
+
+    // Check if user provides input as a table
+    if (1 == lua_gettop(L) && lua_istable(L, 1)) {
+        if (1 == os_time(L)) {
+            t = luaL_checkinteger(L, -1);
+        }
+    }
+    else {
+        struct tm ts;
+        ts.tm_hour  = luaL_checkinteger(L, 1);
+        ts.tm_min   = luaL_checkinteger(L, 2);
+        ts.tm_sec   = luaL_checkinteger(L, 3);
+        ts.tm_mon   = luaL_checkinteger(L, 4) - 1;
+        ts.tm_mday  = luaL_checkinteger(L, 5);
+        ts.tm_year  = luaL_checkinteger(L, 6) - 1900;
+        ts.tm_isdst = luaL_optinteger(L, 7, 0);
+        t = mktime(&ts);
+    }
+
+    if (t == (time_t)-1) {
+        luaL_error(L, "parameters given cannot be set as system time");
+    }
+
+    struct timeval tv;
+    tv.tv_sec = t;
+    tv.tv_usec = 0;
+    settimeofday(&tv, NULL);
+
+    lua_pushinteger(L, (lua_Integer)(t));
+    return 1;
 }
 
 #if defined(MALLOC_DEBUG_H)
