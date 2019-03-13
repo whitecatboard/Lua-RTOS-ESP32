@@ -4,15 +4,20 @@
  * based on TM_ONEWIRE (author  Tilen Majerle)
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+#include <string.h>
+#include <stdio.h>
+
+#include <sys/drivers/cpu.h>
+#include <sys/drivers/owire.h>
+#include <sys/drivers/gpio.h>
 
 #include <sys/syslog.h>
-#include <string.h>
-
-#include <drivers/cpu.h>
-#include <drivers/owire.h>
-#include <drivers/gpio.h>
-#include <stdio.h>
+#include <sys/delay.h>
 
 #define OWIRE_FIRST_PIN	1
 #define OWIRE_LAST_PIN	31
@@ -133,33 +138,37 @@ void owire_init() {
 
 //--------------------------------
 void owdevice_input(uint8_t dev) {
-	gpio_set_pull_mode(ow_devices[dev].device.pin, GPIO_PULLUP_ONLY);
-	gpio_set_direction(ow_devices[dev].device.pin, GPIO_MODE_INPUT);
+    gpio_pin_input(ow_devices[dev].device.pin);
+    gpio_pin_pullup(ow_devices[dev].device.pin);
 }
 
 //-----------------------------------
 void owdevice_pinpower(uint8_t dev) {
-	gpio_set_direction(ow_devices[dev].device.pin, GPIO_MODE_OUTPUT);
-	gpio_set_level(ow_devices[dev].device.pin,1);
+    gpio_pin_output(ow_devices[dev].device.pin);
+    gpio_pin_set(ow_devices[dev].device.pin);
 }
 
 //-------------------------------------------
 unsigned char TM_OneWire_Reset(uint8_t dev) {
 	unsigned char bit = 1;
 	int i;
-	portDISABLE_INTERRUPTS();
+
+    portMUX_TYPE timeCriticalMutex = portMUX_INITIALIZER_UNLOCKED;
+    portENTER_CRITICAL(&timeCriticalMutex);
+
 	// Set line low and wait ~500 us
-	gpio_set_direction(ow_devices[dev].device.pin, GPIO_MODE_OUTPUT);
-	gpio_set_level(ow_devices[dev].device.pin,0);
-	ets_delay_us(500);
+	gpio_pin_output(ow_devices[dev].device.pin);
+	gpio_pin_clr(ow_devices[dev].device.pin);
+	udelay(500);
 
 	// Release the line and wait 500 us for line value
-	gpio_set_level(ow_devices[dev].device.pin,1);
-	gpio_set_direction(ow_devices[dev].device.pin, GPIO_MODE_INPUT);
+	gpio_pin_set(ow_devices[dev].device.pin);
+    gpio_pin_input(ow_devices[dev].device.pin);
+    gpio_pin_pullup(ow_devices[dev].device.pin);
 	i = 500;
 	while (i > 0) {
-		ets_delay_us(10);
-		if (gpio_get_level(ow_devices[dev].device.pin) == 0){
+		udelay(10);
+		if (gpio_ll_pin_get(ow_devices[dev].device.pin) == 0){
 	    	bit = 0;
 	    	break;
 	    }
@@ -167,9 +176,9 @@ unsigned char TM_OneWire_Reset(uint8_t dev) {
 	}
 	if ((i > 0) && (bit == 0)) {
 		// wait up to 500 us
-		ets_delay_us(i);
+		udelay(i);
 	}
-	portENABLE_INTERRUPTS();
+	portEXIT_CRITICAL(&timeCriticalMutex);
     // Return value of presence pulse, 0 = OK, 1 = ERROR
     return bit;
 }
@@ -177,32 +186,36 @@ unsigned char TM_OneWire_Reset(uint8_t dev) {
 // ow WRITE slot
 //---------------------------------------------------------------
 static void TM_OneWire_WriteBit(uint8_t dev, unsigned char bit) {
-  portDISABLE_INTERRUPTS();
+  portMUX_TYPE timeCriticalMutex = portMUX_INITIALIZER_UNLOCKED;
+  portENTER_CRITICAL(&timeCriticalMutex);
+
   if (bit) {
 	// ** Bit high
 	// Set line low and wait 8 us
-	gpio_set_direction(ow_devices[dev].device.pin, GPIO_MODE_OUTPUT);
-	gpio_set_level(ow_devices[dev].device.pin,0);
-	ets_delay_us(8);
+	gpio_pin_output(ow_devices[dev].device.pin);
+	gpio_pin_clr(ow_devices[dev].device.pin);
+	udelay(8);
 
 	// Release the line and wait ~65 us
-	gpio_set_level(ow_devices[dev].device.pin,1);
-	gpio_set_direction(ow_devices[dev].device.pin, GPIO_MODE_INPUT);
-	ets_delay_us(65);
+	gpio_pin_set(ow_devices[dev].device.pin);
+    gpio_pin_input(ow_devices[dev].device.pin);;
+    gpio_pin_pullup(ow_devices[dev].device.pin);
+	udelay(65);
   }
   else {
     // ** Bit low
 	// Set line low and wait ~65 us
-	gpio_set_direction(ow_devices[dev].device.pin, GPIO_MODE_OUTPUT);
-	gpio_set_level(ow_devices[dev].device.pin,0);
-	ets_delay_us(65);
+	gpio_pin_output(ow_devices[dev].device.pin);
+	gpio_pin_clr(ow_devices[dev].device.pin);
+	udelay(65);
 
 	// Release the line and wait 5 us
-	gpio_set_level(ow_devices[dev].device.pin,1);
-	gpio_set_direction(ow_devices[dev].device.pin, GPIO_MODE_INPUT);
-	ets_delay_us(5);
+	gpio_pin_set(ow_devices[dev].device.pin);
+    gpio_pin_input(ow_devices[dev].device.pin);
+    gpio_pin_pullup(ow_devices[dev].device.pin);
+	udelay(5);
   }
-  portENABLE_INTERRUPTS();
+  portEXIT_CRITICAL(&timeCriticalMutex);
 }
 
 // ow READ slot
@@ -211,19 +224,22 @@ unsigned char TM_OneWire_ReadBit(uint8_t dev) {
 	unsigned char bit = 1;
 	int i;
 
-    portDISABLE_INTERRUPTS();
-	// Set line low and wait 3 us
-	gpio_set_direction(ow_devices[dev].device.pin, GPIO_MODE_OUTPUT);
-	gpio_set_level(ow_devices[dev].device.pin,0);
-	ets_delay_us(3);
+	portMUX_TYPE timeCriticalMutex = portMUX_INITIALIZER_UNLOCKED;
+    portENTER_CRITICAL(&timeCriticalMutex);
+
+    // Set line low and wait 3 us
+	gpio_pin_output(ow_devices[dev].device.pin);
+	gpio_pin_clr(ow_devices[dev].device.pin);
+	udelay(3);
 
 	// Release the line and wait ~65 us for line value
-	gpio_set_level(ow_devices[dev].device.pin,1);
-	gpio_set_direction(ow_devices[dev].device.pin, GPIO_MODE_INPUT);
+	gpio_pin_set(ow_devices[dev].device.pin);
+    gpio_pin_input(ow_devices[dev].device.pin);
+    gpio_pin_pullup(ow_devices[dev].device.pin);
 	i = 66;
 	while (i > 0) {
-		ets_delay_us(2);
-		if (gpio_get_level(ow_devices[dev].device.pin) == 0){
+		udelay(2);
+		if (gpio_ll_pin_get(ow_devices[dev].device.pin) == 0){
 	    	bit = 0;
 	    	break;
 	    }
@@ -231,9 +247,9 @@ unsigned char TM_OneWire_ReadBit(uint8_t dev) {
 	}
 	if ((i > 0) && (bit == 0)) {
 		// wait up to 65 us
-		ets_delay_us(i);
+		udelay(i);
 	}
-    portENABLE_INTERRUPTS();
+	portEXIT_CRITICAL(&timeCriticalMutex);
 	// Return bit value
 	return bit;
 }
