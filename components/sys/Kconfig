@@ -7,7 +7,7 @@ menu "Lua RTOS"
          This sets the CPU power voltage (VDDA). The ideal value of this voltage is generally 3300 mVolts,
          but due to the manufacturing processes and components used that may not always be the same this
          value may be different from the ideal one.
-         
+
          For a correct operation of the ADC and some sensors it is necessary that you indicate the exact
          value for your board. Please measure this value with a suitable equipment. A good and cheap
          choice is using an external ADC as an ADS1115.
@@ -146,13 +146,11 @@ menu "Lua RTOS"
             a minimum of 3 copies of the app, so the FLASH memory must have a lot of space to enable this
             option. We recommend to enable this option only in devices with a 8 MB FLASH, or greater.
    endmenu
-   
    menu "General"
       menu "Deep Sleep"
          config LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
                bool "Mantain power for RTC IO, sensors and ULP co-processor by default"
                default n
-   
          config LUA_RTOS_DEEP_SLEEP_RTC_SLOW_MEM
                bool "Mantain power for RTC slow memory by default"
                default y
@@ -179,22 +177,22 @@ menu "Lua RTOS"
          config LUA_RTOS_USE_CONSOLE
             bool "Use console"
             default y
-            help 
+            help
             Select this to enable the Lua RTOS console.
-   
+
       choice LUA_RTOS_CONSOLE_UART
          depends on LUA_RTOS_USE_CONSOLE
          prompt "UART"
          default LUA_RTOS_CONSOLE_UART0
          help
             Select the uart number used by the Lua RTOS console.
-   
+
       config LUA_RTOS_CONSOLE_UART0
          bool "UART 0"
-         
+
       config LUA_RTOS_CONSOLE_UART1
          bool "UART 1"
-   
+
       config LUA_RTOS_CONSOLE_UART2
          bool "UART 2"
    
