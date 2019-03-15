@@ -1396,8 +1396,8 @@ int http_start(lua_State* L) {
 			http_callback = NULL;
 		}
 		lua_pushcfunction(L, &http_execute_lua);  /* to call 'http_execute_lua' in protected mode */
-		http_callback = luaS_callback_create(L, 1);
-		lua_pop(L, 1);
+		http_callback = luaS_callback_create(L, -1);
+		lua_pop(L, -1);
 
 		ap_ip4addr = 0;
 		strcpy(ap_ip4addr_str, "0.0.0.0");
