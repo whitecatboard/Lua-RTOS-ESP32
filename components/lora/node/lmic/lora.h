@@ -36,6 +36,12 @@
 
 #include <sys/driver.h>
 
+// Lora device activation methods
+typedef enum {
+    LoraOTAA = 0,
+    LoraABP
+} lora_device_act_t;
+
 #define LORA_DRIVER driver_get_by_name("lora")
 
 // Lora errors
@@ -45,7 +51,6 @@
 #define LORA_ERR_NOT_JOINED                         (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  3)
 #define LORA_ERR_NOT_SETUP                          (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  4)
 #define LORA_ERR_NO_MEM                             (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  5)
-#define LORA_ERR_ABP_EXPECTED                       (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  6)
 #define LORA_ERR_CANT_SETUP                         (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  7)
 #define LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  8)
 #define LORA_ERR_INVALID_ARGUMENT                   (DRIVER_EXCEPTION_BASE(LORA_DRIVER_ID) |  9)
