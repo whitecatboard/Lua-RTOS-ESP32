@@ -140,7 +140,7 @@ static int hex_string_len(char *hbuff) {
     
     c1 = *hbuff++;
     c2 = *hbuff++;
-    while ((c1 != '0') && (c2 != '0')) {
+    while ((c1 != '0') || (c2 != '0')) {
         len++;
         c1 = *hbuff++;
         c2 = *hbuff++;        
