@@ -62,6 +62,17 @@ typedef struct stringtable {
 } stringtable;
 
 
+#if LUA_USE_ROTABLE
+/*
+ * Block context.
+ */
+typedef struct BlockContext {
+	int block; /* Block id */
+	uint64_t last; /* Last time were a messsage on block has been emitted (in milliseconds) */
+	struct BlockContext *previous; /* Previous context */
+} BlockContext;
+#endif
+
 /*
 ** Information about a call.
 ** When a thread yields, 'func' is adjusted to pretend that the
@@ -90,11 +101,11 @@ typedef struct CallInfo {
   short nresults;  /* expected number of results from this function */
   unsigned short callstatus;
 
-  // Lua RTOS begin
+#if LUA_USE_ROTABLE
   unsigned int ccount;
-  // Lua RTOS end
+  BlockContext *bctx;
+#endif
 } CallInfo;
-
 
 /*
 ** Bits in CallInfo status
@@ -185,7 +196,7 @@ struct lua_State {
   unsigned short nCcalls;  /* number of nested C calls */
   l_signalT hookmask;
   lu_byte allowhook;
-};
+  };
 
 
 #define G(L)	(L->l_G)

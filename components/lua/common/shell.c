@@ -81,6 +81,8 @@ static const command_t command[] = {
     {"reboot", "os", "exit", 0, 0, NULL},
     {"ls", "os", "ls", 0, 1, "ls [pattern]"},
     {"dir", "os", "ls", 0, 1, "dir [pattern]"},
+    {"luac", NULL, "compile", 1, 0, "luac source destination"},
+    {"luad", NULL, "decompile", 1, 0, "luad source"},
     {"mkfs", "os", "format", 1, 0, "format path"},
     {"mkdir", "os", "mkdir", 1, 0, "mkdir path"},
     {"mount", "fs", "mount", 2, 0, "target filesystem"},

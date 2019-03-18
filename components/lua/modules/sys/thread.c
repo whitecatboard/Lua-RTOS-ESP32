@@ -55,6 +55,7 @@
 #include "ldo.h"
 #include "thread.h"
 #include "error.h"
+#include "blocks.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -146,9 +147,16 @@ void *lthread_start_task(void *arg) {
 	// Execute thread function
 	int status = lua_pcall(thread->L, 0, 0, 0);
 	if (status != LUA_OK) {
-		const char *msg = lua_tostring(thread->L, -1);
-		lua_writestringerror("%s\n", msg);
-		lua_pop(thread->L, 1);
+	    BlockContext *bctx;
+	    if ((bctx = luaVB_getBlock(thread->L, NULL)) != NULL) {
+			lua_pop(thread->L, 1);
+	    } else {
+			// If error have not been raised inside a block execution context, write it
+			// to the console
+			const char *msg = lua_tostring(thread->L, -1);
+			lua_writestringerror("%s\n", msg);
+			lua_pop(thread->L, 1);
+	    }
 
 		pthread_exit(NULL);
 	}

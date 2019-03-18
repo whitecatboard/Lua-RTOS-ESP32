@@ -478,6 +478,7 @@ static const LUA_REG_TYPE base_funcs[] = {
   { LSTRKEY( "cache" 		  ),			LFUNCVAL( rotable_cache_dump  	) },
 #endif
   { LSTRKEY( "compile" 		  ),			LFUNCVAL( luaB_compile   		) },
+  { LSTRKEY( "decompile" 	  ),			LFUNCVAL( luaB_decompile   		) },
   { LSTRKEY( "try" 			  ),			LFUNCVAL( luaB_try 				) },
   { LSTRKEY( "assert" 		  ),			LFUNCVAL( luaB_assert 			) },
   { LSTRKEY( "collectgarbage" ),			LFUNCVAL( luaB_collectgarbage 	) },

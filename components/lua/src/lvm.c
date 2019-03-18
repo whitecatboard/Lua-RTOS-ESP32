@@ -33,6 +33,7 @@
 #if LUA_USE_ROTABLE
 #include "lrotable.h"
 #include "llex.h"
+#include "blocks.h"
 #endif
 
 
@@ -68,7 +69,9 @@
 
 #endif
 
-
+#if LUA_USE_ROTABLE
+extern uint8_t lua_vm_blocks;
+#endif
 
 /*
 ** Try to convert a value to a float. The float case is already handled
@@ -895,11 +898,13 @@ void luaV_finishOp (lua_State *L) {
 
 void luaV_execute(lua_State *L) {
     CallInfo *ci = L->ci;
+
     LClosure *cl;
     TValue *k;
     StkId base;
     ci->callstatus |= CIST_FRESH; /* fresh invocation of 'luaV_execute" */
     newframe: /* reentry point when frame changes (call/return) */
+
     lua_assert(ci == L->ci);
     cl = clLvalue(ci->func); /* local reference to function's closure */
 
@@ -1016,6 +1021,20 @@ void luaV_execute(lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
+
+#if LUA_USE_ROTABLE
+        if (lua_vm_blocks) {
+            // In blocks, if one of the arguments is nil, set it to 0
+            if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rb, 0);
+            }
+
+            if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rc, 0);
+            }
+        }
+#endif
+
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
           setivalue(ra, intop(+, ib, ic));
@@ -1030,6 +1049,20 @@ void luaV_execute(lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
+
+#if LUA_USE_ROTABLE
+        if (lua_vm_blocks) {
+            // In blocks, if one of the arguments is nil, set it to 0
+            if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rb, 0);
+            }
+
+            if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rc, 0);
+            }
+        }
+#endif
+
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
           setivalue(ra, intop(-, ib, ic));
@@ -1044,6 +1077,20 @@ void luaV_execute(lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
+
+#if LUA_USE_ROTABLE
+        if (lua_vm_blocks) {
+            // In blocks, if one of the arguments is nil, set it to 0
+            if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rb, 0);
+            }
+
+            if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rc, 0);
+            }
+        }
+#endif
+
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
           setivalue(ra, intop(*, ib, ic));
@@ -1057,6 +1104,20 @@ void luaV_execute(lua_State *L) {
       vmcase(OP_DIV) {  /* float division (always with floats) */
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
+
+#if LUA_USE_ROTABLE
+        if (lua_vm_blocks) {
+            // In blocks, if one of the arguments is nil, set it to 0
+            if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
+                setnvalue(rb, 0.0);
+            }
+
+            if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
+                setnvalue(rc, 0.0);
+            }
+        }
+#endif
+
         lua_Number nb; lua_Number nc;
         if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setfltvalue(ra, luai_numdiv(L, nb, nc));
@@ -1068,6 +1129,20 @@ void luaV_execute(lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
+
+#if LUA_USE_ROTABLE
+        if (lua_vm_blocks) {
+            // In blocks, if one of the arguments is nil, set it to 0
+            if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rb, 0);
+            }
+
+            if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rc, 0);
+            }
+        }
+#endif
+
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(ra, intop(&, ib, ic));
         }
@@ -1078,6 +1153,20 @@ void luaV_execute(lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
+
+#if LUA_USE_ROTABLE
+        // In blocks, if one of the arguments is nil, set it to 0
+        if (lua_vm_blocks) {
+            if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rb, 0);
+            }
+
+            if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rc, 0);
+            }
+        }
+#endif
+
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(ra, intop(|, ib, ic));
         }
@@ -1088,6 +1177,20 @@ void luaV_execute(lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
+
+#if LUA_USE_ROTABLE
+        if (lua_vm_blocks) {
+            // In blocks, if one of the arguments is nil, set it to 0
+            if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rb, 0);
+            }
+
+            if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rc, 0);
+            }
+        }
+#endif
+
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(ra, intop(^, ib, ic));
         }
@@ -1098,6 +1201,21 @@ void luaV_execute(lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
+
+
+#if LUA_USE_ROTABLE
+        if (lua_vm_blocks) {
+            // In blocks, if one of the arguments is nil, set it to 0
+            if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rb, 0);
+            }
+
+            if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rc, 0);
+            }
+        }
+#endif
+
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(ra, luaV_shiftl(ib, ic));
         }
@@ -1108,6 +1226,20 @@ void luaV_execute(lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
+
+#if LUA_USE_ROTABLE
+        if (lua_vm_blocks) {
+            // In blocks, if one of the arguments is nil, set it to 0
+            if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rb, 0);
+            }
+
+            if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rc, 0);
+            }
+        }
+#endif
+
         if (tointeger(rb, &ib) && tointeger(rc, &ic)) {
           setivalue(ra, luaV_shiftl(ib, -ic));
         }
@@ -1118,6 +1250,20 @@ void luaV_execute(lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
+
+    #if LUA_USE_ROTABLE
+        if (lua_vm_blocks) {
+            // In blocks, if one of the arguments is nil, set it to 0
+            if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rb, 0);
+            }
+
+            if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rc, 0);
+            }
+        }
+#endif
+
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
           setivalue(ra, luaV_mod(L, ib, ic));
@@ -1134,6 +1280,20 @@ void luaV_execute(lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
+
+#if LUA_USE_ROTABLE
+        if (lua_vm_blocks) {
+            // In blocks, if one of the arguments is nil, set it to 0
+            if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rb, 0);
+            }
+
+            if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rc, 0);
+            }
+        }
+#endif
+
         if (ttisinteger(rb) && ttisinteger(rc)) {
           lua_Integer ib = ivalue(rb); lua_Integer ic = ivalue(rc);
           setivalue(ra, luaV_div(L, ib, ic));
@@ -1148,6 +1308,20 @@ void luaV_execute(lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
+
+#if LUA_USE_ROTABLE
+        if (lua_vm_blocks) {
+            // In blocks, if one of the arguments is nil, set it to 0
+            if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
+                setnvalue(rb, 0.0);
+            }
+
+            if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
+                setnvalue(rc, 0.0);
+            }
+        }
+#endif
+
         if (tonumber(rb, &nb) && tonumber(rc, &nc)) {
           setfltvalue(ra, luai_numpow(L, nb, nc));
         }
@@ -1157,6 +1331,15 @@ void luaV_execute(lua_State *L) {
       vmcase(OP_UNM) {
         TValue *rb = RB(i);
         lua_Number nb;
+
+#if LUA_USE_ROTABLE
+        if (lua_vm_blocks) {
+            // In blocks, if the argument is nil, set it to 0
+            if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rb, 0);
+            }
+        }
+#endif
         if (ttisinteger(rb)) {
           lua_Integer ib = ivalue(rb);
           setivalue(ra, intop(-, 0, ib));
@@ -1172,6 +1355,15 @@ void luaV_execute(lua_State *L) {
       vmcase(OP_BNOT) {
         TValue *rb = RB(i);
         lua_Integer ib;
+
+#if LUA_USE_ROTABLE
+        if (lua_vm_blocks) {
+            // In blocks, if the argument is nil, set it to 0
+            if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
+                setivalue(rb, 0);
+            }
+        }
+#endif
         if (tointeger(rb, &ib)) {
           setivalue(ra, intop(^, ~l_castS2U(0), ib));
         }
@@ -1440,6 +1632,37 @@ void luaV_execute(lua_State *L) {
         lua_assert(0);
         vmbreak;
       }
+#if LUA_USE_ROTABLE
+      vmcase(OP_BLOCKS) {
+        if (lua_vm_blocks) {
+            int tmp = GETARG_Ax(i);
+            int id = (tmp >> 4);
+            int flags = (tmp & 0b1111);
+
+            luaVB_pushBlock(L, NULL, id);
+            if (flags == 1) {
+                luaVB_emitMessage(L, luaVB_BLOCK_START_MSG, id);
+            }
+        }
+        vmbreak;
+      }
+      vmcase(OP_BLOCKE) {
+        if (lua_vm_blocks) {
+            int tmp = GETARG_Ax(i);
+            int id = (tmp >> 4);
+            int flags = (tmp & 0b1111);
+
+            luaVB_popBlock(L, NULL);
+            if (flags == 1) {
+                luaVB_emitMessage(L, luaVB_BLOCK_END_MSG, id);
+            }
+        }
+		vmbreak;
+      }
+      vmcase(OP_NOP) {
+        vmbreak;
+      }
+#endif
     }
   }
 }

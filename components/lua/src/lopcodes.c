@@ -65,6 +65,11 @@ LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "CLOSURE",
   "VARARG",
   "EXTRAARG",
+#if LUA_USE_ROTABLE
+  "NOP",
+  "BLOCKS",
+  "BLOCKE",
+#endif
   NULL
 };
 
@@ -120,5 +125,10 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 1, OpArgU, OpArgN, iABx)		/* OP_CLOSURE */
  ,opmode(0, 1, OpArgU, OpArgN, iABC)		/* OP_VARARG */
  ,opmode(0, 0, OpArgU, OpArgU, iAx)		/* OP_EXTRAARG */
+#if LUA_USE_ROTABLE
+ ,opmode(0, 0, OpArgN, OpArgN, iABx)     /* OP_NOP */
+ ,opmode(0, 0, OpArgU, OpArgN, iABx)		/* OP_BLOCKS */
+ ,opmode(0, 0, OpArgU, OpArgN, iABx)		/* OP_BLOCKE */
+#endif
 };
 

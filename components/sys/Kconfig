@@ -1531,6 +1531,10 @@ menu "Lua RTOS"
                bool "Include i2c module in build"
                default y
 
+            config LUA_RTOS_LUA_USE_VM
+               bool "Include Lua VM module in build"
+               default y
+
             config LUA_RTOS_LUA_USE_MQTT
                depends on LUA_RTOS_LUA_USE_NET
                bool "Include MQTT module in build"

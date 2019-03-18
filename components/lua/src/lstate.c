@@ -112,6 +112,11 @@ CallInfo *luaE_extendCI (lua_State *L) {
   ci->previous = L->ci;
   ci->next = NULL;
   L->nci++;
+
+#if LUA_USE_ROTABLE
+  ci->bctx = NULL;
+#endif
+
   return ci;
 }
 
@@ -125,6 +130,15 @@ void luaE_freeCI (lua_State *L) {
   ci->next = NULL;
   while ((ci = next) != NULL) {
     next = ci->next;
+
+#if LUA_USE_ROTABLE
+    BlockContext *bctx = ci->bctx;
+    while (bctx) {
+        bctx = bctx->previous;
+    		luaM_free(L, bctx);
+    }
+#endif
+
     luaM_free(L, ci);
     L->nci--;
   }
@@ -139,6 +153,14 @@ void luaE_shrinkCI (lua_State *L) {
   CallInfo *next2;  /* next's next */
   /* while there are two nexts */
   while (ci->next != NULL && (next2 = ci->next->next) != NULL) {
+#if LUA_USE_ROTABLE
+      BlockContext *bctx = ci->next->bctx;
+    while (bctx) {
+        bctx = bctx->previous;
+    		luaM_free(L, bctx);
+    }
+#endif
+
     luaM_free(L, ci->next);  /* free next */
     L->nci--;
     ci->next = next2;  /* remove 'next' from the list */
@@ -162,6 +184,9 @@ static void stack_init (lua_State *L1, lua_State *L) {
   ci->next = ci->previous = NULL;
   ci->callstatus = 0;
   ci->func = L1->top;
+#if LUA_USE_ROTABLE
+  ci->bctx = NULL;
+#endif
   setnilvalue(L1->top++);  /* 'function' entry for this 'ci' */
   ci->top = L1->top + LUA_MINSTACK;
   L1->ci = ci;
@@ -278,6 +303,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   luai_userstatethread(L, L1);
   stack_init(L1, L);  /* init stack */
   lua_unlock(L);
+
   return L1;
 }
 
@@ -334,6 +360,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
     close_state(L);
     L = NULL;
   }
+
   return L;
 }
 

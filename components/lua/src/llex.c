@@ -27,7 +27,9 @@
 #include "ltable.h"
 #include "lzio.h"
 
-
+#if LUA_USE_ROTABLE
+#include "blocks.h"
+#endif
 
 #define next(ls) (ls->current = zgetc(ls->z))
 
@@ -44,8 +46,12 @@ static const char *const luaX_tokens [] = {
     "return", "then", "true", "until", "while",
     "//", "..", "...", "==", ">=", "<=", "~=",
     "<<", ">>", "::", "<eof>",
-    "<number>", "<integer>", "<name>", "<string>"
-};
+    "<number>", "<integer>", "<name>", "<string>",
+#if LUA_USE_ROTABLE
+    "bs annotation",
+    "be annotation"
+#endif
+    };
 
 
 #define save_and_next(ls) (save(ls, ls->current), next(ls))
@@ -447,7 +453,82 @@ static int llex (LexState *ls, SemInfo *seminfo) {
           int sep = skip_sep(ls);
           luaZ_resetbuffer(ls->buff);  /* 'skip_sep' may dirty the buffer */
           if (sep >= 0) {
+#if !LUA_USE_ROTABLE
             read_long_string(ls, NULL, sep);  /* skip long comment */
+#else
+        		read_long_string(ls, seminfo, sep);
+
+        		// Check if comment is an annotation
+        		if (ls->buff->n >= 3) {
+        			if ((ls->buff->buffer[0] == '[') &&
+        				(ls->buff->buffer[ls->buff->n - 1] == ']') &&
+					(ls->buff->buffer[ls->buff->n - 2] == ']')) {
+
+        				char *buff = &(ls->buff->buffer[1]);
+        				int len = ls->buff->n - 3;
+
+        				if (len > 3) {
+        					if ((buff[0] == 'b') && (buff[1] == 's') && (buff[2] == ':')) {
+        						// Block start
+        						buff += 3;
+        						len -= 3;
+
+        						// Get block id
+        						int id = 0;
+        						while ((*buff >= '0') && (*buff <= '9')) {
+        							id = id * 10;
+        							id += (*buff - '0');
+        							buff++;
+        						}
+
+        						// Get block flags
+        						int flags = 0;
+
+        						if (*buff == ':') {
+        							buff++;
+            						while ((*buff >= '0') && (*buff <= '9')) {
+            							flags = flags * 10;
+            							flags += (*buff - '0');
+            							buff++;
+            						}
+        						}
+
+                             seminfo->i = (id << 4) | flags;
+
+            						return TK_BLOCK_START;
+        					} else if ((buff[0] == 'b') && (buff[1] == 'e') && (buff[2] == ':')) {
+        						// Block end
+        						buff += 3;
+        						len -= 3;
+
+        						// Get block id
+        						int id = 0;
+        						while ((*buff >= '0') && (*buff <= '9')) {
+        							id = id * 10;
+        							id += (*buff - '0');
+        							buff++;
+        						}
+
+        						// Get block flags
+        						int flags = 0;
+
+        						if (*buff == ':') {
+        							buff++;
+            						while ((*buff >= '0') && (*buff <= '9')) {
+            							flags = flags * 10;
+            							flags += (*buff - '0');
+            							buff++;
+            						}
+        						}
+
+        						seminfo->i = (id << 4) | flags;
+
+        						return TK_BLOCK_END;
+        					}
+        				}
+        			}
+        		}
+#endif
             luaZ_resetbuffer(ls->buff);  /* previous call may dirty the buff. */
             break;
           }

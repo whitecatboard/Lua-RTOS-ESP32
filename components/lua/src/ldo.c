@@ -33,7 +33,9 @@
 #include "lvm.h"
 #include "lzio.h"
 
-
+#if LUA_USE_ROTABLE
+#include "blocks.h"
+#endif
 
 #define errorstatus(s)	((s) > LUA_YIELD)
 
@@ -391,8 +393,35 @@ int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
 }
 
 
-
+#if !LUA_USE_ROTABLE
 #define next_ci(L) (L->ci = (L->ci->next ? L->ci->next : luaE_extendCI(L)))
+#else
+CallInfo *next_ci(lua_State *L) {
+    CallInfo *cci = L->ci;
+
+    if (L->ci->next) {
+        L->ci = L->ci->next;
+    } else {
+        L->ci = luaE_extendCI(L);
+    }
+
+    if (L->ci->bctx != NULL) {
+        while (luaVB_popBlock(L, NULL));
+
+        L->ci->bctx = NULL;
+    }
+
+    // At this point we have a new CallInfo, push on it
+    // last block context
+    BlockContext *bctx;
+
+    if ((bctx = luaVB_getBlock(L, cci)) != NULL) {
+        luaVB_pushBlock(L, L->ci, bctx->block);
+    }
+
+    return L->ci;
+}
+#endif
 
 
 /* macro to check stack size, preserving 'p' */
@@ -737,8 +766,23 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
   unsigned short old_nny = L->nny;
   ptrdiff_t old_errfunc = L->errfunc;
   L->errfunc = ef;
+
   status = luaD_rawrunprotected(L, func, u);
   if (status != LUA_OK) {  /* an error occurred? */
+#if LUA_USE_ROTABLE
+    BlockContext *bctx;
+
+    if ((bctx = luaVB_getBlock(L, NULL)) != NULL) {
+      // The error has been raised into a block context, then
+      // emit an error message
+      luaVB_emitMessage(L, luaVB_BLOCK_ERR_MSG, bctx->block);
+
+      // The current CallInfo will be deleted later, then
+      // push the current block context into the old CallInfo
+
+      luaVB_pushBlock(L, old_ci, bctx->block);
+    }
+#endif
     StkId oldtop = restorestack(L, old_top);
     luaF_close(L, oldtop);  /* close possible pending closures */
     seterrorobj(L, status, oldtop);
