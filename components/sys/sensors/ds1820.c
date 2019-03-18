@@ -679,6 +679,7 @@ driver_error_t *ds1820_set(sensor_instance_t *unit, const char *id, sensor_value
 driver_error_t *ds1820_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	unsigned char sens = unit->setup[0].owire.owsensor - 1;
 	uint8_t dev = unit->setup[0].owire.owdevice;
+	int retries = 0;
 
 	sens = owire_addess_to_dev(dev, sens);
 
@@ -706,7 +707,15 @@ driver_error_t *ds1820_acquire(sensor_instance_t *unit, sensor_value_t *values) 
 	TM_DS18B20_StartAll(dev);
 	*/
 	// Start temperature conversion on device
+
+retry:
 	if (TM_DS18B20_Start(dev, (unsigned char *)&ow_devices[dev].roms[sens]) != ow_OK) {
+        retries++;
+        if (retries < 3) {
+            vTaskDelay(1 / portTICK_RATE_MS);
+            goto retry;
+        }
+
 		values[0].floatd.value = -9997.0;
 		return NULL;
 	}
@@ -724,9 +733,16 @@ driver_error_t *ds1820_acquire(sensor_instance_t *unit, sensor_value_t *values) 
 		}
 	}
 	vTaskDelay(10 / portTICK_RATE_MS);
+
 	if (!TM_OneWire_ReadBit(dev)) {
-		/* Timeout */
+        retries++;
+        if (retries < 3) {
+            vTaskDelay(1 / portTICK_RATE_MS);
+            goto retry;
+        }
+        /* Timeout */
 		values[0].floatd.value = -9998.0;
+
 		return NULL;
 	}
 
@@ -738,7 +754,13 @@ driver_error_t *ds1820_acquire(sensor_instance_t *unit, sensor_value_t *values) 
 	}
 	else {
 		// Reading error
-		values[0].floatd.value = -9999.0;
+        retries++;
+        if (retries < 3) {
+            vTaskDelay(1 / portTICK_RATE_MS);
+            goto retry;
+        }
+
+        values[0].floatd.value = -9999.0;
 	}
 
 	return NULL;

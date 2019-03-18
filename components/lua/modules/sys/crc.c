@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2019, Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.
  *
@@ -39,70 +39,68 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS, simple channel LoRa WAN gateway
+ * Lua RTOS, Lua crc module
  *
  */
 
-#include "sdkconfig.h"
+#include "lua.h"
+#include "lauxlib.h"
+#include "modules.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
+#if CONFIG_LUA_RTOS_LUA_USE_CRC
 
-#include "sx1276.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stddef.h>
+#include <rom/crc.h>
 
-#include <sys/driver.h>
-#include <sys/delay.h>
+static int lcrc8(lua_State *L) {
+	size_t length;
+	const uint8_t *string = (uint8_t *) luaL_checklstring(L, 1, &length);
+	uint8_t crc = luaL_optinteger(L, 2, 0xFF );
+	crc = crc8_le(crc, string, length);
 
-#include <drivers/gpio.h>
-#include <drivers/spi.h>
-#include <drivers/power_bus.h>
+	lua_pushinteger(L, (lua_Integer)crc);
+	return 1;
+}
 
-void sx1276_reset(uint8_t val) {
-	#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
-		if (val == 1) {
-			pwbus_off();
-			delay(1);
-			pwbus_on();
-		} else if (val == 0) {
-			pwbus_off();
-			delay(1);
-			pwbus_on();
-		} else {
-			delay(5);
-		}
+static int lcrc16(lua_State *L) {
+	size_t length;
+	const uint8_t *string = (uint8_t *) luaL_checklstring(L, 1, &length);
+	uint16_t crc = luaL_optinteger(L, 2, 0xFFFF );
+	crc = crc16_le(crc, string, length);
+
+	lua_pushinteger(L, (lua_Integer)crc);
+	return 1;
+}
+
+static int lcrc32(lua_State *L) {
+	size_t length;
+	const uint8_t *string = (uint8_t *) luaL_checklstring(L, 1, &length);
+	uint32_t crc = luaL_optinteger(L, 2, 0xFFFFFFFF );
+	crc = crc32_le(crc, string, length);
+
+	lua_pushinteger(L, (lua_Integer)crc);
+	return 1;
+}
+
+static const LUA_REG_TYPE crc_map[] = 
+{
+  { LSTRKEY( "crc8"   ),    LFUNCVAL( lcrc8   ) },
+  { LSTRKEY( "crc16"   ),    LFUNCVAL( lcrc16   ) },
+  { LSTRKEY( "crc32"   ),    LFUNCVAL( lcrc32   ) },
+  { LNILKEY, LNILVAL }
+};
+
+int luaopen_crc(lua_State *L) {
+	#if !LUA_USE_ROTABLE
+	luaL_newlib(L, crc_map);
+	return 1;
 	#else
-		#if CONFIG_LUA_RTOS_LORA_RST >= 0
-			if (val == 1) {
-				gpio_pin_output(CONFIG_LUA_RTOS_LORA_RST);
-				gpio_pin_set(CONFIG_LUA_RTOS_LORA_RST);
-			} else if (val == 0) {
-				gpio_pin_output(CONFIG_LUA_RTOS_LORA_RST);
-				gpio_pin_clr(CONFIG_LUA_RTOS_LORA_RST);
-			} else {
-				gpio_pin_input(CONFIG_LUA_RTOS_LORA_RST);
-			}
-		#endif
-	#endif
+	return 0;
+	#endif		   
 }
-
-void IRAM_ATTR stx1276_read_reg(int spi_device, uint8_t addr, uint8_t *data) {
-	spi_ll_select(spi_device);
-	spi_ll_transfer(spi_device, addr & 0x7f, NULL);
-	spi_ll_transfer(spi_device, 0xff, data);
-	spi_ll_deselect(spi_device);
-}
-
-void IRAM_ATTR stx1276_write_reg(int spi_device, uint8_t addr, uint8_t data) {
-	spi_ll_select(spi_device);
-	spi_ll_transfer(spi_device, addr | 0x80, NULL);
-	spi_ll_transfer(spi_device, data, NULL);
-	spi_ll_deselect(spi_device);
-}
-
-void IRAM_ATTR stx1276_read_buff(int spi_device, uint8_t addr, uint8_t *data, uint8_t len) {
-	spi_ll_select(spi_device);
-	spi_ll_transfer(spi_device, addr & 0x7f, NULL);
-	spi_ll_bulk_read(spi_device, len, data);
-	spi_ll_deselect(spi_device);
-}
+	   
+MODULE_REGISTER_ROM(CRC, crc, crc_map, luaopen_crc, 1);
 
 #endif

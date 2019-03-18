@@ -297,7 +297,7 @@ static void IRAM_ATTR spi_master_op(int deviceid, uint32_t word_size,
             }
         }
     } else {
-        int device = (deviceid & 0x00ff);
+        device = (deviceid & 0x00ff);
         esp_err_t ret;
         spi_transaction_t t;
         uint8_t *bin = NULL;

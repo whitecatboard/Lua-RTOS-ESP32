@@ -67,6 +67,7 @@
 #include <vfs/vfs.h>
 #include <sys/driver.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/times.h>
 #include <sys/syslog.h>
 #include <sys/status.h>
@@ -512,7 +513,7 @@ static int os_board(lua_State *L) {
     return 3;
 }
 
-static int os_logcons(lua_State *L) { 
+static int os_logcons(lua_State *L) {
     if (lua_gettop(L) == 1) {
         int mask = LOG_NDELAY;
 
@@ -533,6 +534,30 @@ static int os_logcons(lua_State *L) {
         return 1;
     }
 }
+
+static int os_syslog(lua_State *L) {
+    const char *message = luaL_checkstring(L, 1);
+    int level = luaL_optinteger( L, 2, LOG_ERR );
+    syslog(level, message);
+
+    return 0;
+}
+
+#if CONFIG_LUA_RTOS_USE_RSYSLOG
+static int os_setrsyslog(lua_State *L) {
+    if (lua_gettop(L) == 1) {
+        const char *host = luaL_checkstring(L, 1);
+        const char *ret = syslog_setloghost(host);
+        if (ret == NULL) return 0;
+        lua_pushstring(L, ret);
+        return 1;
+    }
+    const char *ret = syslog_getloghost();
+    if (ret == NULL) return 0;
+    lua_pushstring(L, ret);
+    return 1;
+}
+#endif
 
 static int os_stats(lua_State *L) {
     const char *stat = luaL_optstring(L, 1, NULL);
@@ -921,6 +946,8 @@ static int os_partitions(lua_State *L) {
     char address[9];
     char size[9];
     esp_partition_iterator_t it;
+    const esp_partition_t* boot = esp_ota_get_boot_partition();
+    const esp_partition_t* running = esp_ota_get_running_partition();
 
     printf("TYPE:SUB\t ADDRESS\t  LENGTH\tENC\tLABEL\n");
 
@@ -930,7 +957,7 @@ static int os_partitions(lua_State *L) {
 
         snprintf(address, sizeof(address),"%8d", p->address);
         snprintf(size, sizeof(size),"%8d", p->size);
-        printf("0x%02x:0x%02x\t%s\t%s\t%c\t%s\n", p->type, p->subtype, address, size, p->encrypted ? 'Y':'N', p->label);
+        printf("0x%02x:0x%02x\t%s\t%s\t%c\t%s%s%s\n", p->type, p->subtype, address, size, p->encrypted ? 'Y':'N', p->label, p==boot ? " < boot":"", p==running ? " < running":"");
     }
     esp_partition_iterator_release(it);
 
@@ -1121,6 +1148,41 @@ static int os_uptime(lua_State *L) {
     }
 
     return table;
+}
+
+static int os_time (lua_State *L);
+static int os_settime(lua_State *L) {
+    time_t t = (time_t)-1;
+
+    // Check if user provides input as a table
+    if (1 == lua_gettop(L) && lua_istable(L, 1)) {
+        if (1 == os_time(L)) {
+            t = luaL_checkinteger(L, -1);
+        }
+    }
+    else {
+        struct tm ts;
+        ts.tm_hour  = luaL_checkinteger(L, 1);
+        ts.tm_min   = luaL_checkinteger(L, 2);
+        ts.tm_sec   = luaL_checkinteger(L, 3);
+        ts.tm_mon   = luaL_checkinteger(L, 4) - 1;
+        ts.tm_mday  = luaL_checkinteger(L, 5);
+        ts.tm_year  = luaL_checkinteger(L, 6) - 1900;
+        ts.tm_isdst = luaL_optinteger(L, 7, 0);
+        t = mktime(&ts);
+    }
+
+    if (t == (time_t)-1) {
+        luaL_error(L, "parameters given cannot be set as system time");
+    }
+
+    struct timeval tv;
+    tv.tv_sec = t;
+    tv.tv_usec = 0;
+    settimeofday(&tv, NULL);
+
+    lua_pushinteger(L, (lua_Integer)(t));
+    return 1;
 }
 
 #if defined(MALLOC_DEBUG_H)

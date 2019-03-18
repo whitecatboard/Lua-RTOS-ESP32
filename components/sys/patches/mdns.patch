@@ -1,8 +1,55 @@
 diff --git a/components/mdns/component.mk b/components/mdns/component.mk
-index 064cc060..47576520 100644
+index 064cc0608..ae0cd696e 100644
 --- a/components/mdns/component.mk
 +++ b/components/mdns/component.mk
 @@ -1,2 +1,3 @@
  COMPONENT_ADD_INCLUDEDIRS := include
  COMPONENT_PRIV_INCLUDEDIRS := private_include
 +COMPONENT_SRCDIRS := .
+diff --git a/components/mdns/mdns.c b/components/mdns/mdns.c
+index f5d337a32..b6d2787b2 100644
+--- a/components/mdns/mdns.c
++++ b/components/mdns/mdns.c
+@@ -1220,7 +1220,7 @@ static void _mdns_create_answer_from_parsed_packet(mdns_parsed_packet_t * parsed
+                 }
+             } else if (q->type == MDNS_TYPE_SDPTR) {
+                 shared = true;
+-                if (!_mdns_alloc_answer(&packet->answers, MDNS_TYPE_PTR, service->service, false, false)) {
++                if (!_mdns_alloc_answer(&packet->answers, MDNS_TYPE_SDPTR, service->service, false, false)) {
+                     _mdns_free_tx_packet(packet);
+                     return;
+                 }
+@@ -2988,7 +2988,7 @@ void _mdns_handle_system_event(system_event_id_t event, tcpip_adapter_if_t inter
+         break;
+     case SYSTEM_EVENT_STA_GOT_IP:
+         _mdns_enable_pcb(TCPIP_ADAPTER_IF_STA, MDNS_IP_PROTOCOL_V4);
+-        _mdns_announce_pcb(TCPIP_ADAPTER_IF_STA, MDNS_IP_PROTOCOL_V6, NULL, 0, true);
++        _mdns_announce_pcb(TCPIP_ADAPTER_IF_STA, MDNS_IP_PROTOCOL_V4, NULL, 0, true);
+         break;
+     case SYSTEM_EVENT_STA_DISCONNECTED:
+         _mdns_disable_pcb(TCPIP_ADAPTER_IF_STA, MDNS_IP_PROTOCOL_V4);
+@@ -2996,6 +2996,7 @@ void _mdns_handle_system_event(system_event_id_t event, tcpip_adapter_if_t inter
+         break;
+     case SYSTEM_EVENT_AP_START:
+         _mdns_enable_pcb(TCPIP_ADAPTER_IF_AP, MDNS_IP_PROTOCOL_V4);
++        _mdns_announce_pcb(TCPIP_ADAPTER_IF_AP, MDNS_IP_PROTOCOL_V4, NULL, 0, true);
+         break;
+     case SYSTEM_EVENT_AP_STOP:
+         _mdns_disable_pcb(TCPIP_ADAPTER_IF_AP, MDNS_IP_PROTOCOL_V4);
+@@ -3003,7 +3004,7 @@ void _mdns_handle_system_event(system_event_id_t event, tcpip_adapter_if_t inter
+         break;
+     case SYSTEM_EVENT_GOT_IP6:
+         _mdns_enable_pcb(interface, MDNS_IP_PROTOCOL_V6);
+-        _mdns_announce_pcb(interface, MDNS_IP_PROTOCOL_V4, NULL, 0, true);
++        _mdns_announce_pcb(interface, MDNS_IP_PROTOCOL_V6, NULL, 0, true);
+         break;
+     case SYSTEM_EVENT_ETH_CONNECTED:
+         if (!tcpip_adapter_dhcpc_get_status(TCPIP_ADAPTER_IF_ETH, &dcst)) {
+@@ -3014,6 +3015,7 @@ void _mdns_handle_system_event(system_event_id_t event, tcpip_adapter_if_t inter
+         break;
+     case SYSTEM_EVENT_ETH_GOT_IP:
+         _mdns_enable_pcb(TCPIP_ADAPTER_IF_ETH, MDNS_IP_PROTOCOL_V4);
++        _mdns_announce_pcb(TCPIP_ADAPTER_IF_ETH, MDNS_IP_PROTOCOL_V4, NULL, 0, true);
+         break;
+     case SYSTEM_EVENT_ETH_DISCONNECTED:
+         _mdns_disable_pcb(TCPIP_ADAPTER_IF_ETH, MDNS_IP_PROTOCOL_V4);
