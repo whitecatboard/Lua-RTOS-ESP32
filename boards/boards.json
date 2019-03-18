@@ -396,6 +396,30 @@
         "image": "https://wesp32.com/images/wesp32-iso-4-prog.jpg"
     },
     {
+      "id": "M5STACK",
+      "description": "M5Stack Core Board",
+      "manufacturer": "m5stack",
+      "brand": "",
+      "type": "M5STACK",
+      "subtype": "",
+      "filesystem": "default",
+      "usb_vid_pid": "10C4:EA60",
+      "usb_port_exp": "",
+      "image": "https://www.m5stack.com/assets/images/p_core.png"
+    },
+    {
+      "id": "M5STACK-OTA",
+      "description": "M5Stack Core Board whit OTA",
+      "manufacturer": "m5stack",
+      "brand": "",
+      "type": "M5STACK",
+      "subtype": "",
+      "filesystem": "default",
+      "usb_vid_pid": "10C4:EA60",
+      "usb_port_exp": "",
+      "image": "https://www.m5stack.com/assets/images/p_core.png"
+    },    
+    {
         "id": "GENERIC",
         "description": "Generic ESP32 board",
         "manufacturer": "Generic",
