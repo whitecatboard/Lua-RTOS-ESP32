@@ -72,10 +72,11 @@
 
 #include <drivers/wifi.h>
 #include <esp_wps.h>
+#include <esp_wpa2.h>
 #include <esp_smartconfig.h>
 #include <pthread.h>
 
-#define WIFI_LOG(m) syslog(LOG_DEBUG, m);
+#define WIFI_LOG(...) syslog(LOG_DEBUG, __VA_ARGS__);
 
 // This macro gets a reference for this driver into drivers array
 #define WIFI_DRIVER driver_get_by_name("wifi")
@@ -327,6 +328,8 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_
 
         interface = ESP_IF_WIFI_STA;
         if ((error = wifi_check_error(esp_wifi_set_config(interface, &wifi_config)))) return error;
+        if ((error = wifi_check_error(esp_wifi_sta_wpa2_ent_disable()))) return error;
+        WIFI_LOG("wpa2 enterprise disabled\n");
     }
     if (mode == WIFI_MODE_AP || mode == WIFI_MODE_APSTA) {
         // Setup mode and config related to desired mode
@@ -349,6 +352,114 @@ driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_
 
     if (powersave)
         if ((error = wifi_check_error(esp_wifi_set_ps(powersave)))) return error;
+
+    status_set(STATUS_WIFI_SETUP, 0x00000000);
+
+    // Set ip / mask / gw, if present
+    if (ip && mask && gw) {
+        ip_info.ip.addr = ip;
+        ip_info.netmask.addr = mask;
+        ip_info.gw.addr = gw;
+
+        tcpip_adapter_dhcpc_stop(ESP_IF_WIFI_STA);
+        tcpip_adapter_set_ip_info(ESP_IF_WIFI_STA, &ip_info);
+
+        // If present, set dns1, else set to 8.8.8.8
+        if (!dns1) dns1 = 134744072;
+        ip_addr_set_ip4_u32(dns_p, dns1);
+
+        dns_setserver(0, (const ip_addr_t *)&dns);
+
+        // If present, set dns2, else set to 8.8.4.4
+        if (!dns2) dns2 = 67373064;
+        ip_addr_set_ip4_u32(dns_p, dns2);
+
+        dns_setserver(1, (const ip_addr_t *)&dns);
+    }
+    return NULL;
+}
+
+driver_error_t *wifi_setup_enterprise(char *ssid, char *identity, char *username, char *password, unsigned char *cacert, int cacert_len, unsigned char *certificate, int certificate_len, unsigned char *privkey, int privkey_len, unsigned char *privpwd, int privpwd_len, int disabletimecheck, uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1, uint32_t dns2, int powersave, int channel) {
+   driver_error_t *error;
+    wifi_interface_t interface;
+    tcpip_adapter_ip_info_t ip_info;
+    ip_addr_t dns;
+    ip_addr_t *dns_p = &dns;
+
+    status_set(0x00000000, STATUS_WIFI_SETUP);
+
+    if (status_get(STATUS_WIFI_INITED)) {
+        wifi_mode_t curmode;
+        if ((error = wifi_check_error(esp_wifi_get_mode(&curmode)))) return error;
+        if (curmode == WIFI_MODE_AP) {
+            //in case of switching mode AP<->STA Stop wifi
+            if(status_get(STATUS_WIFI_STARTED)) {
+                if ((error = wifi_check_error(esp_wifi_stop()))) return error;
+                status_set(0x00000000, STATUS_WIFI_STARTED);
+            }
+            status_set(0x00000000, STATUS_WIFI_INITED);
+        }
+    }
+
+    // Attach wifi driver
+    if ((error = wifi_init(WIFI_MODE_STA))) return error;
+
+    // Setup mode and config related to desired mode
+    wifi_config_t wifi_config;
+    memset(&wifi_config, 0, sizeof(wifi_config_t));
+    strncpy((char *)wifi_config.sta.ssid, ssid, 32);
+    wifi_config.sta.channel = (channel ? channel : 0);
+
+    interface = ESP_IF_WIFI_STA;
+    if ((error = wifi_check_error(esp_wifi_set_config(interface, &wifi_config)))) return error;
+
+    if (powersave)
+        if ((error = wifi_check_error(esp_wifi_set_ps(powersave)))) return error;
+
+    if (disabletimecheck==0) {
+        esp_wifi_sta_wpa2_ent_set_disable_time_check(false);
+        WIFI_LOG("wpa2 enterprise certificate time check enabled\n");
+    } else if (disabletimecheck==1) {
+        esp_wifi_sta_wpa2_ent_set_disable_time_check(true);
+        WIFI_LOG("wpa2 enterprise certificate time check disabled\n");
+    }
+
+    esp_wifi_sta_wpa2_ent_clear_ca_cert();
+    if (cacert != NULL && cacert_len>0) {
+        if ((error = wifi_check_error(esp_wifi_sta_wpa2_ent_set_ca_cert(cacert, cacert_len)))) return error;
+        WIFI_LOG("wpa2 enterprise ca-cert set\n");
+    }
+
+    esp_wifi_sta_wpa2_ent_clear_cert_key();
+    if (certificate != NULL && certificate_len>0 && privkey != NULL && privkey_len>0) {
+        if ((error = wifi_check_error(esp_wifi_sta_wpa2_ent_set_cert_key(certificate, certificate_len, privkey, privkey_len, privpwd, privpwd_len)))) return error;
+        if (privpwd_len > 0) {
+            WIFI_LOG("wpa2 enterprise client certificate + key with password set\n");
+        } else {
+            WIFI_LOG("wpa2 enterprise client certificate + key set\n");
+        }
+    }
+
+    esp_wifi_sta_wpa2_ent_clear_identity();
+    if (identity != NULL && *identity != 0) {
+        if ((error = wifi_check_error(esp_wifi_sta_wpa2_ent_set_identity((uint8_t *)identity, strlen(identity))))) return error;
+        WIFI_LOG("wpa2 enterprise identity set to: %s\n", identity);
+    }
+
+    esp_wifi_sta_wpa2_ent_clear_username();
+    if (username != NULL && *username != 0) {
+        if ((error = wifi_check_error(esp_wifi_sta_wpa2_ent_set_username((uint8_t *)username, strlen(username))))) return error;
+        WIFI_LOG("wpa2 enterprise user set to: %s\n", username);
+    }
+    esp_wifi_sta_wpa2_ent_clear_password();
+    if (password != NULL && *password != 0) {
+        if ((error = wifi_check_error(esp_wifi_sta_wpa2_ent_set_password((uint8_t *)password, strlen(password))))) return error;
+        WIFI_LOG("wpa2 enterprise password set\n");
+    }
+
+    esp_wpa2_config_t config = WPA2_CONFIG_INIT_DEFAULT();
+    if ((error = wifi_check_error(esp_wifi_sta_wpa2_ent_enable(&config)))) return error;
+    WIFI_LOG("wpa2 enterprise enabled\n");
 
     status_set(STATUS_WIFI_SETUP, 0x00000000);
 
@@ -426,6 +537,7 @@ driver_error_t *wifi_stop() {
         return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NOT_INIT, NULL);
     }
 
+    esp_wifi_sta_wpa2_ent_disable();
     wifi_wps_disable();
     esp_smartconfig_stop();
 

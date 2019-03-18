@@ -87,6 +87,7 @@ extern const int wifi_error_map;
 
 driver_error_t *wifi_scan(uint16_t *count, wifi_ap_record_t **list);
 driver_error_t *wifi_setup(wifi_mode_t mode, char *ssid, char *password, uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1, uint32_t dns2, int powersave, int channel, int hidden);
+driver_error_t *wifi_setup_enterprise(char *ssid, char *identity, char *username, char *password, unsigned char *cacert, int cacert_len, unsigned char *certificate, int certificate_len, unsigned char *privkey, int privkey_len, unsigned char *privpwd, int privpwd_len, int disabletimecheck, uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1, uint32_t dns2, int powersave, int channel);
 driver_error_t *wifi_start(uint8_t async);
 driver_error_t *wifi_stop();
 driver_error_t *wifi_stat(ifconfig_t *info);
