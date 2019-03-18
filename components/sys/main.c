@@ -71,6 +71,8 @@ pthread_t lua_thread;
 #include <stdio.h>
 
 void *lua_start(void *arg) {
+	semtech_setup();
+
 	for(;;) {
 		luaos_main();
 	}

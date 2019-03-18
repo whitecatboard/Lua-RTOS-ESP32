@@ -928,6 +928,20 @@ menu "Lua RTOS"
                     bool "sx1301, used in multi-channel gateways"
             endchoice
 
+            choice LUA_RTOS_LORA_STACK
+                prompt "LoRa stack"
+                default LUA_RTOS_LORA_STACK_LMIC
+                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
+                help
+                    Select the LoRa stack.
+        
+                config LUA_RTOS_LORA_STACK_LMIC
+                    bool "LMIC"
+            
+                config LUA_RTOS_LORA_STACK_SEMTECH
+                    bool "Semtech"
+            endchoice
+
             choice LUA_RTOS_LORA_BAND
                 depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272 
                 prompt "ISM band"

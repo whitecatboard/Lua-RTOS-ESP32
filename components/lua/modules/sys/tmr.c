@@ -197,7 +197,7 @@ static int ltmr_hw_attach( lua_State* L ) {
 
     callbacks[id] = tmr->callback;
 
-    if ((error = tmr_setup(id, micros, callback_hw_func, 1))) {
+    if ((error = tmr_setup(id, micros, callback_hw_func, 1, 1))) {
         luaS_callback_destroy(tmr->callback);
         callbacks[id] = NULL;
         tmr->callback = NULL;

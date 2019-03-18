@@ -58,6 +58,8 @@ typedef struct{
 
 typedef struct {
 	uint8_t setup;
+	uint8_t restart;
+	uint64_t elapsed;
 	void (*callback)(void *);
 	uint8_t deferred;
 	timer_isr_handle_t isrh;
@@ -77,16 +79,26 @@ typedef void(*tmr_isr_t)(void *);
  * 		  tmr_start function.  No sanity checks are done (use only in driver develop).
  *
  * @param unit Hardware timer, from 0 to 3.
- * @param micros Period of timer, in microseconds.
- * @param callback Callback function to call every micros period.
- * @param deferred If 0, the callback are executed in the isr. If 1, the callback
+ * @param period Timer period, in microseconds.
+ * @param restart Restart timer when timer is expired.
+ * @param callback Callback function to call when timer is expired.
+ * @param deferred If 0, the callback are executed inside the isr. If 1, the callback
  *                 is deferred and is called outside the interrupt. Non deferred
  *                 callbacks must reside in IRAM.
  *
  * @return 0 if success, -1 if error (memory error)
  *
  */
-int tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t deferred);
+int tmr_ll_setup(int8_t unit, uint64_t period, void(*callback)(void *), uint8_t restart, uint8_t deferred);
+
+/**
+ * @brief Sets a new period for the timer. No sanity checks are done (use only in driver develop).
+ *
+ * @param unit Hardware timer, from 0 to 3.
+ * @param period Timer period, in microseconds.
+ */
+void tmr_ll_set_period(int8_t unit, uint64_t period);
+
 
 /**
  * @brief Removes a timer and the resources that uses.
@@ -94,29 +106,30 @@ int tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t
  *
  * @param unit Hardware timer, from 0 to 3.
  */
-void tmr_ll_unsetup(uint8_t unit);
+void tmr_ll_unsetup(int8_t unit);
 
 /**
  * @brief Start a previous configured timer. No sanity checks are done (use only in driver develop).
  *
  * @param unit Hardware timer, from 0 to 3.
  */
-void tmr_ll_start(uint8_t unit);
+void tmr_ll_start(int8_t unit);
 
 /**
  * @brief Stop a previous configured timer. No sanity checks are done (use only in driver develop).
  *
  * @param unit Hardware timer, from 0 to 3.
  */
-void tmr_ll_stop(uint8_t unit);
+void tmr_ll_stop(int8_t unit);
 
 /**
  * @brief Configures a timer. After timer is configured you must start timer using
  * 		  tmr_start function.
  *
  * @param unit Hardware timer, from 0 to 3.
- * @param micros Period of timer, in microseconds.
- * @param callback Callback function to call every micros period.
+ * @param period Timer period, in microseconds.
+ * @param restart Restart timer when timer is expired.
+ * @param callback Callback function to call when timer is expired.
  * @param deferred If 0, the callback are executed in the isr. If 1, the callback
  *                 is deferred and is called outside the interrupt. Non deferred
  *                 callbacks must reside in IRAM.
@@ -126,11 +139,30 @@ void tmr_ll_stop(uint8_t unit);
  *     - Pointer to driver_error_t if some error occurs.
  *
  *     	 TIMER_ERR_INVALID_UNIT
+ *     	 TIMER_ERR_IS_NOT_SETUP
  *     	 TIMER_ERR_INVALID_PERIOD
- *     	 SPI_ERR_DEVICE_IS_NOT_SELECTED
- *     	 SPI_ERR_NOT_ENOUGH_MEMORY
+ *     	 TIMER_ERR_NOT_ENOUGH_MEMORY
  */
-driver_error_t *tmr_setup(int8_t unit, uint32_t micros, void(*callback)(void *), uint8_t deferred);
+driver_error_t *tmr_setup(int8_t unit, uint64_t period, void(*callback)(void *), uint8_t restart, uint8_t deferred);
+
+
+/**
+ * @brief Sets a new period for the timer.
+ *
+ * @param unit Hardware timer, from 0 to 3.
+ * @param period Timer period, in microseconds.
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs.
+ *
+ *     	 TIMER_ERR_INVALID_UNIT
+ *     	 TIMER_ERR_IS_NOT_SETUP
+ *     	 TIMER_ERR_INVALID_PERIOD
+ */
+driver_error_t *tmr_set_period(int8_t unit, uint64_t period);
+
+driver_error_t *tmr_get_elapsed(int8_t unit, uint64_t *elapsed);
 
 /**
  * @brief Removes a timer and the resources that uses.
@@ -143,6 +175,7 @@ driver_error_t *tmr_setup(int8_t unit, uint32_t micros, void(*callback)(void *),
  *     - Pointer to driver_error_t if some error occurs.
  *
  *     	 TIMER_ERR_INVALID_UNIT
+ *     	 TIMER_ERR_IS_NOT_SETUP
  */
 driver_error_t *tmr_unsetup(int8_t unit);
 
@@ -155,6 +188,7 @@ driver_error_t *tmr_unsetup(int8_t unit);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
+ *     	 TIMER_ERR_INVALID_UNIT
  *     	 TIMER_ERR_IS_NOT_SETUP
  */
 driver_error_t *tmr_start(int8_t unit);
@@ -168,6 +202,7 @@ driver_error_t *tmr_start(int8_t unit);
  *     - NULL success
  *     - Pointer to driver_error_t if some error occurs.
  *
+ *     	 TIMER_ERR_INVALID_UNIT
  *     	 TIMER_ERR_IS_NOT_SETUP
  */
 driver_error_t *tmr_stop(int8_t unit);

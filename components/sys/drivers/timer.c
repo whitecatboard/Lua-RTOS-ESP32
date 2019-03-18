@@ -197,8 +197,11 @@ static void IRAM_ATTR isr(void *arg) {
     			tmr->timer[alarm.unit].callback((void *)((int)alarm.unit));
     		}
     	}
+
+    	timer_get_alarm_value(groupn, idx, &tmr->timer[unit].elapsed);
+
     	// Enable alarm again
-    	group->hw_timer[idx].config.alarm_en = 1;
+    	group->hw_timer[idx].config.alarm_en = tmr->timer[unit].restart;
     }
 
     if (high_priority_task_awoken == pdTRUE) {
@@ -210,7 +213,7 @@ static void IRAM_ATTR isr(void *arg) {
  * Low-level functions
  *
  */
-int tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t deferred) {
+int tmr_ll_setup(int8_t unit, uint64_t period, void(*callback)(void *), uint8_t restart, uint8_t deferred) {
 	int groupn, idx;
 
 	tmr_lock();
@@ -228,6 +231,8 @@ int tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t
 		tmr_unlock();
 		return 0;
 	}
+
+	tmr->timer[unit].restart = restart;
 
 	// For deferred callbacks a queue and a task is needed.
 	// In this case in the ISR a message is queued to the queue and callback is
@@ -257,8 +262,8 @@ int tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t
 	get_group_idx(unit, &groupn, &idx);
 
 	// Configure time and stop
-	// Timer is configure for decrement every 1 usec, so
-	// alarm valus is exactly the period, expressed in usec
+	// Timer is configure to decrement it's counter every 1 usec, so
+	// alarm value is exactly the period, expressed in usec
 	timer_config_t config;
 
 	config.alarm_en = 1;
@@ -273,7 +278,7 @@ int tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t
 
     // Set timer at required frequency
     timer_set_counter_value(groupn, idx, 0x00000000ULL);
-    timer_set_alarm_value(groupn, idx, micros);
+    timer_set_alarm_value(groupn, idx, period);
 
     // Enable timer interrupt
     timer_enable_intr(groupn, idx);
@@ -288,7 +293,7 @@ int tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t
 	return 0;
 }
 
-void tmr_ll_unsetup(uint8_t unit) {
+void tmr_ll_unsetup(int8_t unit) {
 	tmr_lock();
 
 	if (!tmr->timer[unit].setup) {
@@ -338,7 +343,7 @@ void tmr_ll_unsetup(uint8_t unit) {
 	tmr_unlock();
 }
 
-void tmr_ll_start(uint8_t unit) {
+void tmr_ll_start(int8_t unit) {
 	int groupn, idx;
 
 	tmr_lock();
@@ -347,7 +352,7 @@ void tmr_ll_start(uint8_t unit) {
 	tmr_unlock();
 }
 
-void tmr_ll_stop(uint8_t unit) {
+void tmr_ll_stop(int8_t unit) {
 	int groupn, idx;
 
 	tmr_lock();
@@ -356,20 +361,42 @@ void tmr_ll_stop(uint8_t unit) {
 	tmr_unlock();
 }
 
+void tmr_ll_set_period(int8_t unit, uint64_t period) {
+	int groupn, idx;
+
+	tmr_lock();
+	get_group_idx(unit, &groupn, &idx);
+    timer_set_counter_value(groupn, idx, 0x00000000ULL);
+    timer_set_alarm_value(groupn, idx, period);
+	timer_set_alarm(groupn, idx, 1);
+	tmr->timer[unit].elapsed = 0;
+	tmr_unlock();
+}
+
+void tmr_ll_get_elapsed(int8_t unit, uint64_t *elapsed) {
+	int groupn, idx;
+
+	tmr_lock();
+	get_group_idx(unit, &groupn, &idx);
+	timer_get_counter_value(groupn, idx, elapsed);
+	*elapsed += tmr->timer[unit].elapsed;
+	tmr_unlock();
+}
+
 /*
  * Operation functions
  */
-driver_error_t *tmr_setup(int8_t unit, uint32_t micros, void(*callback)(void *), uint8_t deferred) {
+driver_error_t *tmr_setup(int8_t unit, uint64_t period, void(*callback)(void *), uint8_t restart, uint8_t deferred) {
 	// Sanity checks
 	if ((unit < CPU_FIRST_TIMER) || (unit > CPU_LAST_TIMER)) {
 		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
 	}
 
-	if (micros < 5) {
+	if ((period != 0) && (period < 5)) {
 		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_PERIOD, NULL);
 	}
 
-	if (tmr_ll_setup(unit, micros, callback, deferred) < 0) {
+	if (tmr_ll_setup(unit, period, callback, restart, deferred) < 0) {
 		return driver_error(TIMER_DRIVER, TIMER_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
@@ -380,6 +407,10 @@ driver_error_t *tmr_unsetup(int8_t unit) {
 	// Sanity checks
 	if ((unit < CPU_FIRST_TIMER) || (unit > CPU_LAST_TIMER)) {
 		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
+	}
+
+	if (!tmr || !tmr->timer[unit].setup) {
+		return driver_error(TIMER_DRIVER, TIMER_ERR_IS_NOT_SETUP, NULL);
 	}
 
 	tmr_ll_unsetup(unit);
@@ -393,7 +424,7 @@ driver_error_t *tmr_start(int8_t unit) {
 		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
 	}
 
-	if (!tmr->timer[unit].setup) {
+	if (!tmr || !tmr->timer[unit].setup) {
 		return driver_error(TIMER_DRIVER, TIMER_ERR_IS_NOT_SETUP, NULL);
 	}
 
@@ -408,11 +439,45 @@ driver_error_t *tmr_stop(int8_t unit) {
 		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
 	}
 
-	if (!tmr->timer[unit].setup) {
+	if (!tmr || !tmr->timer[unit].setup) {
 		return driver_error(TIMER_DRIVER, TIMER_ERR_IS_NOT_SETUP, NULL);
 	}
 
 	tmr_ll_stop(unit);
+
+	return NULL;
+}
+
+driver_error_t *tmr_set_period(int8_t unit, uint64_t period) {
+	// Sanity checks
+	if ((unit < CPU_FIRST_TIMER) || (unit > CPU_LAST_TIMER)) {
+		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
+	}
+
+	if (!tmr || !tmr->timer[unit].setup) {
+		return driver_error(TIMER_DRIVER, TIMER_ERR_IS_NOT_SETUP, NULL);
+	}
+
+	if ((period != 0) && (period < 5)) {
+		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_PERIOD, NULL);
+	}
+
+	tmr_ll_set_period(unit, period);
+
+	return NULL;
+}
+
+driver_error_t *tmr_get_elapsed(int8_t unit, uint64_t *elapsed) {
+	// Sanity checks
+	if ((unit < CPU_FIRST_TIMER) || (unit > CPU_LAST_TIMER)) {
+		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
+	}
+
+	if (!tmr || !tmr->timer[unit].setup) {
+		return driver_error(TIMER_DRIVER, TIMER_ERR_IS_NOT_SETUP, NULL);
+	}
+
+	tmr_ll_get_elapsed(unit, elapsed);
 
 	return NULL;
 }

@@ -43,8 +43,8 @@
  *
  */
 
-#ifndef __GPIO_H__
-#define __GPIO_H__
+#ifndef __SYS_DRIVERS_GPIO_H__
+#define __SYS_DRIVERS_GPIO_H__
 
 #include "driver/rmt.h"
 #include "driver/periph_ctrl.h"

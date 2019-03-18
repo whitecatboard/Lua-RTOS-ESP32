@@ -150,11 +150,11 @@ static void spi_init() {
 }
 
 static void spi_lock(uint8_t unit) {
-    xSemaphoreTakeRecursive(spi_bus[spi_idx(unit)].mtx, portMAX_DELAY);
+    //xSemaphoreTakeRecursive(spi_bus[spi_idx(unit)].mtx, portMAX_DELAY);
 }
 
 static void spi_unlock(uint8_t unit) {
-    while (xSemaphoreGiveRecursive(spi_bus[spi_idx(unit)].mtx) == pdTRUE);
+    //while (xSemaphoreGiveRecursive(spi_bus[spi_idx(unit)].mtx) == pdTRUE);
 }
 
 static void spi_enable_unit(uint8_t unit) {

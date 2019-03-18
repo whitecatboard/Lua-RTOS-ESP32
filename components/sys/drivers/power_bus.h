@@ -43,8 +43,8 @@
  *
  */
 
-#ifndef _POWER_BUS_H
-#define _POWER_BUS_H
+#ifndef __SYS_DRIVERS_POWER_BUS_H__
+#define __SYS_DRIVERS_POWER_BUS_H__
 
 #include <sys/driver.h>
 

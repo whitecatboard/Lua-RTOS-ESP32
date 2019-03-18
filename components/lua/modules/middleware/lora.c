@@ -62,7 +62,7 @@ void lora_gw_start();
 #endif
 
 #if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
-#include <lora/node/lmic/lora.h>
+#include <lora/node/common/lora.h>
 #include <lora/gateway/single_channel/gateway.h>
 
 #include <drivers/uart.h>

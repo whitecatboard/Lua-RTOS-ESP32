@@ -66,8 +66,8 @@
  *
  */
 
-#ifndef _SPI_H_
-#define _SPI_H_
+#ifndef __SYS_DRIVERS_SPI_H__
+#define __SYS_DRIVERS_SPI_H__
 
 #include "driver/spi_master.h"
 

@@ -268,7 +268,7 @@ driver_error_t *gpio_debouncing_register(uint8_t pin, uint16_t threshold, gpio_d
     if (!setup) {
         // Configure a timer, but don't start timer, because timer is started when a
         // GPIO interrupt is raised
-        if ((error = tmr_setup(0, GPIO_DEBOUNCING_PERIOD, debouncing_isr, 0))) {
+        if ((error = tmr_setup(0, GPIO_DEBOUNCING_PERIOD, debouncing_isr, 1, 0))) {
             mtx_unlock(&debouncing->mtx);
 
             return error;
