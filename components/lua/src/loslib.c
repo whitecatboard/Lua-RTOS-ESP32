@@ -457,7 +457,9 @@ static int os_setlocale (lua_State *L) {
   return 1;
 }
 
-
+#if __XTENSA__
+extern __NOINIT_ATTR uint32_t backtrace_count;
+#endif
 static int os_exit (lua_State *L) {
   int status;
   if (lua_isboolean(L, 1))
@@ -466,6 +468,12 @@ static int os_exit (lua_State *L) {
     status = (int)luaL_optinteger(L, 1, EXIT_SUCCESS);
   if (lua_toboolean(L, 2))
     lua_close(L);
+#if __XTENSA__
+  if (EXIT_SUCCESS==status) {
+      backtrace_count = 0;
+      esp_restart(); /* restart without panic'ing */
+  }
+#endif
   if (L) exit(status);  /* 'if' to avoid warnings for unreachable 'return' */
   return 0;
 }
@@ -481,6 +489,7 @@ static const LUA_REG_TYPE syslib[] =
   { LSTRKEY( "remove" ),      LFUNCVAL( os_remove ) },
   { LSTRKEY( "rename" ),      LFUNCVAL( os_rename ) },
   { LSTRKEY( "time" ),        LFUNCVAL( os_time ) },
+  { LSTRKEY( "settime" ),     LFUNCVAL( os_settime ) },
   { LSTRKEY( "tmpname" ),     LFUNCVAL( os_tmpname ) },
   { LSTRKEY( "exit" ),        LFUNCVAL( os_exit ) },
   { LSTRKEY( "execute" ),     LFUNCVAL( os_execute ) },
@@ -506,6 +515,10 @@ static const LUA_REG_TYPE syslib[] =
   { LSTRKEY( "mkdir" ),       LFUNCVAL( os_mkdir ) },
   { LSTRKEY( "logcons" ),     LFUNCVAL( os_logcons ) },
   { LSTRKEY( "loglevel" ),    LFUNCVAL( os_loglevel ) },
+  { LSTRKEY( "syslog" ),      LFUNCVAL( os_syslog ) },
+#if CONFIG_LUA_RTOS_USE_RSYSLOG
+  { LSTRKEY( "rsyslog" ),     LFUNCVAL( os_setrsyslog ) },
+#endif
   { LSTRKEY( "stats" ),       LFUNCVAL( os_stats ) },
   { LSTRKEY( "format" ),      LFUNCVAL( os_format ) },
   { LSTRKEY( "history" ),     LFUNCVAL( os_history ) },

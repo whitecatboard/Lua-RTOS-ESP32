@@ -124,4 +124,6 @@ uint8_t gpio_name(uint8_t pin);
 		) \
 	)
 
+#define gpio_ignore_error(e,s) if (((e) = (s)) != NULL) free(e);
+
 #endif

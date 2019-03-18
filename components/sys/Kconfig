@@ -367,7 +367,7 @@ menu "Lua RTOS"
       endmenu
 
       menu "Network services"
-         menu "OpenVPN"
+         menu "OpenVPN client"
             config LUA_RTOS_USE_OPENVPN
                bool "Enable OpenVPN client support"
                default n
@@ -463,7 +463,7 @@ menu "Lua RTOS"
             config LUA_RTOS_HTTP_SERVER_STACK_SIZE
                 depends on LUA_RTOS_USE_HTTP_SERVER
                 int "HTTP thread stack size"
-                range 10240 20480
+                range 4096 20480
                 default 10240
                 help
                     Default stack size assigned to HTTP thread.
@@ -483,6 +483,28 @@ menu "Lua RTOS"
                 default 1
                 help
                     CPU affinity for the task assigned to the HTTP server.              
+        endmenu
+
+        menu "Rsyslog client"
+            config LUA_RTOS_USE_RSYSLOG
+                bool "Enable rsyslog client support"
+                default y
+
+            config LUA_RTOS_RSYSLOG_SERVER
+                depends on LUA_RTOS_USE_RSYSLOG
+                string "Default rsyslog server address"
+                default "0.0.0.0"
+                help
+                    Empty string or 0.0.0.0 to disable at boot-up
+
+            config LUA_RTOS_RSYSLOG_PORT
+                depends on LUA_RTOS_USE_RSYSLOG
+                int "Rsyslog server port"
+                range 0 65536
+                default 514
+                help
+                    UDP port where Rsyslog server listens
+
         endmenu
 
         menu "TELNET server"
@@ -531,7 +553,7 @@ menu "Lua RTOS"
                 help
                     Default stack size assigned to TELNET thread.
 
-         endmenu
+        endmenu
 
       endmenu
 
@@ -1505,6 +1527,10 @@ menu "Lua RTOS"
    
             config LUA_RTOS_LUA_USE_PACKAGE
                bool "Include package module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_CRC
+               bool "Include crc module in build"
                default y
          endmenu
          menu "Lua RTOS Modules"    

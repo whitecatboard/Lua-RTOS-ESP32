@@ -433,8 +433,9 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
         nread = read(l->ifd,&c,1);
 
         if (nread <= 0) {
+        	int len = l->len;
         	free(l);
-        	return l->len;
+        	return len;
         }
 
         switch(c) {
@@ -443,8 +444,9 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
                 if(!l->password) linenoiseHistoryAdd(l);
             }
             
-        	free(l);
-            return (int)l->len;
+            int len = l->len;
+            free(l);
+            return (int)len;
         case CTRL_C:     /* ctrl-c */
             errno = EAGAIN;
         	free(l);

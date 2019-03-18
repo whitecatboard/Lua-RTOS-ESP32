@@ -43,7 +43,7 @@
  *
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_TMR
 
@@ -176,7 +176,7 @@ static int ltmr_hw_attach( lua_State* L ) {
     driver_error_t *error;
 
     int id = luaL_checkinteger(L, 1);
-    uint32_t micros = luaL_checkinteger(L, 2);
+    int32_t micros = (int)luaL_checknumber(L, 2);
     if (micros < 500) {
         return luaL_exception(L, TIMER_ERR_INVALID_PERIOD);
     }
@@ -217,7 +217,7 @@ static int ltmr_sw_attach( lua_State* L ) {
         return luaL_exception(L, TIMER_ERR_NOT_ENOUGH_MEMORY);
     }
 
-    uint32_t millis = luaL_checkinteger(L, 1);
+    int32_t millis = (int)luaL_checknumber(L, 1);
     if (millis < 1) {
         return luaL_exception(L, TIMER_ERR_INVALID_PERIOD);
     }

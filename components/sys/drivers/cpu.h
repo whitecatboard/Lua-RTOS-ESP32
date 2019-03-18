@@ -382,4 +382,6 @@ int cpu_reset_reason();
 int cpu_wakeup_reason();
 uint8_t cpu_gpio_number(uint8_t pin);
 void cpu_show_flash_info();
-uint32_t cpu_speed();
+uint32_t cpu_speed() __attribute__((deprecated));
+uint32_t cpu_speed_mhz();
+uint32_t cpu_speed_hz();

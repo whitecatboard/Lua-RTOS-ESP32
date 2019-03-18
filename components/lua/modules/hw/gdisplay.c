@@ -22,6 +22,7 @@
 #include "tjpgd.h"
 #include <math.h>
 #include "sys/status.h"
+#include "sys/syslog.h"
 
 #include "lua.h"
 #include "lualib.h"
@@ -40,10 +41,10 @@
 #define GDISPLAY_CUSTOM          4
 
 // Default colors
-static uint32_t background;
-static uint32_t foreground;
-static uint32_t stroke;
-static uint32_t fill;
+static uint32_t static_background;
+static uint32_t static_foreground;
+static uint32_t static_stroke;
+static uint32_t static_fill;
 
 static uint8_t lgdisplay_get_point(lua_State* L, uint8_t n, int *x, int *y) {
 	if ((lua_gettop(L) < n)) {
@@ -97,10 +98,10 @@ static uint32_t lgdisplay_get_color(lua_State* L, uint8_t n, uint8_t mandatory, 
 	// If not color, and not custom, return current default color
 	if ((lua_gettop(L) < n) && (which != GDISPLAY_CUSTOM)) {
 		switch (which) {
-			case GDISPLAY_CURR_BACKGROUND: return background;
-			case GDISPLAY_CURR_FOREGROUND: return foreground;
-			case GDISPLAY_CURR_STROKE: return stroke;
-			case GDISPLAY_CURR_FILL: return fill;
+			case GDISPLAY_CURR_BACKGROUND: return static_background;
+			case GDISPLAY_CURR_FOREGROUND: return static_foreground;
+			case GDISPLAY_CURR_STROKE:     return static_stroke;
+			case GDISPLAY_CURR_FILL:       return static_fill;
 		}
 	}
 
@@ -126,19 +127,17 @@ static uint32_t lgdisplay_get_color(lua_State* L, uint8_t n, uint8_t mandatory, 
 		if (error) {
 			return luaL_driver_error(L, error);
 		}
-
-		return color;
 	} else {
 		int r, g, b;
-		uint32_t color = luaL_checkinteger(L, n);
+		color = luaL_checkinteger(L, n);
 
 		error = gdisplay_color_to_rgb(color, &r, &g, &b);
 		if (error) {
 			return luaL_driver_error(L, error);
 		}
-
-		return color;
 	}
+
+	return color;
 }
 
 static uint8_t lgdisplay_getbool(lua_State *L, uint8_t n) {
@@ -172,13 +171,13 @@ static int lgdisplay_gettype(lua_State *L) {
 		return luaL_driver_error(L, error);
 	}
 
-    lua_pushinteger( L, type);
+	lua_pushinteger( L, type);
 	return 1;
 }
 
 //=========================================
 static int lgdisplay_set_brightness(lua_State *L) {
-    return 0;
+	return 0;
 }
 
 //======================================
@@ -196,32 +195,32 @@ static int lgdisplay_clear( lua_State* L ) {
 		return luaL_driver_error(L, error);
 	}
 
-	stroke = GDISPLAY_WHITE;
-	foreground = GDISPLAY_WHITE;;
-	background = GDISPLAY_BLACK;
+	static_stroke = GDISPLAY_WHITE;
+	static_foreground = GDISPLAY_WHITE;;
+	static_background = GDISPLAY_BLACK;
 
-    return 0;
+	return 0;
 }
 
 static int lgdisplay_foreground(lua_State* L) {
-	foreground = lgdisplay_get_color(L, 1, 1, 0, 0);
-    return 0;
+	static_foreground = lgdisplay_get_color(L, 1, 1, 0, 0);
+	return 0;
 }
 
 static int lgdisplay_background(lua_State* L) {
-	background = lgdisplay_get_color(L, 1, 1, 0, 0);
-    return 0;
+	static_background = lgdisplay_get_color(L, 1, 1, 0, 0);
+	return 0;
 }
 
 static int lgdisplay_stroke(lua_State* L) {
-	stroke = lgdisplay_get_color(L, 1, 1, 0, 0);
-    return 0;
+	static_stroke = lgdisplay_get_color(L, 1, 1, 0, 0);
+	return 0;
 }
 
 static int lgdisplay_setcolor(lua_State* L) {
-	foreground = lgdisplay_get_color(L, 1, 1, 0, 0);
-	stroke = lgdisplay_get_color(L, 1, 1, 0, 0);
-    return 0;
+	static_foreground = lgdisplay_get_color(L, 1, 1, 0, 0);
+	static_stroke = lgdisplay_get_color(L, 1, 1, 0, 0);
+	return 0;
 }
 
 
@@ -338,14 +337,14 @@ static int lgdisplay_getscreensize( lua_State* L ) {
 	int height;
 
 	error = gdisplay_width(&width);
-    if (error) {
-        return luaL_driver_error(L, error);
-    }
+	if (error) {
+		return luaL_driver_error(L, error);
+	}
 
 	error = gdisplay_height(&height);
-    if (error) {
-        return luaL_driver_error(L, error);
-    }
+	if (error) {
+		return luaL_driver_error(L, error);
+	}
 
 	lua_pushinteger( L, width);
 	lua_pushinteger( L, height);
@@ -426,9 +425,9 @@ static int lgdisplay_setclipwin( lua_State* L ) {
 
 //=========================================
 static int lgdisplay_resetclipwin( lua_State* L ) {
-    driver_error_t *error;
+	driver_error_t *error;
 
-    error = gdisplay_reset_clip_window();
+	error = gdisplay_reset_clip_window();
 	if (error) {
 		return luaL_driver_error(L, error);
 	}
@@ -455,40 +454,40 @@ static int lgdisplay_getclipwin( lua_State* L ) {
 
 //=====================================
 static int lgdisplay_HSBtoRGB( lua_State* L ) {
-    driver_error_t *error;
+	driver_error_t *error;
 	uint32_t color;
 
 	float hue = luaL_checknumber(L, 1);
 	float sat = luaL_checknumber(L, 2);
 	float bri = luaL_checknumber(L, 3);
 
-    error = gdisplay_hsb(hue, sat, bri, &color);
+	error = gdisplay_hsb(hue, sat, bri, &color);
 	if (error) {
 		return luaL_driver_error(L, error);
 	}
 
-    lua_pushinteger(L, color);
+	lua_pushinteger(L, color);
 
-    return 1;
+	return 1;
 }
 
 static int lgdisplay_rgb_to_color(lua_State* L) {
-    driver_error_t *error;
+	driver_error_t *error;
 	int r, g, b;
 	uint32_t color;
 
-    r = luaL_checkinteger(L, 1);
-    g = luaL_checkinteger(L, 2);
-    b = luaL_checkinteger(L, 3);
+	r = luaL_checkinteger(L, 1);
+	g = luaL_checkinteger(L, 2);
+	b = luaL_checkinteger(L, 3);
 
-    error = gdisplay_rgb_to_color(r, g, b, &color);
+	error = gdisplay_rgb_to_color(r, g, b, &color);
 	if (error) {
 		return luaL_driver_error(L, error);
 	}
 
-    lua_pushinteger(L, color);
+	lua_pushinteger(L, color);
 
-    return 1;
+	return 1;
 }
 //=====================================
 static int lgdisplay_putpixel( lua_State* L ) {
@@ -501,7 +500,7 @@ static int lgdisplay_putpixel( lua_State* L ) {
 
 	error = gdisplay_set_pixel(x, y, lgdisplay_get_color(L, n, 0, GDISPLAY_CURR_STROKE, 0));
 	if (error) {
-        return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
 	return 0;
@@ -519,7 +518,7 @@ static int lgdisplay_getpixel( lua_State* L ) {
 
 	error = gdisplay_get_pixel(x, y, &color);
 	if (error) {
-        return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
 	lua_pushinteger(L, color);
@@ -534,21 +533,21 @@ static int lgdisplay_getwindow( lua_State* L )
 	_check(L);
 	if (checkParam(4, L)) return 0;
 
-    int out_type = 0;
-    luaL_Buffer b;
-    char hbuf[8];
+	int out_type = 0;
+	luaL_Buffer b;
+	char hbuf[8];
 
-    if ((lua_gettop(L) > 4) && (lua_isstring(L, 4))) {
-        const char* sarg;
-        size_t sarglen;
-        sarg = luaL_checklstring(L, 5, &sarglen);
-        if (sarglen == 2) {
-        	if (strstr(sarg, "*h") != NULL) out_type = 1;
-        	else if (strstr(sarg, "*t") != NULL) out_type = 2;
-        }
-    }
+	if ((lua_gettop(L) > 4) && (lua_isstring(L, 4))) {
+		const char* sarg;
+		size_t sarglen;
+		sarg = luaL_checklstring(L, 5, &sarglen);
+		if (sarglen == 2) {
+			if (strstr(sarg, "*h") != NULL) out_type = 1;
+			else if (strstr(sarg, "*t") != NULL) out_type = 2;
+		}
+	}
 
-    int16_t x = luaL_checkinteger( L, 1 );
+	int16_t x = luaL_checkinteger( L, 1 );
 	int16_t y = luaL_checkinteger( L, 2 );
 	int w = luaL_checkinteger( L, 3 );
 	int h = luaL_checkinteger( L, 3 );
@@ -565,16 +564,16 @@ static int lgdisplay_getwindow( lua_State* L )
 	else if ((x < 0) || (x > (_width-1))) f= 1;
 	else if (len > (TFT_LINEBUF_MAX_SIZE)) f = 1;
 	if (f) {
-        return luaL_error( L, "wrong coordinates or size > %d", TFT_LINEBUF_MAX_SIZE );
+		return luaL_error( L, "wrong coordinates or size > %d", TFT_LINEBUF_MAX_SIZE );
 	}
 
 	int err = read_data(x, y, x+w, y+h, len, (uint8_t *)tft_line);
-    if (err < 0) {
-        return luaL_error( L, "Error reading display data (%d)", err );
-    }
+	if (err < 0) {
+		return luaL_error( L, "Error reading display data (%d)", err );
+	}
 
-    if (out_type < 2) luaL_buffinit(L, &b);
-    else lua_newtable(L);
+	if (out_type < 2) luaL_buffinit(L, &b);
+	else lua_newtable(L);
 
 	if (out_type == 0) {
 		luaL_addlstring(&b, (const char *)tft_line, len);
@@ -592,9 +591,9 @@ static int lgdisplay_getwindow( lua_State* L )
 		}
 	}
 
-    if (out_type < 2) luaL_pushresult(&b);
+	if (out_type < 2) luaL_pushresult(&b);
 #endif
-    return 1;
+	return 1;
 }
 
 //=====================================
@@ -612,7 +611,7 @@ static int lgdisplay_drawline( lua_State* L ) {
 	// Display
 	error = gdisplay_line(x0, y0, x1, y1, lgdisplay_get_color(L, n, 0, GDISPLAY_CURR_STROKE, 0));
 	if (error) {
-        return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
 	return 0;
@@ -638,7 +637,7 @@ static int lgdisplay_drawlineByAngle( lua_State* L ) {
 	// Display
 	error = gdisplay_line_by_angle(x0, y0, (int)length, (int)angle, (int)start, 0, color);
 	if (error) {
-        return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
 	return 0;
@@ -674,7 +673,7 @@ static int lgdisplay_rect( lua_State* L ) {
 	}
 
 	if (error) {
-        return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
 	return 0;
@@ -711,7 +710,7 @@ static int lgdisplay_roundrect( lua_State* L ) {
 	}
 
 	if (error) {
-        return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
 	return 0;
@@ -778,7 +777,7 @@ static int lgdisplay_ellipse( lua_State* L ) {
 	}
 
 	if (error) {
-        return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
 	return 0;
@@ -811,7 +810,7 @@ static int lgdisplay_arc( lua_State* L ) {
 	}
 
 	if (error) {
-        return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
 	return 0;
@@ -844,7 +843,7 @@ static int lgdisplay_poly( lua_State* L ) {
 	}
 
 	if (error) {
-        return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
 	return 0;
@@ -874,7 +873,7 @@ static int lgdisplay_star( lua_State* L ) {
 	}
 
 	if (error) {
-        return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
 	return 0;
@@ -904,7 +903,7 @@ static int lgdisplay_triangle( lua_State* L ) {
 	}
 
 	if (error) {
-        return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
 	return 0;
@@ -927,7 +926,7 @@ static int lgdisplay_writepos( lua_State* L ) {
 
 	error = gdisplay_string_pos(x, y, buf, &px, &py, &pw, &ph);
 	if (error) {
-        return luaL_driver_error(L, error);
+		return luaL_driver_error(L, error);
 	}
 
 	if ((px == -1) && (py == -1)) {
@@ -1027,7 +1026,7 @@ static int lgdisplay_image( lua_State* L ) {
 			}
 			break;
 		case JPGImage:
-		    max_scale = luaL_optinteger( L, n, 0);
+			max_scale = luaL_optinteger( L, n, 0);
 
 			error = gdisplay_image_jpg(x, y, max_scale, fname);
 			if (error) {
@@ -1039,6 +1038,211 @@ static int lgdisplay_image( lua_State* L ) {
 			break;
 	}
 
+	return 0;
+}
+
+static int lgdisplay_qrcode( lua_State* L ) {
+	driver_error_t *error;
+
+	int n = 1;
+	int sx, sy;
+	size_t len;
+	const char *buf = 0;
+
+	// Get point / maxscale / filename
+	n = lgdisplay_get_point(L, n, &sx, &sy);
+
+	// Get file name
+	int text_to_encode = n;
+	if (!lua_istable(L, text_to_encode)) {
+		luaL_checktype( L, n, LUA_TSTRING );
+		buf = lua_tolstring( L, n++, &len );
+	}
+	else n++;
+
+	uint8_t errCorLvl = luaL_optinteger( L, n++, qrcodegen_Ecc_LOW);
+	uint8_t multi = luaL_optinteger( L, n++, 1);
+
+	// Make and print the QR Code symbol
+	uint8_t *qrcode = NULL;
+	qrcode = malloc(qrcodegen_BUFFER_LEN_MAX);
+	if (!qrcode) {
+		luaL_exception_extended(L, GDISPLAY_ERR_NOT_ENOUGH_MEMORY, "error allocating qrcode image buffer");
+	}
+	uint8_t *tempBuffer = NULL;
+	tempBuffer = malloc(qrcodegen_BUFFER_LEN_MAX);
+	if (!qrcodegen_BUFFER_LEN_MAX) {
+		free(qrcode);
+		luaL_exception_extended(L, GDISPLAY_ERR_NOT_ENOUGH_MEMORY, "error allocating qrcode temp buffer");
+	}
+
+	bool ok = false;
+	if (lua_istable(L, text_to_encode)) {
+		#define MAX_SEGMENTS 10
+		struct qrcodegen_Segment text_segments[MAX_SEGMENTS];
+		int num_segments = 0;
+
+		// Push another reference to the master table on top of the stack (so we know
+		// where it is, and this function can work for negative, positive and
+		// pseudo indices
+		lua_pushvalue(L, text_to_encode);
+		// stack now contains: -1 => table
+		lua_pushnil(L);
+		// stack now contains: -1 => nil; -2 => table
+		while (lua_next(L, -2))
+		{
+			// stack now contains: -1 => value; -2 => key; -3 => table
+			// copy the key so that lua_tostring does not modify the original
+			lua_pushvalue(L, -2);
+			// stack now contains: -1 => key; -2 => value; -3 => key; -4 => table
+			// note: this "parent" array has no "string" key
+			// note: this "parent" array value is a table
+
+			int mode = 0;
+			char *text = 0;
+
+			// Push another reference to the child table on top of the stack (so we know
+			// where it is, and this function can work for negative, positive and
+			// pseudo indices
+			lua_pushvalue(L, -2);
+			// stack now contains: -1 => table
+			lua_pushnil(L);
+			// stack now contains: -1 => nil; -2 => table
+			while (lua_next(L, -2))
+			{
+				// stack now contains: -1 => value; -2 => key; -3 => table
+				// copy the key so that lua_tostring does not modify the original
+				lua_pushvalue(L, -2);
+				// stack now contains: -1 => key; -2 => value; -3 => key; -4 => table
+				const char *key = lua_tostring(L, -1);
+				const char *value = lua_tostring(L, -2);
+
+				if (!strcasecmp(key,"mode"))  { mode = lua_tointeger(L, -2); }
+				if (!strcasecmp(key,"text"))  { if(text) free(text); text = strdup(value); }
+				if (!strcasecmp(key,"val"))   { if(text) free(text); text = strdup(value); }
+				if (!strcasecmp(key,"value")) { if(text) free(text); text = strdup(value); }
+
+				// pop value + copy of key, leaving original key
+				lua_pop(L, 2);
+				// stack now contains: -1 => key; -2 => table
+			}
+			// stack now contains: -1 => table (when lua_next returns 0 it pops the key
+			// but does not push anything.)
+			// Pop table
+			lua_pop(L, 1);
+			// Stack is now the same as it was on entry to this function
+
+			if (text && num_segments < MAX_SEGMENTS) {
+				syslog(LOG_DEBUG, "gdisplay: encoding segment type %i value '%s' ...\n", mode, text);
+				uint8_t *segBuf = malloc(qrcodegen_calcSegmentBufferSize((enum qrcodegen_Mode)mode, strlen(text)) * sizeof(uint8_t));
+				switch(mode) {
+					case qrcodegen_Mode_NUMERIC:
+						text_segments[num_segments] = qrcodegen_makeNumeric(text, segBuf);
+						break;
+					case qrcodegen_Mode_ALPHANUMERIC:
+						text_segments[num_segments] = qrcodegen_makeAlphanumeric(text, segBuf);
+						break;
+					case qrcodegen_Mode_BYTE:
+						text_segments[num_segments] = qrcodegen_makeBytes((const uint8_t *)text, strlen(text), segBuf);
+						break;
+					case qrcodegen_Mode_ECI:
+						text_segments[num_segments] = qrcodegen_makeEci(atol(text), segBuf);
+						break;
+					default:
+						syslog(LOG_WARNING, "gdisplay: invalid mode %i, ignoring segment '%s'\n", mode, text);
+				}
+				num_segments++;
+
+				free(text);
+				text = 0;
+			} else if (text) {
+				syslog(LOG_WARNING, "gdisplay: maximum number of segments reached, ignoring segment '%s' with mode %i\n", text, mode);
+			} else {
+				syslog(LOG_WARNING, "gdisplay: no content found, ignoring mode %i\n", mode);
+			}
+
+			// pop value + copy of key, leaving original key
+			lua_pop(L, 2);
+			// stack now contains: -1 => key; -2 => table
+		}
+		// stack now contains: -1 => table (when lua_next returns 0 it pops the key
+		// but does not push anything.)
+		// Pop table
+		lua_pop(L, 1);
+		// Stack is now the same as it was on entry to this function
+
+
+		if (num_segments>0) {
+			syslog(LOG_DEBUG, "gdisplay: found %i segments, now encoding ...\n", num_segments);
+			ok = qrcodegen_encodeSegmentsAdvanced((const struct qrcodegen_Segment *)&text_segments, num_segments, errCorLvl,
+				qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true, tempBuffer, qrcode);
+		}
+
+		for (int i=0; i<num_segments; i++) {
+			free(text_segments[i].data);
+		}
+	}
+	else {
+		ok = qrcodegen_encodeText(buf, tempBuffer, qrcode, errCorLvl,
+			qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+	}
+
+	if (ok) {
+		int foreground = lgdisplay_get_color(L, n + 1, 0, GDISPLAY_CURR_FOREGROUND, 0);
+		int background = lgdisplay_get_color(L, n + 2, 0, GDISPLAY_CURR_BACKGROUND, 0);
+
+		int size = qrcodegen_getSize(qrcode);
+		syslog(LOG_DEBUG, "gdisplay: qrcode size is %i\n", size);
+		if (multi>1) {
+			syslog(LOG_DEBUG, "gdisplay: qrcode height/width is %i\n", size*multi);
+		}
+		int border = 0;
+		error = gdisplay_lock();
+		if (error) {
+			free(qrcode);
+			free(tempBuffer);
+			return luaL_driver_error(L, error);
+		}
+		for (int y = -border; y < size + border; y++) {
+			for (int x = -border; x < size + border; x++) {
+				if (multi<2) {
+					error = gdisplay_set_pixel(sx+x, sy+y, qrcodegen_getModule(qrcode, x, y) ? foreground:background);
+					if (error) {
+						free(qrcode);
+						free(tempBuffer);
+						return luaL_driver_error(L, error);
+					}
+				}
+				else {
+					//multi-size qr-code
+					for(int mx = 0; mx < multi; mx++) {
+						for(int my = 0; my < multi; my++) {
+							error = gdisplay_set_pixel(sx+(x*multi)+mx, sy+(y*multi)+my, qrcodegen_getModule(qrcode, x, y) ? foreground:background);
+							if (error) {
+								free(qrcode);
+								free(tempBuffer);
+								return luaL_driver_error(L, error);
+							}
+						}
+					}
+				}
+			}
+		}
+		error = gdisplay_unlock();
+		if (error) {
+			free(qrcode);
+			free(tempBuffer);
+			return luaL_driver_error(L, error);
+		}
+	}
+	else {
+		free(qrcode);
+		free(tempBuffer);
+		return luaL_driver_error(L, driver_error(GDISPLAY_DRIVER, GDISPLAY_ERR_QR_ENCODING_ERROR, NULL));
+	}
+
+	free(qrcode);
+	free(tempBuffer);
 	return 0;
 }
 
@@ -1064,9 +1268,9 @@ static int lgdisplay_read_touch(lua_State *L) {
 	int x, y, z;
 
 	error = gdisplay_touch_get(&x, &y, &z);
-    if (error) {
-        return luaL_driver_error(L, error);
-    }
+	if (error) {
+		return luaL_driver_error(L, error);
+	}
 
 	lua_pushinteger(L, z);
 	lua_pushinteger(L, x);
@@ -1081,9 +1285,9 @@ static int lgdisplay_read_raw_touch(lua_State *L) {
 	int x, y, z;
 
 	error = gdisplay_touch_get_raw(&x, &y, &z);
-    if (error) {
-        return luaL_driver_error(L, error);
-    }
+	if (error) {
+		return luaL_driver_error(L, error);
+	}
 
 	lua_pushinteger(L, z);
 	lua_pushinteger(L, x);
@@ -1100,11 +1304,11 @@ static int lgdisplay_touch_set_cal(lua_State *L) {
 	int y = luaL_checkinteger(L, 2);
 
 	error = gdisplay_touch_set_cal(x, y);
-    if (error) {
-        return luaL_driver_error(L, error);
-    }
+	if (error) {
+		return luaL_driver_error(L, error);
+	}
 
-    return 0;
+	return 0;
 }
 
 static int lgdisplay_init( lua_State* L ) {
@@ -1113,9 +1317,9 @@ static int lgdisplay_init( lua_State* L ) {
 	uint8_t address = 0;
 
 	uint8_t chipset = luaL_checkinteger( L, 1);
-    uint8_t orient = luaL_optinteger( L, 2, LANDSCAPE);
+	uint8_t orient = luaL_optinteger( L, 2, LANDSCAPE);
 
-    const gdisplay_t *display = gdisplay_get(chipset);
+	const gdisplay_t *display = gdisplay_get(chipset);
 
 	if (lua_gettop(L) >= 3) {
 		luaL_checktype(L, 3, LUA_TBOOLEAN);
@@ -1135,16 +1339,16 @@ static int lgdisplay_init( lua_State* L ) {
 	}
 
 	error = gdisplay_init(chipset, orient, buffered, address);
-    if (error) {
-        return luaL_driver_error(L, error);
-    }
+	if (error) {
+		return luaL_driver_error(L, error);
+	}
 
-    // Set the default stroke, foreground and background colors
-	stroke = GDISPLAY_WHITE;
-	foreground = GDISPLAY_WHITE;;
-	background = GDISPLAY_BLACK;
+	// Set the default stroke, foreground and background colors
+	static_stroke = GDISPLAY_WHITE;
+	static_foreground = GDISPLAY_WHITE;;
+	static_background = GDISPLAY_BLACK;
 
-    return 0;
+	return 0;
 }
 
 // =============================================================================
@@ -1152,60 +1356,61 @@ static int lgdisplay_init( lua_State* L ) {
 #include "modules.h"
 
 static const LUA_REG_TYPE gdisplay_map[] = {
-    { LSTRKEY( "init" ),			LFUNCVAL( lgdisplay_init ) },
-    { LSTRKEY( "attach" ),			LFUNCVAL( lgdisplay_init ) },
-	{ LSTRKEY( "setfont" ),			LFUNCVAL( lgdisplay_setfont )},
-	{ LSTRKEY( "lock" ),		    LFUNCVAL( lgdisplay_lock)},
-	{ LSTRKEY( "unlock" ),		    LFUNCVAL( lgdisplay_unlock)},
-	{ LSTRKEY( "rgb" ),		   		LFUNCVAL( lgdisplay_rgb_to_color )},
-	{ LSTRKEY( "clear" ),		  	LFUNCVAL( lgdisplay_clear )},
-	{ LSTRKEY( "setforeground" ),	LFUNCVAL( lgdisplay_foreground )},
-	{ LSTRKEY( "setbackground" ),	LFUNCVAL( lgdisplay_background )},
-	{ LSTRKEY( "setstroke" ),		LFUNCVAL( lgdisplay_stroke )},
-	{ LSTRKEY( "on" ),				LFUNCVAL( lgdisplay_on )},
-	{ LSTRKEY( "off" ),				LFUNCVAL( lgdisplay_off )},
+	{ LSTRKEY( "init" ),           LFUNCVAL( lgdisplay_init ) },
+	{ LSTRKEY( "attach" ),         LFUNCVAL( lgdisplay_init ) },
+	{ LSTRKEY( "setfont" ),        LFUNCVAL( lgdisplay_setfont )},
+	{ LSTRKEY( "lock" ),           LFUNCVAL( lgdisplay_lock)},
+	{ LSTRKEY( "unlock" ),         LFUNCVAL( lgdisplay_unlock)},
+	{ LSTRKEY( "rgb" ),            LFUNCVAL( lgdisplay_rgb_to_color )},
+	{ LSTRKEY( "clear" ),          LFUNCVAL( lgdisplay_clear )},
+	{ LSTRKEY( "setforeground" ),  LFUNCVAL( lgdisplay_foreground )},
+	{ LSTRKEY( "setbackground" ),  LFUNCVAL( lgdisplay_background )},
+	{ LSTRKEY( "setstroke" ),      LFUNCVAL( lgdisplay_stroke )},
+	{ LSTRKEY( "on" ),             LFUNCVAL( lgdisplay_on )},
+	{ LSTRKEY( "off" ),            LFUNCVAL( lgdisplay_off )},
 #if 0
-	{ LSTRKEY( "compilefont" ),		LFUNCVAL( compile_font_file )},
+	{ LSTRKEY( "compilefont" ),    LFUNCVAL( compile_font_file )},
 #endif
-	{ LSTRKEY( "getscreensize" ),	LFUNCVAL( lgdisplay_getscreensize )},
-	{ LSTRKEY( "getfontsize" ),		LFUNCVAL( lgdisplay_getfontsize )},
-	{ LSTRKEY( "getfontheight" ),	LFUNCVAL( lgdisplay_getfontheight )},
-	{ LSTRKEY( "getfontwidtht" ),	LFUNCVAL( lgdisplay_getfontwidtht )},
-	{ LSTRKEY( "gettype" ),			LFUNCVAL( lgdisplay_gettype )},
-	{ LSTRKEY( "setrot" ),			LFUNCVAL( lgdisplay_setrot )},
-	{ LSTRKEY( "setorient" ),		LFUNCVAL( lgdisplay_setorient )},
-	{ LSTRKEY( "setcolor" ),		LFUNCVAL( lgdisplay_setcolor )},
-	{ LSTRKEY( "settransp" ),		LFUNCVAL( lgdisplay_settransp )},
-	{ LSTRKEY( "setfixed" ),		LFUNCVAL( lgdisplay_setfixed )},
-	{ LSTRKEY( "setwrap" ),			LFUNCVAL( lgdisplay_setwrap )},
-	{ LSTRKEY( "setangleoffset" ),	LFUNCVAL( lgdisplay_set_angleOffset )},
-	{ LSTRKEY( "setangleoffset" ),	LFUNCVAL( lgdisplay_get_angleOffset )},
-	{ LSTRKEY( "setclipwin" ),		LFUNCVAL( lgdisplay_setclipwin )},
-	{ LSTRKEY( "resetclipwin" ),	LFUNCVAL( lgdisplay_resetclipwin )},
-	{ LSTRKEY( "getclipwin" ),		LFUNCVAL( lgdisplay_getclipwin )},
-	{ LSTRKEY( "invert" ),			LFUNCVAL( lgdisplay_invert )},
-	{ LSTRKEY( "putpixel" ),		LFUNCVAL( lgdisplay_putpixel )},
-	{ LSTRKEY( "setpixel" ),		LFUNCVAL( lgdisplay_putpixel )},
-	{ LSTRKEY( "getpixel" ),		LFUNCVAL( lgdisplay_getpixel )},
-	{ LSTRKEY( "getline" ),			LFUNCVAL( lgdisplay_getwindow )},
-	{ LSTRKEY( "line" ),			LFUNCVAL( lgdisplay_drawline )},
-	{ LSTRKEY( "rect" ),			LFUNCVAL( lgdisplay_rect )},
-	{ LSTRKEY( "linebyangle" ),		LFUNCVAL( lgdisplay_drawlineByAngle )},
-	{ LSTRKEY( "roundrect" ),		LFUNCVAL( lgdisplay_roundrect )},
-	{ LSTRKEY( "circle" ),			LFUNCVAL( lgdisplay_circle )},
-	{ LSTRKEY( "ellipse" ),			LFUNCVAL( lgdisplay_ellipse )},
-	{ LSTRKEY( "arc" ),				LFUNCVAL( lgdisplay_arc )},
-	{ LSTRKEY( "poly" ),			LFUNCVAL( lgdisplay_poly )},
-	{ LSTRKEY( "star" ),			LFUNCVAL( lgdisplay_star )},
-	{ LSTRKEY( "triangle" ),		LFUNCVAL( lgdisplay_triangle )},
-	{ LSTRKEY( "write" ),			LFUNCVAL( lgdisplay_write )},
-	{ LSTRKEY( "stringpos" ),		LFUNCVAL( lgdisplay_writepos )},
-	{ LSTRKEY( "image" ),			LFUNCVAL( lgdisplay_image )},
-	{ LSTRKEY( "hsb2rgb" ),			LFUNCVAL( lgdisplay_HSBtoRGB )},
-	{ LSTRKEY( "setbrightness" ),	LFUNCVAL( lgdisplay_set_brightness )},
-	{ LSTRKEY( "gettouch" ),		LFUNCVAL( lgdisplay_read_touch )},
-	{ LSTRKEY( "getrawtouch" ),		LFUNCVAL( lgdisplay_read_raw_touch )},
-	{ LSTRKEY( "setcal" ),			LFUNCVAL( lgdisplay_touch_set_cal )},
+	{ LSTRKEY( "getscreensize" ),  LFUNCVAL( lgdisplay_getscreensize )},
+	{ LSTRKEY( "getfontsize" ),    LFUNCVAL( lgdisplay_getfontsize )},
+	{ LSTRKEY( "getfontheight" ),  LFUNCVAL( lgdisplay_getfontheight )},
+	{ LSTRKEY( "getfontwidtht" ),  LFUNCVAL( lgdisplay_getfontwidtht )},
+	{ LSTRKEY( "gettype" ),        LFUNCVAL( lgdisplay_gettype )},
+	{ LSTRKEY( "setrot" ),         LFUNCVAL( lgdisplay_setrot )},
+	{ LSTRKEY( "setorient" ),      LFUNCVAL( lgdisplay_setorient )},
+	{ LSTRKEY( "setcolor" ),       LFUNCVAL( lgdisplay_setcolor )},
+	{ LSTRKEY( "settransp" ),      LFUNCVAL( lgdisplay_settransp )},
+	{ LSTRKEY( "setfixed" ),       LFUNCVAL( lgdisplay_setfixed )},
+	{ LSTRKEY( "setwrap" ),        LFUNCVAL( lgdisplay_setwrap )},
+	{ LSTRKEY( "setangleoffset" ), LFUNCVAL( lgdisplay_set_angleOffset )},
+	{ LSTRKEY( "setangleoffset" ), LFUNCVAL( lgdisplay_get_angleOffset )},
+	{ LSTRKEY( "setclipwin" ),     LFUNCVAL( lgdisplay_setclipwin )},
+	{ LSTRKEY( "resetclipwin" ),   LFUNCVAL( lgdisplay_resetclipwin )},
+	{ LSTRKEY( "getclipwin" ),     LFUNCVAL( lgdisplay_getclipwin )},
+	{ LSTRKEY( "invert" ),         LFUNCVAL( lgdisplay_invert )},
+	{ LSTRKEY( "putpixel" ),       LFUNCVAL( lgdisplay_putpixel )},
+	{ LSTRKEY( "setpixel" ),       LFUNCVAL( lgdisplay_putpixel )},
+	{ LSTRKEY( "getpixel" ),       LFUNCVAL( lgdisplay_getpixel )},
+	{ LSTRKEY( "getline" ),        LFUNCVAL( lgdisplay_getwindow )},
+	{ LSTRKEY( "line" ),           LFUNCVAL( lgdisplay_drawline )},
+	{ LSTRKEY( "rect" ),           LFUNCVAL( lgdisplay_rect )},
+	{ LSTRKEY( "linebyangle" ),    LFUNCVAL( lgdisplay_drawlineByAngle )},
+	{ LSTRKEY( "roundrect" ),      LFUNCVAL( lgdisplay_roundrect )},
+	{ LSTRKEY( "circle" ),         LFUNCVAL( lgdisplay_circle )},
+	{ LSTRKEY( "ellipse" ),        LFUNCVAL( lgdisplay_ellipse )},
+	{ LSTRKEY( "arc" ),            LFUNCVAL( lgdisplay_arc )},
+	{ LSTRKEY( "poly" ),           LFUNCVAL( lgdisplay_poly )},
+	{ LSTRKEY( "star" ),           LFUNCVAL( lgdisplay_star )},
+	{ LSTRKEY( "triangle" ),       LFUNCVAL( lgdisplay_triangle )},
+	{ LSTRKEY( "write" ),          LFUNCVAL( lgdisplay_write )},
+	{ LSTRKEY( "stringpos" ),      LFUNCVAL( lgdisplay_writepos )},
+	{ LSTRKEY( "image" ),          LFUNCVAL( lgdisplay_image )},
+	{ LSTRKEY( "qrcode" ),         LFUNCVAL( lgdisplay_qrcode )},
+	{ LSTRKEY( "hsb2rgb" ),        LFUNCVAL( lgdisplay_HSBtoRGB )},
+	{ LSTRKEY( "setbrightness" ),  LFUNCVAL( lgdisplay_set_brightness )},
+	{ LSTRKEY( "gettouch" ),       LFUNCVAL( lgdisplay_read_touch )},
+	{ LSTRKEY( "getrawtouch" ),    LFUNCVAL( lgdisplay_read_raw_touch )},
+	{ LSTRKEY( "setcal" ),         LFUNCVAL( lgdisplay_touch_set_cal )},
 	// Constant definitions
 	{ LSTRKEY( "PORTRAIT" ),       LINTVAL( PORTRAIT ) },
 	{ LSTRKEY( "PORTRAIT_FLIP" ),  LINTVAL( PORTRAIT_FLIP ) },
@@ -1245,10 +1450,10 @@ static const LUA_REG_TYPE gdisplay_map[] = {
 	{ LSTRKEY( "FONT_7SEG" ),      LINTVAL( FONT_7SEG ) },
 	{ LSTRKEY( "FONT_LCD" ),       LINTVAL( LCD_FONT ) },
 
-	{ LSTRKEY( "ST7735" ),         LINTVAL( CHIPSET_ST7735     ) },
-	{ LSTRKEY( "ST7735B" ),        LINTVAL( CHIPSET_ST7735B    ) },
-	{ LSTRKEY( "ST7735G" ),        LINTVAL( CHIPSET_ST7735G    ) },
-	{ LSTRKEY( "ST7735_18" ),      LINTVAL( CHIPSET_ST7735_18  ) },
+	{ LSTRKEY( "ST7735" ),         LINTVAL( CHIPSET_ST7735 ) },
+	{ LSTRKEY( "ST7735B" ),        LINTVAL( CHIPSET_ST7735B ) },
+	{ LSTRKEY( "ST7735G" ),        LINTVAL( CHIPSET_ST7735G ) },
+	{ LSTRKEY( "ST7735_18" ),      LINTVAL( CHIPSET_ST7735_18 ) },
 	{ LSTRKEY( "ST7735B_18" ),     LINTVAL( CHIPSET_ST7735B_18 ) },
 	{ LSTRKEY( "ST7735G_18" ),     LINTVAL( CHIPSET_ST7735G_18 ) },
 	{ LSTRKEY( "ST7735G_144" ),    LINTVAL( CHIPSET_ST7735G_144) },
@@ -1259,7 +1464,17 @@ static const LUA_REG_TYPE gdisplay_map[] = {
 
 	{ LSTRKEY( "SSD1306_128_32" ), LINTVAL( CHIPSET_SSD1306_128_32 ) },
 	{ LSTRKEY( "SSD1306_128_64" ), LINTVAL( CHIPSET_SSD1306_128_64 ) },
-	{ LSTRKEY( "SSD1306_96_16" ),  LINTVAL( CHIPSET_SSD1306_96_16  ) },
+	{ LSTRKEY( "SSD1306_96_16" ),  LINTVAL( CHIPSET_SSD1306_96_16 ) },
+
+	{ LSTRKEY( "ECC_LOW" ),        LINTVAL( qrcodegen_Ecc_LOW ) },
+	{ LSTRKEY( "ECC_MEDIUM" ),     LINTVAL( qrcodegen_Ecc_MEDIUM ) },
+	{ LSTRKEY( "ECC_QUARTILE" ),   LINTVAL( qrcodegen_Ecc_QUARTILE ) },
+	{ LSTRKEY( "ECC_HIGH" ),       LINTVAL( qrcodegen_Ecc_HIGH ) },
+
+	{ LSTRKEY( "MODE_NUMERIC" ),   LINTVAL( qrcodegen_Mode_NUMERIC ) },
+	{ LSTRKEY( "MODE_ALPHANUM" ),  LINTVAL( qrcodegen_Mode_ALPHANUMERIC ) },
+	{ LSTRKEY( "MODE_BYTE" ),      LINTVAL( qrcodegen_Mode_BYTE ) },
+	{ LSTRKEY( "MODE_ECI" ),       LINTVAL( qrcodegen_Mode_ECI ) },
 
 	DRIVER_REGISTER_LUA_ERRORS(gdisplay)
 
@@ -1267,7 +1482,7 @@ static const LUA_REG_TYPE gdisplay_map[] = {
 };
 
 int luaopen_gdisplay(lua_State* L) {
-    return 0;
+	return 0;
 }
 
 MODULE_REGISTER_ROM(GDISPLAY, gdisplay, gdisplay_map, luaopen_gdisplay, 1);

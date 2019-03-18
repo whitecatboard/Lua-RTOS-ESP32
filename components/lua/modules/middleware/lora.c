@@ -121,11 +121,11 @@ static char *hex_str_pad(lua_State* L, const char  *str, int len) {
 #endif
 
 static int llora_attach(lua_State* L) {
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276
 	driver_error_t *error;
     int type;
     const char *host;
-    int port;
+    int port, freq, drate;
 
     int band = luaL_checkinteger(L, 1);
     type = luaL_optinteger(L, 2, 0);
@@ -142,9 +142,11 @@ static int llora_attach(lua_State* L) {
 	} else if (type == 1) {
 		host = luaL_optstring(L, 3, "router.eu.thethings.network");
 		port = luaL_optinteger(L, 4, 1700);
+        freq = luaL_optinteger(L, 5, 868100000);
+        drate = luaL_optinteger(L, 6, 5);
 
 		// Gateway
-		if ((error = lora_gw_setup(band, host, port))) {
+		if ((error = lora_gw_setup(band, host, port, freq, drate))) {
 			return luaL_driver_error(L, error);
 		}
 
@@ -514,6 +516,6 @@ MODULE_REGISTER_ROM(LORA, lora, lora_map, luaopen_lora, 1);
 	net.wf.start()
 	net.service.sntp.start()
 
-	lora.attach(lora.BAND868, lora.GATEWAY)
+	lora.attach(lora.BAND868, lora.GATEWAY, nil, nil, 868100000, 5)
 
  */
