@@ -669,7 +669,7 @@ static int lsensor_enumerate_owire( lua_State* L, uint8_t table, int pin) {
     sensor_instance_t *instance = NULL;
     sensor_setup_t setup;
     uint16_t count = 0;
-    int wh, wl;
+    unsigned int wh, wl;
 
     if (!table) {
         printf("SENSOR      DEVICE   ADDRESS             MODEL         \r\n");

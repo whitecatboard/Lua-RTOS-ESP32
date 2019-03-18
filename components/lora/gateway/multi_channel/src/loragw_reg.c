@@ -624,7 +624,7 @@ int lgw_reg_check(FILE *f) {
         if (r.sign == true)
             fprintf(f, "%s reg number %d read: %d (%x) default: %d (%x)\n", ptr, i, read_value, read_value, r.dflt, r.dflt);
         else
-            fprintf(f, "%s reg number %d read: %u (%x) default: %u (%x)\n", ptr, i, read_value, read_value, r.dflt, r.dflt);
+            fprintf(f, "%s reg number %d read: %u (%x) default: %u (%x)\n", ptr, i, (uint32_t)read_value, read_value, r.dflt, r.dflt);
     }
     fprintf(f, "End of register verification\n");
 
