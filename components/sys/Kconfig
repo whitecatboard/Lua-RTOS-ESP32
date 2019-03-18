@@ -1211,6 +1211,33 @@ menu "Lua RTOS"
                   they are not needed, to save power consumption. If your display is connected to Power BUS,
                   enable this option.
          endmenu
+
+        menu "RC-Switch"
+            config LUA_RTOS_RCSWITCH_SERVER_STACK_SIZE
+                depends on LUA_RTOS_LUA_USE_RCSWITCH
+                int "RC-Switch listen thread stack size"
+                range 2048 10240
+                default 4096
+                help
+                    Default stack size assigned to RC-Switch thread.
+
+            config LUA_RTOS_RCSWITCH_SERVER_TASK_PRIORITY
+                depends on LUA_RTOS_LUA_USE_RCSWITCH
+                int "RC-Switch listen thread priority"
+                range 3 25
+                default 10
+                help
+                    Task priority assigned to RC-Switch thread.
+
+            config LUA_RTOS_RCSWITCH_SERVER_TASK_CPU
+                depends on !FREERTOS_UNICORE
+                int "RC-Switch task CPU affinity"
+                range 0 1
+                default 1
+                help
+                    CPU affinity for the task assigned to the RC-Switch listen thread.
+         endmenu
+
       endmenu
       
          menu "Sensors"
@@ -1567,6 +1594,10 @@ menu "Lua RTOS"
 
             config LUA_RTOS_LUA_USE_PWM
                bool "Include pwm module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_RCSWITCH
+               bool "Include RC-Switch module in build"
                default y
 
             config LUA_RTOS_LUA_USE_SENSOR
