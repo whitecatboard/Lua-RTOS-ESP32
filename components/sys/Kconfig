@@ -1480,6 +1480,10 @@ menu "Lua RTOS"
             config LUA_RTOS_LUA_USE_PACKAGE
                bool "Include package module in build"
                default y
+
+            config LUA_RTOS_LUA_USE_CRC
+               bool "Include crc module in build"
+               default y
          endmenu
          menu "Lua RTOS Modules"    
             config LUA_RTOS_LUA_USE_FS
