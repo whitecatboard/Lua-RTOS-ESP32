@@ -507,6 +507,54 @@ menu "Lua RTOS"
 
         endmenu
 
+        menu "TELNET server"
+            config LUA_RTOS_USE_TELNET_SERVER
+               depends on LUA_RTOS_LUA_USE_NET
+               bool "Enable TELNET server"
+               default y
+
+            config LUA_RTOS_TELNET_SERVER_PORT
+                depends on LUA_RTOS_USE_TELNET_SERVER
+                int "TELNET server port"
+                range 0 65536
+                default 23
+                help
+                    TCP port where TELNET server listens
+
+            config LUA_RTOS_TELNET_SERVER_STACK_SIZE
+                depends on LUA_RTOS_USE_TELNET_SERVER
+                int "TELNET thread stack size"
+                range 2048 10240
+                default 2048
+                help
+                    Default stack size assigned to TELNET thread.
+
+            config LUA_RTOS_TELNET_SERVER_TASK_PRIORITY
+                depends on LUA_RTOS_USE_TELNET_SERVER
+                int "TELNET thread priority"
+                range 3 25
+                default 10
+                help
+                    Task priority assigned to TELNET thread.
+
+            config LUA_RTOS_TELNET_SERVER_TASK_CPU
+                depends on !FREERTOS_UNICORE
+                int "TELNET task CPU affinity"
+                range 0 1
+                default 1
+                help
+                    CPU affinity for the task assigned to the TELNET server.
+
+            config LUA_RTOS_TELNET_SERVER_CHILD_STACK_SIZE
+                depends on LUA_RTOS_USE_TELNET_SERVER
+                int "TELNET child thread stack size"
+                range 2048 10240
+                default 3072
+                help
+                    Default stack size assigned to TELNET thread.
+
+         endmenu
+
       endmenu
 
       menu "Hardware"
@@ -1211,6 +1259,33 @@ menu "Lua RTOS"
                   they are not needed, to save power consumption. If your display is connected to Power BUS,
                   enable this option.
          endmenu
+
+        menu "RC-Switch"
+            config LUA_RTOS_RCSWITCH_SERVER_STACK_SIZE
+                depends on LUA_RTOS_LUA_USE_RCSWITCH
+                int "RC-Switch listen thread stack size"
+                range 2048 10240
+                default 4096
+                help
+                    Default stack size assigned to RC-Switch thread.
+
+            config LUA_RTOS_RCSWITCH_SERVER_TASK_PRIORITY
+                depends on LUA_RTOS_LUA_USE_RCSWITCH
+                int "RC-Switch listen thread priority"
+                range 3 25
+                default 10
+                help
+                    Task priority assigned to RC-Switch thread.
+
+            config LUA_RTOS_RCSWITCH_SERVER_TASK_CPU
+                depends on !FREERTOS_UNICORE
+                int "RC-Switch task CPU affinity"
+                range 0 1
+                default 1
+                help
+                    CPU affinity for the task assigned to the RC-Switch listen thread.
+         endmenu
+
       endmenu
       
          menu "Sensors"
@@ -1567,6 +1642,10 @@ menu "Lua RTOS"
 
             config LUA_RTOS_LUA_USE_PWM
                bool "Include pwm module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_RCSWITCH
+               bool "Include RC-Switch module in build"
                default y
 
             config LUA_RTOS_LUA_USE_SENSOR
