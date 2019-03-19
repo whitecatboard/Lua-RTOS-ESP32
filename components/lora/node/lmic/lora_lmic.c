@@ -88,9 +88,6 @@ static osjob_t initjob;
 // Mutext for lora 
 static struct mtx lora_mtx;
 
-// Current device activation method
-static lora_device_act_t device_act = LoraOTAA;
-
 // Event group handler for sync LMIC events with driver functions
 static EventGroupHandle_t loraEvent;
 
@@ -189,20 +186,11 @@ void onEvent (ev_t ev) {
 
 	    case EV_JOIN_FAILED:
 	      session_init = 0;
-
-          DEVADDR = 0;
-          memset(NWKSKEY, 0, 16);
-          memset(APPSKEY, 0, 16);
-
 		  xEventGroupSetBits(loraEvent, evLORA_JOIN_DENIED);
 	      break;
 
 	    case EV_REJOIN_FAILED:
 	      session_init = 0;
-
-          DEVADDR = 0;
-          memset(NWKSKEY, 0, 16);
-          memset(APPSKEY, 0, 16);
 	      break;
 
 	    case EV_TXCOMPLETE:
@@ -581,15 +569,10 @@ driver_error_t *lora_tx(int cnf, int port, const char *data) {
         }
     } else {
         // Session data is not available
-        if (device_act == LoraOTAA) {
-            if (have_otta_data()) {
-                // Not joined
-                mtx_unlock(&lora_mtx);
-                return driver_error(LORA_DRIVER, LORA_ERR_NOT_JOINED, NULL);
-            } else {
-                mtx_unlock(&lora_mtx);
-                return driver_error(LORA_DRIVER, LORA_ERR_KEYS_NOT_CONFIGURED, NULL);
-            }
+        if (have_otta_data()) {
+            // Not joined
+            mtx_unlock(&lora_mtx);
+            return driver_error(LORA_DRIVER, LORA_ERR_NOT_JOINED, NULL);
         } else {
             mtx_unlock(&lora_mtx);
             return driver_error(LORA_DRIVER, LORA_ERR_KEYS_NOT_CONFIGURED, NULL);
