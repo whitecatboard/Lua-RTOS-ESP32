@@ -49,6 +49,8 @@
 #include <drivers/sensor.h>
 #if CONFIG_LUA_RTOS_USE_SENSOR_PUSH_SWITCH
 
+driver_error_t *_push_switch_setup(sensor_instance_t *unit);
+
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) push_switch_sensor = {
 	.id = "PUSH_SWITCH",
@@ -62,8 +64,24 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) push_swit
 	},
 	.data = {
 		{.id = "on", .type = SENSOR_DATA_INT},
-	}
+	},
+	.setup = _push_switch_setup
 };
+
+driver_error_t *_push_switch_setup(sensor_instance_t *unit) {
+    // Get initial state
+    uint8_t p = gpio_ll_pin_get(unit->setup[0].gpio.gpio);
+
+    if (p == 0) {
+        unit->data[0].integerd.value = 1;
+    } else {
+        unit->data[0].integerd.value = 0;
+    }
+
+    unit->latch[0].value.integerd.value = unit->data[0].integerd.value;
+
+    return NULL;
+}
 
 #endif
 #endif
