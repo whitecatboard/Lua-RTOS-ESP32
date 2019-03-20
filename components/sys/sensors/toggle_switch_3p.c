@@ -80,16 +80,15 @@ driver_error_t *_3_pos_switch_setup(sensor_instance_t *unit) {
     // Get initial state
     unit->data[0].integerd.value = 0;
 
-    if ((gpio_ll_pin_get(unit->setup[0].gpio.gpio) == 1) && (gpio_ll_pin_get(unit->setup[1].gpio.gpio) == 1)) {
-        unit->data[0].integerd.value = 0;
-    } else {
-        if (gpio_ll_pin_get(unit->setup[0].gpio.gpio) == 0) {
-            unit->data[0].integerd.value = SENSOR_FLAG_GET_ON_L(unit->sensor->interface[0]);
-        }
+    uint8_t p1 = gpio_ll_pin_get(unit->setup[0].gpio.gpio);
+    uint8_t p2 = gpio_ll_pin_get(unit->setup[1].gpio.gpio);
 
-        if (gpio_ll_pin_get(unit->setup[1].gpio.gpio) == 0) {
-            unit->data[0].integerd.value = SENSOR_FLAG_GET_ON_L(unit->sensor->interface[1]);
-        }
+    if ((p1 == 1) && (p2 == 1)) {
+        unit->data[0].integerd.value = 0;
+    } else if ((p1 == 0) && (p2 == 1)) {
+        unit->data[0].integerd.value = 1;
+    } else if ((p1 == 1) && (p2 == 0)) {
+        unit->data[0].integerd.value = 2;
     }
 
     unit->latch[0].value.integerd.value = unit->data[0].integerd.value;
