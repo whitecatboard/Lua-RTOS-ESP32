@@ -245,7 +245,7 @@ int luac(const char *src, const char *dst) {
 	return ret;
 }
 
-int luad(const char *src, const char *dst) {
+int luad(const char *src) {
 	char* argv[] = {
 		"luac",
 		"-l",
