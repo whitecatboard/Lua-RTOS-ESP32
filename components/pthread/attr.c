@@ -81,6 +81,10 @@ int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize) {
 	}
 
     if (stacksize < PTHREAD_STACK_MIN) {
+        // assign the smallest valid stack size here so that
+		// the new thread won't get a 8k default stack
+		// in case the caller doesn't check our return code
+        attr->stacksize = PTHREAD_STACK_MIN;
         return EINVAL;
     }
 
