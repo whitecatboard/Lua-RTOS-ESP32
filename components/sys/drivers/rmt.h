@@ -39,32 +39,44 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS, DHT sensors common functions
+ * Lua RTOS, RMT driver
  *
  */
 
-#ifndef _SENSORS_DHTXX_H_
-#define _SENSORS_DHTXX_H_
-
-#include "luartos.h"
-
-#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
-#if CONFIG_LUA_RTOS_USE_SENSOR_DHT11 || CONFIG_LUA_RTOS_USE_SENSOR_DHT22 || CONFIG_LUA_RTOS_USE_SENSOR_DHT23
-
-// Tolerance in usecs when decoding bits
-#define DHTXX_TOLERANCE 4
-
-#include <stdint.h>
+#ifndef _DRIVERS_RMT_H_
+#define _DRIVERS_RMT_H_
 
 #include <sys/driver.h>
 
-#include <drivers/sensor.h>
+typedef enum {
+	RMTPulseRangeUSEC = 0,
+	RMTPulseRangeMSEC = 1,
+	RMTPulseRangeMAX
+} rmt_pulse_range_t;
 
-driver_error_t *dhtxx_setup(sensor_instance_t *unit);
-driver_error_t *dhtxx_acquire(sensor_instance_t *unit, uint8_t mdt, uint8_t *data);
-driver_error_t *dhtxx_unsetup(sensor_instance_t *unit);
+typedef struct {
+	union {
+		struct {
+			uint32_t duration0 :15;
+			uint32_t level0 :1;
+			uint32_t duration1 :15;
+			uint32_t level1 :1;
+		};
+		uint32_t val;
+	};
+} rmt_item_t;
 
-#endif
-#endif
+// RMT errors
+#define RMT_ERR_INVALID_PULSE_RANGE             (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) |  0)
+#define RMT_ERR_NOT_ENOUGH_MEMORY               (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  1)
+#define RMT_ERR_NO_MORE_RMT                     (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  2)
+#define RMT_ERR_INVALID_PIN                     (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  3)
+#define RMT_ERR_TIMEOUT                         (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  4)
 
-#endif /* _SENSORS_DHTXX_H_ */
+extern const int rmt_errors;
+extern const int rmt_error_map;
+
+driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, int *deviceid);
+driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item_t **buffer);
+
+#endif /* _DRIVERS_RMT_H_ */

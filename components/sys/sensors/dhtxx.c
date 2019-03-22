@@ -55,6 +55,7 @@
 
 #include <drivers/gpio.h>
 #include <drivers/sensor.h>
+#include <drivers/rmt.h>
 
 static int dhtxx_bus_monitor(uint8_t pin, uint8_t level, int16_t timeout) {
     uint32_t start, end, elapsed;
@@ -87,13 +88,29 @@ static int dhtxx_bus_monitor(uint8_t pin, uint8_t level, int16_t timeout) {
 }
 
 driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
+	driver_error_t *error;
+
     // Get pin from instance
     uint8_t pin = unit->setup[0].gpio.gpio;
 
 	// The preferred implementation uses the RMT to avoid disabling interrupts during
 	// the acquire process. If there a not RMT channels available we use the bit bang
 	// implementation.
+    int rmt_device;
 
+    error = rmt_setup_rx(pin, RMTPulseRangeUSEC, &rmt_device);
+    if (!error) {
+		// Use RMT implementation
+		unit->args = (void *)((uint32_t)rmt_device);
+    } else {
+    	// Not possible
+    	free(error);
+
+        // Use software implementation
+        unit->args = (void *)0xffffffff;
+    }
+
+#if 0
 	rmt_config_t rmt_rx;
 	uint8_t channel;
 
@@ -118,9 +135,7 @@ driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
 			return NULL;
 		}
 	}
-
-    // Use software implementation
-    unit->args = (void *)0xffffffff;
+#endif
 
     // Release data bus
     gpio_pin_input(pin);
@@ -138,20 +153,17 @@ driver_error_t *dhtxx_acquire(sensor_instance_t *unit, uint8_t mdt, uint8_t *dat
     uint8_t pin = unit->setup[0].gpio.gpio;
 
 retry:
-	// We init the data in this way to detect a crc error in case of problems
+	// We initialize the data in this way to detect a CRC error in case of problems: sensor
+	// not connected, bad wire quality, interferences ...
 	data[0] = data[1] = data[2] = data[3] = 0xff;
 	data[4] = 0x00;
 
     if ((uint32_t)unit->args != 0xffffffff) {
-        // Use RMT version
-        RingbufHandle_t rb = NULL;
+    	driver_error_t *error;
+    	rmt_item_t *items;
+    	rmt_item_t *item;
 
-        // Get the ting buffer to read data
-        rmt_get_ringbuf_handle((rmt_channel_t)unit->args, &rb);
-        assert(rb != NULL);
-
-		// Take data bus and set to low to inform the sensor that
-		// we want to acquire data
+		// Take data bus and set to low to inform the sensor that we want to acquire data
 		gpio_pin_output(pin);
 		gpio_pin_clr(pin);
 		delay(mdt);
@@ -159,42 +171,74 @@ retry:
 		// Release data bus
 		gpio_pin_input(pin);
 
-		// Start RMT
-		rmt_rx_start((rmt_channel_t)unit->args, 1);
+		// Read 41 items, timeout 100 milliseconds
+    	error = rmt_rx((int)unit->args, 41, 100, &items);
+    	if (!error) {
+    		item = items;
 
-		// Receive data
-		size_t rx_size = 0;
-		rmt_item32_t *fitem = (rmt_item32_t*) xRingbufferReceive(rb, &rx_size, 100 / portTICK_PERIOD_MS);
-		rmt_item32_t *citem = fitem;
+			// Skip first item, because it corresponds to the pulse sent by the
+			// sensor to indicate that it will start to send the data.
+    		item++;
 
-		if (citem != NULL) {
-			// We have data
+			// The sensor returns 5 bytes. Each bit is encoded as a low to high transition as
+    		// follows:
+    		//
+    		// bit 0: L 54 +/- tolerance usecs, H 24 +/- tolerance usecs
+    		// bit 1: L 54 +/- tolerance usecs, H 70 +/- tolerance usecs
+    		int t0, t1;
 
-			// Get number of items
-			int items = rx_size / sizeof(rmt_item32_t);
+			for(byte=0;byte < 5;byte++) {
+				data[byte] = 0;
 
-			// At least we need 41 items (start bit + 40 bits of data)
-			if (items > 40) {
-				// Skip first item, because it corresponds to the pulse send by the
-				// sensor to indicate that it will start to send the data.
-				citem++;
-
-				// The sensor returns 5 bytes
-				for(byte=0;byte < 5;byte++) {
-					data[byte] = 0;
-
-					for(bit=7;bit >= 0;bit--) {
-						data[byte] |= (((citem->duration1 < 50)?0:1) << bit);
-						citem++;
+				for(bit = 7;bit >= 0;bit--) {
+					if (item->level0 == 0) {
+						t0 = item->duration0;
+					} else {
+						t1 = item->duration0;
 					}
+
+					if (item->level1 == 0) {
+						t0 = item->duration1;
+					} else {
+						t1 = item->duration1;
+					}
+
+					if ((t0 >= 54 - DHTXX_TOLERANCE) && (t0 <= 54 + DHTXX_TOLERANCE)) {
+						if ((t1 >= 70 - DHTXX_TOLERANCE) && (t1 <= 70 + DHTXX_TOLERANCE)) {
+							data[byte] |= (1 << bit);
+						} else if ((t1 >= 24 - DHTXX_TOLERANCE) && (t1 <= 24 + DHTXX_TOLERANCE)) {
+							data[byte] &= ~(1 << bit);
+						} else {
+				    		free(items);
+
+				    	    retries++;
+				    	    if (retries < 5) {
+								goto retry;
+				    	    }
+
+							// Error
+					        return driver_error(SENSOR_DRIVER, SENSOR_ERR_INVALID_DATA, "unexpected bit encode");
+						}
+					} else {
+			    		free(items);
+
+			    		retries++;
+			    	    if (retries < 5) {
+							goto retry;
+			    	    }
+
+						// Error
+				        return driver_error(SENSOR_DRIVER, SENSOR_ERR_INVALID_DATA, "unexpected bit encode");
+					}
+
+					item++;
 				}
 			}
 
-			vRingbufferReturnItem(rb, (void*) fitem);
-		}
+    		free(items);
+    	} else {
 
-		// Stop RMT
-		rmt_rx_stop((rmt_channel_t)unit->args);
+    	}
     } else {
         int elapsed; // Elapsed time in usecs between level transitions 0->1 / 1->0
 
@@ -237,14 +281,14 @@ retry:
     crc += data[3];
 
     if (crc != data[4]) {
-    		if ((uint32_t)unit->args == 0xffffffff) {
-    			portENABLE_INTERRUPTS();
-    		}
+		if ((uint32_t)unit->args == 0xffffffff) {
+			portENABLE_INTERRUPTS();
+		}
 
-    	    retries++;
-    	    if (retries < 5) {
-    	    		goto retry;
-    	    }
+		retries++;
+		if (retries < 5) {
+			goto retry;
+		}
 
         return driver_error(SENSOR_DRIVER, SENSOR_ERR_INVALID_DATA, "crc");
     }
