@@ -73,6 +73,7 @@ DRIVER_REGISTER_BEGIN(RMT,rmt,0,rmt_init,NULL);
 	DRIVER_REGISTER_ERROR(RMT, rmt, InvalidPin, "invalid pin", RMT_ERR_INVALID_PIN);
 	DRIVER_REGISTER_ERROR(RMT, rmt, Timeout, "timeout", RMT_ERR_TIMEOUT);
 	DRIVER_REGISTER_ERROR(RMT, rmt, Unexpected, "unexpected", RMT_ERR_UNEXPECTED);
+	DRIVER_REGISTER_ERROR(RMT, rmt, InvalidIdleLevel, "invalid idle level", RMT_ERR_INVALID_IDLE_LEVEL);
 DRIVER_REGISTER_END(RMT,rmt,0,rmt_init,NULL);
 
 /*
@@ -246,7 +247,7 @@ static driver_error_t *setup_tx(int deviceid) {
 	rmt_tx.tx_config.loop_en = devices[channel].tx.in_loop;
 	rmt_tx.tx_config.carrier_en = 0;
 
-	if (devices[channel].tx.idle_level == RMTIdleNone) {
+	if (devices[channel].tx.idle_level == RMTIdleZ) {
 		rmt_tx.tx_config.idle_output_en = 0;
 	} else if (devices[channel].tx.idle_level == RMTIdleL) {
 		rmt_tx.tx_config.idle_output_en = 1;
@@ -348,6 +349,10 @@ driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t pulse_range, rmt_idle_le
         return driver_error(GPIO_DRIVER, RMT_ERR_INVALID_PIN, NULL);
     }
 
+    if (idle_level >= RMTIdleMAX) {
+        return driver_error(RMT_DRIVER, RMT_ERR_INVALID_IDLE_LEVEL, NULL);
+	}
+
 	// Setup
 	mtx_lock(&mtx);
 
@@ -401,11 +406,11 @@ driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t pulse_range, rmt_idle_le
 	return NULL;
 }
 
-driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item_t **out) {
+driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item_t **buffer) {
 	driver_error_t *error = NULL;
     uint8_t channel = deviceid; // RMT channel
 
-    *out = NULL;
+    *buffer = NULL;
 
     // Allocate output buffer
     rmt_item_t *buff = calloc(pulses, sizeof(rmt_item32_t));
@@ -436,7 +441,9 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
 
 	cbuff = buff;
 
-    while (pulses > 0) {
+	uint32_t pending = pulses;
+
+    while (pending > 0) {
 		// Wait for data
 		ritems = (rmt_item32_t*)xRingbufferReceive(devices[channel].rb, &items, timeout / portTICK_PERIOD_MS);
 		if (ritems) {
@@ -447,7 +454,7 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
 			memcpy(cbuff, ritems, items * sizeof(rmt_item32_t));
 			cbuff += items;
 
-			pulses -= items;
+			pending -= items;
 
 			// Return items to buffer
 			vRingbufferReturnItem(devices[channel].rb, (void *)ritems);
@@ -475,13 +482,26 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
 
     mtx_unlock(&devices[channel].mtx);
 
+    // Need scale?
+    if (devices[channel].rx.scale != 1.0) {
+    	rmt_item_t *cbuffer = buff;
+    	int i;
+
+    	for(i = 0; i < pulses;i++) {
+    		cbuffer->duration0 *= devices[channel].tx.scale;
+    		cbuffer->duration1 *= devices[channel].tx.scale;
+
+    		cbuffer++;
+    	}
+    }
+
     // Return output buffer
-	*out = buff;
+	*buffer = buff;
 
 	return NULL;
 }
 
-driver_error_t *rmt_tx(int deviceid, rmt_item_t *buffer, size_t size) {
+driver_error_t *rmt_tx(int deviceid, rmt_item_t *buffer, size_t pulses) {
 	driver_error_t *error = NULL;
     uint8_t channel = deviceid; // RMT channel
 
@@ -499,7 +519,7 @@ driver_error_t *rmt_tx(int deviceid, rmt_item_t *buffer, size_t size) {
     	rmt_item_t *cbuffer = buffer;
     	int i;
 
-    	for(i = 0; i < size;i++) {
+    	for(i = 0; i < pulses;i++) {
     		cbuffer->duration0 /= devices[channel].tx.scale;
     		cbuffer->duration1 /= devices[channel].tx.scale;
 
@@ -507,8 +527,10 @@ driver_error_t *rmt_tx(int deviceid, rmt_item_t *buffer, size_t size) {
     	}
     }
 
-    if (rmt_write_items(channel, (rmt_item32_t *)buffer, size, 1) != ESP_OK) {
-		// Should not happen
+    if (rmt_write_items(channel, (rmt_item32_t *)buffer, pulses, 1) != ESP_OK) {
+        mtx_unlock(&devices[channel].mtx);
+
+        // Should not happen
 		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "9");
     }
 

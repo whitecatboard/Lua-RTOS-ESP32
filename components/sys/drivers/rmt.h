@@ -64,7 +64,8 @@ typedef enum {
 typedef enum {
 	RMTIdleL,
 	RMTIdleH,
-	RMTIdleNone
+	RMTIdleZ,
+	RMTIdleMAX
 } rmt_idle_level;
 
 typedef struct {
@@ -86,13 +87,101 @@ typedef struct {
 #define RMT_ERR_INVALID_PIN                     (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  3)
 #define RMT_ERR_TIMEOUT                         (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  4)
 #define RMT_ERR_UNEXPECTED                      (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  5)
+#define RMT_ERR_INVALID_IDLE_LEVEL              (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  6)
 
 extern const int rmt_errors;
 extern const int rmt_error_map;
 
+/**
+ * @brief Setup a RMT channel attached to a pin for receive data.
+ *
+ * @param pin GPIO number.
+ *
+ * @param range Time unit that will be used to get pulse duration. Can be either RMTPulseRangeNSEC (nanoseconds),
+ *              RMTPulseRangeUSEC (milliseconds) or RMTPulseRangeMSEC (milliseconds).
+ *
+ * @param deviceid A pointer to an integer that will be used to get the device id.
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs.
+ *
+ *          RMT_ERR_INVALID_PIN
+ *          RMT_ERR_INVALID_PULSE_RANGE
+ *          RMT_ERR_NOT_ENOUGH_MEMORY
+ *          RMT_ERR_NO_MORE_RMT
+ */
 driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, int *deviceid);
+
+/**
+ * @brief Setup a RMT channel attached to a pin for transmit data.
+ *
+ * @param pin GPIO number.
+ *
+ * @param range Time unit that will be used to set pulse duration. Can be either RMTPulseRangeNSEC (nanoseconds),
+ *              RMTPulseRangeUSEC (milliseconds) or RMTPulseRangeMSEC (milliseconds).
+ *
+ * @param idle_level GPIO logical level when RMT goes to the idle state. Can be either RMTIdleL (Low), RMTIdleH
+ *                   (High), or RMTIdleZ (High impedance).
+ *
+ * @param deviceid A pointer to an integer that will be used to get the device id.
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs.
+ *
+ *          RMT_ERR_INVALID_PIN
+ *          RMT_ERR_INVALID_PULSE_RANGE
+ *          RMT_ERR_INVALID_IDLE_LEVEL
+ *          RMT_ERR_NOT_ENOUGH_MEMORY
+ *          RMT_ERR_NO_MORE_RMT
+ */
 driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t pulse_range, rmt_idle_level idle_level, int *deviceid);
+
+/**
+ * @brief Receive a number of pulses from the RMT device until they are received. This function is thread safe.
+ *
+ * @param deviceid RMT device id.
+ *
+ * @param pulses Number of pulses to receive.
+ *
+ * @param timeout A timeout, expressed in milliseconds, to wait for receive the pulses. If not all the pulses
+ *                are received within this time the function returns with an error.
+ *
+ * @param buffer A pointer to a buffer of rmt_item_t structure, in which the received data will be returned.
+ *               In this buffer, all pulse duration data is expressed in the decvice's pulse_range units
+ *               (nanoseconds, microseconds, or milliseconds).
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs.
+ *
+ *          RMT_ERR_NOT_ENOUGH_MEMORY
+ *          RMT_ERR_UNEXPECTED
+ *          RMT_ERR_TIMEOUT
+ */
 driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item_t **buffer);
-driver_error_t *rmt_tx(int deviceid, rmt_item_t *buffer, size_t size);
+
+/**
+ * @brief Transmit a number of pulses to the RMT device until they are transmited. This function is thread safe.
+ *
+ * @param deviceid RMT device id.
+ *
+ * @param buffer A pointer to a buffer of rmt_item_t structure, which contains the pulses to transmit.
+ *               In this buffer, all pulse duration data is expressed in the decvice's pulse_range units
+ *               (nanoseconds, microseconds, or milliseconds).
+ *
+ * @param pulses Number of pulses to transmit.
+ *
+ * @param deviceid A pointer to an integer that will be used to get the device id.
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs.
+ *
+ *          RMT_ERR_NOT_ENOUGH_MEMORY
+ *          RMT_ERR_UNEXPECTED
+ */
+driver_error_t *rmt_tx(int deviceid, rmt_item_t *buffer, size_t pulses);
 
 #endif /* _DRIVERS_RMT_H_ */
