@@ -53,15 +53,26 @@
 #include <sys/driver.h>
 
 typedef struct {
-	uint32_t t0h; //T0H in cycles
-	uint32_t t0l; //T0L in cycles
-	uint32_t t1h; //T1H in cycles
-	uint32_t t1l; //T1L in cycles
-	uint32_t res; //RES in cycles
+	struct {
+		uint32_t t0h; //T0H in nanos
+		uint32_t t0l; //T0L in nanos
+		uint32_t t1h; //T1H in nanos
+		uint32_t t1l; //T1L in nanos
+	} n;
+
+	struct {
+		uint32_t t0h; //T0H in cycles
+		uint32_t t0l; //T0L in cycles
+		uint32_t t1h; //T1H in cycles
+		uint32_t t1l; //T1L in cycles
+	} c;
+
+	uint32_t res; //res in nanos
 } nzr_timing_t;
 
 typedef struct {
 	uint8_t gpio;
+	int deviceid;
 	nzr_timing_t timings;
 } nzr_instance_t;
 

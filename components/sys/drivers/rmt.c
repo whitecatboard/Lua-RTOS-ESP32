@@ -86,10 +86,21 @@ static void rmt_init() {
 
 typedef struct {
 	int8_t pin;
-	rmt_pulse_range_t range;
 	rmt_status_t status;
 	struct mtx mtx;
 	RingbufHandle_t rb;
+
+	struct {
+		rmt_pulse_range_t range;
+		float scale;
+	} rx;
+
+	struct {
+		uint8_t in_loop;
+		rmt_idle_level idle_level;
+		rmt_pulse_range_t range;
+		float scale;
+	} tx;
 } rmt_device_t;
 
 static rmt_device_t *devices = NULL;
@@ -148,15 +159,22 @@ static driver_error_t *setup_rx(int deviceid) {
 		return NULL;
 	}
 
+	rmt_rx.channel = channel;
 	rmt_rx.gpio_num = devices[channel].pin;
 
 	// Set divider
-	if (devices[channel].range == RMTPulseRangeUSEC) {
+	if (devices[channel].rx.range == RMTPulseRangeNSEC) {
+		// Count in nanoseconds, but with APB_CLK_FREQ resolution of RMT is 12.5 nanoseconds
+		rmt_rx.clk_div = 1;
+		devices[channel].rx.scale = 12.5;
+	} else if (devices[channel].rx.range == RMTPulseRangeUSEC) {
 		// Count in microseconds
 		rmt_rx.clk_div = (uint8_t)(APB_CLK_FREQ / 1000000UL);
-	} else if (devices[channel].range == RMTPulseRangeMSEC) {
+		devices[channel].rx.scale = 1;
+	} else if (devices[channel].rx.range == RMTPulseRangeMSEC) {
 		// Count in milliseconds
 		rmt_rx.clk_div = (uint8_t)(APB_CLK_FREQ / 1000UL);
+		devices[channel].rx.scale = 1;
 	}
 
 	rmt_rx.mem_block_num = 1;
@@ -172,24 +190,91 @@ static driver_error_t *setup_rx(int deviceid) {
 
 	if (rmt_config(&rmt_rx) != ESP_OK) {
 		// Should not happen
-		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
+		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "1");
 	}
 
 	if ((ret = rmt_driver_install(channel, 1000, 0)) != ESP_OK) {
 		if (ret == ESP_ERR_NO_MEM) {
 			return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
 		} else {
-			return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
+			return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "2");
 		}
 	}
 
     // Get the ring buffer to receive data
     if ((rmt_get_ringbuf_handle(channel, &devices[channel].rb) != ESP_OK) || (devices[channel].rb == NULL)) {
 		// Should not happen
-		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
+		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "3");
     }
 
     devices[channel].status = RMTStatusRX;
+
+    return NULL;
+
+}
+
+static driver_error_t *setup_tx(int deviceid) {
+	uint8_t channel = deviceid;
+	rmt_config_t rmt_tx;
+
+	// If last mode was TX exit immediately
+	if (devices[channel].status == RMTStatusTX) {
+		return NULL;
+	}
+
+	rmt_tx.channel = channel;
+	rmt_tx.gpio_num = devices[channel].pin;
+
+	// Set divider
+	if (devices[channel].tx.range == RMTPulseRangeNSEC) {
+		// Count in nanoseconds, but with APB_CLK_FREQ resolution of RMT is 12.5 nanoseconds
+		rmt_tx.clk_div = 1;
+		devices[channel].tx.scale = 12.5;
+	} else if (devices[channel].tx.range == RMTPulseRangeUSEC) {
+		// Count in microseconds
+		rmt_tx.clk_div = (uint8_t)(APB_CLK_FREQ / 1000000UL);
+		devices[channel].tx.scale = 1;
+	} else if (devices[channel].rx.range == RMTPulseRangeMSEC) {
+		// Count in milliseconds
+		rmt_tx.clk_div = (uint8_t)(APB_CLK_FREQ / 1000UL);
+		devices[channel].tx.scale = 1;
+	}
+
+	rmt_tx.mem_block_num = 3;
+	rmt_tx.rmt_mode = RMT_MODE_TX;
+
+	rmt_tx.tx_config.loop_en = devices[channel].tx.in_loop;
+	rmt_tx.tx_config.carrier_en = 0;
+
+	if (devices[channel].tx.idle_level == RMTIdleNone) {
+		rmt_tx.tx_config.idle_output_en = 0;
+	} else if (devices[channel].tx.idle_level == RMTIdleL) {
+		rmt_tx.tx_config.idle_output_en = 1;
+		rmt_tx.tx_config.idle_level = 0;
+	} else if (devices[channel].tx.idle_level == RMTIdleH) {
+		rmt_tx.tx_config.idle_output_en = 1;
+		rmt_tx.tx_config.idle_level = 1;
+	}
+
+	// Configure the RMT
+	esp_err_t ret;
+
+	//rmt_driver_uninstall(channel);
+
+	if (rmt_config(&rmt_tx) != ESP_OK) {
+		// Should not happen
+		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "4");
+	}
+
+	if ((ret = rmt_driver_install(channel, 0, 0)) != ESP_OK) {
+		if (ret == ESP_ERR_NO_MEM) {
+			return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
+		} else {
+			return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "5");
+		}
+	}
+
+    devices[channel].status = RMTStatusTX;
 
     return NULL;
 
@@ -243,7 +328,7 @@ driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, int *deviceid) {
 
 	// Store device information
 	devices[channel].pin = pin;
-	devices[channel].range = range;
+	devices[channel].rx.range = range;
 
 	// Create mutex for channel
     mtx_init(&devices[channel].mtx, NULL, NULL, 0);
@@ -252,6 +337,65 @@ driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, int *deviceid) {
 
     syslog(LOG_INFO,
            "rmt%u rx at pin %s%d", channel,
+           gpio_portname(pin), gpio_name(pin));
+
+	return NULL;
+}
+
+driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t pulse_range, rmt_idle_level idle_level, int *deviceid) {
+	// Sanity checks
+    if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
+        return driver_error(GPIO_DRIVER, RMT_ERR_INVALID_PIN, NULL);
+    }
+
+	// Setup
+	mtx_lock(&mtx);
+
+	// Create device structure, if required
+	if (create_devices() < 0) {
+		mtx_unlock(&mtx);
+
+        return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
+	}
+
+	// Find an existing channel to pin
+	int8_t channel = rmt_get_channel_by_pin(pin);
+	if (channel < 0) {
+		// Device not found, so get a free device
+		channel = rmt_get_free_channel();
+		if (channel < 0) {
+			mtx_unlock(&mtx);
+
+			// No more channels
+	        return driver_error(RMT_DRIVER, RMT_ERR_NO_MORE_RMT, NULL);
+		}
+	}
+
+	*deviceid = channel;
+
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+	// Lock resources
+    //driver_unit_lock_error_t *lock_error = NULL;
+
+    //if ((lock_error = driver_lock(RMT_DRIVER, device_idx, GPIO_DRIVER, pin, DRIVER_ALL_FLAGS, NULL))) {
+	//	mtx_unlock(&mtx);
+    //
+    //    return driver_lock_error(RMT_DRIVER, lock_error);
+    //}
+#endif
+
+	// Store device information
+	devices[channel].pin = pin;
+	devices[channel].tx.range = pulse_range;
+	devices[channel].tx.idle_level = idle_level;
+
+	// Create mutex for channel
+    mtx_init(&devices[channel].mtx, NULL, NULL, 0);
+
+	mtx_unlock(&mtx);
+
+    syslog(LOG_INFO,
+           "rmt%u tx at pin %s%d", channel,
            gpio_portname(pin), gpio_name(pin));
 
 	return NULL;
@@ -272,7 +416,7 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
     mtx_lock(&devices[channel].mtx);
 
     // Setup for RX
-    error = setup_rx(channel);
+    error = setup_rx(deviceid);
     if (error) {
         mtx_unlock(&devices[channel].mtx);
     	free(buff);
@@ -282,7 +426,7 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
 	// Start RMT and receive data
     if (rmt_rx_start(channel, 1) != ESP_OK){
     	// Should not happen
-		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
+		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "6");
     }
 
 	// Wait for data
@@ -311,7 +455,7 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
 			// Stop RMT
 			if (rmt_rx_stop(channel) != ESP_OK) {
 				// Should not happen
-				return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
+				return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "7");
 			}
 		} else {
 			// No data received, timeout
@@ -320,7 +464,7 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
 			// Stop RMT
 			if (rmt_rx_stop(channel) != ESP_OK) {
 				// Should not happen
-				return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
+				return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "8");
 			}
 
 	        mtx_unlock(&devices[channel].mtx);
@@ -336,4 +480,41 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
 
 	return NULL;
 }
+
+driver_error_t *rmt_tx(int deviceid, rmt_item_t *buffer, size_t size) {
+	driver_error_t *error = NULL;
+    uint8_t channel = deviceid; // RMT channel
+
+    mtx_lock(&devices[channel].mtx);
+
+    // Setup for TX
+    error = setup_tx(deviceid);
+    if (error) {
+        mtx_unlock(&devices[channel].mtx);
+    	return error;
+    }
+
+    // Need scale?
+    if (devices[channel].tx.scale != 1.0) {
+    	rmt_item_t *cbuffer = buffer;
+    	int i;
+
+    	for(i = 0; i < size;i++) {
+    		cbuffer->duration0 /= devices[channel].tx.scale;
+    		cbuffer->duration1 /= devices[channel].tx.scale;
+
+    		cbuffer++;
+    	}
+    }
+
+    if (rmt_write_items(channel, (rmt_item32_t *)buffer, size, 1) != ESP_OK) {
+		// Should not happen
+		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "9");
+    }
+
+    mtx_unlock(&devices[channel].mtx);
+
+    return NULL;
+}
+
 #endif

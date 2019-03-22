@@ -49,8 +49,9 @@
 #include <sys/driver.h>
 
 typedef enum {
-	RMTPulseRangeUSEC = 0,
-	RMTPulseRangeMSEC = 1,
+	RMTPulseRangeNSEC = 0,
+	RMTPulseRangeUSEC = 1,
+	RMTPulseRangeMSEC = 2,
 	RMTPulseRangeMAX
 } rmt_pulse_range_t;
 
@@ -59,6 +60,12 @@ typedef enum {
 	RMTStatusRX,
 	RMTStatusTX
 } rmt_status_t;
+
+typedef enum {
+	RMTIdleL,
+	RMTIdleH,
+	RMTIdleNone
+} rmt_idle_level;
 
 typedef struct {
 	union {
@@ -84,6 +91,8 @@ extern const int rmt_errors;
 extern const int rmt_error_map;
 
 driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, int *deviceid);
+driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t pulse_range, rmt_idle_level idle_level, int *deviceid);
 driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item_t **buffer);
+driver_error_t *rmt_tx(int deviceid, rmt_item_t *buffer, size_t size);
 
 #endif /* _DRIVERS_RMT_H_ */
