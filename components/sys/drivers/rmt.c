@@ -72,6 +72,7 @@ DRIVER_REGISTER_BEGIN(RMT,rmt,0,rmt_init,NULL);
 	DRIVER_REGISTER_ERROR(RMT, rmt, NoMoreRMT, "no more RMT channels available", RMT_ERR_NO_MORE_RMT);
 	DRIVER_REGISTER_ERROR(RMT, rmt, InvalidPin, "invalid pin", RMT_ERR_INVALID_PIN);
 	DRIVER_REGISTER_ERROR(RMT, rmt, Timeout, "timeout", RMT_ERR_TIMEOUT);
+	DRIVER_REGISTER_ERROR(RMT, rmt, Unexpected, "unexpected", RMT_ERR_UNEXPECTED);
 DRIVER_REGISTER_END(RMT,rmt,0,rmt_init,NULL);
 
 /*
@@ -86,6 +87,8 @@ static void rmt_init() {
 typedef struct {
 	int8_t pin;
 	rmt_pulse_range_t range;
+	rmt_status_t status;
+	struct mtx mtx;
 	RingbufHandle_t rb;
 } rmt_device_t;
 
@@ -136,9 +139,14 @@ static int create_devices() {
 	return 0;
 }
 
-static void setup_rx(int deviceid) {
+static driver_error_t *setup_rx(int deviceid) {
 	uint8_t channel = deviceid;
 	rmt_config_t rmt_rx;
+
+	// If last mode was RX exit immediately
+	if (devices[channel].status == RMTStatusRX) {
+		return NULL;
+	}
 
 	rmt_rx.gpio_num = devices[channel].pin;
 
@@ -158,22 +166,38 @@ static void setup_rx(int deviceid) {
 	rmt_rx.rx_config.idle_threshold = 200;
 
 	// Configure the RMT
-	assert(rmt_config(&rmt_rx) == ESP_OK);
-	assert(rmt_driver_install(channel, 1000, 0) == ESP_OK);
+	esp_err_t ret;
+
+	rmt_driver_uninstall(channel);
+
+	if (rmt_config(&rmt_rx) != ESP_OK) {
+		// Should not happen
+		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
+	}
+
+	if ((ret = rmt_driver_install(channel, 1000, 0)) != ESP_OK) {
+		if (ret == ESP_ERR_NO_MEM) {
+			return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
+		} else {
+			return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
+		}
+	}
 
     // Get the ring buffer to receive data
-    assert(rmt_get_ringbuf_handle(channel, &devices[channel].rb) == ESP_OK);
-    assert(devices[channel].rb != NULL);
+    if ((rmt_get_ringbuf_handle(channel, &devices[channel].rb) != ESP_OK) || (devices[channel].rb == NULL)) {
+		// Should not happen
+		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
+    }
+
+    devices[channel].status = RMTStatusRX;
+
+    return NULL;
 
 }
 
 driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, int *deviceid) {
 	// Sanity checks
     if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
-        return driver_error(GPIO_DRIVER, RMT_ERR_INVALID_PIN, NULL);
-    }
-
-    if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
         return driver_error(GPIO_DRIVER, RMT_ERR_INVALID_PIN, NULL);
     }
 
@@ -221,18 +245,20 @@ driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, int *deviceid) {
 	devices[channel].pin = pin;
 	devices[channel].range = range;
 
-	setup_rx(*deviceid);
+	// Create mutex for channel
+    mtx_init(&devices[channel].mtx, NULL, NULL, 0);
+
+	mtx_unlock(&mtx);
 
     syslog(LOG_INFO,
            "rmt%u rx at pin %s%d", channel,
            gpio_portname(pin), gpio_name(pin));
 
-	mtx_unlock(&mtx);
-
 	return NULL;
 }
 
 driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item_t **out) {
+	driver_error_t *error = NULL;
     uint8_t channel = deviceid; // RMT channel
 
     *out = NULL;
@@ -243,8 +269,21 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
     	return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
     }
 
+    mtx_lock(&devices[channel].mtx);
+
+    // Setup for RX
+    error = setup_rx(channel);
+    if (error) {
+        mtx_unlock(&devices[channel].mtx);
+    	free(buff);
+    	return error;
+    }
+
 	// Start RMT and receive data
-    assert(rmt_rx_start(channel, 1) == ESP_OK);
+    if (rmt_rx_start(channel, 1) != ESP_OK){
+    	// Should not happen
+		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
+    }
 
 	// Wait for data
     rmt_item_t *cbuff;    // Output buffer current position
@@ -270,17 +309,27 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
 			vRingbufferReturnItem(devices[channel].rb, (void *)ritems);
 
 			// Stop RMT
-			rmt_rx_stop(channel);
+			if (rmt_rx_stop(channel) != ESP_OK) {
+				// Should not happen
+				return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
+			}
 		} else {
 			// No data received, timeout
 			free(buff);
 
 			// Stop RMT
-			rmt_rx_stop(channel);
+			if (rmt_rx_stop(channel) != ESP_OK) {
+				// Should not happen
+				return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
+			}
+
+	        mtx_unlock(&devices[channel].mtx);
 
 			return driver_error(RMT_DRIVER, RMT_ERR_TIMEOUT, NULL);
 		}
 	}
+
+    mtx_unlock(&devices[channel].mtx);
 
     // Return output buffer
 	*out = buff;

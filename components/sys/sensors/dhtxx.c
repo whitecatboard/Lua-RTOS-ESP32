@@ -53,6 +53,8 @@
 #include <sys/driver.h>
 #include <sys/delay.h>
 
+#include <sensors/dhtxx.h>
+
 #include <drivers/gpio.h>
 #include <drivers/sensor.h>
 #include <drivers/rmt.h>

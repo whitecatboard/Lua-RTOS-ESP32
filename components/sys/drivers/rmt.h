@@ -54,6 +54,12 @@ typedef enum {
 	RMTPulseRangeMAX
 } rmt_pulse_range_t;
 
+typedef enum {
+	RMTStatusUnknow,
+	RMTStatusRX,
+	RMTStatusTX
+} rmt_status_t;
+
 typedef struct {
 	union {
 		struct {
@@ -72,6 +78,7 @@ typedef struct {
 #define RMT_ERR_NO_MORE_RMT                     (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  2)
 #define RMT_ERR_INVALID_PIN                     (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  3)
 #define RMT_ERR_TIMEOUT                         (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  4)
+#define RMT_ERR_UNEXPECTED                      (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  5)
 
 extern const int rmt_errors;
 extern const int rmt_error_map;
