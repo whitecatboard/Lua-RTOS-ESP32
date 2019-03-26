@@ -164,17 +164,7 @@
 		"type": "WESP32",
 		"subtype": "OTA"
 	},
-	{
-		"id": "M5STACK",
-		"type": "M5STACK",
-		"subtype": ""
-	},
-	{
-		"id": "M5STACK",
-		"type": "M5STACK-OTA",
-		"subtype": "OTA"
-	},
-{
+    {
 		"id": "GENERIC",
 		"type": "GENERIC",
 		"subtype": ""
