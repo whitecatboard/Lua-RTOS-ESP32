@@ -553,7 +553,7 @@ driver_error_t *gdisplay_on() {
 	gdisplay_ll_on();
 
 #if CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT >= 0
-	gpio_pin_clr(CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT);
+	gpio_pin_set(CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT);
 #endif
 
 	return NULL;
@@ -568,7 +568,7 @@ driver_error_t *gdisplay_off() {
 	gdisplay_ll_off();
 
 #if CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT >= 0
-	gpio_pin_set(CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT);
+	gpio_pin_clr(CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT);
 #endif
 
 	return NULL;

@@ -318,6 +318,25 @@
         ]
     },
     {
+        "description": "M5Stack core board",
+        "manufacturer": "M5Stack",
+        "image": "https://www.m5stack.com/assets/images/p_core.png",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "M5STACK",
+                "description": "M5Stack Core Board",
+                "filesystem": "default"
+            },
+            {
+                "id": "M5STACK-OTA",
+                "description": "M5Stack Core Board with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
         "description": "Generic ESP32 board",
         "manufacturer": "Generic",
         "image": "",
