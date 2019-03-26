@@ -139,7 +139,7 @@
 #define LASTY	-2
 #define CENTER	-3
 #define RIGHT	-4
-#define BOTTOM	-4
+#define BOTTOM	-5
 
 // Fonts
 #define DEFAULT_FONT	0
@@ -166,11 +166,6 @@
 
 #define swap(a, b) { int16_t t = a; a = b; b = t; }
 
-#define LASTX	-1
-#define LASTY	-2
-#define CENTER	-3
-#define RIGHT	-4
-#define BOTTOM	-4
 
 typedef struct {
 	uint8_t chipset; // Chipset
