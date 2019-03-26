@@ -67,14 +67,14 @@ static void rmt_init();
 static struct mtx mtx;
 
 // Register driver and messages
-DRIVER_REGISTER_BEGIN(RMT,rmt,0,rmt_init,NULL);
+DRIVER_REGISTER_BEGIN(RMT,rmt,CPU_LAST_RMT_CH - CPU_FIRST_RMT_CH + 1,rmt_init,NULL);
     DRIVER_REGISTER_ERROR(RMT, rmt, InvalidPulseRange, "invalid pulse range", RMT_ERR_INVALID_PULSE_RANGE);
 	DRIVER_REGISTER_ERROR(RMT, rmt, NoMoreRMT, "no more RMT channels available", RMT_ERR_NO_MORE_RMT);
 	DRIVER_REGISTER_ERROR(RMT, rmt, InvalidPin, "invalid pin", RMT_ERR_INVALID_PIN);
 	DRIVER_REGISTER_ERROR(RMT, rmt, Timeout, "timeout", RMT_ERR_TIMEOUT);
 	DRIVER_REGISTER_ERROR(RMT, rmt, Unexpected, "unexpected", RMT_ERR_UNEXPECTED);
 	DRIVER_REGISTER_ERROR(RMT, rmt, InvalidIdleLevel, "invalid idle level", RMT_ERR_INVALID_IDLE_LEVEL);
-DRIVER_REGISTER_END(RMT,rmt,0,rmt_init,NULL);
+DRIVER_REGISTER_END(RMT,rmt,CPU_LAST_RMT_CH - CPU_FIRST_RMT_CH + 1,rmt_init,NULL);
 
 /*
  * Helper functions
@@ -82,7 +82,6 @@ DRIVER_REGISTER_END(RMT,rmt,0,rmt_init,NULL);
 
 static void rmt_init() {
     mtx_init(&mtx, NULL, NULL, 0);
-
 }
 
 typedef struct {
@@ -91,11 +90,13 @@ typedef struct {
 	struct mtx mtx;
 	RingbufHandle_t rb;
 
+	uint8_t rx_config;
 	struct {
 		rmt_pulse_range_t range;
 		float scale;
 	} rx;
 
+	uint8_t tx_config;
 	struct {
 		uint8_t in_loop;
 		rmt_idle_level idle_level;
@@ -318,18 +319,19 @@ driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, int *deviceid) {
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock resources
-    //driver_unit_lock_error_t *lock_error = NULL;
+    driver_unit_lock_error_t *lock_error = NULL;
 
-    //if ((lock_error = driver_lock(RMT_DRIVER, device_idx, GPIO_DRIVER, pin, DRIVER_ALL_FLAGS, NULL))) {
-	//	mtx_unlock(&mtx);
-    //
-    //    return driver_lock_error(RMT_DRIVER, lock_error);
-    //}
+    if ((lock_error = driver_lock(RMT_DRIVER, channel, GPIO_DRIVER, pin, DRIVER_ALL_FLAGS, NULL))) {
+		mtx_unlock(&mtx);
+
+        return driver_lock_error(RMT_DRIVER, lock_error);
+    }
 #endif
 
 	// Store device information
 	devices[channel].pin = pin;
 	devices[channel].rx.range = range;
+    devices[channel].rx_config = 1;
 
 	// Create mutex for channel
     mtx_init(&devices[channel].mtx, NULL, NULL, 0);
@@ -380,19 +382,20 @@ driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t pulse_range, rmt_idle_le
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 	// Lock resources
-    //driver_unit_lock_error_t *lock_error = NULL;
+    driver_unit_lock_error_t *lock_error = NULL;
 
-    //if ((lock_error = driver_lock(RMT_DRIVER, device_idx, GPIO_DRIVER, pin, DRIVER_ALL_FLAGS, NULL))) {
-	//	mtx_unlock(&mtx);
-    //
-    //    return driver_lock_error(RMT_DRIVER, lock_error);
-    //}
+    if ((lock_error = driver_lock(RMT_DRIVER, channel, GPIO_DRIVER, pin, DRIVER_ALL_FLAGS, NULL))) {
+		mtx_unlock(&mtx);
+
+        return driver_lock_error(RMT_DRIVER, lock_error);
+    }
 #endif
 
 	// Store device information
 	devices[channel].pin = pin;
 	devices[channel].tx.range = pulse_range;
 	devices[channel].tx.idle_level = idle_level;
+    devices[channel].tx_config = 1;
 
 	// Create mutex for channel
     mtx_init(&devices[channel].mtx, NULL, NULL, 0);
@@ -461,6 +464,8 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
 
 			// Stop RMT
 			if (rmt_rx_stop(channel) != ESP_OK) {
+			    mtx_unlock(&devices[channel].mtx);
+
 				// Should not happen
 				return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "7");
 			}
@@ -535,6 +540,68 @@ driver_error_t *rmt_tx(int deviceid, rmt_item_t *buffer, size_t pulses) {
     }
 
     mtx_unlock(&devices[channel].mtx);
+
+    return NULL;
+}
+
+void rmt_unsetup_tx(int deviceid) {
+    uint8_t channel = deviceid; // RMT channel
+
+    mtx_lock(&mtx);
+
+    // Device now is not for TX
+    devices[channel].tx_config = 0;
+
+    if (!devices[channel].rx_config) {
+    	// Device is also not for RX, we can free resources
+
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    	// Unlock resources
+        driver_unlock(RMT_DRIVER, channel, GPIO_DRIVER, devices[channel].pin);
+#endif
+
+        // Free device
+    	devices[channel].pin = -1;
+
+    	// Destroy device mtx
+        mtx_destroy(&devices[channel].mtx);
+
+        // Uninstall channel
+    	rmt_driver_uninstall(channel);
+    }
+
+    mtx_unlock(&mtx);
+
+    return NULL;
+}
+
+void rmt_unsetup_rx(int deviceid) {
+    uint8_t channel = deviceid; // RMT channel
+
+    mtx_lock(&mtx);
+
+    // Device now is not for RX
+    devices[channel].rx_config = 0;
+
+    if (!devices[channel].tx_config) {
+    	// Device is also not for TX, we can free resources
+
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    	// Unlock resources
+        driver_unlock(RMT_DRIVER, channel, GPIO_DRIVER, devices[channel].pin);
+#endif
+
+        // Free device
+    	devices[channel].pin = -1;
+
+    	// Destroy device mtx
+        mtx_destroy(&devices[channel].mtx);
+
+        // Uninstall channel
+    	rmt_driver_uninstall(channel);
+    }
+
+    mtx_unlock(&mtx);
 
     return NULL;
 }

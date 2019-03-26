@@ -139,6 +139,22 @@ driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, int *deviceid);
 driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t pulse_range, rmt_idle_level idle_level, int *deviceid);
 
 /**
+ * @brief Unsetup a RMT device for transmit data, and free all resources.
+ *
+ * @param deviceid RMT device id.
+ *
+ */
+void rmt_unsetup_tx(int deviceid);
+
+/**
+ * @brief Unsetup a RMT device for receive data, and free all resources.
+ *
+ * @param deviceid RMT device id.
+ *
+ */
+void rmt_unsetup_rx(int deviceid);
+
+/**
  * @brief Receive a number of pulses from the RMT device until they are received. This function is thread safe.
  *
  * @param deviceid RMT device id.

@@ -82,5 +82,6 @@ typedef struct {
 
 driver_error_t *nzr_setup(nzr_timing_t *timing, uint8_t gpio, uint32_t *unit);
 driver_error_t *nzr_send(uint32_t unit, uint8_t *data, uint32_t bits);
+driver_error_t *nzr_unsetup(uint32_t unit);
 
 #endif /* NZR_H_ */

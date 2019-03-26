@@ -91,53 +91,49 @@ static int dhtxx_bus_monitor(uint8_t pin, uint8_t level, int16_t timeout) {
 
 driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
 	driver_error_t *error;
+	driver_unit_lock_error_t *lock_error = NULL;
 
     // Get pin from instance
     uint8_t pin = unit->setup[0].gpio.gpio;
+
+    // By default, use software implementation
+    unit->args = (void *)0xffffffff;
 
 	// The preferred implementation uses the RMT to avoid disabling interrupts during
 	// the acquire process. If there a not RMT channels available we use the bit bang
 	// implementation.
     int rmt_device;
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    // At this point pin is locked by sensor driver. In this case we need to unlock the
+    // resource first, because maybe we can use RMT.
+    driver_unlock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, pin);
+#endif
+
     error = rmt_setup_rx(pin, RMTPulseRangeUSEC, &rmt_device);
     if (!error) {
-		// Use RMT implementation
-		unit->args = (void *)((uint32_t)rmt_device);
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+		// Lock RMT for this sensor (pin is locked by RMT)
+		if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, RMT_DRIVER, rmt_device, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+			free(lock_error);
+		} else {
+			// Use RMT implementation
+			unit->args = (void *)((uint32_t)rmt_device);
+		}
+#endif
     } else {
-    	// Not possible
     	free(error);
-
-        // Use software implementation
-        unit->args = (void *)0xffffffff;
     }
 
-#if 0
-	rmt_config_t rmt_rx;
-	uint8_t channel;
-
-	rmt_rx.gpio_num = pin;
-	rmt_rx.clk_div = (APB_CLK_FREQ / 1000000); // Count in microseconds
-	rmt_rx.mem_block_num = 1;
-	rmt_rx.rmt_mode = RMT_MODE_RX;
-	rmt_rx.rx_config.filter_en = 1;
-	rmt_rx.rx_config.filter_ticks_thresh = 200;
-	rmt_rx.rx_config.idle_threshold = 200;
-
-	// Configure the RMT, and get a free channel for read
-	if (rmt_config_one(&rmt_rx, &channel) == 0) {
-		// Install driver for channel
-		if (rmt_driver_install(channel, 1000, 0) == 0) {
-			// Use RMT implementation
-			unit->args = (void *)((uint32_t)channel);
-
-			rmt_rx_start((rmt_channel_t)unit->args, 1);
-			rmt_rx_stop((rmt_channel_t)unit->args);
-
-			return NULL;
+    if ((uint32_t)unit->args == 0xffffffff) {
+    	// Use bit bang
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+		// Lock GPIO for this sensor
+		if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, pin, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+			return driver_lock_error(SENSOR_DRIVER, lock_error);
 		}
-	}
 #endif
+    }
 
     // Release data bus
     gpio_pin_input(pin);
@@ -319,7 +315,15 @@ exit:
 
 driver_error_t *dhtxx_unsetup(sensor_instance_t *unit) {
 	if ((uint32_t)unit->args != 0xffffffff) {
-		rmt_driver_uninstall((rmt_channel_t)unit->args);
+	    rmt_unsetup_rx((int)unit->args);
+
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+		driver_unlock(SENSOR_DRIVER, unit->unit, RMT_DRIVER, (uint32_t)unit->args);
+#endif
+	} else {
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+		driver_unlock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup[0].gpio.gpio);
+#endif
 	}
 
 	return NULL;
