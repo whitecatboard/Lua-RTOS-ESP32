@@ -593,6 +593,7 @@ void rmt_unsetup_rx(int deviceid) {
 
         // Free device
     	devices[channel].pin = -1;
+    	devices[channel].status = RMTStatusUnknow;
 
     	// Destroy device mtx
         mtx_destroy(&devices[channel].mtx);

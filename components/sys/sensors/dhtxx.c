@@ -43,7 +43,21 @@
  *
  */
 
-#include "luartos.h"
+/*
+ *
+ * The sensor returns 5 bytes. Each bit is encoded as follows:
+ *
+ * A high to low transition (start bit)
+ * A low to high transition, in with it's length determines the bit value
+ *
+ * For all the dhtxx sensor series, we can apply the following rule to get
+ * the bit value:
+ *
+ * - bit is 0 if high transition time is less than low transition time
+ * - bit is 1 if high transition time is higher than low transition time
+ */
+
+#include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 #if CONFIG_LUA_RTOS_USE_SENSOR_DHT11 || CONFIG_LUA_RTOS_USE_SENSOR_DHT22 || CONFIG_LUA_RTOS_USE_SENSOR_DHT23
@@ -58,6 +72,7 @@
 #include <drivers/gpio.h>
 #include <drivers/sensor.h>
 #include <drivers/rmt.h>
+#include <drivers/power_bus.h>
 
 static int dhtxx_bus_monitor(uint8_t pin, uint8_t level, int16_t timeout) {
     uint32_t start, end, elapsed;
@@ -142,10 +157,27 @@ driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
     return NULL;
 }
 
-driver_error_t *dhtxx_acquire(sensor_instance_t *unit, uint8_t mdt, uint8_t *data) {
+driver_error_t *dhtxx_postsetup(sensor_instance_t *unit) {
+	// Datasheet says:
+	//
+	// When power is supplied to the sensor, do not send any
+	// instruction to the sensor in within one second in order to pass the unstable status
+
+#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
+	if (pwbus_uptime() < 1000) {
+		delay(1000);
+	}
+#endif
+
+	return NULL;
+}
+
+driver_error_t *dhtxx_acquire(sensor_instance_t *unit, uint32_t rdelay, uint32_t atime, uint8_t *data) {
     uint8_t retries = 0; // In case of problems we will retry the acquire a number of times
     uint8_t byte = 0;    // Current byte transferred by sensor
     int8_t  bit = 0;     // Current transferred bit by sensor
+    int t0;              // High to low transition length in usecs
+    int t1;              // Low to high transition length in usecs
 
     // Get pin from instance
     uint8_t pin = unit->setup[0].gpio.gpio;
@@ -164,7 +196,7 @@ retry:
 		// Take data bus and set to low to inform the sensor that we want to acquire data
 		gpio_pin_output(pin);
 		gpio_pin_clr(pin);
-		delay(mdt);
+		delay(rdelay);
 
 		// Release data bus
 		gpio_pin_input(pin);
@@ -177,13 +209,6 @@ retry:
 			// Skip first item, because it corresponds to the pulse sent by the
 			// sensor to indicate that it will start to send the data.
     		item++;
-
-			// The sensor returns 5 bytes. Each bit is encoded as a low to high transition as
-    		// follows:
-    		//
-    		// bit 0: L 54 +/- tolerance usecs, H 24 +/- tolerance usecs
-    		// bit 1: L 54 +/- tolerance usecs, H 70 +/- tolerance usecs
-    		int t0, t1;
 
 			for(byte=0;byte < 5;byte++) {
 				data[byte] = 0;
@@ -201,32 +226,8 @@ retry:
 						t1 = item->duration1;
 					}
 
-					if ((t0 >= 54 - DHTXX_TOLERANCE) && (t0 <= 54 + DHTXX_TOLERANCE)) {
-						if ((t1 >= 70 - DHTXX_TOLERANCE) && (t1 <= 70 + DHTXX_TOLERANCE)) {
-							data[byte] |= (1 << bit);
-						} else if ((t1 >= 24 - DHTXX_TOLERANCE) && (t1 <= 24 + DHTXX_TOLERANCE)) {
-							data[byte] &= ~(1 << bit);
-						} else {
-				    		free(items);
-
-				    	    retries++;
-				    	    if (retries < 5) {
-								goto retry;
-				    	    }
-
-							// Error
-					        return driver_error(SENSOR_DRIVER, SENSOR_ERR_INVALID_DATA, "unexpected bit encode");
-						}
-					} else {
-			    		free(items);
-
-			    		retries++;
-			    	    if (retries < 5) {
-							goto retry;
-			    	    }
-
-						// Error
-				        return driver_error(SENSOR_DRIVER, SENSOR_ERR_INVALID_DATA, "unexpected bit encode");
+					if (t1 > t0) {
+						data[byte] |= (1 << bit);
 					}
 
 					item++;
@@ -238,8 +239,6 @@ retry:
 
     	}
     } else {
-        int elapsed; // Elapsed time in usecs between level transitions 0->1 / 1->0
-
         // Use software version
         portDISABLE_INTERRUPTS();
 
@@ -247,26 +246,26 @@ retry:
 		// we want to acquire data
 		gpio_pin_output(pin);
 		gpio_pin_clr(pin);
-		delay(mdt);
+		delay(rdelay);
 
 		// Release data bus
 		gpio_pin_input(pin);
 	    gpio_pin_pullup(pin);
 
         // Wait response from sensor 1 -> 0 -> 1 -> 0
-        elapsed = dhtxx_bus_monitor(pin, 1, 100);if (elapsed == -1) goto timeout;
-        elapsed = dhtxx_bus_monitor(pin, 0, 100);if (elapsed == -1) goto timeout;
-        elapsed = dhtxx_bus_monitor(pin, 1, 100);if (elapsed == -1) goto timeout;
+        t1 = dhtxx_bus_monitor(pin, 1, 100);if (t1 == -1) goto timeout;
+        t0 = dhtxx_bus_monitor(pin, 0, 100);if (t0 == -1) goto timeout;
+        t1 = dhtxx_bus_monitor(pin, 1, 100);if (t1 == -1) goto timeout;
 
 		for(byte=0;byte < 5;byte++) {
 			data[byte] = 0;
 
 			for(bit=7;bit >= 0;bit--) {
 	            // Wait for bit 0 -> 1 -> 0
-	            elapsed = dhtxx_bus_monitor(pin, 0, 100);if (elapsed == -1) goto timeout;
-	            elapsed = dhtxx_bus_monitor(pin, 1, 100);if (elapsed == -1) goto timeout;
+	            t0 = dhtxx_bus_monitor(pin, 0, 100);if (t0 == -1) goto timeout;
+	            t1 = dhtxx_bus_monitor(pin, 1, 100);if (t1 == -1) goto timeout;
 
-				data[byte] |= (((elapsed < 50)?0:1) << bit);
+				data[byte] |= ((t1 > t0) << bit);
 			}
 		}
     }
@@ -285,6 +284,8 @@ retry:
 
 		retries++;
 		if (retries < 5) {
+			delay(atime);
+
 			goto retry;
 		}
 
@@ -300,6 +301,8 @@ timeout:
 
     retries++;
     if (retries < 5) {
+    		delay(atime);
+
     		goto retry;
     }
 
@@ -309,6 +312,9 @@ exit:
 	if ((uint32_t)unit->args == 0xffffffff) {
 		portENABLE_INTERRUPTS();
 	}
+
+    gettimeofday(&unit->next, NULL);
+    unit->next.tv_sec += atime / 1000;
 
 	return NULL;
 }

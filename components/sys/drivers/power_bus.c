@@ -47,6 +47,8 @@
 
 #if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
 
+#include <time.h>
+
 #include <sys/delay.h>
 #include <sys/driver.h>
 #include <sys/mutex.h>
@@ -59,6 +61,9 @@ static struct mtx mtx;
 // How many devices are connected to the power bus? When no devices are connected the power bus can
 // turn off.
 static int power = 0;
+
+// When was started the powe bus
+static struct timespec uptime;
 
 // Register driver and errors
 static void _pwbus_init();
@@ -89,12 +94,17 @@ driver_error_t *pwbus_on() {
     mtx_lock(&mtx);
 
 	if (power > 0) {
+		power++;
+
 	    mtx_unlock(&mtx);
 	    return NULL;
 	}
 
-	gpio_pin_set(CONFIG_LUA_RTOS_POWER_BUS_PIN);
 	power++;
+
+	clock_gettime(CLOCK_MONOTONIC, &uptime);
+
+	gpio_pin_set(CONFIG_LUA_RTOS_POWER_BUS_PIN);
 
 	// Wait some time for power stabilization
 	delay(CONFIG_LUA_RTOS_POWER_BUS_DELAY);
@@ -107,21 +117,29 @@ driver_error_t *pwbus_on() {
 driver_error_t *pwbus_off() {
     mtx_lock(&mtx);
 
-    power--;
+    if (power == 1) {
+    	uptime.tv_sec = 0;
+    	uptime.tv_nsec = 0;
 
-    if (power == 0) {
-        mtx_unlock(&mtx);
-        return NULL;
+		gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
+		mtx_unlock(&mtx);
     }
 
-	gpio_pin_clr(CONFIG_LUA_RTOS_POWER_BUS_PIN);
-
-    // Wait some time for power stabilization
-    delay(CONFIG_LUA_RTOS_POWER_BUS_DELAY);
+    if (power > 0) {
+    	power--;
+    }
 
     mtx_unlock(&mtx);
 
-	return NULL;
+    return NULL;
+}
+
+uint64_t pwbus_uptime() {
+	struct timespec now;
+
+	clock_gettime(CLOCK_MONOTONIC, &now);
+
+	return ((now.tv_sec * 1000 + (now.tv_nsec / 1000000)) - (uptime.tv_sec * 1000 + (uptime.tv_nsec / 1000000)));
 }
 
 #endif

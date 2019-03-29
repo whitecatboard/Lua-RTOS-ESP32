@@ -43,7 +43,7 @@
  *
  */
 
-#include "luartos.h"
+#include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 #if CONFIG_LUA_RTOS_USE_SENSOR_DHT22
@@ -69,13 +69,15 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) dht22_sen
         {.id = "humidity"   , .type = SENSOR_DATA_FLOAT},
     },
     .setup = dhtxx_setup,
-    .acquire = dht22_acquire
+	.postsetup = dhtxx_postsetup,
+    .acquire = dht22_acquire,
+	.unsetup = dhtxx_unsetup
 };
 
 driver_error_t *dht22_acquire(sensor_instance_t *unit, sensor_value_t *values) {
     uint8_t data[5]; // dht11 returns 5 bytes of data in each transfer
 
-    driver_error_t *error = dhtxx_acquire(unit, 20, data);
+    driver_error_t *error = dhtxx_acquire(unit, 20, 2000, data);
     if (error != NULL) {
             return error;
     }
@@ -88,10 +90,6 @@ driver_error_t *dht22_acquire(sensor_instance_t *unit, sensor_value_t *values) {
     }
 
     values[1].floatd.value = (float)(((uint16_t)data[0]) << 8 | (uint16_t)data[1]) / 10.0;
-
-    // Next value can get in 2 seconds
-    gettimeofday(&unit->next, NULL);
-    unit->next.tv_sec += 2;
 
     return NULL;
 }

@@ -61,7 +61,8 @@
 #include <drivers/sensor.h>
 
 driver_error_t *dhtxx_setup(sensor_instance_t *unit);
-driver_error_t *dhtxx_acquire(sensor_instance_t *unit, uint8_t mdt, uint8_t *data);
+driver_error_t *dhtxx_postsetup(sensor_instance_t *unit);
+driver_error_t *dhtxx_acquire(sensor_instance_t *unit, uint32_t rdelay, uint32_t atime, uint8_t *data);
 driver_error_t *dhtxx_unsetup(sensor_instance_t *unit);
 
 #endif
