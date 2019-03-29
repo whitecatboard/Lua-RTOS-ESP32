@@ -74,6 +74,8 @@ DRIVER_REGISTER_BEGIN(RMT,rmt,CPU_LAST_RMT_CH - CPU_FIRST_RMT_CH + 1,rmt_init,NU
 	DRIVER_REGISTER_ERROR(RMT, rmt, Timeout, "timeout", RMT_ERR_TIMEOUT);
 	DRIVER_REGISTER_ERROR(RMT, rmt, Unexpected, "unexpected", RMT_ERR_UNEXPECTED);
 	DRIVER_REGISTER_ERROR(RMT, rmt, InvalidIdleLevel, "invalid idle level", RMT_ERR_INVALID_IDLE_LEVEL);
+	DRIVER_REGISTER_ERROR(RMT, rmt, InvalidTimeout, "invalid timeout", RMT_ERR_INVALID_TIMEOUT);
+	DRIVER_REGISTER_ERROR(RMT, rmt, InvalidMinPulse, "invalid min pulse time", RMT_ERR_INVALID_MIN_PULSE);
 DRIVER_REGISTER_END(RMT,rmt,CPU_LAST_RMT_CH - CPU_FIRST_RMT_CH + 1,rmt_init,NULL);
 
 /*
@@ -93,6 +95,7 @@ typedef struct {
 	uint8_t rx_config;
 	struct {
 		rmt_pulse_range_t range;
+		int min_pulse;
 		float scale;
 	} rx;
 
@@ -152,9 +155,21 @@ static int create_devices() {
 	return 0;
 }
 
-static driver_error_t *setup_rx(int deviceid) {
+static driver_error_t *setup_rx(int deviceid, int16_t timeout) {
 	uint8_t channel = deviceid;
+	uint32_t filter_ticks_thresh = 0;
+	uint32_t idle_threshold = 0;
+
 	rmt_config_t rmt_rx;
+
+	// Sanity checks
+	if (devices[channel].rx.min_pulse == 0) {
+		return driver_error(RMT_DRIVER, RMT_ERR_INVALID_MIN_PULSE, NULL);
+	}
+
+	if (timeout == 0) {
+		return driver_error(RMT_DRIVER, RMT_ERR_INVALID_TIMEOUT, NULL);
+	}
 
 	// If last mode was RX exit immediately
 	if (devices[channel].status == RMTStatusRX) {
@@ -179,11 +194,22 @@ static driver_error_t *setup_rx(int deviceid) {
 		devices[channel].rx.scale = 1;
 	}
 
+	filter_ticks_thresh = (devices[channel].rx.min_pulse / devices[channel].rx.scale);
+	idle_threshold = (timeout / devices[channel].rx.scale);
+
+	if (filter_ticks_thresh > 0xff) {
+		return driver_error(RMT_DRIVER, RMT_ERR_INVALID_MIN_PULSE, NULL);
+	}
+
+	if (idle_threshold > 0xffff) {
+		return driver_error(RMT_DRIVER, RMT_ERR_INVALID_TIMEOUT, NULL);
+	}
+
 	rmt_rx.mem_block_num = 1;
 	rmt_rx.rmt_mode = RMT_MODE_RX;
 	rmt_rx.rx_config.filter_en = 1;
-	rmt_rx.rx_config.filter_ticks_thresh = 200;
-	rmt_rx.rx_config.idle_threshold = 200;
+	rmt_rx.rx_config.filter_ticks_thresh = (filter_ticks_thresh==0?1:filter_ticks_thresh);
+	rmt_rx.rx_config.idle_threshold = (idle_threshold==0?1:idle_threshold);
 
 	// Configure the RMT
 	esp_err_t ret;
@@ -192,21 +218,21 @@ static driver_error_t *setup_rx(int deviceid) {
 
 	if (rmt_config(&rmt_rx) != ESP_OK) {
 		// Should not happen
-		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "1");
+		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
 	}
 
 	if ((ret = rmt_driver_install(channel, 1000, 0)) != ESP_OK) {
 		if (ret == ESP_ERR_NO_MEM) {
 			return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
 		} else {
-			return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "2");
+			return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
 		}
 	}
 
     // Get the ring buffer to receive data
     if ((rmt_get_ringbuf_handle(channel, &devices[channel].rb) != ESP_OK) || (devices[channel].rb == NULL)) {
 		// Should not happen
-		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "3");
+		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
     }
 
     devices[channel].status = RMTStatusRX;
@@ -265,14 +291,14 @@ static driver_error_t *setup_tx(int deviceid) {
 
 	if (rmt_config(&rmt_tx) != ESP_OK) {
 		// Should not happen
-		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "4");
+		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
 	}
 
 	if ((ret = rmt_driver_install(channel, 0, 0)) != ESP_OK) {
 		if (ret == ESP_ERR_NO_MEM) {
 			return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
 		} else {
-			return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "5");
+			return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
 		}
 	}
 
@@ -282,7 +308,7 @@ static driver_error_t *setup_tx(int deviceid) {
 
 }
 
-driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, int *deviceid) {
+driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, int min_pulse, int *deviceid) {
 	// Sanity checks
     if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
         return driver_error(GPIO_DRIVER, RMT_ERR_INVALID_PIN, NULL);
@@ -331,12 +357,22 @@ driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, int *deviceid) {
 	// Store device information
 	devices[channel].pin = pin;
 	devices[channel].rx.range = range;
+	devices[channel].rx.min_pulse = min_pulse;
     devices[channel].rx_config = 1;
 
 	// Create mutex for channel
     mtx_init(&devices[channel].mtx, NULL, NULL, 0);
 
 	mtx_unlock(&mtx);
+
+	// Workarround?
+	//
+	// Seems that first read gets invalid data
+	rmt_item_t *tmp;
+	rmt_rx(*deviceid, 100, 100, &tmp);
+	if (tmp) {
+		free(tmp);
+	}
 
     syslog(LOG_INFO,
            "rmt%u rx at pin %s%d", channel,
@@ -424,7 +460,7 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
     mtx_lock(&devices[channel].mtx);
 
     // Setup for RX
-    error = setup_rx(deviceid);
+    error = setup_rx(deviceid, timeout);
     if (error) {
         mtx_unlock(&devices[channel].mtx);
     	free(buff);
@@ -434,7 +470,7 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
 	// Start RMT and receive data
     if (rmt_rx_start(channel, 1) != ESP_OK){
     	// Should not happen
-		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "6");
+		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
     }
 
 	// Wait for data
@@ -467,7 +503,7 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
 			    mtx_unlock(&devices[channel].mtx);
 
 				// Should not happen
-				return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "7");
+				return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
 			}
 		} else {
 			// No data received, timeout
@@ -476,7 +512,7 @@ driver_error_t *rmt_rx(int deviceid, uint32_t pulses, uint32_t timeout, rmt_item
 			// Stop RMT
 			if (rmt_rx_stop(channel) != ESP_OK) {
 				// Should not happen
-				return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "8");
+				return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
 			}
 
 	        mtx_unlock(&devices[channel].mtx);
@@ -536,7 +572,7 @@ driver_error_t *rmt_tx(int deviceid, rmt_item_t *buffer, size_t pulses) {
         mtx_unlock(&devices[channel].mtx);
 
         // Should not happen
-		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, "9");
+		return driver_error(RMT_DRIVER, RMT_ERR_UNEXPECTED, NULL);
     }
 
     mtx_unlock(&devices[channel].mtx);

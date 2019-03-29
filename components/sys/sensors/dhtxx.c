@@ -125,7 +125,7 @@ driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
     driver_unlock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, pin);
 #endif
 
-    error = rmt_setup_rx(pin, RMTPulseRangeUSEC, &rmt_device);
+    error = rmt_setup_rx(pin, RMTPulseRangeUSEC, 10, &rmt_device);
     if (!error) {
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
 		// Lock RMT for this sensor (pin is locked by RMT)
@@ -193,12 +193,12 @@ retry:
     	rmt_item_t *items;
     	rmt_item_t *item;
 
-		// Take data bus and set to low to inform the sensor that we want to acquire data
+		// Inform the sensor that we want to acquire data
 		gpio_pin_output(pin);
 		gpio_pin_clr(pin);
 		delay(rdelay);
 
-		// Release data bus
+		// Receive data
 		gpio_pin_input(pin);
 
 		// Read 41 items, timeout 100 milliseconds
@@ -216,14 +216,10 @@ retry:
 				for(bit = 7;bit >= 0;bit--) {
 					if (item->level0 == 0) {
 						t0 = item->duration0;
-					} else {
-						t1 = item->duration0;
-					}
-
-					if (item->level1 == 0) {
-						t0 = item->duration1;
-					} else {
 						t1 = item->duration1;
+					} else {
+						t0 = item->duration1;
+						t1 = item->duration0;
 					}
 
 					if (t1 > t0) {
@@ -236,21 +232,19 @@ retry:
 
     		free(items);
     	} else {
-
+    		return error;
     	}
     } else {
         // Use software version
         portDISABLE_INTERRUPTS();
 
-		// Take data bus and set to low to inform the sensor that
-		// we want to acquire data
+		// Inform the sensor that we want to acquire data
 		gpio_pin_output(pin);
 		gpio_pin_clr(pin);
 		delay(rdelay);
 
-		// Release data bus
+		// Receive data
 		gpio_pin_input(pin);
-	    gpio_pin_pullup(pin);
 
         // Wait response from sensor 1 -> 0 -> 1 -> 0
         t1 = dhtxx_bus_monitor(pin, 1, 100);if (t1 == -1) goto timeout;
@@ -285,7 +279,6 @@ retry:
 		retries++;
 		if (retries < 5) {
 			delay(atime);
-
 			goto retry;
 		}
 
@@ -301,9 +294,8 @@ timeout:
 
     retries++;
     if (retries < 5) {
-    		delay(atime);
-
-    		goto retry;
+		delay(atime);
+		goto retry;
     }
 
     return driver_error(SENSOR_DRIVER, SENSOR_ERR_TIMEOUT, NULL);

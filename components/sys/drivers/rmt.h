@@ -82,12 +82,14 @@ typedef struct {
 
 // RMT errors
 #define RMT_ERR_INVALID_PULSE_RANGE             (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) |  0)
-#define RMT_ERR_NOT_ENOUGH_MEMORY               (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  1)
-#define RMT_ERR_NO_MORE_RMT                     (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  2)
-#define RMT_ERR_INVALID_PIN                     (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  3)
-#define RMT_ERR_TIMEOUT                         (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  4)
-#define RMT_ERR_UNEXPECTED                      (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  5)
-#define RMT_ERR_INVALID_IDLE_LEVEL              (DRIVER_EXCEPTION_BASE(SPI_DRIVER_ID) |  6)
+#define RMT_ERR_NOT_ENOUGH_MEMORY               (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) |  1)
+#define RMT_ERR_NO_MORE_RMT                     (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) |  2)
+#define RMT_ERR_INVALID_PIN                     (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) |  3)
+#define RMT_ERR_TIMEOUT                         (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) |  4)
+#define RMT_ERR_UNEXPECTED                      (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) |  5)
+#define RMT_ERR_INVALID_IDLE_LEVEL              (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) |  6)
+#define RMT_ERR_INVALID_TIMEOUT                 (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) |  7)
+#define RMT_ERR_INVALID_MIN_PULSE               (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) |  8)
 
 extern const int rmt_errors;
 extern const int rmt_error_map;
@@ -100,6 +102,9 @@ extern const int rmt_error_map;
  * @param range Time unit that will be used to get pulse duration. Can be either RMTPulseRangeNSEC (nanoseconds),
  *              RMTPulseRangeUSEC (milliseconds) or RMTPulseRangeMSEC (milliseconds).
  *
+ * @min_pulse Min pulse duration time, expressed in range units. Pulses with a duration time less than this values
+ *            will be ignored.
+ *
  * @param deviceid A pointer to an integer that will be used to get the device id.
  *
  * @return
@@ -111,7 +116,7 @@ extern const int rmt_error_map;
  *          RMT_ERR_NOT_ENOUGH_MEMORY
  *          RMT_ERR_NO_MORE_RMT
  */
-driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, int *deviceid);
+driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, int min_pulse, int *deviceid);
 
 /**
  * @brief Setup a RMT channel attached to a pin for transmit data.

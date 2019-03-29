@@ -127,7 +127,7 @@
 #define RCSWITCH_DRIVER driver_get_by_name("rcswitch")
 #define RMT_DRIVER driver_get_by_name("rmt")
 
-#define DRIVER_EXCEPTION_BASE(n) (n << 24)
+#define DRIVER_EXCEPTION_BASE(n) (n << 16)
 
 struct driver;
 struct driver_error;
