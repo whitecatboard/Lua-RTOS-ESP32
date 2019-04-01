@@ -139,11 +139,9 @@ driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
             }
     #endif
         } else {
-            return error;
             free(error);
         }
     } else {
-        return error;
         free(error);
     }
 

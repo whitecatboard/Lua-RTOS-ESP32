@@ -187,7 +187,7 @@ driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, rmt_filter_ticks_
         return NULL;
     }
 
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS && 0
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     // Lock resources
     driver_unit_lock_error_t *lock_error = NULL;
 
@@ -300,7 +300,7 @@ driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t range, rmt_idle_level id
         return NULL;
     }
 
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS && 0
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     // Lock resources
     driver_unit_lock_error_t *lock_error = NULL;
 
@@ -574,7 +574,7 @@ void rmt_unsetup_tx(int deviceid) {
     if (!devices[channel].rx_config) {
         // Device is also not for RX, we can free resources
 
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS && 0
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
         // Unlock resources
         driver_unlock(RMT_DRIVER, channel, GPIO_DRIVER, devices[channel].pin);
 #endif
@@ -605,7 +605,7 @@ void rmt_unsetup_rx(int deviceid) {
     if (!devices[channel].tx_config) {
         // Device is also not for TX, we can free resources
 
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS && 0
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
         // Unlock resources
         driver_unlock(RMT_DRIVER, channel, GPIO_DRIVER, devices[channel].pin);
 #endif

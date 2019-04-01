@@ -155,7 +155,7 @@ typedef struct {
     const struct driver    *driver;    // Driver that caused error
     int                     unit;      // Driver unit that caused error
     uint32_t                exception; // Exception code
-    const char                *msg;       // Error message
+    const char             *msg;       // Error message
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     struct driver_unit_lock_error *lock_error;
 #endif
@@ -168,10 +168,10 @@ typedef struct {
  */
 typedef struct driver {
     const char *name;                     /*!< Driver name */
-    const uint32_t  exception_base;        /*!< The exception base number for this driver. When a exception is raised the exception number is exception_base + exception number */
+    const uint32_t  exception_base;       /*!< The exception base number for this driver. When a exception is raised the exception number is exception_base + exception number */
     const driver_message_t *error;        /*!< Array of exception error messages */
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-    const struct driver_unit_lock **lock;  /*!< Array locks */
+    const struct driver_unit_lock **lock; /*!< Array locks */
     const int locks;                      /*!< Number of locks */
 #endif
     void (*init)();                       /*!< Driver initialization functions, called at system init */

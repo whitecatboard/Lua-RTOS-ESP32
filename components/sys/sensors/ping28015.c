@@ -86,6 +86,9 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) ping28015
  * Operation functions
  */
 driver_error_t *ping28015_setup(sensor_instance_t *unit) {
+    driver_error_t *error;
+    driver_unit_lock_error_t *lock_error = NULL;
+
     // Set default calibration value
     unit->properties[0].doubled.value = 0;
 
@@ -95,26 +98,46 @@ driver_error_t *ping28015_setup(sensor_instance_t *unit) {
     // By default, use bit bang implementation
     unit->args = (void *)0xffffffff;
 
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    // At this point pin is locked by sensor driver. In this case we need to unlock the
+    // resource first, because maybe we can use RMT.
+    driver_unlock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup[0].gpio.gpio);
+#endif
+
     // The preferred implementation uses the RMT to avoid disabling interrupts during
     // the acquire process. If there are not RMT channels available, use the bit bang
     // implementation.
-    driver_error_t *error;
-#if 0
     int rmt_device;
 
     error = rmt_setup_tx(unit->setup[0].gpio.gpio, RMTPulseRangeUSEC, RMTIdleZ, NULL, &rmt_device);
     if (!error) {
         error = rmt_setup_rx(unit->setup[0].gpio.gpio, RMTPulseRangeUSEC, 10, 22000, &rmt_device);
         if (!error) {
-            // Use RMT implementation
-            unit->args = (void *)((uint32_t)rmt_device);
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+            // Lock RMT for this sensor (pin is locked by RMT)
+            if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, RMT_DRIVER, rmt_device, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+                free(lock_error);
+            } else {
+                // Use RMT implementation
+                unit->args = (void *)((uint32_t)rmt_device);
+            }
+#endif
         } else {
             free(error);
         }
     } else {
         free(error);
     }
+
+    if ((uint32_t)unit->args == 0xffffffff) {
+        // Use bit bang
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+        // Lock GPIO for this sensor
+        if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup[0].gpio.gpio, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+            return driver_lock_error(SENSOR_DRIVER, lock_error);
+        }
 #endif
+    }
 
     // The initial status of the signal line must be low
     gpio_pin_output(unit->setup[0].gpio.gpio);
