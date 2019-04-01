@@ -59,8 +59,8 @@
 void nzr_init();
 
 DRIVER_REGISTER_BEGIN(NZR,nzr,0,nzr_init,NULL);
-	DRIVER_REGISTER_ERROR(NZR, nzr, NotEnoughtMemory, "not enough memory", NZR_ERR_NOT_ENOUGH_MEMORY);
-	DRIVER_REGISTER_ERROR(NZR, nzr, InvalidUnit, "invalid unit", NRZ_ERR_INVALID_UNIT);
+    DRIVER_REGISTER_ERROR(NZR, nzr, NotEnoughtMemory, "not enough memory", NZR_ERR_NOT_ENOUGH_MEMORY);
+    DRIVER_REGISTER_ERROR(NZR, nzr, InvalidUnit, "invalid unit", NRZ_ERR_INVALID_UNIT);
 DRIVER_REGISTER_END(NZR,nzr,0,nzr_init,NULL);
 
 // List of units
@@ -70,167 +70,167 @@ struct list nzr_list;
  * Operation functions
  */
 void nzr_init() {
-	// Init  list
+    // Init  list
     lstinit(&nzr_list, 0, LIST_DEFAULT);
 }
 
 driver_error_t *nzr_setup(nzr_timing_t *timing, uint8_t gpio, uint32_t *unit) {
-	driver_error_t *error;
-	nzr_instance_t *instance;
+    driver_error_t *error;
+    nzr_instance_t *instance;
 
-	// Allocate space for instance
-	instance = (nzr_instance_t *)calloc(1, sizeof(nzr_instance_t));
-	if (!instance) {
-		return driver_error(NZR_DRIVER, NZR_ERR_NOT_ENOUGH_MEMORY, NULL);
-	}
+    // Allocate space for instance
+    instance = (nzr_instance_t *)calloc(1, sizeof(nzr_instance_t));
+    if (!instance) {
+        return driver_error(NZR_DRIVER, NZR_ERR_NOT_ENOUGH_MEMORY, NULL);
+    }
 
-	// Copy values to instance
-	memcpy(&instance->timings, timing, sizeof(nzr_timing_t));
-	instance->gpio = gpio;
+    // Copy values to instance
+    memcpy(&instance->timings, timing, sizeof(nzr_timing_t));
+    instance->gpio = gpio;
 
-	// Add instance
-	if (lstadd(&nzr_list, instance, (int *)unit)) {
-		free(instance);
+    // Add instance
+    if (lstadd(&nzr_list, instance, (int *)unit)) {
+        free(instance);
 
-		return driver_error(NZR_DRIVER, NZR_ERR_NOT_ENOUGH_MEMORY, NULL);
-	}
+        return driver_error(NZR_DRIVER, NZR_ERR_NOT_ENOUGH_MEMORY, NULL);
+    }
 
-	// The preferred implementation uses the RMT to avoid disabling interrupts.
+    // The preferred implementation uses the RMT to avoid disabling interrupts.
     // If there a not RMT channels available we use the bit bang implementation.
     int rmt_device;
 
     error = rmt_setup_tx(gpio, RMTPulseRangeNSEC, RMTIdleL, NULL, &rmt_device);
-   	if (!error) {
-    	// Use RMT
-   		 instance->deviceid = rmt_device;
-   	 } else {
-    	// Not possible
-    	free(error);
+       if (!error) {
+        // Use RMT
+            instance->deviceid = rmt_device;
+        } else {
+        // Not possible
+        free(error);
 
-    	// Use bit bang implementation.
-    	instance->deviceid = 0xffffffff;
+        // Use bit bang implementation.
+        instance->deviceid = 0xffffffff;
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     driver_unit_lock_error_t *lock_error = NULL;
 
     // Lock the GPIO
     if ((lock_error = driver_lock(NZR_DRIVER, *unit, GPIO_DRIVER, gpio, DRIVER_ALL_FLAGS, NULL))) {
-    	lstremove(&nzr_list, *unit, 1);
-    	// Revoked lock on pin
-    	return driver_lock_error(NZR_DRIVER, lock_error);
+        lstremove(&nzr_list, *unit, 1);
+        // Revoked lock on pin
+        return driver_lock_error(NZR_DRIVER, lock_error);
     }
 #endif
 
-    	// Configure GPIO as output
-    	if ((error = gpio_pin_output(gpio))) {
-        	lstremove(&nzr_list, *unit, 1);
+        // Configure GPIO as output
+        if ((error = gpio_pin_output(gpio))) {
+            lstremove(&nzr_list, *unit, 1);
 
-    		return error;
-    	}
+            return error;
+        }
 
-    	gpio_ll_pin_clr(gpio);
+        gpio_ll_pin_clr(gpio);
     }
 
-	return NULL;
+    return NULL;
 }
 
 driver_error_t *nzr_send(uint32_t unit, uint8_t *data, uint32_t bits) {
-	nzr_instance_t *instance;
-	uint8_t mask;
-	uint32_t pulseH;
-	uint32_t pulseL;
-	uint32_t c, s, bit;
+    nzr_instance_t *instance;
+    uint8_t mask;
+    uint32_t pulseH;
+    uint32_t pulseL;
+    uint32_t c, s, bit;
 
-	// Get instance
+    // Get instance
     if (lstget(&nzr_list, (int)unit, (void **)&instance)) {
-		return driver_error(NZR_DRIVER, NRZ_ERR_INVALID_UNIT, NULL);
+        return driver_error(NZR_DRIVER, NRZ_ERR_INVALID_UNIT, NULL);
     }
 
     if (instance->deviceid != 0xffffffff) {
-    	// RMT implementation
-    	driver_error_t *error = NULL;
+        // RMT implementation
+        driver_error_t *error = NULL;
 
-    	// Create buffer
-    	rmt_item_t *buffer = calloc(bits, sizeof(rmt_item_t));
-    	if (!buffer) {
-    		return driver_error(NZR_DRIVER, NZR_ERR_NOT_ENOUGH_MEMORY, NULL);
-    	}
+        // Create buffer
+        rmt_item_t *buffer = calloc(bits, sizeof(rmt_item_t));
+        if (!buffer) {
+            return driver_error(NZR_DRIVER, NZR_ERR_NOT_ENOUGH_MEMORY, NULL);
+        }
 
-    	// Prepare data
-    	rmt_item_t *cbuffer = buffer;
+        // Prepare data
+        rmt_item_t *cbuffer = buffer;
 
-    	mask = 0x80;
-    	for(bit = 0;bit < bits; bit++) {
-    		pulseH = ((*data) & mask)?instance->timings.n.t1h:instance->timings.n.t0h;
-    		pulseL = ((*data) & mask)?instance->timings.n.t1l:instance->timings.n.t0l;
+        mask = 0x80;
+        for(bit = 0;bit < bits; bit++) {
+            pulseH = ((*data) & mask)?instance->timings.n.t1h:instance->timings.n.t0h;
+            pulseL = ((*data) & mask)?instance->timings.n.t1l:instance->timings.n.t0l;
 
-    		cbuffer->duration0 = pulseH;
-    		cbuffer->level0 = 1;
+            cbuffer->duration0 = pulseH;
+            cbuffer->level0 = 1;
 
-    		cbuffer->duration1 = pulseL;
-    		cbuffer->level1 = 0;
+            cbuffer->duration1 = pulseL;
+            cbuffer->level1 = 0;
 
-    		cbuffer++;
+            cbuffer++;
 
-    		mask = mask >> 1;
-    		if (mask == 0) {
-    			mask = 0x80;
-    			data++;
-    		}
-    	}
+            mask = mask >> 1;
+            if (mask == 0) {
+                mask = 0x80;
+                data++;
+            }
+        }
 
-    	error = rmt_tx(instance->deviceid, buffer, bits);
-    	if (error) {
-    		free(buffer);
-    		return error;
-    	}
+        error = rmt_tx(instance->deviceid, buffer, bits);
+        if (error) {
+            free(buffer);
+            return error;
+        }
 
-		free(buffer);
+        free(buffer);
     } else {
-    	// Bit bang implementation
-    	portDISABLE_INTERRUPTS();
+        // Bit bang implementation
+        portDISABLE_INTERRUPTS();
 
-    	mask = 0x80;
-    	c = xthal_get_ccount();
-    	for(bit = 0;bit < bits; bit++) {
-    		s = c;
+        mask = 0x80;
+        c = xthal_get_ccount();
+        for(bit = 0;bit < bits; bit++) {
+            s = c;
 
-    		pulseH = ((*data) & mask)?instance->timings.c.t1h:instance->timings.c.t0h;
-    		pulseL = ((*data) & mask)?instance->timings.c.t1l:instance->timings.c.t0l;
+            pulseH = ((*data) & mask)?instance->timings.c.t1h:instance->timings.c.t0h;
+            pulseL = ((*data) & mask)?instance->timings.c.t1l:instance->timings.c.t0l;
 
-    		gpio_ll_pin_set(instance->gpio);
-    		while (((c = xthal_get_ccount()) - s) < pulseH);
+            gpio_ll_pin_set(instance->gpio);
+            while (((c = xthal_get_ccount()) - s) < pulseH);
 
-    		s = c;
-    		gpio_ll_pin_clr(instance->gpio);
-    		while (((c = xthal_get_ccount()) - s) < pulseL);
+            s = c;
+            gpio_ll_pin_clr(instance->gpio);
+            while (((c = xthal_get_ccount()) - s) < pulseL);
 
-    		mask = mask >> 1;
-    		if (mask == 0) {
-    			mask = 0x80;
-    			data++;
-    		}
-    	}
+            mask = mask >> 1;
+            if (mask == 0) {
+                mask = 0x80;
+                data++;
+            }
+        }
 
-    	portENABLE_INTERRUPTS();
+        portENABLE_INTERRUPTS();
     }
 
-	udelay(instance->timings.res / 1000);
+    udelay(instance->timings.res / 1000);
 
-	return NULL;
+    return NULL;
 }
 
 driver_error_t *nzr_unsetup(uint32_t unit) {
-	nzr_instance_t *instance;
+    nzr_instance_t *instance;
 
-	// Get instance
+    // Get instance
     if (lstget(&nzr_list, (int)unit, (void **)&instance)) {
-		return driver_error(NZR_DRIVER, NRZ_ERR_INVALID_UNIT, NULL);
+        return driver_error(NZR_DRIVER, NRZ_ERR_INVALID_UNIT, NULL);
     }
 
     if (instance->deviceid != 0xffffffff) {
-    	// RMT implementation
-    	rmt_unsetup_tx(instance->deviceid);
+        // RMT implementation
+        rmt_unsetup_tx(instance->deviceid);
     } else {
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     // Unlock the GPIO

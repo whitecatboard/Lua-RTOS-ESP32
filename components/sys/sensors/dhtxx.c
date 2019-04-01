@@ -105,8 +105,8 @@ static int dhtxx_bus_monitor(uint8_t pin, uint8_t level, int16_t timeout) {
 }
 
 driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
-	driver_error_t *error;
-	driver_unit_lock_error_t *lock_error = NULL;
+    driver_error_t *error;
+    driver_unit_lock_error_t *lock_error = NULL;
 
     // Get pin from instance
     uint8_t pin = unit->setup[0].gpio.gpio;
@@ -114,9 +114,9 @@ driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
     // By default, use software implementation
     unit->args = (void *)0xffffffff;
 
-	// The preferred implementation uses the RMT to avoid disabling interrupts during
-	// the acquire process. If there a not RMT channels available we use the bit bang
-	// implementation.
+    // The preferred implementation uses the RMT to avoid disabling interrupts during
+    // the acquire process. If there a not RMT channels available we use the bit bang
+    // implementation.
     int rmt_device;
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
@@ -130,30 +130,30 @@ driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
         error = rmt_setup_rx(pin, RMTPulseRangeUSEC, 10, 100, &rmt_device);
         if (!error) {
     #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-    		// Lock RMT for this sensor (pin is locked by RMT)
-    		if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, RMT_DRIVER, rmt_device, DRIVER_ALL_FLAGS, unit->sensor->id))) {
-    			free(lock_error);
-    		} else {
-    			// Use RMT implementation
-    			unit->args = (void *)((uint32_t)rmt_device);
-    		}
+            // Lock RMT for this sensor (pin is locked by RMT)
+            if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, RMT_DRIVER, rmt_device, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+                free(lock_error);
+            } else {
+                // Use RMT implementation
+                unit->args = (void *)((uint32_t)rmt_device);
+            }
     #endif
         } else {
-        	return error;
-        	free(error);
+            return error;
+            free(error);
         }
     } else {
-    	return error;
-    	free(error);
+        return error;
+        free(error);
     }
 
     if ((uint32_t)unit->args == 0xffffffff) {
-    	// Use bit bang
+        // Use bit bang
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-		// Lock GPIO for this sensor
-		if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, pin, DRIVER_ALL_FLAGS, unit->sensor->id))) {
-			return driver_lock_error(SENSOR_DRIVER, lock_error);
-		}
+        // Lock GPIO for this sensor
+        if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, pin, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+            return driver_lock_error(SENSOR_DRIVER, lock_error);
+        }
 #endif
     }
 
@@ -165,18 +165,18 @@ driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
 }
 
 driver_error_t *dhtxx_postsetup(sensor_instance_t *unit) {
-	// Datasheet says:
-	//
-	// When power is supplied to the sensor, do not send any
-	// instruction to the sensor in within one second in order to pass the unstable status
+    // Datasheet says:
+    //
+    // When power is supplied to the sensor, do not send any
+    // instruction to the sensor in within one second in order to pass the unstable status
 
 #if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
-	if (pwbus_uptime() < 1000) {
-		delay(1000);
-	}
+    if (pwbus_uptime() < 1000) {
+        delay(1000);
+    }
 #endif
 
-	return NULL;
+    return NULL;
 }
 
 driver_error_t *dhtxx_acquire(sensor_instance_t *unit, uint32_t rdelay, uint32_t atime, uint8_t *data) {
@@ -190,82 +190,82 @@ driver_error_t *dhtxx_acquire(sensor_instance_t *unit, uint32_t rdelay, uint32_t
     uint8_t pin = unit->setup[0].gpio.gpio;
 
 retry:
-	// We initialize the data in this way to detect a CRC error in case of problems: sensor
-	// not connected, bad wire quality, interferences ...
-	data[0] = data[1] = data[2] = data[3] = 0xff;
-	data[4] = 0x00;
+    // We initialize the data in this way to detect a CRC error in case of problems: sensor
+    // not connected, bad wire quality, interferences ...
+    data[0] = data[1] = data[2] = data[3] = 0xff;
+    data[4] = 0x00;
 
     if ((uint32_t)unit->args != 0xffffffff) {
-    	driver_error_t *error;
-    	rmt_item_t *item;
+        driver_error_t *error;
+        rmt_item_t *item;
 
-    	// First send, request pulse
-    	rmt_item_t buffer[41];
+        // First send, request pulse
+        rmt_item_t buffer[41];
 
-    	buffer[0].level0 = 0;
-    	buffer[0].duration0 = rdelay * 1000;
-    	buffer[0].level1 = 1;
-    	buffer[0].duration1 = 40;
+        buffer[0].level0 = 0;
+        buffer[0].duration0 = rdelay * 1000;
+        buffer[0].level1 = 1;
+        buffer[0].duration1 = 40;
 
-    	error = rmt_tx_rx((int)unit->args, buffer, 1, buffer, 41, 100000);
-    	if (!error) {
-    		item = buffer;
+        error = rmt_tx_rx((int)unit->args, buffer, 1, buffer, 41, 100000);
+        if (!error) {
+            item = buffer;
 
-			// Skip first item, because it corresponds to the pulse sent by the
-			// sensor to indicate that it will start to send the data.
-			item++;
+            // Skip first item, because it corresponds to the pulse sent by the
+            // sensor to indicate that it will start to send the data.
+            item++;
 
-			for(byte=0;byte < 5;byte++) {
-				data[byte] = 0;
+            for(byte=0;byte < 5;byte++) {
+                data[byte] = 0;
 
-				for(bit = 7;bit >= 0;bit--) {
-					if (item->level0 == 0) {
-						t0 = item->duration0;
-						t1 = item->duration1;
-					} else {
-						t0 = item->duration1;
-						t1 = item->duration0;
-					}
+                for(bit = 7;bit >= 0;bit--) {
+                    if (item->level0 == 0) {
+                        t0 = item->duration0;
+                        t1 = item->duration1;
+                    } else {
+                        t0 = item->duration1;
+                        t1 = item->duration0;
+                    }
 
-					if (t1 > t0) {
-						data[byte] |= (1 << bit);
-					}
+                    if (t1 > t0) {
+                        data[byte] |= (1 << bit);
+                    }
 
-					item++;
-				}
-			}
-    	} else {
-    		return error;
-    	}
+                    item++;
+                }
+            }
+        } else {
+            return error;
+        }
     } else {
         // Use software version
         portDISABLE_INTERRUPTS();
 
-		// Inform the sensor that we want to acquire data
-		gpio_pin_output(pin);
-		gpio_pin_clr(pin);
-		delay(rdelay);
+        // Inform the sensor that we want to acquire data
+        gpio_pin_output(pin);
+        gpio_pin_clr(pin);
+        delay(rdelay);
 
-		// Receive data
-	    gpio_pin_input(pin);
-	    gpio_pin_pullup(pin);
+        // Receive data
+        gpio_pin_input(pin);
+        gpio_pin_pullup(pin);
 
         // Wait response from sensor 1 -> 0 -> 1 -> 0
         t1 = dhtxx_bus_monitor(pin, 1, 100);if (t1 == -1) goto timeout;
         t0 = dhtxx_bus_monitor(pin, 0, 100);if (t0 == -1) goto timeout;
         t1 = dhtxx_bus_monitor(pin, 1, 100);if (t1 == -1) goto timeout;
 
-		for(byte=0;byte < 5;byte++) {
-			data[byte] = 0;
+        for(byte=0;byte < 5;byte++) {
+            data[byte] = 0;
 
-			for(bit=7;bit >= 0;bit--) {
-	            // Wait for bit 0 -> 1 -> 0
-	            t0 = dhtxx_bus_monitor(pin, 0, 100);if (t0 == -1) goto timeout;
-	            t1 = dhtxx_bus_monitor(pin, 1, 100);if (t1 == -1) goto timeout;
+            for(bit=7;bit >= 0;bit--) {
+                // Wait for bit 0 -> 1 -> 0
+                t0 = dhtxx_bus_monitor(pin, 0, 100);if (t0 == -1) goto timeout;
+                t1 = dhtxx_bus_monitor(pin, 1, 100);if (t1 == -1) goto timeout;
 
-				data[byte] |= ((t1 > t0) << bit);
-			}
-		}
+                data[byte] |= ((t1 > t0) << bit);
+            }
+        }
     }
 
     // Check CRC
@@ -276,15 +276,15 @@ retry:
     crc += data[3];
 
     if (crc != data[4]) {
-		if ((uint32_t)unit->args == 0xffffffff) {
-			portENABLE_INTERRUPTS();
-		}
+        if ((uint32_t)unit->args == 0xffffffff) {
+            portENABLE_INTERRUPTS();
+        }
 
-		retries++;
-		if (retries < 5) {
-			delay(atime);
-			goto retry;
-		}
+        retries++;
+        if (retries < 5) {
+            delay(atime);
+            goto retry;
+        }
 
         return driver_error(SENSOR_DRIVER, SENSOR_ERR_INVALID_DATA, "crc");
     }
@@ -292,43 +292,43 @@ retry:
     goto exit;
 
 timeout:
-	if ((uint32_t)unit->args == 0xffffffff) {
-		portENABLE_INTERRUPTS();
-	}
+    if ((uint32_t)unit->args == 0xffffffff) {
+        portENABLE_INTERRUPTS();
+    }
 
     retries++;
     if (retries < 5) {
-		delay(atime);
-		goto retry;
+        delay(atime);
+        goto retry;
     }
 
     return driver_error(SENSOR_DRIVER, SENSOR_ERR_TIMEOUT, NULL);
 
 exit:
-	if ((uint32_t)unit->args == 0xffffffff) {
-		portENABLE_INTERRUPTS();
-	}
+    if ((uint32_t)unit->args == 0xffffffff) {
+        portENABLE_INTERRUPTS();
+    }
 
     gettimeofday(&unit->next, NULL);
     unit->next.tv_sec += atime / 1000;
 
-	return NULL;
+    return NULL;
 }
 
 driver_error_t *dhtxx_unsetup(sensor_instance_t *unit) {
-	if ((uint32_t)unit->args != 0xffffffff) {
-	    rmt_unsetup_rx((int)unit->args);
+    if ((uint32_t)unit->args != 0xffffffff) {
+        rmt_unsetup_rx((int)unit->args);
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-		driver_unlock(SENSOR_DRIVER, unit->unit, RMT_DRIVER, (uint32_t)unit->args);
+        driver_unlock(SENSOR_DRIVER, unit->unit, RMT_DRIVER, (uint32_t)unit->args);
 #endif
-	} else {
+    } else {
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-		driver_unlock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup[0].gpio.gpio);
+        driver_unlock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup[0].gpio.gpio);
 #endif
-	}
+    }
 
-	return NULL;
+    return NULL;
 }
 #endif
 #endif

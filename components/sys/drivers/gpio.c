@@ -1067,44 +1067,44 @@ int IRAM_ATTR gpio_get_pulse_time(uint8_t pin, uint8_t level, uint32_t timeout) 
         timeout = 10000000;
     }
 
-	// Convert timeout to xthal_get_ccount units (ticks)
-	timeout = timeout * (cpu_speed_hz() / 1000000.0);
+    // Convert timeout to xthal_get_ccount units (ticks)
+    timeout = timeout * (cpu_speed_hz() / 1000000.0);
 
-	portDISABLE_INTERRUPTS();
+    portDISABLE_INTERRUPTS();
 
-	start = xthal_get_ccount();
+    start = xthal_get_ccount();
 
-	while (gpio_ll_pin_get(pin) != !level) {
-		end = xthal_get_ccount();
-		if ((end - start) >= timeout) {
-			portENABLE_INTERRUPTS();
-			return -1;
-		}
-	}
+    while (gpio_ll_pin_get(pin) != !level) {
+        end = xthal_get_ccount();
+        if ((end - start) >= timeout) {
+            portENABLE_INTERRUPTS();
+            return -1;
+        }
+    }
 
-	while (gpio_ll_pin_get(pin) != level) {
-		end = xthal_get_ccount();
-		if ((end - start) >= timeout) {
-			portENABLE_INTERRUPTS();
-			return -1;
-		}
-	}
+    while (gpio_ll_pin_get(pin) != level) {
+        end = xthal_get_ccount();
+        if ((end - start) >= timeout) {
+            portENABLE_INTERRUPTS();
+            return -1;
+        }
+    }
 
-	start = xthal_get_ccount();
+    start = xthal_get_ccount();
 
-	while (gpio_ll_pin_get(pin) != !level) {
-		end = xthal_get_ccount();
-		if ((end - start) >= timeout) {
-			portENABLE_INTERRUPTS();
-			return -1;
-		}
-	}
+    while (gpio_ll_pin_get(pin) != !level) {
+        end = xthal_get_ccount();
+        if ((end - start) >= timeout) {
+            portENABLE_INTERRUPTS();
+            return -1;
+        }
+    }
 
-	end = xthal_get_ccount();
+    end = xthal_get_ccount();
 
-	portENABLE_INTERRUPTS();
+    portENABLE_INTERRUPTS();
 
-	elapsed = ((double)end - (double)start) / (double)((cpu_speed_hz() / 1000000.0));
+    elapsed = ((double)end - (double)start) / (double)((cpu_speed_hz() / 1000000.0));
 
     return elapsed;
 }
