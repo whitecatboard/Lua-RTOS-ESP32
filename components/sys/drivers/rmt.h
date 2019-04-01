@@ -58,47 +58,47 @@ typedef int rmt_filter_ticks_thresh_t;
 typedef void (*rmt_callback_t)();
 
 typedef enum {
-	RMTPulseRangeNSEC = 0,
-	RMTPulseRangeUSEC = 1,
-	RMTPulseRangeMSEC = 2,
-	RMTPulseRangeMAX
+    RMTPulseRangeNSEC = 0,
+    RMTPulseRangeUSEC = 1,
+    RMTPulseRangeMSEC = 2,
+    RMTPulseRangeMAX
 } rmt_pulse_range_t;
 
 typedef enum {
-	RMTIdleL,
-	RMTIdleH,
-	RMTIdleZ,
-	RMTIdleMAX
+    RMTIdleL,
+    RMTIdleH,
+    RMTIdleZ,
+    RMTIdleMAX
 } rmt_idle_level;
 
 typedef struct {
-	union {
-		struct {
-			uint32_t duration0 :15;
-			uint32_t level0 :1;
-			uint32_t duration1 :15;
-			uint32_t level1 :1;
-		};
-		uint32_t val;
-	};
+    union {
+        struct {
+            uint32_t duration0 :15;
+            uint32_t level0 :1;
+            uint32_t duration1 :15;
+            uint32_t level1 :1;
+        };
+        uint32_t val;
+    };
 } rmt_item_t;
 
 typedef struct {
-	int8_t pin;
-	struct mtx mtx;
-	RingbufHandle_t rb;
+    int8_t pin;
+    struct mtx mtx;
+    RingbufHandle_t rb;
 
-	uint8_t rx_config;
-	struct {
-		rmt_pulse_range_t range;
-		float scale;
-	} rx;
+    uint8_t rx_config;
+    struct {
+        rmt_pulse_range_t range;
+        float scale;
+    } rx;
 
-	uint8_t tx_config;
-	struct {
-		rmt_pulse_range_t range;
-		float scale;
-	} tx;
+    uint8_t tx_config;
+    struct {
+        rmt_pulse_range_t range;
+        float scale;
+    } tx;
 } rmt_device_t;
 
 // RMT errors
