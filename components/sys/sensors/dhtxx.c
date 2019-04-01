@@ -125,18 +125,25 @@ driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
     driver_unlock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, pin);
 #endif
 
-    error = rmt_setup_rx(pin, RMTPulseRangeUSEC, 10, &rmt_device);
+    error = rmt_setup_tx(pin, RMTPulseRangeUSEC, RMTIdleZ, NULL, &rmt_device);
     if (!error) {
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-		// Lock RMT for this sensor (pin is locked by RMT)
-		if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, RMT_DRIVER, rmt_device, DRIVER_ALL_FLAGS, unit->sensor->id))) {
-			free(lock_error);
-		} else {
-			// Use RMT implementation
-			unit->args = (void *)((uint32_t)rmt_device);
-		}
-#endif
+        error = rmt_setup_rx(pin, RMTPulseRangeUSEC, 10, 100, &rmt_device);
+        if (!error) {
+    #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    		// Lock RMT for this sensor (pin is locked by RMT)
+    		if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, RMT_DRIVER, rmt_device, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+    			free(lock_error);
+    		} else {
+    			// Use RMT implementation
+    			unit->args = (void *)((uint32_t)rmt_device);
+    		}
+    #endif
+        } else {
+        	return error;
+        	free(error);
+        }
     } else {
+    	return error;
     	free(error);
     }
 
@@ -190,25 +197,23 @@ retry:
 
     if ((uint32_t)unit->args != 0xffffffff) {
     	driver_error_t *error;
-    	rmt_item_t *items;
     	rmt_item_t *item;
 
-		// Inform the sensor that we want to acquire data
-		gpio_pin_output(pin);
-		gpio_pin_clr(pin);
-		delay(rdelay);
+    	// First send, request pulse
+    	rmt_item_t buffer[41];
 
-		// Receive data
-		gpio_pin_input(pin);
+    	buffer[0].level0 = 0;
+    	buffer[0].duration0 = rdelay * 1000;
+    	buffer[0].level1 = 1;
+    	buffer[0].duration1 = 40;
 
-		// Read 41 items, timeout 100 milliseconds
-    	error = rmt_rx((int)unit->args, 41, 100, &items);
+    	error = rmt_tx_rx((int)unit->args, buffer, 1, buffer, 41, 100000);
     	if (!error) {
-    		item = items;
+    		item = buffer;
 
 			// Skip first item, because it corresponds to the pulse sent by the
 			// sensor to indicate that it will start to send the data.
-    		item++;
+			item++;
 
 			for(byte=0;byte < 5;byte++) {
 				data[byte] = 0;
@@ -229,8 +234,6 @@ retry:
 					item++;
 				}
 			}
-
-    		free(items);
     	} else {
     		return error;
     	}
@@ -244,7 +247,8 @@ retry:
 		delay(rdelay);
 
 		// Receive data
-		gpio_pin_input(pin);
+	    gpio_pin_input(pin);
+	    gpio_pin_pullup(pin);
 
         // Wait response from sensor 1 -> 0 -> 1 -> 0
         t1 = dhtxx_bus_monitor(pin, 1, 100);if (t1 == -1) goto timeout;

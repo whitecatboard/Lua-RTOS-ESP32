@@ -99,7 +99,7 @@ driver_error_t *nzr_setup(nzr_timing_t *timing, uint8_t gpio, uint32_t *unit) {
     // If there a not RMT channels available we use the bit bang implementation.
     int rmt_device;
 
-    error = rmt_setup_tx(gpio, RMTPulseRangeNSEC, RMTIdleL, &rmt_device);
+    error = rmt_setup_tx(gpio, RMTPulseRangeNSEC, RMTIdleL, NULL, &rmt_device);
    	if (!error) {
     	// Use RMT
    		 instance->deviceid = rmt_device;

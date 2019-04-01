@@ -187,6 +187,7 @@ void _sys_init() {
     periph_module_disable(PERIPH_CAN_MODULE);
     periph_module_disable(PERIPH_I2C0_MODULE);
     periph_module_disable(PERIPH_I2C1_MODULE);
+    periph_module_disable(PERIPH_RMT_MODULE);
 
     // Init important things for Lua RTOS
     _mount_init();

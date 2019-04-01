@@ -52,6 +52,10 @@
 #include <sys/mutex.h>
 #include <sys/panic.h>
 
+int mtx_inited(struct mtx *mutex) {
+	return (mutex->lock != 0);
+}
+
 void mtx_init(struct mtx *mutex, const char *name, const char *type, int opts) {
     mutex->opts = opts;
 
