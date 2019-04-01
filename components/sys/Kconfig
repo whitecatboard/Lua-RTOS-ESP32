@@ -126,7 +126,6 @@ menu "Lua RTOS"
 
       config LUA_RTOS_FIRMWARE_GENERIC_OTA
          bool "Generic ESP32 board with OTA"
-
    endchoice
 
    menu "OTA"
@@ -1567,7 +1566,7 @@ menu "Lua RTOS"
                default y
          endmenu
 
-         menu "Lua RTOS Modules"    
+         menu "Lua RTOS Modules"
             config LUA_RTOS_LUA_USE_FS
                bool "Include fs module in build"
                default y
