@@ -1514,7 +1514,7 @@ menu "Lua RTOS"
                 if you need to work with large integers, or you need more precission when working
                 with real numbers.
          endmenu
-         
+
          menu "Lua Modules"
             config LUA_RTOS_LUA_USE__G
                bool "Include base module in build"
