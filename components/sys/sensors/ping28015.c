@@ -109,9 +109,9 @@ driver_error_t *ping28015_setup(sensor_instance_t *unit) {
     // implementation.
     int rmt_device;
 
-    error = rmt_setup_tx(unit->setup[0].gpio.gpio, RMTPulseRangeUSEC, RMTIdleZ, NULL, &rmt_device);
+    error = rmt_setup_tx(unit->setup[0].gpio.gpio, RMTPulseRangeUSEC, RMTIdleL, NULL, &rmt_device);
     if (!error) {
-        error = rmt_setup_rx(unit->setup[0].gpio.gpio, RMTPulseRangeUSEC, 10, 22000, &rmt_device);
+        error = rmt_setup_rx(unit->setup[0].gpio.gpio, RMTPulseRangeUSEC, 0, 26000, &rmt_device);
         if (!error) {
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
             // Lock RMT for this sensor (pin is locked by RMT)
@@ -147,7 +147,7 @@ driver_error_t *ping28015_setup(sensor_instance_t *unit) {
     sensor_value_t tmp[2];
     int i;
 
-    for(i = 0;i < 2;i++) {
+    for(i = 0;i < 4;i++) {
         error = ping28015_acquire(unit, tmp);
         if (error) {
             free(error);
@@ -178,14 +178,14 @@ driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *value
         rmt_item_t *item;
 
         // First send, request pulse
-        rmt_item_t buffer[41];
+        rmt_item_t buffer[1];
 
-        buffer[0].level0 = 0;
-        buffer[0].duration0 = 5;
-        buffer[0].level1 = 1;
-        buffer[0].duration1 = 5;
+        buffer[0].level0 = 1;
+        buffer[0].duration0 = 10;
+        buffer[0].level1 = 0;
+        buffer[0].duration1 = 0;
 
-        error = rmt_tx_rx((int)unit->args, buffer, 1, buffer, 1, 22000);
+        error = rmt_tx_rx((int)unit->args, buffer, 1, buffer, 1, 26000);
         if (!error) {
             item = buffer;
 
@@ -217,7 +217,7 @@ driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *value
         gpio_pin_input(unit->setup[0].gpio.gpio);
 
         // Get echo pulse width in usecs
-        t = gpio_get_pulse_time(unit->setup[0].gpio.gpio, 1, 22000);
+        t = gpio_get_pulse_time(unit->setup[0].gpio.gpio, 1, 26000);
         if (t < 0) {
             portENABLE_INTERRUPTS();
 

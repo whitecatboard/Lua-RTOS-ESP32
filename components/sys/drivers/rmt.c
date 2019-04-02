@@ -85,7 +85,13 @@ static void rmt_init() {
     mtx_init(&mtx, NULL, NULL, 0);
 }
 
-static void switch_rx(rmt_channel_t channel, void *arg) {
+static void tx_end(rmt_channel_t channel, void *arg) {
+    if (devices[channel].tx.callback) {
+        devices[channel].tx.callback(channel);
+    }
+}
+
+static void switch_rx(int channel) {
     // Stop transmission
     rmt_tx_stop(channel);
 
@@ -93,7 +99,6 @@ static void switch_rx(rmt_channel_t channel, void *arg) {
     rmt_set_pin(channel, RMT_MODE_RX, devices[channel].pin);
     rmt_rx_start(channel, 1);
 }
-
 
 /*
  * Operation functions
@@ -236,7 +241,7 @@ driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, rmt_filter_ticks_
     assert(rmt_config(&rmt_rx) == ESP_OK);
 
     rmt_driver_uninstall(channel);
-    if ((ret = rmt_driver_install(channel, 1000, 0)) != ESP_OK) {
+    if ((ret = rmt_driver_install(channel, 1000, ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_SHARED)) != ESP_OK) {
         if (ret == ESP_ERR_NO_MEM) {
             return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
         } else {
@@ -352,7 +357,7 @@ driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t range, rmt_idle_level id
     assert(rmt_config(&rmt_tx) == ESP_OK);
 
     rmt_driver_uninstall(channel);
-    if ((ret = rmt_driver_install(channel, 0, 0)) != ESP_OK) {
+    if ((ret = rmt_driver_install(channel, 0, ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_SHARED)) != ESP_OK) {
         if (ret == ESP_ERR_NO_MEM) {
             return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
         } else {
@@ -360,7 +365,7 @@ driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t range, rmt_idle_level id
         }
     }
 
-    rmt_register_tx_end_callback(NULL, NULL);
+    rmt_register_tx_end_callback(tx_end, NULL);
 
     // Create mutex for channel, if not yet created
     if (!mtx_inited(&devices[channel].mtx)) {
@@ -494,7 +499,7 @@ driver_error_t *rmt_tx_rx(int deviceid, rmt_item_t *tx, size_t tx_pulses, rmt_it
     // When transmission is ended, RMT is configured in reception mode, and reception is started
     // as soon as possible. This is done installing a transmission end callback, which is executed
     // inside the RMT ISR.
-    rmt_register_tx_end_callback(switch_rx, NULL);
+    devices[channel].tx.callback = switch_rx;
 
     // Start RMT and transmit data
     rmt_set_pin(channel, RMT_MODE_TX, devices[channel].pin);
@@ -503,7 +508,7 @@ driver_error_t *rmt_tx_rx(int deviceid, rmt_item_t *tx, size_t tx_pulses, rmt_it
 
     // At this point reception was started in the transmission end callback, wait for
     // data reception
-    rmt_register_tx_end_callback(NULL, NULL);
+    devices[channel].tx.callback = NULL;
 
     // Convert timeout to FreeRTOS ticks
     if (devices[channel].rx.range == RMTPulseRangeNSEC) {
@@ -516,9 +521,11 @@ driver_error_t *rmt_tx_rx(int deviceid, rmt_item_t *tx, size_t tx_pulses, rmt_it
 
     rmt_item32_t *ritems;         // Items received in current iteration
     uint32_t pending = rx_pulses; // Number of pending pulses
-    size_t items = 0;              // Number of items received in current iteration
+    size_t items = 0;             // Number of items received in current iteration
 
     cbuff = rx;
+
+    int retries = 0;
     while (pending > 0) {
         // Wait for data
         ritems = (rmt_item32_t*)xRingbufferReceive(devices[channel].rb, &items, timeout);
@@ -535,9 +542,15 @@ driver_error_t *rmt_tx_rx(int deviceid, rmt_item_t *tx, size_t tx_pulses, rmt_it
             // Return items to ring buffer
             vRingbufferReturnItem(devices[channel].rb, (void *)ritems);
         } else {
-            // No data received, timeout
-            mtx_unlock(&devices[channel].mtx);
+            // No data received
+            if (retries < 10) {
+                retries++;
+                continue;
+            }
 
+            assert(rmt_rx_stop(channel) == ESP_OK);
+
+            mtx_unlock(&devices[channel].mtx);
             return driver_error(RMT_DRIVER, RMT_ERR_TIMEOUT, NULL);
         }
     }

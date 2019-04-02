@@ -55,7 +55,7 @@ typedef int rmt_pulse_idle_t;
 typedef int rmt_idle_threshold_t;
 typedef int rmt_filter_ticks_thresh_t;
 
-typedef void (*rmt_callback_t)();
+typedef void (*rmt_callback_t)(int);
 
 typedef enum {
     RMTPulseRangeNSEC = 0,
@@ -98,6 +98,7 @@ typedef struct {
     struct {
         rmt_pulse_range_t range;
         float scale;
+        rmt_callback_t callback;
     } tx;
 } rmt_device_t;
 
