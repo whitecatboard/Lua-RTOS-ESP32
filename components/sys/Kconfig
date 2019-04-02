@@ -126,7 +126,6 @@ menu "Lua RTOS"
 
       config LUA_RTOS_FIRMWARE_GENERIC_OTA
          bool "Generic ESP32 board with OTA"
-
    endchoice
 
    menu "OTA"
@@ -1566,6 +1565,7 @@ menu "Lua RTOS"
                bool "Include crc module in build"
                default y
          endmenu
+
          menu "Lua RTOS Modules"
             config LUA_RTOS_LUA_USE_FS
                bool "Include fs module in build"
@@ -1652,6 +1652,10 @@ menu "Lua RTOS"
 
             config LUA_RTOS_LUA_USE_RCSWITCH
                bool "Include RC-Switch module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_RMT
+               bool "Include RMT module in build"
                default y
 
             config LUA_RTOS_LUA_USE_SENSOR

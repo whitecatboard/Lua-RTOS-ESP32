@@ -56,8 +56,15 @@
 
 #define NEO_CYCLES(n) ((double)n / (double)((double)1000000000L / (double)CPU_HZ))
 
+#define NEO_TIMING(t0h, t0l, t1h, t1l, res) \
+{\
+	{t0h, t0l, t1h, t1l},\
+	{NEO_CYCLES(t0h), NEO_CYCLES(t0l), NEO_CYCLES(t1h), NEO_CYCLES(t1l)},\
+	res\
+}
+
 static nzr_timing_t chipset[1] = {
-	{NEO_CYCLES(350), NEO_CYCLES(900), NEO_CYCLES(900), NEO_CYCLES(350), NEO_CYCLES(50000)}, // WS2812B
+	NEO_TIMING(350, 900, 900, 350, 50000), // WS2812B
 };
 
 // Register driver and messages

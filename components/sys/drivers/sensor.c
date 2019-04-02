@@ -483,6 +483,16 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
     pwbus_on();
 #endif
 
+
+    // Call to specific postsetup function
+    if (instance->sensor->postsetup) {
+        if ((error = instance->sensor->postsetup(instance))) {
+            mtx_destroy(&instance->mtx);
+            free(instance);
+            return error;
+        }
+    }
+
     return NULL;
 }
 

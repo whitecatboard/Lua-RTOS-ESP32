@@ -52,6 +52,10 @@
 #include <sys/mutex.h>
 #include <sys/panic.h>
 
+int mtx_inited(struct mtx *mutex) {
+    return (mutex->lock != 0);
+}
+
 void mtx_init(struct mtx *mutex, const char *name, const char *type, int opts) {
     mutex->opts = opts;
 
@@ -69,9 +73,9 @@ void mtx_init(struct mtx *mutex, const char *name, const char *type, int opts) {
             xSemaphoreGiveFromISR( mutex->lock, &xHigherPriorityTaskWoken);
             portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
         } else {
-			if (mutex->opts == MTX_DEF) {
-				xSemaphoreGive( mutex->lock );
-			}
+            if (mutex->opts == MTX_DEF) {
+                xSemaphoreGive( mutex->lock );
+            }
         }
     }    
 }
@@ -83,9 +87,9 @@ void IRAM_ATTR mtx_lock(struct mtx *mutex) {
         portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
     } else {
         if (mutex->opts == MTX_DEF) {
-			xSemaphoreTake( mutex->lock, portMAX_DELAY );
+            xSemaphoreTake( mutex->lock, portMAX_DELAY );
         } else if (mutex->opts == MTX_RECURSE) {
-			xSemaphoreTakeRecursive( mutex->lock, portMAX_DELAY );
+            xSemaphoreTakeRecursive( mutex->lock, portMAX_DELAY );
         }
     }
 }
@@ -115,29 +119,29 @@ void IRAM_ATTR mtx_unlock(struct mtx *mutex) {
         portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
     } else {
         if (mutex->opts == MTX_DEF) {
-			xSemaphoreGive( mutex->lock );
+            xSemaphoreGive( mutex->lock );
         } else if (mutex->opts == MTX_RECURSE) {
-			xSemaphoreGiveRecursive( mutex->lock );
+            xSemaphoreGiveRecursive( mutex->lock );
         }
     }
 }
 
 void mtx_destroy(struct mtx *mutex) {
-	if (!mutex->lock) return;
+    if (!mutex->lock) return;
 
-	if (mutex->opts == MTX_DEF) {
-		if (xPortInIsrContext()) {
-			BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-			xSemaphoreGiveFromISR( mutex->lock, &xHigherPriorityTaskWoken );
-			portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
-		} else {
-			xSemaphoreGive( mutex->lock );
-		}
+    if (mutex->opts == MTX_DEF) {
+        if (xPortInIsrContext()) {
+            BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+            xSemaphoreGiveFromISR( mutex->lock, &xHigherPriorityTaskWoken );
+            portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
+        } else {
+            xSemaphoreGive( mutex->lock );
+        }
 
-		vSemaphoreDelete( mutex->lock );
-	} else if (mutex->opts == MTX_RECURSE) {
-		vSemaphoreDelete( mutex->lock );
-	}
+        vSemaphoreDelete( mutex->lock );
+    } else if (mutex->opts == MTX_RECURSE) {
+        vSemaphoreDelete( mutex->lock );
+    }
 
     mutex->lock = 0;
 }

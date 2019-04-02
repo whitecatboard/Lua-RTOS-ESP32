@@ -266,7 +266,7 @@ driver_unit_lock_error_t *driver_lock(const driver_t *owner_driver, int owner_un
     // Get the target driver lock array
 	driver_unit_lock_t *target_lock = (driver_unit_lock_t *)*target_driver->lock;
 	if ((!target_lock) && (target_driver->locks > 0)) {
-	    // Allocate space for loks
+	    // Allocate space for locks
 	    target_lock = calloc(target_driver->locks, sizeof(driver_unit_lock_t));
 	    assert(target_lock != NULL);
 

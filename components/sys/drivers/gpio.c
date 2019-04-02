@@ -1060,120 +1060,51 @@ uint8_t gpio_is_output(uint8_t pin) {
 }
 
 int IRAM_ATTR gpio_get_pulse_time(uint8_t pin, uint8_t level, uint32_t timeout) {
-    esp_err_t error;
-    uint32_t elapsed;
-
-    esp_log_level_set("rmt", ESP_LOG_NONE);
+    uint32_t start, end, elapsed;
 
     // If no timeout is provided set a 10 second timeout
     if (timeout == 0) {
         timeout = 10000000;
     }
 
-    // Configure RMT RX for read the echo pulse
-    //
-    // RMT is configure for have a click time of 1 usec, so
-    // 1 tick = 1 usec
-    //
-
     // Convert timeout to xthal_get_ccount units (ticks)
-    timeout = timeout * (APB_CLK_FREQ / 1000000.0);
+    timeout = timeout * (cpu_speed_hz() / 1000000.0);
 
-    rmt_config_t rmt_rx;
-    uint8_t channel;
+    portDISABLE_INTERRUPTS();
 
-    rmt_rx.gpio_num = pin;
-    rmt_rx.clk_div = APB_CLK_FREQ / 1000000;
-    rmt_rx.mem_block_num = 1;
-    rmt_rx.rmt_mode = RMT_MODE_RX;
-    rmt_rx.rx_config.filter_en = 0;
-    rmt_rx.rx_config.filter_ticks_thresh = 0;
-    rmt_rx.rx_config.idle_threshold = timeout;
+    start = xthal_get_ccount();
 
-    // This function is a Lua RTOS patch of the esp-idf RMT driver.
-    // In this function RMT channel is provided by the driver.
-    error = rmt_config_one(&rmt_rx, &channel);
-
-    esp_log_level_set("rmt", ESP_LOG_ERROR);
-
-    if (error == ESP_ERR_NOT_FOUND) {
-        uint32_t start, end;
-
-        // Any RMT channel is available. Detect pulse by software
-        // Convert timeout to xthal_get_ccount units (ticks)
-        timeout = timeout * (cpu_speed_hz() / 500000.0);
-
-        portDISABLE_INTERRUPTS();
-
-        start = xthal_get_ccount();
-
-        while (gpio_ll_pin_get(pin) != !level) {
-            end = xthal_get_ccount();
-            if ((end - start) >= timeout) {
-                portENABLE_INTERRUPTS();
-                return -1;
-            }
-        }
-
-        while (gpio_ll_pin_get(pin) != level) {
-            end = xthal_get_ccount();
-            if ((end - start) >= timeout) {
-                portENABLE_INTERRUPTS();
-                return -1;
-            }
-        }
-
-        start = xthal_get_ccount();
-
-        while (gpio_ll_pin_get(pin) != !level) {
-            end = xthal_get_ccount();
-            if ((end - start) >= timeout) {
-                portENABLE_INTERRUPTS();
-                return -1;
-            }
-        }
-
+    while (gpio_ll_pin_get(pin) != !level) {
         end = xthal_get_ccount();
-
-        portENABLE_INTERRUPTS();
-
-        elapsed = ((double)end - (double)start) / (double)((cpu_speed_hz() / 500000.0));
-    } else {
-        // RMT channel is available
-        size_t rx_size = 0;
-        RingbufHandle_t rb = NULL;
-
-        // Install driver
-        error = rmt_driver_install(channel, 32, 0);
-        assert(error == ESP_OK);
-
-        error = rmt_get_ringbuf_handle(channel, &rb);
-        assert(error == ESP_OK);
-
-        // Start
-        error = rmt_rx_start(channel, 1);
-        assert(error == ESP_OK);
-
-        // Read item
-        rmt_item32_t* item = (rmt_item32_t*) xRingbufferReceive(rb, &rx_size, 1000);
-        if (item) {
-            // Get elapsed time (in usecs)
-            elapsed = (item->duration0 & 0x7fff);
-
-            vRingbufferReturnItem(rb, (void*) item);
-        } else {
-            // Uninstall driver
-            rmt_driver_uninstall(channel);
-            esp_log_level_set("rmt", ESP_LOG_ERROR);
-
+        if ((end - start) >= timeout) {
+            portENABLE_INTERRUPTS();
             return -1;
         }
-
-        // Uninstall driver
-        rmt_driver_uninstall(channel);
-
-        esp_log_level_set("rmt", ESP_LOG_ERROR);
     }
+
+    while (gpio_ll_pin_get(pin) != level) {
+        end = xthal_get_ccount();
+        if ((end - start) >= timeout) {
+            portENABLE_INTERRUPTS();
+            return -1;
+        }
+    }
+
+    start = xthal_get_ccount();
+
+    while (gpio_ll_pin_get(pin) != !level) {
+        end = xthal_get_ccount();
+        if ((end - start) >= timeout) {
+            portENABLE_INTERRUPTS();
+            return -1;
+        }
+    }
+
+    end = xthal_get_ccount();
+
+    portENABLE_INTERRUPTS();
+
+    elapsed = ((double)end - (double)start) / (double)((cpu_speed_hz() / 1000000.0));
 
     return elapsed;
 }
