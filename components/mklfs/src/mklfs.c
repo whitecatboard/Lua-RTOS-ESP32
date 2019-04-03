@@ -288,12 +288,10 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	chdir(src);
-	compact(".");
+	compact(src);
 
-	FILE *img;
+	FILE *img = fopen(dst, "wb+");
 
-	img = fopen(dst, "wb+");
 	if (!img) {
 		fprintf(stderr, "can't create image file: errno=%d (%s)\r\n", errno, strerror(errno));
 		return -1;
