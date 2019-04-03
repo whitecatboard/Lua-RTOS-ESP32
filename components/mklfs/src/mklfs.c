@@ -102,7 +102,7 @@ static void create_file(char *src) {
         fprintf(stdout, "%s\r\n", path);
 
         // Open source file
-        FILE *srcf = fopen(src,"r");
+        FILE *srcf = fopen(src,"rb");
         if (!srcf) {
             fprintf(stderr,"can't open source file %s: errno=%d (%s)\r\n", src, errno, strerror(errno));
             exit(1);
@@ -293,7 +293,7 @@ int main(int argc, char **argv) {
 
 	FILE *img;
 
-	img = fopen(dst, "w+");
+	img = fopen(dst, "wb+");
 	if (!img) {
 		fprintf(stderr, "can't create image file: errno=%d (%s)\r\n", errno, strerror(errno));
 		return -1;
