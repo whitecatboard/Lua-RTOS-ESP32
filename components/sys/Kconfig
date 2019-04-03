@@ -1658,6 +1658,10 @@ menu "Lua RTOS"
                bool "Include RMT module in build"
                default y
 
+            config LUA_RTOS_LUA_USE_RTC
+               bool "Include RTC module in build"
+               default y
+
             config LUA_RTOS_LUA_USE_SENSOR
                bool "Include sensor module in build"
                default y

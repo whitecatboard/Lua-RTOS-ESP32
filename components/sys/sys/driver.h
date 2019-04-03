@@ -92,6 +92,7 @@
 #define TOUCH_DRIVER_ID    32
 #define RCSWITCH_DRIVER_ID 33
 #define RMT_DRIVER_ID      34
+#define RTC_DRIVER_ID      35
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -126,8 +127,9 @@
 #define TOUCH_DRIVER driver_get_by_name("touch")
 #define RCSWITCH_DRIVER driver_get_by_name("rcswitch")
 #define RMT_DRIVER driver_get_by_name("rmt")
+#define RTC_DRIVER driver_get_by_name("rtc")
 
-#define DRIVER_EXCEPTION_BASE(n) (n << 16)
+#define DRIVER_EXCEPTION_BASE(n) (n << 24)
 
 struct driver;
 struct driver_error;
