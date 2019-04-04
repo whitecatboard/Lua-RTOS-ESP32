@@ -9,9 +9,9 @@ ifeq ($(OS),Windows_NT)
 	ARCHIVE_CMD := 7z a
 	ARCHIVE_EXTENSION := zip
 	TARGET := mklfs.exe
-	TARGET_CFLAGS := -mno-ms-bitfields -Itclap -Ilfs -I. -DVERSION=\"$(VERSION)\" -D__NO_INLINE__
+	TARGET_CFLAGS := -mno-ms-bitfields -Ilfs -I. -DVERSION=\"$(VERSION)\" -D__NO_INLINE__
 	TARGET_LDFLAGS := -Wl,-static -static-libgcc
-	TARGET_CXXFLAGS := -Itclap -Ilfs -I. -DVERSION=\"$(VERSION)\" -D__NO_INLINE__
+	TARGET_CXXFLAGS := -Ilfs -I. -DVERSION=\"$(VERSION)\" -D__NO_INLINE__
 	CC=gcc
 	CXX=g++
 else
@@ -27,16 +27,16 @@ else
 		endif
 		CC=gcc
 		CXX=g++
-		TARGET_CFLAGS   = -std=gnu99 -Os -Wall -Itclap -Ilfs -I. -D$(TARGET_OS) -DVERSION=\"$(VERSION)\" -D__NO_INLINE__
-		TARGET_CXXFLAGS = -std=gnu++11 -Os -Wall -Itclap -Ilfs -I. -D$(TARGET_OS) -DVERSION=\"$(VERSION)\" -D__NO_INLINE__
+		TARGET_CFLAGS   = -std=gnu99 -Os -Wall -Ilfs -I. -D$(TARGET_OS) -DVERSION=\"$(VERSION)\" -D__NO_INLINE__
+		TARGET_CXXFLAGS = -std=gnu++11 -Os -Wall -Ilfs -I. -D$(TARGET_OS) -DVERSION=\"$(VERSION)\" -D__NO_INLINE__
 	endif
 	ifeq ($(UNAME_S),Darwin)
 		TARGET_OS := OSX
 		DIST_SUFFIX := osx
 		CC=clang
 		CXX=clang++
-		TARGET_CFLAGS   = -std=gnu99 -Os -Wall -Itclap -Ilfs -I. -D$(TARGET_OS) -DVERSION=\"$(VERSION)\" -D__NO_INLINE__ -mmacosx-version-min=10.7 -arch x86_64
-		TARGET_CXXFLAGS = -std=gnu++11 -Os -Wall -Itclap -Ilfs -I. -D$(TARGET_OS) -DVERSION=\"$(VERSION)\" -D__NO_INLINE__ -mmacosx-version-min=10.7 -arch x86_64 -stdlib=libc++
+		TARGET_CFLAGS   = -std=gnu99 -Os -Wall -Ilfs -I. -D$(TARGET_OS) -DVERSION=\"$(VERSION)\" -D__NO_INLINE__ -mmacosx-version-min=10.7 -arch x86_64
+		TARGET_CXXFLAGS = -std=gnu++11 -Os -Wall -Ilfs -I. -D$(TARGET_OS) -DVERSION=\"$(VERSION)\" -D__NO_INLINE__ -mmacosx-version-min=10.7 -arch x86_64 -stdlib=libc++
 		TARGET_LDFLAGS  = -arch x86_64 -stdlib=libc++
 	endif
 	ARCHIVE_CMD := tar czf
@@ -59,8 +59,8 @@ $(TARGET):
 	$(CC) $(TARGET_CFLAGS) -c lfs/lfs.c -o lfs/lfs.o
 	$(CC) $(TARGET_CFLAGS) -c lfs/lfs_util.c -o lfs/lfs_util.o
 	$(CC) $(TARGET_CFLAGS) -c mklfs.c -o mklfs.o
-	$(CXX) $(TARGET_CFLAGS) -o $(TARGET) $(OBJ) $(TARGET_LDFLAGS)
-	
+	$(CC) $(TARGET_CFLAGS) -o $(TARGET) $(OBJ) $(TARGET_LDFLAGS)
+
 clean:
 	@rm -f *.o
 	@rm -f lfs/*.o
