@@ -2074,7 +2074,7 @@ int edit_main(int argc, char *argv[]) {
     if (rc < 0 && errno == ENOENT) rc = new_file(ed, argv[i]);
     if (rc < 0) {
       perror(argv[i]);
-      return 0;
+      return 1;
     }
   }
   if (env.current == NULL) {
