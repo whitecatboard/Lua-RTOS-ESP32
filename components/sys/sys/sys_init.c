@@ -222,7 +222,19 @@ void _sys_init() {
     printf("board type %s\r\n", CONFIG_LUA_RTOS_BOARD_TYPE);
 
     // Open log
+#if CONFIG_LOG_DEFAULT_LEVEL_NONE
+    setlogmask(LOG_UPTO(LOG_EMERG));
+#elif CONFIG_LOG_DEFAULT_LEVEL_ERROR
+    setlogmask(LOG_UPTO(LOG_ERR));
+#elif CONFIG_LOG_DEFAULT_LEVEL_WARN
+    setlogmask(LOG_UPTO(LOG_WARNING));
+#elif CONFIG_LOG_DEFAULT_LEVEL_INFO
     setlogmask(LOG_UPTO(LOG_INFO));
+#elif CONFIG_LOG_DEFAULT_LEVEL_DEBUG
+    setlogmask(LOG_UPTO(LOG_DEBUG));
+#elif CONFIG_LOG_DEFAULT_LEVEL_VERBOSE
+    setlogmask(LOG_UPTO(LOG_DEBUG));
+#endif
     openlog(LOG_CONS | LOG_NDELAY, LOG_LOCAL1);
 
     cpu_show_info();
