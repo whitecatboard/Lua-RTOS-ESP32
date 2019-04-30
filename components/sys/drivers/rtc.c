@@ -48,6 +48,8 @@
 #if CONFIG_LUA_RTOS_LUA_USE_RTC
 
 #include "esp_attr.h"
+#include "esp_sleep.h"
+
 #include "rom/rtc.h"
 
 #include <string.h>
@@ -122,6 +124,8 @@ static void __rtc_init() {
         // Initialize RTC memory
         memset(rtc_data_p, 0, size);
     }
+
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
 
     // Create mutex
     mtx_init(&mtx, NULL, NULL, 0);
