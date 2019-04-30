@@ -213,6 +213,12 @@ static int l_nvs_read(lua_State *L) {
     // Open
     err = nvs_open(nspace, NVS_READONLY, &handle_to_settings);
     if (err != ESP_OK) {
+    
+        if (err == ESP_ERR_NVS_NOT_FOUND && total == 3) {
+            lua_pushvalue(L, 3);
+            return 1;
+        }
+
     	nvs_error(L, err);
     }
 
