@@ -62,8 +62,8 @@
 // Display constants
 #define DELAY 0x80
 
-#define ILI9341_WIDTH  240
-#define ILI9341_HEIGHT 320
+#define ILI9341_WIDTH  320
+#define ILI9341_HEIGHT 240
 #define XADOW_WIDTH  240
 #define XADOW_HEIGHT 240
 
