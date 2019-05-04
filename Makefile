@@ -197,7 +197,7 @@ ifeq ("$(VERSION_CHECK_REQUIRED)","1")
     ifeq ("$(UNAME)", "Linux")
       CURR_HASH := $(shell cat components/sys/patches/*.patch | sha256sum)
     else
-      CURR_HASH := $(shell cat components/sys/patches/*.patch | shasum -a 256 -p)
+      CURR_HASH := $(shell cat components/sys/patches/*.patch | shasum -a 256)
     endif
   
     ifneq ("$(PREV_HASH)","$(CURR_HASH)")
@@ -223,7 +223,7 @@ ifeq ("$(VERSION_CHECK_REQUIRED)","1")
     ifeq ("$(UNAME)", "Linux")
       TMP := $(shell cat components/sys/patches/*.patch | sha256sum > $(IDF_PATH)/lua_rtos_patches)
     else
-      TMP := $(shell cat components/sys/patches/*.patch | shasum -a 256 -p > $(IDF_PATH)/lua_rtos_patches)
+      TMP := $(shell cat components/sys/patches/*.patch | shasum -a 256 > $(IDF_PATH)/lua_rtos_patches)
     endif
   endif
 endif
@@ -242,7 +242,7 @@ ifdef TOOLCHAIN_COMMIT_DESC
         $(info Toolchain version is not supported: $(TOOLCHAIN_COMMIT_DESC))
         $(info Expected to see version: $(SUPPORTED_TOOLCHAIN_COMMIT_DESC))
         $(info Please check ESP-IDF setup instructions and update the toolchain.)
-        $(error Aborting)
+        #$(error Aborting)
     endif
     ifeq (,$(findstring $(TOOLCHAIN_GCC_VER), $(SUPPORTED_TOOLCHAIN_GCC_VERSIONS)))
         $(info Compiler version is not supported: $(TOOLCHAIN_GCC_VER))

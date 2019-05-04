@@ -100,8 +100,13 @@ static const uint8_t ILI9341_init[] = {
   0x28,
   ILI9341_VMCTR2, 1,  								//VCM control2
   0x86,
-  ILI9341_RDMADCTL, 1,    								// Memory Access Control
+  ST7735_MADCTL, 1,    								// Memory Access Control
+#if LUA_RTOS_GDISPLAY_BGR
   0x48,
+#else
+  0x40,
+#endif
+
   ILI9341_PIXFMT, 1,
   0x55,
   ILI9341_FRMCTR1, 2,
@@ -326,28 +331,44 @@ void ili9341_set_orientation(uint8_t m) {
 
 	switch (orientation) {
 	  case LANDSCAPE:
-		madctl = (ST7735_MADCTL_MX | ST7735_MADCTL_RGB);
+		madctl = (ST7735_MADCTL_MX
+#if LUA_RTOS_GDISPLAY_BGR
+		| ST7735_MADCTL_BGR
+#endif
+		);
 		caps->width  = ILI9341_HEIGHT;
 		caps->height = ILI9341_WIDTH;
 		break;
 	  case PORTRAIT:
-		madctl = (ST7735_MADCTL_MV | ST7735_MADCTL_RGB);
+		madctl = (ST7735_MADCTL_MV
+#if LUA_RTOS_GDISPLAY_BGR
+		| ST7735_MADCTL_BGR
+#endif
+		);
 		caps->width  = ILI9341_WIDTH;
 		caps->height = ILI9341_HEIGHT;
 		break;
 	  case LANDSCAPE_FLIP:
-		madctl = (ST7735_MADCTL_MY | ST7735_MADCTL_RGB);
+		madctl = (ST7735_MADCTL_MY
+#if LUA_RTOS_GDISPLAY_BGR
+		| ST7735_MADCTL_BGR
+#endif
+		);
 		caps->width  = ILI9341_HEIGHT;
 		caps->height = ILI9341_WIDTH;
 		break;
 	  case PORTRAIT_FLIP:
-		madctl = (ST7735_MADCTL_MX | ST7735_MADCTL_MY | ST7735_MADCTL_MV | ST7735_MADCTL_RGB);
+		madctl = (ST7735_MADCTL_MX | ST7735_MADCTL_MY | ST7735_MADCTL_MV
+#if LUA_RTOS_GDISPLAY_BGR
+		| ST7735_MADCTL_BGR
+#endif
+		);
 		caps->width  = ILI9341_WIDTH;
 		caps->height = ILI9341_HEIGHT;
 		break;
 	}
 
-	gdisplay_ll_command(ILI9341_RDMADCTL);
+	gdisplay_ll_command(ST7735_MADCTL);
 	gdisplay_ll_data(&madctl, 1);
 }
 

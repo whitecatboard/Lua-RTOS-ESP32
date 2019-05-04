@@ -16,116 +16,247 @@ menu "Lua RTOS"
       prompt "Firmware type"
       default LUA_RTOS_FIRMWARE_WHITECAT_ESP32_N1
 
+
       config LUA_RTOS_FIRMWARE_WHITECAT_ESP32_N1
+
          bool "Whitecat ESP32N1"
 
+
+
       config LUA_RTOS_FIRMWARE_WHITECAT_ESP32_N1_OTA
+
          bool "Whitecat ESP32N1 with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_WHITECAT_ESP32_N1_DEVKIT
+
          bool "Whitecat ESP32N1 DEVKIT"
 
+
+
       config LUA_RTOS_FIRMWARE_WHITECAT_ESP32_N1_DEVKIT_OTA
+
          bool "Whitecat ESP32N1 DEVKIT with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_WHITECAT_ESP32_N2_DEVKIT
+
          bool "Whitecat ESP32N2 DEVKIT"
 
+
+
       config LUA_RTOS_FIRMWARE_WHITECAT_ESP32_N2_DEVKIT_OTA
+
          bool "Whitecat ESP32N2 DEVKIT with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_WHITECAT_ESP32_LORA_GW
+
          bool "Whitecat ESP32 LORA GW"
 
+
+
       config LUA_RTOS_FIRMWARE_WHITECAT_ESP32_LORA_GW_OTA
+
          bool "Whitecat ESP32 LORA GW with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_ESP32_CORE_BOARD
+
          bool "Espressif Systems ESP32-CoreBoard"
 
+
+
       config LUA_RTOS_FIRMWARE_ESP32_CORE_BOARD_OTA
+
          bool "Espressif Systems ESP32-CoreBoard with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_ESP32_PICO_KIT
+
          bool "Espressif Systems ESP32 PICO KIT"
 
+
+
       config LUA_RTOS_FIRMWARE_ESP32_PICO_KIT_OTA
+
          bool "Espressif Systems ESP32 PICO KIT with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_ESP_WROVER_KIT
+
          bool "Espressif Systems ESP-WROVER-KIT"
 
+
+
       config LUA_RTOS_FIRMWARE_ESP_WROVER_KIT_OTA
+
          bool "Espressif Systems ESP-WROVER-KIT with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_ESP32_THING
+
          bool "SparkFun ESP32 Thing"
 
+
+
       config LUA_RTOS_FIRMWARE_ESP32_THING_OTA
+
          bool "SparkFun ESP32 Thing with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_ADAFRUIT_HUZZAH32
+
          bool "Adafruit HUZZAH32"
 
+
+
       config LUA_RTOS_FIRMWARE_ADAFRUIT_HUZZAH32_OTA
+
          bool "Adafruit HUZZAH32 with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_PYCOM_FIPY
+
          bool "Pycom FIPY"
 
+
+
       config LUA_RTOS_FIRMWARE_PYCOM_FIPY_OTA
+
          bool "Pycom FIPY with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_ESP32_POE
+
          bool "Olimex ESP32-POE"
 
+
+
       config LUA_RTOS_FIRMWARE_ESP32_POE_OTA
+
          bool "Olimex ESP32-POE with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_ESP32_GATEWAY
+
          bool "Olimex ESP32-Gateway"
 
+
+
       config LUA_RTOS_FIRMWARE_ESP32_GATEWAY_OTA
+
          bool "Olimex ESP32-Gateway with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_ESP32_EVB
+
          bool "Olimex ESP32-EVB"
 
+
+
       config LUA_RTOS_FIRMWARE_ESP32_EVB_OTA
+
          bool "Olimex ESP32-EVB with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_DOIT_ESP32_DEVKIT_V1
+
          bool "DOIT ESP32 DEVKIT V1"
 
+
+
       config LUA_RTOS_FIRMWARE_DOIT_ESP32_DEVKIT_V1_OTA
+
          bool "DOIT ESP32 DEVKIT V1 with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_WEMOS_ESP32_OLED
+
          bool "WeMos ESP32 with 128x64 OLED"
 
+
+
       config LUA_RTOS_FIRMWARE_WEMOS_ESP32_OLED_OTA
+
          bool "WeMos ESP32 with 128x64 OLED with OTA"
 
+
+
+      config LUA_RTOS_FIRMWARE_WEMOS_ESP32_LOLIN
+
+         bool "WeMos ESP32 LOLIN"
+
+
+
+      config LUA_RTOS_FIRMWARE_TTGO_T4
+
+         bool "TTGO T4"
+
+
+
+      config LUA_RTOS_FIRMWARE_HELTEC_WIFI32_KIT_OLED
+
+         bool "Heltec WIFI 32 Kit with 128x64 OLED"
+
+
+
       config LUA_RTOS_FIRMWARE_EVK_NINA_W
+
          bool "EVK-NINA-W"
 
+
+
       config LUA_RTOS_FIRMWARE_WESP32
+
          bool "Silicognition wESP32"
 
+
+
       config LUA_RTOS_FIRMWARE_WESP32_OTA
+
          bool "Silicognition wESP32 with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_M5STACK
+
          bool "M5Stack Core Board"
 
+
+
       config LUA_RTOS_FIRMWARE_M5STACK_OTA
+
          bool "M5Stack Core Board with OTA"
 
+
+
       config LUA_RTOS_FIRMWARE_GENERIC
+
          bool "Generic ESP32 board"
 
+
+
       config LUA_RTOS_FIRMWARE_GENERIC_OTA
+
          bool "Generic ESP32 board with OTA"
+
+
+
    endchoice
 
    menu "OTA"
@@ -1177,6 +1308,12 @@ menu "Lua RTOS"
       endmenu
 
       menu "Graphic Display"
+			config LUA_RTOS_GDISPLAY_BGR
+                bool "Color BGR encoded"
+                depends on LUA_RTOS_LUA_USE_GDISPLAY
+                default n
+                help
+                  Color-Encoding BGR instead of RGB
          menu "SPI displays"
             config LUA_RTOS_GDISPLAY_SPI
                depends on LUA_RTOS_LUA_USE_GDISPLAY
