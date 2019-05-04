@@ -285,6 +285,47 @@
         ]
     },
     {
+        "description": "WeMos ESP32 LOLIN",
+        "manufacturer": "WeMos",
+        "image": "",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "WEMOS-ESP32-LOLIN",
+                "description": "WeMos ESP32 LOLIN",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "TTGO T4",
+        "manufacturer": "TTGO",
+        "image": "",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "TTGO-T4",
+                "description": "TTGO T4",
+                "filesystem": "default"
+            }
+        ]
+    },	{
+        "description": "Heltec WIFI 32 Kit with 128x64 OLED",
+        "manufacturer": "Heltec",
+        "image": "",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "HELTEC-WIFI32-KIT-OLED",
+                "description": "Heltec WIFI 32 Kit with 128x64 OLED",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
         "description": "EVK-NINA-W",
         "manufacturer": "u-blox",
         "image": "",
