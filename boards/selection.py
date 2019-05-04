@@ -73,7 +73,8 @@ for i, board in enumerate(boards, 1):
     boardn = boardn + 1
     sys.stderr.write("  %2d: %s\r\n" % (i, board["description"]))
 
-sys.stderr.write("\r\nSelected board: ")    
+sys.stderr.write("\r\nSelected board: ")
+sys.stderr.flush()
 sboard = raw_input()
 
 if not sboard.isdigit():
@@ -97,7 +98,8 @@ for j, firmware in enumerate(board["firmwares"], 1):
     firmn = firmn + 1
     sys.stderr.write("  %2d: %s\r\n" % (j, firmware["description"]))
       
-sys.stderr.write("\r\nSelected firmware: ")    
+sys.stderr.write("\r\nSelected firmware: ")
+sys.stderr.flush()
 firm = raw_input()
   
 if not firm.isdigit():
