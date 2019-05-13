@@ -53,39 +53,34 @@
 #include "lauxlib.h"
 #include "modules.h"
 #include "error.h"
+#include "sys.h"
 
 #include <drivers/encoder.h>
 
 typedef struct {
 	encoder_h_t *encoder;
-	int callback;
+	lua_callback_t *callback;
 } encoder_userdata;
 
 static void callback_func(int callback, int8_t dir, uint32_t counter, uint8_t button) {
-	lua_State *TL;
-	lua_State *L;
-	int tref;
+	lua_callback_t *cb = (lua_callback_t *)callback;
 
-	if (callback != LUA_NOREF) {
-	    L = pvGetLuaState();
-	    TL = lua_newthread(L);
+	if (cb != NULL) {
+		lua_State *state = luaS_callback_state(cb);
 
-	    tref = luaL_ref(L, LUA_REGISTRYINDEX);
-
-	    lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
-	    lua_xmove(L, TL, 1);
-        lua_pushinteger(TL, dir);
-        lua_pushinteger(TL, counter);
-        lua_pushinteger(TL, button);
-	    lua_pcall(TL, 3, 0, 0);
-        luaL_unref(TL, LUA_REGISTRYINDEX, tref);
+		if (state != NULL) {
+	        lua_pushinteger(state, dir);
+	        lua_pushinteger(state, counter);
+	        lua_pushinteger(state, button);
+	        luaS_callback_call(cb, 3);
+		}
 	}
 }
 
 static int lencoder_attach( lua_State* L ) {
+	lua_callback_t *callback;
 	driver_error_t *error;
 	int sw;
-	int callback;
 
 	int a = luaL_checkinteger(L, 1);
 	int b = luaL_checkinteger(L, 2);
@@ -98,11 +93,10 @@ static int lencoder_attach( lua_State* L ) {
 
 	if (lua_isfunction(L, 4)) {
 		luaL_checktype(L, 4, LUA_TFUNCTION);
-		lua_pushvalue(L, 4);
 
-		callback = luaL_ref(L, LUA_REGISTRYINDEX);
+		callback = luaS_callback_create(L, 4);
 	} else {
-		callback = LUA_NOREF;
+		callback = NULL;
 	}
 
 	encoder_userdata *userdata = (encoder_userdata *)lua_newuserdata(L, sizeof(encoder_userdata));
@@ -116,9 +110,9 @@ static int lencoder_attach( lua_State* L ) {
     	return luaL_driver_error(L, error);
     }
 
-    if (callback != LUA_NOREF) {
+    if (callback != NULL) {
         // Register callback, the id of the callback is the callback reference
-        if ((error = encoder_register_callback(encoder, callback_func, callback, 1))) {
+        if ((error = encoder_register_callback(encoder, callback_func, (int)callback, 1))) {
         	return luaL_driver_error(L, error);
         }
     }
@@ -171,7 +165,9 @@ static int lencoder_detach (lua_State *L) {
     	return luaL_driver_error(L, error);
     }
 
-	luaL_unref(L, LUA_REGISTRYINDEX, userdata->callback);
+    if (userdata->callback != NULL) {
+    	luaS_callback_destroy(userdata->callback);
+    }
 
 	return 0;
 }

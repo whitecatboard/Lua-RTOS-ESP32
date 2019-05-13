@@ -272,7 +272,7 @@ driver_error_t *encoder_setup(int8_t a, int8_t b, int8_t sw, encoder_h_t **h) {
     	return driver_lock_error(ENCODER_DRIVER, lock_error);
     }
 
-    if ((lock_error = driver_lock(ENCODER_DRIVER, 0, GPIO_DRIVER, sw, 0, "SW"))) {
+    if ((sw >= 0) && (lock_error = driver_lock(ENCODER_DRIVER, 0, GPIO_DRIVER, sw, 0, "SW"))) {
     	// Revoked lock on pin
     	return driver_lock_error(ENCODER_DRIVER, lock_error);
     }
