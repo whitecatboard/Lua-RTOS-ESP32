@@ -95,41 +95,45 @@ driver_error_t *nzr_setup(nzr_timing_t *timing, uint8_t gpio, uint32_t *unit) {
         return driver_error(NZR_DRIVER, NZR_ERR_NOT_ENOUGH_MEMORY, NULL);
     }
 
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     // The preferred implementation uses the RMT to avoid disabling interrupts.
     // If there a not RMT channels available we use the bit bang implementation.
     int rmt_device;
 
     error = rmt_setup_tx(gpio, RMTPulseRangeNSEC, RMTIdleL, NULL, &rmt_device);
-       if (!error) {
-        // Use RMT
-            instance->deviceid = rmt_device;
-        } else {
-        // Not possible
-        free(error);
-
-        // Use bit bang implementation.
-        instance->deviceid = 0xffffffff;
-
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-    driver_unit_lock_error_t *lock_error = NULL;
-
-    // Lock the GPIO
-    if ((lock_error = driver_lock(NZR_DRIVER, *unit, GPIO_DRIVER, gpio, DRIVER_ALL_FLAGS, NULL))) {
-        lstremove(&nzr_list, *unit, 1);
-        // Revoked lock on pin
-        return driver_lock_error(NZR_DRIVER, lock_error);
-    }
+    if (!error) {
+    	// Use RMT
+		instance->deviceid = rmt_device;
+	} else {
 #endif
+		// Not possible
+		free(error);
 
-        // Configure GPIO as output
-        if ((error = gpio_pin_output(gpio))) {
-            lstremove(&nzr_list, *unit, 1);
+		// Use bit bang implementation.
+		instance->deviceid = 0xffffffff;
 
-            return error;
-        }
+	#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+		driver_unit_lock_error_t *lock_error = NULL;
 
-        gpio_ll_pin_clr(gpio);
-    }
+		// Lock the GPIO
+		if ((lock_error = driver_lock(NZR_DRIVER, *unit, GPIO_DRIVER, gpio, DRIVER_ALL_FLAGS, NULL))) {
+			lstremove(&nzr_list, *unit, 1);
+			// Revoked lock on pin
+			return driver_lock_error(NZR_DRIVER, lock_error);
+		}
+	#endif
+
+			// Configure GPIO as output
+			if ((error = gpio_pin_output(gpio))) {
+				lstremove(&nzr_list, *unit, 1);
+
+				return error;
+			}
+
+			gpio_ll_pin_clr(gpio);
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
+	}
+#endif
 
     return NULL;
 }
@@ -146,6 +150,7 @@ driver_error_t *nzr_send(uint32_t unit, uint8_t *data, uint32_t bits) {
         return driver_error(NZR_DRIVER, NRZ_ERR_INVALID_UNIT, NULL);
     }
 
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     if (instance->deviceid != 0xffffffff) {
         // RMT implementation
         driver_error_t *error = NULL;
@@ -187,6 +192,7 @@ driver_error_t *nzr_send(uint32_t unit, uint8_t *data, uint32_t bits) {
 
         free(buffer);
     } else {
+#endif
         // Bit bang implementation
         portDISABLE_INTERRUPTS();
 
@@ -213,7 +219,9 @@ driver_error_t *nzr_send(uint32_t unit, uint8_t *data, uint32_t bits) {
         }
 
         portENABLE_INTERRUPTS();
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     }
+#endif
 
     udelay(instance->timings.res / 1000);
 
@@ -228,15 +236,19 @@ driver_error_t *nzr_unsetup(uint32_t unit) {
         return driver_error(NZR_DRIVER, NRZ_ERR_INVALID_UNIT, NULL);
     }
 
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     if (instance->deviceid != 0xffffffff) {
         // RMT implementation
         rmt_unsetup_tx(instance->deviceid);
     } else {
+#endif
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     // Unlock the GPIO
     driver_unlock(NZR_DRIVER, unit, GPIO_DRIVER, instance->gpio);
 #endif
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     }
+#endif
 
     return NULL;
 }

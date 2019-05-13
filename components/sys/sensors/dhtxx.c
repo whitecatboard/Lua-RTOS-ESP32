@@ -105,7 +105,6 @@ static int dhtxx_bus_monitor(uint8_t pin, uint8_t level, int16_t timeout) {
 }
 
 driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
-    driver_error_t *error;
     driver_unit_lock_error_t *lock_error = NULL;
 
     // Get pin from instance
@@ -113,6 +112,9 @@ driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
 
     // By default, use software implementation
     unit->args = (void *)0xffffffff;
+
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
+    driver_error_t *error;
 
     // The preferred implementation uses the RMT to avoid disabling interrupts during
     // the acquire process. If there a not RMT channels available we use the bit bang
@@ -146,6 +148,7 @@ driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
     }
 
     if ((uint32_t)unit->args == 0xffffffff) {
+#endif
         // Use bit bang
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
         // Lock GPIO for this sensor
@@ -153,7 +156,9 @@ driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
             return driver_lock_error(SENSOR_DRIVER, lock_error);
         }
 #endif
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     }
+#endif
 
     // Release data bus
     gpio_pin_input(pin);
@@ -193,6 +198,7 @@ retry:
     data[0] = data[1] = data[2] = data[3] = 0xff;
     data[4] = 0x00;
 
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     if ((uint32_t)unit->args != 0xffffffff) {
         driver_error_t *error;
         rmt_item_t *item;
@@ -236,6 +242,7 @@ retry:
             return error;
         }
     } else {
+#endif
         // Use software version
         portDISABLE_INTERRUPTS();
 
@@ -264,7 +271,9 @@ retry:
                 data[byte] |= ((t1 > t0) << bit);
             }
         }
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     }
+#endif
 
     // Check CRC
     uint8_t crc = 0;
@@ -314,17 +323,21 @@ exit:
 }
 
 driver_error_t *dhtxx_unsetup(sensor_instance_t *unit) {
-    if ((uint32_t)unit->args != 0xffffffff) {
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
+	if ((uint32_t)unit->args != 0xffffffff) {
         rmt_unsetup_rx((int)unit->args);
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
         driver_unlock(SENSOR_DRIVER, unit->unit, RMT_DRIVER, (uint32_t)unit->args);
 #endif
     } else {
+#endif
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
         driver_unlock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup[0].gpio.gpio);
 #endif
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     }
+#endif
 
     return NULL;
 }

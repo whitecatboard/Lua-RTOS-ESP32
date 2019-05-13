@@ -104,6 +104,7 @@ driver_error_t *ping28015_setup(sensor_instance_t *unit) {
     driver_unlock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup[0].gpio.gpio);
 #endif
 
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     // The preferred implementation uses the RMT to avoid disabling interrupts during
     // the acquire process. If there are not RMT channels available, use the bit bang
     // implementation.
@@ -130,6 +131,7 @@ driver_error_t *ping28015_setup(sensor_instance_t *unit) {
     }
 
     if ((uint32_t)unit->args == 0xffffffff) {
+#endif
         // Use bit bang
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
         // Lock GPIO for this sensor
@@ -137,7 +139,9 @@ driver_error_t *ping28015_setup(sensor_instance_t *unit) {
             return driver_lock_error(SENSOR_DRIVER, lock_error);
         }
 #endif
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     }
+#endif
 
     // The initial status of the signal line must be low
     gpio_pin_output(unit->setup[0].gpio.gpio);
@@ -172,6 +176,7 @@ driver_error_t *ping28015_set(sensor_instance_t *unit, const char *id, sensor_va
 driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *values) {
     int t = 0; // Echo pulse duration in usecs
 
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     if ((uint32_t)unit->args != 0xffffffff) {
         // Use RMT
         driver_error_t *error;
@@ -200,6 +205,7 @@ driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *value
             return driver_error(SENSOR_DRIVER, SENSOR_ERR_TIMEOUT, NULL);
         }
     } else {
+#endif
         // Use bit bang
 
         // Configure pin as output
@@ -225,7 +231,9 @@ driver_error_t *ping28015_acquire(sensor_instance_t *unit, sensor_value_t *value
         }
 
         portENABLE_INTERRUPTS();
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     }
+#endif
 
     /*
      * Calculate distance
