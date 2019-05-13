@@ -76,6 +76,20 @@
         ]
     },
     {
+        "description": "CITILAB ED1",
+        "manufacturer": "citilab.eu",
+        "image": "http://wiki.edutec.citilab.eu/Archivo:Ed1_dues_cares.png",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "CITILAB-ED1",
+                "description": "CITILAB ED1",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
         "description": "Espressif Systems ESP32-CoreBoard",
         "manufacturer": "Espressif Systems",
         "image": "http://git.whitecatboard.org/esp32-core-board.png",

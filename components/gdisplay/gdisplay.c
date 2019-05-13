@@ -260,7 +260,7 @@ driver_error_t *gdisplay_init(uint8_t chipset, uint8_t orient, uint8_t buffered,
 	cursorx = 0;
 	cursory = 0;
 
-#if CONFIG_LUA_RTOS_GDISPLAY_CONNECTED_TO_POWER_BUS || CONFIG_LUA_RTOS_GDISPLAY_I2C_CONNECTED_TO_POWER_BUS
+#if ((CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0) && (CONFIG_LUA_RTOS_GDISPLAY_CONNECTED_TO_POWER_BUS || CONFIG_LUA_RTOS_GDISPLAY_I2C_CONNECTED_TO_POWER_BUS))
     pwbus_on();
 #endif
 

@@ -40,6 +40,9 @@ menu "Lua RTOS"
       config LUA_RTOS_FIRMWARE_WHITECAT_ESP32_LORA_GW_OTA
          bool "Whitecat ESP32 LORA GW with OTA"
 
+      config LUA_RTOS_FIRMWARE_CITILAB_ED1
+         bool "CITILAB ED1"
+
       config LUA_RTOS_FIRMWARE_ESP32_CORE_BOARD
          bool "Espressif Systems ESP32-CoreBoard"
 
@@ -126,6 +129,7 @@ menu "Lua RTOS"
 
       config LUA_RTOS_FIRMWARE_GENERIC_OTA
          bool "Generic ESP32 board with OTA"
+
    endchoice
 
    menu "OTA"
