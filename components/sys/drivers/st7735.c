@@ -92,7 +92,7 @@ static const st7735_variant_t variant[] = {
 	{128, 160, 0 ,  0, ST7735_MADCTL_RGB}, // 1.8" BLACK
 	{128, 160, 0 ,  0, ST7735_MADCTL_RGB}, // 1.8" BLUE
 	{128, 160, 0 ,  0, ST7735_MADCTL_RGB}, // 1.8" GREEN
-	{128, 128, 2 ,  3, ST7735_MADCTL_RGB}, // 1.44" GREEN
+	{128, 128, 2 ,  3, ST7735_MADCTL_BGR}, // 1.44" GREEN
 	{160, 80 , 24,  0, ST7735_MADCTL_RGB}  // 0.96" BLACK
 };
 
