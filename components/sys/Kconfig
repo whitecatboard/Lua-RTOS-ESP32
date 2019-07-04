@@ -1678,6 +1678,10 @@ menu "Lua RTOS"
                bool "Include socket module in build"
                default y
 
+            config LUA_RTOS_LUA_USE_SOUND
+               bool "Include sound module in build"
+               default y
+
             config LUA_RTOS_LUA_USE_SPI
                bool "Include spi module in build"
                default y
