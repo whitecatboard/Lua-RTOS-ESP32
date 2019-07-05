@@ -533,8 +533,12 @@ void MCP23S17_pin_get_mask(uint8_t port, uint8_t pinmask, uint8_t *value) {
 }
 
 uint64_t IRAM_ATTR MCP23S17_pin_get_all() {
-	return ((uint64_t)MCP23S17->latch[1] <<  8) |
-		   (uint64_t)MCP23S17->latch[0];
+    if (MCP23S17) {
+        return ((uint64_t)MCP23S17->latch[1] <<  8) |
+               (uint64_t)MCP23S17->latch[0];
+    } else {
+        return 0;
+    }
 }
 
 void MCP23S17_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type, void *args) {
