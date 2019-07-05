@@ -45,7 +45,7 @@
 
 #include "luartos.h"
 
-#if EXTERNAL_GPIO
+#if (CONFIG_GPIO_PCA9698 ||  CONFIG_GPIO_PCA9505)
 
 #include "esp_attr.h"
 
@@ -357,7 +357,7 @@ driver_error_t *pca_9xxx_pin_inv(uint8_t pin) {
 
 	// Update latch.
 	pca_9xxx_lock();
-	pca_9xxx->latch[port] = (pca_9xxx->latch[port] & ~pinmask) | (((!(pca_9xxx->latch[port] & pinmask)) & pinmask));
+	pca_9xxx->latch[port] = pca_9xxx->latch[port] ^ pinmask;
 	pca_9xxx_unlock();
 
 	driver_error_t *error;
@@ -446,7 +446,7 @@ driver_error_t *pca_9xxx_pin_inv_mask(uint8_t port, uint8_t pinmask) {
 
 	// Update latch.
 	pca_9xxx_lock();
-	pca_9xxx->latch[port] = (pca_9xxx->latch[port] & ~pinmask) | (((!(pca_9xxx->latch[port] & pinmask)) & pinmask));
+	pca_9xxx->latch[port] = pca_9xxx->latch[port] ^ pinmask;
 	pca_9xxx_unlock();
 
 	driver_error_t *error;
@@ -502,47 +502,3 @@ void pca_9xxx_isr_detach(uint8_t pin) {
 }
 
 #endif
-
-/*
-
- pio.pin.interrupt(40, function(value)
- 	 print("value: "..value)
- end, pio.pin.IntrNegEdge)
-
-
----
-
-pio.pin.setdir(pio.OUTPUT, 40)
-
-while true do
-  pio.pin.sethigh(40)
-  tmr.delayms(200)
-  pio.pin.setlow(40)
-  tmr.delayms(200)
-end
-
----
-
-pio.pin.setdir(pio.OUTPUT, 40)
-
-while true do
-  pio.pin.inv(40)
-  tmr.delayms(200)
-end
-
----
-
-pio.pin.setdir(pio.OUTPUT, 40)
-pio.pin.setdir(pio.INPUT, 41)
-pio.pin.setdir(pio.INPUT, 40)
-
----
-
-pio.pin.setdir(pio.INPUT, 41)
-pio.pin.setdir(pio.INPUT, 42)
-
-pio.pin.setlow(41)
-
-pio.pin.setlow(42)
-
- */

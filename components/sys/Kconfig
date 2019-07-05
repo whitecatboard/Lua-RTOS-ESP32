@@ -739,6 +739,9 @@ menu "Lua RTOS"
             config EXTERNAL_GPIO_NONE
                bool "None"
 
+            config GPIO_MCP23S17
+               bool "MCP23S17, 16 IO"
+
             config GPIO_PCA9698
                bool "PCA9698, 40 IO, no pull-up"
 
@@ -746,6 +749,38 @@ menu "Lua RTOS"
                bool "PCA9505, 40 IO, pull-up"
          endchoice
 
+         config MCP23S17_SPI_PORT
+             depends on GPIO_MCP23S17
+                int "MCP23S17 SPI port"
+                range 2 3
+                default 3
+                help
+                   SPI port where MCP23S17 is attached
+             
+         config MCP23S17_SPI_CS
+             depends on GPIO_MCP23S17
+                int "MCP23S17 CS pin"
+                range 0 39
+                default 4
+                help
+                    The GPIO port number used to select MCP23S17.
+
+         config MCP23S17_INTA
+             depends on GPIO_MCP23S17
+                int "MCP23S17 INTA pin"
+                range -1 39
+                default 35
+                help
+                    The GPIO port number used to connect the INTA pin. Use -1 if INTA is not connected.
+
+         config MCP23S17_INTB
+             depends on GPIO_MCP23S17
+                int "MCP23S17 INTB pin"
+                range -1 39
+                default 5
+                help
+                    The GPIO port number used to connect the INTB pin. Use -1 if INTB is not connected.
+                     
          config PCA9xxx_I2C
             depends on (GPIO_PCA9698 || GPIO_PCA9505)
                int "PCA9xxx I2C port"

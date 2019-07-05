@@ -58,6 +58,7 @@
 
 #if EXTERNAL_GPIO
 #include <drivers/pca9xxx.h>
+#include <drivers/MCP23S17.h>
 #endif
 
 // Debouncing data
@@ -122,7 +123,7 @@ void IRAM_ATTR debouncing_isr(void *args) {
     uint64_t current = (((uint64_t)GPIO.in1.data << 32) | GPIO.in) & debouncing->mask;
 
 #if EXTERNAL_GPIO
-    uint64_t current_ext = pca_9xxx_pin_get_all(&current_ext) & debouncing->mask_ext;
+    uint64_t current_ext = gpio_ext_pin_get_all(&current_ext) & debouncing->mask_ext;
 #endif
 
     // Test for changes

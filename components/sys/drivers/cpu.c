@@ -76,7 +76,7 @@ unsigned int cpu_port_number(unsigned int pin) {
 	if ((pin <= 39) || (!EXTERNAL_GPIO)) {
 		return 1;
 	} else {
-		return 2 + ((pin - EXTERNAL_GPIO_PINS) >> 3);
+		return 2 + ((pin - GPIO39 - 1) >> 3);
 	}
 }
 
@@ -84,7 +84,7 @@ uint8_t cpu_gpio_number(uint8_t pin) {
 	if ((pin <= 39) || (!EXTERNAL_GPIO)) {
 		return pin;
 	} else {
-		return ((pin - EXTERNAL_GPIO_PINS) % 7);
+		return ((pin - GPIO39 - 1) % 8);
 	}
 }
 

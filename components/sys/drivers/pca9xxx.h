@@ -48,7 +48,7 @@
 
 #include "luartos.h"
 
-#if EXTERNAL_GPIO
+#if (CONFIG_GPIO_PCA9698 ||  CONFIG_GPIO_PCA9505)
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -109,6 +109,25 @@ void pca_9xxx_pin_get_mask(uint8_t port, uint8_t pinmask, uint8_t *value);
 void pca_9xxx_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type, void *args);
 void pca_9xxx_isr_detach(uint8_t pin);
 uint64_t pca_9xxx_pin_get_all();
+
+#define gpio_ext_pin_set(a)            pca_9xxx_pin_set(a)
+#define gpio_ext_pin_clr(a)            pca_9xxx_pin_clr(a)
+#define gpio_ext_pin_inv(a)            pca_9xxx_pin_inv(a)
+#define gpio_ext_pin_get(a)            pca_9xxx_pin_get(a)
+#define gpio_ext_pin_output(a)         pca_9xxx_pin_output(a)
+#define gpio_ext_pin_input(a)          pca_9xxx_pin_input(a)
+#define gpio_ext_pin_set(a)            pca_9xxx_pin_set(a)
+#define gpio_ext_pin_input_mask(a,b)   pca_9xxx_pin_input_mask(a,b)
+#define gpio_ext_pin_output_mask(a,b)  pca_9xxx_pin_output_mask(a,b)
+#define gpio_ext_pin_set_mask(a,b)     pca_9xxx_pin_set_mask(a,b)
+#define gpio_ext_pin_clr_mask(a,b)     pca_9xxx_clr_set_mask(a,b)
+#define gpio_ext_pin_inv_mask(a,b)     pca_9xxx_pin_inv_mask(a,b)
+#define gpio_ext_pin_get_mask(a,b,c)   pca_9xxx_pin_get_mask(a,b,c)
+#define gpio_ext_pin_input_mask(a,b)   pca_9xxx_pin_input_mask(a,b)
+#define gpio_ext_isr_attach(a,b,c,d)   pca_9xxx_isr_attach(a,b,c,d)
+#define gpio_ext_isr_detach(a)         pca_9xxx_isr_detach(a)
+#define gpio_ext_pin_get_all           pca_9xxx_pin_get_all()
+#define gpio_ext_pullup(a)
 
 #endif	/* PCA9698 */
 
