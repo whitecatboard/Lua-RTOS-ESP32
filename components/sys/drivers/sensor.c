@@ -428,11 +428,20 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
         instance->properties[i].type = sensor->properties[i].type;
     }
 
+#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
+    pwbus_on();
+#endif
+
     // Call to specific pre setup function, if any
     if (instance->sensor->presetup) {
         if ((error = instance->sensor->presetup(instance))) {
             mtx_destroy(&instance->mtx);
             free(instance);
+
+			#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
+				pwbus_off();
+			#endif
+
             return error;
         }
     }
@@ -463,7 +472,12 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
     if (error) {
         mtx_destroy(&instance->mtx);
         free(instance);
-        return error;
+
+		#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
+			pwbus_off();
+		#endif
+
+		return error;
     }
 
     // Call to specific setup function
@@ -471,6 +485,11 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
         if ((error = instance->sensor->setup(instance))) {
             mtx_destroy(&instance->mtx);
             free(instance);
+
+			#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
+				pwbus_off();
+			#endif
+
             return error;
         }
     }
@@ -479,16 +498,16 @@ driver_error_t *sensor_setup(const sensor_t *sensor, sensor_setup_t *setup, sens
 
     attached++;
 
-#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
-    pwbus_on();
-#endif
-
-
     // Call to specific postsetup function
     if (instance->sensor->postsetup) {
         if ((error = instance->sensor->postsetup(instance))) {
             mtx_destroy(&instance->mtx);
             free(instance);
+
+			#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
+				pwbus_off();
+			#endif
+
             return error;
         }
     }
