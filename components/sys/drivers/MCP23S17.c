@@ -81,35 +81,51 @@ static void MCP23S17_unlock() {
     xSemaphoreGiveRecursive(MCP23S17->mtx);
 }
 
-// Write to a MCP23S17 register
-static driver_error_t *MCP23S17_write_register(uint8_t reg, uint8_t val) {
-    uint8_t buff[4];
+// Write 8 bits to a MCP23S17 register
+static driver_error_t *MCP23S17_write8(uint8_t reg, uint8_t val) {
+    uint8_t buff[3];
 
     buff[0] = 0x40;
     buff[1] = reg;
     buff[2] = val;
+
+    spi_ll_select(MCP23S17->spidevice);
+    spi_ll_bulk_write(MCP23S17->spidevice, sizeof(buff), buff);
+    spi_ll_deselect(MCP23S17->spidevice);
+
+    return NULL;
+}
+
+// Write 16 bits to a MCP23S17 register
+static driver_error_t *MCP23S17_write16(uint8_t reg, uint16_t val) {
+    uint8_t buff[4];
+
+    buff[0] = 0x40;
+    buff[1] = reg;
+    buff[2] = (uint8_t)(val & 0x00ff);
+    buff[3] = (uint8_t)(val >> 8);
+
+    spi_ll_select(MCP23S17->spidevice);
+    spi_ll_bulk_write(MCP23S17->spidevice, sizeof(buff), buff);
+    spi_ll_deselect(MCP23S17->spidevice);
+
+    return NULL;
+}
+
+// Read 16 bits from a MCP23S17 register
+static driver_error_t *MCP23S17_read16(uint8_t reg, uint16_t *val) {
+    uint8_t buff[4];
+
+    buff[0] = 0x41;
+    buff[1] = reg;
+    buff[2] = 0;
     buff[3] = 0;
 
     spi_ll_select(MCP23S17->spidevice);
     spi_ll_bulk_rw(MCP23S17->spidevice, sizeof(buff), buff);
     spi_ll_deselect(MCP23S17->spidevice);
 
-    return NULL;
-}
-
-// Read from a MCP23S17 register
-static driver_error_t *MCP23S17_read_register(uint8_t reg, uint8_t *val) {
-    uint8_t buff[3];
-
-    buff[0] = 0x41;
-    buff[1] = reg;
-    buff[2] = 0;
-
-    spi_ll_select(MCP23S17->spidevice);
-    spi_ll_bulk_rw(MCP23S17->spidevice, sizeof(buff), buff);
-    spi_ll_deselect(MCP23S17->spidevice);
-
-    *val = buff[2];
+    *val = (buff[3] << 8) | buff[2];
 
     return NULL;
 }
@@ -119,21 +135,18 @@ static driver_error_t *MCP23S17_read_register(uint8_t reg, uint8_t *val) {
 static void MCP23S17_task(void *arg) {
     uint8_t i, j, pin, latch[MCP23S17_PORTS], current[MCP23S17_PORTS];
 
-    uint8_t tmp;
-
-
     for(;;) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
         MCP23S17_lock();
 
         // Get current latch values
-        memcpy(latch, MCP23S17->latch, sizeof(MCP23S17->latch));
+        memcpy(latch, &MCP23S17->latch, sizeof(MCP23S17->latch));
 
         // Read all pins and latch
-        MCP23S17_read_all_register(MCP23S17_GPIOA, MCP23S17->latch);
+        MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
 
-        memcpy(current, MCP23S17->latch, sizeof(MCP23S17->latch));
+        memcpy(current, &MCP23S17->latch, sizeof(MCP23S17->latch));
 
         MCP23S17_unlock();
 
@@ -190,9 +203,7 @@ static void IRAM_ATTR MCP23S17_isr(void* arg) {
 
 // Read from a MCP23S17 register
 static driver_error_t * MCP23S17_read_all_register(uint8_t reg, uint8_t *val) {
-	MCP23S17_read_register(reg, val);
-	MCP23S17_read_register(reg + 1, val + 1);
-
+	MCP23S17_read16(reg, (uint16_t *)val);
     return NULL;
 }
 
@@ -228,18 +239,8 @@ driver_error_t *MCP23S17_setup() {
 
         MCP23S17_lock();
 
-        // MCP23S17 configuration:
-        //
-        // IOCON:
-        //
-        //    7: The registers are in the same bank
-        //    6: The INT pins are not connected. INTA is associated with PORTA and INTB is associated with PORTB
-        //    5: Sequential operation enabled, address pointer increments
-        //    4: Slew rate enabled
-        //    3: Disables the MCP23S17 address pins
-        //    2: Active driver output
-        //    1: INT Active-low
-        MCP23S17_write_register(MCP23S17_IOCON, 0b10);
+        // MCP23S17 configuration as default value, and enabling hardware addressing
+        MCP23S17_write8(MCP23S17_IOCON, 0b00001000);
 
         // Configure all pins as output / logic level 0
         MCP23S17_pin_output_mask(0, 0xff);
@@ -279,30 +280,28 @@ driver_error_t *MCP23S17_setup() {
             return driver_error(GPIO_DRIVER, GPIO_ERR_NOT_ENOUGH_MEMORY, NULL);
         }
 
-        uint8_t tmp;
-
         if (CONFIG_MCP23S17_INTA > 0) {
         	// Enable interrupts on all pins
-        	MCP23S17_write_register(MCP23S17_GPINTENA, 0xff);
+        	MCP23S17_write8(MCP23S17_GPINTENA, 0xff);
 
         	// Pin value is compared against the previous pin value
-        	MCP23S17_write_register(MCP23S17_INTCONA, 0x00);
+        	MCP23S17_write8(MCP23S17_INTCONA, 0x00);
 
         	gpio_pin_input(CONFIG_MCP23S17_INTA);
         	gpio_pin_pullup(CONFIG_MCP23S17_INTA);
-            gpio_isr_attach(CONFIG_MCP23S17_INTA, MCP23S17_isr, GPIO_INTR_NEGEDGE, 0);
+            gpio_isr_attach(CONFIG_MCP23S17_INTA, MCP23S17_isr, GPIO_INTR_NEGEDGE, NULL);
         }
 
         if (CONFIG_MCP23S17_INTB > 0) {
         	// Enable interrupts on all pins
-        	MCP23S17_write_register(MCP23S17_GPINTENB, 0xff);
+        	MCP23S17_write8(MCP23S17_GPINTENB, 0xff);
 
         	// Pin value is compared against the previous pin value
-        	MCP23S17_write_register(MCP23S17_INTCONB, 0x00);
+        	MCP23S17_write8(MCP23S17_INTCONB, 0x00);
 
         	gpio_pin_input(CONFIG_MCP23S17_INTB);
         	gpio_pin_pullup(CONFIG_MCP23S17_INTB);
-            gpio_isr_attach(CONFIG_MCP23S17_INTB, MCP23S17_isr, GPIO_INTR_NEGEDGE, 1);
+            gpio_isr_attach(CONFIG_MCP23S17_INTB, MCP23S17_isr, GPIO_INTR_NEGEDGE, NULL);
         }
 
         MCP23S17_unlock();
@@ -338,109 +337,144 @@ driver_error_t *MCP23S17_setup() {
 
 driver_error_t *MCP23S17_pin_pullup(uint8_t pin) {
     uint8_t port = MCP23S17_GPIO_BANK_NUM(pin);
-    uint8_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin));
+    uint16_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin) << (port << 3));
 
     if (!MCP23S17) MCP23S17_setup();
 
     // Update pull. For pull-up set bit to 1.
     MCP23S17_lock();
-    MCP23S17->pull[port] |= pinmask;
+    MCP23S17->pull |= pinmask;
+
+    MCP23S17_write16(MCP23S17_GPPUA, MCP23S17->pull);
+
+    // Read all pins and latch
+    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+
     MCP23S17_unlock();
 
-    MCP23S17_write_register(MCP23S17_GPPUA + port, MCP23S17->pull[port]);
+    return NULL;
+}
+
+driver_error_t *MCP23S17_pin_nopull(uint8_t pin) {
+    uint8_t port = MCP23S17_GPIO_BANK_NUM(pin);
+    uint16_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin) << (port << 3));
+
+    if (!MCP23S17) MCP23S17_setup();
+
+    // Update pull. For no pull-up set bit to 0.
+    MCP23S17_lock();
+    MCP23S17->pull &= ~pinmask;
+
+    MCP23S17_write16(MCP23S17_GPPUA, MCP23S17->pull);
+
+    // Read all pins and latch
+    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+
+    MCP23S17_unlock();
 
     return NULL;
 }
 
 driver_error_t *MCP23S17_pin_output(uint8_t pin) {
     uint8_t port = MCP23S17_GPIO_BANK_NUM(pin);
-    uint8_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin));
+    uint16_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin) << (port << 3));
 
     if (!MCP23S17) MCP23S17_setup();
 
     // Update direction. For output set bit to 0.
     MCP23S17_lock();
-    MCP23S17->direction[port] &= ~pinmask;
-    MCP23S17_unlock();
+    MCP23S17->direction &= ~pinmask;
 
-    MCP23S17_write_register(MCP23S17_IODIRA + port, MCP23S17->direction[port]);
+    MCP23S17_write16(MCP23S17_IODIRA, MCP23S17->direction);
+
+    // Read all pins and latch
+    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+
+    MCP23S17_unlock();
 
     return NULL;
 }
 
 driver_error_t *MCP23S17_pin_input(uint8_t pin) {
     uint8_t port = MCP23S17_GPIO_BANK_NUM(pin);
-    uint8_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin));
+    uint16_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin) << (port << 3));
 
     if (!MCP23S17) MCP23S17_setup();
 
     // Update direction. For input set bit to 1.
     MCP23S17_lock();
-    MCP23S17->direction[port] |= pinmask;
-    MCP23S17_unlock();
+    MCP23S17->direction |= pinmask;
 
-    MCP23S17_write_register(MCP23S17_IODIRA + port, MCP23S17->direction[port]);
+    MCP23S17_write16(MCP23S17_IODIRA, MCP23S17->direction);
+
+    // Read all pins and latch
+    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+
+    MCP23S17_unlock();
 
     return NULL;
 }
 
 driver_error_t *MCP23S17_pin_set(uint8_t pin) {
     uint8_t port = MCP23S17_GPIO_BANK_NUM(pin);
-    uint8_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin));
+    uint16_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin) << (port << 3));
 
     if (!MCP23S17) MCP23S17_setup();
 
     // Update latch.
     MCP23S17_lock();
-    MCP23S17->latch[port] |= pinmask;
-    MCP23S17_unlock();
+    MCP23S17->latch |= pinmask;
 
-    MCP23S17_write_register(MCP23S17_GPIOA + port, MCP23S17->latch[port]);
+    MCP23S17_write16(MCP23S17_GPIOA, MCP23S17->latch);
+
+    MCP23S17_unlock();
 
     return NULL;
 }
 
 driver_error_t *MCP23S17_pin_clr(uint8_t pin) {
     uint8_t port = MCP23S17_GPIO_BANK_NUM(pin);
-    uint8_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin));
+    uint16_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin) << (port << 3));
 
     if (!MCP23S17) MCP23S17_setup();
 
     // Update latch.
     MCP23S17_lock();
-    MCP23S17->latch[port] &= ~pinmask;
-    MCP23S17_unlock();
+    MCP23S17->latch &= ~pinmask;
 
-    MCP23S17_write_register(MCP23S17_GPIOA + port, MCP23S17->latch[port]);
+    MCP23S17_write16(MCP23S17_GPIOA, MCP23S17->latch);
+
+    MCP23S17_unlock();
 
     return NULL;
 }
 
 driver_error_t *MCP23S17_pin_inv(uint8_t pin) {
     uint8_t port = MCP23S17_GPIO_BANK_NUM(pin);
-    uint8_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin));
+    uint16_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin) << (port << 3));
 
     if (!MCP23S17) MCP23S17_setup();
 
     // Update latch.
     MCP23S17_lock();
-    MCP23S17->latch[port] = MCP23S17->latch[port]  ^ pinmask;
-    MCP23S17_unlock();
+    MCP23S17->latch ^= pinmask;
 
-    MCP23S17_write_register(MCP23S17_GPIOA + port, MCP23S17->latch[port]);
+    MCP23S17_write16(MCP23S17_GPIOA, MCP23S17->latch);
+
+    MCP23S17_unlock();
 
     return NULL;
 }
 
 uint8_t MCP23S17_pin_get(uint8_t pin) {
     uint8_t port = MCP23S17_GPIO_BANK_NUM(pin);
-    uint8_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin));
+    uint16_t pinmask = (1 << MCP23S17_GPIO_BANK_POS(pin) << (port << 3));
     uint8_t val;
 
     if (!MCP23S17) MCP23S17_setup();
 
     MCP23S17_lock();
-    val = ((MCP23S17->latch[port] & pinmask) != 0);
+    val = ((MCP23S17->latch & pinmask) != 0);
     MCP23S17_unlock();
 
     return val;
@@ -451,10 +485,31 @@ driver_error_t *MCP23S17_pin_pullup_mask(uint8_t port, uint8_t pinmask) {
 
     // Update pull. For pull-up set bit to 1.
     MCP23S17_lock();
-    MCP23S17->pull[port] |= pinmask;
+    MCP23S17->pull |= (((uint16_t)pinmask) << (port << 3));
+
+    MCP23S17_write16(MCP23S17_GPPUA, MCP23S17->pull);
+
+    // Read all pins and latch
+    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+
     MCP23S17_unlock();
 
-    MCP23S17_write_register(MCP23S17_GPPUA + port, MCP23S17->pull[port]);
+    return NULL;
+}
+
+driver_error_t *MCP23S17_pin_nopull_mask(uint8_t port, uint8_t pinmask) {
+    if (!MCP23S17) MCP23S17_setup();
+
+    // Update pull. For not pull-up set bit to 0.
+    MCP23S17_lock();
+    MCP23S17->pull &= ~(((uint16_t)pinmask) << (port << 3));
+
+    MCP23S17_write16(MCP23S17_GPPUA, MCP23S17->pull);
+
+    // Read all pins and latch
+    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+
+    MCP23S17_unlock();
 
     return NULL;
 }
@@ -464,10 +519,14 @@ driver_error_t *MCP23S17_pin_input_mask(uint8_t port, uint8_t pinmask) {
 
     // Update direction. For input set bit to 1.
     MCP23S17_lock();
-    MCP23S17->direction[port] |= pinmask;
-    MCP23S17_unlock();
+    MCP23S17->direction |= (((uint16_t)pinmask) << (port << 3));
 
-    MCP23S17_write_register(MCP23S17_IODIRA + port, MCP23S17->direction[port]);
+    MCP23S17_write16(MCP23S17_IODIRA, MCP23S17->direction);
+
+    // Read all pins and latch
+    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+
+    MCP23S17_unlock();
 
     return NULL;
 }
@@ -477,10 +536,14 @@ driver_error_t *MCP23S17_pin_output_mask(uint8_t port, uint8_t pinmask) {
 
     // Update direction. For output set bit to 0.
     MCP23S17_lock();
-    MCP23S17->direction[port] &= ~pinmask;
-    MCP23S17_unlock();
+    MCP23S17->direction &= ~(((uint16_t)pinmask) << (port << 3));
 
-    MCP23S17_write_register(MCP23S17_IODIRA + port, MCP23S17->direction[port]);
+    MCP23S17_write16(MCP23S17_IODIRA, MCP23S17->direction);
+
+    // Read all pins and latch
+    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+
+    MCP23S17_unlock();
 
     return NULL;
 }
@@ -490,10 +553,11 @@ driver_error_t * MCP23S17_pin_set_mask(uint8_t port, uint8_t pinmask) {
 
     // Update latch.
     MCP23S17_lock();
-    MCP23S17->latch[port] |= pinmask;
-    MCP23S17_unlock();
+    MCP23S17->latch |= (((uint16_t)pinmask) << (port << 3));
 
-    MCP23S17_write_register(MCP23S17_GPIOA + port, MCP23S17->latch[port]);
+    MCP23S17_write16(MCP23S17_GPIOA, MCP23S17->latch);
+
+    MCP23S17_unlock();
 
     return NULL;
 }
@@ -503,10 +567,11 @@ driver_error_t *MCP23S17_pin_clr_mask(uint8_t port, uint8_t pinmask) {
 
     // Update latch.
     MCP23S17_lock();
-    MCP23S17->latch[port] &= ~pinmask;
-    MCP23S17_unlock();
+    MCP23S17->latch &= ~(((uint16_t)pinmask) << (port << 3));
 
-    MCP23S17_write_register(MCP23S17_GPIOA + port, MCP23S17->latch[port]);
+    MCP23S17_write16(MCP23S17_GPIOA, MCP23S17->latch);
+
+    MCP23S17_unlock();
 
     return NULL;
 }
@@ -516,10 +581,11 @@ driver_error_t *MCP23S17_pin_inv_mask(uint8_t port, uint8_t pinmask) {
 
     // Update latch.
     MCP23S17_lock();
-    MCP23S17->latch[port] = MCP23S17->latch[port]  ^ pinmask;
-    MCP23S17_unlock();
+    MCP23S17->latch ^= (((uint16_t)pinmask) << (port << 3));
 
-    MCP23S17_write_register(MCP23S17_GPIOA + port, MCP23S17->latch[port]);
+    MCP23S17_write16(MCP23S17_GPIOA, MCP23S17->latch);
+
+    MCP23S17_unlock();
 
     return NULL;
 }
@@ -528,13 +594,16 @@ void MCP23S17_pin_get_mask(uint8_t port, uint8_t pinmask, uint8_t *value) {
     if (!MCP23S17) MCP23S17_setup();
 
     MCP23S17_lock();
-    *value = (MCP23S17->latch[port] & pinmask);
+    *value = (MCP23S17->latch & (((uint16_t)pinmask) << (port << 3))) >> (port << 3);
     MCP23S17_unlock();
 }
 
 uint64_t IRAM_ATTR MCP23S17_pin_get_all() {
-	return ((uint64_t)MCP23S17->latch[1] <<  8) |
-		   (uint64_t)MCP23S17->latch[0];
+    if (MCP23S17) {
+        return MCP23S17->latch;
+    } else {
+        return 0;
+    }
 }
 
 void MCP23S17_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type, void *args) {
@@ -563,4 +632,3 @@ void MCP23S17_isr_detach(uint8_t pin) {
 }
 
 #endif
-

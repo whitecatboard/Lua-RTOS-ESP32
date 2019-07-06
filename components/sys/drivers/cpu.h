@@ -43,10 +43,12 @@
  *
  */
 
-#ifndef CPU_H
-#define	CPU_H
+#ifndef __CPU_H__
+#define	__CPU_H__
 
 #include <stdint.h>
+
+#include <drivers/gpio.h>
 
 /*
  * ----------------------------------------------------------------
@@ -137,9 +139,6 @@
 // ESP32 has 40 GPIO per port
 #define GPIO_PER_PORT 40
 
-// ESP32 needs 64 bits for pin mask
-typedef uint64_t gpio_pin_mask_t;
-
 // ESP32 gpio masks
 #define GPIO_ALL     0b1111111100001110111111111111111111111111ULL
 #define GPIO_ALL_IN  0b1111111100001110111111111111111111111111ULL
@@ -158,21 +157,21 @@ typedef uint64_t gpio_pin_mask_t;
 #define CPU_LAST_GPIO  (GPIO39 + EXTERNAL_GPIO_PINS)
 #endif
 
- /*
-  * ----------------------------------------------------------------
-  * CAN
-  * ----------------------------------------------------------------
-  */
+/*
+ * ----------------------------------------------------------------
+ * CAN
+ * ----------------------------------------------------------------
+ */
 
- // Unit bounds
- #define CPU_FIRST_CAN 0
- #define CPU_LAST_CAN  0
+// Unit bounds
+#define CPU_FIRST_CAN 0
+#define CPU_LAST_CAN  0
 
- // ESP32 available CAN units
- #define CPU_CAN0  0
+// ESP32 available CAN units
+#define CPU_CAN0  0
 
- // ESP32 available CAN names
- #define CPU_CAN0_NAME  "CAN0"
+// ESP32 available CAN names
+#define CPU_CAN0_NAME  "CAN0"
 
 
 /*
@@ -367,8 +366,6 @@ typedef uint64_t gpio_pin_mask_t;
 
 #define CPU_PWM0_ALL 0b1111111111111111
 
-#endif
-
 void _cpu_init();
 int cpu_revision();
 void cpu_model(char *buffer, int buflen);
@@ -394,3 +391,5 @@ void cpu_show_flash_info();
 uint32_t cpu_speed() __attribute__((deprecated));
 uint32_t cpu_speed_mhz();
 uint32_t cpu_speed_hz();
+
+#endif

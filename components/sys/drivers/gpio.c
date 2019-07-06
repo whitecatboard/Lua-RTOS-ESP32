@@ -74,6 +74,10 @@ DRIVER_REGISTER_BEGIN(GPIO,gpio,CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS * (CPU_LAST_G
     DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPin, "invalid pin", GPIO_ERR_INVALID_PIN);
     DRIVER_REGISTER_ERROR(GPIO, gpio, InvalidPort, "invalid port", GPIO_ERR_INVALID_PORT);
     DRIVER_REGISTER_ERROR(GPIO, gpio, NotEnoughtMemory, "not enough memory", GPIO_ERR_NOT_ENOUGH_MEMORY);
+    DRIVER_REGISTER_ERROR(GPIO, gpio, PullUpNotAllowed, "pull-up not allowed", GPIO_ERR_PULL_UP_NOT_ALLOWED);
+    DRIVER_REGISTER_ERROR(GPIO, gpio, PullDownNotAllowed, "pull-down not allowed", GPIO_ERR_PULL_DOWN_NOT_ALLOWED);
+    DRIVER_REGISTER_ERROR(GPIO, gpio, InterruptNotAllowed, "interrupt not allowed", GPIO_ERR_INT_NOT_ALLOWED);
+    DRIVER_REGISTER_ERROR(GPIO, gpio, PullUpDownNotAllowed, "pull-up or pull-down not allowed", GPIO_ERR_PULL_UP_DOWN_NOT_ALLOWED);
 DRIVER_REGISTER_END(GPIO,gpio,CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS * (CPU_LAST_GPIO + 1),NULL,NULL);
 
 /*
@@ -401,7 +405,18 @@ driver_error_t *gpio_pin_pulldwn(uint8_t pin) {
             return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
         }
 
-        return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_DOWN_NOT_ALLOWED, NULL);
+	#if !EXTERNAL_GPIO_HAS_PROGRAMABLE_PULLDOWNS
+		return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_DOWN_NOT_ALLOWED, NULL);
+	#else
+		driver_error_t *error;
+
+		error = gpio_ext_pin_pulldown(pin - 40);
+		if (error) {
+			return error;
+		}
+	#endif
+
+		return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_DOWN_NOT_ALLOWED, NULL);
     }
 #else
     else {
@@ -428,6 +443,17 @@ driver_error_t *gpio_pin_nopull(uint8_t pin) {
         if (pin >= 40 + EXTERNAL_GPIO_PINS) {
             return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
         }
+
+	#if ((!EXTERNAL_GPIO_HAS_PROGRAMABLE_PULLDOWNS) && (!EXTERNAL_GPIO_HAS_PROGRAMABLE_PULLUPS))
+		return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_UP_DOWN_NOT_ALLOWED, NULL);
+	#else
+		driver_error_t *error;
+
+		error = gpio_ext_pin_nopull(pin - 40);
+		if (error) {
+			return error;
+		}
+	#endif
     }
 #else
     else {
@@ -613,6 +639,17 @@ driver_error_t *gpio_pin_pulldwn_mask(uint8_t port, gpio_pin_mask_t pinmask) {
     }
 #if EXTERNAL_GPIO
     else {
+		#if !EXTERNAL_GPIO_HAS_PROGRAMABLE_PULLDOWNS
+			return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_DOWN_NOT_ALLOWED, NULL);
+		#else
+			driver_error_t *error;
+
+			error = gpio_ext_pin_pulldown_mask(port - 2, pinmask);
+			if (error) {
+				return error;
+			}
+		#endif
+
         return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_DOWN_NOT_ALLOWED, NULL);
     }
 #else
@@ -654,7 +691,16 @@ driver_error_t *gpio_pin_nopull_mask(uint8_t port, gpio_pin_mask_t pinmask) {
     }
 #if EXTERNAL_GPIO
     else {
-        return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_DOWN_NOT_ALLOWED, NULL);
+	#if ((!EXTERNAL_GPIO_HAS_PROGRAMABLE_PULLDOWNS) && (!EXTERNAL_GPIO_HAS_PROGRAMABLE_PULLUPS))
+		return driver_error(GPIO_DRIVER, GPIO_ERR_PULL_UP_DOWN_NOT_ALLOWED, NULL);
+	#else
+		driver_error_t *error;
+
+		error = gpio_ext_pin_nopull_mask(port - 2, pinmask);
+		if (error) {
+			return error;
+		}
+	#endif
     }
 #else
     else {

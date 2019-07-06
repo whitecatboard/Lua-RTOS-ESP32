@@ -46,17 +46,26 @@
 #ifndef __GPIO_H__
 #define __GPIO_H__
 
+#include <stdint.h>
+
 #include "driver/rmt.h"
 #include "driver/periph_ctrl.h"
 #include "soc/rmt_reg.h"
 
-#include <sys/driver.h>
-
 #include <driver/gpio.h>
 #include <rom/gpio.h>
 
-#include "drivers/gpio.h"
-#include "drivers/cpu.h"
+#include <sys/driver.h>
+
+#include <drivers/MCP23S17.h>
+#include <drivers/pca9xxx.h>
+
+#ifndef EXTERNAL_GPIO
+#define EXTERNAL_GPIO 0
+#endif
+
+// ESP32 needs 64 bits for pin mask
+typedef uint64_t gpio_pin_mask_t;
 
 // GPIO errors
 #define GPIO_ERR_INVALID_PIN_DIRECTION        (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  0)
@@ -66,6 +75,7 @@
 #define GPIO_ERR_PULL_UP_NOT_ALLOWED		  (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  4)
 #define GPIO_ERR_PULL_DOWN_NOT_ALLOWED		  (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  5)
 #define GPIO_ERR_INT_NOT_ALLOWED			  (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  6)
+#define GPIO_ERR_PULL_UP_DOWN_NOT_ALLOWED     (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  7)
 
 extern const int gpio_errors;
 extern const int gpio_error_map;

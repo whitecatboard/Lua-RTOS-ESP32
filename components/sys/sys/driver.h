@@ -43,8 +43,8 @@
  *
  */
 
-#ifndef DRIVER_H
-#define DRIVER_H
+#ifndef __DRIVER_H__
+#define __DRIVER_H__
 
 #include "luartos.h"
 #include "lobject.h"
@@ -53,8 +53,6 @@
 #include <sys/list.h>
 #include <sys/resource.h>
 #include <sys/driver.h>
-
-#include <sys/drivers/cpu.h>
 
 typedef void *device_t;
 
@@ -296,8 +294,6 @@ const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error_map)) int DRIVER_CONCAT_WITH_
 const DRIVER_SECTION(DRIVER_TOSTRING(.drivers)) driver_t DRIVER_CONCAT(driver_,lname) = {DRIVER_TOSTRING(lname),  DRIVER_EXCEPTION_BASE(DRIVER_CONCAT(name,_DRIVER_ID)),  (void *)((&(DRIVER_CONCAT(lname,_errors)))+1), initf};
 #endif
 
-#endif
-
 #define DRIVER_REGISTER_ERROR(name, lname, key, msg, exception) \
     const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error)) driver_message_t DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_errors)) = {exception, msg}; \
     const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error_map)) LUA_REG_TYPE DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_error_map)) = {LSTRKEY(DRIVER_TOSTRING(key)), LINTVAL(exception)};
@@ -305,3 +301,4 @@ const DRIVER_SECTION(DRIVER_TOSTRING(.drivers)) driver_t DRIVER_CONCAT(driver_,l
 #define DRIVER_REGISTER_LUA_ERRORS(lname) \
     {LSTRKEY("error"), LROVAL( ((LUA_REG_TYPE *)((&DRIVER_CONCAT_WITH_SEP(lname,_,error_map)) + 1)) )},
 
+#endif

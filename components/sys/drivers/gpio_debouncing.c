@@ -53,13 +53,7 @@
 #include <sys/driver.h>
 #include <drivers/gpio.h>
 #include <drivers/gpio_debouncing.h>
-#include <drivers/cpu.h>
 #include <drivers/timer.h>
-
-#if EXTERNAL_GPIO
-#include <drivers/pca9xxx.h>
-#include <drivers/MCP23S17.h>
-#endif
 
 // Debouncing data
 static debouncing_t *debouncing = NULL;
