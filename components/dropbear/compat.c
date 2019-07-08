@@ -156,6 +156,7 @@ strlcat(dst, src, siz)
 #endif /* HAVE_STRLCAT */
 
 #ifndef HAVE_DAEMON
+#if !__XTENSA__
 /* From NetBSD - daemonise a process */
 
 int daemon(int nochdir, int noclose) {
@@ -186,6 +187,7 @@ int daemon(int nochdir, int noclose) {
 	}
 	return 0;
 }
+#endif
 #endif /* HAVE_DAEMON */
 
 #ifndef HAVE_BASENAME
