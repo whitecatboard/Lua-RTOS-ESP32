@@ -20,6 +20,14 @@
 #include "usocket.h"
 #endif
 
+#if __XTENSA__
+    // rename socket_bind to luasocket_bind so that it won't interfere
+    // with the socket_bind function that openvpn comes with
+    #define socket_bind luasocket_bind
+    // make sure that all luasocket source files that use socket_bind
+    // include this header file directly or indirectly
+#endif
+
 /*=========================================================================*\
 * The connect and accept functions accept a timeout and their
 * implementations are somewhat complicated. We chose to move

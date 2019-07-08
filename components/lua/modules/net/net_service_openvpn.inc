@@ -58,11 +58,13 @@
 #include <drivers/net.h>
 
 int openvpn(int argc, char *argv[]);
-static u8_t volatile _openvpn_running = 0;
+u8_t volatile _openvpn_should_stop = 0;
+u8_t volatile _openvpn_running = 0;
 
 static void *openvpn_thread(void *arg) {
 	// Wait for network
     if (!wait_for_network(20000)) {
+        lua_State* L = (lua_State*)arg;
         luaL_exception(L, NET_ERR_NOT_AVAILABLE);
     }
 
@@ -86,12 +88,13 @@ static int lopenvpn_service_start(lua_State* L) {
 	pthread_t thread;
 	pthread_attr_t attr;
 
-	pthread_attr_init(&attr);
+    _openvpn_should_stop = 0;
 
+	pthread_attr_init(&attr);
     pthread_attr_setstacksize(&attr, 8192);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-    if (pthread_create(&thread, &attr, openvpn_thread, NULL)) {
+    if (pthread_create(&thread, &attr, openvpn_thread, L)) {
     	return 0;
 	}
 
@@ -101,6 +104,7 @@ static int lopenvpn_service_start(lua_State* L) {
 }
 
 static int lopenvpn_service_stop(lua_State* L) {
+    _openvpn_should_stop = 1;
 	return 0;
 }
 

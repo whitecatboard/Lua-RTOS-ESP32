@@ -134,7 +134,7 @@
 #endif
 
 #if CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS <= 1
-#error "Please, review the 'Number of thread local storage pointers' settings in kconfig. Must be >= 2."
+#error "Please review the 'Number of thread local storage pointers' settings in kconfig. Must be >= 2."
 #endif
 
 #define THREAD_LOCAL_STORAGE_POINTER_ID (CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS - 1)
@@ -142,7 +142,10 @@
 // OpenVPN
 #if CONFIG_LUA_RTOS_USE_OPENVPN
 #if !CONFIG_MBEDTLS_BLOWFISH_C
-#error "OpenVPM requires CONFIG_MBEDTLS_BLOWFISH_C = 1. Please activate it with make menuconfig, enabling option in mbedTLS -> Symmetric Ciphers -> Blowfish block cipher."
+#error "OpenVPN requires CONFIG_MBEDTLS_BLOWFISH_C = 1. Please activate it with make menuconfig, enabling option in mbedTLS -> Symmetric Ciphers -> Blowfish block cipher."
+#endif
+#if !CONFIG_MBEDTLS_DES_C
+#error "OpenVPN requires CONFIG_MBEDTLS_DES_C = 1. Please activate it with make menuconfig, enabling option in mbedTLS -> Symmetric Ciphers -> DES block cipher (legacy, insecure)."
 #endif
 #endif
 
