@@ -51,7 +51,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-
+#include <math.h>
 #include <sys/syslog.h>
 
 static char *GPGGA = "GPGGA";  // GPGGA sentence string
@@ -84,7 +84,7 @@ double nmea_geoloc_to_decimal(char *token) {
     double degrees = 0.0;
     double minutes = 0.0;
     double seconds = 0.0;
-
+    int num_decimals = 0;
     char *current = token;
 
     while (*current) {
@@ -119,7 +119,9 @@ double nmea_geoloc_to_decimal(char *token) {
 
             current++;
             current++;
-            seconds = (double)atoi(current) / (double)1000000;
+            num_decimals = strlen(current);
+
+            seconds = (double)atoi(current) / (double)pow((double)10, (double)num_decimals);
 
             // Do the conversion
             val = degrees + ((minutes + seconds) / 60);
