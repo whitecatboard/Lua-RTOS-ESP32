@@ -62,62 +62,63 @@ u8_t volatile _openvpn_should_stop = 0;
 u8_t volatile _openvpn_running = 0;
 
 static void *openvpn_thread(void *arg) {
-	// Wait for network
+    // Wait for network
     if (!wait_for_network(20000)) {
         lua_State* L = (lua_State*)arg;
         luaL_exception(L, NET_ERR_NOT_AVAILABLE);
     }
 
-	delay(1000);
+    delay(1000);
 
-	char* argv[] = {
-			"openvpn",
-			"--config", CONFIG_LUA_RTOS_OPENVPN_CONFIG_FILE,
-			"--ifconfig-nowarn",
-			"--single-session"
-	};
+    char* argv[] = {
+            "openvpn",
+            "--config",
+            CONFIG_LUA_RTOS_OPENVPN_CONFIG_FILE,
+            "--ifconfig-nowarn",
+            "--single-session"
+    };
 
-	_openvpn_running = 1;
-	openvpn(5, argv);
-	_openvpn_running = 0;
+    _openvpn_running = 1;
+    openvpn(5, argv);
+    _openvpn_running = 0;
 
-	return NULL;
+    return NULL;
 }
 
 static int lopenvpn_service_start(lua_State* L) {
-	pthread_t thread;
-	pthread_attr_t attr;
+    pthread_t thread;
+    pthread_attr_t attr;
 
     _openvpn_should_stop = 0;
 
-	pthread_attr_init(&attr);
+    pthread_attr_init(&attr);
     pthread_attr_setstacksize(&attr, 8192);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
     if (pthread_create(&thread, &attr, openvpn_thread, L)) {
-    	return 0;
-	}
+        return 0;
+    }
 
     pthread_setname_np(thread, "openvpn");
 
-	return 0;
+    return 0;
 }
 
 static int lopenvpn_service_stop(lua_State* L) {
     _openvpn_should_stop = 1;
-	return 0;
+    return 0;
 }
 
 static int lopenvpn_service_running( lua_State* L ) {
-	lua_pushboolean(L, _openvpn_running);
-	return 1;
+    lua_pushboolean(L, _openvpn_running);
+    return 1;
 }
 
 static const LUA_REG_TYPE openvpn_map[] = {
-	{ LSTRKEY("start"  ), LFUNCVAL( lopenvpn_service_start   ) },
-	{ LSTRKEY("stop"   ), LFUNCVAL( lopenvpn_service_stop    ) },
-	{ LSTRKEY("running"), LFUNCVAL( lopenvpn_service_running ) },
-	{ LNILKEY,LNILVAL }
+    { LSTRKEY("start"  ), LFUNCVAL( lopenvpn_service_start   ) },
+    { LSTRKEY("stop"   ), LFUNCVAL( lopenvpn_service_stop    ) },
+    { LSTRKEY("running"), LFUNCVAL( lopenvpn_service_running ) },
+    { LNILKEY,LNILVAL }
 };
 
 #endif
