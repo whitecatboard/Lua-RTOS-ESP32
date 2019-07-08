@@ -94,81 +94,81 @@ static int l_nvs_write(lua_State *L) {
 
     // Sanity checks, and check arguments
     if (total != 3 ) {
-    	return luaL_error(L, "missing arguments");
+        return luaL_error(L, "missing arguments");
     }
 
     nspace = luaL_checkstring(L, 1);
     if (!nspace) {
-    	return luaL_error(L, "namespace missing");
+        return luaL_error(L, "namespace missing");
     }
 
     key = luaL_checkstring(L, 2);
     if (!key) {
-    	return luaL_error(L, "key missing");
+        return luaL_error(L, "key missing");
     }
 
     switch(lua_type(L, 3)) {
         case LUA_TNUMBER:
             if (lua_isinteger(L,3)) {
-            	val_size = sizeof(lua_Integer) + 1;
-            	val_val = (void *)malloc(val_size);
-            	if (val_val) {
-            		*((char*)val_val) = (char)LNVS_TYPE_INT;
-            		*((lua_Integer *)(val_val + 1)) = luaL_checkinteger(L, 3);
-            	}
+                val_size = sizeof(lua_Integer) + 1;
+                val_val = (void *)malloc(val_size);
+                if (val_val) {
+                    *((char*)val_val) = (char)LNVS_TYPE_INT;
+                    *((lua_Integer *)(val_val + 1)) = luaL_checkinteger(L, 3);
+                }
             } else {
-            	val_size = sizeof(lua_Number) + 1;
-            	val_val = (void *)malloc(val_size);
-            	if (val_val) {
-            		*((char*)val_val) = (char)LNVS_TYPE_NUMBER;
-            		*((lua_Number *)(val_val + 1)) = luaL_checknumber(L, 3);
-            	}
+                val_size = sizeof(lua_Number) + 1;
+                val_val = (void *)malloc(val_size);
+                if (val_val) {
+                    *((char*)val_val) = (char)LNVS_TYPE_NUMBER;
+                    *((lua_Number *)(val_val + 1)) = luaL_checknumber(L, 3);
+                }
             }
 
             break;
 
         case LUA_TBOOLEAN:
-        	val_size = sizeof(int) + 1;
-        	val_val = (void *)malloc(val_size);
-        	if (val_val) {
-        		*((char*)val_val) = (char)LNVS_TYPE_BOOLEAN;
-        		*((int *)(val_val + 1)) = (char)lua_toboolean(L, 3);
-        	}
+            val_size = sizeof(int) + 1;
+            val_val = (void *)malloc(val_size);
+            if (val_val) {
+                *((char*)val_val) = (char)LNVS_TYPE_BOOLEAN;
+                *((int *)(val_val + 1)) = (char)lua_toboolean(L, 3);
+            }
             break;
 
         case LUA_TNIL:
-        	val_size = sizeof(char) * 2;
-        	val_val = (void *)malloc(val_size);
-        	if (val_val) {
-        		*((char*)val_val) = (char)LNVS_TYPE_NIL;
-        		*((char *)(val_val + 1)) = 0;
-        	}
+            val_size = sizeof(char) * 2;
+            val_val = (void *)malloc(val_size);
+            if (val_val) {
+                *((char*)val_val) = (char)LNVS_TYPE_NIL;
+                *((char *)(val_val + 1)) = 0;
+            }
             break;
 
         case LUA_TSTRING:
-        	str_val = (char *)lua_tostring(L, 3);
+            str_val = (char *)lua_tostring(L, 3);
 
-        	val_size = strlen(str_val) + 2;
-        	val_val = (void *)malloc(val_size);
-        	if (val_val) {
-        		*((char*)val_val) = (char)LNVS_TYPE_STRING;
-        		memcpy((char *)(val_val + 1), str_val, val_size - 1);
-        	}
+            val_size = strlen(str_val) + 2;
+            val_val = (void *)malloc(val_size);
+            if (val_val) {
+                *((char*)val_val) = (char)LNVS_TYPE_STRING;
+                memcpy((char *)(val_val + 1), str_val, val_size - 1);
+            }
             break;
     }
 
     // Open
     err = nvs_open(nspace, NVS_READWRITE, &handle_to_settings);
     if (err != ESP_OK) {
-    	free(val_val);
-    	nvs_error(L, err);
+        free(val_val);
+        nvs_error(L, err);
     }
 
     // Save
     err = nvs_set_blob(handle_to_settings, key, val_val, val_size);
     if (err != ESP_OK) {
-    	free(val_val);
-    	nvs_error(L, err);
+        free(val_val);
+        nvs_error(L, err);
     }
 
     free(val_val);
@@ -176,7 +176,7 @@ static int l_nvs_write(lua_State *L) {
     // Commit changes
     err = nvs_commit(handle_to_settings);
     if (err != ESP_OK) {
-    	nvs_error(L, err);
+        nvs_error(L, err);
     }
 
     // Close
@@ -197,17 +197,17 @@ static int l_nvs_read(lua_State *L) {
 
     // Sanity checks, and check arguments
     if (total < 2 ) {
-    	return luaL_error(L, "missing arguments");
+        return luaL_error(L, "missing arguments");
     }
 
     nspace = luaL_checkstring(L, 1);
     if (!nspace) {
-    	return luaL_error(L, "namespace missing");
+        return luaL_error(L, "namespace missing");
     }
 
     key = luaL_checkstring(L, 2);
     if (!key) {
-    	return luaL_error(L, "key missing");
+        return luaL_error(L, "key missing");
     }
 
     // Open
@@ -219,7 +219,7 @@ static int l_nvs_read(lua_State *L) {
             return 1;
         }
 
-    	nvs_error(L, err);
+        nvs_error(L, err);
     }
 
     // Read key size
@@ -227,51 +227,51 @@ static int l_nvs_read(lua_State *L) {
     err = nvs_get_blob(handle_to_settings, key,NULL, &key_size);
     if (err != ESP_OK) {
 
-			if (err == ESP_ERR_NVS_NOT_FOUND && total == 3) {
-				nvs_close(handle_to_settings);
+        if (err == ESP_ERR_NVS_NOT_FOUND && total == 3) {
+            nvs_close(handle_to_settings);
+            lua_pushvalue(L, 3);
+            return 1;
+        }
 
-				lua_pushvalue(L, 3);
-		    return 1;
-			}
-
-    	nvs_close(handle_to_settings);
-    	nvs_error(L, err);
-    	return 0;
+        nvs_close(handle_to_settings);
+        nvs_error(L, err);
+        return 0;
     }
 
     // Alloc space for retrieve key value
     val_val = malloc(key_size);
     if (!val_val) {
-    	nvs_close(handle_to_settings);
-    	nvs_error(L, ESP_ERR_NO_MEM);
-    	return 0;
+        nvs_close(handle_to_settings);
+        nvs_error(L, ESP_ERR_NO_MEM);
+        return 0;
     }
 
     // Read key value
-    err = nvs_get_blob(handle_to_settings, key,val_val, &key_size);
+    err = nvs_get_blob(handle_to_settings, key, val_val, &key_size);
     if (err != ESP_OK) {
-    	nvs_close(handle_to_settings);
-    	nvs_error(L, err);
-    	return 0;
+        free(val_val);
+        nvs_close(handle_to_settings);
+        nvs_error(L, err);
+        return 0;
     }
 
     val_type = *((char*)val_val);
     switch (val_type) {
-    	case LNVS_TYPE_INT:
-    		lua_pushinteger(L, *((lua_Integer *)(val_val + 1)));
-    		break;
-    	case LNVS_TYPE_NUMBER:
-    		lua_pushnumber(L, *((lua_Number *)(val_val + 1)));
-    		break;
-    	case LNVS_TYPE_BOOLEAN:
-    		lua_pushboolean(L, *((int *)(val_val + 1)));
-    		break;
-    	case LNVS_TYPE_NIL:
-    		lua_pushnil(L);
-    		break;
-    	case LNVS_TYPE_STRING:
-    		lua_pushstring(L, ((const char *)(val_val + 1)));
-    		break;
+        case LNVS_TYPE_INT:
+            lua_pushinteger(L, *((lua_Integer *)(val_val + 1)));
+            break;
+        case LNVS_TYPE_NUMBER:
+            lua_pushnumber(L, *((lua_Number *)(val_val + 1)));
+            break;
+        case LNVS_TYPE_BOOLEAN:
+            lua_pushboolean(L, *((int *)(val_val + 1)));
+            break;
+        case LNVS_TYPE_NIL:
+            lua_pushnil(L);
+            break;
+        case LNVS_TYPE_STRING:
+            lua_pushstring(L, ((const char *)(val_val + 1)));
+            break;
     }
 
     free(val_val);
@@ -292,34 +292,53 @@ static int l_nvs_exists(lua_State *L) {
 
     // Sanity checks, and check arguments
     if (total < 2 ) {
-    	return luaL_error(L, "missing arguments");
+        return luaL_error(L, "missing arguments");
     }
 
     nspace = luaL_checkstring(L, 1);
     if (!nspace) {
-    	return luaL_error(L, "namespace missing");
+        return luaL_error(L, "namespace missing");
     }
 
     key = luaL_checkstring(L, 2);
     if (!key) {
-    	return luaL_error(L, "key missing");
+        return luaL_error(L, "key missing");
     }
 
     // Try to open
     err = nvs_open(nspace, NVS_READONLY, &handle_to_settings);
     if (err != ESP_OK) {
-	    lua_pushboolean(L, 0);
-    	return 1;
+        lua_pushboolean(L, 0);
+        return 1;
     }
-    
+
     // Try to read key size
     size_t key_size = 0;
     err = nvs_get_blob(handle_to_settings, key, NULL, &key_size);
     if (err != ESP_OK) {
-    	nvs_close(handle_to_settings);
-			lua_pushboolean(L, 0);
-	    return 1;
+        nvs_close(handle_to_settings);
+        lua_pushboolean(L, 0);
+        return 1;
     }
+
+    // Alloc space for retrieve key value
+    void *val_val = malloc(key_size);
+    if (!val_val) {
+        nvs_close(handle_to_settings);
+        nvs_error(L, ESP_ERR_NO_MEM);
+        return 0;
+    }
+
+    // Read key value
+    err = nvs_get_blob(handle_to_settings, key, val_val, &key_size);  // when not actually providing a val_val here, 
+    if (err != ESP_OK) {                                              // the function will improperly report an
+        free(val_val);                                                // already deleted nvs value as still existing
+        nvs_close(handle_to_settings);
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+
+    free(val_val);
 
     // Close
     nvs_close(handle_to_settings);
@@ -338,38 +357,38 @@ static int l_nvs_rm(lua_State *L) {
 
     // Sanity checks, and check arguments
     if (total < 2 ) {
-    	return luaL_error(L, "missing arguments");
+        return luaL_error(L, "missing arguments");
     }
 
     nspace = luaL_checkstring(L, 1);
     if (!nspace) {
-    	return luaL_error(L, "namespace missing");
+        return luaL_error(L, "namespace missing");
     }
 
     key = luaL_checkstring(L, 2);
     if (!key) {
-    	return luaL_error(L, "key missing");
+        return luaL_error(L, "key missing");
     }
 
     // Try to open
     err = nvs_open(nspace, NVS_READWRITE, &handle_to_settings);
     if (err != ESP_OK) {
-	    lua_pushboolean(L, 0);
-    	return 1;
+        lua_pushboolean(L, 0);
+        return 1;
     }
     
-    // Try to read key size
+    // Erase the key value
     err = nvs_erase_key(handle_to_settings, key);
     if (err != ESP_OK) {
-    	nvs_close(handle_to_settings);
-			lua_pushboolean(L, 0);
-	    return 1;
+        nvs_close(handle_to_settings);
+        lua_pushboolean(L, 0);
+        return 1;
     }
 
     // Commit changes
     err = nvs_commit(handle_to_settings);
     if (err != ESP_OK) {
-    	nvs_error(L, err);
+        nvs_error(L, err);
     }
 
     // Close
@@ -384,19 +403,19 @@ static const LUA_REG_TYPE nvs_map[] =
   { LSTRKEY( "write" ),      LFUNCVAL( l_nvs_write ) },
   { LSTRKEY( "read" ),       LFUNCVAL( l_nvs_read ) },
   { LSTRKEY( "exists" ),     LFUNCVAL( l_nvs_exists ) },
-  { LSTRKEY( "rm" ),     	 LFUNCVAL( l_nvs_rm ) },
+  { LSTRKEY( "rm" ),         LFUNCVAL( l_nvs_rm ) },
   { LNILKEY, LNILVAL }
 };
 
 int luaopen_nvs(lua_State *L) {
-	#if !LUA_USE_ROTABLE
-	luaL_newlib(L, nvs_map);
-	return 1;
-	#else
-	return 0;
-	#endif		   
+    #if !LUA_USE_ROTABLE
+    luaL_newlib(L, nvs_map);
+    return 1;
+    #else
+    return 0;
+    #endif
 }
-	   
+   
 MODULE_REGISTER_ROM(NVS, nvs, nvs_map, luaopen_nvs, 1);
 
 #endif
