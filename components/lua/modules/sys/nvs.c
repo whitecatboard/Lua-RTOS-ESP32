@@ -229,7 +229,6 @@ static int l_nvs_read(lua_State *L) {
 
 			if (err == ESP_ERR_NVS_NOT_FOUND && total == 3) {
 				nvs_close(handle_to_settings);
-
 				lua_pushvalue(L, 3);
 		    return 1;
 			}
@@ -250,6 +249,7 @@ static int l_nvs_read(lua_State *L) {
     // Read key value
     err = nvs_get_blob(handle_to_settings, key,val_val, &key_size);
     if (err != ESP_OK) {
+        free(val_val);
     	nvs_close(handle_to_settings);
     	nvs_error(L, err);
     	return 0;
@@ -320,6 +320,25 @@ static int l_nvs_exists(lua_State *L) {
 			lua_pushboolean(L, 0);
 	    return 1;
     }
+
+    // Alloc space for retrieve key value
+    void *val_val = malloc(key_size);
+    if (!val_val) {
+        nvs_close(handle_to_settings);
+        nvs_error(L, ESP_ERR_NO_MEM);
+        return 0;
+    }
+
+    // Read key value
+    err = nvs_get_blob(handle_to_settings, key, val_val, &key_size);  // when not actually providing a val_val here, 
+    if (err != ESP_OK) {                                              // the function will improperly report an
+        free(val_val);                                                // already deleted nvs value as still existing
+        nvs_close(handle_to_settings);
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+
+    free(val_val);
 
     // Close
     nvs_close(handle_to_settings);
