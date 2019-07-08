@@ -777,10 +777,6 @@ openvpn_exit(const int status)
         }
     }
 
-#if __XTENSA__
-    extern u8_t volatile _openvpn_running;
-    _openvpn_running = 0;
-#endif
     exit(status);
 }
 

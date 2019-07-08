@@ -45,7 +45,11 @@
 // OpenVPN is executed into a task, so when calling to exit function
 // simply delete current task
 #define exit(e) \
-	vTaskDelete(NULL);
+    { \
+      extern u8_t volatile _openvpn_running; \
+      _openvpn_running = 0; \
+      vTaskDelete(NULL); \
+    }
 
 // srandom is missing in esp-idf, so use srand instead
 #define srandom(s) srand(s)
