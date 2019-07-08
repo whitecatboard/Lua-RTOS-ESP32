@@ -435,10 +435,22 @@ ignore_restart_signals(struct context *c)
     return ret;
 }
 
+#if __XTENSA__
+extern u8_t volatile _openvpn_should_stop;
+#endif
+
 bool
 process_signal(struct context *c)
 {
     bool ret = true;
+
+#if __XTENSA__
+    if (1 == _openvpn_should_stop)
+    {
+        _openvpn_should_stop = 0;
+        c->sig->signal_received = SIGTERM; //make openvpn exit it's main loop
+    }
+#endif
 
     if (ignore_restart_signals(c))
     {
