@@ -85,6 +85,7 @@ static int spi_device;
 static struct netif *interface;
 
 static xQueueHandle ether_q = NULL;
+static TaskHandle_t xtask = 0; // the task itself
 
 static uint16_t exec_8_op(uint8_t op);
 static uint16_t exec_16_op(uint8_t op, uint16_t data);
@@ -489,8 +490,10 @@ int enc424j600_init(struct netif *netif) {
 		ether_q = xQueueCreate(100, sizeof(unsigned int));
 	}
 
-	// ISR related task must run on the same core that ISR handler is added
-    xTaskCreatePinnedToCore(ether_task, "eth", 1536, NULL, configMAX_PRIORITIES - 2, NULL, xPortGetCoreID());
+    if (!xtask) {
+        // ISR related task must run on the same core that ISR handler is added
+        xTaskCreatePinnedToCore(ether_task, "eth", 1536, NULL, configMAX_PRIORITIES - 2, &xtask, xPortGetCoreID());
+    }
 
 	if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
 		gpio_install_isr_service(0);
