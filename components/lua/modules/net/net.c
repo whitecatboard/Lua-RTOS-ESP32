@@ -336,6 +336,31 @@ static int lnet_stat(lua_State* L) {
     }
 #endif
 
+#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_LUA_RTOS_USE_OPENVPN
+extern u8_t volatile _openvpn_running;
+if (_openvpn_running) {
+    lua_pushinteger(L, interfaces++);
+
+    // Call wf.stat
+    lua_getglobal(L, "net");
+    lua_getfield(L, -1, "tu");
+    lua_getfield(L, -1, "stat");
+    lua_pushboolean(L, table);
+
+    if (lua_pcall(L, 1, 1, 0) != LUA_OK) {
+        return luaL_error(L, lua_tostring(L, -1));
+    }
+
+    if (table) {
+        lua_remove(L, 4);
+        lua_remove(L, 4);
+        lua_settable(L, -3);
+    } else {
+        lua_settop(L, 0);
+    }
+}
+#endif
+
     return table;
 }
 
@@ -398,7 +423,7 @@ static const LUA_REG_TYPE service_map[] = {
 };
 
 static const LUA_REG_TYPE net_map[] = {
-    { LSTRKEY( "stat" ), LFUNCVAL ( lnet_stat ) },
+    { LSTRKEY( "stat" ),      LFUNCVAL ( lnet_stat ) },
     { LSTRKEY( "connected" ), LFUNCVAL ( lnet_connected ) },
     { LSTRKEY( "lookup" ),    LFUNCVAL ( lnet_lookup ) },
     { LSTRKEY( "packip" ),    LFUNCVAL ( lnet_packip ) },
@@ -420,6 +445,10 @@ static const LUA_REG_TYPE net_map[] = {
 
 #if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII && CONFIG_LUA_RTOS_LUA_USE_NET
     { LSTRKEY( "en" ), LROVAL ( eth_map ) },
+#endif
+
+#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_LUA_RTOS_USE_OPENVPN
+    { LSTRKEY( "tu" ), LROVAL ( tun_map ) },
 #endif
 
 #if CONFIG_LUA_RTOS_LUA_USE_CURL_NET

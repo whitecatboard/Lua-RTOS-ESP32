@@ -68,7 +68,7 @@ static void *openvpn_thread(void *arg) {
         luaL_exception(L, NET_ERR_NOT_AVAILABLE);
     }
 
-    delay(1000);
+    delay(1000); //probably not required
 
     char* argv[] = {
             "openvpn",
@@ -114,11 +114,106 @@ static int lopenvpn_service_running( lua_State* L ) {
     return 1;
 }
 
+driver_error_t *tun_if_stat(ifconfig_t *info);
+
+static int lopenvpn_tun_stat(lua_State* L) {
+    ifconfig_t info;
+    driver_error_t *error;
+    u8_t table = 0;
+
+    // Check if user wants result as a table, or wants scan's result
+    // on the console
+    if (lua_gettop(L) == 1) {
+        luaL_checktype(L, 1, LUA_TBOOLEAN);
+        if (lua_toboolean(L, 1)) {
+            table = 1;
+        }
+    }
+
+    if ((error = tun_if_stat(&info))) {
+        return luaL_driver_error(L, error);
+    }
+
+    if (!table) {
+        char ipa[16];
+        char maska[16];
+        char gwa[16];
+
+        strcpy(ipa, inet_ntoa(info.ip));
+        strcpy(maska, inet_ntoa(info.netmask));
+        strcpy(gwa, inet_ntoa(info.gw));
+
+        printf(
+                "tu: mac address %02x:%02x:%02x:%02x:%02x:%02x\r\n",
+                info.mac[0],info.mac[1],
+                info.mac[2],info.mac[3],
+                info.mac[4],info.mac[5]
+        );
+
+        printf("   ip address %s netmask %s\r\n", ipa, maska);
+        printf("   gw address %s\r\n\r\n", gwa);
+    } else {
+        char tmp[18];
+
+        lua_createtable(L, 0, 4);
+
+        lua_pushstring(L, "tu");
+        lua_setfield (L, -2, "interface");
+
+        sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&info.ip),ip4_addr2_16(&info.ip),ip4_addr3_16(&info.ip),ip4_addr4_16(&info.ip));
+        lua_pushstring(L, tmp);
+        lua_setfield (L, -2, "ip");
+
+        sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&info.gw),ip4_addr2_16(&info.gw),ip4_addr3_16(&info.gw),ip4_addr4_16(&info.gw));
+        lua_pushstring(L, tmp);
+        lua_setfield (L, -2, "gw");
+
+        sprintf(tmp,"%d.%d.%d.%d", ip4_addr1_16(&info.netmask),ip4_addr2_16(&info.netmask),ip4_addr3_16(&info.netmask),ip4_addr4_16(&info.netmask));
+        lua_pushstring(L, tmp);
+        lua_setfield (L, -2, "netmask");
+
+        sprintf(tmp, "%02x:%02x:%02x:%02x:%02x:%02x",
+            info.mac[0],info.mac[1],
+            info.mac[2],info.mac[3],
+            info.mac[4],info.mac[5]
+        );
+        lua_pushstring(L, tmp);
+        lua_setfield (L, -2, "mac");
+    }
+
+    return table;
+}
+
+driver_error_t *tun_if_stat(ifconfig_t *info) {
+    tcpip_adapter_ip_info_t esp_info;
+    uint8_t mac[6] = {0,0,0,0,0,0};
+
+    // Get IP info
+    tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_TUN, &esp_info);
+
+    // Get MAC info
+    tcpip_adapter_get_mac(TCPIP_ADAPTER_IF_TUN, mac);
+
+    // Copy info
+    info->gw = esp_info.gw;
+    info->ip = esp_info.ip;
+    info->netmask = esp_info.netmask;
+
+    memcpy(info->mac, mac, sizeof(mac));
+
+    return NULL;
+}
+
 static const LUA_REG_TYPE openvpn_map[] = {
     { LSTRKEY("start"  ), LFUNCVAL( lopenvpn_service_start   ) },
     { LSTRKEY("stop"   ), LFUNCVAL( lopenvpn_service_stop    ) },
     { LSTRKEY("running"), LFUNCVAL( lopenvpn_service_running ) },
     { LNILKEY,LNILVAL }
+};
+
+static const LUA_REG_TYPE tun_map[] = {
+    { LSTRKEY( "stat"  ),     LFUNCVAL( lopenvpn_tun_stat    ) },
+    { LNILKEY, LNILVAL }
 };
 
 #endif
