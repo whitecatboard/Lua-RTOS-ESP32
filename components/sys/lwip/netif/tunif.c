@@ -114,7 +114,7 @@ static void tun_task(void *args) {
     while(0 == _task_should_stop) {
         tunif_input(tun_netif);
     }
-    vTaskDelete(NULL);
+    _task_should_stop = 0;
 }
 
 /**
@@ -230,11 +230,12 @@ err_t tunif_init(struct netif *netif) {
 
     netif->hwaddr_len = ETHARP_HWADDR_LEN;
 
-    tun_netif = netif;
-
     if (xtask) {
         _task_should_stop = 1;
-        usleep(100); //wait some time for tunif_input to exit
+        while (1 == _task_should_stop) {
+          usleep(10000); // Sleep 10 msecs for tunif_input to exit - calls vTaskDelay
+        }
+        vTaskDelete(xtask);
     }
     _task_should_stop = 0;
     xTaskCreatePinnedToCore(tun_task, "tun", 1024, (void*)netif, configMAX_PRIORITIES - 2, &xtask, xPortGetCoreID());
