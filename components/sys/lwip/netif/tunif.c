@@ -104,17 +104,15 @@
 extern xQueueHandle tun_queue_rx;
 extern xQueueHandle tun_queue_tx;
 
+static struct netif *tun_netif = NULL;
 static TaskHandle_t xtask = 0; // the task itself
-static u8_t volatile _task_should_stop = 0;
 
 void tunif_input(struct netif *netif);
 
 static void tun_task(void *args) {
-    struct netif *tun_netif = (struct netif *)args;
-    while(0 == _task_should_stop) {
+    for(;;) {
         tunif_input(tun_netif);
     }
-    _task_should_stop = 0;
 }
 
 /**
@@ -230,15 +228,10 @@ err_t tunif_init(struct netif *netif) {
 
     netif->hwaddr_len = ETHARP_HWADDR_LEN;
 
-    if (xtask) {
-        _task_should_stop = 1;
-        while (1 == _task_should_stop) {
-          usleep(10000); // Sleep 10 msecs for tunif_input to exit - calls vTaskDelay
-        }
-        vTaskDelete(xtask);
+    tun_netif = netif;
+    if (!xtask) {
+        xTaskCreatePinnedToCore(tun_task, "tun", 1024, NULL, configMAX_PRIORITIES - 2, &xtask, xPortGetCoreID());
     }
-    _task_should_stop = 0;
-    xTaskCreatePinnedToCore(tun_task, "tun", 1024, (void*)netif, configMAX_PRIORITIES - 2, &xtask, xPortGetCoreID());
 
     return ERR_OK;
 }
