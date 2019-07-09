@@ -96,7 +96,7 @@ void vfs_tun_register()
         .fcntl = NULL,
         .ioctl = NULL,
         .writev = NULL,
-		.select = &vfs_tun_select,
+        .select = &vfs_tun_select,
     };
 
     ESP_ERROR_CHECK(esp_vfs_register("/dev/tun", &vfs, NULL));
@@ -105,7 +105,17 @@ void vfs_tun_register()
 struct netif *tcp_adapter_get_netif(tcpip_adapter_if_t tcpip_if);
 
 static int vfs_tun_open(const char *path, int flags, int mode) {
-	// Create the tx and rx queues
+
+    if (tun_queue_rx) {
+        vQueueDelete(tun_queue_rx);
+        tun_queue_rx = NULL;
+    }
+    if (tun_queue_tx) {
+        vQueueDelete(tun_queue_tx);
+        tun_queue_tx = NULL;
+    }
+
+    // Create the tx and rx queues
     tun_queue_rx = xQueueCreate(4, sizeof(struct pbuf *));
     tun_queue_tx = xQueueCreate(4, sizeof(struct pbuf *));
 
@@ -145,11 +155,10 @@ static ssize_t vfs_tun_write(int fd, const void *data, size_t size) {
             pbuf_header(p, ETH_PAD_SIZE); /* reclaim the padding word */
             #endif
 
-			if (xQueueSend(tun_queue_tx, &p, portMAX_DELAY) != pdTRUE) {
-				pbuf_free(p);
-
-				return 0;
-			}
+            if (xQueueSend(tun_queue_tx, &p, portMAX_DELAY) != pdTRUE) {
+                pbuf_free(p);
+                return 0;
+            }
 
             return size;
         }
@@ -159,25 +168,25 @@ static ssize_t vfs_tun_write(int fd, const void *data, size_t size) {
 }
 
 static ssize_t vfs_tun_read(int fd, void * dst, size_t size) {
-	struct pbuf *p;
-	size_t len = size;
+    struct pbuf *p;
+    size_t len = size;
 
-	if (tun_queue_rx && (len > 0)) {
-		xQueueReceive(tun_queue_rx, &p, portMAX_DELAY);
+    if (tun_queue_rx && (len > 0)) {
+        xQueueReceive(tun_queue_rx, &p, portMAX_DELAY);
 
-		len = p->len;
+        len = p->len;
 
-		memcpy(dst, p->payload, p->len);
+        memcpy(dst, p->payload, p->len);
 
-		pbuf_free(p);
-	}
+        pbuf_free(p);
+    }
 
-	return len;
+    return len;
 }
 
 static int vfs_tun_close(int fd) {
-	tcpip_adapter_stop(TCPIP_ADAPTER_IF_TUN);
-	return 0;
+    tcpip_adapter_stop(TCPIP_ADAPTER_IF_TUN);
+    return 0;
 }
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -191,34 +200,34 @@ static int tv_to_ms_timeout(const struct timeval *tv) {
 }
 
 static int vfs_tun_select (int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout) {
-	struct pbuf *p;
-	int fd;
-	int num;
+    struct pbuf *p;
+    int fd;
+    int num;
 
-	num = 0;
+    num = 0;
 
-	for(fd = 0;fd <= maxfdp1;fd++) {
-		if (readset && FD_ISSET(fd, readset)) {
-			if (xQueuePeek(tun_queue_rx, &p, tv_to_ms_timeout(timeout) / portTICK_PERIOD_MS) == pdTRUE) {
-				num++;
-			} else {
-				FD_CLR(fd, readset);
-			}
-		}
+    for(fd = 0;fd <= maxfdp1;fd++) {
+        if (readset && FD_ISSET(fd, readset)) {
+            if (xQueuePeek(tun_queue_rx, &p, tv_to_ms_timeout(timeout) / portTICK_PERIOD_MS) == pdTRUE) {
+                num++;
+            } else {
+                FD_CLR(fd, readset);
+            }
+        }
 
-		if (writeset && FD_ISSET(fd, writeset)) {
-			if (uxQueueSpacesAvailable(tun_queue_tx) > 0) {
-				num++;
-			} else {
-				FD_CLR(fd, writeset);
-			}
-		}
+        if (writeset && FD_ISSET(fd, writeset)) {
+            if (uxQueueSpacesAvailable(tun_queue_tx) > 0) {
+                num++;
+            } else {
+                FD_CLR(fd, writeset);
+            }
+        }
 
-		if (exceptset && FD_ISSET(fd, exceptset)) {
-		}
-	}
+        if (exceptset && FD_ISSET(fd, exceptset)) {
+        }
+    }
 
-	return num;
+    return num;
 }
 
 #endif
