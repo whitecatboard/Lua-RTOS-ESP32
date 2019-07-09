@@ -660,6 +660,9 @@ close_tun(struct tuntap *tt)
         if (tt->fd >= 0) {
             close(tt->fd);
         }
+#if __XTENSA__
+        free(tt->actual_name);
+#endif
         free(tt);
     }
 }
