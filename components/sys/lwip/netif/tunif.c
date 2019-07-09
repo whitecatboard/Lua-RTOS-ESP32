@@ -104,13 +104,13 @@
 extern xQueueHandle tun_queue_rx;
 extern xQueueHandle tun_queue_tx;
 
-static struct netif *tun_netif;
 static TaskHandle_t xtask = 0; // the task itself
 static u8_t volatile _task_should_stop = 0;
 
 void tunif_input(struct netif *netif);
 
 static void tun_task(void *args) {
+    struct netif *tun_netif = (struct netif *)args;
     while(0 == _task_should_stop) {
         tunif_input(tun_netif);
     }
@@ -237,7 +237,7 @@ err_t tunif_init(struct netif *netif) {
         usleep(100); //wait some time for tunif_input to exit
     }
     _task_should_stop = 0;
-    xTaskCreatePinnedToCore(tun_task, "tun", 1024, NULL, configMAX_PRIORITIES - 2, &xtask, xPortGetCoreID());
+    xTaskCreatePinnedToCore(tun_task, "tun", 1024, (void*)netif, configMAX_PRIORITIES - 2, &xtask, xPortGetCoreID());
 
     return ERR_OK;
 }
