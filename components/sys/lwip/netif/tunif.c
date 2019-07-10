@@ -104,7 +104,7 @@
 extern xQueueHandle tun_queue_rx;
 extern xQueueHandle tun_queue_tx;
 
-static struct netif *tun_netif;
+static struct netif *tun_netif = NULL;
 static TaskHandle_t xtask = 0; // the task itself
 
 void tunif_input(struct netif *netif);
@@ -229,12 +229,9 @@ err_t tunif_init(struct netif *netif) {
     netif->hwaddr_len = ETHARP_HWADDR_LEN;
 
     tun_netif = netif;
-
-    if (xtask) {
-        vTaskDelete(xtask);
-        xtask = 0;
+    if (!xtask) {
+        xTaskCreatePinnedToCore(tun_task, "tun", 1024, NULL, configMAX_PRIORITIES - 2, &xtask, xPortGetCoreID());
     }
-    xTaskCreatePinnedToCore(tun_task, "tun", 1024, NULL, configMAX_PRIORITIES - 2, &xtask, xPortGetCoreID());
 
     return ERR_OK;
 }
