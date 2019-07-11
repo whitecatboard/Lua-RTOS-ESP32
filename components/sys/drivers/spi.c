@@ -480,6 +480,12 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid) {
     spi_lock(unit);
 
+    // TO DO:
+    //
+    // When 2 devices coexist on the same SPI unit, things don't work as expected.
+    // This feature is temporarily disabled.
+    flags &= ~SPI_FLAG_NO_DMA;
+
     // If SPI unit PIN map are not the native pins the max speed must be 26 Mhz
     if ((speed > 26000000) && (!spi_use_native_pins(unit))) {
         speed = 26000000;
