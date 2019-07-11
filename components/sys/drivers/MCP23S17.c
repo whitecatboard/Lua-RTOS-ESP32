@@ -67,7 +67,7 @@
 
 static MCP23S17_t *MCP23S17 = NULL;
 
-static driver_error_t * MCP23S17_read_all_register(uint8_t reg, uint8_t *val);
+static driver_error_t * MCP23S17_read_all_register(uint8_t reg, uint16_t *val);
 
 /*
  * Helper functions
@@ -133,7 +133,8 @@ static driver_error_t *MCP23S17_read16(uint8_t reg, uint16_t *val) {
 // MCP23S17 task. This task waits for a direct task notification and read all pins
 // for release the MCP23S17 INT.
 static void MCP23S17_task(void *arg) {
-    uint8_t i, j, pin, latch[MCP23S17_PORTS], current[MCP23S17_PORTS];
+    uint8_t i, j, pin;
+    uint16_t latch, current;
 
     for(;;) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -141,12 +142,12 @@ static void MCP23S17_task(void *arg) {
         MCP23S17_lock();
 
         // Get current latch values
-        memcpy(latch, &MCP23S17->latch, sizeof(MCP23S17->latch));
+        memcpy(&latch, &MCP23S17->latch, sizeof(MCP23S17->latch));
 
         // Read all pins and latch
-        MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+        MCP23S17_read_all_register(MCP23S17_GPIOA, &current);
 
-        memcpy(current, &MCP23S17->latch, sizeof(MCP23S17->latch));
+        memcpy(&MCP23S17->latch, &current, sizeof(MCP23S17->latch));
 
         MCP23S17_unlock();
 
@@ -161,20 +162,23 @@ static void MCP23S17_task(void *arg) {
 
                         case GPIO_INTR_POSEDGE:
                         case GPIO_INTR_HIGH_LEVEL:
-                            if ((current[i] & (1 << j)) && !(latch[i] & (1 << j))) {
+                            if ((current & (1 << pin)) && !(latch & (1 << pin))) {
+                                printf("interrupt call 1\r\n");
                                 MCP23S17->isr_func[pin](MCP23S17->isr_args[pin]);
                             }
                             break;
 
                         case GPIO_INTR_NEGEDGE:
                         case GPIO_INTR_LOW_LEVEL:
-                            if (!(current[i] & (1 << j)) && (latch[i] & (1 << j))) {
+                            if (!(current & (1 << pin)) && (latch & (1 << pin))) {
+                                printf("interrupt call 2\r\n");
                                 MCP23S17->isr_func[pin](MCP23S17->isr_args[pin]);
                             }
                             break;
 
                         case GPIO_INTR_ANYEDGE:
-                            if (((current[i] & (1 << j))) != (latch[i] & (1 << j))) {
+                            if (((current & (1 << pin))) != (latch & (1 << pin))) {
+                                printf("interrupt call 3\r\n");
                                 MCP23S17->isr_func[pin](MCP23S17->isr_args[pin]);
                             }
                             break;
@@ -202,8 +206,8 @@ static void IRAM_ATTR MCP23S17_isr(void* arg) {
 }
 
 // Read from a MCP23S17 register
-static driver_error_t * MCP23S17_read_all_register(uint8_t reg, uint8_t *val) {
-	MCP23S17_read16(reg, (uint16_t *)val);
+static driver_error_t * MCP23S17_read_all_register(uint8_t reg, uint16_t *val) {
+	MCP23S17_read16(reg, val);
     return NULL;
 }
 
@@ -348,7 +352,7 @@ driver_error_t *MCP23S17_pin_pullup(uint8_t pin) {
     MCP23S17_write16(MCP23S17_GPPUA, MCP23S17->pull);
 
     // Read all pins and latch
-    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+    MCP23S17_read_all_register(MCP23S17_GPIOA, &MCP23S17->latch);
 
     MCP23S17_unlock();
 
@@ -368,7 +372,7 @@ driver_error_t *MCP23S17_pin_nopull(uint8_t pin) {
     MCP23S17_write16(MCP23S17_GPPUA, MCP23S17->pull);
 
     // Read all pins and latch
-    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+    MCP23S17_read_all_register(MCP23S17_GPIOA, &MCP23S17->latch);
 
     MCP23S17_unlock();
 
@@ -388,7 +392,7 @@ driver_error_t *MCP23S17_pin_output(uint8_t pin) {
     MCP23S17_write16(MCP23S17_IODIRA, MCP23S17->direction);
 
     // Read all pins and latch
-    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+    MCP23S17_read_all_register(MCP23S17_GPIOA, &MCP23S17->latch);
 
     MCP23S17_unlock();
 
@@ -408,7 +412,7 @@ driver_error_t *MCP23S17_pin_input(uint8_t pin) {
     MCP23S17_write16(MCP23S17_IODIRA, MCP23S17->direction);
 
     // Read all pins and latch
-    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+    MCP23S17_read_all_register(MCP23S17_GPIOA, &MCP23S17->latch);
 
     MCP23S17_unlock();
 
@@ -490,7 +494,7 @@ driver_error_t *MCP23S17_pin_pullup_mask(uint8_t port, uint8_t pinmask) {
     MCP23S17_write16(MCP23S17_GPPUA, MCP23S17->pull);
 
     // Read all pins and latch
-    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+    MCP23S17_read_all_register(MCP23S17_GPIOA, &MCP23S17->latch);
 
     MCP23S17_unlock();
 
@@ -507,7 +511,7 @@ driver_error_t *MCP23S17_pin_nopull_mask(uint8_t port, uint8_t pinmask) {
     MCP23S17_write16(MCP23S17_GPPUA, MCP23S17->pull);
 
     // Read all pins and latch
-    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+    MCP23S17_read_all_register(MCP23S17_GPIOA, &MCP23S17->latch);
 
     MCP23S17_unlock();
 
@@ -524,7 +528,7 @@ driver_error_t *MCP23S17_pin_input_mask(uint8_t port, uint8_t pinmask) {
     MCP23S17_write16(MCP23S17_IODIRA, MCP23S17->direction);
 
     // Read all pins and latch
-    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+    MCP23S17_read_all_register(MCP23S17_GPIOA, &MCP23S17->latch);
 
     MCP23S17_unlock();
 
@@ -541,7 +545,7 @@ driver_error_t *MCP23S17_pin_output_mask(uint8_t port, uint8_t pinmask) {
     MCP23S17_write16(MCP23S17_IODIRA, MCP23S17->direction);
 
     // Read all pins and latch
-    MCP23S17_read_all_register(MCP23S17_GPIOA, (uint8_t *)&MCP23S17->latch);
+    MCP23S17_read_all_register(MCP23S17_GPIOA, &MCP23S17->latch);
 
     MCP23S17_unlock();
 
