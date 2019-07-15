@@ -145,14 +145,21 @@ static int os_edit (lua_State *L) {
     }
 
     // Create file if does not exists
-    FILE *fp = fopen(path, "a");
+    bool bCreated = false;
+    FILE *fp = fopen(path, "r");
     if (!fp) {
-        return luaL_fileresult(L, 0, path);
+        bCreated = true;
+        fp = fopen(path, "a");
+        if (!fp) {
+            return luaL_fileresult(L, 0, path);
+        }
     }
     fclose(fp);
   
     char* lua_argv[] = {(char *)"edit", (char *)path, NULL};
-    edit_main(2, lua_argv);
+    if (1 == edit_main(2, lua_argv) && bCreated) {
+        unlink(path);
+    }
     console_clear();
     return 0;
 }
