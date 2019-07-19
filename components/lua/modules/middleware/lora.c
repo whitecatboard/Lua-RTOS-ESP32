@@ -53,6 +53,7 @@
 #include "modules.h"
 #include "error.h"
 #include "hex.h"
+#include "sys.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -67,16 +68,16 @@ void lora_gw_start();
 
 #include <drivers/uart.h>
 
-static int rx_callback = 0;
-static lua_State* rx_callbackL;
 static uint8_t is_gateway = 0;
+static lua_callback_t *callback;
 
 static void on_received(int port, char *payload) {
-    if (rx_callback != LUA_NOREF) {
-        lua_rawgeti(rx_callbackL, LUA_REGISTRYINDEX, rx_callback);
-        lua_pushinteger(rx_callbackL, port);
-        lua_pushlstring(rx_callbackL, payload, strlen(payload));
-        lua_call(rx_callbackL, 2, 0);
+    if (callback) {
+        // Push argument for the callback's function
+        lua_pushinteger(luaS_callback_state(callback), port);
+        lua_pushlstring(luaS_callback_state(callback), payload,strlen(payload));
+
+        luaS_callback_call(callback, 2);
     }
 
     free(payload);
@@ -453,12 +454,11 @@ static int llora_tx(lua_State* L) {
 static int llora_rx(lua_State* L) {
 	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
 
-	luaL_checktype(L, 1, LUA_TFUNCTION);
-    lua_pushvalue(L, 1);
+	callback = luaS_callback_create(L, 1);
+    if (callback == NULL) {
+        return luaL_exception_extended(L, LORA_ERR_NO_MEM, NULL);
+    }
 
-    rx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
-
-    rx_callbackL = L;
     lora_set_rx_callback(on_received);
 
     return 0;
