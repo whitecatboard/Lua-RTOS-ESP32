@@ -163,7 +163,6 @@ static void MCP23S17_task(void *arg) {
                         case GPIO_INTR_POSEDGE:
                         case GPIO_INTR_HIGH_LEVEL:
                             if ((current & (1 << pin)) && !(latch & (1 << pin))) {
-                                printf("interrupt call 1\r\n");
                                 MCP23S17->isr_func[pin](MCP23S17->isr_args[pin]);
                             }
                             break;
@@ -171,14 +170,12 @@ static void MCP23S17_task(void *arg) {
                         case GPIO_INTR_NEGEDGE:
                         case GPIO_INTR_LOW_LEVEL:
                             if (!(current & (1 << pin)) && (latch & (1 << pin))) {
-                                printf("interrupt call 2\r\n");
                                 MCP23S17->isr_func[pin](MCP23S17->isr_args[pin]);
                             }
                             break;
 
                         case GPIO_INTR_ANYEDGE:
                             if (((current & (1 << pin))) != (latch & (1 << pin))) {
-                                printf("interrupt call 3\r\n");
                                 MCP23S17->isr_func[pin](MCP23S17->isr_args[pin]);
                             }
                             break;
