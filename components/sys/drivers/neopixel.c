@@ -47,6 +47,8 @@
 
 #include "neopixel.h"
 
+#include <math.h>
+
 #include <sys/list.h>
 #include <sys/driver.h>
 #include <sys/delay.h>
@@ -76,6 +78,7 @@ DRIVER_REGISTER_BEGIN(NEOPIXEL,neopixel,0,neopixel_init,NULL);
 	DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidPixel, "invalid pixel", NEOPIXEL_ERR_INVALID_PIXEL);
 	DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidController, "invalid controller", NEOPIXEL_ERR_INVALID_CONTROLLER);
 	DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidRGBComponent, "invalid RGB component", NEOPIXEL_ERR_INVALID_RGB_COMPONENT);
+    DRIVER_REGISTER_ERROR(NEOPIXEL, neopixel, InvalidBrightness, "invalid brightness", NEOPIXEL_ERR_INVALID_BRIGHTNESS);
 DRIVER_REGISTER_END(NEOPIXEL,neopixel,0,neopixel_init,NULL);
 
 // List of units
@@ -101,9 +104,9 @@ driver_error_t *neopixel_rgb(uint32_t unit, uint32_t pixel, uint8_t r, uint8_t g
 		return driver_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_PIXEL, NULL);
     }
 
-    instance->pixels[pixel].r = r;
-    instance->pixels[pixel].g = g;
-    instance->pixels[pixel].b = b;
+    instance->pixels[pixel].r = r * instance->brightness;
+    instance->pixels[pixel].g = g * instance->brightness;
+    instance->pixels[pixel].b = b * instance->brightness;
 
     return NULL;
 }
@@ -131,6 +134,8 @@ driver_error_t *neopixel_setup(neopixel_controller_t controller, uint8_t gpio, u
 	instance->npixels = pixels;
 	instance->nzr_unit = nzr_unit;
 	instance->pixels = (neopixel_pixel_t *)calloc(1,sizeof(neopixel_pixel_t) * pixels);
+	instance->brightness = 0.2;
+
 	if (!instance->pixels) {
 		free(instance);
 		return driver_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_NOT_ENOUGH_MEMORY, NULL);
@@ -162,4 +167,21 @@ driver_error_t *neopixel_update(uint32_t unit) {
 	}
 
 	return NULL;
+}
+
+driver_error_t *neopixel_set_brightness(uint32_t unit, float brightness) {
+    neopixel_instance_t *instance;
+
+    // Get instance
+    if (lstget(&neopixel_list, (int)unit, (void **)&instance)) {
+        return driver_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_UNIT, NULL);
+    }
+
+    if ((brightness < 0) || (brightness > 1)) {
+        return driver_error(NEOPIXEL_DRIVER, NEOPIXEL_ERR_INVALID_BRIGHTNESS, NULL);
+    }
+
+    instance->brightness = brightness;
+
+    return NULL;
 }

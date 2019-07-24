@@ -150,6 +150,23 @@ static int lneopixel_update( lua_State* L ) {
     return 0;
 }
 
+static int lneopixel_set_brightness( lua_State* L ) {
+    driver_error_t *error;
+    neopixel_userdata *neopixel = NULL;
+
+    neopixel = (neopixel_userdata *)luaL_checkudata(L, 1, "neopixel.inst");
+    luaL_argcheck(L, neopixel, 1, "neopixel expected");
+
+    int brightness = luaL_checknumber( L, 2 );
+
+    if ((error = neopixel_set_brightness(neopixel->unit, brightness))) {
+        return luaL_driver_error(L, error);
+    }
+
+    return 0;
+}
+
+
 static const LUA_REG_TYPE lneopixel_map[] = {
     { LSTRKEY( "setup"   ),	     LFUNCVAL ( lneopixel_setup    ) },
     { LSTRKEY( "attach"  ),	     LFUNCVAL ( lneopixel_attach   ) },
@@ -159,10 +176,11 @@ static const LUA_REG_TYPE lneopixel_map[] = {
 };
 
 static const LUA_REG_TYPE lneopixel_inst_map[] = {
-	{ LSTRKEY( "setPixel"    ),	  LFUNCVAL( lneopixel_set_pixel     ) },
-	{ LSTRKEY( "update"      ),	  LFUNCVAL( lneopixel_update        ) },
-    { LSTRKEY( "__metatable" ),	  LROVAL  ( lneopixel_inst_map      ) },
-	{ LSTRKEY( "__index"     ),   LROVAL  ( lneopixel_inst_map      ) },
+	{ LSTRKEY( "setPixel"      ),	LFUNCVAL( lneopixel_set_pixel      ) },
+	{ LSTRKEY( "update"        ),	LFUNCVAL( lneopixel_update         ) },
+    { LSTRKEY( "setBrightness" ),   LFUNCVAL( lneopixel_set_brightness ) },
+    { LSTRKEY( "__metatable"   ),	LROVAL  ( lneopixel_inst_map       ) },
+	{ LSTRKEY( "__index"       ),   LROVAL  ( lneopixel_inst_map       ) },
 	{ LNILKEY, LNILVAL }
 };
 
