@@ -736,10 +736,6 @@ static int os_run (lua_State *L) {
     }
 
     from_uart = 1;
-    code = (char *)calloc(1,1024);
-    if (!code) {
-        luaL_error(L, "not enough memory");
-    }
 
     lua_pop(L, 1);
 
@@ -770,10 +766,9 @@ static int os_run (lua_State *L) {
 
         code = realloc(code, code_size + chunk_size + 1);
         if (!code) {
-            free(code);
             uart_ll_set_raw(0);
             uart_ll_unlock(CONSOLE_UART);
-            luaL_error(L, "not enough memory");
+            return luaL_error(L, "not enough memory");
         }
 
         // Read chunk
@@ -817,25 +812,13 @@ skip:
         return luaL_error(L, lua_tostring(L, -1));
     }
 
-#if 0
-    lua_remove(L, -1);
-
-    lua_getglobal(L, "thread");
-    lua_getfield(L, -1, "start");
-
-    lua_remove(L, -2);  // Remove "thread" from the stack
-    lua_insert(L, -2);  // Switch "thread" with parsed function
-#endif
-
+    // Call to function
     status = lua_pcall(L, 1, 0, 0);
     if (status != LUA_OK) {
         if (code && from_uart) free(code);
         return luaL_error(L, lua_tostring(L, -1));
     }
 
-#if 0
-    lua_pop(L, 1);
-#endif
 
     if (code && from_uart) free(code);
 
