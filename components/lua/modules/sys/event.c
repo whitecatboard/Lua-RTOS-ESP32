@@ -151,6 +151,45 @@ static int get_listener(lua_State* L, event_userdata_t *udata, listener_data_t *
     return 0;
 }
 
+/*
+ * Remove the listener that corresponds to the current thread.
+ */
+static int remove_listener(lua_State* L, event_userdata_t *udata) {
+    listener_data_t *clistener;
+
+    // Get the current thread
+    pthread_t thread = pthread_self();
+
+    mtx_lock(&udata->mtx);
+
+    // Search for listener
+    int idx = 1;
+    int listener_id = 0;
+    while (idx >= 1) {
+        if (lstget(&udata->listeners, idx, (void **)&clistener)) {
+            break;
+        }
+
+        if (clistener->thread == thread) {
+            listener_id = idx;
+            break;
+        }
+
+        // Next listener
+        idx = lstnext(&udata->listeners, idx);
+    }
+
+    // If found, remove
+    if (listener_id) {
+        vQueueDelete((xQueueHandle)clistener->q);
+        lstremove(&udata->listeners, listener_id, 1);
+    }
+
+    mtx_unlock(&udata->mtx);
+
+    return 0;
+}
+
 static int levent_create( lua_State* L ) {
     // Create user data
     event_userdata_t *udata = (event_userdata_t *)lua_newuserdata(L, sizeof(event_userdata_t));
@@ -248,7 +287,7 @@ static int levent_disable( lua_State* L ) {
 
 static int levent_wait( lua_State* L ) {
     event_userdata_t *udata = NULL;
-    listener_data_t *listener_data;
+    listener_data_t *clistener;
 
     // Get user data
     udata = (event_userdata_t *)luaL_checkudata(L, 1, "event.ins");
@@ -263,11 +302,11 @@ static int levent_wait( lua_State* L ) {
     mtx_unlock(&udata->mtx);
 
     // Get an existing listener for the current thread
-    get_listener(L, udata, &listener_data);
+    get_listener(L, udata, &clistener);
 
     // Wait for broadcast
     uint8_t d = 0;
-    xQueueReceive(listener_data->q, &d, portMAX_DELAY);
+    xQueueReceive(clistener->q, &d, portMAX_DELAY);
 
     lua_pushboolean(L, (d == 0));
 
@@ -298,6 +337,8 @@ static int levent_done( lua_State* L ) {
 
     mtx_unlock(&udata->mtx);
 
+    remove_listener(L, udata);
+
     return 0;
 }
 
@@ -315,7 +356,7 @@ static int levent_pending( lua_State* L ) {
 
 static int levent_broadcast( lua_State* L ) {
     event_userdata_t *udata = NULL;
-    listener_data_t *listener_data;
+    listener_data_t *clistener;
 
     // Get user data
     udata = (event_userdata_t *)luaL_checkudata(L, 1, "event.ins");
@@ -341,11 +382,11 @@ static int levent_broadcast( lua_State* L ) {
 
     while (idx >= 1) {
         // Get queue
-        if (lstget(&udata->listeners, idx, (void **)&listener_data)) {
+        if (lstget(&udata->listeners, idx, (void **)&clistener)) {
             break;
         }
 
-        listener_data->is_waiting = wait;
+        clistener->is_waiting = wait;
 
         if (wait) {
             udata->pending++;
@@ -355,7 +396,7 @@ static int levent_broadcast( lua_State* L ) {
 
         // Unblock
         uint8_t d = 0;
-        xQueueSend((xQueueHandle)listener_data->q, &d, portMAX_DELAY);
+        xQueueSend((xQueueHandle)clistener->q, &d, portMAX_DELAY);
 
         mtx_lock(&udata->mtx);
 
