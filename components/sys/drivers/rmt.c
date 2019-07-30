@@ -248,7 +248,7 @@ driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, rmt_filter_ticks_
     rmt_driver_uninstall(channel);
     esp_log_level_set("rmt", CONFIG_LOG_DEFAULT_LEVEL);
 
-    if ((ret = rmt_driver_install(channel, 1000, ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_SHARED)) != ESP_OK) {
+    if ((ret = rmt_driver_install(channel, 1000, 0)) != ESP_OK) {
         if (ret == ESP_ERR_NO_MEM) {
             return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
         } else {
@@ -370,7 +370,7 @@ driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t range, rmt_idle_level id
     rmt_driver_uninstall(channel);
     esp_log_level_set("rmt", CONFIG_LOG_DEFAULT_LEVEL);
 
-    if ((ret = rmt_driver_install(channel, 0, ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_SHARED)) != ESP_OK) {
+    if ((ret = rmt_driver_install(channel, 0, 0)) != ESP_OK) {
         if (ret == ESP_ERR_NO_MEM) {
             return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
         } else {
