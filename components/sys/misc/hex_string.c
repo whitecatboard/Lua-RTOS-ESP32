@@ -68,6 +68,10 @@ void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev) {
             c = (10 + (*hbuff - 'A')) << 4;
         }
 
+        if ((*hbuff >= 'a') && (*hbuff <= 'f')) {
+            c = (10 + (*hbuff - 'a')) << 4;
+        }
+
         hbuff++;
 
         if ((*hbuff >= '0') && (*hbuff <= '9')) {
@@ -76,6 +80,10 @@ void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev) {
 
         if ((*hbuff >= 'A') && (*hbuff <= 'F')) {
             c |= 10 + (*hbuff - 'A');
+        }
+
+        if ((*hbuff >= 'a') && (*hbuff <= 'f')) {
+            c |= 10 + (*hbuff - 'a');
         }
 
         *vbuff = c;
