@@ -1615,7 +1615,7 @@ menu "Lua RTOS"
                default y
 
             config LUA_RTOS_LUA_USE_BT
-               bool "Include bluetooh module in build"
+               bool "Include bluetooth module in build"
                default y
 
             config LUA_RTOS_LUA_USE_CAN
