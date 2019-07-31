@@ -180,7 +180,11 @@ static int lbt_advertise_start( lua_State* L ) {
     		return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT, "advertise data must be in hex string format");
     }
 
-    uint16_t datalen = strlen(adv_data) / 2;
+    uint16_t datalen = strlen(adv_data) / 2; // must be less than 31 bytes
+    if (datalen>30) {
+    		return luaL_exception(L, BT_ERR_ADVDATA_TOO_LONG);
+    }
+
     uint8_t *data = calloc(1, datalen);
     if (!data) {
     		return luaL_exception(L, BT_ERR_NOT_ENOUGH_MEMORY);

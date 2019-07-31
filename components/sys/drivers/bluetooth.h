@@ -113,6 +113,7 @@ typedef uint8_t bt_adress_t[6];
 #define BT_ERR_CANT_START_ADV		 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  8)
 #define BT_ERR_CANT_STOP_ADV			 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) |  9)
 #define BT_ERR_INVALID_TX_POWER		 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) | 10)
+#define BT_ERR_ADVDATA_TOO_LONG		 (DRIVER_EXCEPTION_BASE(BT_DRIVER_ID) | 11)
 
 driver_error_t *bt_setup(bt_mode_t mode);
 driver_error_t *bt_adv_start(bte_advertise_params_t params, uint8_t *adv_data, uint16_t adv_data_len);
