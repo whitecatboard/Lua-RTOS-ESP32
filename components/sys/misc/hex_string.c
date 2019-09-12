@@ -51,11 +51,11 @@ void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev) {
     int  i;
     char c;
 
-	// If reverse, put hbuff at the last byte
-	if (rev) {
-		while(*hbuff) hbuff++;
-		hbuff -= 2;
-	}
+    // If reverse, put hbuff at the last byte
+    if (rev) {
+        while(*hbuff) hbuff++;
+        hbuff -= 2;
+    }
 
     for(i=0;i<len;i++) {
         c = 0;
@@ -68,6 +68,10 @@ void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev) {
             c = (10 + (*hbuff - 'A')) << 4;
         }
 
+        if ((*hbuff >= 'a') && (*hbuff <= 'f')) {
+            c = (10 + (*hbuff - 'a')) << 4;
+        }
+
         hbuff++;
 
         if ((*hbuff >= '0') && (*hbuff <= '9')) {
@@ -78,13 +82,17 @@ void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev) {
             c |= 10 + (*hbuff - 'A');
         }
 
+        if ((*hbuff >= 'a') && (*hbuff <= 'f')) {
+            c |= 10 + (*hbuff - 'a');
+        }
+
         *vbuff = c;
 
-		if (rev) {
-			hbuff -= 3;
-		} else {
-	        hbuff++;
-		}
+        if (rev) {
+            hbuff -= 3;
+        } else {
+            hbuff++;
+        }
 
         vbuff++;
     }
@@ -95,9 +103,9 @@ void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev) {
 void val_to_hex_string(char *hbuff, char *vbuff, int len, int reverse) {
     int i;
 
-	if (reverse) {
-		vbuff += (len - 1);
-	}
+    if (reverse) {
+        vbuff += (len - 1);
+    }
 
     for(i=0;i<len;i++) {
         if ((((*vbuff & 0xf0) >> 4) >= 0) && (((*vbuff & 0xf0) >> 4) <= 9)) {
@@ -118,13 +126,13 @@ void val_to_hex_string(char *hbuff, char *vbuff, int len, int reverse) {
         }
         hbuff++;
 
-		if (reverse) {
-	        vbuff--;
-		} else {
-	        vbuff++;
-		}
+        if (reverse) {
+            vbuff--;
+        } else {
+            vbuff++;
+        }
     }
 
-	*hbuff = 0x00;
+    *hbuff = 0x00;
 }
 

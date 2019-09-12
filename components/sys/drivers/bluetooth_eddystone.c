@@ -400,7 +400,7 @@ driver_error_t *bt_eddystone_stop(int beacon_h) {
     return NULL;
 }
 
-void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_frame_t *frame) {
+void bt_eddystone_decode(uint8_t *data, uint8_t datalen, bt_adv_frame_t *frame) {
 	uint8_t pos;
 	uint8_t ad_len;
 	uint8_t ad_type;
@@ -408,7 +408,7 @@ void bt_eddystone_decode(uint8_t *data, uint8_t len, bt_adv_frame_t *frame) {
 	uint16_t ad_sdt = 0;
 
 	pos = 0;
-	while (pos < len) {
+	while (pos < datalen) {
 		ad_len  = data[pos++];
 		ad_type = data[pos++];
 
