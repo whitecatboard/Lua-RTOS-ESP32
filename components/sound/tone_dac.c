@@ -84,10 +84,14 @@ driver_error_t *tone_dac_setup(tone_dac_config_t *config, tone_dac_device_h_t *h
 		return driver_error(SOUND_DRIVER, SOUND_ERR_INVALID_PIN, NULL);
 	}
 
+	if (!h) {
+		return driver_error(SOUND_DRIVER, SOUND_ERR_INVALID_DAC_DEVICE, NULL);
+	}
+
 	// Allocate space for device handle
 	*h = calloc(1, sizeof(tone_dac_device_t));
 
-	if (!h) {
+	if (!*h) {
 		return driver_error(SOUND_DRIVER, SOUND_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
