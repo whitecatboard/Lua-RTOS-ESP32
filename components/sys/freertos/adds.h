@@ -148,13 +148,24 @@ typedef struct lthread {
     int status;
 } lthread_t;
 
+typedef enum {
+    TASK_HEAP,
+    TASK_FREERTOS,
+    TASK_PTHREAD,
+    TASK_LUA,
+    TASK_DELETED,
+    TASK_DELIMITER
+} TASK_TYPE_t;
+
 typedef struct {
-	uint8_t task_type;
+	TASK_TYPE_t task_type;
 	char name[configMAX_TASK_NAME_LEN];
 	uint8_t core;
 	uint8_t prio;
 	size_t stack_size;
 	size_t free_stack;
+	size_t heap_count;
+	size_t heap_size;
 	uint32_t cpu_usage;
 	int thid;
 	lthread_t *lthread;

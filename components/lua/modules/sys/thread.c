@@ -193,7 +193,7 @@ static int lthread_suspend_pthreads(lua_State *L, int thid) {
 
 	cinfo = info;
 	while (cinfo->stack_size > 0) {
-		if ((cinfo->task_type == 2) && (cinfo->thid != lua_thread)) {
+		if ((cinfo->task_type == TASK_LUA) && (cinfo->thid != lua_thread)) {
 			if (thid && (cinfo->thid == thid)) {
 				_pthread_suspend(cinfo->thid);
 				suspended++;
@@ -241,7 +241,7 @@ static int lthread_resume_pthreads(lua_State *L, int thid) {
 
 	cinfo = info;
 	while (cinfo->stack_size > 0) {
-		if ((cinfo->task_type == 2) && (cinfo->thid != lua_thread)) {
+		if ((cinfo->task_type == TASK_LUA) && (cinfo->thid != lua_thread)) {
 			if (thid && (cinfo->thid == thid)) {
 				_pthread_resume(cinfo->thid);
 				resumed++;
@@ -290,7 +290,7 @@ static int lthread_stop_pthreads(lua_State *L, int thid) {
 
 	cinfo = info;
 	while (cinfo->stack_size > 0) {
-		if ((cinfo->task_type == 2) && (cinfo->thid != lua_thread)) {
+		if ((cinfo->task_type == TASK_LUA) && (cinfo->thid != lua_thread)) {
 			if (thid && (cinfo->thid == thid)) {
 				_pthread_stop(cinfo->thid);
 
@@ -380,15 +380,29 @@ static int lthread_list(lua_State *L) {
 
 	if (!table) {
 #ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+	#ifdef CONFIG_HEAP_TASK_TRACKING
+		printf("-------------------------------------------------------------------------------------------------------------------------\n");
+		printf("           |        |                  |        |        CPU        |            STACK               |        HEAP       \n");
+		printf("THID       | TYPE   | NAME             | STATUS | CORE   PRIO     %% |   SIZE     FREE     USED       |  BLOCKS    TOTAL  \n");
+		printf("-------------------------------------------------------------------------------------------------------------------------\n");
+	#else
 		printf("-----------------------------------------------------------------------------------------------------\n");
 		printf("           |        |                  |        |        CPU        |            STACK               \n");
-		printf("THID       | TYPE   | NAME             | STATUS | CORE   PRIO     %% |   SIZE     FREE     USED      \n");
+		printf("THID       | TYPE   | NAME             | STATUS | CORE   PRIO     %% |   SIZE     FREE     USED       \n");
 		printf("-----------------------------------------------------------------------------------------------------\n");
+	#endif
 #else
+	#ifdef CONFIG_HEAP_TASK_TRACKING
+		printf("-------------------------------------------------------------------------------------------------------------------\n");
+		printf("           |        |                  |        |      |      |            STACK               |        HEAP       \n");
+		printf("THID       | TYPE   | NAME             | STATUS | CORE | PRIO |   SIZE     FREE     USED       |  BLOCKS    TOTAL  \n");
+		printf("-------------------------------------------------------------------------------------------------------------------\n");
+	#else
 		printf("-----------------------------------------------------------------------------------------------\n");
 		printf("           |        |                  |        |      |      |            STACK               \n");
 		printf("THID       | TYPE   | NAME             | STATUS | CORE | PRIO |   SIZE     FREE     USED       \n");
 		printf("-----------------------------------------------------------------------------------------------\n");
+	#endif
 #endif
 	} else {
 		lua_newtable(L);
@@ -398,8 +412,12 @@ static int lthread_list(lua_State *L) {
 	int table_row = 0;
 
 	cinfo = info;
-	while (cinfo->stack_size > 0) {
-		if ((cinfo->task_type != 2) && (!all)) {
+	while (cinfo->task_type != TASK_DELIMITER) {
+		if ((cinfo->task_type != TASK_LUA) && (!all)) {
+			cinfo++;
+			continue;
+		}
+		if (cinfo->task_type == TASK_DELETED) {
 			cinfo++;
 			continue;
 		}
@@ -413,17 +431,26 @@ static int lthread_list(lua_State *L) {
 		}
 
 		switch (cinfo->task_type) {
-			case 0: strcpy(type,"task"); break;
-			case 1: strcpy(type,"thread"); break;
-			case 2: strcpy(type,"lua"); break;
+			case TASK_HEAP: strcpy(type,"heap"); break;
+			case TASK_PTHREAD: strcpy(type,"thread"); break;
+			case TASK_LUA: strcpy(type,"lua"); break;
+			default: strcpy(type,"task"); break;
 		}
 
 		if (!table) {
 			printf(
 #ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+	#ifdef CONFIG_HEAP_TASK_TRACKING
+					"%10d   %-6s   %-16s   %-6s   % 4d   % 4d   % 3d   % 6d   % 6d   % 6d (% 3d%%)   % 6d  % 7d  \n",
+	#else
 					"%10d   %-6s   %-16s   %-6s   % 4d   % 4d   % 3d   % 6d   % 6d   % 6d (% 3d%%)   \n",
+	#endif
 #else
+	#ifdef CONFIG_HEAP_TASK_TRACKING
+					"%10d   %-6s   %-16s   %-6s   % 4d   % 4d   % 6d   % 6d   % 6d (% 3d%%)   % 6d  % 7d  \n",
+	#else
 					"%10d   %-6s   %-16s   %-6s   % 4d   % 4d   % 6d   % 6d   % 6d (% 3d%%)   \n",
+	#endif
 #endif
 					cinfo->thid,
 					type,
@@ -437,7 +464,11 @@ static int lthread_list(lua_State *L) {
 					cinfo->stack_size,
 					cinfo->free_stack,
 					cinfo->stack_size - cinfo->free_stack,
-					(int)(100 * ((float)(cinfo->stack_size - cinfo->free_stack) / (float)cinfo->stack_size))
+					cinfo->stack_size==0 ? 0 : (int)(100 * ((float)(cinfo->stack_size - cinfo->free_stack) / (float)cinfo->stack_size))
+#ifdef CONFIG_HEAP_TASK_TRACKING
+					,cinfo->heap_count
+					,cinfo->heap_size
+#endif
 			);
 		} else {
 
@@ -475,6 +506,15 @@ static int lthread_list(lua_State *L) {
 
 			lua_pushinteger(L, cinfo->stack_size - cinfo->free_stack);
 			lua_setfield (L, -2, "used_stack");
+
+#ifdef CONFIG_HEAP_TASK_TRACKING
+
+			lua_pushinteger(L, cinfo->heap_count);
+			lua_setfield (L, -2, "heap_blocks");
+
+			lua_pushinteger(L, cinfo->heap_size);
+			lua_setfield (L, -2, "heap_total");
+#endif
 
 			lua_settable( L, -3 );
 		}
