@@ -1603,6 +1603,10 @@ menu "Lua RTOS"
             config LUA_RTOS_LUA_USE_CRC
                bool "Include crc module in build"
                default y
+
+            config LUA_RTOS_LUA_USE_MD5
+               bool "Include md5 module in build"
+               default y
          endmenu
 
          menu "Lua RTOS Modules"
