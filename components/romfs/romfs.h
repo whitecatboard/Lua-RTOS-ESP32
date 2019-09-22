@@ -86,7 +86,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-#include <machine/endian.h>
+#include <endian.h>
 
 #if (BYTE_ORDER == BIG_ENDIAN)
 #define htole16(x) __builtin_bswap16(x)
