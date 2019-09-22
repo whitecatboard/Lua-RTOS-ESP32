@@ -277,18 +277,25 @@ extern __NOINIT_ATTR uint32_t backtrace_pc[MAX_BACKTRACE];
 extern __NOINIT_ATTR uint32_t backtrace_sp[MAX_BACKTRACE];
 
 static int lcpu_backtrace(lua_State *L) {
-	printf("Backtrace:");
+	bool bPrint = false;
+	if (lua_gettop(L) > 0) {
+		luaL_checktype(L, 1, LUA_TBOOLEAN);
+		bPrint = lua_toboolean( L, 1 );
+	}
+
+	if (bPrint) printf("Backtrace:");
 
 	int reason = cpu_reset_reason();
-	if (0 == backtrace_count || POWERON_RESET == reason ||
-	    RTCWDT_RTC_RESET == reason || EXT_CPU_RESET == reason) {
-		printf(" none\r\n");
+	if (0 == backtrace_count || backtrace_count > MAX_BACKTRACE ||
+	    POWERON_RESET == reason || RTCWDT_RTC_RESET == reason ||
+	    EXT_CPU_RESET == reason) {
+		if (bPrint) printf(" none\r\n");
 		return 0;
 	}
 
 	lua_newtable(L);
 	for (uint32_t idx = 0; idx < MAX_BACKTRACE && idx < backtrace_count; idx++) {
-		printf(" 0x%08x:0x%08x", backtrace_pc[idx], backtrace_sp[idx]);
+		if (bPrint) printf(" 0x%08x:0x%08x", backtrace_pc[idx], backtrace_sp[idx]);
 
 		lua_pushnumber(L, idx); //row index
 		lua_newtable(L);
@@ -301,7 +308,7 @@ static int lcpu_backtrace(lua_State *L) {
 
 		lua_settable( L, -3 );
 	}
-	printf("\r\n");
+	if (bPrint) printf("\r\n");
 
 	return 1; //one table
 }
