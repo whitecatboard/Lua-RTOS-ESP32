@@ -305,7 +305,6 @@ driver_error_t *net_check_connectivity() {
 }
 
 driver_error_t *net_lookup(const char *name, int port, struct sockaddr_in *address) {
-    driver_error_t *error;
     int rc = 0;
     int retries = 0;
 
