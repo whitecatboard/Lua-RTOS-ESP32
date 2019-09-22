@@ -47,12 +47,12 @@
 
 // Convert a buffer coded into an hex string (hbuff) into a byte buffer (vbuff)
 // Length of byte buffer is len
-void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev) {
+void hex_string_to_val(char *hbuff, char *vbuff, int len, int reverse) {
     int  i;
     char c;
 
     // If reverse, put hbuff at the last byte
-    if (rev) {
+    if (reverse) {
         while(*hbuff) hbuff++;
         hbuff -= 2;
     }
@@ -88,7 +88,7 @@ void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev) {
 
         *vbuff = c;
 
-        if (rev) {
+        if (reverse) {
             hbuff -= 3;
         } else {
             hbuff++;
@@ -100,8 +100,9 @@ void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev) {
 
 // Convert byte buffer (vbuff argument) of len argument size into a hex
 // string buffer (hbuff argument) into a )
-void val_to_hex_string(char *hbuff, char *vbuff, int len, int reverse) {
+void val_to_hex_string_caps(char *hbuff, char *vbuff, int len, int reverse, int caps, int terminate) {
     int i;
+    char base = (caps ? 'A':'a');
 
     if (reverse) {
         vbuff += (len - 1);
@@ -113,7 +114,7 @@ void val_to_hex_string(char *hbuff, char *vbuff, int len, int reverse) {
         }
 
         if ((((*vbuff & 0xf0) >> 4) >= 10) && (((*vbuff & 0xf0) >> 4) <= 15)) {
-            *hbuff = 'A' + (((*vbuff & 0xf0) >> 4) - 10);
+            *hbuff = base + (((*vbuff & 0xf0) >> 4) - 10);
         }
         hbuff++;
 
@@ -122,7 +123,7 @@ void val_to_hex_string(char *hbuff, char *vbuff, int len, int reverse) {
         }
 
         if (((*vbuff & 0x0f) >= 10) && ((*vbuff & 0x0f) <= 15)) {
-            *hbuff = 'A' + ((*vbuff & 0x0f) - 10);
+            *hbuff = base + ((*vbuff & 0x0f) - 10);
         }
         hbuff++;
 
@@ -133,6 +134,11 @@ void val_to_hex_string(char *hbuff, char *vbuff, int len, int reverse) {
         }
     }
 
-    *hbuff = 0x00;
+    if (terminate) {
+        *hbuff = 0x00;
+    }
 }
 
+void val_to_hex_string(char *hbuff, char *vbuff, int len, int reverse) {
+    val_to_hex_string_caps(hbuff, vbuff, len, reverse, 1, 1);
+}
