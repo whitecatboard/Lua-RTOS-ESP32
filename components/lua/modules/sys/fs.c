@@ -57,6 +57,9 @@
 
 #if CONFIG_LUA_RTOS_LUA_USE_FS
 
+int os_format(lua_State *L);
+int os_df(lua_State *L);
+
 static int l_mount(lua_State *L) {
     const char *target = luaL_checkstring(L, 1);
     if (!target) {
@@ -114,10 +117,20 @@ static int l_umount(lua_State *L) {
     return 0;
 }
 
+static int l_format(lua_State *L) {
+    return os_format(L);
+}
+
+static int l_usage(lua_State *L) {
+    return os_df(L);
+}
+
 static const LUA_REG_TYPE fs_map[] =
 {
   { LSTRKEY( "mount" ),      LFUNCVAL( l_mount  ) },
   { LSTRKEY( "umount" ),     LFUNCVAL( l_umount ) },
+  { LSTRKEY( "format" ),     LFUNCVAL( l_format ) },
+  { LSTRKEY( "usage" ),      LFUNCVAL( l_usage  ) },
   { LNILKEY, LNILVAL }
 };
 

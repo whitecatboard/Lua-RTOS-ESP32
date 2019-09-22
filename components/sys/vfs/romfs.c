@@ -569,4 +569,17 @@ int vfs_romfs_umount(const char *target) {
     return 0;
 }
 
+int vfs_romfs_fsstat(const char *target, u32_t *total, u32_t *used) {
+
+    if (total) {
+      *total = 0;
+    }
+
+    if (used) {
+      *used = 0;
+    }
+
+    return 0;
+}
+
 #endif
