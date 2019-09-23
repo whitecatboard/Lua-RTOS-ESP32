@@ -470,7 +470,7 @@ driver_error_t *net_ota() {
 
     sprintf((char *)buffer, "/?firmware=%s&commit=%s", CONFIG_LUA_RTOS_FIRMWARE, BUILD_COMMIT);
 
-    if ((error = net_http_get(&client, (const char *)buffer, &response))) {
+    if ((error = net_http_get(&client, (const char *)buffer, "application/octet-stream", &response))) {
         net_http_destroy_client(&client);
         return error;
     }

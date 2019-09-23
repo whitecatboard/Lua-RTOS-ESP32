@@ -193,7 +193,7 @@ driver_error_t *net_http_destroy_client(net_http_client_t *client) {
 	return NULL;
 }
 
-driver_error_t *net_http_get(net_http_client_t *client, const char *res, net_http_response_t *response) {
+driver_error_t *net_http_get(net_http_client_t *client, const char *resource, const char *expected_content_type, net_http_response_t *response) {
 	char *http_request;
 	char http_response[2048];
 	char *protocol;
@@ -205,13 +205,13 @@ driver_error_t *net_http_get(net_http_client_t *client, const char *res, net_htt
 	int size;
 
 	// Allocate space for buffer
-	http_request = calloc(1, HTTP_CLIENT_GET_SIZE + strlen(res) + strlen(client->host) + strlen(client->port) + 1);
+	http_request = calloc(1, HTTP_CLIENT_GET_SIZE + strlen(resource) + strlen(client->host) + strlen(client->port) + 1);
 	if (!http_request) {
 		return driver_error(NET_DRIVER, NET_ERR_NOT_ENOUGH_MEMORY, NULL);
 	}
 
 	// Send
-    sprintf(http_request, HTTP_CLIENT_GET, res, client->host, client->port);
+    sprintf(http_request, HTTP_CLIENT_GET, resource, client->host, client->port);
     if (SSL_write(client->ssl, http_request, strlen(http_request)) <= 0) {
     	free(http_request);
 
@@ -257,8 +257,22 @@ driver_error_t *net_http_get(net_http_client_t *client, const char *res, net_htt
 				} else if (strcmp(header,"Content-Type") == 0) {
 					content_type = strtok(NULL, "");
 					content_type++;
-					if (strcmp(content_type, "application/octet-stream") != 0) {
-						return driver_error(NET_DRIVER, NET_ERR_INVALID_CONTENT, "Content-Type");
+					if (0!=expected_content_type && strcmp(content_type, expected_content_type) != 0) {
+						// check for something trailing, e.g. ;charset=UTF-8
+						if (strlen(expected_content_type) < strlen(content_type) &&
+								content_type[strlen(expected_content_type)] == ';' &&
+								strncmp(content_type, expected_content_type, strlen(expected_content_type)) == 0)
+						{
+							//content type matches, ignore anything trailing
+						}
+						else {
+							char *buffer = malloc(250);
+							if (!buffer) {
+									return driver_error(NET_DRIVER, NET_ERR_INVALID_CONTENT, "Content-Type");
+							}
+							snprintf(buffer, 250, "Content-Type is '%s', expected '%s'", content_type, expected_content_type);
+							return driver_error(NET_DRIVER, NET_ERR_INVALID_CONTENT, buffer);
+						}
 					}
 				} else if (strcmp(header,"Content-Length") == 0) {
 					content_length = strtok(NULL, "");
