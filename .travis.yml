@@ -1,0 +1,18 @@
+language: c
+install:
+  - sudo apt-get install git wget make libncurses-dev flex bison gperf python python-serial
+  - cd ~ && wget https://dl.espressif.com/dl/xtensa-esp32-elf-linux64-1.22.0-80-g6c4433a-5.2.0.tar.gz
+  - mkdir ~/esp && cd ~/esp && tar xzf ~/xtensa-esp32-elf-linux64-1.22.0-80-g6c4433a-5.2.0.tar.gz
+  - cd ~ && git clone --recursive https://github.com/espressif/esp-idf.git
+  - cd $TRAVIS_BUILD_DIR
+env:
+  global:
+    - IDF_PATH=~/esp-idf/ && PATH=$PATH:~/esp/xtensa-esp32-elf/bin/
+  matrix:
+    - BOARD=WHITECAT-ESP32-N1
+    - BOARD=ESP32-CORE-BOARD
+    - BOARD=ESP32-THING
+    - BOARD=GENERIC
+script:
+  - make SDKCONFIG_DEFAULTS=$BOARD defconfig
+  - make
