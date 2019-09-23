@@ -124,8 +124,8 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
         // STA events
         case SYSTEM_EVENT_STA_START: // ESP32 station start
-        		status_set(0x00000000, STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP);
-        		esp_wifi_connect();
+            status_set(0x00000000, STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP);
+            esp_wifi_connect();
             break;
 
         case SYSTEM_EVENT_STA_STOP: // ESP32 station stop
@@ -138,24 +138,24 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
             break;
 
         case SYSTEM_EVENT_STA_DISCONNECTED: // ESP32 station disconnected from AP */
-			if (status_get(STATUS_WIFI_SYNC) && (retries > WIFI_CONNECT_RETRIES)) {
-			    bits |= evWIFI_CANT_CONNECT;
+            if (status_get(STATUS_WIFI_SYNC) && (retries > WIFI_CONNECT_RETRIES)) {
+                bits |= evWIFI_CANT_CONNECT;
                 status_set(0x00000000, STATUS_WIFI_CONNECTED);
-				retries = 0;
-			} else {
+                retries = 0;
+            } else {
                 status_set(0x00000000, STATUS_WIFI_CONNECTED);
-	            if (status_get(STATUS_WIFI_STARTED)) {
-	                if (status_get(STATUS_WIFI_SYNC)) {
-	                    retries++;
-	                }
-	                delay(200);
-	                esp_wifi_connect();
-	            }
-			}
+                if (status_get(STATUS_WIFI_STARTED)) {
+                    if (status_get(STATUS_WIFI_SYNC)) {
+                        retries++;
+                    }
+                    delay(200);
+                    esp_wifi_connect();
+                }
+            }
             break;
 
         case SYSTEM_EVENT_STA_GOT_IP: // ESP32 station got IP from connected AP
-        		status_set(STATUS_WIFI_HAS_IP, 0x00000000);
+            status_set(STATUS_WIFI_HAS_IP, 0x00000000);
             bits |= evWIFI_CONNECTED;
             break;
 
@@ -310,9 +310,9 @@ driver_error_t *net_lookup(const char *name, int port, struct sockaddr_in *addre
     int retries = 0;
 
 retry:
-	if (!wait_for_network(20000)) {
+    if (!wait_for_network(20000)) {
         return driver_error(NET_DRIVER, NET_ERR_NOT_AVAILABLE,NULL);
-	}
+    }
 
     sa_family_t family = AF_INET;
     struct addrinfo *result = NULL;
@@ -336,12 +336,12 @@ retry:
 
         freeaddrinfo(result);
     } else {
-    	retries++;
-    	if (retries < 4) {
+        retries++;
+        if (retries < 4) {
             vTaskDelay(500 / portTICK_PERIOD_MS);
 
-    		goto retry;
-    	}
+            goto retry;
+        }
 
         return driver_error(NET_DRIVER, NET_ERR_NAME_CANNOT_BE_RESOLVED,NULL);
     }
@@ -395,8 +395,8 @@ int network_started() {
 
 int wait_for_network_init(uint32_t timeout) {
     while ((timeout > 0) && (!status_get(STATUS_TCPIP_INITED))) {
-    		vTaskDelay(1/portTICK_PERIOD_MS);
-    		timeout--;
+        vTaskDelay(1/portTICK_PERIOD_MS);
+        timeout--;
     }
 
     return status_get(STATUS_TCPIP_INITED);
@@ -423,21 +423,21 @@ int wait_for_network(uint32_t timeout) {
     }
 
     if (!NETWORK_AVAILABLE()) {
-		EventBits_t uxBits = xEventGroupWaitBits(
-				netEvent,
-				evWIFI_CONNECTED | evWIFI_CANT_CONNECT |
-				evSPI_ETH_CONNECTED | evSPI_ETH_CANT_CONNECT |
-				evETH_CONNECTED | evETH_CANT_CONNECT,
-				pdTRUE, pdFALSE, ticks_to_wait
-		);
+        EventBits_t uxBits = xEventGroupWaitBits(
+                netEvent,
+                evWIFI_CONNECTED | evWIFI_CANT_CONNECT |
+                evSPI_ETH_CONNECTED | evSPI_ETH_CANT_CONNECT |
+                evETH_CONNECTED | evETH_CANT_CONNECT,
+                pdTRUE, pdFALSE, ticks_to_wait
+        );
 
-		if (uxBits & (evWIFI_CONNECTED | evSPI_ETH_CONNECTED | evETH_CONNECTED)) {
-			return 1;
-		}
+        if (uxBits & (evWIFI_CONNECTED | evSPI_ETH_CONNECTED | evETH_CONNECTED)) {
+            return 1;
+        }
 
-		if (uxBits & (evWIFI_CANT_CONNECT | evSPI_ETH_CANT_CONNECT | evETH_CANT_CONNECT)) {
-			return 0;
-		}
+        if (uxBits & (evWIFI_CANT_CONNECT | evSPI_ETH_CANT_CONNECT | evETH_CANT_CONNECT)) {
+            return 0;
+        }
     }
 
     return 1;
