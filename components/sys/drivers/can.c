@@ -65,6 +65,7 @@
 #include <sys/mutex.h>
 
 #include <drivers/can.h>
+#include <drivers/cpu.h>
 #include <drivers/gpio.h>
 
 #include <pthread.h>
@@ -341,8 +342,8 @@ driver_error_t *can_setup(int32_t unit, uint32_t speed, uint16_t rx_size) {
 #endif
     }
 
-    g_config.rx_queue_len = 20;
-    g_config.tx_queue_len = 20;
+    g_config.rx_queue_len = rx_size;
+    g_config.tx_queue_len = rx_size;
     switch(speed) {
         case 1000: {
             can_timing_config_t set_config = CAN_TIMING_CONFIG_1MBITS();
