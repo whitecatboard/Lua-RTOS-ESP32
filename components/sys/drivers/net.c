@@ -471,6 +471,7 @@ driver_error_t *net_ota() {
     sprintf((char *)buffer, "/?firmware=%s&commit=%s", CONFIG_LUA_RTOS_FIRMWARE, BUILD_COMMIT);
 
     if ((error = net_http_get(&client, (const char *)buffer, &response))) {
+        net_http_destroy_client(&client);
         return error;
     }
 
@@ -490,6 +491,7 @@ driver_error_t *net_ota() {
         esp_err_t err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
         if (err != ESP_OK) {
             printf("Failed, error %d\r\n", err);
+            net_http_destroy_client(&client);
             return NULL;
         }
 
@@ -497,12 +499,14 @@ driver_error_t *net_ota() {
 
         while (response.size > 0){
             if ((error = net_http_read_response(&response, buffer, sizeof(buffer)))) {
+                net_http_destroy_client(&client);
                 return error;
             }
 
             err = esp_ota_write(update_handle, buffer, response.len);
             if (err != ESP_OK) {
                 printf("\nChunk written unsuccessfully in partition (offset 0x%08x), error %d\r\n", address, err);
+                net_http_destroy_client(&client);
                 return NULL;
             } else {
                 printf("\rChunk written successfully in partition at offset 0x%08x", address);
@@ -515,6 +519,7 @@ driver_error_t *net_ota() {
 
         if (esp_ota_end(update_handle) != ESP_OK) {
             printf("Failed\r\n");
+            net_http_destroy_client(&client);
             return NULL;
         } else {
             printf("Changing boot partition ...\r\n");
