@@ -173,5 +173,10 @@
 		"id": "GENERIC-OTA",
 		"type": "GENERIC",
 		"subtype": "OTA"
+	},
+	{
+		"id": "TRAVIS-ESP32-EVB-OTA",
+		"type": "ESP32-EVB",
+		"subtype": "OTA"
 	}
 ]

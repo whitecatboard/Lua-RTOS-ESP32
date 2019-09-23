@@ -257,6 +257,11 @@
                 "id": "ESP32-EVB-OTA",
                 "description": "Olimex ESP32-EVB with OTA",
                 "filesystem": "default"
+            },
+            {
+                "id": "TRAVIS-ESP32-EVB-OTA",
+                "description": "TRAVIS on Olimex ESP32-EVB with OTA",
+                "filesystem": "default"
             }
         ]
     },
