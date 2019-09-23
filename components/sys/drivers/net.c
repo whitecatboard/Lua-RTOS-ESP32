@@ -103,7 +103,7 @@ DRIVER_REGISTER_END(NET,net,0,NULL,NULL);
 EventGroupHandle_t netEvent;
 
 // Retries for connect
-static uint8_t retries = 0;
+static uint8_t connect_retries = 0;
 
 // Event callbacks
 static net_event_register_callback_t callback[MAX_NET_EVENT_CALLBACKS] = {0};
@@ -138,15 +138,15 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
             break;
 
         case SYSTEM_EVENT_STA_DISCONNECTED: // ESP32 station disconnected from AP */
-            if (status_get(STATUS_WIFI_SYNC) && (retries > WIFI_CONNECT_RETRIES)) {
+            if (status_get(STATUS_WIFI_SYNC) && (connect_retries > WIFI_CONNECT_RETRIES)) {
                 bits |= evWIFI_CANT_CONNECT;
                 status_set(0x00000000, STATUS_WIFI_CONNECTED);
-                retries = 0;
+                connect_retries = 0;
             } else {
                 status_set(0x00000000, STATUS_WIFI_CONNECTED);
                 if (status_get(STATUS_WIFI_STARTED)) {
                     if (status_get(STATUS_WIFI_SYNC)) {
-                        retries++;
+                        connect_retries++;
                     }
                     delay(200);
                     esp_wifi_connect();
@@ -282,7 +282,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
  */
 driver_error_t *net_init() {
     if (!status_get(STATUS_TCPIP_INITED)) {
-        retries = 0;
+        connect_retries = 0;
 
         netEvent = xEventGroupCreate();
 
@@ -305,9 +305,8 @@ driver_error_t *net_check_connectivity() {
 }
 
 driver_error_t *net_lookup(const char *name, int port, struct sockaddr_in *address) {
-    driver_error_t *error;
     int rc = 0;
-    int retries = 0;
+    int lookup_retries = 0;
 
 retry:
     if (!wait_for_network(20000)) {
@@ -336,10 +335,9 @@ retry:
 
         freeaddrinfo(result);
     } else {
-        retries++;
-        if (retries < 4) {
+        lookup_retries++;
+        if (lookup_retries < 4) {
             vTaskDelay(500 / portTICK_PERIOD_MS);
-
             goto retry;
         }
 
