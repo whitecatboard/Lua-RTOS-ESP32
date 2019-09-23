@@ -440,6 +440,13 @@ menu "Lua RTOS"
                     CPU affinity for the task assigned to the SSH server.
          endmenu
 
+         menu "HTTP client"
+            config LUA_RTOS_USE_HTTP_CLIENT
+                depends on LUA_RTOS_LUA_USE_NET
+                bool "Enable HTTP client"
+                default y
+         endmenu
+
       menu "HTTP server"
          config LUA_RTOS_USE_HTTP_SERVER
             depends on LUA_RTOS_LUA_USE_NET
