@@ -11,9 +11,10 @@ env:
     - IDF_PATH=~/esp-idf/ && PATH=$PATH:~/esp/xtensa-esp32-elf/bin/
   matrix:
     - BOARD=WHITECAT-ESP32-N1
-    - BOARD=ESP32-CORE-BOARD
-    - BOARD=ESP32-THING
     - BOARD=GENERIC
+    - BOARD=ESP32-THING
+    - BOARD=ESP32-CORE-BOARD
+    - BOARD=TRAVIS-ESP32-EVB-OTA
 script:
   - make SDKCONFIG_DEFAULTS=$BOARD defconfig
   - make
