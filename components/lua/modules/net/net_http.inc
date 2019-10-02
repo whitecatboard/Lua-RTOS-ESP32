@@ -53,6 +53,18 @@
 #include <drivers/net.h>
 #include <drivers/net_http.h>
 
+// Module errors
+#define LUA_HTTP_ERR_ALREADY_EXISTS      (DRIVER_EXCEPTION_BASE(HTTP_DRIVER_ID) |  0)
+#define LUA_HTTP_ERR_CANT_OPEN           (DRIVER_EXCEPTION_BASE(HTTP_DRIVER_ID) |  1)
+#define LUA_HTTP_ERR_CANT_WRITE          (DRIVER_EXCEPTION_BASE(HTTP_DRIVER_ID) |  2)
+
+// Register drivers and errors
+DRIVER_REGISTER_BEGIN(HTTP,http,0,NULL,NULL);
+	DRIVER_REGISTER_ERROR(HTTP, http, OutputAlreadyExists, "output file already exists, aborting", LUA_HTTP_ERR_ALREADY_EXISTS);
+	DRIVER_REGISTER_ERROR(HTTP, http, CannotOpen, "can't open output file for writing", LUA_HTTP_ERR_CANT_OPEN);
+	DRIVER_REGISTER_ERROR(HTTP, http, CannotWrite, "can't write to output file", LUA_HTTP_ERR_CANT_WRITE);
+DRIVER_REGISTER_END(HTTP,http,0,NULL,NULL);
+
 static int lhttp_get( lua_State* L ) {
     const char *server = luaL_checkstring(L, 1);
     const char *resource = luaL_checkstring(L, 2);
@@ -98,8 +110,95 @@ static int lhttp_get( lua_State* L ) {
     return (count>0) ? 2:1;
 }
 
+static int lhttp_download( lua_State* L ) {
+    FILE* file = NULL;
+    uint8_t     preexists = 0;
+
+    const char *server = luaL_checkstring(L, 1);
+    const char *resource = luaL_checkstring(L, 2);
+    const char *expected_content_type = luaL_checkstring(L, 3);
+    const char *output_filename = luaL_checkstring(L, 4);
+    uint8_t     overwrite = 0;
+
+    if (lua_gettop(L) == 5) {
+        luaL_checktype(L, 5, LUA_TBOOLEAN);
+        if (lua_toboolean(L, 5)) {
+            overwrite = 1;
+        }
+    }
+
+    file = fopen(output_filename, "r");
+    if (file != NULL) {
+      fclose(file);
+      file = NULL;
+      preexists = 1;
+    }
+
+    if (preexists && !overwrite) {
+        return luaL_exception(L, LUA_HTTP_ERR_ALREADY_EXISTS);
+    }
+
+    driver_error_t *error;
+    net_http_client_t client = HTTP_CLIENT_INITIALIZER;
+    net_http_response_t response;
+
+    if ((error = net_http_create_client(server, "443", &client))) {
+        return luaL_driver_error(L, error);
+    }
+
+    if ((error = net_http_get(&client, resource, expected_content_type, &response))) {
+        net_http_destroy_client(&client);
+        return luaL_driver_error(L, error);
+    }
+
+    // push response code
+    lua_pushinteger(L, response.code);
+
+    if ((response.code == 200) && (response.size > 0)) {
+
+        file = fopen(output_filename, "wb");
+        if (file == NULL) {
+            net_http_destroy_client(&client);
+            syslog(LOG_ERR, "Error opening output file %s for writing", output_filename);
+            if (!preexists) remove(output_filename);
+            return luaL_exception(L, LUA_HTTP_ERR_CANT_OPEN);
+        }
+
+        uint8_t buffer[1024];
+        size_t written;
+        while (response.size > 0){
+            if ((error = net_http_read_response(&response, buffer, sizeof(buffer)))) {
+                net_http_destroy_client(&client);
+                fclose(file);
+                if (!preexists) remove(output_filename);
+                return luaL_driver_error(L, error);
+            }
+            written = fwrite(buffer, 1, response.len, file);
+            if (written != response.len) {
+                net_http_destroy_client(&client);
+                fclose(file);
+                if (!preexists) remove(output_filename);
+                syslog(LOG_ERR, "Error writing to output file %s", output_filename);
+                return luaL_exception(L, LUA_HTTP_ERR_CANT_WRITE);
+            }
+        }
+    }
+
+    fclose(file);
+
+    if ((error = net_http_destroy_client(&client))) {
+        return luaL_driver_error(L, error);
+    }
+
+    return 1;
+}
+
 static const LUA_REG_TYPE http_client_map[] = {
     { LSTRKEY( "get"    ),           LFUNCVAL( lhttp_get       ) },
+    { LSTRKEY( "download" ),         LFUNCVAL( lhttp_download  ) },
+
+    // Error definitions
+    DRIVER_REGISTER_LUA_ERRORS(http)
     { LNILKEY, LNILVAL }
 };
 
