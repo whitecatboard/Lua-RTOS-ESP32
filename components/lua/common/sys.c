@@ -95,13 +95,17 @@ lua_State *luaS_callback_state(lua_callback_t *callback) {
     return callback->TL;
 }
 
-int luaS_callback_call(lua_callback_t *callback, int args) {
-    int rc = lua_pcall(callback->TL, args, 0, 0);
+int luaS_callback_call_return(lua_callback_t *callback, int args, int rets) {
+    int rc = lua_pcall(callback->TL, args, rets, 0);
 
     // Copy callback to thread
     lua_pushvalue(callback->TL, 1);
 
     return rc;
+}
+
+int luaS_callback_call(lua_callback_t *callback, int args) {
+    return luaS_callback_call_return(callback, args, 0);
 }
 
 void luaS_callback_destroy(lua_callback_t *callback) {
