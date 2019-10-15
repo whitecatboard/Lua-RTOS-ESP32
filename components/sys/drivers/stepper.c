@@ -234,7 +234,7 @@ static void stepper_setup_timer(int timer_group, int timer_idx) {
     config.alarm_en = 1;
     config.auto_reload = 1;
     config.counter_dir = TIMER_COUNT_UP;
-    config.divider = 1;
+    config.divider = 2; /*!< Counter clock divider. The divider's range is from from 2 to 65536. */
     config.intr_type = TIMER_INTR_LEVEL;
     config.counter_en = TIMER_PAUSE;
 
