@@ -92,21 +92,26 @@ typedef void(*vfs_put_byte)(int,char *);
 int vfs_fat_mount(const char *target);
 int vfs_fat_umount(const char *target);
 int vfs_fat_format(const char *target);
+int vfs_fat_fsstat(const char *target, u32_t *total, u32_t *used);
 
 int vfs_spiffs_mount(const char *target);
 int vfs_spiffs_umount(const char *target);
 int vfs_spiffs_format(const char *target);
+int vfs_spiffs_fsstat(const char *target, u32_t *total, u32_t *used);
 
 int vfs_lfs_mount(const char *target);
 int vfs_lfs_umount(const char *target);
 int vfs_lfs_format(const char *target);
+int vfs_lfs_fsstat(const char *target, u32_t *total, u32_t *used);
 
 int vfs_ramfs_mount(const char *target);
 int vfs_ramfs_umount(const char *target);
 int vfs_ramfs_format(const char *target);
+int vfs_ramfs_fsstat(const char *target, u32_t *total, u32_t *used);
 
 int vfs_romfs_mount(const char *target);
 int vfs_romfs_umount(const char *target);
+int vfs_romfs_fsstat(const char *target, u32_t *total, u32_t *used);
 
 int vfs_generic_fcntl(vfs_fd_local_storage_t *local_storage, int fd, int cmd, va_list args);
 ssize_t vfs_generic_read(vfs_fd_local_storage_t *local_storage, vfs_has_bytes has_bytes, vfs_get_byte get, int fd, void * dst, size_t size);

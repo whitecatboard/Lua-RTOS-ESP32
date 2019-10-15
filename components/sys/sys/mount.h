@@ -53,6 +53,7 @@
 typedef int (*mount_mount_f_t)(const char *);
 typedef int (*mount_umount_f_t)(const char *);
 typedef int (*mount_format_f_t)(const char *);
+typedef int (*mount_fsstat_f_t)(const char *, uint32_t *total, uint32_t *used);
 
 // Mount point structure
 struct mount_pt {
@@ -61,6 +62,7 @@ struct mount_pt {
     mount_mount_f_t mount;    // mount function
     mount_umount_f_t umount;  // unmount function
     mount_format_f_t format;  // format function
+    mount_fsstat_f_t fsstat;  // fs stat function
     uint8_t mounted;          // Is the file system mounted?
 };
 
