@@ -247,7 +247,7 @@ static void reconnect_syslog() {
 	esp_log_set_vprintf(vprintf);
 
 	if (NETWORK_AVAILABLE()) {
-		if (!logHost) logHost = logHostDefault;
+		if (!logHost) logHost = (char*)logHostDefault;
 		if (0 == strlen(logHost) || 0 == strcmp(logHost,"0.0.0.0"))
 			return; //user wants to disable remote logging
 

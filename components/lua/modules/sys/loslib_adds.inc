@@ -91,6 +91,7 @@ FILE *lua_stdout_file = NULL;
 void luaC_fullgc (lua_State *L, int isemergency) ;
 int edit_main(int argc, char *argv[]);
 extern int os_get_random(unsigned char *buf, size_t len);
+int settimeofday(const struct timeval *, const struct timezone *);
 
 static int os_stdout(lua_State *L) {
     int total = lua_gettop(L);
