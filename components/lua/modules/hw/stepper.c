@@ -163,22 +163,36 @@ static int lstepper_move( lua_State* L ){
 
 static int lstepper_start( lua_State* L ){
     stepper_userdata *lstepper = NULL;
+	int mask = 0;
+	int i;
 
-    int total = lua_gettop(L);
-    int mask = 0;
-    int i;
+	if (lua_istable(L, 1)) {
+		lua_pushnil(L);
+		while (lua_next(L, 1) != 0) {
+			if (!lua_isnil(L, -1)) {
+				lstepper = (stepper_userdata *)luaL_checkudata(L, -1, "stepper.inst");
+				luaL_argcheck(L, lstepper, -1, "stepper expected");
 
-    for (i=1; i <= total; i++) {
-        if (!lua_isnil(L, i)) {
-            lstepper = (stepper_userdata *)luaL_checkudata(L, i, "stepper.inst");
-            luaL_argcheck(L, lstepper, i, "stepper expected");
-        
-            mask |= (1 << (lstepper->unit));
-        }
-    }
-    
+				mask |= (1 << (lstepper->unit));
+			}
+
+			lua_pop(L, 1);
+		}
+	} else {
+	    int total = lua_gettop(L);
+
+	    for (i=1; i <= total; i++) {
+	        if (!lua_isnil(L, i)) {
+	            lstepper = (stepper_userdata *)luaL_checkudata(L, i, "stepper.inst");
+	            luaL_argcheck(L, lstepper, i, "stepper expected");
+
+	            mask |= (1 << (lstepper->unit));
+	        }
+	    }
+	}
+
     stepper_start(mask);
-    
+
     return 0;
 }
 
