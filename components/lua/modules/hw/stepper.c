@@ -196,10 +196,17 @@ static int lstepper_start( lua_State* L ){
     return 0;
 }
 
+static int lstepper_stop( lua_State* L ) {
+    stepper_stop(0xffffffff);
+
+    return 0;
+}
+
 static const LUA_REG_TYPE lstepper_map[] = {
     { LSTRKEY( "attach" ),		  LFUNCVAL( lstepper_attach    ) },
-	DRIVER_REGISTER_LUA_ERRORS(stepper)
 	{ LSTRKEY( "start"  ),		  LFUNCVAL( lstepper_start     ) },
+	{ LSTRKEY( "stop"   ),        LFUNCVAL( lstepper_stop      ) },
+	DRIVER_REGISTER_LUA_ERRORS(stepper)
 	{ LNILKEY, LNILVAL }
 };
 

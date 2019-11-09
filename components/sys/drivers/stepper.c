@@ -395,4 +395,29 @@ void stepper_start(int mask) {
 	mtx_unlock(&stepper_mutex);
 }
 
+void stepper_stop(int mask) {
+	portDISABLE_INTERRUPTS();
+
+	if (mask == 0xffffffff) {
+		// Stop timer
+		timer_pause(TIMER_GROUP_0, TIMER_1);
+
+		// As timer is not running, all steppers are now stopped
+
+		// Update start mask, no steppers running
+		start = 0;
+
+		// Start timer again
+	    timer_start(TIMER_GROUP_0, TIMER_1);
+	} else {
+		start &= ~mask;
+	}
+
+	if (start == 0) {
+		mtx_unlock(&stepper_mutex);
+	}
+
+    portENABLE_INTERRUPTS();
+}
+
 #endif
