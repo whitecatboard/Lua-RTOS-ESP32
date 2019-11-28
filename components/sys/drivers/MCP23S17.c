@@ -241,7 +241,20 @@ driver_error_t *MCP23S17_setup() {
         MCP23S17_lock();
 
         // MCP23S17 configuration as default value, and enabling hardware addressing
-        MCP23S17_write8(MCP23S17_IOCON, 0b00001000);
+        uint8_t iocon_val  = 0b00001000;
+        uint8_t int_shared = 0;
+
+        if (
+        		((CONFIG_MCP23S17_INTA >= 0) || (CONFIG_MCP23S17_INTB >= 0)) &&
+        		((CONFIG_MCP23S17_INTA < 0)  || (CONFIG_MCP23S17_INTB < 0))
+		   ) {
+        	// INTA and INTB share the same pin, must set IOCON's MIRROR
+        	iocon_val |= (1 << 6);
+
+        	int_shared = 1;
+        }
+
+        MCP23S17_write8(MCP23S17_IOCON, iocon_val);
 
         // Configure all pins as output / logic level 0
         MCP23S17_pin_output_mask(0, 0xff);
@@ -255,7 +268,7 @@ driver_error_t *MCP23S17_setup() {
         driver_unit_lock_error_t *lock_error = NULL;
 
         // Lock resources
-        if (CONFIG_MCP23S17_INTA > 0) {
+        if (CONFIG_MCP23S17_INTA >= 0) {
             if ((lock_error = driver_lock(GPIO_DRIVER, 0, GPIO_DRIVER, CONFIG_MCP23S17_INTA, 0, NULL))) {
                 MCP23S17_unlock();
 
@@ -264,7 +277,7 @@ driver_error_t *MCP23S17_setup() {
             }
         }
 
-        if (CONFIG_MCP23S17_INTA > 0) {
+        if (CONFIG_MCP23S17_INTB >= 0) {
             if ((lock_error = driver_lock(GPIO_DRIVER, 0, GPIO_DRIVER, CONFIG_MCP23S17_INTB, 0, NULL))) {
                 MCP23S17_unlock();
 
@@ -281,7 +294,7 @@ driver_error_t *MCP23S17_setup() {
             return driver_error(GPIO_DRIVER, GPIO_ERR_NOT_ENOUGH_MEMORY, NULL);
         }
 
-        if (CONFIG_MCP23S17_INTA > 0) {
+        if (CONFIG_MCP23S17_INTA >= 0) {
         	// Enable interrupts on all pins
         	MCP23S17_write8(MCP23S17_GPINTENA, 0xff);
 
@@ -293,7 +306,7 @@ driver_error_t *MCP23S17_setup() {
             gpio_isr_attach(CONFIG_MCP23S17_INTA, MCP23S17_isr, GPIO_INTR_NEGEDGE, NULL);
         }
 
-        if (CONFIG_MCP23S17_INTB > 0) {
+        if (CONFIG_MCP23S17_INTB >= 0) {
         	// Enable interrupts on all pins
         	MCP23S17_write8(MCP23S17_GPINTENB, 0xff);
 
@@ -310,7 +323,7 @@ driver_error_t *MCP23S17_setup() {
         // Read all inputs and latch it
         xTaskNotifyGive(MCP23S17->task);
 
-        if (CONFIG_MCP23S17_INTA > 0) {
+        if ((!int_shared) && (CONFIG_MCP23S17_INTA >= 0)) {
             syslog(
 				LOG_INFO,
 				"GPIO EXTENDER %s spi%d, INTA interrupts enabled on %s%d",
@@ -321,7 +334,7 @@ driver_error_t *MCP23S17_setup() {
             );
         }
 
-        if (CONFIG_MCP23S17_INTB > 0) {
+        if ((!int_shared) && (CONFIG_MCP23S17_INTB >= 0)) {
             syslog(
 				LOG_INFO,
 				"GPIO EXTENDER %s spi%d, INTB interrupts enabled on %s%d",
@@ -329,6 +342,17 @@ driver_error_t *MCP23S17_setup() {
 				CONFIG_MCP23S17_SPI_PORT,
 				gpio_portname(CONFIG_MCP23S17_INTB),
 				gpio_name(CONFIG_MCP23S17_INTB)
+            );
+        }
+
+        if (int_shared) {
+            syslog(
+				LOG_INFO,
+				"GPIO EXTENDER %s spi%d, INTA / INTB interrupts enabled on %s%d",
+				EXTERNAL_GPIO_NAME,
+				CONFIG_MCP23S17_SPI_PORT,
+				gpio_portname(CONFIG_MCP23S17_INTA >= 0?CONFIG_MCP23S17_INTA:CONFIG_MCP23S17_INTB),
+				gpio_name(CONFIG_MCP23S17_INTA >= 0?CONFIG_MCP23S17_INTA:CONFIG_MCP23S17_INTB)
             );
         }
     }
