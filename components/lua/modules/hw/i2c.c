@@ -258,27 +258,52 @@ static int li2c_address(lua_State* L) {
     return 0;
 }
 
+#define MAX_DATA_BYTES 128
 static int li2c_read(lua_State* L) {
     driver_error_t *error;
     i2c_user_data_t *user_data;
-    char data;
 
     // Get user data
     user_data = (i2c_user_data_t *) luaL_checkudata(L, 1, "i2c.trans");
     luaL_argcheck(L, user_data, 1, "i2c transaction expected");
 
-    if ((error = i2c_read(user_data->unit, &user_data->transaction, &data, 1))) {
+    uint8_t length = luaL_optinteger(L, 2, 1 );
+    if (length < 1) {
+      length = 1; //minimum length
+    }
+    else if (length > MAX_DATA_BYTES) {
+      length = MAX_DATA_BYTES; //maximum length
+    }
+
+    uint8_t asString = 0;
+    // Check if user wants result as integers or as string
+    if (lua_gettop(L) == 3) {
+        luaL_checktype(L, 3, LUA_TBOOLEAN);
+        if (lua_toboolean(L, 3)) {
+            asString = 1;
+        }
+    }
+
+    char data[length]; // with length being a minimum of 1 and a maximum of MAX_DATA_BYTES
+
+    if ((error = i2c_read(user_data->unit, &user_data->transaction, data, length))) {
         return luaL_driver_error(L, error);
     }
 
-    // We need to flush because we need to return reaad data now
+    // We need to flush because we need to return read data now
     if ((error = i2c_flush(user_data->unit, &user_data->transaction, 1))) {
         return luaL_driver_error(L, error);
     }
 
-    lua_pushinteger(L, (int) data);
+    if (asString == 1) {
+        lua_pushlstring(L, data, length);
+        return 1;
+    }
 
-    return 1;
+    for(uint8_t i=0; i<length; i++) {
+        lua_pushinteger(L, (int) data[i]);
+    }
+    return length;
 }
 
 static int li2c_write(lua_State* L) {

@@ -65,8 +65,6 @@
 
 #define ACK_CHECK_EN   0x1     /*!< I2C master will check ack from slave*/
 #define ACK_CHECK_DIS  0x0     /*!< I2C master will not check ack from slave */
-#define ACK_VAL        0x0     /*!< I2C ack value */
-#define NACK_VAL       0x1     /*!< I2C nack value */
 
 // Register driver and messages
 static void i2c_init();
@@ -566,8 +564,7 @@ driver_error_t *i2c_stop(int deviceid, int *transaction) {
 
     if (i2c[unit].device[device].reading) {
         uint8_t dummy;
-
-        i2c_master_read_byte(cmd, (uint8_t *) (&dummy), NACK_VAL);
+        i2c_master_read_byte(cmd, (uint8_t *) (&dummy), I2C_MASTER_NACK);
     }
 
     i2c_master_stop(cmd);
@@ -696,10 +693,9 @@ driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len) {
     }
 
     if (len > 1) {
-        i2c_master_read(cmd, (uint8_t *) data, len - 1, ACK_VAL);
-        i2c_master_read_byte(cmd, (uint8_t *) (data + len - 1), NACK_VAL);
+        i2c_master_read(cmd, (uint8_t *) data, len, I2C_MASTER_LAST_NACK);
     } else {
-        i2c_master_read_byte(cmd, (uint8_t *) (data + len - 1), ACK_VAL);
+        i2c_master_read_byte(cmd, (uint8_t *) data, I2C_MASTER_ACK);
     }
 
     i2c_unlock(unit);
