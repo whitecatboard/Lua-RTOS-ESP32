@@ -321,13 +321,13 @@ int openlog(logstat, logfac)
 
 	logFile = NULL;
 
-    char file[PATH_MAX + 1];
+	char file[PATH_MAX + 1];
 
-    if (mount_messages_file(file, sizeof(file))) {
-        mkfile(file);
+	if (mount_messages_file(file, sizeof(file))) {
+		mkfile(file);
 
-        logFile = fopen(file,"a+");
-    }
+		logFile = fopen(file,"a+");
+	}
 
 	if (NULL != logFile) {
 		fflush(logFile);
