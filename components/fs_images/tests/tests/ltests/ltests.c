@@ -632,7 +632,7 @@ static int gc_color (lua_State *L) {
 
 
 static int gc_state (lua_State *L) {
-  static const char *statenames[] = {"propagate", "atomic", "sweepallgc",
+  static const char *const statenames[] = {"propagate", "atomic", "sweepallgc",
       "sweepfinobj", "sweeptobefnz", "sweepend", "pause", ""};
   static const int states[] = {GCSpropagate, GCSatomic, GCSswpallgc,
       GCSswpfinobj, GCSswptobefnz, GCSswpend, GCSpause, -1};

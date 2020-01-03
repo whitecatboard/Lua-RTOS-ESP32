@@ -16,7 +16,11 @@
   Convert error codes to ASCII strings, Tom St Denis
 */
 
+#if __XTENSA__
+static const char *const err_2_str[] =
+#else
 static const char *err_2_str[] =
+#endif
 {
    "CRYPT_OK",
    "CRYPT_ERROR",

@@ -145,7 +145,7 @@ static int inet_global_toip(lua_State *L)
 
 int inet_optfamily(lua_State* L, int narg, const char* def)
 {
-    static const char* optname[] = { "unspec", "inet", "inet6", NULL };
+    static const char *const optname[] = { "unspec", "inet", "inet6", NULL };
     static int optvalue[] = { AF_UNSPEC, AF_INET, AF_INET6, 0 };
 
     return optvalue[luaL_checkoption(L, narg, def, optname)];
@@ -153,7 +153,7 @@ int inet_optfamily(lua_State* L, int narg, const char* def)
 
 int inet_optsocktype(lua_State* L, int narg, const char* def)
 {
-    static const char* optname[] = { "stream", "dgram", NULL };
+    static const char *const optname[] = { "stream", "dgram", NULL };
     static int optvalue[] = { SOCK_STREAM, SOCK_DGRAM, 0 };
 
     return optvalue[luaL_checkoption(L, narg, def, optname)];
