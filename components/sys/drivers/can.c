@@ -110,6 +110,7 @@ DRIVER_REGISTER_BEGIN(CAN,can,0,NULL,NULL);
     DRIVER_REGISTER_ERROR(CAN, can, InvalidArg, "invalid argument", CAN_ERR_INVALID_ARGUMENT);
     DRIVER_REGISTER_ERROR(CAN, can, InvalidState, "invalid state", CAN_ERR_INVALID_STATE);
     DRIVER_REGISTER_ERROR(CAN, can, NotSupport, "can API is not supported yet", CAN_ERR_NOT_SUPPORT);
+    DRIVER_REGISTER_ERROR(CAN, can, TransmitTimeout, "timeout transmitting message", CAN_ERR_TRANSMIT_TIMEOUT);
 DRIVER_REGISTER_END(CAN,can,0,NULL,NULL);
 
 #define CAN_DRIVER driver_get_by_name("can")
@@ -123,6 +124,7 @@ driver_error_t *can_check_error(esp_err_t error) {
         case ESP_ERR_INVALID_ARG:      return driver_error(CAN_DRIVER, CAN_ERR_INVALID_ARGUMENT,NULL);
         case ESP_ERR_NOT_SUPPORTED:    return driver_error(CAN_DRIVER, CAN_ERR_NOT_SUPPORT,NULL);
         case ESP_ERR_INVALID_STATE:    return driver_error(CAN_DRIVER, CAN_ERR_INVALID_STATE,NULL);
+        case ESP_ERR_TIMEOUT:          return driver_error(CAN_DRIVER, CAN_ERR_TRANSMIT_TIMEOUT,NULL);
 
         default: {
             char *buffer;
@@ -145,18 +147,30 @@ driver_error_t *can_check_error(esp_err_t error) {
  * Helper functions
  */
 
+#define MAX_BUS_ERROR 127
+#define MAX_WAITMS_TX 100
+
+void can_recovery() {
+    can_status_info_t status_info;
+    esp_err_t error = can_get_status_info(&status_info);
+    if (error == ESP_OK && status_info.state==CAN_STATE_RUNNING && status_info.bus_error_count<MAX_BUS_ERROR) {
+        ; //do nothing
+    } else {
+        can_start();
+        can_initiate_recovery();
+    }
+}
+
 static driver_error_t *can_ll_tx(can_message_t *frame) {
-    can_start(); //make sure can is running
-    can_initiate_recovery(); //make sure the bus is on
     driver_error_t *error;
-    if ((error = can_check_error(can_transmit(frame, portMAX_DELAY)))) return error;
+    if ((error = can_check_error(can_transmit(frame, pdMS_TO_TICKS(MAX_WAITMS_TX))))) {
+        can_recovery();
+        return error;
+    }
     return 0;
 }
 
 static driver_error_t *can_ll_rx(can_message_t *frame) {
-    can_start(); //make sure can is running
-    can_initiate_recovery(); //make sure the bus is on
-
     // Read next frame
     // Check filter
     uint8_t i;
@@ -164,7 +178,10 @@ static driver_error_t *can_ll_rx(can_message_t *frame) {
     driver_error_t *error;
 
     while (!pass) {
-        if ((error = can_check_error(can_receive(frame, portMAX_DELAY)))) return error;
+        if ((error = can_check_error(can_receive(frame, portMAX_DELAY)))) {
+            can_recovery();
+            return error;
+        }
         pass = 1;
         if (filters > 0) {
             CAN_FIR_t FIR = (CAN_FIR_t)frame->flags;
