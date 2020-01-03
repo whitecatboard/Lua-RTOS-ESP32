@@ -338,7 +338,7 @@ int openlog(logstat, logfac)
 
 	driver_error_t *error;
 	if ((error = net_event_register_callback(syslog_net_callback))) {
-		printf("couldn't register net callback, please restart syslog service from lua using after changing connectivity\n");
+		printf("couldn't register net callback, please restart syslog service from lua after changing connectivity\n");
 		printf("you may use the command 'os.logcons(os.logcons())' to restart the syslog service from lua\n");
 	}
 #endif
