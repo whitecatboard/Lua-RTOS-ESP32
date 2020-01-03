@@ -152,7 +152,13 @@ vsyslog(pri, fmt, ap)
 
 	// Allocate space
 	tbuf = (char *)malloc(MAX_BUFF + 3);
-	if (!tbuf) return;
+	if (!tbuf) {
+		//emergency print (!)
+		fprintf(stderr, "syslog: Out of memory! Printing message to stderr\n");
+		vfprintf(stderr, fmt, ap);
+		fprintf(stderr, "\n");
+		return;
+	}
 
 	/* Set default facility if none specified. */
 	if ((pri & LOG_FACMASK) == 0)
