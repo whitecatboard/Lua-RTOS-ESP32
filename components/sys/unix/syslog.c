@@ -97,6 +97,13 @@ static int	logMask = 0b11111111;		/* mask of priorities to be logged */
 
 void vsyslog(int pri, register const char *fmt, va_list app);
 
+#if CONFIG_LUA_RTOS_LUA_USE_MQTT
+#include "lauxlib.h"
+static int   logMQTT = 0;
+static char *logTopic = NULL;
+static int msyslog_vprintf( const char *str, va_list l );
+#endif
+
 /*
  * syslog, vsyslog --
  *	print message on log file; output is intended for syslogd(8).
@@ -222,6 +229,19 @@ vsyslog(pri, fmt, ap)
 	}
 #endif
 
+#if CONFIG_LUA_RTOS_LUA_USE_MQTT
+	if (0 != logMQTT) {
+		lua_State *L = pvGetLuaState(); // Get the thread's Lua state
+		lua_rawgeti(L, LUA_REGISTRYINDEX, logMQTT);
+		lua_getfield(L, -1, "publish");
+		lua_rawgeti(L, LUA_REGISTRYINDEX, logMQTT);
+		lua_pushstring(L, logTopic ? logTopic : "syslog");
+		lua_pushlstring(L, tbuf, cnt);
+		lua_pushinteger(L, 0);
+		lua_pcall(L, 4, 0, 0);
+	}
+#endif
+
 	free(tbuf);
 }
 
@@ -298,6 +318,12 @@ static void reconnect_syslog() {
 			}
 		}
 	}
+
+#if CONFIG_LUA_RTOS_LUA_USE_MQTT
+	if (logMQTT) {
+		esp_log_set_vprintf(msyslog_vprintf);
+	}
+#endif
 }
 
 static void syslog_net_callback(system_event_t *event){
@@ -404,3 +430,69 @@ const char *syslog_getloghost ()
 	return logHost;
 }
 #endif
+
+#if CONFIG_LUA_RTOS_LUA_USE_MQTT
+static int msyslog_vprintf( const char *str, va_list l ) {
+	// Allocate space
+	char* tbuf = (char *)malloc(MAX_BUFF+1);
+	if (tbuf) {
+		int len = vsnprintf((char*)tbuf, MAX_BUFF, str, l);
+
+		if (0 != logMQTT) {
+			lua_State *L = pvGetLuaState(); // Get the thread's Lua state
+			lua_rawgeti(L, LUA_REGISTRYINDEX, logMQTT);
+			lua_getfield(L, -1, "publish");
+			lua_rawgeti(L, LUA_REGISTRYINDEX, logMQTT);
+			lua_pushstring(L, logTopic ? logTopic : "syslog");
+			lua_pushlstring(L, tbuf, len);
+			lua_pushinteger(L, 0);
+			lua_pcall(L, 4, 0, 0);
+		}
+
+		free(tbuf);
+	}
+
+#if CONFIG_LUA_RTOS_USE_RSYSLOG
+	if (0 != logSock) {
+		return rsyslog_vprintf( str, l );
+	}
+#endif
+	return vprintf( str, l );
+}
+
+int syslog_setlogmqtt (const int mqtt_ref, const char *topic)
+{
+	if (logMQTT) {
+		lua_State *L = pvGetLuaState(); // Get the thread's Lua state
+		luaL_unref(L, LUA_REGISTRYINDEX, logMQTT);
+		logMQTT = 0;
+
+		esp_log_set_vprintf(vprintf);
+#if CONFIG_LUA_RTOS_USE_RSYSLOG
+		if (0 != logSock) {
+			esp_log_set_vprintf(rsyslog_vprintf);
+		}
+#endif
+	}
+	logMQTT = mqtt_ref;
+
+	if (logTopic) {
+		free(logTopic);
+		logTopic = 0;
+	}
+	if (topic) {
+		logTopic = strdup(topic);
+	}
+
+	if (logMQTT) {
+		esp_log_set_vprintf(msyslog_vprintf);
+	}
+
+	return logMQTT;
+}
+int syslog_getlogmqtt ()
+{
+	return logMQTT;
+}
+#endif
+
