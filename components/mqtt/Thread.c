@@ -112,6 +112,9 @@ mutex_type Thread_create_mutex(void)
 		#if !__XTENSA__
 		*mutex = PTHREAD_MUTEX_INITIALIZER;
 		#endif
+#if __XTENSA__
+    if (mutex)
+#endif
 		rc = pthread_mutex_init(mutex, NULL);
 	#endif
 	FUNC_EXIT_RC(rc);
@@ -221,6 +224,9 @@ sem_type Thread_create_sem(void)
 		rc = sem?0:-1;
 	#else
 		sem = malloc(sizeof(sem_t));
+#if __XTENSA__
+    if (sem)
+#endif
 		rc = sem_init(sem, 0, 0);
 	#endif
 	FUNC_EXIT_RC(rc);
@@ -367,8 +373,14 @@ cond_type Thread_create_cond(void)
 
 	FUNC_ENTRY;
 	condvar = malloc(sizeof(cond_type_struct));
+#if __XTENSA__
+  if (condvar) {
+#endif
 	rc = pthread_cond_init(&condvar->cond, NULL);
 	rc = pthread_mutex_init(&condvar->mutex, NULL);
+#if __XTENSA__
+  }
+#endif
 
 	FUNC_EXIT_RC(rc);
 	return condvar;

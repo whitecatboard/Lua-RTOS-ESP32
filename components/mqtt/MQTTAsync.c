@@ -496,7 +496,11 @@ int MQTTAsync_createWithOptions(MQTTAsync* handle, const char* serverURI, const 
 		#if defined(HEAP_H)
 			Heap_initialize();
 		#endif
+#if !__XTENSA__
 		Log_initialize((Log_nameValue*)MQTTAsync_getVersionInfo());
+#else
+		Log_initialize(NULL);
+#endif
 		bstate->clients = ListInitialize();
 		Socket_outInitialize();
 		Socket_setWriteCompleteCallback(MQTTAsync_writeComplete);
@@ -508,6 +512,9 @@ int MQTTAsync_createWithOptions(MQTTAsync* handle, const char* serverURI, const 
 		initialized = 1;
 	}
 	m = malloc(sizeof(MQTTAsyncs));
+#if __XTENSA__
+  if (m) {
+#endif
 	*handle = m;
 	memset(m, '\0', sizeof(MQTTAsyncs));
 	if (strncmp(URI_TCP, serverURI, strlen(URI_TCP)) == 0)
@@ -524,6 +531,9 @@ int MQTTAsync_createWithOptions(MQTTAsync* handle, const char* serverURI, const 
 	ListAppend(handles, m, sizeof(MQTTAsyncs));
 
 	m->c = malloc(sizeof(Clients));
+#if __XTENSA__
+  if (m->c) {
+#endif
 	memset(m->c, '\0', sizeof(Clients));
 	m->c->context = m;
 	m->c->outboundMsgs = ListInitialize();
@@ -535,6 +545,9 @@ int MQTTAsync_createWithOptions(MQTTAsync* handle, const char* serverURI, const 
 	if (options)
 	{
 		m->createOptions = malloc(sizeof(MQTTAsync_createOptions));
+#if __XTENSA__
+    if (m->createOptions)
+#endif
 		memcpy(m->createOptions, options, sizeof(MQTTAsync_createOptions));
 	}
 
@@ -551,6 +564,14 @@ int MQTTAsync_createWithOptions(MQTTAsync* handle, const char* serverURI, const 
 	}
 #endif
 	ListAppend(bstate->clients, m->c, sizeof(Clients) + 3*sizeof(List));
+#if __XTENSA__
+  } else {
+    *handle = NULL;
+    free(m->serverURI);
+    free(m);
+  }
+  }
+#endif
 
 exit:
 	MQTTAsync_unlock_mutex(mqttasync_mutex);
@@ -628,6 +649,9 @@ static int MQTTAsync_persistCommand(MQTTAsync_queuedCommand* qcmd)
 			lens = (int*)malloc(nbufs * sizeof(int));
 			bufs = malloc(nbufs * sizeof(char *));
 
+#if __XTENSA__
+      if (lens && bufs) {
+#endif
 			bufs[bufindex] = &command->type;
 			lens[bufindex++] = sizeof(command->type);
 
@@ -645,6 +669,9 @@ static int MQTTAsync_persistCommand(MQTTAsync_queuedCommand* qcmd)
 				lens[bufindex++] = sizeof(command->details.sub.qoss[i]);
 			}
 			sprintf(key, "%s%d", PERSISTENCE_COMMAND_KEY, ++aclient->command_seqno);
+#if __XTENSA__
+      }
+#endif
 			break;
 
 		case UNSUBSCRIBE:
@@ -653,6 +680,9 @@ static int MQTTAsync_persistCommand(MQTTAsync_queuedCommand* qcmd)
 			lens = (int*)malloc(nbufs * sizeof(int));
 			bufs = malloc(nbufs * sizeof(char *));
 
+#if __XTENSA__
+      if (lens && bufs) {
+#endif
 			bufs[bufindex] = &command->type;
 			lens[bufindex++] = sizeof(command->type);
 
@@ -667,6 +697,9 @@ static int MQTTAsync_persistCommand(MQTTAsync_queuedCommand* qcmd)
 				bufs[bufindex] = command->details.unsub.topics[i];
 				lens[bufindex++] = (int)strlen(command->details.unsub.topics[i]) + 1;
 			}
+#if __XTENSA__
+      }
+#endif
 			sprintf(key, "%s%d", PERSISTENCE_COMMAND_KEY, ++aclient->command_seqno);
 			break;
 
@@ -676,6 +709,9 @@ static int MQTTAsync_persistCommand(MQTTAsync_queuedCommand* qcmd)
 			lens = (int*)malloc(nbufs * sizeof(int));
 			bufs = malloc(nbufs * sizeof(char *));
 
+#if __XTENSA__
+      if (lens && bufs) {
+#endif
 			bufs[bufindex] = &command->type;
 			lens[bufindex++] = sizeof(command->type);
 
@@ -683,6 +719,11 @@ static int MQTTAsync_persistCommand(MQTTAsync_queuedCommand* qcmd)
 			lens[bufindex++] = sizeof(command->token);
 
 			bufs[bufindex] = command->details.pub.destinationName;
+#if __XTENSA__
+      if (!command->details.pub.destinationName)
+        lens[bufindex++] = 0;
+      else
+#endif
 			lens[bufindex++] = (int)strlen(command->details.pub.destinationName) + 1;
 
 			bufs[bufindex] = &command->details.pub.payloadlen;
@@ -696,15 +737,24 @@ static int MQTTAsync_persistCommand(MQTTAsync_queuedCommand* qcmd)
 
 			bufs[bufindex] = &command->details.pub.retained;
 			lens[bufindex++] = sizeof(command->details.pub.retained);
+#if __XTENSA__
+      }
+#endif
 
 			sprintf(key, "%s%d", PERSISTENCE_COMMAND_KEY, ++aclient->command_seqno);
 			break;
 	}
 	if (nbufs > 0)
 	{
+#if __XTENSA__
+    if (lens && bufs) {
+#endif
 		if ((rc = aclient->c->persistence->pput(aclient->c->phandle, key, nbufs, (char**)bufs, lens)) != 0)
 			Log(LOG_ERROR, 0, "Error persisting command, rc %d", rc);
 		qcmd->seqno = aclient->command_seqno;
+#if __XTENSA__
+    }
+#endif
 	}
 	if (lens)
 		free(lens);
@@ -725,6 +775,9 @@ static MQTTAsync_queuedCommand* MQTTAsync_restoreCommand(char* buffer, int bufle
 
 	FUNC_ENTRY;
 	qcommand = malloc(sizeof(MQTTAsync_queuedCommand));
+#if __XTENSA__
+  if (qcommand) {
+#endif
 	memset(qcommand, '\0', sizeof(MQTTAsync_queuedCommand));
 	command = &qcommand->command;
 
@@ -746,11 +799,17 @@ static MQTTAsync_queuedCommand* MQTTAsync_restoreCommand(char* buffer, int bufle
 					command->details.sub.qoss = (int *)malloc(sizeof(int) * command->details.sub.count);
 			}
 
+#if __XTENSA__
+      if (command->details.sub.topics && command->details.sub.qoss)
+#endif
 			for (i = 0; i < command->details.sub.count; ++i)
 			{
 				data_size = strlen(ptr) + 1;
 
 				command->details.sub.topics[i] = malloc(data_size);
+#if __XTENSA__
+        if (command->details.sub.topics[i])
+#endif
 				strcpy(command->details.sub.topics[i], ptr);
 				ptr += data_size;
 
@@ -768,6 +827,9 @@ static MQTTAsync_queuedCommand* MQTTAsync_restoreCommand(char* buffer, int bufle
 					command->details.unsub.topics = (char **)malloc(sizeof(char *) * command->details.unsub.count);
 			}
 
+#if __XTENSA__
+      if (command->details.sub.topics)
+#endif
 			for (i = 0; i < command->details.unsub.count; ++i)
 			{
 				data_size = strlen(ptr) + 1;
@@ -781,6 +843,9 @@ static MQTTAsync_queuedCommand* MQTTAsync_restoreCommand(char* buffer, int bufle
 		case PUBLISH:
 			data_size = strlen(ptr) + 1;
 			command->details.pub.destinationName = malloc(data_size);
+#if __XTENSA__
+      if (command->details.pub.destinationName)
+#endif
 			strcpy(command->details.pub.destinationName, ptr);
 			ptr += data_size;
 
@@ -789,6 +854,9 @@ static MQTTAsync_queuedCommand* MQTTAsync_restoreCommand(char* buffer, int bufle
 
 			data_size = command->details.pub.payloadlen;
 			command->details.pub.payload = malloc(data_size);
+#if __XTENSA__
+      if (command->details.pub.payload)
+#endif
 			memcpy(command->details.pub.payload, ptr, data_size);
 			ptr += data_size;
 
@@ -804,6 +872,9 @@ static MQTTAsync_queuedCommand* MQTTAsync_restoreCommand(char* buffer, int bufle
 			qcommand = NULL;
 
 	}
+#if __XTENSA__
+  }
+#endif
 
 	FUNC_EXIT;
 	return qcommand;
@@ -961,6 +1032,9 @@ int MQTTAsync_reconnect(MQTTAsync handle)
 	{
 		/* to reconnect, put the connect command to the head of the command queue */
 		MQTTAsync_queuedCommand* conn = malloc(sizeof(MQTTAsync_queuedCommand));
+#if __XTENSA__
+    if (conn) {
+#endif
 		memset(conn, '\0', sizeof(MQTTAsync_queuedCommand));
 		conn->client = m;
 		conn->command = m->connect;
@@ -969,6 +1043,9 @@ int MQTTAsync_reconnect(MQTTAsync handle)
 	  		conn->command.details.conn.MQTTVersion = 0;
 		MQTTAsync_addCommand(conn, sizeof(m->connect));
 	  	rc = MQTTASYNC_SUCCESS;
+#if __XTENSA__
+    }
+#endif
 	}
 
 	MQTTAsync_unlock_mutex(mqttasync_mutex);
@@ -1308,6 +1385,9 @@ static int MQTTAsync_processCommand(void)
 		Publish* p = NULL;
 
 		p = malloc(sizeof(Publish));
+#if __XTENSA__
+    if (p) {
+#endif
 
 		p->payload = command->command.details.pub.payload;
 		p->payloadlen = command->command.details.pub.payloadlen;
@@ -1344,6 +1424,9 @@ static int MQTTAsync_processCommand(void)
 		else
 			command->command.details.pub.destinationName = NULL; /* this will be freed by the protocol code */
 		free(p); /* should this be done if the write isn't complete? */
+#if __XTENSA__
+    }
+#endif
 	}
 	else if (command->command.type == DISCONNECT)
 	{
@@ -1449,6 +1532,9 @@ static void nextOrClose(MQTTAsyncs* m, int rc, char* message)
 		MQTTAsync_closeOnly(m->c);
 		/* put the connect command back to the head of the command queue, using the next serverURI */
 		conn = malloc(sizeof(MQTTAsync_queuedCommand));
+#if __XTENSA__
+    if (conn) {
+#endif
 		memset(conn, '\0', sizeof(MQTTAsync_queuedCommand));
 		conn->client = m;
 		conn->command = m->connect;
@@ -1466,6 +1552,9 @@ static void nextOrClose(MQTTAsyncs* m, int rc, char* message)
 			conn->command.details.conn.currentURI++;
 
 		MQTTAsync_addCommand(conn, sizeof(m->connect));
+#if __XTENSA__
+    }
+#endif
 	}
 	else
 	{
@@ -1545,6 +1634,9 @@ static void MQTTAsync_checkTimeouts(void)
 			{
 				/* to reconnect put the connect command to the head of the command queue */
 				MQTTAsync_queuedCommand* conn = malloc(sizeof(MQTTAsync_queuedCommand));
+#if __XTENSA__
+        if (conn) {
+#endif
 				memset(conn, '\0', sizeof(MQTTAsync_queuedCommand));
 				conn->client = m;
 				conn->command = m->connect;
@@ -1554,6 +1646,9 @@ static void MQTTAsync_checkTimeouts(void)
 				Log(TRACE_MIN, -1, "Automatically attempting to reconnect");
 				MQTTAsync_addCommand(conn, sizeof(m->connect));
 				m->reconnectNow = 0;
+#if __XTENSA__
+        }
+#endif
 			}
 		}
 	}
@@ -1719,6 +1814,34 @@ void MQTTAsync_destroy(MQTTAsync* handle)
 		else
 			Log(TRACE_MIN, 1, NULL, saved_clientid, saved_socket);
 		free(saved_clientid);
+
+#if __XTENSA__
+#if defined(OPENSSL)
+		if (m->c->sslopts)
+		{
+			if (m->c->sslopts->trustStore)
+				free((void*)m->c->sslopts->trustStore);
+			if (m->c->sslopts->keyStore)
+				free((void*)m->c->sslopts->keyStore);
+			if (m->c->sslopts->privateKey)
+				free((void*)m->c->sslopts->privateKey);
+			if (m->c->sslopts->privateKeyPassword)
+				free((void*)m->c->sslopts->privateKeyPassword);
+			if (m->c->sslopts->enabledCipherSuites)
+				free((void*)m->c->sslopts->enabledCipherSuites);
+			if (m->c->sslopts->struct_version >= 2)
+			{
+				if (m->c->sslopts->CApath)
+					free((void*)m->c->sslopts->CApath);
+			}
+			free(m->c->sslopts);
+#if !__XTENSA__
+			free((void*)m->c->sslopts);
+#endif
+			m->c->sslopts = NULL;
+		}
+#endif
+#endif
 	}
 
 	if (m->serverURI)
@@ -1965,8 +2088,14 @@ static thread_return_type WINAPI MQTTAsync_receiveThread(void* n)
 								{
 									ListElement* cur_qos = NULL;
 									int* element = array = data.alt.qosList = malloc(sub->qoss->count * sizeof(int));
+#if __XTENSA__
+                  if (element) {
+#endif
 									while (ListNextElement(sub->qoss, &cur_qos))
 										*element++ = *(int*)(cur_qos->content);
+#if __XTENSA__
+                  }
+#endif
 								}
 								data.token = command->command.token;
 								Log(TRACE_MIN, -1, "Calling subscribe success for client %s", m->c->clientID);
@@ -2215,6 +2344,12 @@ void Protocol_processPublication(Publish* publish, Clients* client)
 
 	FUNC_ENTRY;
 	mm = malloc(sizeof(MQTTAsync_message));
+#if __XTENSA__
+	if (!mm) {
+		Log(LOG_ERROR, -1, "processPublication: out of memory, could not publish message");
+		return;
+	}
+#endif
 
 	/* If the message is QoS 2, then we have already stored the incoming payload
 	 * in an allocated buffer, so we don't need to copy again.
@@ -2223,8 +2358,20 @@ void Protocol_processPublication(Publish* publish, Clients* client)
 		mm->payload = publish->payload;
 	else
 	{
+#if __XTENSA__
+    if (!publish->payloadlen) {
+      mm->payload=0;
+    }
+    else {
+#endif
 		mm->payload = malloc(publish->payloadlen);
+#if __XTENSA__
+    if (mm->payload)
+#endif
 		memcpy(mm->payload, publish->payload, publish->payloadlen);
+#if __XTENSA__
+    }
+#endif
 	}
 
 	mm->payloadlen = publish->payloadlen;
@@ -2254,6 +2401,9 @@ void Protocol_processPublication(Publish* publish, Clients* client)
 	if (rc == 0) /* if message was not delivered, queue it up */
 	{
 		qEntry* qe = malloc(sizeof(qEntry));
+#if __XTENSA__
+    if (qe) {
+#endif
 		qe->msg = mm;
 		qe->topicName = publish->topic;
 		qe->topicLen = publish->topiclen;
@@ -2261,6 +2411,9 @@ void Protocol_processPublication(Publish* publish, Clients* client)
 #if !defined(NO_PERSISTENCE)
 		if (client->persistence)
 			MQTTPersistence_persistQueueEntry(client, (MQTTPersistence_qEntry*)qe);
+#endif
+#if __XTENSA__
+    }
 #endif
 	}
 	publish->topic = NULL;
@@ -2387,6 +2540,9 @@ int MQTTAsync_connect(MQTTAsync handle, const MQTTAsync_connectOptions* options)
 		const void* source = NULL;
 
 		m->c->will = malloc(sizeof(willMessages));
+#if __XTENSA__
+    if (m->c->will) {
+#endif
 		if (options->will->message || (options->will->struct_version == 1 && options->will->payload.data))
 		{
 			if (options->will->struct_version == 1 && options->will->payload.data)
@@ -2400,6 +2556,9 @@ int MQTTAsync_connect(MQTTAsync handle, const MQTTAsync_connectOptions* options)
 				source = (void*)options->will->message;
 			}
 			m->c->will->payload = malloc(m->c->will->payloadlen);
+#if __XTENSA__
+      if (m->c->will->payload)
+#endif
 			memcpy(m->c->will->payload, source, m->c->will->payloadlen);
 		}
 		else
@@ -2410,6 +2569,9 @@ int MQTTAsync_connect(MQTTAsync handle, const MQTTAsync_connectOptions* options)
 		m->c->will->qos = options->will->qos;
 		m->c->will->retained = options->will->retained;
 		m->c->will->topic = MQTTStrdup(options->will->topicName);
+#if __XTENSA__
+    }
+#endif
 	}
 
 #if defined(OPENSSL)
@@ -2440,6 +2602,9 @@ int MQTTAsync_connect(MQTTAsync handle, const MQTTAsync_connectOptions* options)
 	if (options->struct_version != 0 && options->ssl)
 	{
 		m->c->sslopts = malloc(sizeof(MQTTClient_SSLOptions));
+#if __XTENSA__
+    if (m->c->sslopts) {
+#endif
 		memset(m->c->sslopts, '\0', sizeof(MQTTClient_SSLOptions));
 		m->c->sslopts->struct_version = options->ssl->struct_version;
 		if (options->ssl->trustStore)
@@ -2461,6 +2626,9 @@ int MQTTAsync_connect(MQTTAsync handle, const MQTTAsync_connectOptions* options)
 			if (m->c->sslopts->CApath)
 				m->c->sslopts->CApath = MQTTStrdup(options->ssl->CApath);
 		}
+#if __XTENSA__
+    }
+#endif
 	}
 #else
 	if (options->struct_version != 0 && options->ssl)
@@ -2495,6 +2663,9 @@ int MQTTAsync_connect(MQTTAsync handle, const MQTTAsync_connectOptions* options)
 	{
 		m->c->passwordlen = options->binarypwd.len;
 		m->c->password = malloc(m->c->passwordlen);
+#if __XTENSA__
+    if (m->c->password)
+#endif
 		memcpy((void*)m->c->password, options->binarypwd.data, m->c->passwordlen);
 	}
 
@@ -2510,12 +2681,18 @@ int MQTTAsync_connect(MQTTAsync handle, const MQTTAsync_connectOptions* options)
 
 		m->serverURIcount = options->serverURIcount;
 		m->serverURIs = malloc(options->serverURIcount * sizeof(char*));
+#if __XTENSA__
+    if (m->serverURIs)
+#endif
 		for (i = 0; i < options->serverURIcount; ++i)
 			m->serverURIs[i] = MQTTStrdup(options->serverURIs[i]);
 	}
 
 	/* Add connect request to operation queue */
 	conn = malloc(sizeof(MQTTAsync_queuedCommand));
+#if __XTENSA__
+  if (conn) {
+#endif
 	memset(conn, '\0', sizeof(MQTTAsync_queuedCommand));
 	conn->client = m;
 	if (options)
@@ -2527,6 +2704,9 @@ int MQTTAsync_connect(MQTTAsync handle, const MQTTAsync_connectOptions* options)
 	conn->command.type = CONNECT;
 	conn->command.details.conn.currentURI = 0;
 	rc = MQTTAsync_addCommand(conn, sizeof(conn));
+#if __XTENSA__
+  }
+#endif
 
 exit:
 	FUNC_EXIT_RC(rc);
@@ -2556,6 +2736,9 @@ static int MQTTAsync_disconnect1(MQTTAsync handle, const MQTTAsync_disconnectOpt
 
 	/* Add disconnect request to operation queue */
 	dis = malloc(sizeof(MQTTAsync_queuedCommand));
+#if __XTENSA__
+  if (dis) {
+#endif
 	memset(dis, '\0', sizeof(MQTTAsync_queuedCommand));
 	dis->client = m;
 	if (options)
@@ -2568,6 +2751,9 @@ static int MQTTAsync_disconnect1(MQTTAsync handle, const MQTTAsync_disconnectOpt
 	dis->command.type = DISCONNECT;
 	dis->command.details.dis.internal = internal;
 	rc = MQTTAsync_addCommand(dis, sizeof(dis));
+#if __XTENSA__
+  }
+#endif
 
 exit:
 	FUNC_EXIT_RC(rc);
@@ -2701,6 +2887,9 @@ int MQTTAsync_subscribeMany(MQTTAsync handle, int count, char* const* topic, int
 
 	/* Add subscribe request to operation queue */
 	sub = malloc(sizeof(MQTTAsync_queuedCommand));
+#if __XTENSA__
+  if (sub) {
+#endif
 	memset(sub, '\0', sizeof(MQTTAsync_queuedCommand));
 	sub->client = m;
 	sub->command.token = msgid;
@@ -2717,10 +2906,19 @@ int MQTTAsync_subscribeMany(MQTTAsync handle, int count, char* const* topic, int
 	sub->command.details.sub.qoss = malloc(sizeof(int) * count);
 	for (i = 0; i < count; ++i)
 	{
+#if __XTENSA__
+    if (sub->command.details.sub.topics)
+#endif
 		sub->command.details.sub.topics[i] = MQTTStrdup(topic[i]);
+#if __XTENSA__
+    if (sub->command.details.sub.qoss)
+#endif
 		sub->command.details.sub.qoss[i] = qos[i];
 	}
 	rc = MQTTAsync_addCommand(sub, sizeof(sub));
+#if __XTENSA__
+  }
+#endif
 
 exit:
 	FUNC_EXIT_RC(rc);
@@ -2774,6 +2972,9 @@ int MQTTAsync_unsubscribeMany(MQTTAsync handle, int count, char* const* topic, M
 
 	/* Add unsubscribe request to operation queue */
 	unsub = malloc(sizeof(MQTTAsync_queuedCommand));
+#if __XTENSA__
+  if (unsub) {
+#endif
 	memset(unsub, '\0', sizeof(MQTTAsync_queuedCommand));
 	unsub->client = m;
 	unsub->command.type = UNSUBSCRIBE;
@@ -2788,8 +2989,14 @@ int MQTTAsync_unsubscribeMany(MQTTAsync handle, int count, char* const* topic, M
 	unsub->command.details.unsub.count = count;
 	unsub->command.details.unsub.topics = malloc(sizeof(char*) * count);
 	for (i = 0; i < count; ++i)
+#if __XTENSA__
+    if (unsub->command.details.unsub.topics)
+#endif
 		unsub->command.details.unsub.topics[i] = MQTTStrdup(topic[i]);
 	rc = MQTTAsync_addCommand(unsub, sizeof(unsub));
+#if __XTENSA__
+  }
+#endif
 
 exit:
 	FUNC_EXIT_RC(rc);
@@ -2872,6 +3079,9 @@ int MQTTAsync_send(MQTTAsync handle, const char* destinationName, int payloadlen
 
 	/* Add publish request to operation queue */
 	pub = malloc(sizeof(MQTTAsync_queuedCommand));
+#if __XTENSA__
+  if (pub) {
+#endif
 	memset(pub, '\0', sizeof(MQTTAsync_queuedCommand));
 	pub->client = m;
 	pub->command.type = PUBLISH;
@@ -2886,10 +3096,16 @@ int MQTTAsync_send(MQTTAsync handle, const char* destinationName, int payloadlen
 	pub->command.details.pub.destinationName = MQTTStrdup(destinationName);
 	pub->command.details.pub.payloadlen = payloadlen;
 	pub->command.details.pub.payload = malloc(payloadlen);
+#if __XTENSA__
+  if (pub->command.details.pub.payload)
+#endif
 	memcpy(pub->command.details.pub.payload, payload, payloadlen);
 	pub->command.details.pub.qos = qos;
 	pub->command.details.pub.retained = retained;
 	rc = MQTTAsync_addCommand(pub, sizeof(pub));
+#if __XTENSA__
+  }
+#endif
 
 exit:
 	FUNC_EXIT_RC(rc);
@@ -3199,6 +3415,9 @@ int MQTTAsync_getPendingTokens(MQTTAsync handle, MQTTAsync_token **tokens)
 	if (count == 0)
 		goto exit; /* no tokens to return */
 	*tokens = malloc(sizeof(MQTTAsync_token) * (count + 1));  /* add space for sentinel at end of list */
+#if __XTENSA__
+  if (*tokens) {
+#endif
 
 	/* First add the unprocessed commands to the pending tokens */
 	current = NULL;
@@ -3227,6 +3446,9 @@ int MQTTAsync_getPendingTokens(MQTTAsync handle, MQTTAsync_token **tokens)
 		}
 	}
 	(*tokens)[count] = -1; /* indicate end of list */
+#if __XTENSA__
+  }
+#endif
 
 exit:
 	MQTTAsync_unlock_mutex(mqttasync_mutex);
@@ -3345,13 +3567,10 @@ void MQTTAsync_setTraceCallback(MQTTAsync_traceCallback* callback)
 }
 
 
+#if !__XTENSA__
 MQTTAsync_nameValue* MQTTAsync_getVersionInfo(void)
 {
-#if !__XTENSA__
 	#define MAX_INFO_STRINGS 8
-#else
-    #define MAX_INFO_STRINGS 3
-#endif
 	static MQTTAsync_nameValue libinfo[MAX_INFO_STRINGS + 1];
 	int i = 0;
 
@@ -3364,7 +3583,6 @@ MQTTAsync_nameValue* MQTTAsync_getVersionInfo(void)
 	libinfo[i].name = "Build level";
 	libinfo[i++].value = BUILD_TIMESTAMP;
 #if defined(OPENSSL)
-#if !__XTENSA__
 	libinfo[i].name = "OpenSSL version";
 	libinfo[i++].value = SSLeay_version(SSLEAY_VERSION);
 
@@ -3380,12 +3598,11 @@ MQTTAsync_nameValue* MQTTAsync_getVersionInfo(void)
 	libinfo[i].name = "OpenSSL directory";
 	libinfo[i++].value = SSLeay_version(SSLEAY_DIR);
 #endif
-#endif
 	libinfo[i].name = NULL;
 	libinfo[i].value = NULL;
 	return libinfo;
 }
-
+#endif
 
 const char* MQTTAsync_strerror(int code)
 {

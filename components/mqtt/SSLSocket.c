@@ -65,6 +65,7 @@ extern Sockets s;
 
 int SSLSocket_error(char* aString, SSL* ssl, int sock, int rc);
 char* SSL_get_verify_result_string(int rc);
+#if !__XTENSA__
 void SSL_CTX_info_callback(const SSL* ssl, int where, int ret);
 char* SSLSocket_get_version_string(int version);
 void SSL_CTX_msg_callback(
@@ -73,6 +74,7 @@ void SSL_CTX_msg_callback(
 		int content_type,
 		const void* buf, size_t len,
 		SSL* ssl, void* arg);
+#endif
 int pem_passwd_cb(char* buf, int size, int rwflag, void* userdata);
 int SSL_create_mutex(ssl_mutex_type* mutex);
 int SSL_lock_mutex(ssl_mutex_type* mutex);
@@ -178,12 +180,16 @@ int SSLSocket_error(char* aString, SSL* ssl, int sock, int rc)
     }
     else
     {
+
+#if !__XTENSA__
         static char buf[120];
 
         if (strcmp(aString, "shutdown") != 0)
         	Log(TRACE_MIN, -1, "SSLSocket error %s(%d) in %s for socket %d rc %d errno %d %s\n", buf, error, aString, sock, rc, errno, strerror(errno));
-#if !__XTENSA__
         ERR_print_errors_fp(stderr);
+#else
+        if (strcmp(aString, "shutdown") != 0)
+        	Log(TRACE_MIN, -1, "SSLSocket error %d in %s for socket %d rc %d errno %d %s\n", error, aString, sock, rc, errno, strerror(errno));
 #endif
 		if (error == SSL_ERROR_SSL || error == SSL_ERROR_SYSCALL)
 			error = SSL_FATAL;
@@ -320,7 +326,6 @@ void SSL_CTX_info_callback(const SSL* ssl, int where, int ret)
                    SSL_alert_type_string_long(ret), SSL_alert_desc_string_long(ret));
 	}
 }
-#endif
 
 char* SSLSocket_get_version_string(int version)
 {
@@ -356,17 +361,11 @@ char* SSLSocket_get_version_string(int version)
 
 	if (retstring == NULL)
 	{
-#if !__XTENSA__
 		sprintf(buf, "%i", version);
-#else
-		// avoid using sprintf
-		snprintf(buf, sizeof(buf), "%i", version);
-#endif
 		retstring = buf;
 	}
 	return retstring;
 }
-
 
 void SSL_CTX_msg_callback(int write_p, int version, int content_type, const void* buf, size_t len,
         SSL* ssl, void* arg)
@@ -399,7 +398,7 @@ The user-defined argument optionally defined by SSL_CTX_set_msg_callback_arg() o
 		SSLSocket_get_version_string(version),
 		content_type, (int)len);
 }
-
+#endif
 
 int pem_passwd_cb(char* buf, int size, int rwflag, void* userdata)
 {
@@ -1010,6 +1009,9 @@ int SSLSocket_putdatas(SSL* ssl, int socket, char* buf0, size_t buf0len, int cou
 		iovec.iov_len += (ULONG)buflens[i];
 
 	ptr = iovec.iov_base = (char *)malloc(iovec.iov_len);
+#if __XTENSA__
+  if (ptr) {
+#endif
 	memcpy(ptr, buf0, buf0len);
 	ptr += buf0len;
 	for (i = 0; i < count; i++)
@@ -1060,6 +1062,9 @@ int SSLSocket_putdatas(SSL* ssl, int socket, char* buf0, size_t buf0len, int cou
 		    }
 		}	
 	}
+#if __XTENSA__
+  }
+#endif
 	FUNC_EXIT_RC(rc);
 	return rc;
 }
@@ -1072,8 +1077,14 @@ void SSLSocket_addPendingRead(int sock)
 	if (ListFindItem(&pending_reads, &sock, intcompare) == NULL) /* make sure we don't add the same socket twice */
 	{
 		int* psock = (int*)malloc(sizeof(sock));
+#if __XTENSA__
+    if (psock) {
+#endif
 		*psock = sock;
 		ListAppend(&pending_reads, psock, sizeof(sock));
+#if __XTENSA__
+    }
+#endif
 	}
 	else
 		Log(TRACE_MIN, -1, "SSLSocket_addPendingRead: socket %d already in the list", sock);
