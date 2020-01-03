@@ -297,7 +297,7 @@ static int lcpu_backtrace(lua_State *L) {
     for (uint32_t idx = 0; idx < MAX_BACKTRACE && idx < backtrace_count; idx++) {
         if (bPrint) printf(" 0x%08x:0x%08x", backtrace_pc[idx], backtrace_sp[idx]);
 
-        lua_pushnumber(L, idx); //row index
+        lua_pushnumber(L, idx+1); //row index starts from 1
         lua_newtable(L);
 
         lua_pushinteger(L, backtrace_pc[idx]);
