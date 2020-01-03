@@ -7,10 +7,39 @@ index 064cc0608..ae0cd696e 100644
  COMPONENT_PRIV_INCLUDEDIRS := private_include
 +COMPONENT_SRCDIRS := .
 diff --git a/components/mdns/mdns.c b/components/mdns/mdns.c
-index f5d337a32..b6d2787b2 100644
+index 0f52ecf8e..fbd8a44a5 100644
 --- a/components/mdns/mdns.c
 +++ b/components/mdns/mdns.c
-@@ -1220,7 +1220,7 @@ static void _mdns_create_answer_from_parsed_packet(mdns_parsed_packet_t * parsed
+@@ -26,6 +26,10 @@ static const char * MDNS_DEFAULT_DOMAIN = "local";
+ static const char * MDNS_SUB_STR = "_sub";
+ 
+ mdns_server_t * _mdns_server = NULL;
++static uint8_t * _packet = NULL;
++static mdns_name_t * _n = NULL;
++static char * _buf_append = NULL;
++static char * _buf_parse = NULL;
+ 
+ static const char *TAG = "MDNS";
+ 
+@@ -370,7 +374,7 @@ static uint16_t _mdns_append_fqdn(uint8_t * packet, uint16_t * index, const char
+         return _mdns_append_u8(packet, index, 0);
+     }
+     mdns_name_t name;
+-    static char buf[MDNS_NAME_BUF_LEN];
++    char * buf = _buf_append;
+     uint8_t len = strlen(strings[0]);
+     //try to find first the string length in the packet (if it exists)
+     uint8_t * len_location = (uint8_t *)memchr(packet, (char)len, *index);
+@@ -908,7 +912,7 @@ static uint8_t _mdns_append_answer(uint8_t * packet, uint16_t * index, mdns_out_
+  */
+ static void _mdns_dispatch_tx_packet(mdns_tx_packet_t * p)
+ {
+-    static uint8_t packet[MDNS_MAX_PACKET_SIZE];
++    uint8_t * packet = _packet;
+     uint16_t index = MDNS_HEAD_LEN;
+     memset(packet, 0, MDNS_HEAD_LEN);
+     mdns_out_question_t * q;
+@@ -1234,7 +1238,7 @@ static void _mdns_create_answer_from_parsed_packet(mdns_parsed_packet_t * parsed
                  }
              } else if (q->type == MDNS_TYPE_SDPTR) {
                  shared = true;
@@ -19,7 +48,33 @@ index f5d337a32..b6d2787b2 100644
                      _mdns_free_tx_packet(packet);
                      return;
                  }
-@@ -2988,7 +2988,7 @@ void _mdns_handle_system_event(system_event_id_t event, tcpip_adapter_if_t inter
+@@ -2316,7 +2320,7 @@ static const uint8_t * _mdns_parse_fqdn(const uint8_t * packet, const uint8_t *
+     name->proto[0] = 0;
+     name->domain[0] = 0;
+ 
+-    static char buf[MDNS_NAME_BUF_LEN];
++    char * buf = _buf_parse;
+ 
+     const uint8_t * next_data = (uint8_t*)_mdns_read_fqdn(packet, start, name, buf);
+     if (!next_data) {
+@@ -2548,7 +2552,6 @@ static esp_err_t _mdns_strdup_check(char ** out, char * in)
+  */
+ void mdns_parse_packet(mdns_rx_packet_t * packet)
+ {
+-    static mdns_name_t n;
+     mdns_header_t header;
+     const uint8_t * data = (const uint8_t*)packet->pb->payload;
+     size_t len = packet->pb->len;
+@@ -2573,7 +2576,7 @@ void mdns_parse_packet(mdns_rx_packet_t * packet)
+     }
+     memset(parsed_packet, 0, sizeof(mdns_parsed_packet_t));
+ 
+-    mdns_name_t * name = &n;
++    mdns_name_t * name = _n;
+     memset(name, 0, sizeof(mdns_name_t));
+ 
+     header.id = _mdns_read_u16(data, MDNS_HEAD_ID_OFFSET);
+@@ -3065,7 +3068,7 @@ void _mdns_handle_system_event(system_event_id_t event, tcpip_adapter_if_t inter
          break;
      case SYSTEM_EVENT_STA_GOT_IP:
          _mdns_enable_pcb(TCPIP_ADAPTER_IF_STA, MDNS_IP_PROTOCOL_V4);
@@ -28,7 +83,7 @@ index f5d337a32..b6d2787b2 100644
          break;
      case SYSTEM_EVENT_STA_DISCONNECTED:
          _mdns_disable_pcb(TCPIP_ADAPTER_IF_STA, MDNS_IP_PROTOCOL_V4);
-@@ -2996,6 +2996,7 @@ void _mdns_handle_system_event(system_event_id_t event, tcpip_adapter_if_t inter
+@@ -3073,6 +3076,7 @@ void _mdns_handle_system_event(system_event_id_t event, tcpip_adapter_if_t inter
          break;
      case SYSTEM_EVENT_AP_START:
          _mdns_enable_pcb(TCPIP_ADAPTER_IF_AP, MDNS_IP_PROTOCOL_V4);
@@ -36,7 +91,7 @@ index f5d337a32..b6d2787b2 100644
          break;
      case SYSTEM_EVENT_AP_STOP:
          _mdns_disable_pcb(TCPIP_ADAPTER_IF_AP, MDNS_IP_PROTOCOL_V4);
-@@ -3003,7 +3004,7 @@ void _mdns_handle_system_event(system_event_id_t event, tcpip_adapter_if_t inter
+@@ -3080,7 +3084,7 @@ void _mdns_handle_system_event(system_event_id_t event, tcpip_adapter_if_t inter
          break;
      case SYSTEM_EVENT_GOT_IP6:
          _mdns_enable_pcb(interface, MDNS_IP_PROTOCOL_V6);
@@ -45,7 +100,7 @@ index f5d337a32..b6d2787b2 100644
          break;
      case SYSTEM_EVENT_ETH_CONNECTED:
          if (!tcpip_adapter_dhcpc_get_status(TCPIP_ADAPTER_IF_ETH, &dcst)) {
-@@ -3014,6 +3015,7 @@ void _mdns_handle_system_event(system_event_id_t event, tcpip_adapter_if_t inter
+@@ -3091,6 +3095,7 @@ void _mdns_handle_system_event(system_event_id_t event, tcpip_adapter_if_t inter
          break;
      case SYSTEM_EVENT_ETH_GOT_IP:
          _mdns_enable_pcb(TCPIP_ADAPTER_IF_ETH, MDNS_IP_PROTOCOL_V4);
@@ -53,3 +108,81 @@ index f5d337a32..b6d2787b2 100644
          break;
      case SYSTEM_EVENT_ETH_DISCONNECTED:
          _mdns_disable_pcb(TCPIP_ADAPTER_IF_ETH, MDNS_IP_PROTOCOL_V4);
+@@ -4125,10 +4130,42 @@ esp_err_t mdns_init()
+         return err;
+     }
+ 
++    if (!_packet) {
++        _packet = calloc(MDNS_MAX_PACKET_SIZE, sizeof(uint8_t));
++        if (!_packet) {
++            HOOK_MALLOC_FAILED;
++            return ESP_ERR_NO_MEM;
++        }
++    }
++
++    if (!_n) {
++        _n = calloc(1, sizeof(mdns_name_t));
++        if (!_n) {
++            HOOK_MALLOC_FAILED;
++            goto free_packet;
++        }
++    }
++
++    if (!_buf_append) {
++        _buf_append = calloc(MDNS_NAME_BUF_LEN, sizeof(char));
++        if (!_buf_append) {
++            HOOK_MALLOC_FAILED;
++            goto free_name;
++        }
++    }
++
++    if (!_buf_parse) {
++        _buf_parse = calloc(MDNS_NAME_BUF_LEN, sizeof(char));
++        if (!_buf_parse) {
++            HOOK_MALLOC_FAILED;
++            goto free_append;
++        }
++    }
++
+     _mdns_server = (mdns_server_t *)malloc(sizeof(mdns_server_t));
+     if (!_mdns_server) {
+         HOOK_MALLOC_FAILED;
+-        return ESP_ERR_NO_MEM;
++        goto free_parse;
+     }
+     memset((uint8_t*)_mdns_server, 0, sizeof(mdns_server_t));
+ 
+@@ -4176,6 +4213,18 @@ free_lock:
+ free_server:
+     free(_mdns_server);
+     _mdns_server = NULL;
++free_parse:
++    free(_buf_parse);
++    _buf_parse = NULL;
++free_append:
++    free(_buf_append);
++    _buf_append = NULL;
++free_name:
++    free(_n);
++    _n = NULL;
++free_packet:
++    free(_packet);
++    _packet = NULL;
+     return err;
+ }
+ 
+@@ -4217,6 +4266,14 @@ void mdns_free()
+     vSemaphoreDelete(_mdns_server->lock);
+     free(_mdns_server);
+     _mdns_server = NULL;
++    free(_n);
++    _n = NULL;
++    free(_packet);
++    _packet = NULL;
++    free(_buf_append);
++    _buf_append = NULL;
++    free(_buf_parse);
++    _buf_parse = NULL;
+ }
+ 
+ esp_err_t mdns_hostname_set(const char * hostname)
