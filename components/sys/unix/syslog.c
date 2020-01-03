@@ -226,7 +226,7 @@ vsyslog(pri, fmt, ap)
 }
 
 #if CONFIG_LUA_RTOS_USE_RSYSLOG
-static int syslog_logging_vprintf( const char *str, va_list l ) {
+static int rsyslog_vprintf( const char *str, va_list l ) {
 	// Allocate space
 	char* tbuf = (char *)malloc(MAX_BUFF+1);
 	if (tbuf) {
@@ -293,7 +293,7 @@ static void reconnect_syslog() {
 					int reuse = 1;
 					setsockopt(logSock,SOL_SOCKET,SO_REUSEADDR,(void *)&reuse,sizeof(reuse));
 
-					esp_log_set_vprintf(syslog_logging_vprintf);
+					esp_log_set_vprintf(rsyslog_vprintf);
 				}
 			}
 		}
