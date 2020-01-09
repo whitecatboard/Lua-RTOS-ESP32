@@ -83,6 +83,7 @@ static struct mtx stepper_mutex;
 timg_dev_t *stepper_timerg;        // Timer group
 int stepper_timeri;                // Timer unit into timer group
 static uint32_t start;             // Start stepper mask (1 = started, 0 = not started)
+static uint8_t timer_inited;
 
 /*
  * Helper functions
@@ -222,6 +223,10 @@ static void IRAM_ATTR stepper_isr(void *arg) {
 }
 
 static void stepper_setup_timer(int timer_group, int timer_idx) {
+	if (timer_inited) {
+		return;
+	}
+
     stepper_timeri = timer_idx;
 
     if (timer_group == 0) {
@@ -234,7 +239,7 @@ static void stepper_setup_timer(int timer_group, int timer_idx) {
     config.alarm_en = 1;
     config.auto_reload = 1;
     config.counter_dir = TIMER_COUNT_UP;
-    config.divider = 1;
+    config.divider = 80; /*!< decrement every 1 usec */
     config.intr_type = TIMER_INTR_LEVEL;
     config.counter_en = TIMER_PAUSE;
 
@@ -246,7 +251,7 @@ static void stepper_setup_timer(int timer_group, int timer_idx) {
     timer_set_counter_value(timer_group, timer_idx, 0x00000000ULL);
     /*Set alarm value*/
 
-    timer_set_alarm_value(timer_group, timer_idx,  ((TIMER_BASE_CLK / STEPPER_HZ) / 2) - STEPPER_TIMER_ADJ);
+    timer_set_alarm_value(timer_group, timer_idx,  ((1.0 / (float)STEPPER_HZ) * 1000000.0));
 
     /*Enable timer interrupt*/
     timer_enable_intr(timer_group, timer_idx);
@@ -254,6 +259,8 @@ static void stepper_setup_timer(int timer_group, int timer_idx) {
     timer_isr_register(timer_group, timer_idx, stepper_isr, (void*) timer_idx, ESP_INTR_FLAG_IRAM, NULL);
     /*Start timer counter*/
     timer_start(timer_group, timer_idx);
+
+    timer_inited = 1;
 }
 
 /*
@@ -388,11 +395,36 @@ void stepper_start(int mask) {
     start |= mask;
     portENABLE_INTERRUPTS();
 
-    // This lock blocks the calling thread
-    // Loc is released in the ISR when movement is done
+	// This lock blocks the calling thread
+	// Loc is released in the ISR when movement is done
 	mtx_lock(&stepper_mutex);
 
 	mtx_unlock(&stepper_mutex);
+}
+
+void stepper_stop(int mask) {
+	portDISABLE_INTERRUPTS();
+
+	if (mask == 0xffffffff) {
+		// Stop timer
+		timer_pause(TIMER_GROUP_0, TIMER_1);
+
+		// As timer is not running, all steppers are now stopped
+
+		// Update start mask, no steppers running
+		start = 0;
+
+		// Start timer again
+	    timer_start(TIMER_GROUP_0, TIMER_1);
+	} else {
+		start &= ~mask;
+	}
+
+	if (start == 0) {
+		mtx_unlock(&stepper_mutex);
+	}
+
+    portENABLE_INTERRUPTS();
 }
 
 #endif

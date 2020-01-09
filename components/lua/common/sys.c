@@ -69,7 +69,7 @@ lua_callback_t *luaS_callback_create(lua_State *L, int index) {
     int argref = LUA_REFNIL;
 
     if (lua_gettop(L) == index + 1) {
-    	// Callback has argument
+        // Callback has argument
         lua_pushvalue(L, index + 1);
         argref = luaL_ref(L, LUA_REGISTRYINDEX);
     }
@@ -106,10 +106,10 @@ lua_State *luaS_callback_state(lua_callback_t *callback) {
 }
 
 int luaS_callback_call_return(lua_callback_t *callback, int args, int rets) {
-	if (callback->arg != LUA_REFNIL) {
-		args++;
-		lua_rawgeti(callback->TL, LUA_REGISTRYINDEX, callback->arg );
-	}
+    if (callback->arg != LUA_REFNIL) {
+        args++;
+        lua_rawgeti(callback->TL, LUA_REGISTRYINDEX, callback->arg );
+    }
 
     int rc = lua_pcall(callback->TL, args, rets, 0);
 

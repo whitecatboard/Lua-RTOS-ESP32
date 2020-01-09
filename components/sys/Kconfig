@@ -408,7 +408,7 @@ menu "Lua RTOS"
                     Task priority assigned to SSH thread.
 
             config LUA_RTOS_SSH_SERVER_TASK_CPU
-                depends on !FREERTOS_UNICORE
+                depends on !FREERTOS_UNICORE && LUA_RTOS_USE_SSH_SERVER
                 int "SSH task CPU affinity"
                 range 0 1
                 default 1
@@ -432,7 +432,7 @@ menu "Lua RTOS"
                     Task priority assigned to SSH thread.
 
             config LUA_RTOS_SSH_SHELL_TASK_CPU
-                depends on !FREERTOS_UNICORE
+                depends on !FREERTOS_UNICORE && LUA_RTOS_USE_SSH_SERVER
                 int "SSH task CPU affinity"
                 range 0 1
                 default 1
@@ -486,7 +486,7 @@ menu "Lua RTOS"
                     Task priority assigned to HTTP thread.
 
             config LUA_RTOS_HTTP_SERVER_TASK_CPU
-                depends on !FREERTOS_UNICORE
+                depends on !FREERTOS_UNICORE && LUA_RTOS_USE_HTTP_SERVER
                 int "HTTP task CPU affinity"
                 range 0 1
                 default 1
@@ -547,7 +547,7 @@ menu "Lua RTOS"
                     Task priority assigned to TELNET thread.
 
             config LUA_RTOS_TELNET_SERVER_TASK_CPU
-                depends on !FREERTOS_UNICORE
+                depends on !FREERTOS_UNICORE && LUA_RTOS_USE_TELNET_SERVER
                 int "TELNET task CPU affinity"
                 range 0 1
                 default 1
@@ -1602,6 +1602,10 @@ menu "Lua RTOS"
 
             config LUA_RTOS_LUA_USE_CRC
                bool "Include crc module in build"
+               default y
+
+            config LUA_RTOS_LUA_USE_MD5
+               bool "Include md5 module in build"
                default y
          endmenu
 

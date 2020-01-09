@@ -53,6 +53,7 @@ typedef struct {
     lua_State *TL; // Callback Lua thread
     int callback;  // Callback reference (in parent thread)
     int lthread;   // Lua thread reference (in parent thread)
+    int arg;       // Argument reference (in parent thread)
 } lua_callback_t;
 
 /**

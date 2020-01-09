@@ -43,8 +43,15 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/mount.h>
+#include <sys/luartos.h>
 
 #include "sys/console.h"
+
+
+#if LUA_USE_ROTABLE
+static int auto_indent = 1;
+static int edit_saved = 0;
+#endif
 
 #ifdef SANOS
 #include <os.h>
@@ -1430,6 +1437,9 @@ void newline(struct editor *ed) {
   ed->line++;
   p = ed->linepos;
   ed->linepos = next_line(ed, ed->linepos);
+#if LUA_USE_ROTABLE
+  if (1 == auto_indent) {
+#endif
   for (;;) {
     ch = get(ed, p++);
     if (ch == ' ' || ch == '\t') {
@@ -1439,6 +1449,9 @@ void newline(struct editor *ed) {
       break;
     }
   }
+#if LUA_USE_ROTABLE
+  }
+#endif
   ed->lastcol = ed->col;
   
   ed->refresh = 1;
@@ -1719,6 +1732,12 @@ void read_from_stdin(struct editor *ed) {
 void save_editor(struct editor *ed) {
   int rc;
   
+#if LUA_USE_ROTABLE
+  // even if the editor wasn't dirty, the user would expect the file
+  // to exist after pressing CTRL+S then CTRL+Q
+  edit_saved = 1;
+#endif
+
   if (!ed->dirty && !ed->newfile) return;
   
   if (ed->newfile) {
@@ -1930,8 +1949,13 @@ void help(struct editor *ed) {
   outstr("<backspace>  Delete previous character    Ctrl+F  Find text\r\n");
   outstr("<delete>     Delete current character     Ctrl+G  Find next\r\n"); 
   outstr("Ctrl+<tab>   Next editor                  Ctrl+L  Goto line\r\n");
+#if LUA_USE_ROTABLE
+  outstr("<tab>        Indent selection             Ctrl+T  Toggle auto-indent\r\n");
+  outstr("Shift+<tab>  Unindent selection           Ctrl+Y Help\r\n");
+#else
   outstr("<tab>        Indent selection             Ctrl+Y  Help\r\n");
   outstr("Shift+<tab>  Unindent selection\r\n");
+#endif
   outstr("\r\n(*) Extends selection if combined with Shift");
   outstr("\r\nPress any key to continue...");
   fflush(stdout);
@@ -1989,6 +2013,8 @@ void edit(struct editor *ed) {
         case ctrl('y'): help(ed); break;
         case ctrl('t'): top(ed, 0); break;
         case ctrl('b'): bottom(ed, 0); break;
+#elif LUA_USE_ROTABLE
+        case ctrl('t'): auto_indent = !auto_indent; break;
 #endif
 
         case KEY_UP: up(ed, 0); break;
@@ -2066,6 +2092,10 @@ int edit_main(int argc, char *argv[]) {
 #ifdef SANOS
   struct term *term;
 #endif
+#if LUA_USE_ROTABLE
+  auto_indent = 1;
+  edit_saved = 0;
+#endif
 
   memset(&env, 0, sizeof(env));
   for (i = 1; i < argc; i++) {
@@ -2131,5 +2161,5 @@ int edit_main(int argc, char *argv[]) {
 
   setbuf(stdout, NULL);
   //sigprocmask(SIG_SETMASK, &orig_sigmask, NULL);
-  return 0;
+  return (edit_saved>0 ? 0:1);
 }

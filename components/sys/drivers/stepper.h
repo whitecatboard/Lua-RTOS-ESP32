@@ -86,12 +86,10 @@
 #define NSTEP 8
 
 // Stepper base timer frequency
-#define STEPPER_HZ 100000
+#define STEPPER_HZ 200000
 
 // Stepper clock pulse in microseconds
-#define STEPPER_CLOCK_PULSE 10
-
-#define STEPPER_TIMER_ADJ 5
+#define STEPPER_CLOCK_PULSE 2
 
 typedef struct {
 	uint8_t  setup;         // Is this unit setup?
@@ -127,5 +125,6 @@ extern const int stepper_error_map;
 driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, uint8_t *unit);
 driver_error_t *stepper_move(uint8_t unit, uint8_t dir, uint32_t steps, uint32_t ramp, double ifreq, double efreq);
 void stepper_start(int mask);
+void stepper_stop(int mask);
 
 #endif /* _STEPPER_H_ */

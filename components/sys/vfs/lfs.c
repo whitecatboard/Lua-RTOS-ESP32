@@ -935,4 +935,15 @@ int vfs_lfs_format(const char *target) {
     return -1;
 }
 
+int vfs_lfs_fsstat(const char *target, u32_t *total, u32_t *used) {
+
+    int err = lfs_info(&lfs, total, used);
+    if (err != 0) {
+        syslog(LOG_ERR, "lfs get fs info of '%s' (%i)", target, err);
+        return -1;
+    }
+
+    return 0;
+}
+
 #endif

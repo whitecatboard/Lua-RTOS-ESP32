@@ -2564,3 +2564,29 @@ int lfs_deorphan(lfs_t *lfs) {
 
     return 0;
 }
+
+static int lfs_statvfs_count(void *p, lfs_block_t b)
+{
+    *(lfs_size_t *)p += 1;
+    return 0;
+}
+
+int lfs_info(lfs_t *lfs, uint32_t *total, uint32_t *used)
+{
+    lfs_size_t in_use = 0;
+    int err = lfs_traverse(lfs, lfs_statvfs_count, &in_use);
+    if (err) {
+        LFS_ERROR("lfs_info got error %d", err);
+        return err;
+    }
+
+    if (total) {
+      *total = lfs->cfg->block_count * lfs->cfg->block_size;
+    }
+
+    if (used) {
+      *used = in_use * lfs->cfg->block_size;
+    }
+
+    return 0;
+}
