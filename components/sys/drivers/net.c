@@ -58,6 +58,7 @@
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
 #include "esp_image_format.h"
+#include <esp_task_wdt.h>
 
 #if CONFIG_LUA_RTOS_LUA_USE_MDNS
 #include <mdns.h>
@@ -105,7 +106,7 @@ DRIVER_REGISTER_END(NET,net,0,NULL,NULL);
 EventGroupHandle_t netEvent;
 
 // Retries for connect
-static uint8_t retries = 0;
+static uint8_t connect_retries = 0;
 
 // Event callbacks
 static net_event_register_callback_t callback[MAX_NET_EVENT_CALLBACKS] = {0};
@@ -126,8 +127,8 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
         // STA events
         case SYSTEM_EVENT_STA_START: // ESP32 station start
-        		status_set(0x00000000, STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP);
-        		esp_wifi_connect();
+            status_set(0x00000000, STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP);
+            esp_wifi_connect();
             break;
 
         case SYSTEM_EVENT_STA_STOP: // ESP32 station stop
@@ -140,24 +141,24 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
             break;
 
         case SYSTEM_EVENT_STA_DISCONNECTED: // ESP32 station disconnected from AP */
-			if (status_get(STATUS_WIFI_SYNC) && (retries > WIFI_CONNECT_RETRIES)) {
-			    bits |= evWIFI_CANT_CONNECT;
+            if (status_get(STATUS_WIFI_SYNC) && (connect_retries > WIFI_CONNECT_RETRIES)) {
+                bits |= evWIFI_CANT_CONNECT;
                 status_set(0x00000000, STATUS_WIFI_CONNECTED);
-				retries = 0;
-			} else {
+                connect_retries = 0;
+            } else {
                 status_set(0x00000000, STATUS_WIFI_CONNECTED);
-	            if (status_get(STATUS_WIFI_STARTED)) {
-	                if (status_get(STATUS_WIFI_SYNC)) {
-	                    retries++;
-	                }
-	                delay(200);
-	                esp_wifi_connect();
-	            }
-			}
+                if (status_get(STATUS_WIFI_STARTED)) {
+                    if (status_get(STATUS_WIFI_SYNC)) {
+                        connect_retries++;
+                    }
+                    delay(200);
+                    esp_wifi_connect();
+                }
+            }
             break;
 
         case SYSTEM_EVENT_STA_GOT_IP: // ESP32 station got IP from connected AP
-        		status_set(STATUS_WIFI_HAS_IP, 0x00000000);
+            status_set(STATUS_WIFI_HAS_IP, 0x00000000);
             bits |= evWIFI_CONNECTED;
             break;
 
@@ -284,7 +285,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
  */
 driver_error_t *net_init() {
     if (!status_get(STATUS_TCPIP_INITED)) {
-        retries = 0;
+        connect_retries = 0;
 
         netEvent = xEventGroupCreate();
 
@@ -307,10 +308,13 @@ driver_error_t *net_check_connectivity() {
 }
 
 driver_error_t *net_lookup(const char *name, int port, struct sockaddr_in *address) {
-    driver_error_t *error;
     int rc = 0;
+    int lookup_retries = 0;
 
-    if ((error = net_check_connectivity())) return error;
+retry:
+    if (!wait_for_network(20000)) {
+        return driver_error(NET_DRIVER, NET_ERR_NOT_AVAILABLE,NULL);
+    }
 
     sa_family_t family = AF_INET;
     struct addrinfo *result = NULL;
@@ -334,6 +338,12 @@ driver_error_t *net_lookup(const char *name, int port, struct sockaddr_in *addre
 
         freeaddrinfo(result);
     } else {
+        lookup_retries++;
+        if (lookup_retries < 4) {
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+            goto retry;
+        }
+
         return driver_error(NET_DRIVER, NET_ERR_NAME_CANNOT_BE_RESOLVED,NULL);
     }
 
@@ -386,8 +396,8 @@ int network_started() {
 
 int wait_for_network_init(uint32_t timeout) {
     while ((timeout > 0) && (!status_get(STATUS_TCPIP_INITED))) {
-    		vTaskDelay(1/portTICK_PERIOD_MS);
-    		timeout--;
+        vTaskDelay(1/portTICK_PERIOD_MS);
+        timeout--;
     }
 
     return status_get(STATUS_TCPIP_INITED);
@@ -403,24 +413,30 @@ int wait_for_network(uint32_t timeout) {
 
     }
 
+    uint32_t elapsed = 0;
+    while ((!status_get(STATUS_TCPIP_INITED)) && (elapsed < timeout)) {
+        delay(1);
+        elapsed++;
+    }
+
+    if (!status_get(STATUS_TCPIP_INITED)) {
+        return 0;
+    }
+
     if (!NETWORK_AVAILABLE()) {
-        if (status_get(STATUS_WIFI_STARTED) | status_get(STATUS_SPI_ETH_STARTED) | status_get(STATUS_ETH_STARTED)) {
-            EventBits_t uxBits = xEventGroupWaitBits(
-                    netEvent,
-                    evWIFI_CONNECTED | evWIFI_CANT_CONNECT |
-                    evSPI_ETH_CONNECTED | evSPI_ETH_CANT_CONNECT |
-                    evETH_CONNECTED | evETH_CANT_CONNECT,
-                    pdTRUE, pdFALSE, ticks_to_wait
-            );
+        EventBits_t uxBits = xEventGroupWaitBits(
+                netEvent,
+                evWIFI_CONNECTED | evWIFI_CANT_CONNECT |
+                evSPI_ETH_CONNECTED | evSPI_ETH_CANT_CONNECT |
+                evETH_CONNECTED | evETH_CANT_CONNECT,
+                pdTRUE, pdFALSE, ticks_to_wait
+        );
 
-            if (uxBits & (evWIFI_CONNECTED | evSPI_ETH_CONNECTED | evETH_CONNECTED)) {
-                return 1;
-            }
+        if (uxBits & (evWIFI_CONNECTED | evSPI_ETH_CONNECTED | evETH_CONNECTED)) {
+            return 1;
+        }
 
-            if (uxBits & (evWIFI_CANT_CONNECT | evSPI_ETH_CANT_CONNECT | evETH_CANT_CONNECT)) {
-                return 0;
-            }
-        } else {
+        if (uxBits & (evWIFI_CANT_CONNECT | evSPI_ETH_CANT_CONNECT | evETH_CANT_CONNECT)) {
             return 0;
         }
     }
@@ -435,7 +451,6 @@ driver_error_t *net_ota(const char *server, const char *project, int verify, int
     net_http_response_t response;
     esp_ota_handle_t update_handle = 0 ;
     uint8_t buffer[1024];
-    char *firmware;
     esp_err_t err;
 
     const esp_partition_t *running = esp_ota_get_running_partition();
@@ -455,33 +470,15 @@ driver_error_t *net_ota(const char *server, const char *project, int verify, int
 
     printf("Current firmware commit is %s\r\n", BUILD_COMMIT);
 
-    firmware = calloc(1, 3 + strlen(CONFIG_LUA_RTOS_BOARD_BRAND) + strlen(LUA_RTOS_BOARD) + strlen(CONFIG_LUA_RTOS_BOARD_SUBTYPE));
-    if (!firmware) {
-        return driver_error(NET_DRIVER, NET_ERR_NOT_ENOUGH_MEMORY,NULL);
-    }
-
-    if (strlen(CONFIG_LUA_RTOS_BOARD_BRAND) > 0) {
-        firmware = strcat(firmware, CONFIG_LUA_RTOS_BOARD_BRAND);
-        firmware = strcat(firmware, "-");
-    }
-
-    firmware = strcat(firmware, LUA_RTOS_BOARD);
-
-    if (strlen(CONFIG_LUA_RTOS_BOARD_SUBTYPE) > 0) {
-        firmware = strcat(firmware, "-");
-        firmware = strcat(firmware, CONFIG_LUA_RTOS_BOARD_SUBTYPE);
-    }
-
     if (NULL != project) {
-        snprintf((char *)buffer, sizeof(buffer), "/?firmware=%s&commit=%s&project=%s", firmware, BUILD_COMMIT, project);
+        snprintf((char *)buffer, sizeof(buffer), "/?firmware=%s&commit=%s&project=%s", CONFIG_LUA_RTOS_FIRMWARE, BUILD_COMMIT, project);
     }
     else {
-        snprintf((char *)buffer, sizeof(buffer), "/?firmware=%s&commit=%s", firmware, BUILD_COMMIT);
+        snprintf((char *)buffer, sizeof(buffer), "/?firmware=%s&commit=%s", CONFIG_LUA_RTOS_FIRMWARE, BUILD_COMMIT);
     }
 
-    free(firmware);
-
-    if ((error = net_http_get(&client, (const char *)buffer, &response))) {
+    if ((error = net_http_get(&client, (const char *)buffer, "application/octet-stream", &response))) {
+        net_http_destroy_client(&client);
         return error;
     }
 
@@ -499,10 +496,13 @@ driver_error_t *net_ota(const char *server, const char *project, int verify, int
 
         float total = (float)response.size;
 
+        esp_task_wdt_reset();
+
         printf("Starting OTA update, downloading partition image with %.2f MB\r\n", (total/(1024.0*1024.0)) );
         err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
         if (err != ESP_OK) {
             printf("OTA update failed, error %d\r\n", err);
+            net_http_destroy_client(&client);
             return NULL;
         }
 
@@ -510,15 +510,19 @@ driver_error_t *net_ota(const char *server, const char *project, int verify, int
 
         while (response.size > 0){
             if ((error = net_http_read_response(&response, buffer, sizeof(buffer)))) {
+                net_http_destroy_client(&client);
                 return error;
             }
 
             err = esp_ota_write(update_handle, buffer, response.len);
             if (err != ESP_OK) {
                 printf("\nError while writing chunk to 0x%08x, error %d\r\n", address, err);
+                net_http_destroy_client(&client);
                 return NULL;
             } else {
-                printf("\rWriting chunk at 0x%08x... (%i %%)", address, (int)(((float)(address-update_partition->address))/total*100) );
+                int pct = (int)(((float)(address-update_partition->address))/total*100);
+                if (0 == pct%10) esp_task_wdt_reset();
+                printf("\rWriting chunk at 0x%08x... (%i %%)", address, pct);
             }
 
             address = address + response.len;
@@ -526,18 +530,24 @@ driver_error_t *net_ota(const char *server, const char *project, int verify, int
 
         printf("\rWriting chunk at 0x%08x... (%i %%)\r\n", address, 100 );
 
+        esp_task_wdt_reset();
+
         if (esp_ota_end(update_handle) != ESP_OK) {
             printf("OTA transfer complete, update failed\r\n");
+            net_http_destroy_client(&client);
             return NULL;
         }
     } else if (response.code == 470) {
         printf("Missing or bad arguments\r\n");
+        net_http_destroy_client(&client);
         return NULL;
     } else if (response.code == 471) {
         printf("No new firmware available\r\n");
+        net_http_destroy_client(&client);
         return NULL;
     } else {
         printf("Unexpected error, response code %i, size %i\r\n", response.code, response.size);
+        net_http_destroy_client(&client);
         return NULL;
     }
 
