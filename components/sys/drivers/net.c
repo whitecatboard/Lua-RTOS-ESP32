@@ -56,6 +56,7 @@
 #include "esp_event.h"
 #include "esp_event_loop.h"
 #include "esp_ota_ops.h"
+#include <esp_task_wdt.h>
 
 #if CONFIG_LUA_RTOS_LUA_USE_MDNS
 #include <mdns.h>
