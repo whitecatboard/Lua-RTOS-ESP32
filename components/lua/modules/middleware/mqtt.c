@@ -107,6 +107,7 @@ typedef struct {
     char *topic;              // Subscribed topic
     int qos;                  // QOS
     int subscribed;           // Topic is subscribed to broker?
+    void *luafunc;            // For comparison *only*
     lua_callback_t *callback; // Lua callback, called when a message is received on topic
     void *next;               // Next subscribed topic
 } mqtt_subs;
@@ -269,8 +270,19 @@ static int topic_matches_sub(const char *sub, const char *topic) {
 // Add a topic to the subscription list, and subscribe the topic to the broker if client is
 // connected. Also, a Lua callback is linked with the topic.
 static int add_subs(lua_State *L, int index, mqtt_userdata *mqtt, const char *topic, int qos) {
+
+    // make sure that the exact same callback has not yet been added
+    void *luafunc = (void*)lua_topointer(L, index);
+    mqtt_subs *subs = mqtt->subs;
+    while (subs) {
+        if (subs->qos == qos && 0 == strcmp(subs->topic, topic) && subs->luafunc == luafunc) {
+            return 0; //return zero to indicate all is good
+        }
+        subs = subs->next;
+    }
+
     // Create and populate subscription structure
-    mqtt_subs *subs = (mqtt_subs *)calloc(1, sizeof(mqtt_subs));
+    subs = (mqtt_subs *)calloc(1, sizeof(mqtt_subs));
     if (!subs) {
         return luaL_exception_extended(L, LUA_MQTT_ERR_NOT_ENOUGH_MEMORY, NULL);
     }
@@ -278,6 +290,7 @@ static int add_subs(lua_State *L, int index, mqtt_userdata *mqtt, const char *to
     // Copy topic & QOS
     subs->topic = strdup(topic);
     subs->qos = qos;
+    subs->luafunc = luafunc;
 
     // Not subscribed yet
     subs->subscribed = 0;
@@ -301,14 +314,14 @@ static int add_subs(lua_State *L, int index, mqtt_userdata *mqtt, const char *to
     mqtt->subs = subs;
 
     if (MQTTAsync_isConnected(mqtt->client)) {
-    		// If client is connected, subscribe to topic now
-    		int rc;
+        // If client is connected, subscribe to topic now
+        int rc;
 
-		if ((rc = MQTTAsync_subscribe(mqtt->client, topic, qos, NULL)) != MQTTASYNC_SUCCESS) {
-			return rc;
-		} else {
-			subs->subscribed = 1;
-		}
+        if ((rc = MQTTAsync_subscribe(mqtt->client, topic, qos, NULL)) != MQTTASYNC_SUCCESS) {
+            return rc;
+        } else {
+            subs->subscribed = 1;
+        }
     }
 
     return 0;
@@ -323,16 +336,15 @@ static int subs_subscribe(mqtt_userdata *mqtt) {
 
     subs = mqtt->subs;
     while (subs) {
-    		if (!subs->subscribed) {
-			if ((rc = MQTTAsync_subscribe(mqtt->client, subs->topic, subs->qos, NULL)) == MQTTASYNC_SUCCESS) {
-				subs->subscribed = 1;
-			} else {
-			    mtx_unlock(&mqtt->mtx);
-				return rc;
-			}
-    		}
-
-    		subs = subs->next;
+        if (!subs->subscribed) {
+            if ((rc = MQTTAsync_subscribe(mqtt->client, subs->topic, subs->qos, NULL)) == MQTTASYNC_SUCCESS) {
+                subs->subscribed = 1;
+            } else {
+                mtx_unlock(&mqtt->mtx);
+                return rc;
+            }
+        }
+        subs = subs->next;
     }
 
     mtx_unlock(&mqtt->mtx);
@@ -361,26 +373,26 @@ static void connFailure(void *context, MQTTAsync_failureData *response) {
 static void connSuccess(void *context, MQTTAsync_successData *response) {
     mqtt_userdata *mqtt = (mqtt_userdata *)context;
 
-	// Subscribe to topics
-	int rc;
+    // Subscribe to topics
+    int rc;
 
-	if ((rc = subs_subscribe(mqtt)) != 0) {
-		// If a task is waiting for the connection, notify the task with the
-		// response code
-		mtx_lock(&mqtt->mtx);
-		if (mqtt->connTask) {
-			xTaskNotify(mqtt->connTask, rc, eSetValueWithOverwrite);
-		}
-		mtx_unlock(&mqtt->mtx);
-	} else {
-		// If a task is waiting for the connection, notify the task with the
-		// response code
-		mtx_lock(&mqtt->mtx);
-		if (mqtt->connTask) {
-			xTaskNotify(mqtt->connTask, 0, eSetValueWithOverwrite);
-		}
-		mtx_unlock(&mqtt->mtx);
-	}
+    if ((rc = subs_subscribe(mqtt)) != 0) {
+        // If a task is waiting for the connection, notify the task with the
+        // response code
+        mtx_lock(&mqtt->mtx);
+        if (mqtt->connTask) {
+            xTaskNotify(mqtt->connTask, rc, eSetValueWithOverwrite);
+        }
+        mtx_unlock(&mqtt->mtx);
+    } else {
+        // If a task is waiting for the connection, notify the task with the
+        // response code
+        mtx_lock(&mqtt->mtx);
+        if (mqtt->connTask) {
+            xTaskNotify(mqtt->connTask, 0, eSetValueWithOverwrite);
+        }
+        mtx_unlock(&mqtt->mtx);
+    }
 }
 
 // Disconnection failure callback, called by the MQTT client when there is
@@ -404,13 +416,13 @@ static void discFailure(void *context, MQTTAsync_failureData *response) {
 static void discSuccess(void *context, MQTTAsync_successData *response) {
     mqtt_userdata *mqtt = (mqtt_userdata *)context;
 
-	// If a task is waiting for the disconnection, notify the task with the
-	// response code
-	mtx_lock(&mqtt->mtx);
-	if (mqtt->discTask) {
-		xTaskNotify(mqtt->discTask, 0, eSetValueWithOverwrite);
-	}
-	mtx_unlock(&mqtt->mtx);
+    // If a task is waiting for the disconnection, notify the task with the
+    // response code
+    mtx_lock(&mqtt->mtx);
+    if (mqtt->discTask) {
+        xTaskNotify(mqtt->discTask, 0, eSetValueWithOverwrite);
+    }
+    mtx_unlock(&mqtt->mtx);
 }
 
 // Message arrived callback
@@ -628,7 +640,7 @@ static int lmqtt_connect(lua_State* L) {
         mqtt->connTask = NULL;
         mtx_unlock(&mqtt->mtx);
 
-    		return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_CONNECT, "network not started");
+        return luaL_exception_extended(L, LUA_MQTT_ERR_CANT_CONNECT, "network not started");
     }
 
     MQTTAsync_connect(mqtt->client, &mqtt->conn_opts);
@@ -681,7 +693,7 @@ static int lmqtt_subscribe(lua_State* L) {
     // Add subscription
     mtx_lock(&mqtt->mtx);
     if ((rc = add_subs(L, 4, mqtt, topic, qos)) != 0) {
-    		return mqtt_emit_exeption(L, LUA_MQTT_ERR_CANT_SUBSCRIBE, rc);
+        return mqtt_emit_exeption(L, LUA_MQTT_ERR_CANT_SUBSCRIBE, rc);
     }
     mtx_unlock(&mqtt->mtx);
 
@@ -773,8 +785,8 @@ static int lmqtt_disconnect(lua_State* L) {
 
     subs = mqtt->subs;
     while (subs) {
-    		subs->subscribed = 0;
-    		subs = subs->next;
+        subs->subscribed = 0;
+        subs = subs->next;
     }
 
     //make sure user and password are properly free'd

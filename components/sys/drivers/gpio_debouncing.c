@@ -53,12 +53,7 @@
 #include <sys/driver.h>
 #include <drivers/gpio.h>
 #include <drivers/gpio_debouncing.h>
-#include <drivers/cpu.h>
 #include <drivers/timer.h>
-
-#if EXTERNAL_GPIO
-#include <drivers/pca9xxx.h>
-#endif
 
 // Debouncing data
 static debouncing_t *debouncing = NULL;
@@ -122,7 +117,7 @@ void IRAM_ATTR debouncing_isr(void *args) {
     uint64_t current = (((uint64_t)GPIO.in1.data << 32) | GPIO.in) & debouncing->mask;
 
 #if EXTERNAL_GPIO
-    uint64_t current_ext = pca_9xxx_pin_get_all(&current_ext) & debouncing->mask_ext;
+    uint64_t current_ext = gpio_ext_pin_get_all(&current_ext) & debouncing->mask_ext;
 #endif
 
     // Test for changes

@@ -43,8 +43,8 @@
  *
  */
 
-#ifndef DRIVER_H
-#define DRIVER_H
+#ifndef __DRIVER_H__
+#define __DRIVER_H__
 
 #include "luartos.h"
 #include "lobject.h"
@@ -54,7 +54,7 @@
 #include <sys/resource.h>
 #include <sys/driver.h>
 
-#include <sys/drivers/cpu.h>
+typedef void *device_t;
 
 #define DRIVER_ALL_FLAGS   0xff
 
@@ -90,6 +90,10 @@
 #define ETH_DRIVER_ID      30
 #define BT_DRIVER_ID       31
 #define TOUCH_DRIVER_ID    32
+#define RCSWITCH_DRIVER_ID 33
+#define RMT_DRIVER_ID      34
+#define RTC_DRIVER_ID      35
+#define SOUND_DRIVER_ID    37
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -122,6 +126,10 @@
 #define SDISPLAY_DRIVER driver_get_by_name("sdisplay")
 #define BT_DRIVER driver_get_by_name("bt")
 #define TOUCH_DRIVER driver_get_by_name("touch")
+#define RCSWITCH_DRIVER driver_get_by_name("rcswitch")
+#define RMT_DRIVER driver_get_by_name("rmt")
+#define RTC_DRIVER driver_get_by_name("rtc")
+#define SOUND_DRIVER driver_get_by_name("sound")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 
@@ -134,15 +142,15 @@ struct driver_unit_lock_error;
 #endif
 
 typedef struct {
-	uint32_t exception;
-	const char *message;
+    uint32_t exception;
+    const char *message;
 } driver_message_t;
 
 typedef enum {
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-    LOCK,		// Someone needs a resource which is locked
+    LOCK,        // Someone needs a resource which is locked
 #endif
-	OPERATION   // Something fails during normal operation
+    OPERATION   // Something fails during normal operation
 } driver_error_type;
 
 
@@ -151,7 +159,7 @@ typedef struct {
     const struct driver    *driver;    // Driver that caused error
     int                     unit;      // Driver unit that caused error
     uint32_t                exception; // Exception code
-    const char 			   *msg;       // Error message
+    const char             *msg;       // Error message
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     struct driver_unit_lock_error *lock_error;
 #endif
@@ -163,18 +171,18 @@ typedef struct {
  *        each exception, etc ...
  */
 typedef struct driver {
-	const char *name;           		  /*!< Driver name */
-	const uint32_t  exception_base;  	  /*!< The exception base number for this driver. When a exception is raised the exception number is exception_base + exception number */
-	const driver_message_t *error;        /*!< Array of exception error messages */
+    const char *name;                     /*!< Driver name */
+    const uint32_t  exception_base;       /*!< The exception base number for this driver. When a exception is raised the exception number is exception_base + exception number */
+    const driver_message_t *error;        /*!< Array of exception error messages */
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-	const struct driver_unit_lock **lock;  /*!< Array locks */
-	const int locks;					  /*!< Number of locks */
+    const struct driver_unit_lock **lock; /*!< Array locks */
+    const int locks;                      /*!< Number of locks */
 #endif
-	void (*init)();             		  /*!< Driver initialization functions, called at system init */
+    void (*init)();                       /*!< Driver initialization functions, called at system init */
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-	// Driver lock function
-	driver_error_t *(*lock_resources)(int,uint8_t, void *);
+    // Driver lock function
+    driver_error_t *(*lock_resources)(int,uint8_t, void *);
 #endif
 } driver_t;
 
@@ -201,19 +209,19 @@ typedef struct driver {
  *        gpio_locks[15] says that GPIO15 is owned by UART0.
  */
 typedef struct driver_unit_lock {
-	const driver_t *owner; /*!< Which driver owns the lock */
-	int unit;			   /*!< Which unit driver owns the lock */
-	const char *tag;       /*!< A tag, used, for example for set the signal name */
+    const driver_t *owner; /*!< Which driver owns the lock */
+    int unit;               /*!< Which unit driver owns the lock */
+    const char *tag;       /*!< A tag, used, for example for set the signal name */
 } driver_unit_lock_t;
 
 typedef struct driver_unit_lock_error {
-	driver_unit_lock_t *lock;
+    driver_unit_lock_t *lock;
 
-	const driver_t *owner_driver;
-	int owner_unit;
+    const driver_t *owner_driver;
+    int owner_unit;
 
-	const driver_t *target_driver;
-	int target_unit;
+    const driver_t *target_driver;
+    int target_unit;
 } driver_unit_lock_error_t;
 #endif
 
@@ -286,12 +294,11 @@ const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error_map)) int DRIVER_CONCAT_WITH_
 const DRIVER_SECTION(DRIVER_TOSTRING(.drivers)) driver_t DRIVER_CONCAT(driver_,lname) = {DRIVER_TOSTRING(lname),  DRIVER_EXCEPTION_BASE(DRIVER_CONCAT(name,_DRIVER_ID)),  (void *)((&(DRIVER_CONCAT(lname,_errors)))+1), initf};
 #endif
 
-#endif
-
 #define DRIVER_REGISTER_ERROR(name, lname, key, msg, exception) \
-	const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error)) driver_message_t DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_errors)) = {exception, msg}; \
-	const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error_map)) LUA_REG_TYPE DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_error_map)) = {LSTRKEY(DRIVER_TOSTRING(key)), LINTVAL(exception)};
+    const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error)) driver_message_t DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_errors)) = {exception, msg}; \
+    const DRIVER_SECTION(DRIVER_TOSTRING(.driver_error_map)) LUA_REG_TYPE DRIVER_CONCAT(lname,DRIVER_CONCAT(key,_error_map)) = {LSTRKEY(DRIVER_TOSTRING(key)), LINTVAL(exception)};
 
 #define DRIVER_REGISTER_LUA_ERRORS(lname) \
-	{LSTRKEY("error"), LROVAL( ((LUA_REG_TYPE *)((&DRIVER_CONCAT_WITH_SEP(lname,_,error_map)) + 1)) )},
+    {LSTRKEY("error"), LROVAL( ((LUA_REG_TYPE *)((&DRIVER_CONCAT_WITH_SEP(lname,_,error_map)) + 1)) )},
 
+#endif

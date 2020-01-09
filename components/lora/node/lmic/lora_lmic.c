@@ -65,13 +65,13 @@ DRIVER_REGISTER_BEGIN(LORA,lora, 0,_lora_init,NULL);
 	DRIVER_REGISTER_ERROR(LORA, lora, NotJoined, "not joined", LORA_ERR_NOT_JOINED);
 	DRIVER_REGISTER_ERROR(LORA, lora, NotSetup, "not setup", LORA_ERR_NOT_SETUP);
 	DRIVER_REGISTER_ERROR(LORA, lora, NotEnoughtMemory, "not enough memory", LORA_ERR_NO_MEM);
-	DRIVER_REGISTER_ERROR(LORA, lora, ABPExpected, "ABP expected", LORA_ERR_ABP_EXPECTED);
 	DRIVER_REGISTER_ERROR(LORA, lora, CannotSetup, "can't setup", LORA_ERR_CANT_SETUP);
 	DRIVER_REGISTER_ERROR(LORA, lora, TransmissionFail, "transmission fail ack not received", LORA_ERR_TRANSMISSION_FAIL_ACK_NOT_RECEIVED);
 	DRIVER_REGISTER_ERROR(LORA, lora, InvalidArgument, "invalid argument", LORA_ERR_INVALID_ARGUMENT);
 	DRIVER_REGISTER_ERROR(LORA, lora, InvalidDataRate, "invalid data rate for your location", LORA_ERR_INVALID_DR);
 	DRIVER_REGISTER_ERROR(LORA, lora, InvalidBand, "invalid band for your location", LORA_ERR_INVALID_BAND);
 	DRIVER_REGISTER_ERROR(LORA, lora, NotAllowed, "not allowed", LORA_ERR_NOT_ALLOWED);
+    DRIVER_REGISTER_ERROR(LORA, lora, InvalidFreq, "invalid frequency for your location", LORA_ERR_INVALID_FREQ);
 DRIVER_REGISTER_END(LORA,lora, 0,_lora_init,NULL);
 
 #define evLORA_INITED 	       	 ( 1 << 0 )
@@ -91,17 +91,32 @@ static struct mtx lora_mtx;
 // Event group handler for sync LMIC events with driver functions
 static EventGroupHandle_t loraEvent;
 
-// Data needed for OTAA
-static u1_t APPEUI[8] = {0,0,0,0,0,0,0,0};
-static u1_t DEVEUI[8] = {0,0,0,0,0,0,0,0};
+// Data required for OTAA
+static u1_t APPEUI[8]  = {0,0,0,0,0,0,0,0};
+static u1_t DEVEUI[8]  = {0,0,0,0,0,0,0,0};
 static u1_t APPKEY[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-static u1_t joined = 0;
+// This macro is used to check if data required for OTAA activation is available
+#define have_otta_data() \
+    ( \
+        (memcmp(APPEUI, (u1_t[]){0,0,0,0,0,0,0,0}, 8) != 0) && \
+        (memcmp(DEVEUI, (u1_t[]){0,0,0,0,0,0,0,0}, 8) != 0) && \
+        (memcmp(APPKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) != 0) \
+    )
 
-// Data needed for ABP
-static u4_t DEVADDR = 0x00000000;
-static u1_t NWKSKEY[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-static u1_t APPSKEY[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+// Session data
+RTC_DATA_ATTR static u4_t DEVADDR = 0x00000000;
+RTC_DATA_ATTR static u1_t NWKSKEY[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+RTC_DATA_ATTR static u1_t APPSKEY[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+// This macro is used to check if session data to participate in a LoRa network
+// is available
+#define have_session_data() \
+    ( \
+        (DEVADDR != 0) && \
+        (memcmp(NWKSKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) != 0) && \
+        (memcmp(APPSKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) != 0) \
+    )
 
 static u1_t session_init = 0;
 
@@ -154,27 +169,28 @@ void onEvent (ev_t ev) {
 	      break;
 
 	    case EV_JOINING:
-          joined = 0;
 	      break;
 
 	    case EV_JOINED:
-          joined = 1;
-		  xEventGroupSetBits(loraEvent, evLORA_JOINED);
+	      session_init = 1;
 
-		  /* TTN uses SF9 for its RX2 window. */
-		  LMIC.dn2Dr = DR_SF9;
+	      DEVADDR = LMIC.devaddr;
+	      memcpy(NWKSKEY, LMIC.nwkKey, 16);
+          memcpy(APPSKEY, LMIC.artKey, 16);
+
+		  xEventGroupSetBits(loraEvent, evLORA_JOINED);
 	      break;
 
 	    case EV_RFU1:
 	      break;
 
 	    case EV_JOIN_FAILED:
-          joined = 0;
+	      session_init = 0;
 		  xEventGroupSetBits(loraEvent, evLORA_JOIN_DENIED);
 	      break;
 
 	    case EV_REJOIN_FAILED:
-          joined = 0;
+	      session_init = 0;
 	      break;
 
 	    case EV_TXCOMPLETE:
@@ -229,59 +245,48 @@ static void lora_init(osjob_t *j) {
     // Reset MAC state
     LMIC_reset();
 
+    // Add channels
 	#if CONFIG_LUA_RTOS_LORA_BAND_EU868
-    	LMIC_setupChannel(0, 868100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
+        LMIC_setupChannel(0, 868100000, DR_RANGE_MAP(DR_SF12, DR_SF7 ), BAND_CENTI);
 	    LMIC_setupChannel(1, 868300000, DR_RANGE_MAP(DR_SF12, DR_SF7B), BAND_CENTI);
-	    LMIC_setupChannel(2, 868500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
-	    LMIC_setupChannel(3, 867100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
-	    LMIC_setupChannel(4, 867300000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
-	    LMIC_setupChannel(5, 867500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
-	    LMIC_setupChannel(6, 867700000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
-	    LMIC_setupChannel(7, 867900000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
-	    LMIC_setupChannel(8, 868800000, DR_RANGE_MAP(DR_FSK,  DR_FSK),  BAND_MILLI);	
+	    LMIC_setupChannel(2, 868500000, DR_RANGE_MAP(DR_SF12, DR_SF7 ), BAND_CENTI);
+	    LMIC_setupChannel(3, 867100000, DR_RANGE_MAP(DR_SF12, DR_SF7 ), BAND_CENTI);
+	    LMIC_setupChannel(4, 867300000, DR_RANGE_MAP(DR_SF12, DR_SF7 ), BAND_CENTI);
+	    LMIC_setupChannel(5, 867500000, DR_RANGE_MAP(DR_SF12, DR_SF7 ), BAND_CENTI);
+	    LMIC_setupChannel(6, 867700000, DR_RANGE_MAP(DR_SF12, DR_SF7 ), BAND_CENTI);
+	    LMIC_setupChannel(7, 867900000, DR_RANGE_MAP(DR_SF12, DR_SF7 ), BAND_CENTI);
+	    LMIC_setupChannel(8, 868800000, DR_RANGE_MAP(DR_FSK,  DR_FSK ), BAND_MILLI);
 	#endif
 
 	#if CONFIG_LUA_RTOS_LORA_BAND_US915
 	    LMIC_selectSubBand(1);
 	#endif
 
-	/* Disable link check validation */
+	// Disable link check validation
     LMIC_setLinkCheckMode(0);
 
-    /* adr disabled */
+    // ADR disabled
     adr = 0;
     LMIC_setAdrMode(0);
 
-	/* TTN uses SF9 for its RX2 window. */
-	LMIC.dn2Dr = DR_SF9;
+    if (have_session_data()) {
+        // If at this point session data is available, means that CPU has been waked up from
+        // deep sleep, were session data is stored into RTC memory
+        syslog(LOG_DEBUG, "lora: restore session from RTC");
+        LMIC_setSession (0x1, DEVADDR, NWKSKEY, APPSKEY);
+        session_init = 1;
+    }
 
-	/* Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library) */
-	current_dr = DR_SF7;
-	LMIC_setDrTxpow(current_dr, 14);
+    // TTN uses SF9 for its RX2 window
+    LMIC.dn2Dr = DR_SF9;
 
+    // Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library)
+    current_dr = DR_SF7;
+    LMIC_setDrTxpow(current_dr, 14);
+
+	// Inform waiting thread that stack is initialized
     xEventGroupSetBits(loraEvent, evLORA_INITED);
 }
-
-#define lora_must_join() \
-    ( \
-		(DEVADDR == 0) && \
-		(memcmp(APPSKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) == 0) && \
-		(memcmp(APPSKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) == 0) \
-	)
-
-#define lora_can_participate_otaa() \
-	( \
-		(memcmp(APPEUI,  (u1_t[]){0,0,0,0,0,0,0,0}, 8) != 0) && \
-		(memcmp(DEVEUI, (u1_t[]){0,0,0,0,0,0,0,0}, 8) != 0) && \
-		(memcmp(APPKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) != 0) \
-	)
-
-#define lora_can_participate_abp() \
-	( \
-		(DEVADDR != 0) && \
-		(memcmp(APPSKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) != 0) && \
-		(memcmp(APPSKEY, (u1_t[]){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, 16) != 0) \
-	)
 
 // Setup driver
 driver_error_t *lora_setup(int band) {
@@ -425,6 +430,8 @@ driver_error_t *lora_mac_get(const char command, char **value) {
 
 	switch(command) {
 		case LORA_MAC_GET_DEVADDR:
+            result = (char *)malloc(9);
+            val_to_hex_string(result, (char *)(&DEVADDR), 4, 1);
 			break;
 		
 		case LORA_MAC_GET_DEVEUI:
@@ -496,27 +503,26 @@ driver_error_t *lora_join() {
 
     // Sanity checks
     if (!setup) {
-    	mtx_unlock(&lora_mtx);
+        mtx_unlock(&lora_mtx);
 		return driver_error(LORA_DRIVER, LORA_ERR_NOT_SETUP, NULL);
     }
 
-    if (!lora_must_join()) {
+    if (have_session_data()) {
+        // Session data is available, this means that we have joined in the past,
+        // or MCU has been waked up from deep sleep and session has been restored,
+        // or node is activated by ABP and DevAddr, NWKSessionKey, APPSessionKey have
+        // been set by the programmer.
         mtx_unlock(&lora_mtx);
-		return driver_error(LORA_DRIVER, LORA_ERR_ABP_EXPECTED, NULL);
+        return NULL;
     }
 
-    if (!lora_can_participate_otaa()) {
+    if (!have_otta_data()) {
+        // We don't have data for OTAA activation
         mtx_unlock(&lora_mtx);
 		return driver_error(LORA_DRIVER, LORA_ERR_KEYS_NOT_CONFIGURED, NULL);
     }
 
-    // Join, if needed
-    if (joined) {
-        mtx_unlock(&lora_mtx);
-    	return NULL;
-    }
-
-    // If we use join, set msgid to 0
+    // Set msgid to 0
     msgid = 0;
 
     // Set DR
@@ -524,6 +530,7 @@ driver_error_t *lora_join() {
         LMIC_setDrTxpow(current_dr, 14);
     }
 
+    // Do join
 	hal_lmic_join();
 
 	// Wait for one of the expected events
@@ -554,32 +561,24 @@ driver_error_t *lora_tx(int cnf, int port, const char *data) {
         return driver_error(LORA_DRIVER, LORA_ERR_NOT_SETUP, NULL);
     }
 
-    if (lora_must_join()) {
-    	if (lora_can_participate_otaa()) {
-            if (!joined) {
-                mtx_unlock(&lora_mtx);
-                return driver_error(LORA_DRIVER, LORA_ERR_NOT_JOINED, NULL);
-            }
-    	} else {
-            mtx_unlock(&lora_mtx);
-            return driver_error(LORA_DRIVER, LORA_ERR_KEYS_NOT_CONFIGURED, NULL);
-    	}
+    if (have_session_data()) {
+        if (!session_init) {
+            // Session data is available, so set session if it has not yet been done
+            LMIC_setSession (0x1, DEVADDR, NWKSKEY, APPSKEY);
+            session_init = 1;
+        }
     } else {
-    	if (!lora_can_participate_abp()) {
+        // Session data is not available
+        if (have_otta_data()) {
+            // Not joined
+            mtx_unlock(&lora_mtx);
+            return driver_error(LORA_DRIVER, LORA_ERR_NOT_JOINED, NULL);
+        } else {
             mtx_unlock(&lora_mtx);
             return driver_error(LORA_DRIVER, LORA_ERR_KEYS_NOT_CONFIGURED, NULL);
-    	} else {
-    		if (!session_init) {
-    			LMIC_setSession (0x1, DEVADDR, NWKSKEY, APPSKEY);
-
-    		    /* TTN uses SF9 for its RX2 window. */
-    		    LMIC.dn2Dr = DR_SF9;
-
-    		    session_init = 1;
-    		}
-    	}
+        }
     }
-	
+
 	payload_len = strlen(data) / 2;
 
 	// Allocate buffer por payload	

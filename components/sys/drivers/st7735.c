@@ -92,7 +92,7 @@ static const st7735_variant_t variant[] = {
 	{128, 160, 0 ,  0, ST7735_MADCTL_RGB}, // 1.8" BLACK
 	{128, 160, 0 ,  0, ST7735_MADCTL_RGB}, // 1.8" BLUE
 	{128, 160, 0 ,  0, ST7735_MADCTL_RGB}, // 1.8" GREEN
-	{128, 128, 2 ,  3, ST7735_MADCTL_RGB}, // 1.44" GREEN
+	{128, 128, 2 ,  3, ST7735_MADCTL_BGR}, // 1.44" GREEN
 	{160, 80 , 24,  0, ST7735_MADCTL_RGB}  // 0.96" BLACK
 };
 
@@ -299,8 +299,8 @@ driver_error_t *st7735_init(uint8_t chip, uint8_t orientation, uint8_t address) 
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
 
 	caps->addr_window = st7735_addr_window;
-	caps->on = st7735_on;
-	caps->off = st7735_off;
+	caps->on = NULL;
+	caps->off = NULL;
 	caps->invert = st7735_invert;
 	caps->orientation = st7735_set_orientation;
 	caps->touch_get = NULL;
@@ -374,6 +374,7 @@ driver_error_t *st7735_init(uint8_t chip, uint8_t orientation, uint8_t address) 
 		case CHIPSET_ST7735G_144:
 			ST7735_commonInit(Rcmd1);
 			gdisplay_ll_command_list(Rcmd2green144);
+			gdisplay_ll_command_list((uint8_t *)Rcmd3);
 			break;
 
 		case CHIPSET_ST7735_096:
@@ -391,8 +392,6 @@ driver_error_t *st7735_init(uint8_t chip, uint8_t orientation, uint8_t address) 
 
 	// Clear screen (black)
     st7735_clear(GDISPLAY_BLACK);
-
-    gdisplay_ll_command(ST7735_DISPON); // Display On
 
     return NULL;
 }

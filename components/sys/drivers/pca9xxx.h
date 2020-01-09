@@ -48,7 +48,7 @@
 
 #include "luartos.h"
 
-#if EXTERNAL_GPIO
+#if (CONFIG_GPIO_PCA9698 ||  CONFIG_GPIO_PCA9505)
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -62,13 +62,11 @@
 
 #include <sys/driver.h>
 
-#if CONFIG_GPIO_PCA9698 ||  CONFIG_GPIO_PCA9505
-	// Number of banks
-	#define PCA9xxx_BANKS 5
+// Number of banks
+#define PCA9xxx_BANKS 5
 
-	// Number of pins
-	#define PCA9xxx_PINS 40
-#endif
+// Number of pins
+#define PCA9xxx_PINS 40
 
 // Convert a GPIO number to it's bank number
 #define PCA9xxx_GPIO_BANK_NUM(gpio) (gpio >> 3)
@@ -109,6 +107,123 @@ void pca_9xxx_pin_get_mask(uint8_t port, uint8_t pinmask, uint8_t *value);
 void pca_9xxx_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type, void *args);
 void pca_9xxx_isr_detach(uint8_t pin);
 uint64_t pca_9xxx_pin_get_all();
+
+#define gpio_ext_pin_set(a)            pca_9xxx_pin_set(a)
+#define gpio_ext_pin_clr(a)            pca_9xxx_pin_clr(a)
+#define gpio_ext_pin_inv(a)            pca_9xxx_pin_inv(a)
+#define gpio_ext_pin_get(a)            pca_9xxx_pin_get(a)
+#define gpio_ext_pin_output(a)         pca_9xxx_pin_output(a)
+#define gpio_ext_pin_input(a)          pca_9xxx_pin_input(a)
+#define gpio_ext_pin_set(a)            pca_9xxx_pin_set(a)
+#define gpio_ext_pin_input_mask(a,b)   pca_9xxx_pin_input_mask(a,b)
+#define gpio_ext_pin_output_mask(a,b)  pca_9xxx_pin_output_mask(a,b)
+#define gpio_ext_pin_set_mask(a,b)     pca_9xxx_pin_set_mask(a,b)
+#define gpio_ext_pin_clr_mask(a,b)     pca_9xxx_pin_clr_mask(a,b)
+#define gpio_ext_pin_inv_mask(a,b)     pca_9xxx_pin_inv_mask(a,b)
+#define gpio_ext_pin_get_mask(a,b,c)   pca_9xxx_pin_get_mask(a,b,c)
+#define gpio_ext_pin_input_mask(a,b)   pca_9xxx_pin_input_mask(a,b)
+#define gpio_ext_isr_attach(a,b,c,d)   pca_9xxx_isr_attach(a,b,c,d)
+#define gpio_ext_isr_detach(a)         pca_9xxx_isr_detach(a)
+#define gpio_ext_pin_get_all(a)        pca_9xxx_pin_get_all()
+
+// PCA9XXX available GPIO pins mapped to internal pins
+#define GPIO40   40
+#define GPIO41   41
+#define GPIO42   42
+#define GPIO43   43
+#define GPIO44   44
+#define GPIO45   45
+#define GPIO46   46
+#define GPIO47   47
+#define GPIO48   48
+#define GPIO49   49
+#define GPIO50   50
+#define GPIO51   51
+#define GPIO52   52
+#define GPIO53   53
+#define GPIO54   54
+#define GPIO55   55
+#define GPIO56   56
+#define GPIO57   57
+#define GPIO58   58
+#define GPIO59   59
+#define GPIO60   60
+#define GPIO61   61
+#define GPIO62   62
+#define GPIO63   63
+#define GPIO64   64
+#define GPIO65   65
+#define GPIO66   66
+#define GPIO67   67
+#define GPIO68   68
+#define GPIO69   69
+#define GPIO70   70
+#define GPIO71   71
+#define GPIO72   72
+#define GPIO73   73
+#define GPIO74   74
+#define GPIO75   75
+#define GPIO76   76
+#define GPIO77   77
+#define GPIO78   78
+#define GPIO79   79
+
+// PCA9XXX available pin names mapped to internal pins
+#define GPIO40_NAME  "GPIO40"
+#define GPIO41_NAME  "GPIO41"
+#define GPIO42_NAME  "GPIO42"
+#define GPIO43_NAME  "GPIO43"
+#define GPIO44_NAME  "GPIO44"
+#define GPIO45_NAME  "GPIO45"
+#define GPIO46_NAME  "GPIO46"
+#define GPIO47_NAME  "GPIO47"
+#define GPIO48_NAME  "GPIO48"
+#define GPIO49_NAME  "GPIO49"
+#define GPIO50_NAME  "GPIO50"
+#define GPIO51_NAME  "GPIO51"
+#define GPIO52_NAME  "GPIO52"
+#define GPIO53_NAME  "GPIO53"
+#define GPIO54_NAME  "GPIO54"
+#define GPIO55_NAME  "GPIO55"
+#define GPIO56_NAME  "GPIO56"
+#define GPIO57_NAME  "GPIO57"
+#define GPIO58_NAME  "GPIO58"
+#define GPIO59_NAME  "GPIO59"
+#define GPIO60_NAME  "GPIO60"
+#define GPIO61_NAME  "GPIO61"
+#define GPIO62_NAME  "GPIO62"
+#define GPIO63_NAME  "GPIO63"
+#define GPIO64_NAME  "GPIO64"
+#define GPIO65_NAME  "GPIO65"
+#define GPIO66_NAME  "GPIO66"
+#define GPIO67_NAME  "GPIO67"
+#define GPIO68_NAME  "GPIO68"
+#define GPIO69_NAME  "GPIO69"
+#define GPIO70_NAME  "GPIO70"
+#define GPIO71_NAME  "GPIO71"
+#define GPIO72_NAME  "GPIO72"
+#define GPIO73_NAME  "GPIO73"
+#define GPIO74_NAME  "GPIO74"
+#define GPIO75_NAME  "GPIO75"
+#define GPIO76_NAME  "GPIO76"
+#define GPIO77_NAME  "GPIO77"
+#define GPIO78_NAME  "GPIO78"
+#define GPIO79_NAME  "GPIO79"
+
+// Capabilities
+#define EXTERNAL_GPIO 1
+#define EXTERNAL_GPIO_PINS PCA9xxx_PINS
+#define EXTERNAL_GPIO_PORTS PCA9xxx_BANKS
+#define EXTERNAL_GPIO_HAS_PROGRAMABLE_PULLUPS 0
+#define EXTERNAL_GPIO_HAS_PROGRAMABLE_PULLDOWNS 0
+
+#if CONFIG_GPIO_PCA9698
+#define EXTERNAL_GPIO_NAME "PCA9698"
+#endif
+
+#if CONFIG_GPIO_PCA9505
+#define EXTERNAL_GPIO_NAME "PCA9505"
+#endif
 
 #endif	/* PCA9698 */
 

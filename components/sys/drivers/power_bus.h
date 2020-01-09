@@ -53,5 +53,6 @@
 
 driver_error_t *pwbus_on();
 driver_error_t *pwbus_off();
+uint64_t pwbus_uptime();
 
 #endif /* _POWER_BUS_H */

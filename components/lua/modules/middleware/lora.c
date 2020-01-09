@@ -53,6 +53,7 @@
 #include "modules.h"
 #include "error.h"
 #include "hex.h"
+#include "sys.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -67,16 +68,16 @@ void lora_gw_start();
 
 #include <drivers/uart.h>
 
-static int rx_callback = 0;
-static lua_State* rx_callbackL;
 static uint8_t is_gateway = 0;
+static lua_callback_t *callback;
 
 static void on_received(int port, char *payload) {
-    if (rx_callback != LUA_NOREF) {
-        lua_rawgeti(rx_callbackL, LUA_REGISTRYINDEX, rx_callback);
-        lua_pushinteger(rx_callbackL, port);
-        lua_pushlstring(rx_callbackL, payload, strlen(payload));
-        lua_call(rx_callbackL, 2, 0);
+    if (callback) {
+        // Push argument for the callback's function
+        lua_pushinteger(luaS_callback_state(callback), port);
+        lua_pushlstring(luaS_callback_state(callback), payload,strlen(payload));
+
+        luaS_callback_call(callback, 2);
     }
 
     free(payload);
@@ -121,11 +122,11 @@ static char *hex_str_pad(lua_State* L, const char  *str, int len) {
 #endif
 
 static int llora_attach(lua_State* L) {
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
+#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276
 	driver_error_t *error;
     int type;
     const char *host;
-    int port;
+    int port, freq, drate;
 
     int band = luaL_checkinteger(L, 1);
     type = luaL_optinteger(L, 2, 0);
@@ -142,9 +143,11 @@ static int llora_attach(lua_State* L) {
 	} else if (type == 1) {
 		host = luaL_optstring(L, 3, "router.eu.thethings.network");
 		port = luaL_optinteger(L, 4, 1700);
+        freq = luaL_optinteger(L, 5, 868100000);
+        drate = luaL_optinteger(L, 6, 5);
 
 		// Gateway
-		if ((error = lora_gw_setup(band, host, port))) {
+		if ((error = lora_gw_setup(band, host, port, freq, drate))) {
 			return luaL_driver_error(L, error);
 		}
 
@@ -451,12 +454,11 @@ static int llora_tx(lua_State* L) {
 static int llora_rx(lua_State* L) {
 	if (is_gateway) luaL_exception_extended(L, LORA_ERR_NOT_ALLOWED, "only allowed for nodes");
 
-	luaL_checktype(L, 1, LUA_TFUNCTION);
-    lua_pushvalue(L, 1);
+	callback = luaS_callback_create(L, 1);
+    if (callback == NULL) {
+        return luaL_exception_extended(L, LORA_ERR_NO_MEM, NULL);
+    }
 
-    rx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
-
-    rx_callbackL = L;
     lora_set_rx_callback(on_received);
 
     return 0;
@@ -514,6 +516,6 @@ MODULE_REGISTER_ROM(LORA, lora, lora_map, luaopen_lora, 1);
 	net.wf.start()
 	net.service.sntp.start()
 
-	lora.attach(lora.BAND868, lora.GATEWAY)
+	lora.attach(lora.BAND868, lora.GATEWAY, nil, nil, 868100000, 5)
 
  */

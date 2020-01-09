@@ -562,6 +562,12 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
     case VUPVAL: {  /* move value to some (pending) register */
       e->u.info = luaK_codeABC(fs, OP_GETUPVAL, 0, e->u.info, 0);
       e->k = VRELOCABLE;
+#if LUA_USE_ROTABLE
+      if (e->closeAnnotation != 0) {
+          luaK_block_end(fs, e->closeAnnotation);
+          e->closeAnnotation = 0;
+      }
+#endif
       break;
     }
     case VINDEXED: {
@@ -576,11 +582,23 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
         op = OP_GETTABUP;  /* 't' is in an upvalue */
       }
       e->u.info = luaK_codeABC(fs, op, 0, e->u.ind.t, e->u.ind.idx);
+#if LUA_USE_ROTABLE
+      if (e->closeAnnotation != 0) {
+          luaK_block_end(fs, e->closeAnnotation);
+          e->closeAnnotation = 0;
+      }
+#endif
       e->k = VRELOCABLE;
       break;
     }
     case VVARARG: case VCALL: {
       luaK_setoneret(fs, e);
+#if LUA_USE_ROTABLE
+      if (e->closeAnnotation != 0) {
+          luaK_block_end(fs, e->closeAnnotation);
+          e->closeAnnotation = 0;
+      }
+#endif
       break;
     }
     default: break;  /* there is one value available (somewhere) */
@@ -1064,7 +1082,11 @@ static void codecomp (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
 ** Aplly prefix operation 'op' to expression 'e'.
 */
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
+#if !LUA_USE_ROTABLE
   static const expdesc ef = {VKINT, {0}, NO_JUMP, NO_JUMP};
+#else
+  static const expdesc ef = {VKINT, {0}, NO_JUMP, NO_JUMP, 0, 0, 0};
+#endif
   switch (op) {
     case OPR_MINUS: case OPR_BNOT:  /* use 'ef' as fake 2nd operand */
       if (constfolding(fs, op + LUA_OPUNM, e, &ef))
@@ -1201,3 +1223,16 @@ void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
   fs->freereg = base + 1;  /* free registers with list values */
 }
 
+#if LUA_USE_ROTABLE
+int luaK_block_start (FuncState *fs, int n) {
+    return luaK_code(fs, CREATE_Ax(OP_BLOCKS, n));
+}
+
+int luaK_block_end (FuncState *fs, int n) {
+  return luaK_code(fs, CREATE_Ax(OP_BLOCKE, n));
+}
+
+int luaK_NOP(FuncState *fs) {
+  return luaK_code(fs, CREATE_Ax(OP_NOP, 0));
+}
+#endif

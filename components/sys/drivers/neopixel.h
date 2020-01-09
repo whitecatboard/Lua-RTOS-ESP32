@@ -62,6 +62,7 @@ typedef struct {
 	uint32_t nzr_unit;
 	neopixel_pixel_t *pixels;
 	uint32_t npixels;
+	float    brightness;
 } neopixel_instance_t;
 
 // NEOPIXEL errors
@@ -70,6 +71,7 @@ typedef struct {
 #define NEOPIXEL_ERR_INVALID_PIXEL               (DRIVER_EXCEPTION_BASE(NEOPIXEL_DRIVER_ID) |  2)
 #define NEOPIXEL_ERR_INVALID_CONTROLLER          (DRIVER_EXCEPTION_BASE(NEOPIXEL_DRIVER_ID) |  4)
 #define NEOPIXEL_ERR_INVALID_RGB_COMPONENT       (DRIVER_EXCEPTION_BASE(NEOPIXEL_DRIVER_ID) |  5)
+#define NEOPIXEL_ERR_INVALID_BRIGHTNESS          (DRIVER_EXCEPTION_BASE(NEOPIXEL_DRIVER_ID) |  6)
 
 extern const int neopixel_errors;
 extern const int neopixel_error_map;
@@ -77,5 +79,6 @@ extern const int neopixel_error_map;
 driver_error_t *neopixel_rgb(uint32_t unit, uint32_t pixel, uint8_t r, uint8_t g, uint8_t b);
 driver_error_t *neopixel_setup(neopixel_controller_t controller, uint8_t gpio, uint32_t pixels, uint32_t *unit);
 driver_error_t *neopixel_update(uint32_t unit);
+driver_error_t *neopixel_set_brightness(uint32_t unit, float brightness);
 
 #endif /* NEOPIXEL_H_ */

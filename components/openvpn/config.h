@@ -36,21 +36,26 @@
 
 #include <string.h>
 
-#include "../compat/include/linux/in6.h"
 #include "lwip/sockets.h"
 #include "lwip/netdb.h"
-
-#include "linux/netdb.h"
+#include <compat/include/linux/in6.h>
 
 #include "tcpip_adapter.h"
 
 // OpenVPN is executed into a task, so when calling to exit function
 // simply delete current task
 #define exit(e) \
-	vTaskDelete(NULL);
+    { \
+      extern u8_t volatile _openvpn_running; \
+      _openvpn_running = 0; \
+      vTaskDelete(NULL); \
+    }
 
 // srandom is missing in esp-idf, so use srand instead
 #define srandom(s) srand(s)
+
+// openvpn uses small letters but lwip uses capitals
+#define lwip_socket_offset LWIP_SOCKET_OFFSET
 
 #define PACKAGE_NAME "openvpn"
 #define PACKAGE "openvpn"

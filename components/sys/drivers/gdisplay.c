@@ -417,11 +417,15 @@ void gdisplay_ll_get_bitmap(int x, int y, uint8_t *buffer, uint8_t *buff, int bu
 }
 
 void gdisplay_ll_on() {
-	caps.on();
+	if (caps.on) {
+		caps.on();
+	}
 }
 
 void gdisplay_ll_off() {
-	caps.off();
+	if (caps.off) {
+		caps.off();
+	}
 }
 
 void gdisplay_ll_invert(uint8_t on) {

@@ -9,7 +9,17 @@
 
 #include "lobject.h"
 #include "lzio.h"
+#include "lparser.h"
 
+#if LUA_USE_ROTABLE
+typedef struct AnnotationInfo {
+    FuncState *fs;
+	int i;
+	int pc;
+	int closed;
+	struct AnnotationInfo *previous;
+} AnnotationInfo;
+#endif
 
 #define FIRST_RESERVED	257
 
@@ -33,7 +43,11 @@ enum RESERVED {
   TK_IDIV, TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE,
   TK_SHL, TK_SHR,
   TK_DBCOLON, TK_EOS,
-  TK_FLT, TK_INT, TK_NAME, TK_STRING
+  TK_FLT, TK_INT, TK_NAME, TK_STRING,
+#if LUA_USE_ROTABLE
+  TK_BLOCK_START,
+  TK_BLOCK_END,
+#endif
 };
 
 /* number of reserved words */
@@ -49,6 +63,10 @@ typedef union {
 
 typedef struct Token {
   int token;
+#if LUA_USE_ROTABLE
+  int id;
+  int flags;
+#endif
   SemInfo seminfo;
 } Token;
 
@@ -70,7 +88,6 @@ typedef struct LexState {
   TString *source;  /* current source name */
   TString *envn;  /* environment variable name */
 } LexState;
-
 
 LUAI_FUNC void luaX_init (lua_State *L);
 LUAI_FUNC void luaX_setinput (lua_State *L, LexState *ls, ZIO *z,

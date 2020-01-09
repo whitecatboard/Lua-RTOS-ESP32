@@ -244,6 +244,21 @@ int luac(const char *src, const char *dst) {
 
 	return ret;
 }
+
+int luad(const char *src) {
+	char* argv[] = {
+		"luac",
+		"-l",
+		(char *)src
+	};
+
+	int ret = 0;
+	if (!(ret = setjmp(ex_buf__))) {
+		ret = luac_main(3, argv);
+	}
+
+	return ret;
+}
 // LUA RTOS END
 
 /*
@@ -352,9 +367,20 @@ static void PrintCode(const Proto* f)
     if (getCMode(o)!=OpArgN) printf(" %d",ISK(c) ? (MYK(INDEXK(c))) : c);
     break;
    case iABx:
+#if !LUA_USE_ROTABLE
     printf("%d",a);
     if (getBMode(o)==OpArgK) printf(" %d",MYK(bx));
     if (getBMode(o)==OpArgU) printf(" %d",bx);
+#else
+    if ((o == OP_BLOCKS) || (o == OP_BLOCKE)) {
+      printf("%d",a >> 4);
+      printf(" %d",bx & 0b1111);
+    } else {
+      printf("%d",a);
+      if (getBMode(o)==OpArgK) printf(" %d",MYK(bx));
+      if (getBMode(o)==OpArgU) printf(" %d",bx);
+    }
+#endif
     break;
    case iAsBx:
     printf("%d %d",a,sbx);
@@ -368,12 +394,18 @@ static void PrintCode(const Proto* f)
    case OP_LOADK:
     printf("\t; "); PrintConstant(f,bx);
     break;
+#if LUA_USE_ROTABLE
+   case OP_BLOCKS:
+   case OP_BLOCKE:
+    printf("\t; ");
+    break;
+#endif
    case OP_GETUPVAL:
    case OP_SETUPVAL:
     printf("\t; %s",UPVALNAME(b));
     break;
    case OP_GETTABUP:
-    printf("\t; %s",UPVALNAME(b));
+    printf("\t; %x %s",(unsigned)i,UPVALNAME(b));
     if (ISK(c)) { printf(" "); PrintConstant(f,INDEXK(c)); }
     break;
    case OP_SETTABUP:

@@ -616,18 +616,18 @@ do_ifconfig(struct tuntap *tt,
         tcpip_adapter_ip_info_t ip_info;
 
         // To use tcpip_adapter_get_ip_info, first whe have to stop dhcp
-		tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_TUN);
+        tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_TUN);
 
-		// Get previous ip info
-		tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_TUN, &ip_info);
+        // Get previous ip info
+        tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_TUN, &ip_info);
 
-		// Update ip info
-    	ip_info.ip.addr = ntohl(tt->local);
-		ip_info.netmask.addr = ntohl(tt->remote_netmask);
-		ip_info.gw.addr = ntohl(tt->broadcast);
+        // Update ip info
+        ip_info.ip.addr = ntohl(tt->local);
+        ip_info.netmask.addr = ntohl(tt->remote_netmask);
+        ip_info.gw.addr = ntohl(tt->broadcast);
 
-		// Update ip information to tun adapter
-		tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_TUN, &ip_info);
+        // Update ip information to tun adapter
+        tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_TUN, &ip_info);
     }
 }
 
@@ -638,11 +638,16 @@ clear_tuntap(struct tuntap *tuntap)
     tuntap->fd = -1;
 }
 
+#if __XTENSA__
+void vfs_tun_register();
+#endif
+
 void
 open_tun(struct tuntap *tt)
 {
-	vfs_tun_register();
-
+#if __XTENSA__
+    vfs_tun_register();
+#endif
     tt->fd = open("/dev/tun", O_RDWR);
     tt->actual_name = string_alloc("tu", NULL);
 }
@@ -652,11 +657,13 @@ close_tun(struct tuntap *tt)
 {
     if (tt)
     {
-    	if (tt->fd >= 0) {
-    		close(tt->fd);
-    	}
-
-    	free(tt);
+        if (tt->fd >= 0) {
+            close(tt->fd);
+        }
+#if __XTENSA__
+        free(tt->actual_name);
+#endif
+        free(tt);
     }
 }
 

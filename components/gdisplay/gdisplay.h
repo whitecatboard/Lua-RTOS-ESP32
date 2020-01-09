@@ -53,6 +53,7 @@
 #include <gdisplay/primitives/primitives.h>
 #include <gdisplay/fonts/font.h>
 #include <gdisplay/image/image.h>
+#include <gdisplay/qrcodegen/qrcodegen.h>
 
 #include <sys/driver.h>
 
@@ -138,7 +139,7 @@
 #define LASTY	-2
 #define CENTER	-3
 #define RIGHT	-4
-#define BOTTOM	-4
+#define BOTTOM	-5
 
 // Fonts
 #define DEFAULT_FONT	0
@@ -165,11 +166,6 @@
 
 #define swap(a, b) { int16_t t = a; a = b; b = t; }
 
-#define LASTX	-1
-#define LASTY	-2
-#define CENTER	-3
-#define RIGHT	-4
-#define BOTTOM	-4
 
 typedef struct {
 	uint8_t chipset; // Chipset
@@ -178,21 +174,22 @@ typedef struct {
 
 //  Driver errors
 #define  GDISPLAY_ERR_INVALID_CHIPSET             (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  0)
-#define  GDISPLAY_ERR_INVALID_COLOR            	  (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  1)
-#define  GDISPLAY_ERR_IS_NOT_SETUP            	  (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  2)
+#define  GDISPLAY_ERR_INVALID_COLOR               (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  1)
+#define  GDISPLAY_ERR_IS_NOT_SETUP                (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  2)
 #define  GDISPLAY_ERR_COLOR_REQUIRED              (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  3)
 #define  GDISPLAY_ERR_POINT_REQUIRED              (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  4)
 #define  GDISPLAY_ERR_NOT_ENOUGH_MEMORY           (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  5)
 #define  GDISPLAY_ERR_INVALID_RADIUS              (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  6)
 #define  GDISPLAY_ERR_INVALID_FONT                (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  7)
-#define  GDISPLAY_ERR_IMAGE                		  (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  8)
+#define  GDISPLAY_ERR_IMAGE                       (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  8)
 #define  GDISPLAY_ERR_OUT_OFF_SCREEN              (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  9)
 #define  GDISPLAY_ERR_INVALID_ORIENTATION         (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  10)
 #define  GDISPLAY_ERR_MISSING_FILE_NAME           (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  11)
 #define  GDISPLAY_ERR_IMG_PROCESSING_ERROR        (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  12)
 #define  GDISPLAY_ERR_BOOLEAN_REQUIRED            (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  13)
 #define  GDISPLAY_ERR_TOUCH_NOT_SUPPORTED         (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  14)
-#define  GDISPLAY_ERR_CANNOT_SETUP				  (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  15)
+#define  GDISPLAY_ERR_CANNOT_SETUP                (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  15)
+#define  GDISPLAY_ERR_QR_ENCODING_ERROR           (DRIVER_EXCEPTION_BASE(GDISPLAY_DRIVER_ID) |  16)
 
 extern const int gdisplay_errors;
 extern const int gdisplay_error_map;

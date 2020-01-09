@@ -47,15 +47,15 @@
 
 // Convert a buffer coded into an hex string (hbuff) into a byte buffer (vbuff)
 // Length of byte buffer is len
-void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev) {
+void hex_string_to_val(char *hbuff, char *vbuff, int len, int reverse) {
     int  i;
     char c;
 
-	// If reverse, put hbuff at the last byte
-	if (rev) {
-		while(*hbuff) hbuff++;
-		hbuff -= 2;
-	}
+    // If reverse, put hbuff at the last byte
+    if (reverse) {
+        while(*hbuff) hbuff++;
+        hbuff -= 2;
+    }
 
     for(i=0;i<len;i++) {
         c = 0;
@@ -68,6 +68,10 @@ void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev) {
             c = (10 + (*hbuff - 'A')) << 4;
         }
 
+        if ((*hbuff >= 'a') && (*hbuff <= 'f')) {
+            c = (10 + (*hbuff - 'a')) << 4;
+        }
+
         hbuff++;
 
         if ((*hbuff >= '0') && (*hbuff <= '9')) {
@@ -78,13 +82,17 @@ void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev) {
             c |= 10 + (*hbuff - 'A');
         }
 
+        if ((*hbuff >= 'a') && (*hbuff <= 'f')) {
+            c |= 10 + (*hbuff - 'a');
+        }
+
         *vbuff = c;
 
-		if (rev) {
-			hbuff -= 3;
-		} else {
-	        hbuff++;
-		}
+        if (reverse) {
+            hbuff -= 3;
+        } else {
+            hbuff++;
+        }
 
         vbuff++;
     }
@@ -92,12 +100,13 @@ void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev) {
 
 // Convert byte buffer (vbuff argument) of len argument size into a hex
 // string buffer (hbuff argument) into a )
-void val_to_hex_string(char *hbuff, char *vbuff, int len, int reverse) {
+void val_to_hex_string_caps(char *hbuff, char *vbuff, int len, int reverse, int caps, int terminate) {
     int i;
+    char base = (caps ? 'A':'a');
 
-	if (reverse) {
-		vbuff += (len - 1);
-	}
+    if (reverse) {
+        vbuff += (len - 1);
+    }
 
     for(i=0;i<len;i++) {
         if ((((*vbuff & 0xf0) >> 4) >= 0) && (((*vbuff & 0xf0) >> 4) <= 9)) {
@@ -105,7 +114,7 @@ void val_to_hex_string(char *hbuff, char *vbuff, int len, int reverse) {
         }
 
         if ((((*vbuff & 0xf0) >> 4) >= 10) && (((*vbuff & 0xf0) >> 4) <= 15)) {
-            *hbuff = 'A' + (((*vbuff & 0xf0) >> 4) - 10);
+            *hbuff = base + (((*vbuff & 0xf0) >> 4) - 10);
         }
         hbuff++;
 
@@ -114,17 +123,22 @@ void val_to_hex_string(char *hbuff, char *vbuff, int len, int reverse) {
         }
 
         if (((*vbuff & 0x0f) >= 10) && ((*vbuff & 0x0f) <= 15)) {
-            *hbuff = 'A' + ((*vbuff & 0x0f) - 10);
+            *hbuff = base + ((*vbuff & 0x0f) - 10);
         }
         hbuff++;
 
-		if (reverse) {
-	        vbuff--;
-		} else {
-	        vbuff++;
-		}
+        if (reverse) {
+            vbuff--;
+        } else {
+            vbuff++;
+        }
     }
 
-	*hbuff = 0x00;
+    if (terminate) {
+        *hbuff = 0x00;
+    }
 }
 
+void val_to_hex_string(char *hbuff, char *vbuff, int len, int reverse) {
+    val_to_hex_string_caps(hbuff, vbuff, len, reverse, 1, 1);
+}

@@ -134,35 +134,18 @@
 #endif
 
 #if CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS <= 1
-#error "Please, review the 'Number of thread local storage pointers' settings in kconfig. Must be >= 2."
+#error "Please review the 'Number of thread local storage pointers' settings in kconfig. Must be >= 2."
 #endif
 
 #define THREAD_LOCAL_STORAGE_POINTER_ID (CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS - 1)
-// External GPIO
-#define EXTERNAL_GPIO 0
-#define EXTERNAL_GPIO_PINS 0
-#define EXTERNAL_GPIO_PORTS 0
-#if CONFIG_GPIO_PCA9698 ||  CONFIG_GPIO_PCA9505
-	#undef EXTERNAL_GPIO_PINS
-	#define EXTERNAL_GPIO_PINS 40
-	#undef EXTERNAL_GPIO_PORTS
-	#define EXTERNAL_GPIO_PORTS 5
-	#undef EXTERNAL_GPIO
-	#define EXTERNAL_GPIO 1
-
-	#if CONFIG_GPIO_PCA9698
-	#define EXTERNAL_GPIO_NAME "PCA9698"
-	#endif
-
-#if CONFIG_GPIO_PCA9505
-	#define EXTERNAL_GPIO_NAME "PCA9505"
-	#endif
-#endif
 
 // OpenVPN
 #if CONFIG_LUA_RTOS_USE_OPENVPN
 #if !CONFIG_MBEDTLS_BLOWFISH_C
-#error "OpenVPM requires CONFIG_MBEDTLS_BLOWFISH_C = 1. Please activate it with make menuconfig, enabling option in mbedTLS -> Symmetric Ciphers -> Blowfish block cipher."
+#error "OpenVPN requires CONFIG_MBEDTLS_BLOWFISH_C = 1. Please activate it with make menuconfig, enabling option in mbedTLS -> Symmetric Ciphers -> Blowfish block cipher."
+#endif
+#if !CONFIG_MBEDTLS_DES_C
+#error "OpenVPN requires CONFIG_MBEDTLS_DES_C = 1. Please activate it with make menuconfig, enabling option in mbedTLS -> Symmetric Ciphers -> DES block cipher (legacy, insecure)."
 #endif
 #endif
 
@@ -181,6 +164,13 @@
 #if CONFIG_LUA_RTOS_LUA_USE_BT
 #if !CONFIG_BT_ENABLED
 #error "Bluetooth requires CONFIG_BT_ENABLED = 1. Please activate it with make menuconfig, enabling option in Component config -> Bluetooth."
+#endif
+#endif
+
+// SOUND
+#if CONFIG_LUA_RTOS_LUA_USE_SOUND
+#if !CONFIG_LUA_RTOS_LUA_USE_PWM
+#error "Sound requires CONFIG_LUA_RTOS_LUA_USE_PWM = 1. Please activate it with make menuconfig, enabling option in Component config -> Lua RTOS -> Lua -> Lua RTOS Modules."
 #endif
 #endif
 

@@ -76,6 +76,20 @@
         ]
     },
     {
+        "description": "CITILAB ED1",
+        "manufacturer": "citilab.eu",
+        "image": "http://wiki.edutec.citilab.eu/Archivo:Ed1_dues_cares.png",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "CITILAB-ED1",
+                "description": "CITILAB ED1",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
         "description": "Espressif Systems ESP32-CoreBoard",
         "manufacturer": "Espressif Systems",
         "image": "http://git.whitecatboard.org/esp32-core-board.png",
@@ -313,6 +327,25 @@
             {
                 "id": "WESP32-OTA",
                 "description": "Silicognition wESP32 with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "M5Stack core board",
+        "manufacturer": "M5Stack",
+        "image": "https://www.m5stack.com/assets/images/p_core.png",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "M5STACK",
+                "description": "M5Stack Core Board",
+                "filesystem": "default"
+            },
+            {
+                "id": "M5STACK-OTA",
+                "description": "M5Stack Core Board with OTA",
                 "filesystem": "default"
             }
         ]

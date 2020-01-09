@@ -48,6 +48,8 @@
 
 #include <sys/mutex.h>
 
+#include <drivers/cpu.h>
+
 typedef void (*gpio_debouncing_callback_t)(void *, uint8_t);
 
 typedef struct {

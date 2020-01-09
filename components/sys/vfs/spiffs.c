@@ -1328,4 +1328,15 @@ int vfs_spiffs_format(const char *target) {
     return 0;
 }
 
+int vfs_spiffs_fsstat(const char *target, u32_t *total, u32_t *used) {
+
+    if (SPIFFS_info(&fs, total, used) != SPIFFS_OK) {
+        syslog(LOG_ERR, "spiffs get fs info of '%s' (%s)", target,
+                strerror(spiffs_result(fs.err_code)));
+        return -1;
+    }
+
+    return 0;
+}
+
 #endif

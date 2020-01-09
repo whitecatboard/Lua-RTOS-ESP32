@@ -43,7 +43,21 @@
  *
  */
 
-#include "luartos.h"
+/*
+ *
+ * The sensor returns 5 bytes. Each bit is encoded as follows:
+ *
+ * A high to low transition (start bit)
+ * A low to high transition, in with it's length determines the bit value
+ *
+ * For all the dhtxx sensor series, we can apply the following rule to get
+ * the bit value:
+ *
+ * - bit is 0 if high transition time is less than low transition time
+ * - bit is 1 if high transition time is higher than low transition time
+ */
+
+#include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 #if CONFIG_LUA_RTOS_USE_SENSOR_DHT11 || CONFIG_LUA_RTOS_USE_SENSOR_DHT22 || CONFIG_LUA_RTOS_USE_SENSOR_DHT23
@@ -53,8 +67,12 @@
 #include <sys/driver.h>
 #include <sys/delay.h>
 
+#include <sensors/dhtxx.h>
+
 #include <drivers/gpio.h>
 #include <drivers/sensor.h>
+#include <drivers/rmt.h>
+#include <drivers/power_bus.h>
 
 static int dhtxx_bus_monitor(uint8_t pin, uint8_t level, int16_t timeout) {
     uint32_t start, end, elapsed;
@@ -87,40 +105,60 @@ static int dhtxx_bus_monitor(uint8_t pin, uint8_t level, int16_t timeout) {
 }
 
 driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
+    driver_unit_lock_error_t *lock_error = NULL;
+
     // Get pin from instance
     uint8_t pin = unit->setup[0].gpio.gpio;
 
-	// The preferred implementation uses the RMT to avoid disabling interrupts during
-	// the acquire process. If there a not RMT channels available we use the bit bang
-	// implementation.
-
-	rmt_config_t rmt_rx;
-	uint8_t channel;
-
-	rmt_rx.gpio_num = pin;
-	rmt_rx.clk_div = (APB_CLK_FREQ / 1000000); // Count in microseconds
-	rmt_rx.mem_block_num = 1;
-	rmt_rx.rmt_mode = RMT_MODE_RX;
-	rmt_rx.rx_config.filter_en = 1;
-	rmt_rx.rx_config.filter_ticks_thresh = 200;
-	rmt_rx.rx_config.idle_threshold = 200;
-
-	// Configure the RMT, and get a free channel for read
-	if (rmt_config_one(&rmt_rx, &channel) == 0) {
-		// Install driver for channel
-		if (rmt_driver_install(channel, 1000, 0) == 0) {
-			// Use RMT implementation
-			unit->args = (void *)((uint32_t)channel);
-
-			rmt_rx_start((rmt_channel_t)unit->args, 1);
-			rmt_rx_stop((rmt_channel_t)unit->args);
-
-			return NULL;
-		}
-	}
-
-    // Use software implementation
+    // By default, use software implementation
     unit->args = (void *)0xffffffff;
+
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
+    driver_error_t *error;
+
+    // The preferred implementation uses the RMT to avoid disabling interrupts during
+    // the acquire process. If there a not RMT channels available we use the bit bang
+    // implementation.
+    int rmt_device;
+
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    // At this point pin is locked by sensor driver. In this case we need to unlock the
+    // resource first, because maybe we can use RMT.
+    driver_unlock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, pin);
+#endif
+
+    error = rmt_setup_tx(pin, RMTPulseRangeUSEC, RMTIdleZ, NULL, &rmt_device);
+    if (!error) {
+        error = rmt_setup_rx(pin, RMTPulseRangeUSEC, 10, 100, &rmt_device);
+        if (!error) {
+    #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+            // Lock RMT for this sensor (pin is locked by RMT)
+            if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, RMT_DRIVER, rmt_device, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+                free(lock_error);
+            } else {
+                // Use RMT implementation
+                unit->args = (void *)((uint32_t)rmt_device);
+            }
+    #endif
+        } else {
+            free(error);
+        }
+    } else {
+        free(error);
+    }
+
+    if ((uint32_t)unit->args == 0xffffffff) {
+#endif
+        // Use bit bang
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+        // Lock GPIO for this sensor
+        if ((lock_error = driver_lock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, pin, DRIVER_ALL_FLAGS, unit->sensor->id))) {
+            return driver_lock_error(SENSOR_DRIVER, lock_error);
+        }
+#endif
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
+    }
+#endif
 
     // Release data bus
     gpio_pin_input(pin);
@@ -129,105 +167,113 @@ driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
     return NULL;
 }
 
-driver_error_t *dhtxx_acquire(sensor_instance_t *unit, uint8_t mdt, uint8_t *data) {
+driver_error_t *dhtxx_postsetup(sensor_instance_t *unit) {
+    // Datasheet says:
+    //
+    // When power is supplied to the sensor, do not send any
+    // instruction to the sensor in within one second in order to pass the unstable status
+
+#if (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0)
+    if (pwbus_uptime() < 1000) {
+        delay(1000);
+    }
+#endif
+
+    return NULL;
+}
+
+driver_error_t *dhtxx_acquire(sensor_instance_t *unit, uint32_t rdelay, uint32_t atime, uint8_t *data) {
     uint8_t retries = 0; // In case of problems we will retry the acquire a number of times
     uint8_t byte = 0;    // Current byte transferred by sensor
     int8_t  bit = 0;     // Current transferred bit by sensor
+    int t0;              // High to low transition length in usecs
+    int t1;              // Low to high transition length in usecs
 
     // Get pin from instance
     uint8_t pin = unit->setup[0].gpio.gpio;
 
 retry:
-	// We init the data in this way to detect a crc error in case of problems
-	data[0] = data[1] = data[2] = data[3] = 0xff;
-	data[4] = 0x00;
+    // We initialize the data in this way to detect a CRC error in case of problems: sensor
+    // not connected, bad wire quality, interferences ...
+    data[0] = data[1] = data[2] = data[3] = 0xff;
+    data[4] = 0x00;
 
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     if ((uint32_t)unit->args != 0xffffffff) {
-        // Use RMT version
-        RingbufHandle_t rb = NULL;
+        driver_error_t *error;
+        rmt_item_t *item;
 
-        // Get the ting buffer to read data
-        rmt_get_ringbuf_handle((rmt_channel_t)unit->args, &rb);
-        assert(rb != NULL);
+        // First send, request pulse
+        rmt_item_t buffer[41];
 
-		// Take data bus and set to low to inform the sensor that
-		// we want to acquire data
-		gpio_pin_output(pin);
-		gpio_pin_clr(pin);
-		delay(mdt);
+        buffer[0].level0 = 0;
+        buffer[0].duration0 = rdelay * 1000;
+        buffer[0].level1 = 1;
+        buffer[0].duration1 = 40;
 
-		// Release data bus
-		gpio_pin_input(pin);
+        error = rmt_tx_rx((int)unit->args, buffer, 1, buffer, 41, 100000);
+        if (!error) {
+            item = buffer;
 
-		// Start RMT
-		rmt_rx_start((rmt_channel_t)unit->args, 1);
+            // Skip first item, because it corresponds to the pulse sent by the
+            // sensor to indicate that it will start to send the data.
+            item++;
 
-		// Receive data
-		size_t rx_size = 0;
-		rmt_item32_t *fitem = (rmt_item32_t*) xRingbufferReceive(rb, &rx_size, 100 / portTICK_PERIOD_MS);
-		rmt_item32_t *citem = fitem;
+            for(byte=0;byte < 5;byte++) {
+                data[byte] = 0;
 
-		if (citem != NULL) {
-			// We have data
+                for(bit = 7;bit >= 0;bit--) {
+                    if (item->level0 == 0) {
+                        t0 = item->duration0;
+                        t1 = item->duration1;
+                    } else {
+                        t0 = item->duration1;
+                        t1 = item->duration0;
+                    }
 
-			// Get number of items
-			int items = rx_size / sizeof(rmt_item32_t);
+                    if (t1 > t0) {
+                        data[byte] |= (1 << bit);
+                    }
 
-			// At least we need 41 items (start bit + 40 bits of data)
-			if (items > 40) {
-				// Skip first item, because it corresponds to the pulse send by the
-				// sensor to indicate that it will start to send the data.
-				citem++;
-
-				// The sensor returns 5 bytes
-				for(byte=0;byte < 5;byte++) {
-					data[byte] = 0;
-
-					for(bit=7;bit >= 0;bit--) {
-						data[byte] |= (((citem->duration1 < 50)?0:1) << bit);
-						citem++;
-					}
-				}
-			}
-
-			vRingbufferReturnItem(rb, (void*) fitem);
-		}
-
-		// Stop RMT
-		rmt_rx_stop((rmt_channel_t)unit->args);
+                    item++;
+                }
+            }
+        } else {
+            return error;
+        }
     } else {
-        int elapsed; // Elapsed time in usecs between level transitions 0->1 / 1->0
-
+#endif
         // Use software version
         portDISABLE_INTERRUPTS();
 
-		// Take data bus and set to low to inform the sensor that
-		// we want to acquire data
-		gpio_pin_output(pin);
-		gpio_pin_clr(pin);
-		delay(mdt);
+        // Inform the sensor that we want to acquire data
+        gpio_pin_output(pin);
+        gpio_pin_clr(pin);
+        delay(rdelay);
 
-		// Release data bus
-		gpio_pin_input(pin);
-	    gpio_pin_pullup(pin);
+        // Receive data
+        gpio_pin_input(pin);
+        gpio_pin_pullup(pin);
 
         // Wait response from sensor 1 -> 0 -> 1 -> 0
-        elapsed = dhtxx_bus_monitor(pin, 1, 100);if (elapsed == -1) goto timeout;
-        elapsed = dhtxx_bus_monitor(pin, 0, 100);if (elapsed == -1) goto timeout;
-        elapsed = dhtxx_bus_monitor(pin, 1, 100);if (elapsed == -1) goto timeout;
+        t1 = dhtxx_bus_monitor(pin, 1, 100);if (t1 == -1) goto timeout;
+        t0 = dhtxx_bus_monitor(pin, 0, 100);if (t0 == -1) goto timeout;
+        t1 = dhtxx_bus_monitor(pin, 1, 100);if (t1 == -1) goto timeout;
 
-		for(byte=0;byte < 5;byte++) {
-			data[byte] = 0;
+        for(byte=0;byte < 5;byte++) {
+            data[byte] = 0;
 
-			for(bit=7;bit >= 0;bit--) {
-	            // Wait for bit 0 -> 1 -> 0
-	            elapsed = dhtxx_bus_monitor(pin, 0, 100);if (elapsed == -1) goto timeout;
-	            elapsed = dhtxx_bus_monitor(pin, 1, 100);if (elapsed == -1) goto timeout;
+            for(bit=7;bit >= 0;bit--) {
+                // Wait for bit 0 -> 1 -> 0
+                t0 = dhtxx_bus_monitor(pin, 0, 100);if (t0 == -1) goto timeout;
+                t1 = dhtxx_bus_monitor(pin, 1, 100);if (t1 == -1) goto timeout;
 
-				data[byte] |= (((elapsed < 50)?0:1) << bit);
-			}
-		}
+                data[byte] |= ((t1 > t0) << bit);
+            }
+        }
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
     }
+#endif
 
     // Check CRC
     uint8_t crc = 0;
@@ -237,14 +283,15 @@ retry:
     crc += data[3];
 
     if (crc != data[4]) {
-    		if ((uint32_t)unit->args == 0xffffffff) {
-    			portENABLE_INTERRUPTS();
-    		}
+        if ((uint32_t)unit->args == 0xffffffff) {
+            portENABLE_INTERRUPTS();
+        }
 
-    	    retries++;
-    	    if (retries < 5) {
-    	    		goto retry;
-    	    }
+        retries++;
+        if (retries < 5) {
+            delay(atime);
+            goto retry;
+        }
 
         return driver_error(SENSOR_DRIVER, SENSOR_ERR_INVALID_DATA, "crc");
     }
@@ -252,31 +299,47 @@ retry:
     goto exit;
 
 timeout:
-	if ((uint32_t)unit->args == 0xffffffff) {
-		portENABLE_INTERRUPTS();
-	}
+    if ((uint32_t)unit->args == 0xffffffff) {
+        portENABLE_INTERRUPTS();
+    }
 
     retries++;
     if (retries < 5) {
-    		goto retry;
+        delay(atime);
+        goto retry;
     }
 
     return driver_error(SENSOR_DRIVER, SENSOR_ERR_TIMEOUT, NULL);
 
 exit:
-	if ((uint32_t)unit->args == 0xffffffff) {
-		portENABLE_INTERRUPTS();
-	}
+    if ((uint32_t)unit->args == 0xffffffff) {
+        portENABLE_INTERRUPTS();
+    }
 
-	return NULL;
+    gettimeofday(&unit->next, NULL);
+    unit->next.tv_sec += atime / 1000;
+
+    return NULL;
 }
 
 driver_error_t *dhtxx_unsetup(sensor_instance_t *unit) {
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
 	if ((uint32_t)unit->args != 0xffffffff) {
-		rmt_driver_uninstall((rmt_channel_t)unit->args);
-	}
+        rmt_unsetup_rx((int)unit->args);
 
-	return NULL;
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+        driver_unlock(SENSOR_DRIVER, unit->unit, RMT_DRIVER, (uint32_t)unit->args);
+#endif
+    } else {
+#endif
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+        driver_unlock(SENSOR_DRIVER, unit->unit, GPIO_DRIVER, unit->setup[0].gpio.gpio);
+#endif
+#if CONFIG_LUA_RTOS_LUA_USE_RMT
+    }
+#endif
+
+    return NULL;
 }
 #endif
 #endif

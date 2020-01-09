@@ -218,7 +218,7 @@ driver_error_t *pwm_setup(int8_t unit, int8_t channel, int8_t pin, int32_t freq,
 		case 0: periph_module_enable(PERIPH_LEDC_MODULE); break;
 	}
 
-	// If channel is -1 means that channel assignement is made by driver
+	// If channel is -1 means that channel assignment is made by driver
 	if (channel == -1) {
 		// Get a free channel
 		int8_t cchannel;
@@ -424,6 +424,8 @@ driver_error_t *pwm_unsetup(int8_t unit, int8_t channel) {
 	// Sanity checks
 	if ((error = pwm_check_unit(unit, 0))) return error;
 	if ((error = pwm_check_channel(unit, channel, 0))) return error;
+
+	if (!pwm[unit][channel].setup) return NULL;
 
 	// Stop PWM
 	pwm_stop(unit, channel);

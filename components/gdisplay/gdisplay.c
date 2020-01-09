@@ -127,6 +127,7 @@ DRIVER_REGISTER_BEGIN(GDISPLAY,gdisplay,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, BooleanRequired, "boolean required", GDISPLAY_ERR_BOOLEAN_REQUIRED);
 	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, TouchNotSupported, "touch pad not supported in this display", GDISPLAY_ERR_TOUCH_NOT_SUPPORTED);
 	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, CannotSetup, "can't setup", GDISPLAY_ERR_TOUCH_NOT_SUPPORTED);
+	DRIVER_REGISTER_ERROR(GDISPLAY, gdisplay, QREncodeError, "qrcode encode error", GDISPLAY_ERR_QR_ENCODING_ERROR);
 DRIVER_REGISTER_END(GDISPLAY,gdisplay,0,NULL,NULL);
 
 /*
@@ -259,7 +260,7 @@ driver_error_t *gdisplay_init(uint8_t chipset, uint8_t orient, uint8_t buffered,
 	cursorx = 0;
 	cursory = 0;
 
-#if CONFIG_LUA_RTOS_GDISPLAY_CONNECTED_TO_POWER_BUS || CONFIG_LUA_RTOS_GDISPLAY_I2C_CONNECTED_TO_POWER_BUS
+#if ((CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0) && (CONFIG_LUA_RTOS_GDISPLAY_CONNECTED_TO_POWER_BUS || CONFIG_LUA_RTOS_GDISPLAY_I2C_CONNECTED_TO_POWER_BUS))
     pwbus_on();
 #endif
 
@@ -552,7 +553,7 @@ driver_error_t *gdisplay_on() {
 	gdisplay_ll_on();
 
 #if CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT >= 0
-	gpio_pin_clr(CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT);
+	gpio_pin_set(CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT);
 #endif
 
 	return NULL;
@@ -567,7 +568,7 @@ driver_error_t *gdisplay_off() {
 	gdisplay_ll_off();
 
 #if CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT >= 0
-	gpio_pin_set(CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT);
+	gpio_pin_clr(CONFIG_LUA_RTOS_GDISPLAY_BACKLIGHT);
 #endif
 
 	return NULL;

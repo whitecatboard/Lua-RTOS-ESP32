@@ -154,7 +154,12 @@ static void print_usage (const char *badoption) {
 ** (if present)
 */
 static void l_message (const char *pname, const char *msg) {
+#if !LUA_USE_ROTABLE
   if (pname) lua_writestringerror("%s: ", pname);
+#else
+  if (pname) lua_writestringerror("%s: %s\n", pname, msg);
+  else
+#endif
   lua_writestringerror("%s\n", msg);
 }
 

@@ -230,12 +230,20 @@ OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx])			*/
 
 OP_VARARG,/*	A B	R(A), R(A+1), ..., R(A+B-2) = vararg		*/
 
-OP_EXTRAARG/*	Ax	extra (larger) argument for previous opcode	*/
+OP_EXTRAARG,/*	Ax	extra (larger) argument for previous opcode	*/
+#if LUA_USE_ROTABLE
+OP_NOP,
+OP_BLOCKS,
+OP_BLOCKE,
+#endif
 } OpCode;
 
 
+#if !LUA_USE_ROTABLE
 #define NUM_OPCODES	(cast(int, OP_EXTRAARG) + 1)
-
+#else
+#define NUM_OPCODES	(cast(int, OP_BLOCKE) + 1)
+#endif
 
 
 /*===========================================================================

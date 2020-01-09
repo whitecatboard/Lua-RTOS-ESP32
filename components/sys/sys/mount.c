@@ -69,22 +69,22 @@ void _mount_init() {
 // Current mount points
 struct mount_pt mountps[] = {
 #if (CONFIG_SD_CARD_MMC || CONFIG_SD_CARD_SPI) && CONFIG_LUA_RTOS_USE_FAT
-    {NULL, "fat", &vfs_fat_mount, &vfs_fat_umount, &vfs_fat_format, 0},
+    {NULL, "fat", &vfs_fat_mount, &vfs_fat_umount, &vfs_fat_format, &vfs_fat_fsstat, 0},
 #endif
 #if CONFIG_LUA_RTOS_USE_LFS
-    {NULL, "lfs", &vfs_lfs_mount, &vfs_lfs_umount, &vfs_lfs_format, 0},
+    {NULL, "lfs", &vfs_lfs_mount, &vfs_lfs_umount, &vfs_lfs_format, &vfs_lfs_fsstat, 0},
 #endif
 #if CONFIG_LUA_RTOS_USE_RAM_FS
-    {NULL, "ramfs", &vfs_ramfs_mount, &vfs_ramfs_umount, &vfs_ramfs_format, 0},
+    {NULL, "ramfs", &vfs_ramfs_mount, &vfs_ramfs_umount, &vfs_ramfs_format, &vfs_ramfs_fsstat, 0},
 #endif
 #if CONFIG_LUA_RTOS_USE_ROM_FS
-    {NULL, "romfs", &vfs_romfs_mount, &vfs_romfs_umount, NULL, 0},
+    {NULL, "romfs", &vfs_romfs_mount, &vfs_romfs_umount, NULL, &vfs_romfs_fsstat, 0},
 #endif
 #if CONFIG_LUA_RTOS_USE_SPIFFS
-   {NULL, "spiffs", &vfs_spiffs_mount, &vfs_spiffs_umount, &vfs_spiffs_format, 0},
+   {NULL, "spiffs", &vfs_spiffs_mount, &vfs_spiffs_umount, &vfs_spiffs_format, &vfs_spiffs_fsstat, 0},
 #endif
-    {"/dev", "dev", NULL, NULL, NULL, 0},
-    {NULL, NULL, NULL, NULL, NULL, 0}
+    {"/dev", "dev", NULL, NULL, NULL, NULL, 0},
+    {NULL, NULL, NULL, NULL, NULL, NULL, 0}
 };
 
 static char *dot_dot(char *rpath, char *cpath) {
@@ -572,7 +572,8 @@ struct mount_pt *mount_get_mount_point_for_path(const char *path) {
         ppath++;
         while (cmount->fs) {
             if (strcmp(ppath, cmount->fs) == 0) {
-                free(--ppath);
+                ppath--;
+                free(ppath);
                 mtx_unlock(&mtx);
                 return cmount;
             }
@@ -580,7 +581,8 @@ struct mount_pt *mount_get_mount_point_for_path(const char *path) {
             cmount++;
         }
 
-        free(--ppath);
+        ppath--;
+        free(ppath);
     }
 
 	mtx_unlock(&mtx);

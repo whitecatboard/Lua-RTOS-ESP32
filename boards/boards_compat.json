@@ -153,7 +153,7 @@
 		"id": "EVK-NINA-W",
 		"type": "EVK-NINA-W",
 		"subtype": ""
-	}, 
+	},
 	{
 		"id": "WESP32",
 		"type": "WESP32",
@@ -164,7 +164,7 @@
 		"type": "WESP32",
 		"subtype": "OTA"
 	},
-	{
+    {
 		"id": "GENERIC",
 		"type": "GENERIC",
 		"subtype": ""

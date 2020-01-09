@@ -100,7 +100,7 @@ static const uint8_t ILI9341_init[] = {
   0x28,
   ILI9341_VMCTR2, 1,  								//VCM control2
   0x86,
-  ST7735_MADCTL, 1,    								// Memory Access Control
+  ILI9341_RDMADCTL, 1,    								// Memory Access Control
   0x48,
   ILI9341_PIXFMT, 1,
   0x55,
@@ -347,7 +347,7 @@ void ili9341_set_orientation(uint8_t m) {
 		break;
 	}
 
-	gdisplay_ll_command(ST7735_MADCTL);
+	gdisplay_ll_command(ILI9341_RDMADCTL);
 	gdisplay_ll_data(&madctl, 1);
 }
 

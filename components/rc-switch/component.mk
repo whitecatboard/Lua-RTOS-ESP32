@@ -1,0 +1,16 @@
+#
+# Component Makefile
+#
+
+ifdef CONFIG_LUA_RTOS_LUA_USE_RCSWITCH
+
+COMPONENT_SRCDIRS := . 
+COMPONENT_ADD_INCLUDEDIRS := . 
+
+else
+
+# disable RCSWITCH support
+COMPONENT_SRCDIRS :=
+COMPONENT_ADD_INCLUDEDIRS :=
+
+endif

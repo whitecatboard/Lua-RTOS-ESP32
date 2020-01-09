@@ -67,6 +67,7 @@
 #include <vfs/vfs.h>
 #include <sys/driver.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/times.h>
 #include <sys/syslog.h>
 #include <sys/status.h>
@@ -90,6 +91,7 @@ FILE *lua_stdout_file = NULL;
 void luaC_fullgc (lua_State *L, int isemergency) ;
 int edit_main(int argc, char *argv[]);
 extern int os_get_random(unsigned char *buf, size_t len);
+int settimeofday(const struct timeval *, const struct timezone *);
 
 static int os_stdout(lua_State *L) {
     int total = lua_gettop(L);
@@ -144,14 +146,21 @@ static int os_edit (lua_State *L) {
     }
 
     // Create file if does not exists
-    FILE *fp = fopen(path, "a");
+    bool bCreated = false;
+    FILE *fp = fopen(path, "r");
     if (!fp) {
-        return luaL_fileresult(L, 0, path);
+        bCreated = true;
+        fp = fopen(path, "a");
+        if (!fp) {
+            return luaL_fileresult(L, 0, path);
+        }
     }
     fclose(fp);
   
     char* lua_argv[] = {(char *)"edit", (char *)path, NULL};
-    edit_main(2, lua_argv);
+    if (1 == edit_main(2, lua_argv) && bCreated) {
+        unlink(path);
+    }
     console_clear();
     return 0;
 }
@@ -512,7 +521,7 @@ static int os_board(lua_State *L) {
     return 3;
 }
 
-static int os_logcons(lua_State *L) { 
+static int os_logcons(lua_State *L) {
     if (lua_gettop(L) == 1) {
         int mask = LOG_NDELAY;
 
@@ -534,6 +543,30 @@ static int os_logcons(lua_State *L) {
     }
 }
 
+static int os_syslog(lua_State *L) {
+    const char *message = luaL_checkstring(L, 1);
+    int level = luaL_optinteger( L, 2, LOG_ERR );
+    syslog(level, message);
+
+    return 0;
+}
+
+#if CONFIG_LUA_RTOS_USE_RSYSLOG
+static int os_setrsyslog(lua_State *L) {
+    if (lua_gettop(L) == 1) {
+        const char *host = luaL_checkstring(L, 1);
+        const char *ret = syslog_setloghost(host);
+        if (ret == NULL) return 0;
+        lua_pushstring(L, ret);
+        return 1;
+    }
+    const char *ret = syslog_getloghost();
+    if (ret == NULL) return 0;
+    lua_pushstring(L, ret);
+    return 1;
+}
+#endif
+
 static int os_stats(lua_State *L) {
     const char *stat = luaL_optstring(L, 1, NULL);
 
@@ -553,7 +586,7 @@ static int os_stats(lua_State *L) {
     return 0;
 }
 
-static int os_format(lua_State *L) {
+int os_format(lua_State *L) {
     const char *path = luaL_checkstring(L, 1);
 
     const struct mount_pt *mountp;
@@ -586,6 +619,25 @@ static int os_format(lua_State *L) {
 
     printf("%s can't be formatted\r\n", path);
 
+    return 0;
+}
+
+int os_df(lua_State *L) {
+    const char *path = luaL_optstring(L, 1, "/");
+    const struct mount_pt *mountp;
+
+    if ((mountp = mount_get_mount_point_for_path(path))) {
+        if (mountp->fsstat) {
+            uint32_t total, used;
+            if (0 == mountp->fsstat(path, &total, &used)) {
+                lua_pushinteger(L, total-used); // free
+                lua_pushinteger(L, total);      // total
+                return 2;
+            }
+        }
+    }
+
+    printf("can't get free space of %s\r\n", path);
     return 0;
 }
 
@@ -704,10 +756,6 @@ static int os_run (lua_State *L) {
     }
 
     from_uart = 1;
-    code = (char *)calloc(1,1024);
-    if (!code) {
-        luaL_error(L, "not enough memory");
-    }
 
     lua_pop(L, 1);
 
@@ -738,10 +786,9 @@ static int os_run (lua_State *L) {
 
         code = realloc(code, code_size + chunk_size + 1);
         if (!code) {
-            free(code);
             uart_ll_set_raw(0);
             uart_ll_unlock(CONSOLE_UART);
-            luaL_error(L, "not enough memory");
+            return luaL_error(L, "not enough memory");
         }
 
         // Read chunk
@@ -785,25 +832,13 @@ skip:
         return luaL_error(L, lua_tostring(L, -1));
     }
 
-#if 0
-    lua_remove(L, -1);
-
-    lua_getglobal(L, "thread");
-    lua_getfield(L, -1, "start");
-
-    lua_remove(L, -2);  // Remove "thread" from the stack
-    lua_insert(L, -2);  // Switch "thread" with parsed function
-#endif
-
+    // Call to function
     status = lua_pcall(L, 1, 0, 0);
     if (status != LUA_OK) {
         if (code && from_uart) free(code);
         return luaL_error(L, lua_tostring(L, -1));
     }
 
-#if 0
-    lua_pop(L, 1);
-#endif
 
     if (code && from_uart) free(code);
 
@@ -921,6 +956,8 @@ static int os_partitions(lua_State *L) {
     char address[9];
     char size[9];
     esp_partition_iterator_t it;
+    const esp_partition_t* boot = esp_ota_get_boot_partition();
+    const esp_partition_t* running = esp_ota_get_running_partition();
 
     printf("TYPE:SUB\t ADDRESS\t  LENGTH\tENC\tLABEL\n");
 
@@ -930,7 +967,7 @@ static int os_partitions(lua_State *L) {
 
         snprintf(address, sizeof(address),"%8d", p->address);
         snprintf(size, sizeof(size),"%8d", p->size);
-        printf("0x%02x:0x%02x\t%s\t%s\t%c\t%s\n", p->type, p->subtype, address, size, p->encrypted ? 'Y':'N', p->label);
+        printf("0x%02x:0x%02x\t%s\t%s\t%c\t%s%s%s\n", p->type, p->subtype, address, size, p->encrypted ? 'Y':'N', p->label, p==boot ? " < boot":"", p==running ? " < running":"");
     }
     esp_partition_iterator_release(it);
 
@@ -1121,6 +1158,41 @@ static int os_uptime(lua_State *L) {
     }
 
     return table;
+}
+
+static int os_time (lua_State *L);
+static int os_settime(lua_State *L) {
+    time_t t = (time_t)-1;
+
+    // Check if user provides input as a table
+    if (1 == lua_gettop(L) && lua_istable(L, 1)) {
+        if (1 == os_time(L)) {
+            t = luaL_checkinteger(L, -1);
+        }
+    }
+    else {
+        struct tm ts;
+        ts.tm_hour  = luaL_checkinteger(L, 1);
+        ts.tm_min   = luaL_checkinteger(L, 2);
+        ts.tm_sec   = luaL_checkinteger(L, 3);
+        ts.tm_mon   = luaL_checkinteger(L, 4) - 1;
+        ts.tm_mday  = luaL_checkinteger(L, 5);
+        ts.tm_year  = luaL_checkinteger(L, 6) - 1900;
+        ts.tm_isdst = luaL_optinteger(L, 7, 0);
+        t = mktime(&ts);
+    }
+
+    if (t == (time_t)-1) {
+        luaL_error(L, "parameters given cannot be set as system time");
+    }
+
+    struct timeval tv;
+    tv.tv_sec = t;
+    tv.tv_usec = 0;
+    settimeofday(&tv, NULL);
+
+    lua_pushinteger(L, (lua_Integer)(t));
+    return 1;
 }
 
 #if defined(MALLOC_DEBUG_H)

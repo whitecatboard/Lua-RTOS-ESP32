@@ -519,8 +519,8 @@ static const LUA_REG_TYPE pio_map[] = {
 #else
 static const LUA_REG_TYPE pio_map[] = {
     { LSTRKEY( "decode"   ),        LFUNCVAL( pio_decode               ) },
-    { LSTRKEY( "pin"      ),            LROVAL  ( pio_pin_map              ) },
-    { LSTRKEY( "port"     ),            LROVAL  ( pio_port_map             ) },
+    { LSTRKEY( "pin"      ),        LROVAL  ( pio_pin_map              ) },
+    { LSTRKEY( "port"     ),        LROVAL  ( pio_port_map             ) },
 
     { LSTRKEY( "INPUT"    ),        LINTVAL ( PIO_DIR_INPUT            ) },
     { LSTRKEY( "OUTPUT"   ),        LINTVAL ( PIO_DIR_OUTPUT           ) },
@@ -575,6 +575,39 @@ static const LUA_REG_TYPE pio_map[] = {
     PIO_GPIO44
     PIO_GPIO45
     PIO_GPIO46
+    PIO_GPIO47
+    PIO_GPIO48
+    PIO_GPIO49
+    PIO_GPIO50
+    PIO_GPIO51
+    PIO_GPIO52
+    PIO_GPIO53
+    PIO_GPIO54
+    PIO_GPIO55
+    PIO_GPIO56
+    PIO_GPIO57
+    PIO_GPIO58
+    PIO_GPIO59
+    PIO_GPIO60
+    PIO_GPIO61
+    PIO_GPIO62
+    PIO_GPIO63
+    PIO_GPIO64
+    PIO_GPIO65
+    PIO_GPIO66
+    PIO_GPIO67
+    PIO_GPIO68
+    PIO_GPIO69
+    PIO_GPIO70
+    PIO_GPIO71
+    PIO_GPIO72
+    PIO_GPIO73
+    PIO_GPIO74
+    PIO_GPIO75
+    PIO_GPIO76
+    PIO_GPIO77
+    PIO_GPIO78
+    PIO_GPIO79
 
     { LNILKEY, LNILVAL }
 };
@@ -587,13 +620,3 @@ LUALIB_API int luaopen_pio(lua_State *L) {
 MODULE_REGISTER_ROM(PIO, pio, pio_map, luaopen_pio, 1);
 
 #endif
-
-
-/*
-
- pio.pin.interrupt(pio.GPIO35, function(value)
-      print("value: "..value)
- end, pio.pin.IntrNegEdge)
-
-
- */

@@ -68,11 +68,12 @@ DRIVER_REGISTER_BEGIN(BT,bt,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(BT, bt, NotEnoughtMemory, "not enough memory", BT_ERR_NOT_ENOUGH_MEMORY);
 	DRIVER_REGISTER_ERROR(BT, bt, InvalidArgument, "invalid argument", BT_ERR_INVALID_ARGUMENT);
 	DRIVER_REGISTER_ERROR(BT, bt, InvalidBeacon, "invalid beacon", BT_ERR_INVALID_BEACON);
-	DRIVER_REGISTER_ERROR(BT, bt, CannoStartScan, "can't start scanning", BT_ERR_CANT_START_SCAN);
-	DRIVER_REGISTER_ERROR(BT, bt, CannoStopScan, "can't stop scanning", BT_ERR_CANT_STOP_SCAN);
-	DRIVER_REGISTER_ERROR(BT, bt, CannoStartAdv, "can't start advertising", BT_ERR_CANT_START_ADV);
-	DRIVER_REGISTER_ERROR(BT, bt, CannoStopAdv, "can't start advertising", BT_ERR_CANT_STOP_ADV);
+	DRIVER_REGISTER_ERROR(BT, bt, CannotStartScan, "can't start scanning", BT_ERR_CANT_START_SCAN);
+	DRIVER_REGISTER_ERROR(BT, bt, CannotStopScan, "can't stop scanning", BT_ERR_CANT_STOP_SCAN);
+	DRIVER_REGISTER_ERROR(BT, bt, CannotStartAdv, "can't start advertising", BT_ERR_CANT_START_ADV);
+	DRIVER_REGISTER_ERROR(BT, bt, CannotStopAdv, "can't start advertising", BT_ERR_CANT_STOP_ADV);
 	DRIVER_REGISTER_ERROR(BT, bt, InvalidTxPower, "invalid tx power", BT_ERR_INVALID_TX_POWER);
+	DRIVER_REGISTER_ERROR(BT, bt, AdvTooLong, "advertising data must be less then 31 bytes", BT_ERR_ADVDATA_TOO_LONG);
 DRIVER_REGISTER_END(BT,bt,0,NULL,NULL);
 
 #define evBT_SCAN_START_COMPLETE ( 1 << 0 )

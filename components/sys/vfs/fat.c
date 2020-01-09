@@ -420,4 +420,34 @@ int vfs_fat_format(const char *target) {
 
     return 0;
 }
+
+int vfs_fat_fsstat(const char *target, u32_t *total, u32_t *used) {
+    DWORD nclst = 0;
+    FATFS* fs = NULL;
+    FRESULT err = f_getfree (target, &nclst, &fs);
+
+    if (err != FR_OK) {
+        syslog(LOG_ERR, "fat get fs info of '%s' (%i)", target, err);
+        return -1;
+    }
+
+    //fs->free_clst and nclst both are equal and give the number of free clusters
+    //fs->csize = Cluster size [sectors]
+    //fs->ssize = Sector size (512, 1024, 2048 or 4096)
+    //fs->fsize = Size of an FAT [sectors]
+    //fs->n_fatent = nclst + 2
+
+    DWORD	tclst = fs->n_fatent - 2;
+
+    if (total) {
+      *total = tclst * fs->csize * fs->ssize;
+    }
+
+    if (used) {
+      *used = (tclst - nclst) * fs->csize * fs->ssize;
+    }
+
+    return 0;
+}
+
 #endif

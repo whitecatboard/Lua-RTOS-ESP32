@@ -174,6 +174,7 @@ typedef struct {
     const sensor_data_t properties[SENSOR_MAX_PROPERTIES];
     const sensor_setup_f_t setup;
     const sensor_setup_f_t presetup;
+    const sensor_setup_f_t postsetup;
     const sensor_unsetup_f_t unsetup;
     const sensor_acquire_f_t acquire;
     const sensor_set_f_t set;

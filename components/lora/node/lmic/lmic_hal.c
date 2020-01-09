@@ -233,7 +233,7 @@ void hal_pin_rxtx (u1_t val) {
  * control radio RST pin (0=low, 1=high, 2=floating)
  */
 void hal_pin_rst (u1_t val) {
-	#if CONFIG_LUA_RTOS_LORA_CONNECTED_TO_POWER_BUS
+	#if (CONFIG_LUA_RTOS_LORA_CONNECTED_TO_POWER_BUS && (CONFIG_LUA_RTOS_POWER_BUS_PIN >= 0))
 		if (val == 1) {
 			pwbus_off();
 			delay(1);

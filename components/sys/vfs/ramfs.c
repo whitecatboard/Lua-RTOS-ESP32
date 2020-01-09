@@ -618,4 +618,17 @@ int vfs_ramfs_format(const char *target) {
     return 0;
 }
 
+int vfs_ramfs_fsstat(const char *target, u32_t *total, u32_t *used) {
+
+    if (total) {
+      *total = fs.size;
+    }
+
+    if (used) {
+      *used = fs.current_size;
+    }
+
+    return 0;
+}
+
 #endif

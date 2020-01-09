@@ -108,6 +108,11 @@ static int lstepper_move( lua_State* L ){
     double ispd = lstepper->min_spd;
     double stpu = lstepper->stpu;
 
+    // Sanity checks
+    if (speed < lstepper->min_spd) {
+    	speed = lstepper->min_spd;
+    }
+
     if (speed > lstepper->max_spd) {
     	speed = lstepper->max_spd;
     }
@@ -115,18 +120,17 @@ static int lstepper_move( lua_State* L ){
     // Calculate direction
     uint8_t dir = (units >= 0.0);
 
-	// Calculate steps needed for move the axis
+	// Calculate steps needed to move the axis by the desired units
     double absUnits = fabs(units);
     double steps = absUnits * stpu;
 
-	// Remembrer:
+	// Remember:
 	//
 	// acc = (speed - initial speed) / time
 	// distance = initial speed * time + (1/2) * acc * time ^ 2
 
-	// Calculate time needed for reach desired speed from the initial speed at
-	// desired accelerarion
-
+	// Calculate the time required to reach desired speed from the initial speed at
+	// the desired acceleration
     if (speed < ispd) {
     	ispd = speed;
     }
@@ -135,22 +139,21 @@ static int lstepper_move( lua_State* L ){
     	accel = 1;
     }
 
+	// Calculate the distance required to reach the desired speed from the initial speed at
+	// the desired acceleration
     double acc_time = ((speed - ispd) / (60.0 * accel));
-
-	// Calculate distance needed for reach desired speed from the initial speed at
-	// desired accelerarion
     double acc_dist = (ispd / 60.0) * acc_time + ((accel  * acc_time * acc_time)/2.0);
 
-	// Calculate steps needed for reach desired speed from the initial speed at
-	// desired accelerarion
+	// Calculate the steps required to reach the desired speed from the initial speed at
+	// the desired acceleration
     double acc_steps = acc_dist * stpu;
 
-	if ((steps - 2 * acc_steps) < 0) {
+	if ((steps - 2.0 * acc_steps) < 0.0) {
 		acc_steps = floor(steps / 2.0);
 	}
 
 	// Calculate initial and end frequency
-	double ifreq = (ispd * stpu) / 60.0;
+	double ifreq = (ispd  * stpu) / 60.0;
 	double efreq = (speed * stpu) / 60.0;
 
     stepper_move(
@@ -163,29 +166,52 @@ static int lstepper_move( lua_State* L ){
 
 static int lstepper_start( lua_State* L ){
     stepper_userdata *lstepper = NULL;
+	int mask = 0;
+	int i;
 
-    int total = lua_gettop(L);
-    int mask = 0;
-    int i;
+	if (lua_istable(L, 1)) {
+		lua_pushnil(L);
+		while (lua_next(L, 1) != 0) {
+			if (!lua_isnil(L, -1)) {
+				lstepper = (stepper_userdata *)luaL_checkudata(L, -1, "stepper.inst");
+				luaL_argcheck(L, lstepper, -1, "stepper expected");
 
-    for (i=1; i <= total; i++) {
-        if (!lua_isnil(L, i)) {
-            lstepper = (stepper_userdata *)luaL_checkudata(L, i, "stepper.inst");
-            luaL_argcheck(L, lstepper, i, "stepper expected");
-        
-            mask |= (1 << (lstepper->unit));
-        }
-    }
-    
-    stepper_start(mask);
-    
+				mask |= (1 << (lstepper->unit));
+			}
+
+			lua_pop(L, 1);
+		}
+	} else {
+	    int total = lua_gettop(L);
+
+	    for (i=1; i <= total; i++) {
+	        if (!lua_isnil(L, i)) {
+	            lstepper = (stepper_userdata *)luaL_checkudata(L, i, "stepper.inst");
+	            luaL_argcheck(L, lstepper, i, "stepper expected");
+
+	            mask |= (1 << (lstepper->unit));
+	        }
+	    }
+	}
+
+	if (mask) {
+		stepper_start(mask);
+	}
+
+    return 0;
+}
+
+static int lstepper_stop( lua_State* L ) {
+    stepper_stop(0xffffffff);
+
     return 0;
 }
 
 static const LUA_REG_TYPE lstepper_map[] = {
     { LSTRKEY( "attach" ),		  LFUNCVAL( lstepper_attach    ) },
-	DRIVER_REGISTER_LUA_ERRORS(stepper)
 	{ LSTRKEY( "start"  ),		  LFUNCVAL( lstepper_start     ) },
+	{ LSTRKEY( "stop"   ),        LFUNCVAL( lstepper_stop      ) },
+	DRIVER_REGISTER_LUA_ERRORS(stepper)
 	{ LNILKEY, LNILVAL }
 };
 

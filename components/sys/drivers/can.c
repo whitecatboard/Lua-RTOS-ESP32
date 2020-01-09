@@ -63,6 +63,7 @@
 #include <sys/syslog.h>
 #include <sys/mutex.h>
 
+#include <drivers/cpu.h>
 #include <drivers/can.h>
 #include <drivers/gpio.h>
 

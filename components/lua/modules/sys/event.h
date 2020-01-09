@@ -48,7 +48,7 @@
  */
 
 #ifndef LEVENT_H
-#define	LEVENT_H
+#define    LEVENT_H
 
 #include "lua.h"
 
@@ -61,16 +61,17 @@
 #include <pthread.h>
 
 typedef struct {
-	pthread_t thread;   // Thread id
-	uint8_t is_waiting; // If 1 the caller is waiting for the termination of all subscribers
-	xQueueHandle q;     // Queue for sync listener thread with this event
+    pthread_t thread;   // Thread id
+    uint8_t is_waiting; // If 1 the caller is waiting for the termination of all subscribers
+    xQueueHandle q;     // Queue for sync listener thread with this event
 } listener_data_t;
 
 typedef struct {
-	struct mtx mtx;        // Mutex for protect the listeners list and the queue
-	struct list listeners; // List of listeners for this event
-	uint8_t pending;       // Number of listeners that are processing the event
-	xQueueHandle q;        // This is used by the listener for inform the caller that event is processed
+    struct mtx mtx;        // Mutex for protect the listeners list and the queue
+    struct list listeners; // List of listeners for this event
+    uint8_t pending;       // Number of listeners that are processing the event
+    uint8_t disabled;      // Is event disabled?
+    xQueueHandle q;        // This is used by the listener for inform the caller that event is processed
 } event_userdata_t;
 
-#endif	/* LEVENT_H */
+#endif    /* LEVENT_H */

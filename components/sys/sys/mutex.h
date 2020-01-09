@@ -59,6 +59,7 @@ struct mtx {
 #define MTX_DEF 0
 #define MTX_RECURSE 1
 
+int mtx_inited(struct mtx *mutex);
 void mtx_init(struct mtx *mutex, const char *name, const char *type, int opts);
 void mtx_lock(struct mtx *mutex);
 int  mtx_trylock(struct    mtx *mutex);

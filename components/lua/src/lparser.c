@@ -27,6 +27,9 @@
 #include "lstring.h"
 #include "ltable.h"
 
+#if LUA_USE_ROTABLE
+#define isBlockStart(n) (n->t.token == TK_BLOCK_START)
+#endif
 
 
 /* maximum number of local variables per function (must be smaller
@@ -61,7 +64,6 @@ typedef struct BlockCnt {
 */
 static void statement (LexState *ls);
 static void expr (LexState *ls, expdesc *v);
-
 
 /* semantic error */
 static l_noret semerror (LexState *ls, const char *msg) {
@@ -108,6 +110,34 @@ static void check (LexState *ls, int c) {
     error_expected(ls, c);
 }
 
+#if LUA_USE_ROTABLE
+static int openAnnotation(LexState *ls, expdesc *v) {
+    if (ls->t.token == TK_BLOCK_START) {
+        v->openAnnotation = ls->t.seminfo.i;
+        v->closeAnnotation = 0;
+        v->annotationLine = ls->linenumber;
+
+        luaK_block_start(ls->fs, v->openAnnotation);
+        luaX_next(ls);
+    }
+
+    return ls->linenumber;
+}
+
+static void closeAnnotation(LexState *ls, expdesc *v) {
+    if (v->openAnnotation != 0) {
+      check(ls, TK_BLOCK_END);
+      if (ls->t.seminfo.i != v->openAnnotation) {
+          luaX_syntaxerror(ls, luaO_pushfstring(ls->L,
+                       "annotation not closed at line %d",
+                        v->annotationLine));
+      }
+      luaX_next(ls);
+      v->closeAnnotation = v->openAnnotation;
+      v->openAnnotation = 0;
+    }
+}
+#endif
 
 static void checknext (LexState *ls, int c) {
   check(ls, c);
@@ -298,13 +328,18 @@ static void singlevar (LexState *ls, expdesc *var) {
   singlevaraux(fs, varname, var, 1);
   if (var->k == VVOID) {  /* global name? */
     expdesc key;
+
+#if LUA_USE_ROTABLE
+    key.openAnnotation = 0;
+    key.closeAnnotation = 0;
+#endif
+
     singlevaraux(fs, ls->envn, var, 1);  /* get environment variable */
     lua_assert(var->k != VVOID);  /* this one must exist */
     codestring(ls, &key, varname);  /* key is variable name */
     luaK_indexed(fs, var, &key);  /* env[varname] */
   }
 }
-
 
 static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
   FuncState *fs = ls->fs;
@@ -594,10 +629,18 @@ static int block_follow (LexState *ls, int withuntil) {
   }
 }
 
-
 static void statlist (LexState *ls) {
   /* statlist -> { stat [';'] } */
   while (!block_follow(ls, 1)) {
+#if LUA_USE_ROTABLE
+    if (ls->t.token == TK_BLOCK_START) {
+      luaK_block_start(ls->fs, ls->t.seminfo.i);
+      luaX_next(ls);
+    } else if (ls->t.token == TK_BLOCK_END) {
+      luaK_block_end(ls->fs, ls->t.seminfo.i);
+      luaX_next(ls);
+    } else
+#endif
     if (ls->t.token == TK_RETURN) {
       statement(ls);
       return;  /* 'return' must be last statement */
@@ -611,6 +654,12 @@ static void fieldsel (LexState *ls, expdesc *v) {
   /* fieldsel -> ['.' | ':'] NAME */
   FuncState *fs = ls->fs;
   expdesc key;
+
+#if LUA_USE_ROTABLE
+    key.openAnnotation = 0;
+    key.closeAnnotation = 0;
+#endif
+
   luaK_exp2anyregup(fs, v);
   luaX_next(ls);  /* skip the dot or colon */
   checkname(ls, &key);
@@ -648,6 +697,14 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   FuncState *fs = ls->fs;
   int reg = ls->fs->freereg;
   expdesc key, val;
+
+#if LUA_USE_ROTABLE
+    key.openAnnotation = 0;
+    key.closeAnnotation = 0;
+    val.openAnnotation = 0;
+    val.closeAnnotation = 0;
+#endif
+
   int rkkey;
   if (ls->t.token == TK_NAME) {
     checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
@@ -730,6 +787,13 @@ static void constructor (LexState *ls, expdesc *t) {
   struct ConsControl cc;
   cc.na = cc.nh = cc.tostore = 0;
   cc.t = t;
+
+#if LUA_USE_ROTABLE
+  cc.v.openAnnotation = 0;
+  cc.v.closeAnnotation = 0;
+  cc.v.annotationLine = 0;
+#endif
+
   init_exp(t, VRELOCABLE, pc);
   init_exp(&cc.v, VVOID, 0);  /* no value (yet) */
   luaK_exp2nextreg(ls->fs, t);  /* fix it at stack top */
@@ -818,10 +882,16 @@ static void funcargs (LexState *ls, expdesc *f, int line) {
   FuncState *fs = ls->fs;
   expdesc args;
   int base, nparams;
+
+#if LUA_USE_ROTABLE
+  args.openAnnotation = 0;
+  args.closeAnnotation = 0;
+#endif
+
   switch (ls->t.token) {
     case '(': {  /* funcargs -> '(' [ explist ] ')' */
       luaX_next(ls);
-      if (ls->t.token == ')')  /* arg list is empty? */
+      if (ls->t.token == ')') /* arg list is empty? */
         args.k = VVOID;
       else {
         explist(ls, &args);
@@ -867,9 +937,9 @@ static void funcargs (LexState *ls, expdesc *f, int line) {
 ** =======================================================================
 */
 
-
 static void primaryexp (LexState *ls, expdesc *v) {
   /* primaryexp -> NAME | '(' expr ')' */
+
   switch (ls->t.token) {
     case '(': {
       int line = ls->linenumber;
@@ -889,12 +959,16 @@ static void primaryexp (LexState *ls, expdesc *v) {
   }
 }
 
-
 static void suffixedexp (LexState *ls, expdesc *v) {
   /* suffixedexp ->
        primaryexp { '.' NAME | '[' exp ']' | ':' NAME funcargs | funcargs } */
   FuncState *fs = ls->fs;
   int line = ls->linenumber;
+
+#if LUA_USE_ROTABLE
+  line = openAnnotation(ls, v);
+#endif
+
   primaryexp(ls, v);
   for (;;) {
     switch (ls->t.token) {
@@ -904,6 +978,12 @@ static void suffixedexp (LexState *ls, expdesc *v) {
       }
       case '[': {  /* '[' exp1 ']' */
         expdesc key;
+
+#if LUA_USE_ROTABLE
+        key.openAnnotation = 0;
+        key.closeAnnotation = 0;
+#endif
+
         luaK_exp2anyregup(fs, v);
         yindex(ls, &key);
         luaK_indexed(fs, v, &key);
@@ -911,6 +991,12 @@ static void suffixedexp (LexState *ls, expdesc *v) {
       }
       case ':': {  /* ':' NAME funcargs */
         expdesc key;
+
+#if LUA_USE_ROTABLE
+        key.openAnnotation = 0;
+        key.closeAnnotation = 0;
+#endif
+
         luaX_next(ls);
         checkname(ls, &key);
         luaK_self(fs, v, &key);
@@ -922,15 +1008,21 @@ static void suffixedexp (LexState *ls, expdesc *v) {
         funcargs(ls, v, line);
         break;
       }
+#if !LUA_USE_ROTABLE
       default: return;
+#else
+      default:
+        closeAnnotation(ls, v);
+        return;
+#endif
     }
   }
 }
 
-
 static void simpleexp (LexState *ls, expdesc *v) {
   /* simpleexp -> FLT | INT | STRING | NIL | TRUE | FALSE | ... |
                   constructor | FUNCTION body | suffixedexp */
+
   switch (ls->t.token) {
     case TK_FLT: {
       init_exp(v, VKFLT, 0);
@@ -1049,28 +1141,100 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   BinOpr op;
   UnOpr uop;
   enterlevel(ls);
+
+#if LUA_USE_ROTABLE
+  int opAnnotation = 0;
+  if ((ls->t.token == TK_BLOCK_START) && (getunopr(luaX_lookahead(ls)) != OPR_NOUNOPR)) {
+    // Operator is annotated
+    opAnnotation = ls->t.seminfo.i;
+    luaX_next(ls);
+  }
+#endif
+
   uop = getunopr(ls->t.token);
   if (uop != OPR_NOUNOPR) {
     int line = ls->linenumber;
     luaX_next(ls);
+
+#if LUA_USE_ROTABLE
+   if (opAnnotation != 0) {
+        check(ls, TK_BLOCK_END);
+        luaX_next(ls);
+    }
+#endif
+
     subexpr(ls, v, UNARY_PRIORITY);
-    luaK_prefix(ls->fs, uop, v, line);
+
+#if LUA_USE_ROTABLE
+   if (opAnnotation != 0) {
+     luaK_block_start(ls->fs, opAnnotation);
+   }
+#endif
+
+   luaK_prefix(ls->fs, uop, v, line);
+
+#if LUA_USE_ROTABLE
+   if (opAnnotation != 0) {
+     luaK_block_end(ls->fs, opAnnotation);
+   }
+#endif
   }
   else simpleexp(ls, v);
+
   /* expand while operators have priorities higher than 'limit' */
+#if LUA_USE_ROTABLE
+  opAnnotation = 0;
+  if ((ls->t.token == TK_BLOCK_START) && (getbinopr(luaX_lookahead(ls)) != OPR_NOBINOPR)) {
+    // Operator is annotated
+    opAnnotation = ls->t.seminfo.i;
+    luaX_next(ls);
+  }
+#endif
   op = getbinopr(ls->t.token);
   while (op != OPR_NOBINOPR && priority[op].left > limit) {
     expdesc v2;
+
+    #if LUA_USE_ROTABLE
+    v2.openAnnotation = 0;
+    v2.closeAnnotation = 0;
+    #endif
+
     BinOpr nextop;
     int line = ls->linenumber;
     luaX_next(ls);
+
+#if LUA_USE_ROTABLE
+   if (opAnnotation != 0) {
+        check(ls, TK_BLOCK_END);
+        luaX_next(ls);
+    }
+#endif
+
     luaK_infix(ls->fs, op, v);
     /* read sub-expression with higher priority */
     nextop = subexpr(ls, &v2, priority[op].right);
+
+#if LUA_USE_ROTABLE
+   if (opAnnotation != 0) {
+     luaK_block_start(ls->fs, opAnnotation);
+   }
+#endif
+
     luaK_posfix(ls->fs, op, v, &v2, line);
+
+#if LUA_USE_ROTABLE
+   if (opAnnotation != 0) {
+     luaK_block_end(ls->fs, opAnnotation);
+
+     opAnnotation = 0;
+   }
+#endif
+
     op = nextop;
   }
+
   leavelevel(ls);
+
   return op;  /* return first untreated operator */
 }
 
@@ -1146,9 +1310,21 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
 
 static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
   expdesc e;
+
+#if LUA_USE_ROTABLE
+   e.openAnnotation = 0;
+   e.closeAnnotation = 0;
+#endif
+
   check_condition(ls, vkisvar(lh->v.k), "syntax error");
   if (testnext(ls, ',')) {  /* assignment -> ',' suffixedexp assignment */
     struct LHS_assign nv;
+
+#if LUA_USE_ROTABLE
+    nv.v.openAnnotation = 0;
+    nv.v.closeAnnotation = 0;
+#endif
+
     nv.prev = lh;
     suffixedexp(ls, &nv.v);
     if (nv.v.k != VINDEXED)
@@ -1177,6 +1353,12 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
 static int cond (LexState *ls) {
   /* cond -> exp */
   expdesc v;
+
+#if LUA_USE_ROTABLE
+  v.openAnnotation = 0;
+  v.closeAnnotation = 0;
+#endif
+
   expr(ls, &v);  /* read condition */
   if (v.k == VNIL) v.k = VFALSE;  /* 'falses' are all equal here */
   luaK_goiftrue(ls->fs, &v);
@@ -1280,6 +1462,12 @@ static void repeatstat (LexState *ls, int line) {
 static int exp1 (LexState *ls) {
   expdesc e;
   int reg;
+
+#if LUA_USE_ROTABLE
+  e.openAnnotation = 0;
+  e.closeAnnotation = 0;
+#endif
+
   expr(ls, &e);
   luaK_exp2nextreg(ls->fs, &e);
   lua_assert(e.k == VNONRELOC);
@@ -1343,6 +1531,12 @@ static void forlist (LexState *ls, TString *indexname) {
   int nvars = 4;  /* gen, state, control, plus at least one declared var */
   int line;
   int base = fs->freereg;
+
+#if LUA_USE_ROTABLE
+   e.openAnnotation = 0;
+   e.closeAnnotation = 0;
+#endif
+
   /* create control variables */
   new_localvarliteral(ls, "(for generator)");
   new_localvarliteral(ls, "(for state)");
@@ -1385,6 +1579,12 @@ static void test_then_block (LexState *ls, int *escapelist) {
   FuncState *fs = ls->fs;
   expdesc v;
   int jf;  /* instruction to skip 'then' code (if condition is false) */
+
+#if LUA_USE_ROTABLE
+   v.openAnnotation = 0;
+   v.closeAnnotation = 0;
+#endif
+
   luaX_next(ls);  /* skip IF or ELSEIF */
   expr(ls, &v);  /* read condition */
   checknext(ls, TK_THEN);
@@ -1394,7 +1594,7 @@ static void test_then_block (LexState *ls, int *escapelist) {
     gotostat(ls, v.t);  /* handle goto/break */
     skipnoopstat(ls);  /* skip other no-op statements */
     if (block_follow(ls, 0)) {  /* 'goto' is the entire block? */
-      leaveblock(fs);
+        leaveblock(fs);
       return;  /* and that is it */
     }
     else  /* must skip over 'then' part if condition is false */
@@ -1430,6 +1630,12 @@ static void ifstat (LexState *ls, int line) {
 
 static void localfunc (LexState *ls) {
   expdesc b;
+
+#if LUA_USE_ROTABLE
+   b.openAnnotation = 0;
+   b.closeAnnotation = 0;
+#endif
+
   FuncState *fs = ls->fs;
   new_localvar(ls, str_checkname(ls));  /* new local variable */
   adjustlocalvars(ls, 1);  /* enter its scope */
@@ -1444,6 +1650,12 @@ static void localstat (LexState *ls) {
   int nvars = 0;
   int nexps;
   expdesc e;
+
+#if LUA_USE_ROTABLE
+  e.openAnnotation = 0;
+  e.closeAnnotation = 0;
+#endif
+
   do {
     new_localvar(ls, str_checkname(ls));
     nvars++;
@@ -1477,6 +1689,14 @@ static void funcstat (LexState *ls, int line) {
   /* funcstat -> FUNCTION funcname body */
   int ismethod;
   expdesc v, b;
+
+#if LUA_USE_ROTABLE
+   v.openAnnotation = 0;
+   v.closeAnnotation = 0;
+   b.openAnnotation = 0;
+   b.closeAnnotation = 0;
+#endif
+
   luaX_next(ls);  /* skip FUNCTION */
   ismethod = funcname(ls, &v);
   body(ls, &b, ismethod, line);
@@ -1484,11 +1704,16 @@ static void funcstat (LexState *ls, int line) {
   luaK_fixline(ls->fs, line);  /* definition "happens" in the first line */
 }
 
-
 static void exprstat (LexState *ls) {
   /* stat -> func | assignment */
   FuncState *fs = ls->fs;
   struct LHS_assign v;
+
+#if LUA_USE_ROTABLE
+    v.v.openAnnotation = 0;
+    v.v.closeAnnotation = 0;
+#endif
+
   suffixedexp(ls, &v.v);
   if (ls->t.token == '=' || ls->t.token == ',') { /* stat -> assignment ? */
     v.prev = NULL;
@@ -1506,6 +1731,12 @@ static void retstat (LexState *ls) {
   FuncState *fs = ls->fs;
   expdesc e;
   int first, nret;  /* registers with returned values */
+
+#if LUA_USE_ROTABLE
+   e.openAnnotation = 0;
+   e.closeAnnotation = 0;
+#endif
+
   if (block_follow(ls, 1) || ls->t.token == ';')
     first = nret = 0;  /* return no values */
   else {
@@ -1537,6 +1768,15 @@ static void retstat (LexState *ls) {
 static void statement (LexState *ls) {
   int line = ls->linenumber;  /* may be needed for error messages */
   enterlevel(ls);
+
+#if LUA_USE_ROTABLE
+  while (ls->t.token == TK_BLOCK_START) {
+    //openAnnotation = ls->t.seminfo.i;
+    luaK_block_start(ls->fs, ls->t.seminfo.i);
+    luaX_next(ls);
+  }
+#endif
+
   switch (ls->t.token) {
     case ';': {  /* stat -> ';' (empty statement) */
       luaX_next(ls);  /* skip ';' */
@@ -1591,6 +1831,15 @@ static void statement (LexState *ls) {
       gotostat(ls, luaK_jump(ls->fs));
       break;
     }
+#if LUA_USE_ROTABLE
+    case TK_BLOCK_END: {
+      //openAnnotation = ls->t.seminfo.i;
+      luaK_block_end(ls->fs, ls->t.seminfo.i);
+      luaX_next(ls);
+      break;
+    }
+#endif
+
     default: {  /* stat -> func | assignment */
       exprstat(ls);
       break;
@@ -1599,6 +1848,14 @@ static void statement (LexState *ls) {
   lua_assert(ls->fs->f->maxstacksize >= ls->fs->freereg &&
              ls->fs->freereg >= ls->fs->nactvar);
   ls->fs->freereg = ls->fs->nactvar;  /* free registers */
+
+#if LUA_USE_ROTABLE
+  while (ls->t.token == TK_BLOCK_END) {
+    luaK_block_end(ls->fs, ls->t.seminfo.i);
+    luaX_next(ls);
+  }
+#endif
+
   leavelevel(ls);
 }
 
@@ -1612,6 +1869,12 @@ static void statement (LexState *ls) {
 static void mainfunc (LexState *ls, FuncState *fs) {
   BlockCnt bl;
   expdesc v;
+
+#if LUA_USE_ROTABLE
+   v.openAnnotation = 0;
+   v.closeAnnotation = 0;
+#endif
+
   open_func(ls, fs, &bl);
   fs->f->is_vararg = 1;  /* main function is always declared vararg */
   init_exp(&v, VLOCAL, 0);  /* create and... */

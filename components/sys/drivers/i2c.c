@@ -65,8 +65,6 @@
 
 #define ACK_CHECK_EN   0x1     /*!< I2C master will check ack from slave*/
 #define ACK_CHECK_DIS  0x0     /*!< I2C master will not check ack from slave */
-#define ACK_VAL        0x0     /*!< I2C ack value */
-#define NACK_VAL       0x1     /*!< I2C nack value */
 
 // Register driver and messages
 static void i2c_init();
@@ -150,13 +148,13 @@ static driver_error_t *i2c_lock_resources(int unit) {
     driver_unit_lock_error_t *lock_error = NULL;
 
     // Lock sda
-    if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].sda,
+    if ((lock_error = driver_lock(I2C_DRIVER, (unit << 8), GPIO_DRIVER, i2c[unit].sda,
     DRIVER_ALL_FLAGS, "SDA"))) {
         return driver_lock_error(I2C_DRIVER, lock_error);
     }
 
     // Lock scl
-    if ((lock_error = driver_lock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].scl,
+    if ((lock_error = driver_lock(I2C_DRIVER, (unit << 8), GPIO_DRIVER, i2c[unit].scl,
     DRIVER_ALL_FLAGS, "SCL"))) {
         return driver_lock_error(I2C_DRIVER, lock_error);
     }
@@ -166,10 +164,10 @@ static driver_error_t *i2c_lock_resources(int unit) {
 
 static driver_error_t *i2c_unlock_resources(int unit) {
     // Unlock sda
-    driver_unlock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].sda);
+    driver_unlock(I2C_DRIVER, (unit << 8), GPIO_DRIVER, i2c[unit].sda);
 
     // Unlock scl
-    driver_unlock(I2C_DRIVER, unit, GPIO_DRIVER, i2c[unit].scl);
+    driver_unlock(I2C_DRIVER, (unit << 8), GPIO_DRIVER, i2c[unit].scl);
 
     return NULL;
 }
@@ -299,28 +297,28 @@ driver_error_t *i2c_pin_map(int unit, int sda, int scl) {
     }
 
     // Sanity checks on pinmap
-    if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << i2c[unit].scl))) && (scl >= 0)) {
+    if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << scl))) && (scl >= 0)) {
         i2c_unlock(unit);
 
         return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED,
                 "scl, selected pin cannot be output");
     }
 
-    if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << i2c[unit].sda))) && (sda >= 0)) {
+    if ((!(GPIO_ALL_OUT & (GPIO_BIT_MASK << sda))) && (sda >= 0)) {
         i2c_unlock(unit);
 
         return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED,
                 "sda, selected pin cannot be output");
     }
 
-    if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << i2c[unit].sda))) && (sda >= 0)) {
+    if ((!(GPIO_ALL_IN & (GPIO_BIT_MASK << sda))) && (sda >= 0)) {
         i2c_unlock(unit);
 
         return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED,
                 "sda, selected pin cannot be input");
     }
 
-    if (!TEST_UNIQUE2(i2c[unit].sda, i2c[unit].scl)) {
+    if (!TEST_UNIQUE2(sda, scl)) {
         i2c_unlock(unit);
         return driver_error(I2C_DRIVER, I2C_ERR_PIN_NOT_ALLOWED,
                 "sda and scl must be different");
@@ -566,8 +564,7 @@ driver_error_t *i2c_stop(int deviceid, int *transaction) {
 
     if (i2c[unit].device[device].reading) {
         uint8_t dummy;
-
-        i2c_master_read_byte(cmd, (uint8_t *) (&dummy), NACK_VAL);
+        i2c_master_read_byte(cmd, (uint8_t *) (&dummy), I2C_MASTER_NACK);
     }
 
     i2c_master_stop(cmd);
@@ -696,10 +693,9 @@ driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len) {
     }
 
     if (len > 1) {
-        i2c_master_read(cmd, (uint8_t *) data, len - 1, ACK_VAL);
-        i2c_master_read_byte(cmd, (uint8_t *) (data + len - 1), NACK_VAL);
+        i2c_master_read(cmd, (uint8_t *) data, len, I2C_MASTER_LAST_NACK);
     } else {
-        i2c_master_read_byte(cmd, (uint8_t *) (data + len - 1), ACK_VAL);
+        i2c_master_read_byte(cmd, (uint8_t *) data, I2C_MASTER_ACK);
     }
 
     i2c_unlock(unit);

@@ -104,14 +104,15 @@
 extern xQueueHandle tun_queue_rx;
 extern xQueueHandle tun_queue_tx;
 
-static struct netif *tun_netif;
+static struct netif *tun_netif = NULL;
+static TaskHandle_t xtask = 0; // the task itself
 
 void tunif_input(struct netif *netif);
 
 static void tun_task(void *args) {
-	for(;;) {
-		tunif_input(tun_netif);
-	}
+    for(;;) {
+        tunif_input(tun_netif);
+    }
 }
 
 /**
@@ -124,55 +125,55 @@ static void tun_task(void *args) {
  * @param netif the lwip network interface structure for this ethernetif
  */
 void tunif_input(struct netif *netif) {
-	struct pbuf *p;
-	err_t ok = ERR_OK;
+    struct pbuf *p;
+    err_t ok = ERR_OK;
 
-	/* move received packet into a new pbuf */
-	xQueueReceive(tun_queue_tx, &p, portMAX_DELAY);
+    if (tun_queue_tx) {
+        /* move received packet into a new pbuf */
+        xQueueReceive(tun_queue_tx, &p, portMAX_DELAY);
 
-	/* full packet send to tcpip_thread to process */
-	ok = netif->input(p, netif);
-	if (ok != ERR_OK) {
-		LWIP_DEBUGF(NETIF_DEBUG, ("ethernetif_input: IP input error\n"));
-		pbuf_free(p);
-	}
+        /* full packet send to tcpip_thread to process */
+        ok = netif->input(p, netif);
+        if (ok != ERR_OK) {
+            LWIP_DEBUGF(NETIF_DEBUG, ("ethernetif_input: IP input error\n"));
+            pbuf_free(p);
+        }
+    }
 }
 
 err_t tun_output(struct netif *netif, struct pbuf *p) {
-	struct pbuf *q;
-	struct pbuf *c;
+    struct pbuf *q;
+    struct pbuf *c;
 
 #if ETH_PAD_SIZE
-	pbuf_header(p, -ETH_PAD_SIZE); /* drop the padding word */
+    pbuf_header(p, -ETH_PAD_SIZE); /* drop the padding word */
 #endif
 
-	q = p;
-	if (q->len > 0) {
-		if (tun_queue_rx) {
-			c = pbuf_alloc(PBUF_RAW_TX, q->tot_len, PBUF_RAM);
-			if (c) {
-				pbuf_copy(c, q);
-			}
+    q = p;
+    if (q->len > 0) {
+        if (tun_queue_rx) {
+            c = pbuf_alloc(PBUF_RAW_TX, q->tot_len, PBUF_RAM);
+            if (c) {
+                pbuf_copy(c, q);
+            }
 
-			if (xQueueSend(tun_queue_rx, &c, portMAX_DELAY) == errQUEUE_FULL) {
-				pbuf_free(c);
-
-				return ERR_MEM;
-			}
-		}
-	}
+            if (xQueueSend(tun_queue_rx, &c, portMAX_DELAY) == errQUEUE_FULL) {
+                pbuf_free(c);
+                return ERR_MEM;
+            }
+        }
+    }
 
 #if ETH_PAD_SIZE
-	pbuf_header(p, ETH_PAD_SIZE); /* reclaim the padding word */
+    pbuf_header(p, ETH_PAD_SIZE); /* reclaim the padding word */
 #endif
 
-	LINK_STATS_INC(link.xmit);
-
-	return ERR_OK;
+    LINK_STATS_INC(link.xmit);
+    return ERR_OK;
 }
 
 static err_t etharp_tun_output(struct netif *netif, struct pbuf *q, const ip4_addr_t *ipaddr) {
-	return netif->linkoutput(netif, q);
+    return netif->linkoutput(netif, q);
 }
 
 /**
@@ -188,52 +189,51 @@ static err_t etharp_tun_output(struct netif *netif, struct pbuf *q, const ip4_ad
  *         any other err_t on error
  */
 err_t tunif_init(struct netif *netif) {
-	LWIP_ASSERT("netif != NULL", (netif != NULL));
+    LWIP_ASSERT("netif != NULL", (netif != NULL));
 
 #if LWIP_NETIF_HOSTNAME
-	/* Initialize interface hostname */
+    /* Initialize interface hostname */
 
 #if ESP_LWIP
-	netif->hostname = "espressif";
+    netif->hostname = "espressif";
 #else
-	netif->hostname = "lwip";
+    netif->hostname = "lwip";
 #endif
 
 #endif /* LWIP_NETIF_HOSTNAME */
 
-	/*
-	 * Initialize the snmp variables and counters inside the struct netif.
-	 * The last argument should be replaced with your link speed, in units
-	 * of bits per second.
-	 */
-	//NETIF_INIT_SNMP(netif, snmp_ifType_ethernet_csmacd, LINK_SPEED_OF_YOUR_NETIF_IN_BPS);
+    /*
+     * Initialize the snmp variables and counters inside the struct netif.
+     * The last argument should be replaced with your link speed, in units
+     * of bits per second.
+     */
+    NETIF_INIT_SNMP(netif, snmp_ifType_ethernet_csmacd, 100);
 
-	netif->name[0] = IFNAME0;
-	netif->name[1] = IFNAME1;
-	/* We directly use etharp_output() here to save a function call.
-	 * You can instead declare your own function an call etharp_output()
-	 * from it if you have to do some checks before sending (e.g. if link
-	 * is available...) */
-	netif->output = etharp_tun_output;
+    netif->name[0] = IFNAME0;
+    netif->name[1] = IFNAME1;
+    /* We directly use etharp_output() here to save a function call.
+     * You can instead declare your own function an call etharp_output()
+     * from it if you have to do some checks before sending (e.g. if link
+     * is available...) */
+    netif->output = etharp_tun_output;
 #if LWIP_IPV6
-	//netif->output_ip6 = ethip6_output;
+    //netif->output_ip6 = ethip6_output;
 #endif /* LWIP_IPV6 */
-	netif->linkoutput = tun_output;
+    netif->linkoutput = tun_output;
 
-	/* initialize the hardware */
-	netif->flags = 0;
-	netif->mtu = 1500;
-	netif->flags = NETIF_FLAG_LINK_UP | NETIF_FLAG_UP | NETIF_FLAG_UP;
+    /* initialize the hardware */
+    netif->flags = 0;
+    netif->mtu = 1500;
+    netif->flags = NETIF_FLAG_LINK_UP | NETIF_FLAG_UP | NETIF_FLAG_UP;
 
-	netif->hwaddr_len = ETHARP_HWADDR_LEN;
+    netif->hwaddr_len = ETHARP_HWADDR_LEN;
 
-	tun_netif = netif;
+    tun_netif = netif;
+    if (!xtask) {
+        xTaskCreatePinnedToCore(tun_task, "tun", 1024, NULL, configMAX_PRIORITIES - 2, &xtask, xPortGetCoreID());
+    }
 
-    xTaskCreatePinnedToCore(tun_task, "tun", 1024, NULL, configMAX_PRIORITIES - 2, NULL, xPortGetCoreID());
-
-	//enc424j600_init(netif);
-
-	return ERR_OK;
+    return ERR_OK;
 }
 
 #endif

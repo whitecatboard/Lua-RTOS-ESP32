@@ -73,6 +73,8 @@
 
 #include <sys/driver.h>
 
+#include <drivers/cpu.h>
+
 // Number of SPI devices per bus
 #define SPI_BUS_DEVICES 3
 
