@@ -171,15 +171,19 @@ static driver_error_t *can_ll_tx(can_message_t *frame) {
     return 0;
 }
 
-static driver_error_t *can_ll_rx(can_message_t *frame) {
+static driver_error_t *can_ll_rx(can_message_t *frame, uint32_t timeout) {
     // Read next frame
     // Check filter
     uint8_t i;
     uint8_t pass = 0;
     driver_error_t *error;
 
+    if (timeout != portMAX_DELAY) {
+        timeout = timeout / portTICK_PERIOD_MS;
+    }
+
     while (!pass) {
-        if ((error = can_check_error(can_receive(frame, portMAX_DELAY)))) {
+        if ((error = can_check_error(can_receive(frame, timeout)))) {
             can_recovery();
             return error;
         }
@@ -211,7 +215,7 @@ static void *gw_thread_up(void *arg) {
 
     while(!gw_config->stop) {
         // Wait for a CAN packet
-        can_ll_rx(&frame);
+        can_ll_rx(&frame, portMAX_DELAY);
         CAN_FIR_t FIR = (CAN_FIR_t)frame.flags;
         if (FIR.B.DLC != 0) {
             // Fill packet
@@ -449,7 +453,7 @@ driver_error_t *can_tx(int32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t 
     return can_ll_tx(&frame);
 }
 
-driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_t *data, uint8_t *len) {
+driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_t *data, uint8_t *len, uint32_t timeout) {
     can_message_t frame;
 
     // Sanity checks
@@ -461,7 +465,7 @@ driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_
         return driver_error(CAN_DRIVER, CAN_ERR_IS_NOT_SETUP, NULL);
     }
 
-    driver_error_t *error = can_ll_rx(&frame);
+    driver_error_t *error = can_ll_rx(&frame, timeout);
     if (!error) {
         *msg_id = frame.identifier;
         *msg_type = (frame.flags & CAN_MSG_FLAG_EXTD ? 1 : 0);

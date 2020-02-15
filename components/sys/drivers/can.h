@@ -165,7 +165,7 @@ extern const int can_error_map;
 driver_error_t *can_check_error(esp_err_t error);
 driver_error_t *can_setup(int32_t unit, uint32_t speed, uint16_t rx_size);
 driver_error_t *can_tx(int32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t *data, uint8_t len);
-driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_t *data, uint8_t *len);
+driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_t *data, uint8_t *len, uint32_t timeout);
 driver_error_t *can_add_filter(int32_t unit, int32_t fromId, int32_t toId);
 driver_error_t *can_remove_filter(int32_t unit, int32_t fromId, int32_t toId);
 driver_error_t *can_gateway_start(int32_t unit, uint32_t speed, int32_t port);

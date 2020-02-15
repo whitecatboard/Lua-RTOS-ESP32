@@ -126,10 +126,16 @@ static int lcan_recv(lua_State* L) {
     uint8_t msg_id_type;
     uint8_t len;
     uint8_t data[9] = {0,0,0,0,0,0,0,0,0};
+    uint32_t timeout;
 
     int id = luaL_checkinteger(L, 1);
 
-    if ((error = can_rx(id, &msg_id, &msg_id_type, data, &len))) {
+    timeout = luaL_optinteger(L, 2, 0xffffffff);
+    if (timeout == 0xffffffff) {
+        timeout = portMAX_DELAY;
+    }
+
+    if ((error = can_rx(id, &msg_id, &msg_id_type, data, &len, timeout))) {
         return luaL_driver_error(L, error);
     }
 
@@ -158,7 +164,7 @@ static int lcan_dump(lua_State* L) {
     signal(SIGINT, ldump_stop);
 
     while (!dump_stop) {
-        if ((error = can_rx(id, &msg_id, &msg_id_type, data, &len))) {
+        if ((error = can_rx(id, &msg_id, &msg_id_type, data, &len, portMAX_DELAY))) {
                 return luaL_driver_error(L, error);
         }
 
