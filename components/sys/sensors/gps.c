@@ -68,6 +68,7 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) gps_senso
 		{.id = "lon", .type = SENSOR_DATA_DOUBLE},
 		{.id = "lat" , .type = SENSOR_DATA_DOUBLE},
 		{.id = "sats", .type = SENSOR_DATA_INT},
+		{.id = "valid", .type = SENSOR_DATA_INT},
 	},
 	.setup = gps_setup,
 	.acquire = gps_acquire
@@ -97,7 +98,7 @@ driver_error_t *gps_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	values[0].doubled.value  = nmea_lon();
 	values[1].doubled.value  = nmea_lat();
 	values[2].integerd.value = nmea_sats();
-
+	values[3].integer.value = nmea_valid();
 	return NULL;
 }
 

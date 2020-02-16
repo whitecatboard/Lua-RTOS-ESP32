@@ -61,6 +61,7 @@ static char *GPGGA = "GPGGA";  // GPGGA sentence string
 // Last position data
 static double lat, lon;
 static int sats;
+static int gps_valid;
 static int new_pos = 0;
 
 // As parser computes checksum incrementally, this function computes
@@ -155,7 +156,6 @@ double nmea_geoloc_to_decimal(char *token) {
 // 14   = Diff. reference station ID#
 // 15   = Checksum
 static void nmea_GPGGA(char *sentence) {
-    int    valid = 1; // It's a valid position?
 
     int seq = 0;      // Current nmea sentence field (0 = first after nmea command)
     char *c;
@@ -196,7 +196,7 @@ static void nmea_GPGGA(char *sentence) {
             if (seq == 5) {	// GPS quality indicator (0=invalid; 1=GPS fix; 2=Diff. GPS fix)
                 int quality = atoi(token);
 
-                valid = ((quality == 1) || (quality == 2));
+                gps_valid = ((quality == 1) || (quality == 2));
             }
 
             if (seq == 6) {	// Number of satellites in use [not those in view]
@@ -220,7 +220,7 @@ static void nmea_GPGGA(char *sentence) {
     checksum = (int)strtol(token, NULL, 16);
 
     if (checksum == computed_checksum) {
-        if (valid) {
+        if (gps_valid) {
             new_pos = 1;
         }
     }
@@ -377,6 +377,10 @@ double nmea_lat() {
 
 int nmea_sats() {
     return sats;
+}
+
+int nmea_valid() {
+    return gps_valid;
 }
 
 #endif

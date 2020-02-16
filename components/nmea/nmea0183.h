@@ -57,6 +57,7 @@ int nmea_new_pos();
 double nmea_lat();
 double nmea_lon();
 int nmea_sats();
+int nmea_valid();
 
 #endif	/* NMEA0183_H */
 #endif
