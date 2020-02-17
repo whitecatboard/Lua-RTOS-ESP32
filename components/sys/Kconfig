@@ -1412,7 +1412,11 @@ menu "Lua RTOS"
             config LUA_RTOS_USE_SENSOR_ML8511
                 depends on LUA_RTOS_LUA_USE_SENSOR
                 bool "ML8511"
-                default y
+                default y    
+            config LUA_RTOS_USE_MPXV6115V
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "MPXV6115V"
+               default y
             config LUA_RTOS_USE_SENSOR_PIR_AM412
                depends on LUA_RTOS_LUA_USE_SENSOR
                bool "AM412 based PIR sensor"

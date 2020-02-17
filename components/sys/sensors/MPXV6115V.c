@@ -1,0 +1,97 @@
+/*
+ * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ *
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the <organization> nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *     * The WHITECAT logotype cannot be changed, you can remove it, but you
+ *       cannot change it in any way. The WHITECAT logotype is:
+ *
+ *          /\       /\
+ *         /  \_____/  \
+ *        /_____________\
+ *        W H I T E C A T
+ *
+ *     * Redistributions in binary form must retain all copyright notices printed
+ *       to any local or remote output device. This include any reference to
+ *       Lua RTOS, whitecatboard.org, Lua, and other copyright notices that may
+ *       appear in the future.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Lua RTOS, MPXV6115V Vaccum Sensor
+ */
+
+#include "sdkconfig.h"
+
+#if CONFIG_LUA_RTOS_LUA_USE_SENSOR
+#if CONFIG_LUA_RTOS_USE_MPXV6115V
+
+#define MPXV6115V_SAMPLES 10
+
+#include <math.h>
+
+#include <sys/driver.h>
+
+#include <drivers/sensor.h>
+#include <drivers/adc.h>
+
+driver_error_t *MPXV6115V_presetup(sensor_instance_t *unit);
+driver_error_t *MPXV6115V_acquire(sensor_instance_t *unit, sensor_value_t *values);
+
+// Sensor specification and registration
+static const sensor_t __attribute__((used,unused,section(".sensors"))) MPXV6115V_sensor = {
+	.id = "MPXV6115V",
+	.interface = {
+		{.type = ADC_INTERFACE},
+	},
+	.data = {
+		{.id = "pressure", .type = SENSOR_DATA_FLOAT},
+	},
+	.acquire = MPXV6115V_acquire
+};
+
+/*
+ * Operation functions
+ */
+driver_error_t *MPXV6115V_acquire(sensor_instance_t *unit, sensor_value_t *values) {
+	driver_error_t *error;
+	double mvolts = 0;
+
+	// Read average for some samples
+	if ((error = adc_read_avg(&unit->setup[0].adc.h, MPXV6115V_SAMPLES, NULL, &mvolts))) {
+		return error;
+	}
+
+	// Get channel info
+	adc_chann_t *chan;
+
+	adc_get_channel(&unit->setup[0].adc.h, &chan);
+
+	values[0].floatd.value = (mvolts - 4600.0) / 38.26;
+
+	return NULL;
+}
+
+#endif
+#endif
