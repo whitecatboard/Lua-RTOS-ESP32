@@ -118,12 +118,7 @@ static const LUA_REG_TYPE md5_map[] =
 };
 
 int luaopen_md5(lua_State *L) {
-#if !LUA_USE_ROTABLE
-    luaL_newlib(L, md5_map);
-    return 1;
-#else
-    return 0;
-#endif
+    LNEWLIB(L, md5_map);
 }
 
 MODULE_REGISTER_ROM(MD5, md5, md5_map, luaopen_md5, 1);

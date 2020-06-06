@@ -281,13 +281,8 @@ static const LUA_REG_TYPE lulp_service_map[] = {
 
 LUALIB_API int luaopen_ulp( lua_State *L ) {
   luaL_newmetarotable(L,"ulp.var", (void *)lulp_service_map);
-
-#if !LUA_USE_ROTABLE
-  luaL_newlib(L, ulp);
-  return 1;
-#else
-	return 0;
-#endif
+ 
+  LNEWLIB(L, ulp); 
 }
 
 MODULE_REGISTER_ROM(ULP, ulp, lulp_map, luaopen_ulp, 1);

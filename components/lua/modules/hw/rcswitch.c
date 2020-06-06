@@ -86,12 +86,7 @@ static const LUA_REG_TYPE lrcswitch_map[] = {
 };
 
 LUALIB_API int luaopen_rcswitch( lua_State *L ) {
-#if !LUA_USE_ROTABLE
-  luaL_newlib(L, rcswitch);
-  return 1;
-#else
-	return 0;
-#endif
+  LNEWLIB(L, rcswitch);
 }
 
 MODULE_REGISTER_ROM(RCSWITCH, rcswitch, lrcswitch_map, luaopen_rcswitch, 1);
