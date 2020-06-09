@@ -1535,6 +1535,13 @@ menu "Lua RTOS"
                speedud the execution of Lua RTOS scripts. This option is disabled when the JIT bytecode
                optimizer is enabled.
 
+         config LUA_RTOS_LUA_USE_BLOCK_CONTEXT
+            bool "Add block context for the Whitecat IDE"
+            default y
+            help
+               Add some modifications into the Lua VM to provide the block-based language some vital
+               features required to improve the block-programming experience
+
          config LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
             bool "Use JIT bytecode optimizer (experimental)"
             default n
@@ -1660,6 +1667,7 @@ menu "Lua RTOS"
                default y
 
             config LUA_RTOS_LUA_USE_VM
+               depends on LUA_RTOS_LUA_USE_BLOCK_CONTEXT
                bool "Include Lua VM module in build"
                default y
 

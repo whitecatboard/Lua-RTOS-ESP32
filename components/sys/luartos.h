@@ -57,6 +57,14 @@
  */
 #define LUA_USE_ROTABLE	   1
 
+
+//enables the whitecate ide block support
+#if CONFIG_LUA_RTOS_LUA_USE_BLOCK_CONTEXT
+#define LUA_USE_BLOCK_CONTEXT 1
+#else
+#define LUA_USE_BLOCK_CONTEXT 0
+#endif
+
 // Get the UART assigned to the console
 #if CONFIG_LUA_RTOS_CONSOLE_UART0
 #define CONSOLE_UART 0

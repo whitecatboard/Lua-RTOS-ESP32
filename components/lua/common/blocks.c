@@ -8,6 +8,8 @@
 
 #include <sys/time.h>
 
+#if LUA_USE_BLOCK_CONTEXT
+
 static char *parseErrMsg(const char *error_msg, int *err) {
     const char *whereEnd = NULL;
     const char *lineEnd = NULL;
@@ -236,3 +238,6 @@ void luaVB_emitMessage(lua_State *L, int type, int id) {
 		}
     }
 }
+
+#endif // LUA_USE_BLOCK_CONTEXT
+
