@@ -26,20 +26,20 @@
 #include "lauxlib.h"
 
 #define LUA_REG_TYPE                luaL_Reg
-#define LSTRKEY(x)                  x
+#define LSTRKEY(x)                  (x)
 #define LNILKEY                     NULL
-#define LFUNCVAL(x)                 x
+#define LFUNCVAL(x)                 (x)
 #define LNILVAL                     NULL
-#define LNUMVAL(x)					x
-#define LINTVAL(x)					x
-#define LROVAL(x)					x
+#define LNUMVAL(x)					(x)
+#define LINTVAL(x)					(x)
+#define LROVAL(x)					(x)
 	  
 #define LREGISTER(L, name, table)\
   luaL_register(L, name, table);\
   return 1
 
 #define LNEWLIB(L, name)\
-  luaL_newlib(L, name);\
+  luaL_newlib(L, #name);\
   return 1
 
 
