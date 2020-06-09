@@ -1109,11 +1109,11 @@ void luaV_execute(lua_State *L) {
         if (lua_vm_blocks) {
             // In blocks, if one of the arguments is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
-                setnvalue(rb, 0.0);
+                setfltvalue(rb, 0.0);
             }
 
             if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
-                setnvalue(rc, 0.0);
+                setfltvalue(rc, 0.0);
             }
         }
 #endif
@@ -1313,11 +1313,11 @@ void luaV_execute(lua_State *L) {
         if (lua_vm_blocks) {
             // In blocks, if one of the arguments is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
-                setnvalue(rb, 0.0);
+                setfltvalue(rb, 0.0);
             }
 
             if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
-                setnvalue(rc, 0.0);
+                setfltvalue(rc, 0.0);
             }
         }
 #endif
