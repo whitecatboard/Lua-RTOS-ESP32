@@ -33,7 +33,7 @@
 #include "lvm.h"
 #include "lzio.h"
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
 #include "blocks.h"
 #endif
 
@@ -393,7 +393,7 @@ int luaD_poscall (lua_State *L, CallInfo *ci, StkId firstResult, int nres) {
 }
 
 
-#if !LUA_USE_ROTABLE
+#if !LUA_USE_BLOCK_CONTEXT
 #define next_ci(L) (L->ci = (L->ci->next ? L->ci->next : luaE_extendCI(L)))
 #else
 CallInfo *next_ci(lua_State *L) {
@@ -769,7 +769,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
 
   status = luaD_rawrunprotected(L, func, u);
   if (status != LUA_OK) {  /* an error occurred? */
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
     BlockContext *bctx;
 
     if ((bctx = luaVB_getBlock(L, NULL)) != NULL) {

@@ -31,8 +31,8 @@ const PUT_IN_SECTION(LIB_TOSTRING(LIB_SECTION(fname,.lua_rotable))) luaR_entry L
 #define MODULE_REGISTER_RAM(fname, lname, func, autoload) \
 const PUT_IN_SECTION(LIB_TOSTRING(LIB_SECTION(fname,.lua_libs))) luaL_Reg_adv LIB_CONCAT(lua_libs,LIB_CONCAT(_,LIB_CONCAT(fname,LIB_USED(fname)))) = {LIB_TOSTRING(lname), func, autoload};
 #else
-#define MODULE_REGISTER_ROM(fname, lname, map)
-#define MODULE_REGISTER_RAM(fname, lname, func)
+#define MODULE_REGISTER_ROM(fname, lname, map, func, autoload)
+#define MODULE_REGISTER_RAM(fname, lname, func, autoload)
 #endif
 
 #endif

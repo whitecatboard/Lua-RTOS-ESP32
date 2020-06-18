@@ -215,6 +215,7 @@ void rcswitch_destroy(lua_State *L) {
 	if (rcswitch_initialized != 0) {
 		listen_shutdown = 1;
 		usleep(1000); // 1ms
+		RCSwitch_deinit();
 		rcswitch_initialized = 0;
 	}
 }

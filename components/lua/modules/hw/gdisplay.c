@@ -1383,7 +1383,7 @@ static const LUA_REG_TYPE gdisplay_map[] = {
 	{ LSTRKEY( "setfixed" ),       LFUNCVAL( lgdisplay_setfixed )},
 	{ LSTRKEY( "setwrap" ),        LFUNCVAL( lgdisplay_setwrap )},
 	{ LSTRKEY( "setangleoffset" ), LFUNCVAL( lgdisplay_set_angleOffset )},
-	{ LSTRKEY( "setangleoffset" ), LFUNCVAL( lgdisplay_get_angleOffset )},
+	{ LSTRKEY( "getangleoffset" ), LFUNCVAL( lgdisplay_get_angleOffset )},
 	{ LSTRKEY( "setclipwin" ),     LFUNCVAL( lgdisplay_setclipwin )},
 	{ LSTRKEY( "resetclipwin" ),   LFUNCVAL( lgdisplay_resetclipwin )},
 	{ LSTRKEY( "getclipwin" ),     LFUNCVAL( lgdisplay_getclipwin )},

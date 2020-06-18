@@ -408,12 +408,7 @@ static const LUA_REG_TYPE nvs_map[] =
 };
 
 int luaopen_nvs(lua_State *L) {
-    #if !LUA_USE_ROTABLE
-    luaL_newlib(L, nvs_map);
-    return 1;
-    #else
-    return 0;
-    #endif
+    LNEWLIB(L, nvs_map);
 }
    
 MODULE_REGISTER_ROM(NVS, nvs, nvs_map, luaopen_nvs, 1);

@@ -32,6 +32,8 @@
 
 #if LUA_USE_ROTABLE
 #include "lrotable.h"
+#endif
+#if LUA_USE_BLOCK_CONTEXT
 #include "llex.h"
 #include "blocks.h"
 #endif
@@ -69,8 +71,8 @@
 
 #endif
 
-#if LUA_USE_ROTABLE
-extern uint8_t lua_vm_blocks;
+#if LUA_USE_BLOCK_CONTEXT
+uint8_t lua_vm_blocks = 0;
 #endif
 
 /*
@@ -1022,7 +1024,7 @@ void luaV_execute(lua_State *L) {
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         if (lua_vm_blocks) {
             // In blocks, if one of the arguments is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
@@ -1050,7 +1052,7 @@ void luaV_execute(lua_State *L) {
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         if (lua_vm_blocks) {
             // In blocks, if one of the arguments is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
@@ -1078,7 +1080,7 @@ void luaV_execute(lua_State *L) {
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         if (lua_vm_blocks) {
             // In blocks, if one of the arguments is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
@@ -1105,15 +1107,15 @@ void luaV_execute(lua_State *L) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         if (lua_vm_blocks) {
             // In blocks, if one of the arguments is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
-                setnvalue(rb, 0.0);
+                setfltvalue(rb, 0.0);
             }
 
             if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
-                setnvalue(rc, 0.0);
+                setfltvalue(rc, 0.0);
             }
         }
 #endif
@@ -1130,7 +1132,7 @@ void luaV_execute(lua_State *L) {
         TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         if (lua_vm_blocks) {
             // In blocks, if one of the arguments is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
@@ -1154,7 +1156,7 @@ void luaV_execute(lua_State *L) {
         TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         // In blocks, if one of the arguments is nil, set it to 0
         if (lua_vm_blocks) {
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
@@ -1178,7 +1180,7 @@ void luaV_execute(lua_State *L) {
         TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         if (lua_vm_blocks) {
             // In blocks, if one of the arguments is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
@@ -1203,7 +1205,7 @@ void luaV_execute(lua_State *L) {
         lua_Integer ib; lua_Integer ic;
 
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         if (lua_vm_blocks) {
             // In blocks, if one of the arguments is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
@@ -1227,7 +1229,7 @@ void luaV_execute(lua_State *L) {
         TValue *rc = RKC(i);
         lua_Integer ib; lua_Integer ic;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         if (lua_vm_blocks) {
             // In blocks, if one of the arguments is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
@@ -1251,7 +1253,7 @@ void luaV_execute(lua_State *L) {
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
 
-    #if LUA_USE_ROTABLE
+    #if LUA_USE_BLOCK_CONTEXT
         if (lua_vm_blocks) {
             // In blocks, if one of the arguments is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
@@ -1281,7 +1283,7 @@ void luaV_execute(lua_State *L) {
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         if (lua_vm_blocks) {
             // In blocks, if one of the arguments is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
@@ -1309,15 +1311,15 @@ void luaV_execute(lua_State *L) {
         TValue *rc = RKC(i);
         lua_Number nb; lua_Number nc;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         if (lua_vm_blocks) {
             // In blocks, if one of the arguments is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
-                setnvalue(rb, 0.0);
+                setfltvalue(rb, 0.0);
             }
 
             if (ttisnil(rc) && (luaVB_getBlock(L, ci) != NULL)) {
-                setnvalue(rc, 0.0);
+                setfltvalue(rc, 0.0);
             }
         }
 #endif
@@ -1332,7 +1334,7 @@ void luaV_execute(lua_State *L) {
         TValue *rb = RB(i);
         lua_Number nb;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         if (lua_vm_blocks) {
             // In blocks, if the argument is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
@@ -1356,7 +1358,7 @@ void luaV_execute(lua_State *L) {
         TValue *rb = RB(i);
         lua_Integer ib;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         if (lua_vm_blocks) {
             // In blocks, if the argument is nil, set it to 0
             if (ttisnil(rb) && (luaVB_getBlock(L, ci) != NULL)) {
@@ -1632,7 +1634,7 @@ void luaV_execute(lua_State *L) {
         lua_assert(0);
         vmbreak;
       }
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
       vmcase(OP_BLOCKS) {
         if (lua_vm_blocks) {
             int tmp = GETARG_Ax(i);

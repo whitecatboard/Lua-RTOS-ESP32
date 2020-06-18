@@ -187,12 +187,7 @@ static const LUA_REG_TYPE ltouch_map[] = {
 };
 
 LUALIB_API int luaopen_touch( lua_State *L ) {
-#if !LUA_USE_ROTABLE
-  luaL_newlib(L, touch);
-  return 1;
-#else
-	return 0;
-#endif
+  LNEWLIB(L, touch);
 }
 
 MODULE_REGISTER_ROM(TOUCH, touch, ltouch_map, luaopen_touch, 1);

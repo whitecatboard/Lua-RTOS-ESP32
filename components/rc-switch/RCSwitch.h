@@ -119,6 +119,7 @@
 
 
     void RCSwitch_init();
+    void RCSwitch_deinit();
     
     void RCSwitch_switchOnBy1(int nGroupNumber, int nSwitchNumber);
     void RCSwitch_switchOffBy1(int nGroupNumber, int nSwitchNumber);
