@@ -56,6 +56,9 @@ void ListZero(List* newl)
 List* ListInitialize(void)
 {
 	List* newl = malloc(sizeof(List));
+#if __XTENSA__
+  if (newl)
+#endif
 	ListZero(newl);
 	return newl;
 }
@@ -71,6 +74,9 @@ List* ListInitialize(void)
  */
 void ListAppendNoMalloc(List* aList, void* content, ListElement* newel, size_t size)
 { /* for heap use */
+#if __XTENSA__
+  if (aList) {
+#endif
 	newel->content = content;
 	newel->next = NULL;
 	newel->prev = aList->last;
@@ -81,6 +87,9 @@ void ListAppendNoMalloc(List* aList, void* content, ListElement* newel, size_t s
 	aList->last = newel;
 	++(aList->count);
 	aList->size += size;
+#if __XTENSA__
+  }
+#endif
 }
 
 
@@ -92,8 +101,17 @@ void ListAppendNoMalloc(List* aList, void* content, ListElement* newel, size_t s
  */
 void ListAppend(List* aList, void* content, size_t size)
 {
+#if __XTENSA__
+  if (aList) {
+#endif
 	ListElement* newel = malloc(sizeof(ListElement));
+#if __XTENSA__
+  if (newel)
+#endif
 	ListAppendNoMalloc(aList, content, newel, size);
+#if __XTENSA__
+  }
+#endif
 }
 
 
@@ -107,7 +125,13 @@ void ListAppend(List* aList, void* content, size_t size)
  */
 void ListInsert(List* aList, void* content, size_t size, ListElement* index)
 {
+#if __XTENSA__
+  if (aList) {
+#endif
 	ListElement* newel = malloc(sizeof(ListElement));
+#if __XTENSA__
+  if (newel) {
+#endif
 
 	if ( index == NULL )
 		ListAppendNoMalloc(aList, content, newel, size);
@@ -126,6 +150,10 @@ void ListInsert(List* aList, void* content, size_t size, ListElement* index)
 		++(aList->count);
 		aList->size += size;
 	}
+#if __XTENSA__
+  }
+  }
+#endif
 }
 
 
@@ -153,6 +181,9 @@ ListElement* ListFindItem(List* aList, void* content, int(*callback)(void*, void
 {
 	ListElement* rc = NULL;
 
+#if __XTENSA__
+  if (aList) {
+#endif
 	if (aList->current != NULL && ((callback == NULL && aList->current->content == content) ||
 		   (callback != NULL && callback(aList->current->content, content))))
 		rc = aList->current;
@@ -183,6 +214,9 @@ ListElement* ListFindItem(List* aList, void* content, int(*callback)(void*, void
 		if (rc != NULL)
 			aList->current = rc;
 	}
+#if __XTENSA__
+  }
+#endif
 	return rc;
 }
 
@@ -198,6 +232,9 @@ ListElement* ListFindItem(List* aList, void* content, int(*callback)(void*, void
  */
 static int ListUnlink(List* aList, void* content, int(*callback)(void*, void*), int freeContent)
 {
+#if __XTENSA__
+  if (aList) {
+#endif
 	ListElement* next = NULL;
 	ListElement* saved = aList->current;
 	int saveddeleted = 0;
@@ -230,6 +267,9 @@ static int ListUnlink(List* aList, void* content, int(*callback)(void*, void*), 
 	else
 		aList->current = saved;
 	--(aList->count);
+#if __XTENSA__
+  }
+#endif
 	return 1; /* successfully removed item */
 }
 
@@ -266,6 +306,9 @@ int ListRemove(List* aList, void* content)
 void* ListDetachHead(List* aList)
 {
 	void *content = NULL;
+#if __XTENSA__
+  if (aList) {
+#endif
 	if (aList->count > 0)
 	{
 		ListElement* first = aList->first;
@@ -280,6 +323,9 @@ void* ListDetachHead(List* aList)
 		free(first);
 		--(aList->count);
 	}
+#if __XTENSA__
+  }
+#endif
 	return content;
 }
 
@@ -304,6 +350,9 @@ int ListRemoveHead(List* aList)
 void* ListPopTail(List* aList)
 {
 	void* content = NULL;
+#if __XTENSA__
+  if (aList) {
+#endif
 	if (aList->count > 0)
 	{
 		ListElement* last = aList->last;
@@ -318,6 +367,9 @@ void* ListPopTail(List* aList)
 		free(last);
 		--(aList->count);
 	}
+#if __XTENSA__
+  }
+#endif
 	return content;
 }
 
@@ -356,6 +408,9 @@ int ListRemoveItem(List* aList, void* content, int(*callback)(void*, void*))
  */
 void ListEmpty(List* aList)
 {
+#if __XTENSA__
+  if (aList) {
+#endif
 	while (aList->first != NULL)
 	{
 		ListElement* first = aList->first;
@@ -370,6 +425,9 @@ void ListEmpty(List* aList)
 	aList->count = 0;
 	aList->size = 0;
 	aList->current = aList->first = aList->last = NULL;
+#if __XTENSA__
+  }
+#endif
 }
 
 /**
@@ -389,6 +447,9 @@ void ListFree(List* aList)
  */
 void ListFreeNoContent(List* aList)
 {
+#if __XTENSA__
+  if (aList) {
+#endif
 	while (aList->first != NULL)
 	{
 		ListElement* first = aList->first;
@@ -396,6 +457,9 @@ void ListFreeNoContent(List* aList)
 		free(first);
 	}
 	free(aList);
+#if __XTENSA__
+  }
+#endif
 }
 
 

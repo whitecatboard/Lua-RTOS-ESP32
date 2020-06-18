@@ -56,6 +56,7 @@
 #include "esp_event.h"
 #include "esp_event_loop.h"
 #include "esp_ota_ops.h"
+#include <esp_task_wdt.h>
 
 #if CONFIG_LUA_RTOS_LUA_USE_MDNS
 #include <mdns.h>
@@ -484,6 +485,8 @@ driver_error_t *net_ota() {
             update_partition->label, update_partition->address
         );
 
+        esp_task_wdt_reset();
+
         printf("Begin OTA update ...\r\n");
 
         esp_err_t err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
@@ -504,6 +507,8 @@ driver_error_t *net_ota() {
                 printf("\nChunk written unsuccessfully in partition (offset 0x%08x), error %d\r\n", address, err);
                 return NULL;
             } else {
+                int pct = (int)(((float)(address-update_partition->address))/total*100);
+                if (0 == pct%10) esp_task_wdt_reset();
                 printf("\rChunk written successfully in partition at offset 0x%08x", address);
             }
 
@@ -511,6 +516,8 @@ driver_error_t *net_ota() {
         }
 
         printf("\nEnding OTA update ...\r\n");
+
+        esp_task_wdt_reset();
 
         if (esp_ota_end(update_handle) != ESP_OK) {
             printf("Failed\r\n");

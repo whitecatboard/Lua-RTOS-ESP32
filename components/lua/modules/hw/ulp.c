@@ -88,7 +88,6 @@ DRIVER_REGISTER_BEGIN(ULP,ulp,0,NULL,NULL);
 DRIVER_REGISTER_END(ULP,ulp,0,NULL,NULL);
 
 typedef struct {
-    lua_State *L;
     unsigned long addr;
 } ulp_userdata;
 
@@ -195,7 +194,6 @@ static int lulp_assign( lua_State* L ){
 	unsigned long addr = luaL_checkinteger(L, 1);
 
 	ulp_userdata *ulpvar = (ulp_userdata *)lua_newuserdata(L, sizeof(ulp_userdata));
-	ulpvar->L = L;
 	ulpvar->addr = addr;
 
 	luaL_getmetatable(L, "ulp.var");

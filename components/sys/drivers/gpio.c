@@ -1034,7 +1034,16 @@ driver_error_t *gpio_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_
     }
 
     if ((error = gpio_pin_pullup(pin))) {
+#if EXTERNAL_GPIO
+        // Can fail with external GPIO, continue
+        if (pin > 40) {
+            free(error);
+        } else {
+            return error;
+        }
+#else
         return error;
+#endif
     }
 
     if (pin < 40) {
