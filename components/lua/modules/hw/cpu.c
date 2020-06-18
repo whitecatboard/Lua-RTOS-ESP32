@@ -418,12 +418,7 @@ static const LUA_REG_TYPE lcpu_map[] = {
 };
 
 LUALIB_API int luaopen_cpu( lua_State *L ) {
-#if !LUA_USE_ROTABLE
-    luaL_newlib(L, cpu);
-    return 1;
-#else
-    return 0;
-#endif
+    LNEWLIB(L, cpu);
 }
 
 MODULE_REGISTER_ROM(CPU, cpu, lcpu_map, luaopen_cpu, 1);

@@ -246,10 +246,17 @@ static const LUA_REG_TYPE lbt_service[] = {
 };
 
 static const LUA_REG_TYPE lbt_mode[] = {
-	{ LSTRKEY( "Idle"       ), LINTVAL( ((bt_mode_t)Idle)    ) },
-	{ LSTRKEY( "BLE"        ), LINTVAL( ((bt_mode_t)BLE)     ) },
-	{ LSTRKEY( "Classic"    ), LINTVAL( ((bt_mode_t)Classic) ) },
-	{ LSTRKEY( "Dual"       ), LINTVAL( ((bt_mode_t)Dual)    ) },
+
+	{ LSTRKEY( "Idle"       ), LINTVAL( Idle    ) },
+	{ LSTRKEY( "BLE"        ), LINTVAL( BLE     ) },
+	{ LSTRKEY( "Classic"    ), LINTVAL( Classic ) },
+	{ LSTRKEY( "Dual"       ), LINTVAL( Dual    ) },
+
+
+
+
+
+
 	{ LNILKEY, LNILVAL } 
 };
 

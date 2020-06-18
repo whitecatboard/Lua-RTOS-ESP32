@@ -14,9 +14,6 @@
 // TO DO: ??
 #define luaS_newro(L, s)  (luaS_newlstr(L, s, strlen(s)))
 
-// TO DO: ??
-#define setnvalue(obj,x) \
-  { lua_Number i_x = (x); TValue *i_o=(obj); i_o->value_.n=i_x; i_o->tt_=LUA_TNUMBER; }
   
   
 /* Macros one can use to define rotable entries */

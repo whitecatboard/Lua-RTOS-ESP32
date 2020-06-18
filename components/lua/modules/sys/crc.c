@@ -93,12 +93,7 @@ static const LUA_REG_TYPE crc_map[] =
 };
 
 int luaopen_crc(lua_State *L) {
-	#if !LUA_USE_ROTABLE
-	luaL_newlib(L, crc_map);
-	return 1;
-	#else
-	return 0;
-	#endif		   
+	LNEWLIB(L, crc_map);   
 }
 	   
 MODULE_REGISTER_ROM(CRC, crc, crc_map, luaopen_crc, 1);
