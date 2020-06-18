@@ -57,6 +57,9 @@
  */
 #define LUA_USE_ROTABLE	   1
 
+// enables the user to disable the automatic indenting
+#define EDITOR_TOGGLE_AUTO_INDENT	1
+
 // Get the UART assigned to the console
 #if CONFIG_LUA_RTOS_CONSOLE_UART0
 #define CONSOLE_UART 0
