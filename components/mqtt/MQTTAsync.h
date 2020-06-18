@@ -1185,7 +1185,9 @@ typedef struct
   * MQTTASYNC_TRACE_MINIMUM
   * @return an array of strings describing the library.  The last entry is a NULL pointer.
   */
+#if !__XTENSA__
 DLLExport MQTTAsync_nameValue* MQTTAsync_getVersionInfo(void);
+#endif
 
 /**
  * Returns a pointer to the string representation of the error or NULL.
