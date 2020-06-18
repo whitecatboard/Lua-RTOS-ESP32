@@ -79,10 +79,21 @@ int socketcompare(void* a, void* b)
 void SocketBuffer_newDefQ(void)
 {
 	def_queue = malloc(sizeof(socket_queue));
+#if __XTENSA__
+  if (def_queue) {
+#endif
 	def_queue->buflen = 1000;
 	def_queue->buf = malloc(def_queue->buflen);
+#if __XTENSA__
+  if (!def_queue->buf) {
+    fprintf(stderr, "Error allocating def_queue->buf - continuing");
+  }
+#endif
 	def_queue->socket = def_queue->index = 0;
 	def_queue->buflen = def_queue->datalen = 0;
+#if __XTENSA__
+  }
+#endif
 }
 
 
@@ -176,6 +187,9 @@ char* SocketBuffer_getQueuedData(int socket, size_t bytes, size_t* actual_len)
 		if (queue->datalen > 0)
 		{
 			void* newmem = malloc(bytes);
+#if __XTENSA__
+      if (newmem)
+#endif
 			memcpy(newmem, queue->buf, queue->datalen);
 			free(queue->buf);
 			queue->buf = newmem;
@@ -335,6 +349,9 @@ void SocketBuffer_pendingWrite(int socket, int count, iobuf* iovecs, int* frees,
 	FUNC_ENTRY;
 	/* store the buffers until the whole packet is written */
 	pw = malloc(sizeof(pending_writes));
+#if __XTENSA__
+  if (pw) {
+#endif
 	pw->socket = socket;
 #if defined(OPENSSL)
 	pw->ssl = ssl;
@@ -348,6 +365,9 @@ void SocketBuffer_pendingWrite(int socket, int count, iobuf* iovecs, int* frees,
 		pw->frees[i] = frees[i];
 	}
 	ListAppend(&writes, pw, sizeof(pw) + total);
+#if __XTENSA__
+  }
+#endif
 	FUNC_EXIT;
 }
 

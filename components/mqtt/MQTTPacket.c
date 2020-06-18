@@ -44,15 +44,20 @@
 /**
  * List of the predefined MQTT v3 packet names.
  */
-static const char *packet_names[] =
+#if __XTENSA__
+static const char *const packet_names[] =
+#else
+static const char * packet_names[] =
+#endif
 {
 	"RESERVED", "CONNECT", "CONNACK", "PUBLISH", "PUBACK", "PUBREC", "PUBREL",
 	"PUBCOMP", "SUBSCRIBE", "SUBACK", "UNSUBSCRIBE", "UNSUBACK",
 	"PINGREQ", "PINGRESP", "DISCONNECT"
 };
 
+#if !__XTENSA__
 const char** MQTTClient_packet_names = packet_names;
-
+#endif
 
 /**
  * Converts an MQTT packet code into its name
@@ -67,6 +72,9 @@ const char* MQTTPacket_name(int ptype)
 /**
  * Array of functions to build packets, indexed according to packet code
  */
+#if __XTENSA__
+const
+#endif
 pf new_packets[] =
 {
 	NULL,	/**< reserved */
@@ -150,11 +158,17 @@ void* MQTTPacket_Factory(networkHandles* net, int* error)
 			{
 				int buf0len;
 				char *buf = malloc(10);
+#if __XTENSA__
+        if (buf) {
+#endif
 				buf[0] = header.byte;
 				buf0len = 1 + MQTTPacket_encode(&buf[1], remaining_length);
 				*error = MQTTPersistence_put(net->socket, buf, buf0len, 1,
 					&data, &remaining_length, header.bits.type, ((Publish *)pack)->msgId, 1);
 				free(buf);
+#if __XTENSA__
+        }
+#endif
 			}
 #endif
 		}
@@ -184,6 +198,10 @@ int MQTTPacket_send(networkHandles* net, Header header, char* buffer, size_t buf
 
 	FUNC_ENTRY;
 	buf = malloc(10);
+#if __XTENSA__
+  rc = 0;
+  if (buf) {
+#endif
 	buf[0] = header.byte;
 	buf0len = 1 + MQTTPacket_encode(&buf[1], buflen);
 
@@ -212,6 +230,9 @@ int MQTTPacket_send(networkHandles* net, Header header, char* buffer, size_t buf
 	
 	if (rc != TCPSOCKET_INTERRUPTED)
 	  free(buf);
+#if __XTENSA__
+  }
+#endif
 
 	FUNC_EXIT_RC(rc);
 	return rc;
@@ -235,6 +256,10 @@ int MQTTPacket_sends(networkHandles* net, Header header, int count, char** buffe
 
 	FUNC_ENTRY;
 	buf = malloc(10);
+#if __XTENSA__
+  rc = 0;
+  if (buf) {
+#endif
 	buf[0] = header.byte;
 	for (i = 0; i < count; i++)
 		total += buflens[i];
@@ -260,6 +285,10 @@ int MQTTPacket_sends(networkHandles* net, Header header, int count, char** buffe
 	
 	if (rc != TCPSOCKET_INTERRUPTED)
 	  free(buf);
+
+#if __XTENSA__
+  }
+#endif
 	FUNC_EXIT_RC(rc);
 	return rc;
 }
@@ -366,8 +395,14 @@ static char* readUTFlen(char** pptr, char* enddata, int* len)
 		if (&(*pptr)[*len] <= enddata)
 		{
 			string = malloc(*len+1);
+#if __XTENSA__
+      if (string) {
+#endif
 			memcpy(string, *pptr, *len);
 			string[*len] = '\0';
+#if __XTENSA__
+      }
+#endif
 			*pptr += *len;
 		}
 	}
@@ -505,6 +540,9 @@ int MQTTPacket_send_disconnect(networkHandles *net, const char* clientID)
 void* MQTTPacket_publish(unsigned char aHeader, char* data, size_t datalen)
 {
 	Publish* pack = malloc(sizeof(Publish));
+#if __XTENSA__
+  if (pack) {
+#endif
 	char* curdata = data;
 	char* enddata = &data[datalen];
 
@@ -522,6 +560,10 @@ void* MQTTPacket_publish(unsigned char aHeader, char* data, size_t datalen)
 		pack->msgId = 0;
 	pack->payload = curdata;
 	pack->payloadlen = (int)(datalen-(curdata-data));
+
+#if __XTENSA__
+  }
+#endif
 exit:
 	FUNC_EXIT;
 	return pack;
@@ -558,6 +600,10 @@ static int MQTTPacket_send_ack(int type, int msgid, int dup, networkHandles *net
 	char *ptr = buf;
 
 	FUNC_ENTRY;
+#if __XTENSA__
+  rc = 0;
+  if (buf) {
+#endif
 	header.byte = 0;
 	header.bits.type = type;
 	header.bits.dup = dup;
@@ -566,6 +612,9 @@ static int MQTTPacket_send_ack(int type, int msgid, int dup, networkHandles *net
 	writeInt(&ptr, msgid);
 	if ((rc = MQTTPacket_send(net, header, buf, 2, 1)) != TCPSOCKET_INTERRUPTED)
 		free(buf);
+#if __XTENSA__
+  }
+#endif
 	FUNC_EXIT_RC(rc);
 	return rc;
 }
@@ -675,8 +724,14 @@ void* MQTTPacket_ack(unsigned char aHeader, char* data, size_t datalen)
 	char* curdata = data;
 
 	FUNC_ENTRY;
+#if __XTENSA__
+  if (pack) {
+#endif
 	pack->header.byte = aHeader;
 	pack->msgId = readInt(&curdata);
+#if __XTENSA__
+  }
+#endif
 	FUNC_EXIT;
 	return pack;
 }
@@ -700,6 +755,9 @@ int MQTTPacket_send_publish(Publish* pack, int dup, int qos, int retained, netwo
 
 	FUNC_ENTRY;
 	topiclen = malloc(2);
+#if __XTENSA__
+  if (pack && net && topiclen) {
+#endif
 
 	header.bits.type = PUBLISH;
 	header.bits.dup = dup;
@@ -708,6 +766,9 @@ int MQTTPacket_send_publish(Publish* pack, int dup, int qos, int retained, netwo
 	if (qos > 0)
 	{
 		char *buf = malloc(2);
+#if __XTENSA__
+    if (buf) {
+#endif
 		char *ptr = buf;
 		char* bufs[4] = {topiclen, pack->topic, buf, pack->payload};
 		size_t lens[4] = {2, strlen(pack->topic), 2, pack->payloadlen};
@@ -719,6 +780,9 @@ int MQTTPacket_send_publish(Publish* pack, int dup, int qos, int retained, netwo
 		rc = MQTTPacket_sends(net, header, 4, bufs, lens, frees);
 		if (rc != TCPSOCKET_INTERRUPTED)
 			free(buf);
+#if __XTENSA__
+    }
+#endif
 	}
 	else
 	{
@@ -737,6 +801,11 @@ int MQTTPacket_send_publish(Publish* pack, int dup, int qos, int retained, netwo
 	else
 		Log(LOG_PROTOCOL, 10, NULL, net->socket, clientID, pack->msgId, qos, retained, rc,
 				min(20, pack->payloadlen), pack->payload);
+
+#if __XTENSA__
+  }
+  else free(topiclen);
+#endif
 	FUNC_EXIT_RC(rc);
 	return rc;
 }

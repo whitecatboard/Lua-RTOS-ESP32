@@ -186,6 +186,9 @@ int Socket_addSocket(int newSd)
 		else
 		{
 			int* pnewSd = (int*)malloc(sizeof(newSd));
+#if __XTENSA__
+      if (pnewSd) {
+#endif
 			*pnewSd = newSd;
 			ListAppend(s.clientsds, pnewSd, sizeof(newSd));
 			FD_SET(newSd, &(s.rset_saved));
@@ -193,6 +196,9 @@ int Socket_addSocket(int newSd)
 			rc = Socket_setnonblocking(newSd);
 			if (rc == SOCKET_ERROR)
 				Log(LOG_ERROR, -1, "addSocket: setnonblocking");
+#if __XTENSA__
+      }
+#endif
 		}
 	}
 	else
@@ -539,8 +545,14 @@ int Socket_putdatas(int socket, char* buf0, size_t buf0len, int count, char** bu
 #else
 			SocketBuffer_pendingWrite(socket, count+1, iovecs, frees1, total, bytes);
 #endif
+#if __XTENSA__
+      if (sockmem) {
+#endif
 			*sockmem = socket;
 			ListAppend(s.write_pending, sockmem, sizeof(int));
+#if __XTENSA__
+      }
+#endif
 			FD_SET(socket, &(s.pending_wset));
 			rc = TCPSOCKET_INTERRUPTED;
 		}
@@ -952,6 +964,7 @@ int Socket_continueWrites(fd_set* pwset)
  *  @param sock socket
  *  @return the peer information
  */
+#if !__XTENSA__
 char* Socket_getaddrname(struct sockaddr* sa, int sock)
 {
 /**
@@ -1006,7 +1019,7 @@ char* Socket_getpeer(int sock)
 
 	return Socket_getaddrname((struct sockaddr*)&sa, sock);
 }
-
+#endif
 
 #if defined(Socket_TEST)
 

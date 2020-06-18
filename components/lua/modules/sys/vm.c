@@ -80,6 +80,7 @@ static int llua_blocks(lua_State *L) {
 
 static const LUA_REG_TYPE lvm_map[] = {
   { LSTRKEY( "blocks" ), LFUNCVAL( llua_blocks    ) },
+  { LNILKEY, LNILVAL } 
 };
 
 LUALIB_API int luaopen_vm( lua_State *L ) {
