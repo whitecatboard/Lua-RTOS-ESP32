@@ -440,34 +440,41 @@ menu "Lua RTOS"
                     CPU affinity for the task assigned to the SSH server.
          endmenu
 
-      menu "HTTP server"
-         config LUA_RTOS_USE_HTTP_SERVER
-            depends on LUA_RTOS_LUA_USE_NET
-            bool "Enable HTTP server"
-            default y
+         menu "HTTP client"
+            config LUA_RTOS_USE_HTTP_CLIENT
+                depends on LUA_RTOS_LUA_USE_NET
+                bool "Enable HTTP client"
+                default y
+         endmenu
 
-         config LUA_RTOS_HTTP_SERVER_PORT
-            depends on LUA_RTOS_USE_HTTP_SERVER
-               int "HTTP server port"
-               range 0 65536
-               default 80
-            help
-               TCP port where HTTP server listens
+         menu "HTTP server"
+            config LUA_RTOS_USE_HTTP_SERVER
+                depends on LUA_RTOS_LUA_USE_NET
+                bool "Enable HTTP server"
+                default y
 
-         config LUA_RTOS_HTTP_SERVER_PORT_SSL
-            depends on LUA_RTOS_USE_HTTP_SERVER
-               int "HTTPS server port"
-               range 0 65536
-               default 443
-            help
-               TCP port where HTTPS server listens
+            config LUA_RTOS_HTTP_SERVER_PORT
+                depends on LUA_RTOS_USE_HTTP_SERVER
+                   int "HTTP server port"
+                   range 0 65536
+                   default 80
+                help
+                   TCP port where HTTP server listens
 
-         config LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT
-            depends on LUA_RTOS_USE_HTTP_SERVER
-               string "HTTP document root"
-               default /
-            help
-               base folder where HTTP server looks for files
+            config LUA_RTOS_HTTP_SERVER_PORT_SSL
+                depends on LUA_RTOS_USE_HTTP_SERVER
+                   int "HTTPS server port"
+                   range 0 65536
+                   default 443
+                help
+                   TCP port where HTTPS server listens
+
+            config LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT
+                depends on LUA_RTOS_USE_HTTP_SERVER
+                   string "HTTP document root"
+                   default /
+                help
+                   base folder where HTTP server looks for files
 
             config LUA_RTOS_HTTP_SERVER_STACK_SIZE
                 depends on LUA_RTOS_USE_HTTP_SERVER
