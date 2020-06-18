@@ -38,7 +38,11 @@
 
 #include "memdbg.h"
 
+#if __XTENSA__
+static const char *const metric_names[] = {
+#else
 static const char *metric_names[] = {
+#endif
     "PERF_BIO_READ_PLAINTEXT",
     "PERF_BIO_WRITE_PLAINTEXT",
     "PERF_BIO_READ_CIPHERTEXT",

@@ -41,6 +41,9 @@
 /**
  * Structure to hold the valid ranges of UTF-8 characters, for each byte up to 4
  */
+#if __XTENSA__
+const
+#endif
 struct
 {
 	int len; /**< number of elements in the following array (1 to 4) */

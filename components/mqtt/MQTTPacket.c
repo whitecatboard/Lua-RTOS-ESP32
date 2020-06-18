@@ -44,7 +44,11 @@
 /**
  * List of the predefined MQTT v3 packet names.
  */
-static const char *packet_names[] =
+#if __XTENSA__
+static const char *const packet_names[] =
+#else
+static const char * packet_names[] =
+#endif
 {
 	"RESERVED", "CONNECT", "CONNACK", "PUBLISH", "PUBACK", "PUBREC", "PUBREL",
 	"PUBCOMP", "SUBSCRIBE", "SUBACK", "UNSUBSCRIBE", "UNSUBACK",
