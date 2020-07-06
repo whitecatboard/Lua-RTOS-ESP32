@@ -155,6 +155,9 @@ static int l_nvs_write(lua_State *L) {
                 memcpy((char *)(val_val + 1), str_val, val_size - 1);
             }
             break;
+        default :
+            return luaL_error(L, "value of unsupported type");
+            break;
     }
 
     // Open
