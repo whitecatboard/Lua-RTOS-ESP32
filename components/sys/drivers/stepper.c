@@ -631,7 +631,7 @@ void stepper_stop(int mask) {
 
     portEXIT_CRITICAL(&spinlock);
 
-    if (start_num == 0) {
+    if (waiting_task && start_num == 0) {
         xTaskNotifyGive(waiting_task);
     }
 }
