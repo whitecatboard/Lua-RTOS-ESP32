@@ -28,5 +28,6 @@
 
 void s_curve_prepare(motion_t *pmotion);
 float s_curve_next(motion_t *pmotion);
+void s_curve_dump(motion_t *pmotion);
 
 #endif

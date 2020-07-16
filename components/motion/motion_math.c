@@ -88,7 +88,44 @@ float IRAM_ATTR solve_second_order_pos(float a, float b, float c) {
         unknown = (-1.0 * b + sqrt(discriminant)) / (2.0 * a);
 
         if (unknown < 0.0) {
-            unknown = NAN;;
+            unknown = NAN;
+        }
+    } else if (discriminant == 0.0) {
+        unknown = - (b / (2 * a));
+        if (unknown < 0.0) {
+            unknown = NAN;
+        }
+    } else {
+        unknown = NAN;
+    }
+
+    return unknown;
+}
+
+float IRAM_ATTR solve_second_min_pos(float a, float b, float c) {
+    float discriminant;
+    float unknown;
+    float unknown1;
+    float unknown2;
+
+    discriminant = b*b - 4.0 * a * c;
+
+    if (discriminant > 0.0) {
+        unknown1 = (-1.0 * b + sqrt(discriminant)) / (2.0 * a);
+        unknown2 = (-1.0 * b - sqrt(discriminant)) / (2.0 * a);
+
+        if (unknown1 < 0.0) {
+            if (unknown2 < 0.0) {
+                unknown = NAN;
+            } else {
+                unknown = unknown2;
+            }
+        } else {
+            if (unknown2 < 0.0) {
+                unknown = unknown1;
+            } else {
+                unknown = fmin(unknown1,unknown2);
+            }
         }
     } else if (discriminant == 0.0) {
         unknown = - (b / (2 * a));

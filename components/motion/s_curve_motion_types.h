@@ -32,18 +32,20 @@ typedef struct {
     float a;  // Max acceleration
     float j;  // Max jerk
     float s;  // Total displacement
+    float t;  // Displacement time (if > 0.0)
 
     float units_per_step; // Units per step
     float steps_per_unit; // Steps per unit
 } s_curve_motion_constraints;
 
 typedef struct {
-    // Motion constraints
+    // Current motion constraints
     float v0; // Initial velocity
     float v;  // Target velocity
     float a;  // Max acceleration
     float j;  // Max jerk
     float s;  // Total displacement
+    float t;  // Displacement time (if > 0.0)
 
     uint32_t steps;       // Number of steps
     int32_t step;         // Current step
@@ -55,10 +57,13 @@ typedef struct {
 
     // Phase bounds
     struct {
-        float s[8];       // Phase total displacement
-        float v[8];       // Phase exit velocity
-        int32_t steps[8]; // Phase steps, in each step the displacement is
-                          // increased in units_per_step units
+        float s[8];           // Phase total displacement
+        float v[8];           // Phase exit velocity
+        float t[8];           // Phase displacement time
+        float total_t;        // Total displacement time
+        int32_t steps[8];     // Phase steps, in each step the displacement is
+                              // increased in units_per_step units
+        int32_t acc_steps[8];
     } bound;
 
     int8_t phase; // In which profile acceleration phase we are?

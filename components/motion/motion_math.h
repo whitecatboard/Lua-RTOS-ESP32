@@ -26,5 +26,6 @@
 
 float solve_third_order_newton(float a, float b, float c, float d, float first_approximation, float err);
 float solve_second_order_pos(float a, float b, float c);
+float solve_second_min_pos(float a, float b, float c);
 
 #endif

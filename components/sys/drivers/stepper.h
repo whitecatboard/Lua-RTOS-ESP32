@@ -34,17 +34,19 @@
 #define NSTEP 8
 
 // Step pulse duration in nanos
-#define STEPPER_PULSE_NANOS 1000
+#define STEPPER_PULSE_NANOS 3000.0F
 
 // Nonos per RMT tick
-#define STEPPER_RMT_NANOS_PER_TICK 25
+#define STEPPER_RMT_NANOS_PER_TICK 25.0F
 
 // Step pulse duration in RMT ticks
 #define STEPPER_PULSE_TICKS (STEPPER_PULSE_NANOS / STEPPER_RMT_NANOS_PER_TICK)
 
 #define STEPPER_RMT_BUFF_SIZE 64
-#define STEPPER_RMT_DATA_SIZE 640
+#define STEPPER_RMT_HALF_BUFF_SIZE (STEPPER_RMT_BUFF_SIZE >> 1)
 
+#define STEPPER_RMT_DATA_SIZE 640
+#define STEPPER_RMT_MAX_DURATION (32767 >> 1)
 #define STEPPER_STATS 1
 #define STEPPER_DEBUG 1
 
@@ -58,6 +60,7 @@ typedef struct {
 
     uint8_t  dir;           // Direction. 0 = ccw, 1 = cw
     uint32_t steps;         // Number of steps
+    float units;            // Displacement units
 
     float units_per_step;   // Units per step
     float steps_per_unit;   // Steps per unit

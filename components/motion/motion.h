@@ -34,6 +34,7 @@ struct motion;
 
 typedef void (*motion_prepare_func_t)(struct motion *);
 typedef float (*motion_next_func_t)(struct motion *);
+typedef void (*motion_dump_func_t)(struct motion *);
 
 typedef enum {
     MotionSCurve,
@@ -54,13 +55,19 @@ typedef struct motion {
     motion_prepare_func_t _prepare;
     motion_next_func_t _next;
 
+#if MOTION_DEBUG
+    motion_dump_func_t _dump;
+#endif
+
     union {
         s_curve_motion_t s_curve;
     };
 } motion_t;
 
 void motion_prepare(motion_constraints_t *pconstraints, motion_t *pmotion);
+void motion_constraint_t(motion_t *pmotion, float t);
 float motion_next(motion_t *pmotion);
+void motion_dumnp(motion_t *pmotion);
 
 #include "s_curve_motion.h"
 
