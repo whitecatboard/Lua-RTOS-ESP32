@@ -61,7 +61,11 @@ int http_preprocess_lua_page(const char *ipath, const char *opath) {
 
     int c;
     int lc = 0;
-    char lua = 0; // lua mode
+    char lua = 0; // kind of text we are currently reading
+    // 0: verbatim text;
+    // 1: lua tag found, we still need to decide if there is a '=' to follow
+    // 2: statment lua code (eg: <?lua ... ?> )
+    // 3: expression lua code ( eg: <?lua 1+2 ?> )
     char buff[6];
     // avoid line longer than PRINTF_BUFFER_SIZE_INITIAL, as they will trigger a memory allocation in do_print()
     // they may even silently fail if they are longer than BUFFER_SIZE_MAX
@@ -109,18 +113,28 @@ int http_preprocess_lua_page(const char *ipath, const char *opath) {
             }
 
             *cbuff = '\0';
+        } else if (lua == 1 && c == '=') { // shortand lua tag
+              lua = 3;
+              fprintf(ofp, "_w(");
         } else if (lua && (c == *cet)) {  // in closing lua mark
             cet++;
             if (!*cet) { // end of mark, switch to text
-                lua = 0;
                 cbuff = buff;  // drop buffer content
-                fprintf(ofp, "\n");  // end of user lua statement
+                if (lua == 3) {
+                    fprintf(ofp, ")\n");  // end of lua expression
+                } else {
+                    fprintf(ofp, "\n");  // end of user lua statement
+                }
+                lua = 0;
             } else {
                 *cbuff++ = c;
             }
 
             *cbuff = '\0';
         } else { // not in mark
+		    if (lua == 1) {
+                lua = 2; // normal lua code
+            }
             cbt = bt;
             cet = et;
 
