@@ -57,7 +57,7 @@ static int lstepper_attach( lua_State* L ){
     float min_spd  = luaL_optnumber(L, 4, 60.0);   // Min speed in units / min (60 rpm by default)
     float max_spd  = luaL_optnumber(L, 5, 1000.0); // Max speed in units / min (1000 rpm by default)
     float max_acc  = luaL_optnumber(L, 6, 2);      // Max acceleration in units/secs^2 (2 by default )
-    float max_jerk = luaL_optnumber(L, 7, 20);     // Max acceleration in units/secs^3 (20 by default )
+    float max_jerk = luaL_optnumber(L, 7, 20);     // Max jerk in units/secs^3 (20 by default )
 
     min_spd = min_spd / 60.0;
     max_spd = max_spd / 60.0;
@@ -91,31 +91,13 @@ static int lstepper_move( lua_State* L ) {
     float units  = luaL_checknumber(L, 2);
 
     // Speed in units / min (1000 rpm by default)
-    float speed;
-
-    if lua_isnil(L, 3) {
-        speed = lstepper->max_spd;
-    } else {
-        speed = luaL_checknumber(L, 3);
-        speed = speed / 60.0;
-    }
+    float speed = luaL_optnumber(L, 3, lstepper->max_spd * 60);
+    speed = speed / 60.0;
 
     // Acceleration in units/secs^2 (2 by default)
-    float accel;
-
-    if lua_isnil(L, 4) {
-        accel = lstepper->max_acc;
-    } else {
-        accel = luaL_checknumber(L, 4);
-    }
-
-    float jerk;
-
-    if lua_isnil(L, 5) {
-        jerk = lstepper->max_jerk;
-    } else {
-        jerk = luaL_checknumber(L, 5);
-    }
+    float accel = luaL_optnumber(L, 4, lstepper->max_acc);
+    // Jerk in units/sec^3 ( 20 by default)
+    float jerk = luaL_optnumber(L, 5, lstepper->max_jerk);
 
     #if (STEPPER_DEBUG || STEPPER_STATS)
     syslog(LOG_INFO, "\r\nMove stepper, distance: %.4f units, target speed: %.4f units/s, acceleration: %.4f units/s^2, jerk: %.4f units/s^3, %.4f steps/unit, %.4f unit/step", units, speed, accel, jerk, lstepper->stpu, 1.0 / lstepper->stpu);
