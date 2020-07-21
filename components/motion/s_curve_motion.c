@@ -401,7 +401,6 @@ float IRAM_ATTR s_curve_next(motion_t *pmotion) {
         next_in = pmotion->s_curve.step_time; // (8.14)
         if (next_in == 0.0) {
         	next_in = pmotion->s_curve.units_per_step /  pmotion->s_curve.bound.v[4];
-        	printf("next in %f\r\n",next_in * 1000000);
         	pmotion->s_curve.step_time = next_in;
         }
     } else if ((pmotion->s_curve.phase == 2) || (pmotion->s_curve.phase == 6)) {
