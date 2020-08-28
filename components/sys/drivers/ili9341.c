@@ -385,6 +385,8 @@ void ili9341_tp_get(int *x, int *y, int *z, uint8_t raw) {
 	    result = ili9341_tp_read(0xB0, 3);
 		if (result > 50)  {
 			// tp pressed
+			*z = result;
+
 			result = ili9341_tp_read(0xD0, 10);
 			if (result >= 0) {
 				*x = result;
@@ -394,10 +396,10 @@ void ili9341_tp_get(int *x, int *y, int *z, uint8_t raw) {
 			}
 		}
 
-		if (result <= 50) {
+		if (result < 0) {
 			*x = 0;
 			*y = 0;
-			*z = 0;
+			*z = result;
 			return;
 		}
 
