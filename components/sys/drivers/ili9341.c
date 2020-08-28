@@ -210,7 +210,14 @@ driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation, uint8_t address)
 	caps->on = st7735_on;
 	caps->off = st7735_off;
 	caps->invert = st7735_invert;
-	caps->orientation = ili9341_set_orientation;
+	switch (chip) {
+	  case CHIPSET_ILI9341:
+		caps->orientation = ili9341_set_orientation;
+		break;
+	  case CHIPSET_ILI9341_BGR:
+		caps->orientation = ili9341_bgr_set_orientation;
+		break;
+	}
 	caps->touch_get = ili9341_tp_get;
 	caps->touch_cal = ili9341_tp_set_cal;
 	caps->bytes_per_pixel = 2;
@@ -298,10 +305,13 @@ driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation, uint8_t address)
     switch (chipset) {
 		case CHIPSET_ILI9341:
 			gdisplay_ll_command_list(ILI9341_init);
+			ili9341_set_orientation(orientation);
+			break;
+		case CHIPSET_ILI9341_BGR:
+			gdisplay_ll_command_list(ILI9341_init);
+			ili9341_bgr_set_orientation(orientation);
 			break;
     }
-
-    ili9341_set_orientation(orientation);
 
 	// Allocate buffer
 	if (!gdisplay_ll_allocate_buffer(ST7735_BUFFER)) {
@@ -342,6 +352,42 @@ void ili9341_set_orientation(uint8_t m) {
 		break;
 	  case PORTRAIT_FLIP:
 		madctl = (ST7735_MADCTL_MX | ST7735_MADCTL_MY | ST7735_MADCTL_MV | ST7735_MADCTL_RGB);
+		caps->width  = ILI9341_WIDTH;
+		caps->height = ILI9341_HEIGHT;
+		break;
+	}
+
+	gdisplay_ll_command(ST7735_MADCTL);
+	gdisplay_ll_data(&madctl, 1);
+}
+
+void ili9341_bgr_set_orientation(uint8_t m) {
+	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
+	uint8_t orientation = m & 3; // can't be higher than 3
+	uint8_t madctl = ST7735_MADCTL_BGR;
+
+	caps->ystart = 0;
+	caps->xstart = 0;
+
+
+	switch (orientation) {
+	  case LANDSCAPE:
+		madctl |= ST7735_MADCTL_MV;
+		caps->width  = ILI9341_HEIGHT;
+		caps->height = ILI9341_WIDTH;
+		break;
+	  case PORTRAIT:
+		madctl |= ST7735_MADCTL_MY;
+		caps->width  = ILI9341_WIDTH;
+		caps->height = ILI9341_HEIGHT;
+		break;
+	  case LANDSCAPE_FLIP:
+		madctl |= ST7735_MADCTL_MX | ST7735_MADCTL_MY | ST7735_MADCTL_MV;
+		caps->width  = ILI9341_HEIGHT;
+		caps->height = ILI9341_WIDTH;
+		break;
+	  case PORTRAIT_FLIP:
+		madctl |= ST7735_MADCTL_MX;
 		caps->width  = ILI9341_WIDTH;
 		caps->height = ILI9341_HEIGHT;
 		break;
