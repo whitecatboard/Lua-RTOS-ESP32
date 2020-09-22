@@ -213,12 +213,13 @@ driver_error_t *ili9341_init(uint8_t chip, uint8_t orientation, uint8_t address)
 	switch (chip) {
 	  case CHIPSET_ILI9341:
 		caps->orientation = ili9341_set_orientation;
-		break;
+		caps->touch_get = ili9341_tp_get;
+	break;
 	  case CHIPSET_ILI9341_BGR:
 		caps->orientation = ili9341_bgr_set_orientation;
-		break;
+		caps->touch_get = ili9341_bgr_tp_get;
+	break;
 	}
-	caps->touch_get = ili9341_tp_get;
 	caps->touch_cal = ili9341_tp_set_cal;
 	caps->bytes_per_pixel = 2;
 	caps->rdepth = 5;
@@ -455,9 +456,10 @@ void ili9341_tp_get(int *x, int *y, int *z, uint8_t raw) {
 		int ybottom = tp_caly & 0x3FFF;
 
 		if (((xright - xleft) != 0) && ((ybottom - ytop) != 0)) {
-			*x = ((*x - xleft) * 320) / (xright - xleft);
-			*y = ((*y - ytop) * 240) / (ybottom - ytop);
+			*x = ((*x - xleft) * ILI9341_WIDTH) / (xright - xleft);
+			*y = ((*y - ytop) * ILI9341_HEIGHT) / (ybottom - ytop);
 		}
+
 		else {
 			*z = 0;
 			*x = 0;
@@ -466,9 +468,9 @@ void ili9341_tp_get(int *x, int *y, int *z, uint8_t raw) {
 		}
 
 		if (*x < 0) *x = 0;
-		if (*x > 319) *x = 319;
+		if (*x >= ILI9341_WIDTH) *x = ILI9341_WIDTH-1;
 		if (*y < 0) *y = 0;
-		if (*y > 239) *y = 239;
+		if (*y >= ILI9341_HEIGHT) *y = ILI9341_HEIGHT-1;
 
 		gdisplay_caps_t *caps = gdisplay_ll_get_caps();
 
@@ -491,4 +493,74 @@ void ili9341_tp_get(int *x, int *y, int *z, uint8_t raw) {
 	}
 }
 
+void ili9341_bgr_tp_get(int *x, int *y, int *z, uint8_t raw) {
+	int result = -1;
+	int tmp;
+
+	*x = 0;
+	*y = 0;
+	*z = 0;
+
+	result = ili9341_tp_read(0xB0, 3);
+	if (result > 50)  {
+		// tp pressed
+		*z = result;
+
+		result = ili9341_tp_read(0xD0, 10);
+		if (result >= 0) {
+			*x = result;
+
+			result = ili9341_tp_read(0x90, 10);
+			if (result >= 0) *y = result;
+		}
+	}
+
+	if (result < 0) {
+		*x = 0;
+		*y = 0;
+		*z = result;
+		return;
+	}
+
+	if (!raw) {
+		int xleft   = (tp_calx >> 16) & 0x3FFF;
+		int xright  = tp_calx & 0x3FFF;
+		int ytop    = (tp_caly >> 16) & 0x3FFF;
+		int ybottom = tp_caly & 0x3FFF;
+
+		if (((xright - xleft) != 0) && ((ybottom - ytop) != 0)) {
+			*x = ((*x - xleft) * ILI9341_WIDTH) / (xright - xleft);
+			*y = ((*y - ytop) * ILI9341_HEIGHT) / (ybottom - ytop);
+		} else {
+			*z = 0;
+			*x = 0;
+			*y = 0;
+			return;
+		}
+
+		if (*x < 0) *x = 0;
+		if (*x >= ILI9341_WIDTH) *x = ILI9341_WIDTH-1;
+		if (*y < 0) *y = 0;
+		if (*y >= ILI9341_HEIGHT) *y = ILI9341_HEIGHT-1;
+
+		gdisplay_caps_t *caps = gdisplay_ll_get_caps();
+
+		switch (caps->orient) {
+			case LANDSCAPE:
+				tmp = *x;
+				*x = ILI9341_HEIGHT - *y - 1;
+				*y = tmp;
+				break;
+			case LANDSCAPE_FLIP:
+				tmp = *x;
+				*x = *y;
+				*y = ILI9341_WIDTH - tmp - 1;
+				break;
+			case PORTRAIT_FLIP :
+				*x = ILI9341_WIDTH - *x - 1;
+				*y = ILI9341_HEIGHT - *y - 1;
+				break;
+		}
+	}
+}
 #endif

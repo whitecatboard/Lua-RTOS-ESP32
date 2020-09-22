@@ -122,6 +122,7 @@ void ili9341_set_orientation(uint8_t m);
 void ili9341_bgr_set_orientation(uint8_t m);
 
 void ili9341_tp_get(int *x, int *y, int *z, uint8_t raw);
+void ili9341_bgr_tp_get(int *x, int *y, int *z, uint8_t raw);
 void ili9341_tp_set_cal(int calx, int caly);
 
 #endif
