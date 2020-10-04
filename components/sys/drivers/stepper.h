@@ -101,7 +101,7 @@ extern const int stepper_error_map;
 driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, float max_spd, float max_acc, float stpu, uint8_t *unit);
 driver_error_t *stepper_move(uint8_t unit, float units, float initial_spd, float target_spd, float acc, float jerk);
 
-void stepper_start(int mask);
-void stepper_stop(int mask);
+void stepper_start(int mask, uint8_t async);
+void stepper_stop(int mask, uint8_t async);
 
 #endif /* _STEPPER_H_ */

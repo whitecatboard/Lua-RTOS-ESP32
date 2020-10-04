@@ -582,7 +582,7 @@ driver_error_t *stepper_move(uint8_t unit, float units, float initial_spd, float
     return NULL;
 }
 
-void stepper_start(int mask) {
+void stepper_start(int mask, uint8_t async) {
     mtx_lock(&stepper_mutex);
 
     start_num = 0;
@@ -680,12 +680,12 @@ void stepper_start(int mask) {
     xQueueSend(acceleration_queue, &start_mask, portMAX_DELAY);
 
     // Wait until movements done
-    if (mask) {
+    if (mask && !async) {
     	xEventGroupWaitBits(move_event_group, mask, pdTRUE, pdTRUE, portMAX_DELAY);
     }
 }
 
-void stepper_stop(int mask) {
+void stepper_stop(int mask, uint8_t async) {
     // Stop required steppers
     portENTER_CRITICAL(&spinlock);
 
@@ -709,7 +709,7 @@ void stepper_stop(int mask) {
     portEXIT_CRITICAL(&spinlock);
 
     // Wait for stop
-    if (stop_mask) {
+    if (stop_mask && ! async) {
     	xEventGroupWaitBits(stop_event_group, stop_mask, pdTRUE, pdTRUE, portMAX_DELAY);
     }
 }

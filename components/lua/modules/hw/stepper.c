@@ -135,7 +135,7 @@ static int lstepper_move( lua_State* L ) {
     return 0;
 }
 
-static int lstepper_start( lua_State* L ){
+static int list_to_mask( lua_State* L ){
     stepper_userdata *lstepper = NULL;
     int mask = 0;
     int i;
@@ -164,16 +164,45 @@ static int lstepper_start( lua_State* L ){
             }
         }
     }
+    return mask;
+}
 
+static int lstepper_start( lua_State* L ){
+    int mask = list_to_mask(L);
+    
     if (mask) {
-        stepper_start(mask);
+        stepper_start(mask, 0);
+    }
+
+    return 0;
+}
+
+static int lstepper_start_async( lua_State* L ){
+    int mask = list_to_mask(L);
+    
+    if (mask) {
+        stepper_start(mask, 1);
     }
 
     return 0;
 }
 
 static int lstepper_stop( lua_State* L ) {
-    stepper_stop(0xffffffff);
+    int mask = list_to_mask(L);
+
+    if (mask) {
+        stepper_stop(mask, 0);
+    }
+
+    return 0;
+}
+
+static int lstepper_stop_async( lua_State* L ) {
+    int mask = list_to_mask(L);
+    
+    if (mask) {
+        stepper_stop(mask, 1);
+    }
 
     return 0;
 }
@@ -181,7 +210,10 @@ static int lstepper_stop( lua_State* L ) {
 static const LUA_REG_TYPE lstepper_map[] = {
     { LSTRKEY( "attach" ),        LFUNCVAL( lstepper_attach    ) },
     { LSTRKEY( "start"  ),        LFUNCVAL( lstepper_start     ) },
+    { LSTRKEY( "startAsync"  ),   LFUNCVAL( lstepper_start_async) },
     { LSTRKEY( "stop"   ),        LFUNCVAL( lstepper_stop      ) },
+    { LSTRKEY( "stopAsync"   ),   LFUNCVAL( lstepper_stop_async) },
+
     DRIVER_REGISTER_LUA_ERRORS(stepper)
     { LNILKEY, LNILVAL }
 };
