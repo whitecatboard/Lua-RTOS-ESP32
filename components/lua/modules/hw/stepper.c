@@ -207,6 +207,19 @@ static int lstepper_stop_async( lua_State* L ) {
     return 0;
 }
 
+static int lstepper_get_distance( lua_State* L ) {
+    stepper_userdata *lstepper = NULL;
+    float units=0;
+    lstepper = (stepper_userdata *)luaL_checkudata(L, 1, "stepper.inst");
+    luaL_argcheck(L, lstepper, 1, "stepper expected");
+
+    stepper_get_distance(lstepper->unit, &units );
+
+    lua_pushnumber(L, units);
+
+    return 1;
+}
+
 static const LUA_REG_TYPE lstepper_map[] = {
     { LSTRKEY( "attach" ),        LFUNCVAL( lstepper_attach    ) },
     { LSTRKEY( "start"  ),        LFUNCVAL( lstepper_start     ) },
@@ -220,6 +233,7 @@ static const LUA_REG_TYPE lstepper_map[] = {
 
 static const LUA_REG_TYPE lstepper_inst_map[] = {
     { LSTRKEY( "move"        ),   LFUNCVAL( lstepper_move      ) },
+    { LSTRKEY( "getdistance" ),   LFUNCVAL( lstepper_get_distance) },
     { LSTRKEY( "__metatable" ),   LROVAL  ( lstepper_inst_map  ) },
     { LSTRKEY( "__index"     ),   LROVAL  ( lstepper_inst_map  ) },
     { LNILKEY, LNILVAL }

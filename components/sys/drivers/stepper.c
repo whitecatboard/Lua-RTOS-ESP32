@@ -582,6 +582,28 @@ driver_error_t *stepper_move(uint8_t unit, float units, float initial_spd, float
     return NULL;
 }
 
+driver_error_t *stepper_get_distance(uint8_t unit, float* units) {
+     // Sanity checks
+    if (unit > NSTEP) {
+        // Invalid unit
+        return driver_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_UNIT, NULL);
+    }
+
+    mtx_lock(&stepper_mutex);
+
+    if (!stepper[unit].setup) {
+        // Unit not setup
+        mtx_unlock(&stepper_mutex);
+        return driver_error(STEPPER_DRIVER, STEPPER_ERR_UNIT_NOT_SETUP, NULL);
+    }
+
+    stepper_t *pstepper = &stepper[unit];
+    *units = stepper[unit].steps * pstepper->units_per_step;
+
+    mtx_unlock(&stepper_mutex);
+    return NULL;
+}
+
 void stepper_start(int mask, uint8_t async) {
     mtx_lock(&stepper_mutex);
 
