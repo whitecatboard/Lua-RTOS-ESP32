@@ -284,7 +284,7 @@ static int lsensor_set( lua_State* L ) {
 
     // Set sensor
     if ((error = sensor_set(udata->instance, property, &property_value))) {
-            return luaL_driver_error(L, error);
+        return luaL_driver_error(L, error);
     }
 
     return 0;

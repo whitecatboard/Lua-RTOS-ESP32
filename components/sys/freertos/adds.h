@@ -176,6 +176,22 @@ if (xSwitchRequired) {	  \
 	_frxt_setup_switch(); \
 }
 
+#define portENTER_CRITICAL_SAFE(mux)  do {                                             \
+                                         if (xPortInIsrContext()) {                    \
+                                             portENTER_CRITICAL_ISR(mux);              \
+                                         } else {                                      \
+                                             portENTER_CRITICAL(mux);                  \
+                                         }                                             \
+                                      } while(0)
+
+#define portEXIT_CRITICAL_SAFE(mux)  do {                                              \
+                                         if (xPortInIsrContext()) {                    \
+                                             portEXIT_CRITICAL_ISR(mux);               \
+                                         } else {                                      \
+                                             portEXIT_CRITICAL(mux);                   \
+                                         }                                             \
+                                      } while(0)
+
 UBaseType_t uxGetTaskId();
 UBaseType_t uxGetThreadId();
 void uxSetThreadStatus(TaskHandle_t h, pthread_status_t status);

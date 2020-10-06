@@ -51,7 +51,6 @@
 #include "driver/i2c.h"
 #include "driver/periph_ctrl.h"
 
-#include <stdint.h>
 #include <string.h>
 
 #include <sys/macros.h>
@@ -701,6 +700,63 @@ driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len) {
     i2c_unlock(unit);
 
     return NULL;
+}
+
+driver_error_t *i2c_write_register(int deviceid, int address, uint8_t reg, uint8_t data) {
+    driver_error_t *error;
+	int transaction = I2C_TRANSACTION_INITIALIZER;
+
+	uint8_t buffer[2];
+
+	buffer[0]= reg;
+	buffer[1]= data;
+
+    error = i2c_start(deviceid, &transaction);if (error) return error;
+
+    error = i2c_write_address(deviceid, &transaction, address, 0);if (error) return error;
+	error = i2c_write(deviceid, &transaction, (char *)&buffer, sizeof(buffer));if (error) return error;
+
+	error = i2c_stop(deviceid, &transaction);if (error) return error;
+
+	return NULL;
+}
+
+driver_error_t *i2c_read_register(int deviceid, int address, uint8_t reg, uint8_t *data) {
+    driver_error_t *error;
+	int transaction = I2C_TRANSACTION_INITIALIZER;
+
+    error = i2c_start(deviceid, &transaction);if (error) return error;
+
+    error = i2c_write_address(deviceid, &transaction, address, 0);if (error) return error;
+	error = i2c_write(deviceid, &transaction, (char *)&reg, 1);if (error) return error;
+
+    error = i2c_start(deviceid, &transaction);if (error) return error;
+
+    error = i2c_write_address(deviceid, &transaction, address, 1);if (error) return error;
+	error = i2c_read(deviceid, &transaction, (char *)data, 1);if (error) return error;
+
+	error = i2c_stop(deviceid, &transaction);if (error) return error;
+
+	return NULL;
+}
+
+driver_error_t *i2c_read_register_block(int deviceid, int address, uint8_t reg, uint8_t *data, size_t size) {
+    driver_error_t *error;
+	int transaction = I2C_TRANSACTION_INITIALIZER;
+
+    error = i2c_start(deviceid, &transaction);if (error) return error;
+
+    error = i2c_write_address(deviceid, &transaction, address, 0);if (error) return error;
+	error = i2c_write(deviceid, &transaction, (char *)&reg, 1);if (error) return error;
+
+    error = i2c_start(deviceid, &transaction);if (error) return error;
+
+    error = i2c_write_address(deviceid, &transaction, address, 1);if (error) return error;
+	error = i2c_read(deviceid, &transaction, (char *)data, size);if (error) return error;
+
+	error = i2c_stop(deviceid, &transaction);if (error) return error;
+
+	return NULL;
 }
 
 #endif

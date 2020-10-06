@@ -95,6 +95,7 @@ typedef void *device_t;
 #define RTC_DRIVER_ID      35
 #define SOUND_DRIVER_ID    37
 #define HTTP_DRIVER_ID     38
+#define VTIMER_DRIVER_ID   39
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -132,6 +133,8 @@ typedef void *device_t;
 #define RTC_DRIVER driver_get_by_name("rtc")
 #define SOUND_DRIVER driver_get_by_name("sound")
 #define HTTP_DRIVER driver_get_by_name("http")
+#define VTIMER_DRIVER driver_get_by_name("vtimer")
+
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 

@@ -684,10 +684,9 @@ driver_error_t *sensor_set(sensor_instance_t *unit, const char *id, sensor_value
     for(idx=0;idx < SENSOR_MAX_PROPERTIES;idx++) {
         if (unit->sensor->properties[idx].id) {
             if (strcmp(unit->sensor->properties[idx].id,id) == 0) {
-                unit->sensor->set(unit, id, value);
-
+                driver_error_t *error = unit->sensor->set(unit, id, value);
                 mtx_unlock(&unit->mtx);
-                return NULL;
+                return error;
             }
         }
     }

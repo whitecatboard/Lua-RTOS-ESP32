@@ -39,46 +39,80 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS list data structure
+ * Lua RTOS, soft filter library
  *
  */
 
-#ifndef _LIST_H
-#define	_LIST_H
+#ifndef SOFT_FILTER_H_
+#define SOFT_FILTER_H_
 
-#include <stdint.h>
-#include <sys/mutex.h>
+typedef enum {
+    FilterButterLowPass,
+    FilterButterHighPass,
+    FilterButterBandPass,
+    FilterButterBandStop,
+    FilterMax
+} filter_type_t;
 
-struct list {
-    struct mtx mutex;
-    struct lstindex *index;
-    struct lstindex *free;
-    struct lstindex *last;
-    uint8_t indexes;
-    uint8_t first_index;
-    uint8_t flags;
-    uint8_t init;
-};
+typedef struct {
+    filter_type_t type;
 
-struct lstindex {
-    void *item;
-    uint8_t index;
-    uint8_t deleted;
-    struct lstindex *next;
-    struct lstindex *previous;
-};
+    union {
+        struct {
+            int n;
+            float *a;
+            float *d1;
+            float *d2;
+            float *w0;
+            float *w1;
+            float *w2;
+        } butter_lp;
 
-#define LIST_DEFAULT 	(1 << 0)
-#define LIST_NOT_INDEXED (1 << 1)
+        struct {
+            int n;
+            float *a;
+            float *d1;
+            float *d2;
+            float *w0;
+            float *w1;
+            float *w2;
+        } butter_hp;
 
-void lstinit(struct list *list, int first_index, uint8_t flags);
-int lstadd(struct list *list, void *item, int *item_index);
-int lstget(struct list *list, int index, void **item);
-int lstremove(struct list *list, int index, int destroy);
-int lstremovec(struct list *list, int index, int destroy, bool compact);
-int lstfirst(struct list *list);
-int lstlast(struct list *list);
-int lstnext(struct list *list, int index);
-void lstdestroy(struct list *list, int items);
+        struct {
+            int n;
+            float *a;
+            float *d1;
+            float *d2;
+            float *d3;
+            float *d4;
+            float *w0;
+            float *w1;
+            float *w2;
+            float *w3;
+            float *w4;
+        } butter_bp;
 
-#endif	/* _LIST_H */
+        struct {
+            int n;
+            float r;
+            float s;
+            float *a;
+            float *d1;
+            float *d2;
+            float *d3;
+            float *d4;
+            float *w0;
+            float *w1;
+            float *w2;
+            float *w3;
+            float *w4;
+        } butter_bs;
+    };
+} filter_t;
+
+filter_t *filter_create(filter_type_t type, ...);
+void filter_destroy(filter_t *filter);
+float filter_value(filter_t *filter, float x);
+
+
+#endif /* SOFT_FILTER_H_ */

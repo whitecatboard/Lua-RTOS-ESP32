@@ -39,46 +39,77 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS list data structure
+ * Lua RTOS, memory pool management
  *
  */
+#include "sdkconfig.h"
 
-#ifndef _LIST_H
-#define	_LIST_H
+#include "pool.h"
+#include "esp_attr.h"
 
-#include <stdint.h>
-#include <sys/mutex.h>
+#include <errno.h>
+#include <stdlib.h>
 
-struct list {
-    struct mtx mutex;
-    struct lstindex *index;
-    struct lstindex *free;
-    struct lstindex *last;
-    uint8_t indexes;
-    uint8_t first_index;
-    uint8_t flags;
-    uint8_t init;
-};
+int pool_setup(size_t size, size_t item_size, mem_pool_t **pool) {
+  if (item_size > 32) {
+    *pool = NULL;
+    return EINVAL;
+  }
 
-struct lstindex {
-    void *item;
-    uint8_t index;
-    uint8_t deleted;
-    struct lstindex *next;
-    struct lstindex *previous;
-};
+  *pool = calloc(1, sizeof(mem_pool_t));
+  if (*pool == NULL) {
+    *pool = NULL;
+    return ENOMEM;
+  }
 
-#define LIST_DEFAULT 	(1 << 0)
-#define LIST_NOT_INDEXED (1 << 1)
+  // Allocate pool data
+  (*pool)->data = calloc(size, item_size);
+  if ((*pool)->data == NULL) {
+    free(*pool);
+    *pool = NULL;
+    return ENOMEM;
+  }
 
-void lstinit(struct list *list, int first_index, uint8_t flags);
-int lstadd(struct list *list, void *item, int *item_index);
-int lstget(struct list *list, int index, void **item);
-int lstremove(struct list *list, int index, int destroy);
-int lstremovec(struct list *list, int index, int destroy, bool compact);
-int lstfirst(struct list *list);
-int lstlast(struct list *list);
-int lstnext(struct list *list, int index);
-void lstdestroy(struct list *list, int items);
+  // All items in pool free
+  (*pool)->status = 0xffffffff;
 
-#endif	/* _LIST_H */
+  (*pool)->size = size;
+  (*pool)->item_size = item_size;
+
+  return 0;
+}
+
+void *IRAM_ATTR pool_get(mem_pool_t *pool, uint8_t *item_id) {
+  if (item_id == NULL) {
+    return NULL;
+  }
+
+  if (pool == NULL) {
+    return NULL;
+  }
+
+  // Get the first unused element of the pool
+  uint8_t uiFirstFree = __builtin_ffs(pool->status);
+
+  if (uiFirstFree == 0) {
+    // No more space on pool
+    return NULL;
+  }
+
+  *item_id = (uiFirstFree - 1);
+
+  // Update pool status
+  pool->status &= ~(1 << (uiFirstFree - 1));
+
+  // Return data
+  return pool->data + (pool->item_size * (uiFirstFree - 1));
+}
+
+void IRAM_ATTR pool_free(mem_pool_t *pool, uint8_t item_id) {
+  if (pool == NULL) {
+    return;
+  }
+
+  // Update pool status
+  pool->status |= (1 << item_id);
+}

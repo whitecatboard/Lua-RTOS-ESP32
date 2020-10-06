@@ -54,6 +54,7 @@
 #include "driver/i2c.h"
 
 #include <stdint.h>
+#include <unistd.h>
 
 #include <sys/driver.h>
 
@@ -267,5 +268,9 @@ driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len);
  *          I2C_ERR_INVALID_TRANSACTION
  */
 driver_error_t *i2c_flush(int deviceid, int *transaction, int new_transaction);
+
+driver_error_t *i2c_write_register(int deviceid, int address, uint8_t reg, uint8_t data);
+driver_error_t *i2c_read_register(int deviceid, int address, uint8_t reg, uint8_t *data);
+driver_error_t *i2c_read_register_block(int deviceid, int address, uint8_t reg, uint8_t *data, size_t size);
 
 #endif /* I2C_H */

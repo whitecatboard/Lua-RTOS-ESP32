@@ -61,6 +61,11 @@ typedef struct {
 	void (*callback)(void *);
 	uint8_t deferred;
 	timer_isr_handle_t isrh;
+	uint8_t trigger;
+	uint32_t cnt_low;
+	uint32_t cnt_high;
+	uint32_t alarm_low;
+	uint32_t alarm_high;
 } tmr_t;
 
 typedef void(*tmr_isr_t)(void *);
@@ -77,7 +82,8 @@ typedef void(*tmr_isr_t)(void *);
  * 		  tmr_start function.  No sanity checks are done (use only in driver develop).
  *
  * @param unit Hardware timer, from 0 to 3.
- * @param micros Period of timer, in microseconds.
+ * @param micros Period of timer, in microseconds. If period is !0 timer is configured
+ *        in autoload mode.
  * @param callback Callback function to call every micros period.
  * @param deferred If 0, the callback are executed in the isr. If 1, the callback
  *                 is deferred and is called outside the interrupt. Non deferred
@@ -104,11 +110,21 @@ void tmr_ll_unsetup(uint8_t unit);
 void tmr_ll_start(uint8_t unit);
 
 /**
+ * @brief Start a previous configured timer in a given time. No sanity checks are done (use only in
+ *        driver develop).
+ *
+ * @param unit Hardware timer, from 0 to 3.
+ */
+void tmr_ll_start_in(uint8_t unit, uint32_t micros);
+
+/**
  * @brief Stop a previous configured timer. No sanity checks are done (use only in driver develop).
  *
  * @param unit Hardware timer, from 0 to 3.
  */
 void tmr_ll_stop(uint8_t unit);
+
+void tmr_ll_trigger(int8_t unit);
 
 /**
  * @brief Configures a timer. After timer is configured you must start timer using
@@ -160,6 +176,20 @@ driver_error_t *tmr_unsetup(int8_t unit);
 driver_error_t *tmr_start(int8_t unit);
 
 /**
+ * @brief Start a previous configured timer in a given time, and stop timer when time is reached.
+ *
+ * @param unit   Hardware timer, from 0 to 3.
+ * @param micros Period of timer, in microseconds.
+ *
+ * @return
+ *     - NULL success
+ *     - Pointer to driver_error_t if some error occurs.
+ *
+ *     	 TIMER_ERR_IS_NOT_SETUP
+ */
+driver_error_t *tmr_start_in(int8_t unit, uint32_t micros);
+
+/**
  * @brief Stop a previous configured timer.
  *
  * @param unit Hardware timer, from 0 to 3.
@@ -171,6 +201,8 @@ driver_error_t *tmr_start(int8_t unit);
  *     	 TIMER_ERR_IS_NOT_SETUP
  */
 driver_error_t *tmr_stop(int8_t unit);
+
+driver_error_t *tmr_trigger(int8_t unit);
 
 void get_group_idx(int8_t unit, int *groupn, int *idx);
 

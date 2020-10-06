@@ -222,7 +222,7 @@
 #define CPU_FIRST_TIMER 0
 #define CPU_LAST_TIMER  3
 
-#define CPU_TIMER_ALL 0b11
+#define CPU_TIMER_ALL 0b1011
 
 // ESP32 available timer units
 #define CPU_TIMER0  0 // Group 0, timer 0
@@ -235,6 +235,8 @@
 #define CPU_TIMER1_NAME "TMR1"
 #define CPU_TIMER2_NAME "TMR2"
 #define CPU_TIMER3_NAME "TMR3"
+
+#define TIMER_BIT_MASK 1ULL
 
 /*
  * ----------------------------------------------------------------

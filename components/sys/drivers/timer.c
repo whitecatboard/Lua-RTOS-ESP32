@@ -51,6 +51,7 @@
 #include "soc/timer_group_struct.h"
 
 #include "freertos/FreeRTOS.h"
+#include "freertos/adds.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
@@ -85,6 +86,8 @@ static tmr_driver_t *tmr = NULL;
 
 // Recursive mutex
 static SemaphoreHandle_t mtx;
+
+static portMUX_TYPE spinlock[2] = {portMUX_INITIALIZER_UNLOCKED, portMUX_INITIALIZER_UNLOCKED};
 
 /*
  * Helper functions
@@ -162,27 +165,42 @@ static void alarm_task(void *arg) {
 
 static void IRAM_ATTR isr(void *arg) {
     int unit = (int) arg;
-	int groupn, idx;
 	portBASE_TYPE high_priority_task_awoken = 0;
 
-	// Get group number / idx
-	get_group_idx(unit, &groupn, &idx);
+	// Get timer
+	int groupn, idx;
+	static timg_dev_t *DRAM_ATTR timer;
 
-	// Get timer group device
-	timg_dev_t *group = (groupn==0?&TIMERG0:&TIMERG1);
+	get_group_idx(unit, &groupn, &idx);
+	timer = (groupn == 0) ? &TIMERG0 : &TIMERG1;
 
 	// Check that interrupt is for us
-	uint32_t intr_status = group->int_st_timers.val;
+	uint32_t intr_status = timer->int_st_timers.val;
 
     if (intr_status & BIT(idx)) {
+    	if (tmr->timer[unit].trigger) {
+    	  // Restore cnt and alarm values
+
+    	  tmr->timer[unit].trigger = 0;
+
+		  timer->hw_timer[idx].config.enable = 0;
+		  timer->hw_timer[idx].config.divider = 80;
+		  timer->hw_timer[idx].load_high = tmr->timer[unit].cnt_high;
+		  timer->hw_timer[idx].load_low = tmr->timer[unit].cnt_low;
+		  timer->hw_timer[idx].reload = 1;
+		  timer->hw_timer[idx].alarm_high = tmr->timer[unit].alarm_high;
+		  timer->hw_timer[idx].alarm_low = tmr->timer[unit].alarm_high;
+		  timer->hw_timer[idx].config.enable = 1;
+    	}
+
     	// Reload alarm value
-    	group->hw_timer[idx].update = 1;
+    	timer->hw_timer[idx].update = 1;
 
     	// Clear inerrupt mask
     	if (idx == 0) {
-        	group->int_clr_timers.t0 = 1;
+    		timer->int_clr_timers.t0 = 1;
     	} else {
-        	group->int_clr_timers.t1 = 1;
+    		timer->int_clr_timers.t1 = 1;
     	}
 
     	// Queue alarm
@@ -198,7 +216,7 @@ static void IRAM_ATTR isr(void *arg) {
     		}
     	}
     	// Enable alarm again
-    	group->hw_timer[idx].config.alarm_en = 1;
+    	timer->hw_timer[idx].config.alarm_en = 1;
     }
 
     if (high_priority_task_awoken == pdTRUE) {
@@ -230,8 +248,8 @@ int tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t
 	}
 
 	// For deferred callbacks a queue and a task is needed.
-	// In this case in the ISR a message is queued to the queue and callback is
-	// executed from a task.
+	// In this case, in the ISR, a message is queued and callback is
+	// executed from high priority task outside the ISR.
 	if (deferred) {
 		// Create queue if not created
 		if (!tmr->queue) {
@@ -242,7 +260,7 @@ int tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t
 			}
 		}
 
-		// Create task if not created
+		// Create task, if not created
 		if (!tmr->task) {
 			BaseType_t xReturn;
 
@@ -256,13 +274,13 @@ int tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t
 
 	get_group_idx(unit, &groupn, &idx);
 
-	// Configure time and stop
+	// Configure timer and stop it.
 	// Timer is configure for decrement every 1 usec, so
-	// alarm valus is exactly the period, expressed in usec
+	// alarm value is exactly the period, expressed in usec
 	timer_config_t config;
 
 	config.alarm_en = 1;
-	config.auto_reload = 1;
+	config.auto_reload = (micros != 0);
 	config.counter_dir = TIMER_COUNT_UP;
 	config.divider = 80;
 	config.intr_type = TIMER_INTR_LEVEL;
@@ -280,6 +298,7 @@ int tmr_ll_setup(uint8_t unit, uint32_t micros, void(*callback)(void *), uint8_t
     timer_isr_register(groupn, idx, isr, (void *)((int)unit), ESP_INTR_FLAG_IRAM, &tmr->timer[unit].isrh);
 
     tmr->timer[unit].setup = 1;
+    tmr->timer[unit].trigger = 0;
     tmr->timer[unit].callback = callback;
     tmr->timer[unit].deferred = deferred;
 
@@ -299,6 +318,7 @@ void tmr_ll_unsetup(uint8_t unit) {
 	tmr->timer[unit].callback = NULL;
 	tmr->timer[unit].deferred = 0;
 	tmr->timer[unit].setup = 0;
+	tmr->timer[unit].trigger = 0;
 
 	// Stop timer
 	tmr_ll_stop(unit);
@@ -338,22 +358,103 @@ void tmr_ll_unsetup(uint8_t unit) {
 	tmr_unlock();
 }
 
-void tmr_ll_start(uint8_t unit) {
+void IRAM_ATTR tmr_ll_start(uint8_t unit) {
+	// Get timer
 	int groupn, idx;
+	static timg_dev_t *DRAM_ATTR timer;
 
-	tmr_lock();
 	get_group_idx(unit, &groupn, &idx);
-	timer_start(groupn, idx);
-	tmr_unlock();
+	timer = (groupn == 0) ? &TIMERG0 : &TIMERG1;
+
+	portENTER_CRITICAL_SAFE(&spinlock[groupn]);
+	timer->hw_timer[idx].config.enable = 1;
+	portEXIT_CRITICAL_SAFE(&spinlock[groupn]);
 }
 
-void tmr_ll_stop(uint8_t unit) {
+void IRAM_ATTR tmr_ll_start_in(uint8_t unit, uint32_t micros) {
+	// Get timer
 	int groupn, idx;
+	static timg_dev_t *DRAM_ATTR timer;
 
-	tmr_lock();
 	get_group_idx(unit, &groupn, &idx);
-	timer_pause(groupn, idx);
-	tmr_unlock();
+	timer = (groupn == 0) ? &TIMERG0 : &TIMERG1;
+
+	portENTER_CRITICAL_SAFE(&spinlock[groupn]);
+
+	tmr->timer[idx].trigger = false;
+
+	timer->hw_timer[idx].config.enable = 0;
+
+	timer->hw_timer[idx].load_high = 0;
+	timer->hw_timer[idx].load_low = 0;
+	timer->hw_timer[idx].reload = 1;
+
+	timer->hw_timer[idx].alarm_high = 0;
+	timer->hw_timer[idx].alarm_low = micros;
+	timer->hw_timer[idx].config.alarm_en = TIMER_ALARM_EN;
+
+	timer->int_ena.val |= (1 << idx);
+	timer->hw_timer[idx].config.enable = 1;
+
+	portEXIT_CRITICAL_SAFE(&spinlock[groupn]);
+}
+
+void IRAM_ATTR tmr_ll_stop(uint8_t unit) {
+	// Get timer
+	int groupn, idx;
+	static timg_dev_t *DRAM_ATTR timer;
+
+	get_group_idx(unit, &groupn, &idx);
+	timer = (groupn == 0) ? &TIMERG0 : &TIMERG1;
+
+	portENTER_CRITICAL_SAFE(&spinlock[groupn]);
+	timer->hw_timer[idx].config.enable = 0;
+	portEXIT_CRITICAL_SAFE(&spinlock[groupn]);
+}
+
+void IRAM_ATTR tmr_ll_trigger(int8_t unit) {
+	// Get timer
+	int groupn, idx;
+	static timg_dev_t *DRAM_ATTR timer;
+
+	get_group_idx(unit, &groupn, &idx);
+	timer = (groupn == 0) ? &TIMERG0 : &TIMERG1;
+
+	portENTER_CRITICAL_SAFE(&spinlock[groupn]);
+
+	// Stop timer and program an alarm in the next 12.5 nsecs
+	timer->hw_timer[idx].config.enable = 0;
+
+	// Change divider to APBCLK, period = 1 / APBCLK = 12.5 nsec
+	timer->hw_timer[idx].config.divider = 1;
+
+	// Store current cnt value
+	timer->hw_timer[idx].update = 1;
+
+	tmr->timer[unit].cnt_high = timer->hw_timer[idx].cnt_high;
+	tmr->timer[unit].cnt_low = timer->hw_timer[idx].cnt_low;
+
+	// Store current alarm value
+	tmr->timer[unit].alarm_high = timer->hw_timer[idx].alarm_high;
+	tmr->timer[unit].alarm_low = timer->hw_timer[idx].alarm_low;
+
+	timer->hw_timer[idx].load_high = 0;
+	timer->hw_timer[idx].load_low = 0;
+	timer->hw_timer[idx].reload = 1;
+
+	// Alarm in 12.5 nsec
+	timer->hw_timer[idx].alarm_high = 0;
+	timer->hw_timer[idx].alarm_low = 1;
+
+	timer->int_ena.val |= (1 << idx);
+
+	timer->hw_timer[idx].config.alarm_en = TIMER_ALARM_EN;
+	timer->hw_timer[idx].config.enable = 1;
+
+	// Mark as manual trigger
+	tmr->timer[unit].trigger = 1;
+
+	portEXIT_CRITICAL_SAFE(&spinlock[groupn]);
 }
 
 /*
@@ -365,7 +466,11 @@ driver_error_t *tmr_setup(int8_t unit, uint32_t micros, void(*callback)(void *),
 		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
 	}
 
-	if (micros < 5) {
+    if (!(CPU_TIMER_ALL & (TIMER_BIT_MASK << unit))) {
+        return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, "timer reserved");
+    }
+
+	if ((micros != 0) && (micros < 5)) {
 		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_PERIOD, NULL);
 	}
 
@@ -402,6 +507,21 @@ driver_error_t *tmr_start(int8_t unit) {
 	return NULL;
 }
 
+driver_error_t *tmr_start_in(int8_t unit, uint32_t micros) {
+	// Sanity checks
+	if ((unit < CPU_FIRST_TIMER) || (unit > CPU_LAST_TIMER)) {
+		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
+	}
+
+	if (!tmr->timer[unit].setup) {
+		return driver_error(TIMER_DRIVER, TIMER_ERR_IS_NOT_SETUP, NULL);
+	}
+
+	tmr_ll_start_in(unit, micros);
+
+	return NULL;
+}
+
 driver_error_t *tmr_stop(int8_t unit) {
 	// Sanity checks
 	if ((unit < CPU_FIRST_TIMER) || (unit > CPU_LAST_TIMER)) {
@@ -413,6 +533,21 @@ driver_error_t *tmr_stop(int8_t unit) {
 	}
 
 	tmr_ll_stop(unit);
+
+	return NULL;
+}
+
+driver_error_t *tmr_trigger(int8_t unit) {
+	// Sanity checks
+	if ((unit < CPU_FIRST_TIMER) || (unit > CPU_LAST_TIMER)) {
+		return driver_error(TIMER_DRIVER, TIMER_ERR_INVALID_UNIT, NULL);
+	}
+
+	if (!tmr->timer[unit].setup) {
+		return driver_error(TIMER_DRIVER, TIMER_ERR_IS_NOT_SETUP, NULL);
+	}
+
+	tmr_ll_trigger(unit);
 
 	return NULL;
 }

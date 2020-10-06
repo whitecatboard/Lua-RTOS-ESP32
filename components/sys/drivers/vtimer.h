@@ -39,46 +39,48 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS list data structure
+ * Lua RTOS, virtual timer driver
  *
  */
-
-#ifndef _LIST_H
-#define	_LIST_H
+#ifndef VTIMER_H
+#define VTIMER_H
 
 #include <stdint.h>
-#include <sys/mutex.h>
+#include <sys/driver.h>
 
-struct list {
-    struct mtx mutex;
-    struct lstindex *index;
-    struct lstindex *free;
-    struct lstindex *last;
-    uint8_t indexes;
-    uint8_t first_index;
-    uint8_t flags;
-    uint8_t init;
-};
+// VTIMER errors
+#define VTIMER_ERR_INVALID_CALLBACK        (DRIVER_EXCEPTION_BASE(VTIMER_DRIVER_ID) |  0)
 
-struct lstindex {
-    void *item;
-    uint8_t index;
-    uint8_t deleted;
-    struct lstindex *next;
-    struct lstindex *previous;
-};
+typedef void (*vtmr_callback_t)(void *);
 
-#define LIST_DEFAULT 	(1 << 0)
-#define LIST_NOT_INDEXED (1 << 1)
+/**
+ * @brief Start a virtual timer. A callback function is executed once the timer expires.
+ *
+ * @param uiWhen        Time, in usecs, when the timer callback will be executed.
+ *
+ * @param pCallback     A pointer to a callback function that will be executed when the timer expires. Please,
+ *                      take note that the callback is executed inside an ISR context, so it is intended to be
+ *                      fast, and executed in IRAM. The callback function can be used later, if timer needs to
+ *                      be stopped.
+ *
+ * @param pArgs         A pointer to a memory structure with the arguments to pass when the callback will called.
+ *
+ * @return
+ *     - true if all is ok
+ *     - false if an error occurred. In this case an error log message is written to the console.
+ */
+driver_error_t *vtmr_start(uint64_t uiWhen, vtmr_callback_t pCallback, void *pArgs);
 
-void lstinit(struct list *list, int first_index, uint8_t flags);
-int lstadd(struct list *list, void *item, int *item_index);
-int lstget(struct list *list, int index, void **item);
-int lstremove(struct list *list, int index, int destroy);
-int lstremovec(struct list *list, int index, int destroy, bool compact);
-int lstfirst(struct list *list);
-int lstlast(struct list *list);
-int lstnext(struct list *list, int index);
-void lstdestroy(struct list *list, int items);
+/**
+ * @brief Stop a virttual timer.
+ *
+ * @param pCallback     A pointer to a callback function, which identifies a previously started timer with
+ *                      VTMR_StartTimer.
+ *
+ * @return
+ *     - true if all is ok
+ *     - false if an error occurred. In this case an error log message is written to the console.
+ */
+driver_error_t *vtmr_stop(vtmr_callback_t pCallback);
 
-#endif	/* _LIST_H */
+#endif /* VTIMER_H */

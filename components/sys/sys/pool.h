@@ -39,46 +39,25 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS list data structure
+ * Lua RTOS, memory pool management
  *
  */
 
-#ifndef _LIST_H
-#define	_LIST_H
+#ifndef _SYS_POOL_H_
+#define _SYS_POOL_H_
 
+#include <unistd.h>
 #include <stdint.h>
-#include <sys/mutex.h>
 
-struct list {
-    struct mtx mutex;
-    struct lstindex *index;
-    struct lstindex *free;
-    struct lstindex *last;
-    uint8_t indexes;
-    uint8_t first_index;
-    uint8_t flags;
-    uint8_t init;
-};
+typedef struct {
+	size_t size;
+	size_t item_size;
+	void *data;
+	 uint32_t status;
+} mem_pool_t;
 
-struct lstindex {
-    void *item;
-    uint8_t index;
-    uint8_t deleted;
-    struct lstindex *next;
-    struct lstindex *previous;
-};
+int pool_setup(size_t size, size_t item_size, mem_pool_t **pool);
+void *pool_get(mem_pool_t *pool, uint8_t *item_id);
+void pool_free(mem_pool_t *pool, uint8_t item_id);
 
-#define LIST_DEFAULT 	(1 << 0)
-#define LIST_NOT_INDEXED (1 << 1)
-
-void lstinit(struct list *list, int first_index, uint8_t flags);
-int lstadd(struct list *list, void *item, int *item_index);
-int lstget(struct list *list, int index, void **item);
-int lstremove(struct list *list, int index, int destroy);
-int lstremovec(struct list *list, int index, int destroy, bool compact);
-int lstfirst(struct list *list);
-int lstlast(struct list *list);
-int lstnext(struct list *list, int index);
-void lstdestroy(struct list *list, int items);
-
-#endif	/* _LIST_H */
+#endif /* _SYS_POOL_H_ */
