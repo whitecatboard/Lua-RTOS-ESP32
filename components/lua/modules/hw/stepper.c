@@ -192,6 +192,8 @@ static int lstepper_stop( lua_State* L ) {
 
     if (mask) {
         stepper_stop(mask, 0);
+    } else {    
+        stepper_stop(0xffffffff, 0);
     }
 
     return 0;
@@ -202,6 +204,8 @@ static int lstepper_stop_async( lua_State* L ) {
     
     if (mask) {
         stepper_stop(mask, 1);
+    } else {    
+        stepper_stop(0xffffffff, 1);
     }
 
     return 0;
