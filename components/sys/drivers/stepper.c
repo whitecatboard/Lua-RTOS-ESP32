@@ -302,7 +302,11 @@ static void IRAM_ATTR acceleration_profile_task(void *args) {
 
                     // Decrement steps
                     pstepper->steps--;
-
+                    if  (pstepper->dir){
+                        pstepper->pos++;
+                    } else {
+                        pstepper->pos--;
+                    }
                     if (pstepper->steps == 0) {
                         // RMT end
                         // Enough space in buffer?
@@ -599,6 +603,50 @@ driver_error_t *stepper_get_distance(uint8_t unit, float* units) {
 
     stepper_t *pstepper = &stepper[unit];
     *units = stepper[unit].steps * pstepper->units_per_step;
+
+    mtx_unlock(&stepper_mutex);
+    return NULL;
+}
+
+driver_error_t *stepper_set_position(uint8_t unit, float units) {
+     // Sanity checks
+    if (unit > NSTEP) {
+        // Invalid unit
+        return driver_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_UNIT, NULL);
+    }
+
+    mtx_lock(&stepper_mutex);
+
+    if (!stepper[unit].setup) {
+        // Unit not setup
+        mtx_unlock(&stepper_mutex);
+        return driver_error(STEPPER_DRIVER, STEPPER_ERR_UNIT_NOT_SETUP, NULL);
+    }
+
+    stepper_t *pstepper = &stepper[unit];
+    pstepper->pos = units * pstepper->steps_per_unit;
+
+    mtx_unlock(&stepper_mutex);
+    return NULL;
+}
+
+driver_error_t *stepper_get_position(uint8_t unit, float* units) {
+     // Sanity checks
+    if (unit > NSTEP) {
+        // Invalid unit
+        return driver_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_UNIT, NULL);
+    }
+
+    mtx_lock(&stepper_mutex);
+
+    if (!stepper[unit].setup) {
+        // Unit not setup
+        mtx_unlock(&stepper_mutex);
+        return driver_error(STEPPER_DRIVER, STEPPER_ERR_UNIT_NOT_SETUP, NULL);
+    }
+
+    stepper_t *pstepper = &stepper[unit];
+    *units = pstepper->pos * pstepper->units_per_step;
 
     mtx_unlock(&stepper_mutex);
     return NULL;
