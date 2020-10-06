@@ -50,6 +50,11 @@
 
 #define LIS3DH_I2C_ADDRESS 0x19
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+#include "esp_attr.h"
+
 #include <math.h>
 #include <string.h>
 #include <stdint.h>
@@ -145,6 +150,7 @@
 
 driver_error_t *LIS3DH_presetup(sensor_instance_t *unit);
 driver_error_t *LIS3DH_setup(sensor_instance_t *unit);
+driver_error_t *LIS3DH_unsetup(sensor_instance_t *unit);
 driver_error_t *LIS3DH_acquire(sensor_instance_t *unit, sensor_value_t *values);
 driver_error_t *LIS3DH_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting);
 
@@ -173,9 +179,14 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) LIS3DH_se
 	},
 	.presetup = LIS3DH_presetup,
 	.setup = LIS3DH_setup,
+    .unsetup = LIS3DH_unsetup,
 	.acquire = LIS3DH_acquire,
 	.set = LIS3DH_set
 };
+
+/*
+ * Helper functions
+ */
 
 static void IRAM_ATTR _acquire(void *args) {
 	portBASE_TYPE high_priority_task_awoken = 0;
@@ -195,9 +206,9 @@ static void _acquire_task(void *args) {
 	uint8_t i2c = unit->setup[0].i2c.id;
 	int16_t address = unit->setup[0].i2c.devid;
 
-	x_g_filter = filter_create(FilterButterHighPass, 4, 400.0, 5);
-	y_g_filter = filter_create(FilterButterHighPass, 4, 400.0, 5);
-	z_g_filter = filter_create(FilterButterHighPass, 4, 400.0, 5);
+	x_g_filter = filter_create(FilterButterHighPass, 2, 400.0, 5);
+	y_g_filter = filter_create(FilterButterHighPass, 2, 400.0, 5);
+	z_g_filter = filter_create(FilterButterHighPass, 2, 400.0, 5);
 
 	while (1) {
 		// Wait for notification
@@ -248,15 +259,12 @@ static void _acquire_task(void *args) {
 		y_g = ((float)y_raw) / ((float)_divider);
 		z_g = ((float)z_raw) / ((float)_divider);
 
-		//x_g += 0.031215;
-		//y_g += 0.031215;
-		//z_g += 0.031215;
-
+		// Filter data
 		x_g = filter_value(x_g_filter, x_g);
 		y_g = filter_value(y_g_filter, y_g);
 		z_g = filter_value(z_g_filter, z_g);
 
-		if (z_g >= 0.1) {
+		if (fabs(z_g )>= 0.1) {
 			printf("%f\r\n",z_g);
 		}
 	}
@@ -330,6 +338,15 @@ driver_error_t *LIS3DH_setup(sensor_instance_t *unit) {
 	}
 
 	return NULL;
+}
+
+driver_error_t *LIS3DH_unsetup(sensor_instance_t *unit) {
+    // Destroy filters
+    filter_destroy(x_g_filter);
+    filter_destroy(y_g_filter);
+    filter_destroy(z_g_filter);
+
+    return NULL;
 }
 
 driver_error_t *LIS3DH_acquire(sensor_instance_t *unit, sensor_value_t *values) {
