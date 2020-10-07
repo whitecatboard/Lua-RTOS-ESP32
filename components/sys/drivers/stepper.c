@@ -652,6 +652,20 @@ driver_error_t *stepper_get_position(uint8_t unit, float* units) {
     return NULL;
 }
 
+driver_error_t *stepper_is_running(uint8_t unit, uint32_t* running) {
+  // Sanity checks
+    if (unit > NSTEP) {
+        // Invalid unit
+        return driver_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_UNIT, NULL);
+    }
+
+    portENTER_CRITICAL(&spinlock);
+    *running = start_mask & (1<<unit) ;
+    portEXIT_CRITICAL(&spinlock);
+    return NULL;
+}
+
+
 void stepper_start(int mask, uint8_t async) {
     mtx_lock(&stepper_mutex);
 

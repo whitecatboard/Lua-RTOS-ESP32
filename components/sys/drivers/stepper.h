@@ -104,6 +104,7 @@ driver_error_t *stepper_move(uint8_t unit, float units, float initial_spd, float
 driver_error_t *stepper_get_distance(uint8_t unit, float *units);
 driver_error_t *stepper_set_position(uint8_t unit, float units);
 driver_error_t *stepper_get_position(uint8_t unit, float *units);
+driver_error_t *stepper_is_running(uint8_t unit, uint32_t* running);
 
 void stepper_start(int mask, uint8_t async);
 void stepper_stop(int mask, uint8_t async);
