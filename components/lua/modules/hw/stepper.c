@@ -265,9 +265,9 @@ static int lstepper_is_running( lua_State* L ) {
 static const LUA_REG_TYPE lstepper_map[] = {
     { LSTRKEY( "attach" ),        LFUNCVAL( lstepper_attach    ) },
     { LSTRKEY( "start"  ),        LFUNCVAL( lstepper_start     ) },
-    { LSTRKEY( "startAsync"  ),   LFUNCVAL( lstepper_start_async) },
+    { LSTRKEY( "startasync"  ),   LFUNCVAL( lstepper_start_async) },
     { LSTRKEY( "stop"   ),        LFUNCVAL( lstepper_stop      ) },
-    { LSTRKEY( "stopAsync"   ),   LFUNCVAL( lstepper_stop_async) },
+    { LSTRKEY( "stopasync"   ),   LFUNCVAL( lstepper_stop_async) },
 
     DRIVER_REGISTER_LUA_ERRORS(stepper)
     { LNILKEY, LNILVAL }
