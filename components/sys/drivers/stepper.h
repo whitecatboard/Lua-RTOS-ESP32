@@ -60,7 +60,7 @@ typedef struct {
 
     uint8_t  dir;           // Direction. 0 = ccw, 1 = cw
     uint32_t steps;         // Number of steps
-    uint32_t pos;           // position in steps
+    int32_t pos;            // position in steps
     float units;            // Displacement units
 
     float units_per_step;   // Units per step
