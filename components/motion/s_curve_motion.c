@@ -216,7 +216,7 @@ void s_curve_prepare(motion_t *pmotion) {
 
             if (v_ > v) {
                 a_ = sqrt(j * (v - v0)); // (7.15)
-                v_ = v0 + ((a*a)/j);     // (7.16)
+                v_ = v0 + ((a_*a_)/j);     // (7.16)
 
                 if (a_ <= 0.0001) {
         			a  = 0.0;
