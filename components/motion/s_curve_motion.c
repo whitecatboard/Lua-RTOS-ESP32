@@ -64,7 +64,7 @@ static void _compute_bounds(motion_t *pmotion, uint8_t phase_2, uint8_t phase_4)
 		pmotion->s_curve.bound.steps[2] = floor(pmotion->s_curve.bound.s[2] * pmotion->s_curve.steps_per_unit);
     } else {
     	t2 = 0.0;
-    	pmotion->s_curve.bound.v[2] = v0;
+    	pmotion->s_curve.bound.v[2] = pmotion->s_curve.bound.v[1];
     	pmotion->s_curve.bound.s[2] = 0.0;
         pmotion->s_curve.bound.t[2] = t2;
     	pmotion->s_curve.bound.steps[2] = 0.0;
