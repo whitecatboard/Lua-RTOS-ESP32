@@ -106,6 +106,16 @@ static void stepper_init() {
     memset(stepper,0,sizeof(stepper_t) * NSTEP);
 }
 
+static void IRAM_ATTR step_feedback(void *arg) {
+	stepper_t *pstepper = (stepper_t *)arg;
+
+    if  (pstepper->dir){
+        pstepper->pos++;
+    } else {
+        pstepper->pos--;
+    }
+}
+
 static void IRAM_ATTR rmt_isr(void *arg) {
     // Get ISR status
     uint32_t intr_st = RMT.int_st.val;
@@ -302,11 +312,6 @@ static void IRAM_ATTR acceleration_profile_task(void *args) {
 
                     // Decrement steps
                     pstepper->steps--;
-                    if  (pstepper->dir){
-                        pstepper->pos++;
-                    } else {
-                        pstepper->pos--;
-                    }
                     if (pstepper->steps == 0) {
                         // RMT end
                         // Enough space in buffer?
@@ -495,8 +500,11 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
     RMT.carrier_duty_ch[*unit].low = 0;
 
     // Set pin
+    //
+    // NOTE: pin is configured as input/output because we need feedback to count exactly
+    // the number of steps.
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[stepper[*unit].step_pin], 2);
-    gpio_set_direction(stepper[*unit].step_pin, GPIO_MODE_OUTPUT);
+    gpio_set_direction(stepper[*unit].step_pin, GPIO_MODE_INPUT_OUTPUT);
     gpio_matrix_out(stepper[*unit].step_pin, RMT_SIG_OUT0_IDX + *unit, 0, 0);
 
     // Enable TX interrupt
@@ -522,6 +530,10 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
 
     	esp_intr_alloc(ETS_RMT_INTR_SOURCE, ESP_INTR_FLAG_IRAM, rmt_isr, NULL, &isr_h);
     }
+
+    // Attach ISR on step_in to get feedback
+    gpio_set_intr_type(stepper[*unit].step_pin, GPIO_INTR_POSEDGE);
+    gpio_isr_handler_add(stepper[*unit].step_pin, step_feedback, &stepper[*unit]);
 
     mtx_unlock(&stepper_mutex);
 
@@ -624,7 +636,7 @@ driver_error_t *stepper_set_position(uint8_t unit, float units) {
     }
 
     stepper_t *pstepper = &stepper[unit];
-    pstepper->pos = units * pstepper->steps_per_unit;
+    pstepper->pos = units * pstepper->units_per_step;
 
     mtx_unlock(&stepper_mutex);
     return NULL;
