@@ -39,7 +39,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS, Lua CPU helper functions for throw an error from a driver error
+ * Lua RTOS, Lua helper functions for throw an error from a driver error
  *
  */
 
@@ -108,6 +108,8 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
 
     	exception = error->exception;
 
+    	free(error);
+
     	if (ext_msg) {
             ret_val = luaL_error(L,
                 "%d:%s (%s)",
@@ -124,6 +126,8 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     	}
     } else {
     	msg = driver_get_err_msg(error);
+
+    	free(error);
 
     	ret_val = luaL_error(L, msg);
     }
