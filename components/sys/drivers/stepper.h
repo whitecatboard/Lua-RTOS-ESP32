@@ -47,8 +47,8 @@
 
 #define STEPPER_RMT_DATA_SIZE 640
 #define STEPPER_RMT_MAX_DURATION (32767 >> 1)
-#define STEPPER_STATS 1
-#define STEPPER_DEBUG 1
+#define STEPPER_STATS 0
+#define STEPPER_DEBUG 0
 
 typedef struct {
 	uint8_t  setup;         // Is this stepper unit setup?

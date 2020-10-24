@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 - 2018, Thomas E. Horner (whitecatboard.org@horner.it)
+ * Copyright (C) 2015 - 2020, Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.
  *
