@@ -39,6 +39,7 @@
 #include <sys/driver.h>
 #include <sys/syslog.h>
 #include <sys/mutex.h>
+#include <sys/status.h>
 
 #include <drivers/stepper.h>
 #include <drivers/gpio.h>
@@ -529,6 +530,13 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
     	}
 
     	esp_intr_alloc(ETS_RMT_INTR_SOURCE, ESP_INTR_FLAG_IRAM, rmt_isr, NULL, &isr_h);
+    }
+
+    // Configure interrupts
+    if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
+        gpio_install_isr_service(0);
+
+        status_set(STATUS_ISR_SERVICE_INSTALLED, 0x00000000);
     }
 
     // Attach ISR on step_in to get feedback
