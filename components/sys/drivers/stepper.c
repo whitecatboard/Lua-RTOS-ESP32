@@ -644,7 +644,7 @@ driver_error_t *stepper_set_position(uint8_t unit, float units) {
     }
 
     stepper_t *pstepper = &stepper[unit];
-    pstepper->pos = units * pstepper->units_per_step;
+    pstepper->pos = units * pstepper->steps_per_unit;
 
     mtx_unlock(&stepper_mutex);
     return NULL;
