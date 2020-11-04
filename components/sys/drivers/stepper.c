@@ -798,7 +798,7 @@ void stepper_stop(int mask, uint8_t async) {
     uint8_t channel = 0;
 
     while (testMask != (1 << (NSTEP - 1))) {
-        if (start_mask & testMask) {
+        if (start_mask & testMask & mask) {
             RMTMEM.chan[channel].data32[0].val = 0;
             RMT.conf_ch[channel].conf1.tx_start = 0;
             RMT.conf_ch[channel].conf1.mem_rd_rst = 1;
