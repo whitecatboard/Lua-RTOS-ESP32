@@ -14,3 +14,5 @@ RUN /usr/bin/python -m pip install --user -r ~/esp-idf/requirements.txt
 RUN mkdir -p /home/builder/ && cd /home/builder/ && git clone --recursive https://github.com/whitecatboard/Lua-RTOS-ESP32
 ADD build.sh /home/builder/build.sh
 RUN bash /home/builder/build.sh
+
+USER root
