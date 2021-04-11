@@ -6,10 +6,16 @@ If you don't know how Docker works - please don't use it before read docs.docker
 
 Clone repository and run
 ```
+cd docker/
 docker build -t any_name:1.0.0 .
 ```
 
+Wait until process will be finished.
+
 ## How to build firmware
+
+In this example used **/tmp** folder but you can use any other folders.
+
 Run container with volume mapping
 
 ```
@@ -27,3 +33,5 @@ cd /tmp/test/source/
 After that you can configure your parameters using `make menuconfig` and `make`.
 
 All changes will be in folder /tmp/lua-docker-folder/source/ on your local system.
+
+Also, you can update code using `git pull` in /tmp/lua-docker-folder/source/
