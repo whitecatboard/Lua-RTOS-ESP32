@@ -41,7 +41,7 @@ Also, you can update code using `git pull` in /tmp/lua-docker-folder/source/
 Run container with volume and device mapping
 
 ```
-docker run -it -v /tmp/lua-docker-folder:/tmp/lua-docker-folder --device /dev/ttyUSB0:/dev/ttyUSB0 registry.gitlab.com/sanekz13/artifacts/whitecat-rtos-builder:1.0.0 bash
+docker run -it -v /tmp/lua-docker-folder:/tmp/lua-docker-folder --device /dev/ttyUSB0:/dev/ttyUSB0 any_name:1.0.0 bash
 ```
 
 After run execute command `chown -R builder:builder /dev/ttyUSB0` for provide access to not-root user (builder).
