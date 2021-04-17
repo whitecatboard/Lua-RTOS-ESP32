@@ -3,7 +3,9 @@ FROM ubuntu:18.04
 RUN useradd -ms /bin/bash builder
 
 RUN apt update
-RUN apt-get install git wget make libncurses-dev flex bison gperf python python-pip python-serial python-future python-cryptography python-pyparsing -y
+RUN apt-get install curl git wget make libncurses-dev flex bison gperf python python-pip python-serial python-future python-cryptography python-pyparsing picocom mc htop nano vim -y
+
+RUN curl http://downloads.whitecatboard.org/console/linux/wcc --output /usr/local/bin/wcc && chmod +x /usr/local/bin/wcc
 
 USER builder
 
