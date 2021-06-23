@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -50,6 +50,7 @@
 #define MPXV6115V_SAMPLES 10
 
 #include <math.h>
+#include <string.h>
 
 #include <sys/driver.h>
 
@@ -58,6 +59,7 @@
 
 driver_error_t *MPXV6115V_presetup(sensor_instance_t *unit);
 driver_error_t *MPXV6115V_acquire(sensor_instance_t *unit, sensor_value_t *values);
+driver_error_t *MPXV6115V_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting);
 
 // Sensor specification and registration
 static const sensor_t __attribute__((used,unused,section(".sensors"))) MPXV6115V_sensor = {
@@ -68,12 +70,31 @@ static const sensor_t __attribute__((used,unused,section(".sensors"))) MPXV6115V
 	.data = {
 		{.id = "pressure", .type = SENSOR_DATA_FLOAT},
 	},
-	.acquire = MPXV6115V_acquire
+    .properties = {
+        {.id = "vs", .type = SENSOR_DATA_FLOAT},
+        {.id = "v_div", .type = SENSOR_DATA_FLOAT},
+    },
+	.presetup = MPXV6115V_presetup,
+	.acquire = MPXV6115V_acquire,
+	.set = MPXV6115V_set,
 };
 
 /*
  * Operation functions
  */
+driver_error_t *MPXV6115V_presetup(sensor_instance_t *unit) {
+	// Set default property values
+
+	// Vs
+    unit->properties[0].floatd.value = 5000.0;
+
+    // Voltage divider factor
+    unit->properties[1].floatd.value = 1.0;
+
+
+	return NULL;
+}
+
 driver_error_t *MPXV6115V_acquire(sensor_instance_t *unit, sensor_value_t *values) {
 	driver_error_t *error;
 	double mvolts = 0;
@@ -88,10 +109,24 @@ driver_error_t *MPXV6115V_acquire(sensor_instance_t *unit, sensor_value_t *value
 
 	adc_get_channel(&unit->setup[0].adc.h, &chan);
 
-	values[0].floatd.value = (mvolts - 4600.0) / 38.26;
+	float vs = unit->properties[0].floatd.value;
+	float vdiv = unit->properties[1].floatd.value;
+
+	values[0].floatd.value = (mvolts * vdiv - vs * 0.92 - 1.725 * 0.007652 * vs) / (vs * 0.007652);
 
 	return NULL;
 }
+
+driver_error_t *MPXV6115V_set(sensor_instance_t *unit, const char *id, sensor_value_t *setting) {
+    if (strcmp(id,"vs") == 0) {
+        memcpy(&unit->properties[0], setting, sizeof(sensor_value_t));
+    } else if (strcmp(id,"v_div") == 0) {
+        memcpy(&unit->properties[1], setting, sizeof(sensor_value_t));
+    }
+
+    return NULL;
+}
+
 
 #endif
 #endif

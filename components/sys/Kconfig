@@ -97,6 +97,9 @@ menu "Lua RTOS"
       config LUA_RTOS_FIRMWARE_ESP32_EVB_OTA
          bool "Olimex ESP32-EVB with OTA"
 
+      config LUA_RTOS_FIRMWARE_TRAVIS_ESP32_EVB_OTA
+         bool "TRAVIS on Olimex ESP32-EVB with OTA"
+
       config LUA_RTOS_FIRMWARE_DOIT_ESP32_DEVKIT_V1
          bool "DOIT ESP32 DEVKIT V1"
 
@@ -123,6 +126,12 @@ menu "Lua RTOS"
 
       config LUA_RTOS_FIRMWARE_M5STACK_OTA
          bool "M5Stack Core Board with OTA"
+
+      config LUA_RTOS_FIRMWARE_TTGO_LORA32
+         bool "TTGO Lora32 without OLED"
+
+      config LUA_RTOS_FIRMWARE_TTGO_LORA32_OTA
+         bool "TTGO Lora32 without OLED with OTA"
 
       config LUA_RTOS_FIRMWARE_GENERIC
          bool "Generic ESP32 board"

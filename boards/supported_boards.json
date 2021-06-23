@@ -356,6 +356,25 @@
         ]
     },
     {
+        "description": "TTGO Lora32 without OLED",
+        "manufacturer": "TTGO",
+        "image": "",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "TTGO-LORA32",
+                "description": "TTGO Lora32 without OLED",
+                "filesystem": "default"
+            },
+            {
+                "id": "TTGO-LORA32-OTA",
+                "description": "TTGO Lora32 without OLED with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
         "description": "Generic ESP32 board",
         "manufacturer": "Generic",
         "image": "",

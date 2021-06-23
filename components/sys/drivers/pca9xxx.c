@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -157,10 +157,14 @@ static driver_error_t *pca9xxx_write_register(uint8_t reg, uint8_t val) {
 	buff[0] = reg;
 	buff[1] = val;
 
-	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) return error;
-	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 0);if (error) return error;
-	error = i2c_write(pca_9xxx->i2cdevice, &transaction, (char *)&buff, sizeof(buff));if (error) return error;
-	error = i2c_stop(pca_9xxx->i2cdevice, &transaction);if (error) return error;
+	pca_9xxx_lock();
+
+	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 0);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_write(pca_9xxx->i2cdevice, &transaction, (char *)&buff, sizeof(buff));if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_stop(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
+
+	pca_9xxx_unlock();
 
 	return NULL;
 }
@@ -173,13 +177,17 @@ static driver_error_t * pca9xxx_read_all_register(uint8_t reg, uint8_t *val) {
 
 	buff[0] = 0b10000000 | reg;
 
-	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) return error;
-	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 0);if (error) return error;
-	error = i2c_write(pca_9xxx->i2cdevice, &transaction, (char *)&buff, 1);if (error) return error;
-	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) return error;
-	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 1);if (error) return error;
-	error = i2c_read(pca_9xxx->i2cdevice, &transaction, (char *)val, 5);if (error) return error;
-	error = i2c_stop(pca_9xxx->i2cdevice, &transaction);if (error) return error;
+	pca_9xxx_lock();
+
+	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 0);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_write(pca_9xxx->i2cdevice, &transaction, (char *)&buff, 1);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 1);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_read(pca_9xxx->i2cdevice, &transaction, (char *)val, 5);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_stop(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
+
+	pca_9xxx_unlock();
 
 	return NULL;
 }

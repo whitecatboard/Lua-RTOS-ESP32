@@ -47,8 +47,8 @@
 
 #define STEPPER_RMT_DATA_SIZE 640
 #define STEPPER_RMT_MAX_DURATION (32767 >> 1)
-#define STEPPER_STATS 1
-#define STEPPER_DEBUG 1
+#define STEPPER_STATS 0
+#define STEPPER_DEBUG 0
 
 typedef struct {
 	uint8_t  setup;         // Is this stepper unit setup?
@@ -60,6 +60,7 @@ typedef struct {
 
     uint8_t  dir;           // Direction. 0 = ccw, 1 = cw
     uint32_t steps;         // Number of steps
+    int32_t pos;            // position in steps
     float units;            // Displacement units
 
     float units_per_step;   // Units per step
@@ -100,8 +101,12 @@ extern const int stepper_error_map;
 
 driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, float max_spd, float max_acc, float stpu, uint8_t *unit);
 driver_error_t *stepper_move(uint8_t unit, float units, float initial_spd, float target_spd, float acc, float jerk);
+driver_error_t *stepper_get_distance(uint8_t unit, float *units);
+driver_error_t *stepper_set_position(uint8_t unit, float units);
+driver_error_t *stepper_get_position(uint8_t unit, float *units);
+driver_error_t *stepper_is_running(uint8_t unit, uint32_t* running);
 
-void stepper_start(int mask);
-void stepper_stop(int mask);
+void stepper_start(int mask, uint8_t async);
+void stepper_stop(int mask, uint8_t async);
 
 #endif /* _STEPPER_H_ */

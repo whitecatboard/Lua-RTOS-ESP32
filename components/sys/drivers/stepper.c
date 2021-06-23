@@ -106,6 +106,16 @@ static void stepper_init() {
     memset(stepper,0,sizeof(stepper_t) * NSTEP);
 }
 
+static void IRAM_ATTR step_feedback(void *arg) {
+	stepper_t *pstepper = (stepper_t *)arg;
+
+    if  (pstepper->dir){
+        pstepper->pos++;
+    } else {
+        pstepper->pos--;
+    }
+}
+
 static void IRAM_ATTR rmt_isr(void *arg) {
     // Get ISR status
     uint32_t intr_st = RMT.int_st.val;
@@ -302,7 +312,6 @@ static void IRAM_ATTR acceleration_profile_task(void *args) {
 
                     // Decrement steps
                     pstepper->steps--;
-
                     if (pstepper->steps == 0) {
                         // RMT end
                         // Enough space in buffer?
@@ -491,8 +500,11 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
     RMT.carrier_duty_ch[*unit].low = 0;
 
     // Set pin
+    //
+    // NOTE: pin is configured as input/output because we need feedback to count exactly
+    // the number of steps.
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[stepper[*unit].step_pin], 2);
-    gpio_set_direction(stepper[*unit].step_pin, GPIO_MODE_OUTPUT);
+    gpio_set_direction(stepper[*unit].step_pin, GPIO_MODE_INPUT_OUTPUT);
     gpio_matrix_out(stepper[*unit].step_pin, RMT_SIG_OUT0_IDX + *unit, 0, 0);
 
     // Enable TX interrupt
@@ -518,6 +530,10 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
 
     	esp_intr_alloc(ETS_RMT_INTR_SOURCE, ESP_INTR_FLAG_IRAM, rmt_isr, NULL, &isr_h);
     }
+
+    // Attach ISR on step_in to get feedback
+    gpio_set_intr_type(stepper[*unit].step_pin, GPIO_INTR_POSEDGE);
+    gpio_isr_handler_add(stepper[*unit].step_pin, step_feedback, &stepper[*unit]);
 
     mtx_unlock(&stepper_mutex);
 
@@ -582,7 +598,87 @@ driver_error_t *stepper_move(uint8_t unit, float units, float initial_spd, float
     return NULL;
 }
 
-void stepper_start(int mask) {
+driver_error_t *stepper_get_distance(uint8_t unit, float* units) {
+     // Sanity checks
+    if (unit > NSTEP) {
+        // Invalid unit
+        return driver_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_UNIT, NULL);
+    }
+
+    mtx_lock(&stepper_mutex);
+
+    if (!stepper[unit].setup) {
+        // Unit not setup
+        mtx_unlock(&stepper_mutex);
+        return driver_error(STEPPER_DRIVER, STEPPER_ERR_UNIT_NOT_SETUP, NULL);
+    }
+
+    stepper_t *pstepper = &stepper[unit];
+    *units = stepper[unit].steps * pstepper->units_per_step;
+
+    mtx_unlock(&stepper_mutex);
+    return NULL;
+}
+
+driver_error_t *stepper_set_position(uint8_t unit, float units) {
+     // Sanity checks
+    if (unit > NSTEP) {
+        // Invalid unit
+        return driver_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_UNIT, NULL);
+    }
+
+    mtx_lock(&stepper_mutex);
+
+    if (!stepper[unit].setup) {
+        // Unit not setup
+        mtx_unlock(&stepper_mutex);
+        return driver_error(STEPPER_DRIVER, STEPPER_ERR_UNIT_NOT_SETUP, NULL);
+    }
+
+    stepper_t *pstepper = &stepper[unit];
+    pstepper->pos = units * pstepper->units_per_step;
+
+    mtx_unlock(&stepper_mutex);
+    return NULL;
+}
+
+driver_error_t *stepper_get_position(uint8_t unit, float* units) {
+     // Sanity checks
+    if (unit > NSTEP) {
+        // Invalid unit
+        return driver_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_UNIT, NULL);
+    }
+
+    mtx_lock(&stepper_mutex);
+
+    if (!stepper[unit].setup) {
+        // Unit not setup
+        mtx_unlock(&stepper_mutex);
+        return driver_error(STEPPER_DRIVER, STEPPER_ERR_UNIT_NOT_SETUP, NULL);
+    }
+
+    stepper_t *pstepper = &stepper[unit];
+    *units = pstepper->pos * pstepper->units_per_step;
+
+    mtx_unlock(&stepper_mutex);
+    return NULL;
+}
+
+driver_error_t *stepper_is_running(uint8_t unit, uint32_t* running) {
+  // Sanity checks
+    if (unit > NSTEP) {
+        // Invalid unit
+        return driver_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_UNIT, NULL);
+    }
+
+    portENTER_CRITICAL(&spinlock);
+    *running = start_mask & (1<<unit) ;
+    portEXIT_CRITICAL(&spinlock);
+    return NULL;
+}
+
+
+void stepper_start(int mask, uint8_t async) {
     mtx_lock(&stepper_mutex);
 
     start_num = 0;
@@ -680,12 +776,12 @@ void stepper_start(int mask) {
     xQueueSend(acceleration_queue, &start_mask, portMAX_DELAY);
 
     // Wait until movements done
-    if (mask) {
+    if (mask && !async) {
     	xEventGroupWaitBits(move_event_group, mask, pdTRUE, pdTRUE, portMAX_DELAY);
     }
 }
 
-void stepper_stop(int mask) {
+void stepper_stop(int mask, uint8_t async) {
     // Stop required steppers
     portENTER_CRITICAL(&spinlock);
 
@@ -709,7 +805,7 @@ void stepper_stop(int mask) {
     portEXIT_CRITICAL(&spinlock);
 
     // Wait for stop
-    if (stop_mask) {
+    if (stop_mask && ! async) {
     	xEventGroupWaitBits(stop_event_group, stop_mask, pdTRUE, pdTRUE, portMAX_DELAY);
     }
 }
