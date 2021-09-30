@@ -569,18 +569,37 @@ static int os_setrsyslog(lua_State *L) {
 
 static int os_stats(lua_State *L) {
     const char *stat = luaL_optstring(L, 1, NULL);
+    uint8_t table = 0;
 
+    // Check if user wants result as a table, or wants result
+    // on the console
+    if (stat && strcmp(stat,"table") == 0){
+        table = 1;
+    }
     // Do a garbage collection
     lua_lock(L);
     luaC_fullgc(L, 0);
     lua_unlock(L);
 
-    if (stat && strcmp(stat,"mem") == 0) {
-        lua_pushinteger(L, xPortGetFreeHeapSize());
-        return 1;
+    if (!table) {
+        if (stat && strcmp(stat,"mem") == 0) {
+            lua_pushinteger(L, xPortGetFreeHeapSize());
+            return 1;
+        } else {
+            printf("Free mem: %d\n",xPortGetFreeHeapSize());
+            printf("Free mem min: %d\n",xPortGetMinimumEverFreeHeapSize());
+        }
     } else {
-        printf("Free mem: %d\n",xPortGetFreeHeapSize());
-        printf("Free mem min: %d\n",xPortGetMinimumEverFreeHeapSize());
+        lua_createtable(L, 0, 0);
+        
+        lua_pushstring(L,"free");
+        lua_pushinteger(L,xPortGetFreeHeapSize());
+        lua_settable(L,-3);
+
+        lua_pushstring(L,"min");
+        lua_pushinteger(L,xPortGetMinimumEverFreeHeapSize());
+        lua_settable(L,-3);
+        return table;
     }
 
     return 0;
