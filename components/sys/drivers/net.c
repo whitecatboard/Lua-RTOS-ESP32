@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -56,6 +56,7 @@
 #include "esp_event.h"
 #include "esp_event_loop.h"
 #include "esp_ota_ops.h"
+#include <esp_task_wdt.h>
 
 #if CONFIG_LUA_RTOS_LUA_USE_MDNS
 #include <mdns.h>
@@ -103,7 +104,7 @@ DRIVER_REGISTER_END(NET,net,0,NULL,NULL);
 EventGroupHandle_t netEvent;
 
 // Retries for connect
-static uint8_t retries = 0;
+static uint8_t connect_retries = 0;
 
 // Event callbacks
 static net_event_register_callback_t callback[MAX_NET_EVENT_CALLBACKS] = {0};
@@ -124,8 +125,8 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
 
         // STA events
         case SYSTEM_EVENT_STA_START: // ESP32 station start
-        		status_set(0x00000000, STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP);
-        		esp_wifi_connect();
+            status_set(0x00000000, STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP);
+            esp_wifi_connect();
             break;
 
         case SYSTEM_EVENT_STA_STOP: // ESP32 station stop
@@ -138,24 +139,24 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
             break;
 
         case SYSTEM_EVENT_STA_DISCONNECTED: // ESP32 station disconnected from AP */
-			if (status_get(STATUS_WIFI_SYNC) && (retries > WIFI_CONNECT_RETRIES)) {
-			    bits |= evWIFI_CANT_CONNECT;
+            if (status_get(STATUS_WIFI_SYNC) && (connect_retries > WIFI_CONNECT_RETRIES)) {
+                bits |= evWIFI_CANT_CONNECT;
                 status_set(0x00000000, STATUS_WIFI_CONNECTED);
-				retries = 0;
-			} else {
+                connect_retries = 0;
+            } else {
                 status_set(0x00000000, STATUS_WIFI_CONNECTED);
-	            if (status_get(STATUS_WIFI_STARTED)) {
-	                if (status_get(STATUS_WIFI_SYNC)) {
-	                    retries++;
-	                }
-	                delay(200);
-	                esp_wifi_connect();
-	            }
-			}
+                if (status_get(STATUS_WIFI_STARTED)) {
+                    if (status_get(STATUS_WIFI_SYNC)) {
+                        connect_retries++;
+                    }
+                    delay(200);
+                    esp_wifi_connect();
+                }
+            }
             break;
 
         case SYSTEM_EVENT_STA_GOT_IP: // ESP32 station got IP from connected AP
-        		status_set(STATUS_WIFI_HAS_IP, 0x00000000);
+            status_set(STATUS_WIFI_HAS_IP, 0x00000000);
             bits |= evWIFI_CONNECTED;
             break;
 
@@ -282,7 +283,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event) {
  */
 driver_error_t *net_init() {
     if (!status_get(STATUS_TCPIP_INITED)) {
-        retries = 0;
+        connect_retries = 0;
 
         netEvent = xEventGroupCreate();
 
@@ -306,12 +307,12 @@ driver_error_t *net_check_connectivity() {
 
 driver_error_t *net_lookup(const char *name, int port, struct sockaddr_in *address) {
     int rc = 0;
-    int retries = 0;
+    int lookup_retries = 0;
 
 retry:
-	if (!wait_for_network(20000)) {
+    if (!wait_for_network(20000)) {
         return driver_error(NET_DRIVER, NET_ERR_NOT_AVAILABLE,NULL);
-	}
+    }
 
     sa_family_t family = AF_INET;
     struct addrinfo *result = NULL;
@@ -335,12 +336,11 @@ retry:
 
         freeaddrinfo(result);
     } else {
-    	retries++;
-    	if (retries < 4) {
+        lookup_retries++;
+        if (lookup_retries < 4) {
             vTaskDelay(500 / portTICK_PERIOD_MS);
-
-    		goto retry;
-    	}
+            goto retry;
+        }
 
         return driver_error(NET_DRIVER, NET_ERR_NAME_CANNOT_BE_RESOLVED,NULL);
     }
@@ -394,8 +394,8 @@ int network_started() {
 
 int wait_for_network_init(uint32_t timeout) {
     while ((timeout > 0) && (!status_get(STATUS_TCPIP_INITED))) {
-    		vTaskDelay(1/portTICK_PERIOD_MS);
-    		timeout--;
+        vTaskDelay(1/portTICK_PERIOD_MS);
+        timeout--;
     }
 
     return status_get(STATUS_TCPIP_INITED);
@@ -422,21 +422,21 @@ int wait_for_network(uint32_t timeout) {
     }
 
     if (!NETWORK_AVAILABLE()) {
-		EventBits_t uxBits = xEventGroupWaitBits(
-				netEvent,
-				evWIFI_CONNECTED | evWIFI_CANT_CONNECT |
-				evSPI_ETH_CONNECTED | evSPI_ETH_CANT_CONNECT |
-				evETH_CONNECTED | evETH_CANT_CONNECT,
-				pdTRUE, pdFALSE, ticks_to_wait
-		);
+        EventBits_t uxBits = xEventGroupWaitBits(
+                netEvent,
+                evWIFI_CONNECTED | evWIFI_CANT_CONNECT |
+                evSPI_ETH_CONNECTED | evSPI_ETH_CANT_CONNECT |
+                evETH_CONNECTED | evETH_CANT_CONNECT,
+                pdTRUE, pdFALSE, ticks_to_wait
+        );
 
-		if (uxBits & (evWIFI_CONNECTED | evSPI_ETH_CONNECTED | evETH_CONNECTED)) {
-			return 1;
-		}
+        if (uxBits & (evWIFI_CONNECTED | evSPI_ETH_CONNECTED | evETH_CONNECTED)) {
+            return 1;
+        }
 
-		if (uxBits & (evWIFI_CANT_CONNECT | evSPI_ETH_CANT_CONNECT | evETH_CANT_CONNECT)) {
-			return 0;
-		}
+        if (uxBits & (evWIFI_CANT_CONNECT | evSPI_ETH_CANT_CONNECT | evETH_CANT_CONNECT)) {
+            return 0;
+        }
     }
 
     return 1;
@@ -469,7 +469,8 @@ driver_error_t *net_ota() {
 
     sprintf((char *)buffer, "/?firmware=%s&commit=%s", CONFIG_LUA_RTOS_FIRMWARE, BUILD_COMMIT);
 
-    if ((error = net_http_get(&client, (const char *)buffer, &response))) {
+    if ((error = net_http_get(&client, (const char *)buffer, "application/octet-stream", &response))) {
+        net_http_destroy_client(&client);
         return error;
     }
 
@@ -484,11 +485,14 @@ driver_error_t *net_ota() {
             update_partition->label, update_partition->address
         );
 
+        esp_task_wdt_reset();
+
         printf("Begin OTA update ...\r\n");
 
         esp_err_t err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
         if (err != ESP_OK) {
             printf("Failed, error %d\r\n", err);
+            net_http_destroy_client(&client);
             return NULL;
         }
 
@@ -496,14 +500,18 @@ driver_error_t *net_ota() {
 
         while (response.size > 0){
             if ((error = net_http_read_response(&response, buffer, sizeof(buffer)))) {
+                net_http_destroy_client(&client);
                 return error;
             }
 
             err = esp_ota_write(update_handle, buffer, response.len);
             if (err != ESP_OK) {
                 printf("\nChunk written unsuccessfully in partition (offset 0x%08x), error %d\r\n", address, err);
+                net_http_destroy_client(&client);
                 return NULL;
             } else {
+                int pct = (int)(((float)(address-update_partition->address))/total*100);
+                if (0 == pct%10) esp_task_wdt_reset();
                 printf("\rChunk written successfully in partition at offset 0x%08x", address);
             }
 
@@ -512,8 +520,11 @@ driver_error_t *net_ota() {
 
         printf("\nEnding OTA update ...\r\n");
 
+        esp_task_wdt_reset();
+
         if (esp_ota_end(update_handle) != ESP_OK) {
             printf("Failed\r\n");
+            net_http_destroy_client(&client);
             return NULL;
         } else {
             printf("Changing boot partition ...\r\n");

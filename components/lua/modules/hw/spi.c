@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -327,6 +327,7 @@ static int lspi_rw_helper( lua_State *L, int withread ) {
             lua_rawseti(L, -2, i);
             buff++;
         }
+        spi->len = 0; // Buffer was send and received. So don't send on deselect
     }
 
 exit:

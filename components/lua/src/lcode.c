@@ -562,7 +562,7 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
     case VUPVAL: {  /* move value to some (pending) register */
       e->u.info = luaK_codeABC(fs, OP_GETUPVAL, 0, e->u.info, 0);
       e->k = VRELOCABLE;
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
       if (e->closeAnnotation != 0) {
           luaK_block_end(fs, e->closeAnnotation);
           e->closeAnnotation = 0;
@@ -582,7 +582,7 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
         op = OP_GETTABUP;  /* 't' is in an upvalue */
       }
       e->u.info = luaK_codeABC(fs, op, 0, e->u.ind.t, e->u.ind.idx);
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
       if (e->closeAnnotation != 0) {
           luaK_block_end(fs, e->closeAnnotation);
           e->closeAnnotation = 0;
@@ -593,7 +593,7 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
     }
     case VVARARG: case VCALL: {
       luaK_setoneret(fs, e);
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
       if (e->closeAnnotation != 0) {
           luaK_block_end(fs, e->closeAnnotation);
           e->closeAnnotation = 0;
@@ -1082,7 +1082,7 @@ static void codecomp (FuncState *fs, BinOpr opr, expdesc *e1, expdesc *e2) {
 ** Aplly prefix operation 'op' to expression 'e'.
 */
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
-#if !LUA_USE_ROTABLE
+#if !LUA_USE_BLOCK_CONTEXT
   static const expdesc ef = {VKINT, {0}, NO_JUMP, NO_JUMP};
 #else
   static const expdesc ef = {VKINT, {0}, NO_JUMP, NO_JUMP, 0, 0, 0};
@@ -1223,7 +1223,7 @@ void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
   fs->freereg = base + 1;  /* free registers with list values */
 }
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
 int luaK_block_start (FuncState *fs, int n) {
     return luaK_code(fs, CREATE_Ax(OP_BLOCKS, n));
 }

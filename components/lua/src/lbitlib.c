@@ -200,26 +200,25 @@ static int b_replace (lua_State *L) {
 
 
 static const luaL_Reg bitlib[] = {
-  {"arshift", b_arshift},
-  {"band", b_and},
-  {"bnot", b_not},
-  {"bor", b_or},
-  {"bxor", b_xor},
-  {"btest", b_test},
-  {"extract", b_extract},
-  {"lrotate", b_lrot},
-  {"lshift", b_lshift},
-  {"replace", b_replace},
-  {"rrotate", b_rrot},
-  {"rshift", b_rshift},
-  {NULL, NULL}
+  {LSTRKEY("arshift"),    LFUNCVAL( b_arshift)},
+  {LSTRKEY("band"),       LFUNCVAL( b_and)},
+  {LSTRKEY("bnot"),       LFUNCVAL( b_not)},
+  {LSTRKEY("bor"),        LFUNCVAL( b_or)},
+  {LSTRKEY("bxor"),       LFUNCVAL( b_xor)},
+  {LSTRKEY("btest"),      LFUNCVAL( b_test)},
+  {LSTRKEY("extract"),    LFUNCVAL( b_extract)},
+  {LSTRKEY("lrotate"),    LFUNCVAL( b_lrot)},
+  {LSTRKEY("lshift"),     LFUNCVAL( b_lshift)},
+  {LSTRKEY("replace"),    LFUNCVAL( b_replace)},
+  {LSTRKEY("rrotate"),    LFUNCVAL( b_rrot)},
+  {LSTRKEY("rshift"),     LFUNCVAL( b_rshift)},
+  {LNILKEY, LNILVAL }
 };
 
 
 
 LUAMOD_API int luaopen_bit32 (lua_State *L) {
-  luaL_newlib(L, bitlib);
-  return 1;
+  LNEWLIB(L, bitlib); 
 }
 
 

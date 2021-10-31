@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -110,10 +110,9 @@ extern EventGroupHandle_t netEvent;
 #define evWIFI_CANT_CONNECT          ( 1 << 2 )
 
 static int wps_mode = WPS_TYPE_DISABLE;
-static esp_wps_config_t wps_config_pbc = WPS_CONFIG_INIT_DEFAULT(WPS_TYPE_PBC);
-static esp_wps_config_t wps_config_pin = WPS_CONFIG_INIT_DEFAULT(WPS_TYPE_PIN);
-static wifi_wps_pin_cb* wps_pin_callback = NULL;
-static wifi_sc_cb* wps_sc_callback = NULL;
+static esp_wps_config_t * wps_config = NULL;
+static wifi_wps_pin_cb * wps_pin_callback = NULL;
+static wifi_sc_cb * wps_sc_callback = NULL;
 
 #define WPSPIN2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5], (a)[6], (a)[7]
 
@@ -613,7 +612,20 @@ driver_error_t *wifi_wps(int wpsmode, wifi_wps_pin_cb* callback) {
     status_set(STATUS_WIFI_STARTED, 0x00000000);
 
     if (wps_mode != WPS_TYPE_DISABLE) {
-        if ((error = wifi_check_error(esp_wifi_wps_enable(wps_mode == WPS_TYPE_PIN ? &wps_config_pin : &wps_config_pbc)))) return error;
+        if (!wps_config) {
+          wps_config = malloc(sizeof(esp_wps_config_t));
+          if (!wps_config) return driver_error(WIFI_DRIVER, WIFI_ERR_WIFI_NO_MEM,NULL);
+        }
+
+        if (wps_mode == WPS_TYPE_PIN) {
+          esp_wps_config_t wps_config_pin = WPS_CONFIG_INIT_DEFAULT(WPS_TYPE_PIN);
+          memcpy(wps_config, &wps_config_pin, sizeof(esp_wps_config_t));
+        } else {
+          esp_wps_config_t wps_config_pbc = WPS_CONFIG_INIT_DEFAULT(WPS_TYPE_PBC);
+          memcpy(wps_config, &wps_config_pbc, sizeof(esp_wps_config_t));
+        }
+
+        if ((error = wifi_check_error(esp_wifi_wps_enable(wps_config)))) return error;
         if ((error = wifi_check_error(esp_wifi_wps_start(0)))) return error;
     }
     return NULL;
@@ -622,7 +634,7 @@ driver_error_t *wifi_wps(int wpsmode, wifi_wps_pin_cb* callback) {
 void wifi_wps_reconnect() {
     esp_wifi_wps_disable();
     if (wps_mode != WPS_TYPE_DISABLE) {
-        esp_wifi_wps_enable(wps_mode == WPS_TYPE_PIN ? &wps_config_pin : &wps_config_pbc);
+        esp_wifi_wps_enable(wps_config);
         esp_wifi_wps_start(0);
     }
 }
@@ -631,6 +643,10 @@ void wifi_wps_disable() {
     if (wps_mode != WPS_TYPE_DISABLE) {
         esp_wifi_wps_disable();
         wps_mode = WPS_TYPE_DISABLE;
+    }
+    if (wps_config) {
+      free(wps_config);
+      wps_config = NULL;
     }
 }
 

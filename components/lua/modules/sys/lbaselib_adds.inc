@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -182,6 +182,7 @@ static int luaB_try (lua_State *L) {
             if ((status != LUA_OK) && (status != LUA_YIELD)) {
                 // Catch function has failed, raise an error
                 return luaL_error(L, msg);
+#if LUA_USE_BLOCK_CONTEXT
             } else {
                 BlockContext *bctx;
 
@@ -190,6 +191,7 @@ static int luaB_try (lua_State *L) {
 					// Emit a message
 					luaVB_emitMessage(L, luaVB_BLOCK_ERR_CATCH_MSG, bctx->block);
             		}
+#endif  //LUA_USE_BLOCK_CONTEXT
             }
         }
     }

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -892,12 +892,7 @@ static const LUA_REG_TYPE lmqtt_client_map[] = {
 LUALIB_API int luaopen_mqtt( lua_State *L ) {
     luaL_newmetarotable(L,"mqtt.cli", (void *)lmqtt_client_map);
 
-#if !LUA_USE_ROTABLE
-    luaL_newlib(L, mqtt);
-    return 1;
-#else
-    return 0;
-#endif
+    LNEWLIB(L, mqtt);
 }
 
 MODULE_REGISTER_ROM(MQTT, mqtt, lmqtt_map, luaopen_mqtt, 1);

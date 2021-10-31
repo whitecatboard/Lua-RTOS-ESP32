@@ -164,12 +164,7 @@ static const LUA_REG_TYPE co_funcs[] = {
 
 
 LUAMOD_API int luaopen_coroutine (lua_State *L) {
-#if !LUA_USE_ROTABLE
-  luaL_newlib(L, co_funcs);
-  return 1;
-#else
-  return 0;
-#endif
+  LNEWLIB(L, co_funcs);
 }
 
 MODULE_REGISTER_ROM(COROUTINE, coroutine, co_funcs, luaopen_coroutine, 1);

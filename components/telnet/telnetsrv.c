@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * Copyright (C) 2018 - 2019, Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.

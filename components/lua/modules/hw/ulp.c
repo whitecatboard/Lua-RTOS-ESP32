@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Thomas E. Horner (whitecatboard.org@horner.it)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.
  *
@@ -88,7 +88,6 @@ DRIVER_REGISTER_BEGIN(ULP,ulp,0,NULL,NULL);
 DRIVER_REGISTER_END(ULP,ulp,0,NULL,NULL);
 
 typedef struct {
-    lua_State *L;
     unsigned long addr;
 } ulp_userdata;
 
@@ -195,7 +194,6 @@ static int lulp_assign( lua_State* L ){
 	unsigned long addr = luaL_checkinteger(L, 1);
 
 	ulp_userdata *ulpvar = (ulp_userdata *)lua_newuserdata(L, sizeof(ulp_userdata));
-	ulpvar->L = L;
 	ulpvar->addr = addr;
 
 	luaL_getmetatable(L, "ulp.var");
@@ -281,13 +279,8 @@ static const LUA_REG_TYPE lulp_service_map[] = {
 
 LUALIB_API int luaopen_ulp( lua_State *L ) {
   luaL_newmetarotable(L,"ulp.var", (void *)lulp_service_map);
-
-#if !LUA_USE_ROTABLE
-  luaL_newlib(L, ulp);
-  return 1;
-#else
-	return 0;
-#endif
+ 
+  LNEWLIB(L, ulp); 
 }
 
 MODULE_REGISTER_ROM(ULP, ulp, lulp_map, luaopen_ulp, 1);

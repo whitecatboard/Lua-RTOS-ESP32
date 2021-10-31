@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -83,7 +83,7 @@ static void pca_9xxx_task(void *arg) {
 	uint8_t i, j, pin, latch[PCA9xxx_BANKS], current[PCA9xxx_BANKS];
 
     for(;;) {
-    	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
         pca_9xxx_lock();
 
@@ -157,10 +157,14 @@ static driver_error_t *pca9xxx_write_register(uint8_t reg, uint8_t val) {
 	buff[0] = reg;
 	buff[1] = val;
 
-	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) return error;
-	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 0);if (error) return error;
-	error = i2c_write(pca_9xxx->i2cdevice, &transaction, (char *)&buff, sizeof(buff));if (error) return error;
-	error = i2c_stop(pca_9xxx->i2cdevice, &transaction);if (error) return error;
+	pca_9xxx_lock();
+
+	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 0);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_write(pca_9xxx->i2cdevice, &transaction, (char *)&buff, sizeof(buff));if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_stop(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
+
+	pca_9xxx_unlock();
 
 	return NULL;
 }
@@ -171,15 +175,19 @@ static driver_error_t * pca9xxx_read_all_register(uint8_t reg, uint8_t *val) {
 	driver_error_t *error;
 	uint8_t buff[1];
 
-	buff[0] = reg & 0b10000000;
+	buff[0] = 0b10000000 | reg;
 
-	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) return error;
-	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 0);if (error) return error;
-	error = i2c_write(pca_9xxx->i2cdevice, &transaction, (char *)&buff, 1);if (error) return error;
-	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) return error;
-	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 1);if (error) return error;
-	error = i2c_read(pca_9xxx->i2cdevice, &transaction, (char *)val, 5);if (error) return error;
-	error = i2c_stop(pca_9xxx->i2cdevice, &transaction);if (error) return error;
+	pca_9xxx_lock();
+
+	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 0);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_write(pca_9xxx->i2cdevice, &transaction, (char *)&buff, 1);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 1);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_read(pca_9xxx->i2cdevice, &transaction, (char *)val, 5);if (error) {pca_9xxx_unlock();return error;}
+	error = i2c_stop(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
+
+	pca_9xxx_unlock();
 
 	return NULL;
 }
@@ -216,18 +224,54 @@ driver_error_t *pca9xxx_setup() {
 
 		pca_9xxx_lock();
 
-		// Configure all pins as output / logic level 0
-		pca9xxx_write_register(0x18, 0x00);
-		pca9xxx_write_register(0x19, 0x00);
-		pca9xxx_write_register(0x1a, 0x00);
-		pca9xxx_write_register(0x1b, 0x00);
-		pca9xxx_write_register(0x1c, 0x00);
+		pca_9xxx->direction[0] = 0xff;
+        pca_9xxx->direction[1] = 0xff;
+        pca_9xxx->direction[2] = 0xff;
+        pca_9xxx->direction[3] = 0xff;
+        pca_9xxx->direction[4] = 0xff;
 
+        pca_9xxx->latch[0] = 0xff;
+        pca_9xxx->latch[1] = 0xff;
+        pca_9xxx->latch[2] = 0xff;
+        pca_9xxx->latch[3] = 0xff;
+        pca_9xxx->latch[4] = 0xff;
+
+		// Output Port registers, all to L
 		pca9xxx_write_register(0x8, 0x00);
 		pca9xxx_write_register(0x9, 0x00);
 		pca9xxx_write_register(0xa, 0x00);
 		pca9xxx_write_register(0xb, 0x00);
 		pca9xxx_write_register(0xc, 0x00);
+
+		// Polarity Inversion registers, do not invert
+        pca9xxx_write_register(0x10, 0x00);
+        pca9xxx_write_register(0x11, 0x00);
+        pca9xxx_write_register(0x12, 0x00);
+        pca9xxx_write_register(0x13, 0x00);
+        pca9xxx_write_register(0x14, 0x00);
+
+        // I/O Configuration registers, set all to input
+        pca9xxx_write_register(0x18, 0xff);
+        pca9xxx_write_register(0x19, 0xff);
+        pca9xxx_write_register(0x1a, 0xff);
+        pca9xxx_write_register(0x1b, 0xff);
+        pca9xxx_write_register(0x1c, 0xff);
+
+        // Mask interrupt registers, all disabled
+        pca9xxx_write_register(0x20, 0xff);
+        pca9xxx_write_register(0x21, 0xff);
+        pca9xxx_write_register(0x22, 0xff);
+        pca9xxx_write_register(0x23, 0xff);
+        pca9xxx_write_register(0x24, 0xff);
+
+        // Output structure configuration register, default values
+        pca9xxx_write_register(0x28, 0xff);
+
+        // All Bank control register, default values
+        pca9xxx_write_register(0x29, 0x80);
+
+        // Mode selection register, default values
+        pca9xxx_write_register(0x2a, 0x02);
 
 		// Configure interrupts
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
@@ -252,7 +296,7 @@ driver_error_t *pca9xxx_setup() {
 		gpio_pin_input(CONFIG_PCA9xxx_INT);
 		gpio_isr_attach(CONFIG_PCA9xxx_INT, pca9xxx_isr, GPIO_INTR_NEGEDGE, NULL);
 
-		// Enable interrupts on all pins
+		// Mask interrupt registers, all enabled
 		pca9xxx_write_register(0x20, 0x00);
 		pca9xxx_write_register(0x21, 0x00);
 		pca9xxx_write_register(0x22, 0x00);
@@ -307,6 +351,8 @@ driver_error_t *pca_9xxx_pin_input(uint8_t pin) {
 	pca_9xxx_unlock();
 
 	driver_error_t *error;
+
+	pca9xxx_write_register(0x20 + port, 0x00);
 
 	error = pca9xxx_write_register(0x18 + port, pca_9xxx->direction[port]);
 

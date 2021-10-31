@@ -237,7 +237,11 @@ void setusershell() {
 
 static char **initshells() {
 	/* don't touch this list. */
+#if __XTENSA__
+	static const char *const okshells[] = { "/bin/sh", "/bin/csh", NULL };
+#else
 	static const char *okshells[] = { "/bin/sh", "/bin/csh", NULL };
+#endif
 	register char **sp, *cp;
 	register FILE *fp;
 	struct stat statb;

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -68,6 +68,7 @@
 #include "net_service_openvpn.inc"
 #include "net_service_ssh.inc"
 #include "net_ssh.inc"
+#include "net_http.inc"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -453,6 +454,10 @@ static const LUA_REG_TYPE net_map[] = {
 
 #if CONFIG_LUA_RTOS_LUA_USE_CURL_NET
     { LSTRKEY( "curl" ), LROVAL ( curl_map ) },
+#endif
+
+#if CONFIG_LUA_RTOS_USE_HTTP_CLIENT
+    { LSTRKEY( "http" ), LROVAL ( http_client_map ) },
 #endif
 
     { LSTRKEY( "service" ), LROVAL ( service_map ) },

@@ -2,10 +2,10 @@
  * Copyright (c) 1983, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
- * Copyright (C) 2015 - 2018
+ * Copyright (C) 2015 - 2020
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
- * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ * Author: Jaume Olivï¿½ (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *         Thomas E. Horner (whitecatboard.org@horner.it)
  * 
  * All rights reserved.

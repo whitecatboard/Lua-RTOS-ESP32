@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * Copyright (C) 2015 - 2019, Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.
@@ -122,7 +122,7 @@
  * These are combined to form Tri-State bits when sending or receiving codes.
  */
 #if defined(ESP8266) || defined(ESP32)
-static const struct Protocol proto [] = {
+static const struct Protocol const proto [] = {
 #else
 static const struct Protocol proto [] PROGMEM = {
 #endif
@@ -149,7 +149,7 @@ const static unsigned int nSeparationLimit = 4300;
 // separationLimit: minimum microseconds between received codes, closer codes are ignored.
 // according to discussion on issue #14 it might be more suitable to set the separation
 // limit to the same time as the 'low' part of the sync signal for the current protocol.
-static unsigned int timings[RCSWITCH_MAX_CHANGES];
+static unsigned int *timings = NULL;
 #endif
 
 #if 1 // static, moved here from RCSwitch.h
@@ -180,7 +180,20 @@ void RCSwitch_init() {
   nReceiverInterrupt = -1;
   RCSwitch_setReceiveTolerance(60);
   nReceivedValue = 0;
+  if (!timings) {
+    timings = calloc(RCSWITCH_MAX_CHANGES, sizeof(unsigned int));
+    if (!timings) {
+      syslog(LOG_ERR, "ERROR allocating memory for receive-timings\n");
+    }
+  }
   #endif
+}
+
+void RCSwitch_deinit() {
+  if (timings) {
+    free(timings);
+    timings = NULL;
+  }
 }
 
 /**

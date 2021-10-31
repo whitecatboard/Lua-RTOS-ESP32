@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -44,6 +44,8 @@
 #include "sdkconfig.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_VM
+#if CONFIG_LUA_RTOS_LUA_USE_BLOCK_CONTEXT
+
 
 #include "lua.h"
 #include "lualib.h"
@@ -59,7 +61,7 @@
 
 #include <lua/common/blocks.h>
 
-uint8_t lua_vm_blocks = 0;
+extern uint8_t lua_vm_blocks;
 
 static int llua_blocks(lua_State *L) {
     luaL_checktype(L, 1, LUA_TBOOLEAN);
@@ -78,12 +80,14 @@ static int llua_blocks(lua_State *L) {
 
 static const LUA_REG_TYPE lvm_map[] = {
   { LSTRKEY( "blocks" ), LFUNCVAL( llua_blocks    ) },
+  { LNILKEY, LNILVAL } 
 };
 
 LUALIB_API int luaopen_vm( lua_State *L ) {
-    return 0;
+   LREGISTER(L, "vm", lvm_map);
 }
 
 MODULE_REGISTER_ROM(VM, vm, lvm_map, luaopen_vm, 1);
 
+#endif
 #endif

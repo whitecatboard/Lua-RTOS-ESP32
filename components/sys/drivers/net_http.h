@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -68,7 +68,7 @@ typedef struct {
 
 driver_error_t *net_http_create_client(const char *server, const char *port, net_http_client_t *client);
 driver_error_t *net_http_destroy_client(net_http_client_t *client);
-driver_error_t *net_http_get(net_http_client_t *client, const char *res, net_http_response_t *response);
+driver_error_t *net_http_get(net_http_client_t *client, const char *resource, const char *expected_content_type, net_http_response_t *response);
 driver_error_t *net_http_read_response(net_http_response_t *response, uint8_t *buffer, size_t size);
 
 #endif

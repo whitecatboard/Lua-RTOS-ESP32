@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 - 2018, Thomas E. Horner (whitecatboard.org@horner.it)
+ * Copyright (C) 2015 - 2020, Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.
  *
@@ -474,12 +474,7 @@ static const LUA_REG_TYPE mdns_map[] = {
 
 //called from luaopen_net
 LUALIB_API int luaopen_mdns( lua_State *L ) {
-#if !LUA_USE_ROTABLE
-	luaL_newlib(L, mdns);
-	return 1;
-#else
-	return 0;
-#endif
+ 	LNEWLIB(L, mdns);
 }
 
 #endif

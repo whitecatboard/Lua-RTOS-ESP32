@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
- * Copyright (C) 2015 - 2018, Thomas E. Horner (whitecatboard.org@horner.it)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.
  *
@@ -64,6 +64,10 @@
 #include <esp32/pm.h>
 #include <esp_pm.h>
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include <esp_task_wdt.h>
+
 extern const int cpu_error_map;
 
 // Module errors
@@ -75,6 +79,9 @@ extern const int cpu_error_map;
 #define LUA_CPU_ERR_CANT_SET_WATCHPOINT (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  5)
 #define LUA_CPU_ERR_INVALID_CPU_SPEED   (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  6)
 #define LUA_CPU_ERR_CANT_SET_CPU_SPEED  (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  7)
+#define LUA_CPU_ERR_CANT_RESET_WATCHDOG (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  8)
+#define LUA_CPU_ERR_CANT_DEL_WATCHDOG   (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) |  9)
+#define LUA_CPU_ERR_CANT_ADD_WATCHDOG   (DRIVER_EXCEPTION_BASE(CPU_DRIVER_ID) | 10)
 
 // Register drivers and errors
 DRIVER_REGISTER_BEGIN(CPU,cpu,0,NULL,NULL);
@@ -86,6 +93,9 @@ DRIVER_REGISTER_BEGIN(CPU,cpu,0,NULL,NULL);
     DRIVER_REGISTER_ERROR(CPU, cpu, CannotSetWatchpoint, "can't set Watchpoint", LUA_CPU_ERR_CANT_SET_WATCHPOINT);
     DRIVER_REGISTER_ERROR(CPU, cpu, CPUSpeedInvalid,     "invalid CPU speed",    LUA_CPU_ERR_INVALID_CPU_SPEED);
     DRIVER_REGISTER_ERROR(CPU, cpu, CannotSetCPUSpeed,   "can't set CPU speed",  LUA_CPU_ERR_CANT_SET_CPU_SPEED);
+    DRIVER_REGISTER_ERROR(CPU, cpu, CannotResetWatchdog, "can't reset watchdog", LUA_CPU_ERR_CANT_RESET_WATCHDOG);
+    DRIVER_REGISTER_ERROR(CPU, cpu, CannotAddWatchdog,   "can't add watchdog",   LUA_CPU_ERR_CANT_ADD_WATCHDOG);
+    DRIVER_REGISTER_ERROR(CPU, cpu, CannotDelWatchdog,   "can't del watchdog",   LUA_CPU_ERR_CANT_DEL_WATCHDOG);
 DRIVER_REGISTER_END(CPU,cpu,0,NULL,NULL);
 
 int temprature_sens_read(void); //undocumented esp32 function
@@ -297,7 +307,7 @@ static int lcpu_backtrace(lua_State *L) {
     for (uint32_t idx = 0; idx < MAX_BACKTRACE && idx < backtrace_count; idx++) {
         if (bPrint) printf(" 0x%08x:0x%08x", backtrace_pc[idx], backtrace_sp[idx]);
 
-        lua_pushnumber(L, idx); //row index
+        lua_pushnumber(L, idx+1); //row index starts from 1
         lua_newtable(L);
 
         lua_pushinteger(L, backtrace_pc[idx]);
@@ -313,6 +323,47 @@ static int lcpu_backtrace(lua_State *L) {
     return 1; //one table
 }
 
+static int lcpu_watchdog_add(lua_State *L) {
+#if CONFIG_TASK_WDT
+    TaskHandle_t task = xTaskGetCurrentTaskHandle();
+    esp_err_t error;
+    if ((error = esp_task_wdt_add(task))) {
+        return luaL_exception(L, LUA_CPU_ERR_CANT_ADD_WATCHDOG);
+    }
+#endif
+  return 0;
+}
+
+static int lcpu_watchdog_reset(lua_State *L) {
+#if CONFIG_TASK_WDT
+    esp_err_t error;
+    if ((error = esp_task_wdt_reset())) {
+        if (ESP_ERR_INVALID_STATE != error) {
+            return luaL_exception(L, LUA_CPU_ERR_CANT_RESET_WATCHDOG);
+        }
+    }
+#endif
+  return 0;
+}
+
+static int lcpu_watchdog_remove(lua_State *L) {
+#if CONFIG_TASK_WDT
+    TaskHandle_t task = xTaskGetCurrentTaskHandle();
+    esp_err_t error;
+    if ((error = esp_task_wdt_delete(task))) {
+        return luaL_exception(L, LUA_CPU_ERR_CANT_DEL_WATCHDOG);
+    }
+#endif
+  return 0;
+}
+
+static const LUA_REG_TYPE cpu_watchdog_map[] = {
+    { LSTRKEY( "add"          ),           LFUNCVAL( lcpu_watchdog_add     ) },
+    { LSTRKEY( "reset"        ),           LFUNCVAL( lcpu_watchdog_reset   ) },
+    { LSTRKEY( "remove"       ),           LFUNCVAL( lcpu_watchdog_remove  ) },
+
+    { LNILKEY, LNILVAL }
+};
 
 static const LUA_REG_TYPE lcpu_map[] = {
     { LSTRKEY( "model" ),                  LFUNCVAL( lcpu_model ) },
@@ -328,6 +379,8 @@ static const LUA_REG_TYPE lcpu_map[] = {
     { LSTRKEY( "temperature" ),            LFUNCVAL( lcpu_temperature ) },
     { LSTRKEY( "speed" ),                  LFUNCVAL( lcpu_speed ) },
     { LSTRKEY( "backtrace" ),              LFUNCVAL( lcpu_backtrace ) },
+
+    { LSTRKEY( "watchdog" ),               LROVAL  ( cpu_watchdog_map ) },
 
     { LSTRKEY( "RESET_POWERON" ),          LINTVAL( POWERON_RESET          ) },
     { LSTRKEY( "RESET_SW" ),               LINTVAL( SW_RESET               ) },
@@ -365,12 +418,7 @@ static const LUA_REG_TYPE lcpu_map[] = {
 };
 
 LUALIB_API int luaopen_cpu( lua_State *L ) {
-#if !LUA_USE_ROTABLE
-    luaL_newlib(L, cpu);
-    return 1;
-#else
-    return 0;
-#endif
+    LNEWLIB(L, cpu);
 }
 
 MODULE_REGISTER_ROM(CPU, cpu, lcpu_map, luaopen_cpu, 1);

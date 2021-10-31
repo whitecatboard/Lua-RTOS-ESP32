@@ -113,7 +113,7 @@ CallInfo *luaE_extendCI (lua_State *L) {
   ci->next = NULL;
   L->nci++;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   ci->bctx = NULL;
 #endif
 
@@ -131,7 +131,7 @@ void luaE_freeCI (lua_State *L) {
   while ((ci = next) != NULL) {
     next = ci->next;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
     BlockContext *bctx = ci->bctx;
     while (bctx) {
         bctx = bctx->previous;
@@ -153,7 +153,7 @@ void luaE_shrinkCI (lua_State *L) {
   CallInfo *next2;  /* next's next */
   /* while there are two nexts */
   while (ci->next != NULL && (next2 = ci->next->next) != NULL) {
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
       BlockContext *bctx = ci->next->bctx;
     while (bctx) {
         bctx = bctx->previous;
@@ -184,7 +184,7 @@ static void stack_init (lua_State *L1, lua_State *L) {
   ci->next = ci->previous = NULL;
   ci->callstatus = 0;
   ci->func = L1->top;
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   ci->bctx = NULL;
 #endif
   setnilvalue(L1->top++);  /* 'function' entry for this 'ci' */
