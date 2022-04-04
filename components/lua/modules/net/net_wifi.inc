@@ -518,6 +518,27 @@ static int lwifi_smartconfig(lua_State* L) {
     return 0;
 }
 
+static int lwifi_hostname(lua_State* L) {
+    driver_error_t *error;
+    const char *hostname = luaL_optstring( L, 1, NULL );
+
+    if (NULL != hostname) {
+        if ((error = wifi_set_hostname(hostname))) {
+            return luaL_driver_error(L, error);
+        }
+
+        return 0;
+    }
+
+    hostname = NULL;
+    if ((error = wifi_get_hostname(&hostname))) {
+        return luaL_driver_error(L, error);
+    }
+
+    lua_pushstring(L, hostname);
+    return 1;
+}
+
 
 static const LUA_REG_TYPE wifi_auth_map[] = {
     { LSTRKEY( "OPEN"         ), LINTVAL( WIFI_AUTH_OPEN ) },
@@ -559,6 +580,7 @@ static const LUA_REG_TYPE wifi_map[] = {
     { LSTRKEY( "start"      ),     LFUNCVAL( lwifi_start            ) },
     { LSTRKEY( "stop"       ),     LFUNCVAL( lwifi_stop             ) },
     { LSTRKEY( "stat"       ),     LFUNCVAL( lwifi_stat             ) },
+    { LSTRKEY( "hostname"  ),      LFUNCVAL( lwifi_hostname         ) },
 #if CONFIG_ESP32_WIFI_NVS_ENABLED
     // wps ssid+auth can only be stored to nvs
     // so if nvs is disabled, wps would have to be repeated on every boot

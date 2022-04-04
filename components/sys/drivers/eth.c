@@ -302,4 +302,18 @@ driver_error_t *eth_stat(ifconfig_t *info) {
     return NULL;
 }
 
+driver_error_t *eth_set_hostname(const char *hostname) {
+    esp_err_t ret = tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_ETH, hostname);
+    if (ESP_ERR_TCPIP_ADAPTER_INVALID_PARAMS == ret) return driver_error(ETH_DRIVER, ETH_ERR_INVALID_ARGUMENT, NULL);
+    if (ESP_ERR_TCPIP_ADAPTER_IF_NOT_READY   == ret) return driver_error(ETH_DRIVER, ETH_ERR_NOT_START, NULL);
+    return NULL;
+}
+
+driver_error_t *eth_get_hostname(const char **hostname) {
+    esp_err_t ret = tcpip_adapter_get_hostname(TCPIP_ADAPTER_IF_ETH, hostname);
+    if (ESP_ERR_TCPIP_ADAPTER_INVALID_PARAMS == ret) return driver_error(ETH_DRIVER, ETH_ERR_INVALID_ARGUMENT, NULL);
+    if (ESP_ERR_TCPIP_ADAPTER_IF_NOT_READY   == ret) return driver_error(ETH_DRIVER, ETH_ERR_NOT_START, NULL);
+    return NULL;
+}
+
 #endif
