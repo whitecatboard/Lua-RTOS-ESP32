@@ -480,6 +480,12 @@ static void spi_setup_bus(uint8_t unit, uint8_t flags) {
 int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t speed, uint8_t flags, int *deviceid) {
     spi_lock(unit);
 
+    // TO DO:
+    //
+    // When 2 devices coexist on the same SPI unit, things don't work as expected.
+    // This feature is temporarily disabled.
+    flags &= ~SPI_FLAG_NO_DMA;
+
     // If SPI unit PIN map are not the native pins the max speed must be 26 Mhz
     if ((speed > 26000000) && (!spi_use_native_pins(unit))) {
         speed = 26000000;
@@ -543,7 +549,7 @@ int spi_ll_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode, uint32_t
     }
 
     // Setup CS
-    if (!(flags & SPI_FLAG_CS_AUTO)) {
+    if (cs >= 0 && !(flags & SPI_FLAG_CS_AUTO)) {
         gpio_pin_output(cs);
         gpio_ll_pin_set(cs);
     }
@@ -767,7 +773,7 @@ void IRAM_ATTR spi_ll_select(int deviceid) {
     spi_bus[spi_idx(unit)].last_device = deviceid;
     spi_bus[spi_idx(unit)].selected_device = deviceid;
 
-    if (!(spi_bus[spi_idx(unit)].device[device].flags & SPI_FLAG_CS_AUTO)) {
+    if (spi_bus[spi_idx(unit)].device[device].cs >= 0 && !(spi_bus[spi_idx(unit)].device[device].flags & SPI_FLAG_CS_AUTO)) {
         // Select device
         gpio_ll_pin_clr(spi_bus[spi_idx(unit)].device[device].cs);
     }
@@ -777,7 +783,7 @@ void IRAM_ATTR spi_ll_deselect(int deviceid) {
     int unit = (deviceid & 0xff00) >> 8;
     int device = (deviceid & 0x00ff);
 
-    if (!(spi_bus[spi_idx(unit)].device[device].flags & SPI_FLAG_CS_AUTO)) {
+    if (spi_bus[spi_idx(unit)].device[device].cs >= 0 && !(spi_bus[spi_idx(unit)].device[device].flags & SPI_FLAG_CS_AUTO)) {
         // Deselect device
         gpio_ll_pin_set(spi_bus[spi_idx(unit)].device[device].cs);
     }
@@ -894,12 +900,14 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode,
             cs = CONFIG_LUA_RTOS_SPI3_CS;
         }
 
+        /* -1 is a valid configuration which signifies that CS should not be used
         if (cs == -1) {
             return driver_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "default cs is not set in kconfig");
         }
+        */
     }
 
-    if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << cs))) {
+    if (cs >= 0 && !(GPIO_ALL_OUT & (GPIO_BIT_MASK << cs))) {
         return driver_error(SPI_DRIVER, SPI_ERR_PIN_NOT_ALLOWED, "cs, selected pin is not valid for output");
     }
 
@@ -916,7 +924,7 @@ driver_error_t *spi_setup(uint8_t unit, uint8_t master, int8_t cs, uint8_t mode,
     }
 
     driver_unit_lock_error_t *lock_error = NULL;
-    if ((lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, cs, flags, "CS"))) {
+    if (cs >= 0 && (lock_error = driver_lock(SPI_DRIVER, unit, GPIO_DRIVER, cs, flags, "CS"))) {
         return driver_lock_error(SPI_DRIVER, lock_error);
     }
 #endif
