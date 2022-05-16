@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -81,6 +81,7 @@ static const command_t command[] = {
     {"reboot", "os", "exit", 0, 0, NULL},
     {"ls", "os", "ls", 0, 1, "ls [pattern]"},
     {"dir", "os", "ls", 0, 1, "dir [pattern]"},
+    {"df", "os", "df", 0, 1, "df [target]"},
     {"luac", NULL, "compile", 1, 0, "luac source destination"},
     {"luad", NULL, "decompile", 1, 0, "luad source"},
     {"mkfs", "os", "format", 1, 0, "format path"},

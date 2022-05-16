@@ -855,7 +855,11 @@ init_static(void)
 #ifdef BUFFER_LIST_AGGREGATE_TEST
     /* test buffer_list_aggregate function */
     {
+#if __XTENSA__
+        static const char *const text[] = {
+#else
         static const char *text[] = {
+#endif
             "It was a bright cold day in April, ",
             "and the clocks were striking ",
             "thirteen. ",

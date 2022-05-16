@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -62,6 +62,7 @@ DRIVER_REGISTER_BEGIN(SOUND,sound,0,NULL,NULL);
 	DRIVER_REGISTER_ERROR(SOUND, sound, InvalidPin, "invalid pin", SOUND_ERR_INVALID_PIN);
 	DRIVER_REGISTER_ERROR(SOUND, sound, InvalidVolume, "invalid volume", SOUND_ERR_NO_INVALID_VOLUME);
 	DRIVER_REGISTER_ERROR(SOUND, sound, InvalidSampleRate, "invalid sample rate", SOUND_ERR_INVALID_SAMPLE_RATE);
+	DRIVER_REGISTER_ERROR(SOUND, sound, InvalidDacDevice, "invalid dac device", SOUND_ERR_INVALID_DAC_DEVICE);
 DRIVER_REGISTER_END(SOUND,sound,0,NULL,NULL);
 
 static int whole_duration;

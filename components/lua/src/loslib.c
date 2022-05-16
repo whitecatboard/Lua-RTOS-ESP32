@@ -534,6 +534,7 @@ static const LUA_REG_TYPE syslib[] =
   { LSTRKEY( "bootcount" ),   LFUNCVAL( os_bootcount ) },
   { LSTRKEY( "flashEUI" ),    LFUNCVAL( os_flash_unique_id ) },
   { LSTRKEY( "edit" ),        LFUNCVAL( os_edit ) },
+  { LSTRKEY( "df" ),          LFUNCVAL( os_df ) },
 
   { LSTRKEY( "LOG_INFO" ),    LINTVAL( LOG_INFO    ) },
   { LSTRKEY( "LOG_EMERG" ),   LINTVAL( LOG_EMERG   ) },

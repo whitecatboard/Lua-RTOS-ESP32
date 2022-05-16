@@ -324,6 +324,18 @@
         "image": "http://git.whitecatboard.org/ESP32-EVB.png"
     },
     {
+        "id": "TRAVIS-ESP32-EVB-OTA",
+        "description": "TRAVIS on Olimex ESP32-EVB with OTA",
+        "manufacturer": "OTAlimex",
+        "brand": "",
+        "type": "ESP32-EVB",
+        "subtype": "OTA",
+        "filesystem": "default",
+        "usb_vid_pid": "1A86:7523",
+        "usb_port_exp": "",
+        "image": "http://git.whitecatboard.org/ESP32-EVB.png"
+    },
+    {
         "id": "DOIT-ESP32-DEVKIT-V1",
         "description": "DOIT ESP32 DEVKIT V1",
         "manufacturer": "doit.am",
@@ -430,6 +442,30 @@
         "usb_vid_pid": "10C4:EA60",
         "usb_port_exp": "",
         "image": "https://www.m5stack.com/assets/images/p_core.png"
+    },
+    {
+        "id": "TTGO-LORA32",
+        "description": "TTGO Lora32 without OLED",
+        "manufacturer": "TTGO",
+        "brand": "",
+        "type": "TTGO-LORA32",
+        "subtype": "",
+        "filesystem": "default",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "image": ""
+    },
+    {
+        "id": "TTGO-LORA32-OTA",
+        "description": "TTGO Lora32 without OLED with OTA",
+        "manufacturer": "TTGO",
+        "brand": "",
+        "type": "TTGO-LORA32-OTA",
+        "subtype": "",
+        "filesystem": "default",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "image": ""
     },
     {
         "id": "GENERIC",

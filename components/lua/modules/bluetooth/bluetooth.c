@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -242,13 +242,22 @@ static int lbt_scan_stop( lua_State* L ) {
 
 static const LUA_REG_TYPE lbt_service[] = {
 	{ LSTRKEY( "eddystone" ), LROVAL ( eddystone_map ) },
+	{ LNILKEY, LNILVAL } 
 };
 
 static const LUA_REG_TYPE lbt_mode[] = {
-	{ LSTRKEY( "Idle"       ), LINTVAL( ((bt_mode_t)Idle)    ) },
-	{ LSTRKEY( "BLE"        ), LINTVAL( ((bt_mode_t)BLE)     ) },
-	{ LSTRKEY( "Classic"    ), LINTVAL( ((bt_mode_t)Classic) ) },
-	{ LSTRKEY( "Dual"       ), LINTVAL( ((bt_mode_t)Dual)    ) },
+
+	{ LSTRKEY( "Idle"       ), LINTVAL( Idle    ) },
+	{ LSTRKEY( "BLE"        ), LINTVAL( BLE     ) },
+	{ LSTRKEY( "Classic"    ), LINTVAL( Classic ) },
+	{ LSTRKEY( "Dual"       ), LINTVAL( Dual    ) },
+
+
+
+
+
+
+	{ LNILKEY, LNILVAL } 
 };
 
 static const LUA_REG_TYPE lbt_adv_type[] = {
@@ -257,6 +266,7 @@ static const LUA_REG_TYPE lbt_adv_type[] = {
 	{ LSTRKEY( "ADV_DIRECT_IND_LOW"   ), LINTVAL( ADV_DIRECT_IND_LOW  ) },
 	{ LSTRKEY( "ADV_NONCONN_IND" 	 ), LINTVAL( ADV_NONCONN_IND 	 ) },
 	{ LSTRKEY( "ADV_SCAN_IND"    	 ), LINTVAL( ADV_SCAN_IND	     ) },
+	{ LNILKEY, LNILVAL } 
 };
 
 static const LUA_REG_TYPE lbt_own_addr_type[] = {
@@ -264,11 +274,13 @@ static const LUA_REG_TYPE lbt_own_addr_type[] = {
 	{ LSTRKEY( "Random"  		 ), LINTVAL( OwnRandom        ) },
 	{ LSTRKEY( "PrivatePublic"   ), LINTVAL( OwnPrivatePublic ) },
 	{ LSTRKEY( "PrivateRandom"   ), LINTVAL( OwnPrivateRandom ) },
+	{ LNILKEY, LNILVAL } 
 };
 
 static const LUA_REG_TYPE lbt_peer_addr_type[] = {
 	{ LSTRKEY( "Public"          ), LINTVAL( PeerPublic       ) },
 	{ LSTRKEY( "Random"  		 ), LINTVAL( PeerRandom       ) },
+	{ LNILKEY, LNILVAL } 
 };
 
 static const LUA_REG_TYPE lbt_adv_channel_map[] = {
@@ -276,6 +288,7 @@ static const LUA_REG_TYPE lbt_adv_channel_map[] = {
 	{ LSTRKEY( "38"              ), LINTVAL( Chann38       ) },
 	{ LSTRKEY( "39"              ), LINTVAL( Chann39       ) },
 	{ LSTRKEY( "All"             ), LINTVAL( AllChann      ) },
+	{ LNILKEY, LNILVAL } 
 };
 
 static const LUA_REG_TYPE lbt_adv_filter_policy[] = {
@@ -283,6 +296,7 @@ static const LUA_REG_TYPE lbt_adv_filter_policy[] = {
 	{ LSTRKEY( "ConnAllScanWhite"   ), LINTVAL( ConnAllScanWhite   ) },
 	{ LSTRKEY( "ConnWhiteScanAll"   ), LINTVAL( ConnWhiteScanAll   ) },
 	{ LSTRKEY( "ConnWhiteScanWhite" ), LINTVAL( ConnWhiteScanWhite ) },
+	{ LNILKEY, LNILVAL } 
 };
 
 static const LUA_REG_TYPE lbt_advertise_map[] = {

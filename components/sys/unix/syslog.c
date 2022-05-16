@@ -2,10 +2,10 @@
  * Copyright (c) 1983, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
- * Copyright (C) 2015 - 2018
+ * Copyright (C) 2015 - 2020
  * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * 
- * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
+ * Author: Jaume Olivï¿½ (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *         Thomas E. Horner (whitecatboard.org@horner.it)
  * 
  * All rights reserved.
@@ -247,7 +247,7 @@ static void reconnect_syslog() {
 	esp_log_set_vprintf(vprintf);
 
 	if (NETWORK_AVAILABLE()) {
-		if (!logHost) logHost = logHostDefault;
+		if (!logHost) logHost = (char*)logHostDefault;
 		if (0 == strlen(logHost) || 0 == strcmp(logHost,"0.0.0.0"))
 			return; //user wants to disable remote logging
 

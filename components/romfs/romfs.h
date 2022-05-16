@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -86,7 +86,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-#include <machine/endian.h>
+#include <endian.h>
 
 #if (BYTE_ORDER == BIG_ENDIAN)
 #define htole16(x) __builtin_bswap16(x)

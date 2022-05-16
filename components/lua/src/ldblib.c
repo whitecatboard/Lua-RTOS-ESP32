@@ -452,12 +452,7 @@ static const LUA_REG_TYPE dblib[] = {
 
 
 LUAMOD_API int luaopen_debug (lua_State *L) {
-#if !LUA_USE_ROTABLE
-  luaL_newlib(L, dblib);
-  return 1;
-#else
-  return 0;
-#endif
+  LNEWLIB(L, dblib);
 }
 
 MODULE_REGISTER_ROM(DEBUG, debug, dblib, luaopen_debug, 1);

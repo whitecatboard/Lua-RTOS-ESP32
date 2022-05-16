@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -565,6 +565,19 @@ int vfs_romfs_umount(const char *target) {
 	esp_vfs_unregister("/romfs");
 
     syslog(LOG_INFO, "romfs unmounted");
+
+    return 0;
+}
+
+int vfs_romfs_fsstat(const char *target, u32_t *total, u32_t *used) {
+
+    if (total) {
+      *total = 0;
+    }
+
+    if (used) {
+      *used = 0;
+    }
 
     return 0;
 }

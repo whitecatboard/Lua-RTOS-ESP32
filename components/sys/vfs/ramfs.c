@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -614,6 +614,19 @@ int vfs_ramfs_umount(const char *target) {
 int vfs_ramfs_format(const char *target) {
     vfs_ramfs_umount(target);
     vfs_ramfs_mount(target);
+
+    return 0;
+}
+
+int vfs_ramfs_fsstat(const char *target, u32_t *total, u32_t *used) {
+
+    if (total) {
+      *total = fs.size;
+    }
+
+    if (used) {
+      *used = fs.current_size;
+    }
 
     return 0;
 }

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -53,6 +53,7 @@ typedef struct {
     lua_State *TL; // Callback Lua thread
     int callback;  // Callback reference (in parent thread)
     int lthread;   // Lua thread reference (in parent thread)
+    int arg;       // Argument reference (in parent thread)
 } lua_callback_t;
 
 /**
@@ -83,9 +84,19 @@ lua_State *luaS_callback_state(lua_callback_t *callback);
  *
  * @param callback A pointer to a callback handler created with the luaS_callback_create
  *                 function.
- * @param args Number of argument of the function.
+ * @param args Number of arguments of the function.
  */
 int luaS_callback_call(lua_callback_t *callback, int args);
+
+/**
+ * @brief Call the callback's lua function.
+ *
+ * @param callback A pointer to a callback handler created with the luaS_callback_create
+ *                 function.
+ * @param args Number of arguments of the function.
+ * @param rets Number of return values of the function.
+ */
+int luaS_callback_call_return(lua_callback_t *callback, int args, int rets);
 
 /**
  * @brief Destroy a callback.

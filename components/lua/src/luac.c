@@ -367,7 +367,7 @@ static void PrintCode(const Proto* f)
     if (getCMode(o)!=OpArgN) printf(" %d",ISK(c) ? (MYK(INDEXK(c))) : c);
     break;
    case iABx:
-#if !LUA_USE_ROTABLE
+#if !LUA_USE_BLOCK_CONTEXT
     printf("%d",a);
     if (getBMode(o)==OpArgK) printf(" %d",MYK(bx));
     if (getBMode(o)==OpArgU) printf(" %d",bx);
@@ -394,7 +394,7 @@ static void PrintCode(const Proto* f)
    case OP_LOADK:
     printf("\t; "); PrintConstant(f,bx);
     break;
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
    case OP_BLOCKS:
    case OP_BLOCKE:
     printf("\t; ");

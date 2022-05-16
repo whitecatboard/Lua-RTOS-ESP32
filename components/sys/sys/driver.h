@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -94,6 +94,7 @@ typedef void *device_t;
 #define RMT_DRIVER_ID      34
 #define RTC_DRIVER_ID      35
 #define SOUND_DRIVER_ID    37
+#define HTTP_DRIVER_ID     38
 
 #define GPIO_DRIVER driver_get_by_name("gpio")
 #define UART_DRIVER driver_get_by_name("uart")
@@ -130,6 +131,7 @@ typedef void *device_t;
 #define RMT_DRIVER driver_get_by_name("rmt")
 #define RTC_DRIVER driver_get_by_name("rtc")
 #define SOUND_DRIVER driver_get_by_name("sound")
+#define HTTP_DRIVER driver_get_by_name("http")
 
 #define DRIVER_EXCEPTION_BASE(n) (n << 24)
 

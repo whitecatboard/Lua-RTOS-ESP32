@@ -102,7 +102,7 @@ typedef enum {
     T_UNKNOWN
 } json_token_type_t;
 
-static const char *json_token_type_name[] = {
+static const char *const json_token_type_name[] = {
     "T_OBJ_BEGIN",
     "T_OBJ_END",
     "T_ARR_BEGIN",
@@ -161,7 +161,7 @@ typedef struct {
     int string_len;
 } json_token_t;
 
-static const char *char2escape[256] = {
+static const char *const char2escape[256] = {
     "\\u0000", "\\u0001", "\\u0002", "\\u0003",
     "\\u0004", "\\u0005", "\\u0006", "\\u0007",
     "\\b", "\\t", "\\n", "\\u000b",
@@ -252,7 +252,7 @@ static int json_integer_option(lua_State *l, int optindex, int *setting,
 static int json_enum_option(lua_State *l, int optindex, int *setting,
                             const char **options, int bool_true)
 {
-    static const char *bool_options[] = { "off", "on", NULL };
+    static const char *const bool_options[] = { "off", "on", NULL };
 
     if (!options) {
         options = bool_options;
@@ -350,7 +350,7 @@ void json_verify_invalid_number_setting(lua_State *l, int *setting)
 
 static int json_cfg_encode_invalid_numbers(lua_State *l)
 {
-    static const char *options[] = { "off", "on", "null", NULL };
+    static const char *const options[] = { "off", "on", "null", NULL };
     json_config_t *cfg = json_arg_init(l, 1);
 
     json_enum_option(l, 1, &cfg->encode_invalid_numbers, options, 1);

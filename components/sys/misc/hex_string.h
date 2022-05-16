@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -50,7 +50,9 @@
 #ifndef _LORA_COMMON_H
 #define _LORA_COMMON_H
 
-void hex_string_to_val(char *hbuff, char *vbuff, int len, int rev);
+void hex_string_to_val(char *hbuff, char *vbuff, int len, int reverse);
+
 void val_to_hex_string(char *hbuff, char *vbuff, int len, int reverse);
+void val_to_hex_string_caps(char *hbuff, char *vbuff, int len, int reverse, int caps, int terminate);
 
 #endif /* _LORA_COMMON_H */

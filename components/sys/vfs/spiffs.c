@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -1321,6 +1321,17 @@ int vfs_spiffs_format(const char *target) {
     if (SPIFFS_close(&fs, fd) < 0) {
         vfs_spiffs_umount(target);
         syslog(LOG_ERR, "spiffs can't create root folder (%s)",
+                strerror(spiffs_result(fs.err_code)));
+        return -1;
+    }
+
+    return 0;
+}
+
+int vfs_spiffs_fsstat(const char *target, u32_t *total, u32_t *used) {
+
+    if (SPIFFS_info(&fs, total, used) != SPIFFS_OK) {
+        syslog(LOG_ERR, "spiffs get fs info of '%s' (%s)", target,
                 strerror(spiffs_result(fs.err_code)));
         return -1;
     }

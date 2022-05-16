@@ -5,6 +5,8 @@
 #include "lstate.h"
 #include "llex.h"
 
+#if LUA_USE_BLOCK_CONTEXT
+
 #define luaVB_BLOCK_START_MSG       1
 #define luaVB_BLOCK_END_MSG         2
 #define luaVB_BLOCK_ERR_MSG         3
@@ -25,5 +27,7 @@ void luaXB_closeAnnotation(LexState *ls, int i);
 void luaK_emitAnnotation(LexState *ls);
 
 int luaVB_init(lua_State *L);
+
+#endif // LUA_USE_BLOCK_CONTEXT
 
 #endif

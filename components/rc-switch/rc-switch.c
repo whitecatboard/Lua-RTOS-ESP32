@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * Copyright (C) 2015 - 2019, Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.
@@ -215,6 +215,7 @@ void rcswitch_destroy(lua_State *L) {
 	if (rcswitch_initialized != 0) {
 		listen_shutdown = 1;
 		usleep(1000); // 1ms
+		RCSwitch_deinit();
 		rcswitch_initialized = 0;
 	}
 }

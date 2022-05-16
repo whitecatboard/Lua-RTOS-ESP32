@@ -27,7 +27,7 @@
 #include "lstring.h"
 #include "ltable.h"
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
 #define isBlockStart(n) (n->t.token == TK_BLOCK_START)
 #endif
 
@@ -110,7 +110,7 @@ static void check (LexState *ls, int c) {
     error_expected(ls, c);
 }
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
 static int openAnnotation(LexState *ls, expdesc *v) {
     if (ls->t.token == TK_BLOCK_START) {
         v->openAnnotation = ls->t.seminfo.i;
@@ -329,7 +329,7 @@ static void singlevar (LexState *ls, expdesc *var) {
   if (var->k == VVOID) {  /* global name? */
     expdesc key;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
     key.openAnnotation = 0;
     key.closeAnnotation = 0;
 #endif
@@ -632,7 +632,7 @@ static int block_follow (LexState *ls, int withuntil) {
 static void statlist (LexState *ls) {
   /* statlist -> { stat [';'] } */
   while (!block_follow(ls, 1)) {
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
     if (ls->t.token == TK_BLOCK_START) {
       luaK_block_start(ls->fs, ls->t.seminfo.i);
       luaX_next(ls);
@@ -655,7 +655,7 @@ static void fieldsel (LexState *ls, expdesc *v) {
   FuncState *fs = ls->fs;
   expdesc key;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
     key.openAnnotation = 0;
     key.closeAnnotation = 0;
 #endif
@@ -698,7 +698,7 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   int reg = ls->fs->freereg;
   expdesc key, val;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
     key.openAnnotation = 0;
     key.closeAnnotation = 0;
     val.openAnnotation = 0;
@@ -788,7 +788,7 @@ static void constructor (LexState *ls, expdesc *t) {
   cc.na = cc.nh = cc.tostore = 0;
   cc.t = t;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   cc.v.openAnnotation = 0;
   cc.v.closeAnnotation = 0;
   cc.v.annotationLine = 0;
@@ -883,7 +883,7 @@ static void funcargs (LexState *ls, expdesc *f, int line) {
   expdesc args;
   int base, nparams;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   args.openAnnotation = 0;
   args.closeAnnotation = 0;
 #endif
@@ -965,7 +965,7 @@ static void suffixedexp (LexState *ls, expdesc *v) {
   FuncState *fs = ls->fs;
   int line = ls->linenumber;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   line = openAnnotation(ls, v);
 #endif
 
@@ -979,7 +979,7 @@ static void suffixedexp (LexState *ls, expdesc *v) {
       case '[': {  /* '[' exp1 ']' */
         expdesc key;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         key.openAnnotation = 0;
         key.closeAnnotation = 0;
 #endif
@@ -992,7 +992,7 @@ static void suffixedexp (LexState *ls, expdesc *v) {
       case ':': {  /* ':' NAME funcargs */
         expdesc key;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
         key.openAnnotation = 0;
         key.closeAnnotation = 0;
 #endif
@@ -1008,7 +1008,7 @@ static void suffixedexp (LexState *ls, expdesc *v) {
         funcargs(ls, v, line);
         break;
       }
-#if !LUA_USE_ROTABLE
+#if !LUA_USE_BLOCK_CONTEXT
       default: return;
 #else
       default:
@@ -1142,7 +1142,7 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   UnOpr uop;
   enterlevel(ls);
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   int opAnnotation = 0;
   if ((ls->t.token == TK_BLOCK_START) && (getunopr(luaX_lookahead(ls)) != OPR_NOUNOPR)) {
     // Operator is annotated
@@ -1156,7 +1156,7 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
     int line = ls->linenumber;
     luaX_next(ls);
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
    if (opAnnotation != 0) {
         check(ls, TK_BLOCK_END);
         luaX_next(ls);
@@ -1165,7 +1165,7 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
 
     subexpr(ls, v, UNARY_PRIORITY);
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
    if (opAnnotation != 0) {
      luaK_block_start(ls->fs, opAnnotation);
    }
@@ -1173,7 +1173,7 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
 
    luaK_prefix(ls->fs, uop, v, line);
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
    if (opAnnotation != 0) {
      luaK_block_end(ls->fs, opAnnotation);
    }
@@ -1182,7 +1182,7 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   else simpleexp(ls, v);
 
   /* expand while operators have priorities higher than 'limit' */
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   opAnnotation = 0;
   if ((ls->t.token == TK_BLOCK_START) && (getbinopr(luaX_lookahead(ls)) != OPR_NOBINOPR)) {
     // Operator is annotated
@@ -1194,7 +1194,7 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   while (op != OPR_NOBINOPR && priority[op].left > limit) {
     expdesc v2;
 
-    #if LUA_USE_ROTABLE
+    #if LUA_USE_BLOCK_CONTEXT
     v2.openAnnotation = 0;
     v2.closeAnnotation = 0;
     #endif
@@ -1203,7 +1203,7 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
     int line = ls->linenumber;
     luaX_next(ls);
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
    if (opAnnotation != 0) {
         check(ls, TK_BLOCK_END);
         luaX_next(ls);
@@ -1214,7 +1214,7 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
     /* read sub-expression with higher priority */
     nextop = subexpr(ls, &v2, priority[op].right);
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
    if (opAnnotation != 0) {
      luaK_block_start(ls->fs, opAnnotation);
    }
@@ -1222,7 +1222,7 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
 
     luaK_posfix(ls->fs, op, v, &v2, line);
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
    if (opAnnotation != 0) {
      luaK_block_end(ls->fs, opAnnotation);
 
@@ -1311,7 +1311,7 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
 static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
   expdesc e;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
    e.openAnnotation = 0;
    e.closeAnnotation = 0;
 #endif
@@ -1320,7 +1320,7 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
   if (testnext(ls, ',')) {  /* assignment -> ',' suffixedexp assignment */
     struct LHS_assign nv;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
     nv.v.openAnnotation = 0;
     nv.v.closeAnnotation = 0;
 #endif
@@ -1354,7 +1354,7 @@ static int cond (LexState *ls) {
   /* cond -> exp */
   expdesc v;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   v.openAnnotation = 0;
   v.closeAnnotation = 0;
 #endif
@@ -1463,7 +1463,7 @@ static int exp1 (LexState *ls) {
   expdesc e;
   int reg;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   e.openAnnotation = 0;
   e.closeAnnotation = 0;
 #endif
@@ -1532,7 +1532,7 @@ static void forlist (LexState *ls, TString *indexname) {
   int line;
   int base = fs->freereg;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
    e.openAnnotation = 0;
    e.closeAnnotation = 0;
 #endif
@@ -1580,7 +1580,7 @@ static void test_then_block (LexState *ls, int *escapelist) {
   expdesc v;
   int jf;  /* instruction to skip 'then' code (if condition is false) */
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
    v.openAnnotation = 0;
    v.closeAnnotation = 0;
 #endif
@@ -1631,7 +1631,7 @@ static void ifstat (LexState *ls, int line) {
 static void localfunc (LexState *ls) {
   expdesc b;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
    b.openAnnotation = 0;
    b.closeAnnotation = 0;
 #endif
@@ -1651,7 +1651,7 @@ static void localstat (LexState *ls) {
   int nexps;
   expdesc e;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   e.openAnnotation = 0;
   e.closeAnnotation = 0;
 #endif
@@ -1690,7 +1690,7 @@ static void funcstat (LexState *ls, int line) {
   int ismethod;
   expdesc v, b;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
    v.openAnnotation = 0;
    v.closeAnnotation = 0;
    b.openAnnotation = 0;
@@ -1709,7 +1709,7 @@ static void exprstat (LexState *ls) {
   FuncState *fs = ls->fs;
   struct LHS_assign v;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
     v.v.openAnnotation = 0;
     v.v.closeAnnotation = 0;
 #endif
@@ -1732,7 +1732,7 @@ static void retstat (LexState *ls) {
   expdesc e;
   int first, nret;  /* registers with returned values */
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
    e.openAnnotation = 0;
    e.closeAnnotation = 0;
 #endif
@@ -1769,7 +1769,7 @@ static void statement (LexState *ls) {
   int line = ls->linenumber;  /* may be needed for error messages */
   enterlevel(ls);
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   while (ls->t.token == TK_BLOCK_START) {
     //openAnnotation = ls->t.seminfo.i;
     luaK_block_start(ls->fs, ls->t.seminfo.i);
@@ -1831,7 +1831,7 @@ static void statement (LexState *ls) {
       gotostat(ls, luaK_jump(ls->fs));
       break;
     }
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
     case TK_BLOCK_END: {
       //openAnnotation = ls->t.seminfo.i;
       luaK_block_end(ls->fs, ls->t.seminfo.i);
@@ -1849,7 +1849,7 @@ static void statement (LexState *ls) {
              ls->fs->freereg >= ls->fs->nactvar);
   ls->fs->freereg = ls->fs->nactvar;  /* free registers */
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   while (ls->t.token == TK_BLOCK_END) {
     luaK_block_end(ls->fs, ls->t.seminfo.i);
     luaX_next(ls);
@@ -1870,7 +1870,7 @@ static void mainfunc (LexState *ls, FuncState *fs) {
   BlockCnt bl;
   expdesc v;
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
    v.openAnnotation = 0;
    v.closeAnnotation = 0;
 #endif
