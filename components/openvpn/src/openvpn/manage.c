@@ -2722,7 +2722,11 @@ management_set_state(struct management *man,
 static bool
 env_filter_match(const char *env_str, const int env_filter_level)
 {
+#if __XTENSA__
+    static const char *const env_names[] = {
+#else
     static const char *env_names[] = {
+#endif
         "username=",
         "password=",
         "X509_0_CN=",

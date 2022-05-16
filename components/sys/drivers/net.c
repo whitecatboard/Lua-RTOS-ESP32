@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -529,6 +529,8 @@ driver_error_t *net_ota(const char *server, const char *project, int verify, int
         }
 
         printf("\rWriting chunk at 0x%08x... (%i %%)\r\n", address, 100 );
+
+        esp_task_wdt_reset();
 
         esp_task_wdt_reset();
 

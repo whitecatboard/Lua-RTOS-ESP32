@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -147,16 +147,20 @@ void *lthread_start_task(void *arg) {
 	// Execute thread function
 	int status = lua_pcall(thread->L, 0, 0, 0);
 	if (status != LUA_OK) {
+#if LUA_USE_BLOCK_CONTEXT
 	    BlockContext *bctx;
 	    if ((bctx = luaVB_getBlock(thread->L, NULL)) != NULL) {
 			lua_pop(thread->L, 1);
 	    } else {
+#endif // LUA_USE_BLOCK_CONTEXT
 			// If error have not been raised inside a block execution context, write it
 			// to the console
 			const char *msg = lua_tostring(thread->L, -1);
 			lua_writestringerror("%s\n", msg);
 			lua_pop(thread->L, 1);
+#if LUA_USE_BLOCK_CONTEXT
 	    }
+#endif //LUA_USE_BLOCK_CONTEXT
 
 		pthread_exit(NULL);
 	}

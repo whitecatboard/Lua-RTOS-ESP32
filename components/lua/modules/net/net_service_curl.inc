@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 - 2018, Boris Lovosevic (loboris@gmail.com; https://github.com/loboris)
+ * Copyright (C) 2015 - 2020, Boris Lovosevic (loboris@gmail.com; https://github.com/loboris)
  *
  * All rights reserved.
  *

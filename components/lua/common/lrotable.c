@@ -201,7 +201,7 @@ static void luaR_next_helper(lua_State *L, const luaR_entry *pentries, int pos,
 		if (pentries[pos].key.type == LUA_TSTRING)
 			setsvalue(L, key, luaS_newro( L, pentries[pos].key.id.strkey))
 		else
-			setnvalue(key, (lua_Number )pentries[pos].key.id.numkey)
+			setfltvalue(key, (lua_Number )pentries[pos].key.id.numkey)
 		setobj2s(L, val, &pentries[pos].value)
 		;
 	}

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -54,6 +54,33 @@
 #include <sys/driver.h>
 
 #define CAN_NUM_FILTERS 10
+
+/**
+ * \brief CAN frame type (standard/extended)
+ */
+typedef enum {
+	CAN_frame_std=0, 						/**< Standard frame, using 11 bit identifer. */
+	CAN_frame_ext=1 						/**< Extended frame, using 29 bit identifer. */
+}CAN_frame_format_t;
+
+/**
+ * \brief CAN RTR
+ */
+typedef enum {
+	CAN_no_RTR=0, 							/**< No RTR frame. */
+	CAN_RTR=1 								/**< RTR frame. */
+}CAN_RTR_t;
+
+/** \brief Frame information record type */
+typedef union{uint32_t U;					/**< \brief Unsigned access */
+	 struct {
+		uint8_t 			DLC:4;        	/**< \brief [3:0] DLC, Data length container */
+		unsigned int 		unknown_2:2;    /**< \brief \internal unknown */
+		CAN_RTR_t 			RTR:1;          /**< \brief [6:6] RTR, Remote Transmission Request */
+		CAN_frame_format_t 	FF:1;           /**< \brief [7:7] Frame Format, see# CAN_frame_format_t*/
+		unsigned int 		reserved_24:24;	/**< \brief \internal Reserved */
+	} B;
+} CAN_FIR_t;
 
 typedef struct {
 	int32_t fromID;
@@ -117,21 +144,28 @@ struct can_frame {
 #endif
 
 // CAN errors
-#define CAN_ERR_NOT_ENOUGH_MEMORY           	(DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  0)
-#define CAN_ERR_INVALID_FRAME_LENGTH			(DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  1)
-#define CAN_ERR_INVALID_UNIT					(DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  2)
-#define CAN_ERR_NO_MORE_FILTERS_ALLOWED		(DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  3)
-#define CAN_ERR_INVALID_FILTER			    (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  4)
-#define CAN_ERR_IS_NOT_SETUP		   	    		(DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  5)
-#define CAN_ERR_CANT_START		   	    		(DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  6)
-#define CAN_ERR_GW_NOT_STARTED				(DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  7)
+#define CAN_ERR_NOT_ENOUGH_MEMORY         (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  0)
+#define CAN_ERR_INVALID_FRAME_LENGTH      (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  1)
+#define CAN_ERR_INVALID_UNIT              (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  2)
+#define CAN_ERR_NO_MORE_FILTERS_ALLOWED   (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  3)
+#define CAN_ERR_INVALID_FILTER            (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  4)
+#define CAN_ERR_IS_NOT_SETUP              (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  5)
+#define CAN_ERR_CANT_START                (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  6)
+#define CAN_ERR_GW_NOT_STARTED            (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  7)
+//#define CAN_ERR_CANT_INIT               (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  0)
+#define CAN_ERR_INVALID_ARGUMENT          (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  8)
+#define CAN_ERR_NOT_SUPPORT               (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) |  9)
+#define CAN_ERR_TRANSMIT_FAIL             (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) | 10)
+#define CAN_ERR_INVALID_STATE             (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) | 11)
+#define CAN_ERR_TRANSMIT_TIMEOUT          (DRIVER_EXCEPTION_BASE(CAN_DRIVER_ID) | 12)
 
 extern const int can_errors;
 extern const int can_error_map;
 
+driver_error_t *can_check_error(esp_err_t error);
 driver_error_t *can_setup(int32_t unit, uint32_t speed, uint16_t rx_size);
 driver_error_t *can_tx(int32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t *data, uint8_t len);
-driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_t *data, uint8_t *len);
+driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_t *data, uint8_t *len, uint32_t timeout);
 driver_error_t *can_add_filter(int32_t unit, int32_t fromId, int32_t toId);
 driver_error_t *can_remove_filter(int32_t unit, int32_t fromId, int32_t toId);
 driver_error_t *can_gateway_start(int32_t unit, uint32_t speed, int32_t port);

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -39,7 +39,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Lua RTOS, Lua CPU helper functions for throw an error from a driver error
+ * Lua RTOS, Lua helper functions for throw an error from a driver error
  *
  */
 
@@ -51,6 +51,7 @@
 #include <stdlib.h>
 
 #include <sys/driver.h>
+#include <sys/memory.h>
 
 int luaL_driver_error(lua_State* L, driver_error_t *error) {
     int ret_val;
@@ -64,6 +65,7 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     // executed.
     const char *msg = NULL;
     const char *ext_msg = NULL;
+    char ext_msg_copy[180];
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     const char *target_name;
     const char *owner_name;
@@ -103,10 +105,22 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     	msg = driver_get_err_msg(error);
 
     	if (error->msg) {
-    		ext_msg = error ->msg;
+    		// As nothing is executed after calling luaL_error we must copy the
+    		// message into a local variable (may be truncated) to ensure that we can
+    		// safely free the message (if it's allocated in the heap) before calling
+    		// luaL_error.
+    		memcpy(ext_msg_copy, error->msg, sizeof(ext_msg_copy));
+    		ext_msg_copy[sizeof(ext_msg_copy) - 1] = '\0';
+    		ext_msg = ext_msg_copy;
     	}
 
     	exception = error->exception;
+
+    	if (memory_check_in_heap((void *)error->msg)) {
+    		free((void *)error->msg);
+    	}
+
+    	free(error);
 
     	if (ext_msg) {
             ret_val = luaL_error(L,
@@ -124,6 +138,8 @@ int luaL_driver_error(lua_State* L, driver_error_t *error) {
     	}
     } else {
     	msg = driver_get_err_msg(error);
+
+    	free(error);
 
     	ret_val = luaL_error(L, msg);
     }

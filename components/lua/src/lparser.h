@@ -65,7 +65,7 @@ typedef struct expdesc {
   } u;
   int t;  /* patch list of 'exit when true' */
   int f;  /* patch list of 'exit when false' */
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   int openAnnotation;
   int closeAnnotation;
   int annotationLine;

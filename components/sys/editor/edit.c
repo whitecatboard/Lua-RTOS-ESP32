@@ -48,7 +48,7 @@
 #include "sys/console.h"
 
 
-#if LUA_USE_ROTABLE
+#if EDITOR_TOGGLE_AUTO_INDENT
 static int auto_indent = 1;
 static int edit_saved = 0;
 #endif
@@ -1437,7 +1437,7 @@ void newline(struct editor *ed) {
   ed->line++;
   p = ed->linepos;
   ed->linepos = next_line(ed, ed->linepos);
-#if LUA_USE_ROTABLE
+#if EDITOR_TOGGLE_AUTO_INDENT
   if (1 == auto_indent) {
 #endif
   for (;;) {
@@ -1449,7 +1449,7 @@ void newline(struct editor *ed) {
       break;
     }
   }
-#if LUA_USE_ROTABLE
+#if EDITOR_TOGGLE_AUTO_INDENT
   }
 #endif
   ed->lastcol = ed->col;
@@ -1732,7 +1732,7 @@ void read_from_stdin(struct editor *ed) {
 void save_editor(struct editor *ed) {
   int rc;
   
-#if LUA_USE_ROTABLE
+#if EDITOR_TOGGLE_AUTO_INDENT
   // even if the editor wasn't dirty, the user would expect the file
   // to exist after pressing CTRL+S then CTRL+Q
   edit_saved = 1;
@@ -1949,7 +1949,7 @@ void help(struct editor *ed) {
   outstr("<backspace>  Delete previous character    Ctrl+F  Find text\r\n");
   outstr("<delete>     Delete current character     Ctrl+G  Find next\r\n"); 
   outstr("Ctrl+<tab>   Next editor                  Ctrl+L  Goto line\r\n");
-#if LUA_USE_ROTABLE
+#if EDITOR_TOGGLE_AUTO_INDENT
   outstr("<tab>        Indent selection             Ctrl+T  Toggle auto-indent\r\n");
   outstr("Shift+<tab>  Unindent selection           Ctrl+Y Help\r\n");
 #else
@@ -2013,7 +2013,7 @@ void edit(struct editor *ed) {
         case ctrl('y'): help(ed); break;
         case ctrl('t'): top(ed, 0); break;
         case ctrl('b'): bottom(ed, 0); break;
-#elif LUA_USE_ROTABLE
+#elif EDITOR_TOGGLE_AUTO_INDENT
         case ctrl('t'): auto_indent = !auto_indent; break;
 #endif
 
@@ -2092,7 +2092,7 @@ int edit_main(int argc, char *argv[]) {
 #ifdef SANOS
   struct term *term;
 #endif
-#if LUA_USE_ROTABLE
+#if EDITOR_TOGGLE_AUTO_INDENT
   auto_indent = 1;
   edit_saved = 0;
 #endif
@@ -2161,5 +2161,11 @@ int edit_main(int argc, char *argv[]) {
 
   setbuf(stdout, NULL);
   //sigprocmask(SIG_SETMASK, &orig_sigmask, NULL);
+#if EDITOR_TOGGLE_AUTO_INDENT
   return (edit_saved>0 ? 0:1);
+#else
+  return 0;
+#endif
+
 }
+

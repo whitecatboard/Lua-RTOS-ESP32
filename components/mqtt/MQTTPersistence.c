@@ -62,6 +62,9 @@ int MQTTPersistence_create(MQTTClient_persistence** persistence, int type, void*
 				if ( pcontext != NULL )
 				{
 					per->context = malloc(strlen(pcontext) + 1);
+#if __XTENSA__
+          if (per->context)
+#endif
 					strcpy(per->context, pcontext);
 				}
 				else
@@ -216,6 +219,9 @@ int MQTTPersistence_restore(Clients *c)
 						Publish* publish = (Publish*)pack;
 						Messages* msg = NULL;
 						char *key = malloc(MESSAGE_FILENAME_LENGTH + 1);
+#if __XTENSA__
+            if (key) {
+#endif
 						sprintf(key, "%s%d", PERSISTENCE_PUBREL, publish->msgId);
 						msg = MQTTProtocol_createMessage(publish, &msg, publish->header.bits.qos, publish->header.bits.retain);
 						if ( c->persistence->pcontainskey(c->phandle, key) == 0 )
@@ -228,6 +234,9 @@ int MQTTPersistence_restore(Clients *c)
 						publish->topic = NULL;
 						MQTTPacket_freePublish(publish);
 						free(key);
+#if __XTENSA__
+            }
+#endif
 						msgs_sent++;
 					}
 					else if ( strstr(msgkeys[i],PERSISTENCE_PUBREL) != NULL )
@@ -235,11 +244,17 @@ int MQTTPersistence_restore(Clients *c)
 						/* orphaned PUBRELs ? */
 						Pubrel* pubrel = (Pubrel*)pack;
 						char *key = malloc(MESSAGE_FILENAME_LENGTH + 1);
+#if __XTENSA__
+            if (key) {
+#endif
 						sprintf(key, "%s%d", PERSISTENCE_PUBLISH_SENT, pubrel->msgId);
 						if ( c->persistence->pcontainskey(c->phandle, key) != 0 )
 							rc = c->persistence->premove(c->phandle, msgkeys[i]);
 						free(pubrel);
 						free(key);
+#if __XTENSA__
+            }
+#endif
 					}
 				}
 				else  /* pack == NULL -> bad persisted record */
@@ -359,6 +374,10 @@ int MQTTPersistence_put(int socket, char* buf0, size_t buf0len, int count,
 		nbufs = 1 + count;
 		lens = (int *)malloc(nbufs * sizeof(int));
 		bufs = (char **)malloc(nbufs * sizeof(char *));
+
+#if __XTENSA__
+    if (key && lens && bufs) {
+#endif
 		lens[0] = (int)buf0len;
 		bufs[0] = buf0;
 		for (i = 0; i < count; i++)
@@ -380,6 +399,9 @@ int MQTTPersistence_put(int socket, char* buf0, size_t buf0len, int count,
 
 		rc = client->persistence->pput(client->phandle, key, nbufs, bufs, lens);
 
+#if __XTENSA__
+    }
+#endif
 		free(key);
 		free(lens);
 		free(bufs);
@@ -407,6 +429,9 @@ int MQTTPersistence_remove(Clients* c, char *type, int qos, int msgId)
 	if (c->persistence != NULL)
 	{
 		char *key = malloc(MESSAGE_FILENAME_LENGTH + 1);
+#if __XTENSA__
+    if (key) {
+#endif
 		if ( (strcmp(type,PERSISTENCE_PUBLISH_SENT) == 0) && qos == 2 )
 		{
 			sprintf(key, "%s%d", PERSISTENCE_PUBLISH_SENT, msgId) ;
@@ -420,6 +445,9 @@ int MQTTPersistence_remove(Clients* c, char *type, int qos, int msgId)
 			rc = c->persistence->premove(c->phandle, key);
 		}
 		free(key);
+#if __XTENSA__
+    }
+#endif
 	}
 
 	FUNC_EXIT_RC(rc);
@@ -500,6 +528,9 @@ int MQTTPersistence_persistQueueEntry(Clients* aclient, MQTTPersistence_qEntry* 
 	lens = (int*)malloc(nbufs * sizeof(int));
 	bufs = malloc(nbufs * sizeof(char *));
 						
+#if __XTENSA__
+  if (lens && bufs) {
+#endif
 	bufs[bufindex] = &qe->msg->payloadlen;
 	lens[bufindex++] = sizeof(qe->msg->payloadlen);
 				
@@ -530,6 +561,9 @@ int MQTTPersistence_persistQueueEntry(Clients* aclient, MQTTPersistence_qEntry* 
 	if ((rc = aclient->persistence->pput(aclient->phandle, key, nbufs, (char**)bufs, lens)) != 0)
 		Log(LOG_ERROR, 0, "Error persisting queue entry, rc %d", rc);
 
+#if __XTENSA__
+  }
+#endif
 	free(lens);
 	free(bufs);
 
@@ -546,9 +580,15 @@ static MQTTPersistence_qEntry* MQTTPersistence_restoreQueueEntry(char* buffer, s
 	
 	FUNC_ENTRY;
 	qe = malloc(sizeof(MQTTPersistence_qEntry));
+#if __XTENSA__
+  if (qe) {
+#endif
 	memset(qe, '\0', sizeof(MQTTPersistence_qEntry));
 	
 	qe->msg = malloc(sizeof(MQTTPersistence_message));
+#if __XTENSA__
+  if (qe->msg) {
+#endif
 	memset(qe->msg, '\0', sizeof(MQTTPersistence_message));
 	
 	qe->msg->payloadlen = *(int*)ptr;
@@ -556,6 +596,9 @@ static MQTTPersistence_qEntry* MQTTPersistence_restoreQueueEntry(char* buffer, s
 	
 	data_size = qe->msg->payloadlen;
 	qe->msg->payload = malloc(data_size);
+#if __XTENSA__
+  if (qe->msg->payload)
+#endif
 	memcpy(qe->msg->payload, ptr, data_size);
 	ptr += data_size;
 	
@@ -573,12 +616,19 @@ static MQTTPersistence_qEntry* MQTTPersistence_restoreQueueEntry(char* buffer, s
 	
 	data_size = (int)strlen(ptr) + 1;	
 	qe->topicName = malloc(data_size);
+#if __XTENSA__
+  if (qe->topicName)
+#endif
 	strcpy(qe->topicName, ptr);
 	ptr += data_size;
 	
 	qe->topicLen = *(int*)ptr;
 	ptr += sizeof(int);
 
+#if __XTENSA__
+  }
+  }
+#endif
 	FUNC_EXIT;
 	return qe;
 }

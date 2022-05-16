@@ -1,80 +1,24 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the <organization> nor the
- *       names of its contributors may be used to endorse or promote products
- *       derived from this software without specific prior written permission.
- *     * The WHITECAT logotype cannot be changed, you can remove it, but you
- *       cannot change it in any way. The WHITECAT logotype is:
- *
  *          /\       /\
  *         /  \_____/  \
  *        /_____________\
  *        W H I T E C A T
  *
- *     * Redistributions in binary form must retain all copyright notices printed
- *       to any local or remote output device. This include any reference to
- *       Lua RTOS, whitecatboard.org, Lua, and other copyright notices that may
- *       appear in the future.
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * Lua RTOS, stepper driver
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- */
-
-/*
-
- The stepper driver is controlled by an interrupt that triggers every 1 / STEPPER_HZ seconds.
-
- Clock signal is generated accessing the GPIO registers directly. PWM is not used because
- with PWM we cannot guarantee that a movement involving more than 1 stepper starts at the
- same time.
-
- For a stepper the movement is defined by:
-
- - Number of steps
- - Frequency (this defines the speed)
-
- For example:
-
-    200 steps at 200 Hz = 1 step every 0.005 seconds
-    200 steps at 100 Hz = 1 step every 0.01 seconds
-
- Due to that we have a resolution of 1 / STEPPER_HZ we can have an error when calculating the
- number of ticks we need to reach the stepper frequency. For example, if STEPPER_HZ = 1000000:
-
-    base period = (1 / STEPPER_HZ) seconds = 0.00001 seconds
- 	stepper frequency = 333 Hz
- 	stepper period = (1 / 540) seconds = 0.00185 seconds
- 	ticks = (stepper period) / (base period) = 185.185 ticks
-
- 	We need 185.185 ticks for generate a clock pulse at 540 Hz, but we only can count 185 or 186
- 	ticks. If we count 185 ticks we have an error of 0.185 ticks.
-
- The error is compensated in the interrupt handler. In the previous example every 6 ticks the
- interrupt handler increments 1 tick for compensate.
-
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef _STEPPER_H_
@@ -82,33 +26,65 @@
 
 #include <math.h>
 
-// Number of steppers
+#include <driver/rmt.h>
+
+#include <motion/motion.h>
+
+// Max number of steppers
 #define NSTEP 8
 
-// Stepper base timer frequency
-#define STEPPER_HZ 200000
+// Step pulse duration in nanos
+#define STEPPER_PULSE_NANOS 3000.0F
 
-// Stepper clock pulse in microseconds
-#define STEPPER_CLOCK_PULSE 2
+// Nonos per RMT tick
+#define STEPPER_RMT_NANOS_PER_TICK 25.0F
+
+// Step pulse duration in RMT ticks
+#define STEPPER_PULSE_TICKS (STEPPER_PULSE_NANOS / STEPPER_RMT_NANOS_PER_TICK)
+
+#define STEPPER_RMT_BUFF_SIZE 64
+#define STEPPER_RMT_HALF_BUFF_SIZE (STEPPER_RMT_BUFF_SIZE >> 1)
+
+#define STEPPER_RMT_DATA_SIZE 640
+#define STEPPER_RMT_MAX_DURATION (32767 >> 1)
+#define STEPPER_STATS 0
+#define STEPPER_DEBUG 0
 
 typedef struct {
-	uint8_t  setup;         // Is this unit setup?
-    uint8_t  clock_pin;     // Clock pin number
+	uint8_t  setup;         // Is this stepper unit setup?
+    uint8_t  step_pin;      // Step pin number
     uint8_t  dir_pin;       // Direction pin number
+    float min_spd;          // Min speed
+    float max_spd;          // Max speed
+    float mac_acc;          // Max acceleration
 
-    uint32_t steps;         // Number of steps to do
-    uint32_t steps_up;      // Number of ramp-up steps to do
-    uint32_t steps_down;    // Number of ramp-down steps to do
+    uint8_t  dir;           // Direction. 0 = ccw, 1 = cw
+    uint32_t steps;         // Number of steps
+    int32_t pos;            // position in steps
+    float units;            // Displacement units
 
-    double target_freq;     // Target stepper clock frequency
-    double current_freq;    // Current stepper clock frequency
-    double freq_inc;        // Increment of current clock frequency
+    float units_per_step;   // Units per step
+    float steps_per_unit;   // Steps per unit
 
-    uint32_t     ticks;     // Number of ticks to do for each clock pulse
-    uint32_t     cticks;    // Number of ticks since last clock pulse
-    double       lticks;    // Number of lost ticks per tick
-    double       lost;      // Current lost ticks
-    uint8_t      dir;       // Direction. 0 = ccw, 1 = cw
+    uint32_t *rmt_data;           // Circular - buffer with precomputed RMT data
+    uint32_t rmt_data_head;
+    uint32_t rmt_data_tail;
+
+    uint32_t *rmt_block;          // Pointer to RMT RAM block
+    uint32_t *rmt_block_current;  // Current write position in RMT RAM block
+    float    rmt_period;          // Current RMT period
+    uint32_t rmt_ticks;           // Current RMT period in RMT ticks
+    uint32_t rmt_ticks_remain;
+    uint8_t  rmt_offset;          // When RMT has send the half of a block, points to the start
+                                  // of the consumed half block. Can be 0 or 32.
+
+    uint8_t  rmt_start;
+    uint8_t  rmt_started;
+
+    float current_time;
+    float current_position;
+
+    motion_t motion;
 } stepper_t;
 
 // Stepper errors
@@ -118,13 +94,19 @@ typedef struct {
 #define STEPPER_ERR_UNIT_NOT_SETUP           (DRIVER_EXCEPTION_BASE(STEPPER_DRIVER_ID) |  3)
 #define STEPPER_ERR_INVALID_PIN              (DRIVER_EXCEPTION_BASE(STEPPER_DRIVER_ID) |  4)
 #define STEPPER_ERR_INVALID_DIRECTION        (DRIVER_EXCEPTION_BASE(STEPPER_DRIVER_ID) |  5)
+#define STEPPER_ERR_INVALID_ACCELERATION     (DRIVER_EXCEPTION_BASE(STEPPER_DRIVER_ID) |  6)
 
 extern const int stepper_errors;
 extern const int stepper_error_map;
 
-driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, uint8_t *unit);
-driver_error_t *stepper_move(uint8_t unit, uint8_t dir, uint32_t steps, uint32_t ramp, double ifreq, double efreq);
-void stepper_start(int mask);
-void stepper_stop(int mask);
+driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, float max_spd, float max_acc, float stpu, uint8_t *unit);
+driver_error_t *stepper_move(uint8_t unit, float units, float initial_spd, float target_spd, float acc, float jerk);
+driver_error_t *stepper_get_distance(uint8_t unit, float *units);
+driver_error_t *stepper_set_position(uint8_t unit, float units);
+driver_error_t *stepper_get_position(uint8_t unit, float *units);
+driver_error_t *stepper_is_running(uint8_t unit, uint32_t* running);
+
+void stepper_start(int mask, uint8_t async);
+void stepper_stop(int mask, uint8_t async);
 
 #endif /* _STEPPER_H_ */

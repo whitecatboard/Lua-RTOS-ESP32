@@ -105,6 +105,9 @@ static void MQTTProtocol_storeQoS0(Clients* pubclient, Publish* publish)
 	FUNC_ENTRY;
 	/* store the publication until the write is finished */
 	pw = malloc(sizeof(pending_write));
+#if __XTENSA__
+  if (pw) {
+#endif
 	Log(TRACE_MIN, 12, NULL);
 	pw->p = MQTTProtocol_storePublication(publish, &len);
 	pw->socket = pubclient->net.socket;
@@ -113,6 +116,9 @@ static void MQTTProtocol_storeQoS0(Clients* pubclient, Publish* publish)
 	the saved copy is */
 	if (SocketBuffer_updateWrite(pw->socket, pw->p->topic, pw->p->payload) == NULL)
 		Log(LOG_SEVERE, 0, "Error updating write");
+#if __XTENSA__
+  }
+#endif
 	FUNC_EXIT;
 }
 
@@ -149,6 +155,9 @@ static int MQTTProtocol_startPublishCommon(Clients* pubclient, Publish* publish,
  */
 int MQTTProtocol_startPublish(Clients* pubclient, Publish* publish, int qos, int retained, Messages** mm)
 {
+#if __XTENSA__
+  if (publish) {
+#endif
 	Publish p = *publish;
 	int rc = 0;
 
@@ -156,15 +165,25 @@ int MQTTProtocol_startPublish(Clients* pubclient, Publish* publish, int qos, int
 	if (qos > 0)
 	{
 		*mm = MQTTProtocol_createMessage(publish, mm, qos, retained);
+#if __XTENSA__
+    if (*mm) {
+#endif
 		ListAppend(pubclient->outboundMsgs, *mm, (*mm)->len);
 		/* we change these pointers to the saved message location just in case the packet could not be written
 		entirely; the socket buffer will use these locations to finish writing the packet */
 		p.payload = (*mm)->publish->payload;
 		p.topic = (*mm)->publish->topic;
+#if __XTENSA__
+    }
+#endif
 	}
 	rc = MQTTProtocol_startPublishCommon(pubclient, &p, qos, retained);
 	FUNC_EXIT_RC(rc);
 	return rc;
+#if __XTENSA__
+  }
+  return 0;
+#endif
 }
 
 
@@ -181,6 +200,9 @@ Messages* MQTTProtocol_createMessage(Publish* publish, Messages **mm, int qos, i
 	Messages* m = malloc(sizeof(Messages));
 
 	FUNC_ENTRY;
+#if __XTENSA__
+  if (m) {
+#endif
 	m->len = sizeof(Messages);
 	if (*mm == NULL || (*mm)->publish == NULL)
 	{
@@ -200,6 +222,9 @@ Messages* MQTTProtocol_createMessage(Publish* publish, Messages **mm, int qos, i
 	time(&(m->lastTouch));
 	if (qos == 2)
 		m->nextMessageType = PUBREC;
+#if __XTENSA__
+  }
+#endif
 	FUNC_EXIT;
 	return m;
 }
@@ -216,6 +241,9 @@ Publications* MQTTProtocol_storePublication(Publish* publish, int* len)
 	Publications* p = malloc(sizeof(Publications));
 
 	FUNC_ENTRY;
+#if __XTENSA__
+  if (p) {
+#endif
 	p->refcount = 1;
 
 	*len = (int)strlen(publish->topic)+1;
@@ -235,6 +263,9 @@ Publications* MQTTProtocol_storePublication(Publish* publish, int* len)
 	*len += publish->payloadlen;
 
 	ListAppend(&(state.publications), p, *len);
+#if __XTENSA__
+  }
+#endif
 	FUNC_EXIT;
 	return p;
 }
@@ -291,6 +322,9 @@ int MQTTProtocol_handlePublishes(void* pack, int sock)
 		int len;
 		ListElement* listElem = NULL;
 		Messages* m = malloc(sizeof(Messages));
+#if __XTENSA__
+    if (m) {
+#endif
 		Publications* p = MQTTProtocol_storePublication(publish, &len);
 		m->publish = p;
 		m->msgid = publish->msgId;
@@ -307,6 +341,9 @@ int MQTTProtocol_handlePublishes(void* pack, int sock)
 			ListAppend(client->inboundMsgs, m, sizeof(Messages) + len);
 		rc = MQTTPacket_send_pubrec(publish->msgId, &client->net, client->clientID);
 		publish->topic = NULL;
+#if __XTENSA__
+    }
+#endif
 	}
 	MQTTPacket_freePublish(publish);
 	FUNC_EXIT_RC(rc);
@@ -596,8 +633,10 @@ static void MQTTProtocol_retries(time_t now, Clients* client, int regardless)
 				if (rc == SOCKET_ERROR)
 				{
 					client->good = 0;
+#if !__XTENSA__
 					Log(TRACE_PROTOCOL, 29, NULL, client->clientID, client->net.socket,
 												Socket_getpeer(client->net.socket));
+#endif
 					MQTTProtocol_closeSession(client, 1);
 					client = NULL;
 				}
@@ -614,8 +653,10 @@ static void MQTTProtocol_retries(time_t now, Clients* client, int regardless)
 				if (MQTTPacket_send_pubrel(m->msgid, 0, &client->net, client->clientID) != TCPSOCKET_COMPLETE)
 				{
 					client->good = 0;
+#if !__XTENSA__
 					Log(TRACE_PROTOCOL, 29, NULL, client->clientID, client->net.socket,
 							Socket_getpeer(client->net.socket));
+#endif
 					MQTTProtocol_closeSession(client, 1);
 					client = NULL;
 				}
@@ -809,6 +850,9 @@ char* MQTTStrdup(const char* src)
 {
 	size_t mlen = strlen(src) + 1;
 	char* temp = malloc(mlen);
+#if __XTENSA__
+  if (temp)
+#endif
 	MQTTStrncpy(temp, src, mlen);
 	return temp;
 }

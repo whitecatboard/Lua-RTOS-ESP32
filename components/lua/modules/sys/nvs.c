@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -81,7 +81,7 @@ static void nvs_error(lua_State* L, int code) {
     }
 }
 
-// Lua: nvs.write(namespace, key) return: nothing|exception
+// Lua: nvs.write(namespace, key, value) return: nothing|exception
 static int l_nvs_write(lua_State *L) {
     int total = lua_gettop(L); // Get number of arguments
     nvs_handle handle_to_settings;
@@ -155,6 +155,9 @@ static int l_nvs_write(lua_State *L) {
                 memcpy((char *)(val_val + 1), str_val, val_size - 1);
             }
             break;
+        default :
+            return luaL_error(L, "value of unsupported type");
+            break;
     }
 
     // Open
@@ -185,7 +188,7 @@ static int l_nvs_write(lua_State *L) {
     return 0;
 }
 
-// Lua: nvs.rm(namespace, key) return: true|exception
+// Lua: nvs.read(namespace, key) return: boolean|exception
 static int l_nvs_read(lua_State *L) {
     int total = lua_gettop(L); // Get number of arguments
     nvs_handle handle_to_settings;
@@ -408,12 +411,7 @@ static const LUA_REG_TYPE nvs_map[] =
 };
 
 int luaopen_nvs(lua_State *L) {
-    #if !LUA_USE_ROTABLE
-    luaL_newlib(L, nvs_map);
-    return 1;
-    #else
-    return 0;
-    #endif
+    LNEWLIB(L, nvs_map);
 }
    
 MODULE_REGISTER_ROM(NVS, nvs, nvs_map, luaopen_nvs, 1);

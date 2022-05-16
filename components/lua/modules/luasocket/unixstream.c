@@ -310,7 +310,7 @@ static int meth_listen(lua_State *L)
 static int meth_shutdown(lua_State *L)
 {
     /* SHUT_RD,  SHUT_WR,  SHUT_RDWR  have  the value 0, 1, 2, so we can use method index directly */
-    static const char* methods[] = { "receive", "send", "both", NULL };
+    static const char *const methods[] = { "receive", "send", "both", NULL };
     p_unix stream = (p_unix) auxiliar_checkclass(L, "unixstream{client}", 1);
     int how = luaL_checkoption(L, 2, "both", methods);
     socket_shutdown(&stream->sock, how);

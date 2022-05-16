@@ -11,7 +11,7 @@
 #include "lzio.h"
 #include "lparser.h"
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
 typedef struct AnnotationInfo {
     FuncState *fs;
 	int i;
@@ -44,7 +44,7 @@ enum RESERVED {
   TK_SHL, TK_SHR,
   TK_DBCOLON, TK_EOS,
   TK_FLT, TK_INT, TK_NAME, TK_STRING,
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   TK_BLOCK_START,
   TK_BLOCK_END,
 #endif
@@ -63,7 +63,7 @@ typedef union {
 
 typedef struct Token {
   int token;
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
   int id;
   int flags;
 #endif

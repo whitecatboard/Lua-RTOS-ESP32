@@ -146,7 +146,9 @@ void Socket_close(int socket);
 int Socket_new(char* addr, int port, int* socket);
 
 int Socket_noPendingWrites(int socket);
+#if !__XTENSA__
 char* Socket_getpeer(int sock);
+#endif
 
 void Socket_addPendingWrite(int socket);
 void Socket_clearPendingWrite(int socket);

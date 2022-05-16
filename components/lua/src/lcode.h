@@ -84,7 +84,7 @@ LUAI_FUNC void luaK_posfix (FuncState *fs, BinOpr op, expdesc *v1,
                             expdesc *v2, int line);
 LUAI_FUNC void luaK_setlist (FuncState *fs, int base, int nelems, int tostore);
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
 int luaK_block_start (FuncState *fs, int n);
 int luaK_block_end (FuncState *fs, int n);
 int luaK_NOP(FuncState *fs);

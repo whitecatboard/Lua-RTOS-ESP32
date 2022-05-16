@@ -257,6 +257,11 @@
                 "id": "ESP32-EVB-OTA",
                 "description": "Olimex ESP32-EVB with OTA",
                 "filesystem": "default"
+            },
+            {
+                "id": "TRAVIS-ESP32-EVB-OTA",
+                "description": "TRAVIS on Olimex ESP32-EVB with OTA",
+                "filesystem": "default"
             }
         ]
     },
@@ -346,6 +351,25 @@
             {
                 "id": "M5STACK-OTA",
                 "description": "M5Stack Core Board with OTA",
+                "filesystem": "default"
+            }
+        ]
+    },
+    {
+        "description": "TTGO Lora32 without OLED",
+        "manufacturer": "TTGO",
+        "image": "",
+        "usb_vid_pid": "10C4:EA60",
+        "usb_port_exp": "",
+        "firmwares": [
+            {
+                "id": "TTGO-LORA32",
+                "description": "TTGO Lora32 without OLED",
+                "filesystem": "default"
+            },
+            {
+                "id": "TTGO-LORA32-OTA",
+                "description": "TTGO Lora32 without OLED with OTA",
                 "filesystem": "default"
             }
         ]

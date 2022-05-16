@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
  * Copyright (C) 2015 - 2019, Thomas E. Horner (whitecatboard.org@horner.it)
  *
  * All rights reserved.
@@ -119,6 +119,7 @@
 
 
     void RCSwitch_init();
+    void RCSwitch_deinit();
     
     void RCSwitch_switchOnBy1(int nGroupNumber, int nSwitchNumber);
     void RCSwitch_switchOffBy1(int nGroupNumber, int nSwitchNumber);

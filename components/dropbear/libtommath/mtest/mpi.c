@@ -91,7 +91,11 @@ static unsigned int s_mp_defprec = MP_DEFPREC;
 /* {{{ Constant strings */
 
 /* Constant strings returned by mp_strerror() */
+#if __XTENSA__
+static const char *const mp_err_string[] = {
+#else
 static const char *mp_err_string[] = {
+#endif
   "unknown result code",     /* say what?            */
   "boolean true",            /* MP_OKAY, MP_YES      */
   "boolean false",           /* MP_NO                */

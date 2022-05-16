@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -56,6 +56,19 @@
  * Lua RTOS
  */
 #define LUA_USE_ROTABLE	   1
+
+
+
+//enables the whitecat ide block support
+#if CONFIG_LUA_RTOS_LUA_USE_BLOCK_CONTEXT
+#define LUA_USE_BLOCK_CONTEXT 1
+#else
+#define LUA_USE_BLOCK_CONTEXT 0
+#endif
+
+// enables the user to disable the automatic indenting
+#define EDITOR_TOGGLE_AUTO_INDENT	1
+
 
 // Get the UART assigned to the console
 #if CONFIG_LUA_RTOS_CONSOLE_UART0

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -219,7 +219,19 @@ driver_error_t *gpio_debouncing_register(uint8_t pin, uint16_t threshold, gpio_d
     // GPIO is an input GPIO?
     if (gpio_is_input(pin)) {
         gpio_pin_input(pin);
-        gpio_pin_pullup(pin);
+        error = gpio_pin_pullup(pin);
+        if (error != NULL) {
+#if EXTERNAL_GPIO
+            // Can fail with external GPIO, continue
+            if (pin > 40) {
+                free(error);
+            } else {
+                return error;
+            }
+#else
+        return error;
+#endif
+        }
 
         // Get initial state
         if (gpio_ll_pin_get(pin)) {

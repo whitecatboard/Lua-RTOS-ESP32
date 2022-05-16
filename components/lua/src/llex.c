@@ -27,7 +27,7 @@
 #include "ltable.h"
 #include "lzio.h"
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT 
 #include "blocks.h"
 #endif
 
@@ -47,7 +47,7 @@ static const char *const luaX_tokens [] = {
     "//", "..", "...", "==", ">=", "<=", "~=",
     "<<", ">>", "::", "<eof>",
     "<number>", "<integer>", "<name>", "<string>",
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
     "bs annotation",
     "be annotation"
 #endif
@@ -453,7 +453,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
           int sep = skip_sep(ls);
           luaZ_resetbuffer(ls->buff);  /* 'skip_sep' may dirty the buffer */
           if (sep >= 0) {
-#if !LUA_USE_ROTABLE
+#if !LUA_USE_BLOCK_CONTEXT
             read_long_string(ls, NULL, sep);  /* skip long comment */
 #else
         		read_long_string(ls, seminfo, sep);

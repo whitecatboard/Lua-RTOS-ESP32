@@ -61,6 +61,9 @@ int MQTTPacket_send_connect(Clients* client, int MQTTVersion)
 		len += client->passwordlen+2;
 
 	ptr = buf = malloc(len);
+#if __XTENSA__
+  if (!ptr) goto exit;
+#endif
 	if (MQTTVersion == 3)
 	{
 		writeUTF(&ptr, "MQIsdp");
@@ -124,9 +127,15 @@ void* MQTTPacket_connack(unsigned char aHeader, char* data, size_t datalen)
 	char* curdata = data;
 
 	FUNC_ENTRY;
+#if __XTENSA__
+  if (pack) {
+#endif
 	pack->header.byte = aHeader;
 	pack->flags.all = readChar(&curdata);
 	pack->rc = readChar(&curdata);
+#if __XTENSA__
+  }
+#endif
 	FUNC_EXIT;
 	return pack;
 }
@@ -182,6 +191,9 @@ int MQTTPacket_send_subscribe(List* topics, List* qoss, int msgid, int dup, netw
 		datalen += (int)strlen((char*)(elem->content));
 	ptr = data = malloc(datalen);
 
+#if __XTENSA__
+  if (ptr) {
+#endif
 	writeInt(&ptr, msgid);
 	elem = NULL;
 	while (ListNextElement(topics, &elem))
@@ -194,6 +206,9 @@ int MQTTPacket_send_subscribe(List* topics, List* qoss, int msgid, int dup, netw
 	Log(LOG_PROTOCOL, 22, NULL, net->socket, clientID, msgid, rc);
 	if (rc != TCPSOCKET_INTERRUPTED)
 		free(data);
+#if __XTENSA__
+  }
+#endif
 	FUNC_EXIT_RC(rc);
 	return rc;
 }
@@ -212,6 +227,9 @@ void* MQTTPacket_suback(unsigned char aHeader, char* data, size_t datalen)
 	char* curdata = data;
 
 	FUNC_ENTRY;
+#if __XTENSA__
+  if (pack) {
+#endif
 	pack->header.byte = aHeader;
 	pack->msgId = readInt(&curdata);
 	pack->qoss = ListInitialize();
@@ -219,9 +237,18 @@ void* MQTTPacket_suback(unsigned char aHeader, char* data, size_t datalen)
 	{
 		int* newint;
 		newint = malloc(sizeof(int));
+#if __XTENSA__
+    if (newint) {
+#endif
 		*newint = (int)readChar(&curdata);
 		ListAppend(pack->qoss, newint, sizeof(int));
+#if __XTENSA__
+    }
+#endif
 	}
+#if __XTENSA__
+  }
+#endif
 	FUNC_EXIT;
 	return pack;
 }
@@ -255,6 +282,9 @@ int MQTTPacket_send_unsubscribe(List* topics, int msgid, int dup, networkHandles
 		datalen += (int)strlen((char*)(elem->content));
 	ptr = data = malloc(datalen);
 
+#if __XTENSA__
+  if (ptr) {
+#endif
 	writeInt(&ptr, msgid);
 	elem = NULL;
 	while (ListNextElement(topics, &elem))
@@ -263,6 +293,9 @@ int MQTTPacket_send_unsubscribe(List* topics, int msgid, int dup, networkHandles
 	Log(LOG_PROTOCOL, 25, NULL, net->socket, clientID, msgid, rc);
 	if (rc != TCPSOCKET_INTERRUPTED)
 		free(data);
+#if __XTENSA__
+  }
+#endif
 	FUNC_EXIT_RC(rc);
 	return rc;
 }

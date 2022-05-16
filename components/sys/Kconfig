@@ -97,6 +97,9 @@ menu "Lua RTOS"
       config LUA_RTOS_FIRMWARE_ESP32_EVB_OTA
          bool "Olimex ESP32-EVB with OTA"
 
+      config LUA_RTOS_FIRMWARE_TRAVIS_ESP32_EVB_OTA
+         bool "TRAVIS on Olimex ESP32-EVB with OTA"
+
       config LUA_RTOS_FIRMWARE_DOIT_ESP32_DEVKIT_V1
          bool "DOIT ESP32 DEVKIT V1"
 
@@ -123,6 +126,12 @@ menu "Lua RTOS"
 
       config LUA_RTOS_FIRMWARE_M5STACK_OTA
          bool "M5Stack Core Board with OTA"
+
+      config LUA_RTOS_FIRMWARE_TTGO_LORA32
+         bool "TTGO Lora32 without OLED"
+
+      config LUA_RTOS_FIRMWARE_TTGO_LORA32_OTA
+         bool "TTGO Lora32 without OLED with OTA"
 
       config LUA_RTOS_FIRMWARE_GENERIC
          bool "Generic ESP32 board"
@@ -216,8 +225,8 @@ menu "Lua RTOS"
          help
             Baud rate to use by the Lua RTOS console.
 
-      config LUA_RTOS_CONSOLE_BR_57200
-         bool "57200 baud"
+      config LUA_RTOS_CONSOLE_BR_57600
+         bool "57600 baud"
 
       config LUA_RTOS_CONSOLE_BR_115200
          bool "115200 baud"
@@ -440,34 +449,41 @@ menu "Lua RTOS"
                     CPU affinity for the task assigned to the SSH server.
          endmenu
 
-      menu "HTTP server"
-         config LUA_RTOS_USE_HTTP_SERVER
-            depends on LUA_RTOS_LUA_USE_NET
-            bool "Enable HTTP server"
-            default y
+         menu "HTTP client"
+            config LUA_RTOS_USE_HTTP_CLIENT
+                depends on LUA_RTOS_LUA_USE_NET
+                bool "Enable HTTP client"
+                default y
+         endmenu
 
-         config LUA_RTOS_HTTP_SERVER_PORT
-            depends on LUA_RTOS_USE_HTTP_SERVER
-               int "HTTP server port"
-               range 0 65536
-               default 80
-            help
-               TCP port where HTTP server listens
+         menu "HTTP server"
+            config LUA_RTOS_USE_HTTP_SERVER
+                depends on LUA_RTOS_LUA_USE_NET
+                bool "Enable HTTP server"
+                default y
 
-         config LUA_RTOS_HTTP_SERVER_PORT_SSL
-            depends on LUA_RTOS_USE_HTTP_SERVER
-               int "HTTPS server port"
-               range 0 65536
-               default 443
-            help
-               TCP port where HTTPS server listens
+            config LUA_RTOS_HTTP_SERVER_PORT
+                depends on LUA_RTOS_USE_HTTP_SERVER
+                   int "HTTP server port"
+                   range 0 65536
+                   default 80
+                help
+                   TCP port where HTTP server listens
 
-         config LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT
-            depends on LUA_RTOS_USE_HTTP_SERVER
-               string "HTTP document root"
-               default /
-            help
-               base folder where HTTP server looks for files
+            config LUA_RTOS_HTTP_SERVER_PORT_SSL
+                depends on LUA_RTOS_USE_HTTP_SERVER
+                   int "HTTPS server port"
+                   range 0 65536
+                   default 443
+                help
+                   TCP port where HTTPS server listens
+
+            config LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT
+                depends on LUA_RTOS_USE_HTTP_SERVER
+                   string "HTTP document root"
+                   default /
+                help
+                   base folder where HTTP server looks for files
 
             config LUA_RTOS_HTTP_SERVER_STACK_SIZE
                 depends on LUA_RTOS_USE_HTTP_SERVER
@@ -1412,7 +1428,11 @@ menu "Lua RTOS"
             config LUA_RTOS_USE_SENSOR_ML8511
                 depends on LUA_RTOS_LUA_USE_SENSOR
                 bool "ML8511"
-                default y
+                default y    
+            config LUA_RTOS_USE_MPXV6115V
+               depends on LUA_RTOS_LUA_USE_SENSOR
+               bool "MPXV6115V"
+               default y
             config LUA_RTOS_USE_SENSOR_PIR_AM412
                depends on LUA_RTOS_LUA_USE_SENSOR
                bool "AM412 based PIR sensor"
@@ -1530,6 +1550,13 @@ menu "Lua RTOS"
                When accessing to readonly tables, Lua RTOS can get the key/value pair from a cache. This can
                speedud the execution of Lua RTOS scripts. This option is disabled when the JIT bytecode
                optimizer is enabled.
+
+         config LUA_RTOS_LUA_USE_BLOCK_CONTEXT
+            bool "Add block context for the Whitecat IDE"
+            default y
+            help
+               Add some modifications into the Lua VM to provide the block-based language some vital
+               features required to improve the block-programming experience
 
          config LUA_RTOS_LUA_USE_JIT_BYTECODE_OPTIMIZER
             bool "Use JIT bytecode optimizer (experimental)"
@@ -1656,6 +1683,7 @@ menu "Lua RTOS"
                default y
 
             config LUA_RTOS_LUA_USE_VM
+               depends on LUA_RTOS_LUA_USE_BLOCK_CONTEXT
                bool "Include Lua VM module in build"
                default y
 

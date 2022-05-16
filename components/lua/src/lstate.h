@@ -62,7 +62,7 @@ typedef struct stringtable {
 } stringtable;
 
 
-#if LUA_USE_ROTABLE
+#if LUA_USE_BLOCK_CONTEXT
 /*
  * Block context.
  */
@@ -101,8 +101,8 @@ typedef struct CallInfo {
   short nresults;  /* expected number of results from this function */
   unsigned short callstatus;
 
-#if LUA_USE_ROTABLE
   unsigned int ccount;
+#if LUA_USE_BLOCK_CONTEXT
   BlockContext *bctx;
 #endif
 } CallInfo;

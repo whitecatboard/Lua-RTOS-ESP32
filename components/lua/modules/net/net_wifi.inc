@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 - 2018, IBEROXARXA SERVICIOS INTEGRALES, S.L.
- * Copyright (C) 2015 - 2018, Jaume Olivé Petrus (jolive@whitecatboard.org)
+ * Copyright (C) 2015 - 2020, IBEROXARXA SERVICIOS INTEGRALES, S.L.
+ * Copyright (C) 2015 - 2020, Jaume Olivé Petrus (jolive@whitecatboard.org)
  *
  * All rights reserved.
  *
@@ -525,6 +525,7 @@ static const LUA_REG_TYPE wifi_auth_map[] = {
     { LSTRKEY( "WPA_PSK"      ), LINTVAL( WIFI_AUTH_WPA_PSK ) },
     { LSTRKEY( "WPA2_PSK"     ), LINTVAL( WIFI_AUTH_WPA2_PSK ) },
     { LSTRKEY( "WPA_WPA2_PSK" ), LINTVAL( WIFI_AUTH_WPA_WPA2_PSK ) },
+    { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE wifi_mode_map[] = {
@@ -532,6 +533,7 @@ static const LUA_REG_TYPE wifi_mode_map[] = {
     { LSTRKEY( "AP"           ), LINTVAL( WIFI_MODE_AP ) },
     { LSTRKEY( "APSTA"        ), LINTVAL( WIFI_MODE_APSTA ) },
     { LSTRKEY( "STAENT"       ), LINTVAL( WIFI_MODE_STA_ENTERPRISE ) },
+    { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE wifi_powersave_map[] = {
@@ -539,18 +541,21 @@ static const LUA_REG_TYPE wifi_powersave_map[] = {
     { LSTRKEY( "MODEM"         ), LINTVAL( WIFI_PS_MIN_MODEM ) },
     { LSTRKEY( "MODEM_MIN"     ), LINTVAL( WIFI_PS_MIN_MODEM ) },
     { LSTRKEY( "MODEM_MAX"     ), LINTVAL( WIFI_PS_MAX_MODEM ) },
+    { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE wifi_wpstype_map[] = {
     { LSTRKEY( "DISABLE"       ), LINTVAL( WPS_TYPE_DISABLE ) },
     { LSTRKEY( "PBC"           ), LINTVAL( WPS_TYPE_PBC ) },
     { LSTRKEY( "PIN"           ), LINTVAL( WPS_TYPE_PIN ) },
+    { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE wifi_timecheck_map[] = {
     { LSTRKEY( "DEFAULT"       ), LINTVAL( 2 ) },
     { LSTRKEY( "ENABLE"        ), LINTVAL( 0 ) },
     { LSTRKEY( "DISABLE"       ), LINTVAL( 1 ) },
+    { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE wifi_map[] = {
