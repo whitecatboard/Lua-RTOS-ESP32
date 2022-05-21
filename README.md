@@ -171,7 +171,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    * [Mac OS]( http://esp-idf.readthedocs.io/en/latest/get-started/macos-setup.html)
    * [Linux](http://esp-idf.readthedocs.io/en/latest/get-started/linux-setup.html)
 
-2. Clone or pull esp-idf repository from ESPRESSIF:
+1. Clone or pull esp-idf repository from ESPRESSIF:
 
    If you are build Lua RTOS for first time, clone the esp-idf repository:
    
@@ -186,7 +186,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    git submodule update --init --recursive
    ```
  
-3. Clone or pull Lua RTOS repository:
+1. Clone or pull Lua RTOS repository:
 
    If you are building Lua RTOS for first time, clone Lua RTOS repository:
    
@@ -199,8 +199,25 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    ```lua
    git pull origin master
    ```
+1. The installer works only with Python 2. 
 
-4. Setup the build environment:
+   You can check your python version by running
+   
+   ```
+   python --version
+   ```
+   
+   If your default python verision is 3.x.x then the most convenient way to switch is to [install pyenv](https://github.com/pyenv/pyenv#installation). Then [install the latest python2](https://github.com/pyenv/pyenv#install-additional-python-versions), and [activate](https://github.com/pyenv/pyenv#switch-between-python-versions) the python2 version. Activating Python2 in the Lua-RTOS-ESP32 directory may be your best approach.
+   
+   You may need to revert your pyparsing version using 
+   
+   ```
+   pip install pyparsing==2.4.7
+   ```
+   
+   which is the latest version that works with Python2.
+
+1. Setup the build environment:
    
    Go to Lua-RTOS-ESP32 folder:
    
@@ -216,7 +233,7 @@ In our [wiki](https://github.com/whitecatboard/Lua-RTOS-ESP32/wiki) you have mor
    source ./env
    ```
 
-5. Build:
+1. Build:
 
    ```lua
    $ make flash
