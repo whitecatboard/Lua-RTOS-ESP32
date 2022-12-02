@@ -510,8 +510,6 @@ driver_error_t *net_ota() {
                 net_http_destroy_client(&client);
                 return NULL;
             } else {
-                int pct = (int)(((float)(address-update_partition->address))/total*100);
-                if (0 == pct%10) esp_task_wdt_reset();
                 printf("\rChunk written successfully in partition at offset 0x%08x", address);
             }
 
