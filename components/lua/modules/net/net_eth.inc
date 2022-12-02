@@ -180,11 +180,34 @@ static int leth_stat(lua_State* L) {
     return table;
 }
 
+static int leth_hostname(lua_State* L) {
+    driver_error_t *error;
+    const char *hostname = luaL_optstring( L, 1, NULL );
+
+    if (NULL != hostname) {
+        if ((error = eth_set_hostname(hostname))) {
+            return luaL_driver_error(L, error);
+        }
+
+        return 0;
+    }
+
+    hostname = NULL;
+    if ((error = eth_get_hostname(&hostname))) {
+        return luaL_driver_error(L, error);
+    }
+
+    lua_pushstring(L, hostname);
+    return 1;
+}
+
+
 static const LUA_REG_TYPE eth_map[] = {
-    { LSTRKEY( "setup" ),     LFUNCVAL( leth_setup   ) },
-    { LSTRKEY( "start" ),     LFUNCVAL( leth_start   ) },
-    { LSTRKEY( "stop"  ),     LFUNCVAL( leth_stop    ) },
-    { LSTRKEY( "stat"  ),     LFUNCVAL( leth_stat    ) },
+    { LSTRKEY( "setup" ),     LFUNCVAL( leth_setup    ) },
+    { LSTRKEY( "start" ),     LFUNCVAL( leth_start    ) },
+    { LSTRKEY( "stop"  ),     LFUNCVAL( leth_stop     ) },
+    { LSTRKEY( "stat"  ),     LFUNCVAL( leth_stat     ) },
+    { LSTRKEY( "hostname"  ), LFUNCVAL( leth_hostname ) },
     DRIVER_REGISTER_LUA_ERRORS(eth)
     { LNILKEY, LNILVAL }
 };

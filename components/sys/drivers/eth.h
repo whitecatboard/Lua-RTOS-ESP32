@@ -64,5 +64,7 @@ driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1
 driver_error_t *eth_start(uint8_t async);
 driver_error_t *eth_stop();
 driver_error_t *eth_stat(ifconfig_t *info);
+driver_error_t *eth_set_hostname(const char *hostname);
+driver_error_t *eth_get_hostname(const char **hostname);
 
 #endif /* DRIVERS_ETH_H_ */

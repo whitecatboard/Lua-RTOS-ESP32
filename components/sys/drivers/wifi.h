@@ -92,6 +92,8 @@ driver_error_t *wifi_start(uint8_t async);
 driver_error_t *wifi_stop();
 driver_error_t *wifi_stat(ifconfig_t *info);
 driver_error_t *wifi_get_mac(uint8_t mac[6]);
+driver_error_t *wifi_set_hostname(const char *hostname);
+driver_error_t *wifi_get_hostname(const char **hostname);
 
 void wifi_wps_reconnect();
 void wifi_wps_disable();

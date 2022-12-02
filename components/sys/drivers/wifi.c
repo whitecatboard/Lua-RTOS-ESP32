@@ -785,4 +785,44 @@ driver_error_t *wifi_get_mac(uint8_t mac[6]) {
     return NULL;
 }
 
+driver_error_t *wifi_set_hostname(const char *hostname) {
+    driver_error_t *error;
+
+    uint8_t interface = ESP_IF_WIFI_STA;
+    if (status_get(STATUS_WIFI_INITED)) {
+        wifi_mode_t mode;
+        if ((error = wifi_check_error(esp_wifi_get_mode(&mode)))) return error;
+
+        if (mode == WIFI_MODE_AP)
+            interface = ESP_IF_WIFI_AP;
+
+        //TODO add mac for WIFI_MODE_APSTA
+    }
+
+    esp_err_t ret = tcpip_adapter_set_hostname(interface, hostname);
+    if (ESP_ERR_TCPIP_ADAPTER_INVALID_PARAMS == ret) return driver_error(ETH_DRIVER, WIFI_ERR_INVALID_ARGUMENT, NULL);
+    if (ESP_ERR_TCPIP_ADAPTER_IF_NOT_READY   == ret) return driver_error(ETH_DRIVER, WIFI_ERR_WIFI_NOT_START, NULL);
+    return NULL;
+}
+
+driver_error_t *wifi_get_hostname(const char **hostname) {
+    driver_error_t *error;
+
+    uint8_t interface = ESP_IF_WIFI_STA;
+    if (status_get(STATUS_WIFI_INITED)) {
+        wifi_mode_t mode;
+        if ((error = wifi_check_error(esp_wifi_get_mode(&mode)))) return error;
+
+        if (mode == WIFI_MODE_AP)
+            interface = ESP_IF_WIFI_AP;
+
+        //TODO add mac for WIFI_MODE_APSTA
+    }
+
+    esp_err_t ret = tcpip_adapter_get_hostname(interface, hostname);
+    if (ESP_ERR_TCPIP_ADAPTER_INVALID_PARAMS == ret) return driver_error(ETH_DRIVER, WIFI_ERR_INVALID_ARGUMENT, NULL);
+    if (ESP_ERR_TCPIP_ADAPTER_IF_NOT_READY   == ret) return driver_error(ETH_DRIVER, WIFI_ERR_WIFI_NOT_START, NULL);
+    return NULL;
+}
+
 #endif
