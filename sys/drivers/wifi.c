@@ -105,7 +105,7 @@ DRIVER_REGISTER_BEGIN(WIFI,wifi,0,NULL,NULL);
 DRIVER_REGISTER_END(WIFI,wifi,0,NULL,NULL);
 
 extern EventGroupHandle_t netEvent;
-
+extern net_event_register_callback_t net_event_callback[MAX_NET_EVENT_CALLBACKS];
 
 // TO DO
 #if 0
@@ -118,6 +118,150 @@ static wifi_sc_cb * wps_sc_callback = NULL;
 #endif
 
 static esp_netif_t *netif = NULL;
+
+// Retries for connect
+static uint8_t connect_retries = 0;
+
+static void net_wifi_handler(void *arg, esp_event_base_t base, int32_t id, void *data) {
+    EventBits_t bits = 0;
+
+    // Exit if not for us
+    if (((esp_event_base_t)arg) != WIFI_EVENT) {
+		return;
+	}
+
+    switch (id) {
+        case WIFI_EVENT_WIFI_READY: // SP32 WiFi ready
+            break;
+
+        case WIFI_EVENT_SCAN_DONE: // ESP32 finish scanning AP
+            bits |= evWIFI_SCAN_END;
+            break;
+
+        // STA events
+        case WIFI_EVENT_STA_START: // ESP32 station start
+            status_set(0x00000000, STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP);
+            esp_wifi_connect();
+            break;
+
+        case WIFI_EVENT_STA_STOP: // ESP32 station stop
+            status_set(0x00000000, STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP);
+            break;
+
+        case WIFI_EVENT_STA_CONNECTED: // ESP32 station connected to AP
+            status_set(STATUS_WIFI_CONNECTED, 0x00000000);
+            bits |= evWIFI_STARTED;
+            // TO DO
+            //tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_STA);
+            break;
+
+        case WIFI_EVENT_STA_DISCONNECTED: // ESP32 station disconnected from AP */
+            if (status_get(STATUS_WIFI_SYNC) && (connect_retries > WIFI_CONNECT_RETRIES)) {
+                bits |= evWIFI_CANT_CONNECT;
+                status_set(0x00000000, STATUS_WIFI_CONNECTED);
+                connect_retries = 0;
+            } else {
+                status_set(0x00000000, STATUS_WIFI_CONNECTED);
+                if (status_get(STATUS_WIFI_STARTED)) {
+                    if (status_get(STATUS_WIFI_SYNC)) {
+                        connect_retries++;
+                    }
+                    delay(200);
+                    esp_wifi_connect();
+                }
+            }
+            break;
+
+        case WIFI_EVENT_STA_AUTHMODE_CHANGE: // The auth mode of AP connected by ESP32 station changed */
+            break;
+
+        // STA WPS events
+        case WIFI_EVENT_STA_WPS_ER_SUCCESS: // ESP32 station wps succeeds in enrollee mode */
+            wifi_wps_disable();
+            esp_wifi_connect();
+            break;
+
+        case WIFI_EVENT_STA_WPS_ER_FAILED: // ESP32 station wps fails in enrollee mode
+            wifi_wps_reconnect();
+            break;
+
+        case WIFI_EVENT_STA_WPS_ER_TIMEOUT:       /**< ESP32 station wps timeout in enrollee mode */
+            wifi_wps_reconnect();
+            break;
+
+        case WIFI_EVENT_STA_WPS_ER_PIN:           /**< ESP32 station wps pin code in enrollee mode */
+            // TO DO
+        	// wifi_wps_pin(event->event_info.sta_er_pin.pin_code);
+            break;
+
+        case WIFI_EVENT_AP_START:                 /**< ESP32 soft-AP start */
+        	// TO DO
+            // tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_AP);
+            break;
+
+        case WIFI_EVENT_AP_STOP:                  /**< ESP32 soft-AP stop */
+            status_set(0x00000000, STATUS_WIFI_CONNECTED | STATUS_WIFI_INITED);
+            break;
+
+        case WIFI_EVENT_AP_STACONNECTED:          /**< a station connected to ESP32 soft-AP */
+            break;
+
+        case WIFI_EVENT_AP_STADISCONNECTED:       /**< a station disconnected from ESP32 soft-AP */
+            break;
+
+        case WIFI_EVENT_AP_PROBEREQRECVED:        /**< Receive probe request packet in soft-AP interface */
+            break;
+    }
+
+    // Call to the registered callbacks
+    for(int i=0; i < MAX_NET_EVENT_CALLBACKS; i++) {
+        if (net_event_callback[i]) {
+			net_event_callback[i](NetEventTypeWifi, id);
+        }
+    }
+
+    if (bits) {
+        xEventGroupSetBits(netEvent, bits);
+    }
+}
+
+static void net_wifi_ip_handler(void *arg, esp_event_base_t base, int32_t id, void *data) {
+    EventBits_t bits = 0;
+
+    // Exit if not for us
+    if (((esp_event_base_t)arg) != IP_EVENT) {
+		return;
+	}
+
+	switch (id) {
+		case IP_EVENT_STA_GOT_IP:
+            status_set(STATUS_WIFI_HAS_IP, 0x00000000);
+            bits |= evWIFI_CONNECTED;
+            break;
+
+		case IP_EVENT_STA_LOST_IP:
+            status_set(0x00000000, STATUS_WIFI_HAS_IP);
+            break;
+
+		case IP_EVENT_AP_STAIPASSIGNED:
+			break;
+
+		case IP_EVENT_GOT_IP6:
+            bits |= evWIFI_CONNECTED;
+			break;
+	}
+
+    // Call to the registered callbacks
+    for(int i=0; i < MAX_NET_EVENT_CALLBACKS; i++) {
+        if (net_event_callback[i]) {
+			net_event_callback[i](NetEventTypeWifiIp, id);
+        }
+    }
+
+    if (bits) {
+        xEventGroupSetBits(netEvent, bits);
+    }
+}
 
 driver_error_t *wifi_check_error(esp_err_t error) {
     if (error == ESP_OK) return NULL;
@@ -161,9 +305,14 @@ driver_error_t *wifi_check_error(esp_err_t error) {
 static driver_error_t *wifi_init(wifi_mode_t mode) {
     driver_error_t *error;
 
+    connect_retries = 0;
+
     if ((error = net_init())) {
         return error;
     }
+
+    esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &net_wifi_handler, WIFI_EVENT, NULL);
+    esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &net_wifi_ip_handler, IP_EVENT, NULL);
 
     if (!status_get(STATUS_WIFI_INITED)) {
         wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();

@@ -106,7 +106,11 @@ typedef struct {
 extern const int net_errors;
 extern const int net_error_map;
 
-typedef uint32_t net_event_type_t;
+typedef enum {
+	NetEventTypeWifi = 1,
+	NetEventTypeWifiIp
+} net_event_type_t;
+
 typedef uint32_t net_event_t;
 
 typedef void (*net_event_register_callback_t)(net_event_type_t type, net_event_t event);
@@ -154,7 +158,7 @@ driver_error_t *net_lookup(const char *name, int port, struct sockaddr_in *addre
  *        received in the event loop the net driver executes the default treatment
  *        for the event, and at the end call to the registered callbacks.
  *
- * @param name A pointer to the callback function.
+ * @param func A pointer to the callback function.
  *
  * @return
  *     - NULL success
