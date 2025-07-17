@@ -1,5 +1,0 @@
-export PATH=$PATH:/usr/local/xtensa-esp32-elf/bin
-export IDF_PATH=~/esp-idf
-export LIBRARY_PATH="/usr/local/opt/gettext/lib:$LIBRARY_PATH";
-export PKG_CONFIG_PATH="/usr/local/opt/ncurses/lib/pkgconfig:$PKG_CONFIG_PATH"
-export CPATH="/usr/local/opt/gettext/include:$CPATH"

@@ -1,3 +1,0 @@
-#!/bin/sh
-exec 2>&1
-exec dropbear -d ./dropbear_dss_host_key -r ./dropbear_rsa_host_key -F -E -p 22

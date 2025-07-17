@@ -1,0 +1,44 @@
+[mapping:esp_system]
+archive: libesp_system.a
+entries:
+    if ESP_PANIC_HANDLER_IRAM = y:
+        panic (noflash)
+        panic_handler (noflash)
+        panic_arch (noflash)
+        cache_err_int:esp_cache_err_get_cpuid (noflash)
+        reset_reason:esp_reset_reason_get_hint (noflash)
+        if ESP_SYSTEM_HW_STACK_GUARD = y:
+            hw_stack_guard:esp_hw_stack_guard_get_bounds (noflash)
+            hw_stack_guard:esp_hw_stack_guard_is_fired (noflash)
+            hw_stack_guard:esp_hw_stack_guard_get_pc (noflash)
+
+    esp_err (noflash)
+    esp_system_chip:esp_system_abort (noflash)
+    ubsan (noflash)
+
+    if ESP_CONSOLE_USB_CDC_SUPPORT_ETS_PRINTF:
+        usb_console:esp_usb_console_write_char (noflash)
+        usb_console:esp_usb_console_write_buf (noflash)
+        usb_console:esp_usb_console_flush_internal (noflash)
+        usb_console:esp_usb_console_osglue_wait_proc (noflash)
+        usb_console:esp_usb_console_osglue_dis_int (noflash)
+        usb_console:esp_usb_console_osglue_ena_int (noflash)
+        usb_console:esp_usb_console_interrupt (noflash)
+        usb_console:esp_usb_console_poll_interrupts (noflash)
+        usb_console:esp_usb_console_cdc_acm_cb (noflash)
+        usb_console:esp_usb_console_dfu_detach_cb (noflash)
+        usb_console:esp_usb_console_before_restart (noflash)
+        usb_console:esp_usb_console_on_restart_timeout (noflash)
+
+[mapping:vfs_cdcacm]
+archive: libvfs.a
+entries:
+    if ESP_CONSOLE_USB_CDC_SUPPORT_ETS_PRINTF:
+        vfs_cdcacm:cdcacm_tx_cb (noflash)
+        vfs_cdcacm:cdcacm_rx_cb (noflash)
+
+[mapping:esp_system_hal]
+archive: libhal.a
+entries:
+    if ESP_PANIC_HANDLER_IRAM = y:
+        uart_hal_iram (noflash)

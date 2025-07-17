@@ -1,0 +1,7 @@
+[mapping:luartos_libpthread_iram]
+archive: libpthread.a
+entries:
+	_pthread:_pthread_has_signal (noflash)
+	mutex:pthread_mutex_lock (noflash)
+	mutex:pthread_mutex_unlock (noflash)
+	self:pthread_self (noflash)

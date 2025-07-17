@@ -1,2 +1,0 @@
-#!/bin/sh
-exec chpst -udropbearlog svlogd -tt ./main

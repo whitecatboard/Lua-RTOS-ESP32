@@ -1,5 +1,0 @@
-source ./env
-
-cd $IDF_PATH && git submodule update --init
-cd ~/Lua-RTOS-ESP32 && git pull origin master
-cd ~/Lua-RTOS-ESP32 && make SDKCONFIG_DEFAULTS=GENERIC defconfig

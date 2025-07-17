@@ -106,28 +106,28 @@ if with_ota:
 start = part_table_offset + 0x1000
 offset = start
 
-print ""
-print "Partition      Offset         Size    Size"
-print "------------------------------------------"
+print ("")
+print ("Partition      Offset         Size    Size")
+print ("------------------------------------------")
 
 nvs_offset = offset
 if with_nvs:
-  print "nvs        0x%08x\t0x%08x  % 5dK" % (offset, nvs_size, nvs_size / 1024)
+  print ("nvs        0x%08x\t0x%08x  % 5dK" % (offset, nvs_size, nvs_size / 1024))
   offset = offset + nvs_size
 
 storage_offset = offset
 if storage_partition:    
-  print "storage    0x%08x\t0x%08x  % 5dK" % (offset, int(args.LUA_RTOS_PART_STORAGE_SIZE), int(args.LUA_RTOS_PART_STORAGE_SIZE) / 1024)
+  print ("storage    0x%08x\t0x%08x  % 5dK" % (offset, int(args.LUA_RTOS_PART_STORAGE_SIZE), int(args.LUA_RTOS_PART_STORAGE_SIZE) / 1024))
   offset = offset + int(args.LUA_RTOS_PART_STORAGE_SIZE)
 
 phy_init_offset = offset
 if with_phy_init:
-  print "phy_init   0x%08x\t0x%08x" % (offset, 0x1000)
+  print ("phy_init   0x%08x\t0x%08x" % (offset, 0x1000))
   offset = offset + 0x1000
 
 ota_offset = offset
 if with_ota:
-  print "otadata    0x%08x\t0x%08x  % 5dK" % (offset, 0x2000, 0x2000 / 1024)
+  print ("otadata    0x%08x\t0x%08x  % 5dK" % (offset, 0x2000, 0x2000 / 1024))
   offset = offset + 0x2000
 
 max_app_size = (flash_size - offset) // app_partitions
@@ -141,7 +141,7 @@ app_offset = flash_size - (max_app_size * app_partitions)
 
 unused =  app_offset - offset
 if unused:
-  print "unused     0x%08x\t0x%08x  % 5dK" % (offset, unused, unused / 1024)
+  print ("unused     0x%08x\t0x%08x  % 5dK" % (offset, unused, unused / 1024))
 
 # Generate the partition table
 f = open(args.LUA_RTOS_PARTION_CSV,"w") 
@@ -172,18 +172,18 @@ if (with_ota):
 offset = app_offset
 if with_ota:
   if with_ota_factory:
-    print "factory    0x%08x\t0x%08x  % 5dK" % (offset, max_app_size, max_app_size / 1024)
+    print ("factory    0x%08x\t0x%08x  % 5dK" % (offset, max_app_size, max_app_size / 1024))
     offset = make_part("factory","0","0",offset,max_app_size)
       
-  print "ota_0      0x%08x\t0x%08x  % 5dK" % (offset, max_app_size, max_app_size / 1024)
+  print ("ota_0      0x%08x\t0x%08x  % 5dK" % (offset, max_app_size, max_app_size / 1024))
   offset = make_part("ota_0","0","ota_0",offset,max_app_size)
 
-  print "ota_1      0x%08x\t0x%08x  % 5dK" % (offset, max_app_size, max_app_size / 1024)
+  print ("ota_1      0x%08x\t0x%08x  % 5dK" % (offset, max_app_size, max_app_size / 1024))
   offset = make_part("ota_1","0","ota_1",offset,max_app_size)
 else:
-  print "factory    0x%08x\t0x%08x  % 5dK" % (offset, max_app_size, max_app_size / 1024)
+  print ("factory    0x%08x\t0x%08x  % 5dK" % (offset, max_app_size, max_app_size / 1024))
   offset = make_part("factory","0","0",offset,max_app_size)
     
 f.close()
 
-print ""
+print ("")

@@ -1,0 +1,9 @@
+[mapping:luartos_liblua_iram]
+archive: liblua.a
+entries:
+	cache:rotable_cache_get (noflash)
+	cache:rotable_cache_put (noflash)
+	lrotable:luaR_auxfind (noflash)
+	lrotable:luaR_findglobal (noflash)
+	lrotable:luaR_findfunction (noflash)
+	pio:pio_intr_handler (noflash)
