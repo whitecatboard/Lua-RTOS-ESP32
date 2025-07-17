@@ -90,7 +90,7 @@ typedef union {
 
 static lua_callback_t *callback = NULL;
 
-static void callback_func(net_event_type_t event_type, net_event_t event) {
+static void callback_func(net_event_type_t event_type, net_event_t event_id) {
     uint8_t for_us = 0; // The event is for us?
     char interface[3];
     char type[5];
@@ -128,7 +128,26 @@ static void callback_func(net_event_type_t event_type, net_event_t event) {
 				}
         }
     }
-
+#if 0
+    switch (event) {
+        case SYSTEM_EVENT_STA_START:
+        case SYSTEM_EVENT_STA_STOP:
+        case SYSTEM_EVENT_STA_CONNECTED:
+        case SYSTEM_EVENT_STA_DISCONNECTED:
+        case SYSTEM_EVENT_STA_GOT_IP:
+        case SYSTEM_EVENT_STA_LOST_IP:
+        case SYSTEM_EVENT_STA_AUTHMODE_CHANGE:
+            if (!status_get_prev(STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP) && status_get(STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP)) {
+                for_us = 1;
+                strcpy(interface,"wf");
+                strcpy(type,"up");
+            } else if (status_get_prev(STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP) && !status_get(STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP)) {
+                for_us = 1;
+                strcpy(interface,"wf");
+                strcpy(type,"down");
+            }
+            break;
+#endif
 
 #if 0
 #if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
