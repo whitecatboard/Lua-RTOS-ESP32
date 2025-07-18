@@ -47,7 +47,7 @@ driver_error_t *os_init () {
 
     memset(&OS, 0x00, sizeof(OS));
 
-    if ((error = hal_init())) {
+    if ((error = lmic_hal_init())) {
     	return error;
     }
 

@@ -80,6 +80,8 @@
 #include <drivers/net.h>
 #include <drivers/wifi.h>
 
+#include <inttypes.h>
+
 // Signal band width
 #define LORA_SBW_7_8   (0b0000 << 4) // 7.8 kHz
 #define LORA_SBW_10_4  (0b0001 << 4) // 10.4 kHz
@@ -407,7 +409,7 @@ static uint8_t ttn_wait_ack(uint8_t packet, uint8_t t1, uint8_t t2) {
  *
  */
 static void ttn_up_task(void *arg) {
-    uint8_t buffer[12 + 512]; // Buffer to build TTN message, coded in a JSON object
+    uint8_t buffer[2048]; // Buffer to build TTN message, coded in a JSON object
     char b64_payload[350];    // BUffer to encode payload into base 64
     lora_data_t rx_data;      // RX data
     uint8_t  token1;
@@ -434,7 +436,7 @@ static void ttn_up_task(void *arg) {
             // Build JSON
             sprintf(
                 buff_pos,
-                "{\"rxpk\":[{\"time\":\"%04d-%02d-%02dT%02d:%02d:%02d.00000Z\",\"tmst\":%u,\"chan\":%u,\"rfch\":%u,\"freq\":%.5lf,\"stat\":%u,\"modu\":\"%s\",\"datr\":\"SF%uBW125\",\"codr\":\"%s\",\"rssi\":%d,\"lsnr\":%.1f,\"size\":%u,\"data\":\"%s\"}]}",
+                "{\"rxpk\":[{\"time\":\"%04d-%02d-%02dT%02d:%02d:%02d.00000Z\",\"tmst\":%"PRIu32",\"chan\":%u,\"rfch\":%u,\"freq\":%.5lf,\"stat\":%u,\"modu\":\"%s\",\"datr\":\"SF%uBW125\",\"codr\":\"%s\",\"rssi\":%d,\"lsnr\":%.1f,\"size\":%u,\"data\":\"%s\"}]}",
                 (stm->tm_year + 1900),                  /* UTC time of pkt RX, us precision, ISO 8601 'compact' format */
                 (stm->tm_mon + 1),                      /* UTC time of pkt RX, us precision, ISO 8601 'compact' format */
                 stm->tm_mday,                           /* UTC time of pkt RX, us precision, ISO 8601 'compact' format */
@@ -478,7 +480,7 @@ static void ttn_up_task(void *arg) {
                 *(buff_pos++) = '{';
             }
 
-            sprintf(buff_pos, "\"stat\":{\"time\":\"%04d-%02d-%02d %02d:%02d:%02d GMT\",\"lati\":%.5f,\"long\":%.5f,\"alti\":%d,\"rxnb\":%u,\"rxok\":%u,\"rxfw\":%u,\"ackr\":%f,\"dwnb\":%u,\"txnb\":%u}}",
+            sprintf(buff_pos, "\"stat\":{\"time\":\"%04d-%02d-%02d %02d:%02d:%02d GMT\",\"lati\":%.5f,\"long\":%.5f,\"alti\":%d,\"rxnb\":%"PRIu32",\"rxok\":%"PRIu32",\"rxfw\":%"PRIu32",\"ackr\":%f,\"dwnb\":%"PRIu32",\"txnb\":%"PRIu32"}}",
             (stm->tm_year + 1900),              /* UTC 'system' time of the gateway, ISO 8601 'expanded' format */
             (stm->tm_mon + 1),                  /* UTC 'system' time of the gateway, ISO 8601 'expanded' format */
             stm->tm_mday,                       /* UTC 'system' time of the gateway, ISO 8601 'expanded' format */
@@ -539,10 +541,8 @@ static void ttn_up_task(void *arg) {
 static void ttn_down_task(void *arg) {
     int len;
     uint8_t buffer[12 + 512];
-    uint8_t  token1;
-    uint8_t  token2;
-    uint8_t  alive_token1;
-    uint8_t  alive_token2;
+    uint8_t  alive_token1 = 0;
+    uint8_t  alive_token2 = 0;
     uint64_t last_alive = 0;
 
     for(;;) {

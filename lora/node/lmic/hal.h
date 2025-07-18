@@ -48,7 +48,7 @@ typedef struct {
 /*
  * initialize hardware (IO, SPI, TIMER, IRQ).
  */
-driver_error_t *hal_init (void);
+driver_error_t *lmic_hal_init (void);
 
 /*
  * drive radio NSS pin (0=low, 1=high).

@@ -1,20 +1,20 @@
 if(CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301)
 	set(srcs
-		"gateway/multi_channel/srcbase64.c"
-		"gateway/multi_channel/srcjitqueue.c"
-		"gateway/multi_channel/srclora_pkt_fwd.c"
-		"gateway/multi_channel/srcloragw_aux.c"
-		"gateway/multi_channel/srcloragw_fpga.c"
-		"gateway/multi_channel/srcloragw_gps.c"
-		"gateway/multi_channel/srcloragw_hal.c"
-		"gateway/multi_channel/srcloragw_lbt.c"
-		"gateway/multi_channel/srcloragw_radio.c"
-		"gateway/multi_channel/srcloragw_reg.c"
-		"gateway/multi_channel/srcloragw_spi.native.c"
-		"gateway/multi_channel/srcmain.c"
-		"gateway/multi_channel/srcparson.c"
-		"gateway/multi_channel/srcplatform.c"
-		"gateway/multi_channel/srctimersync.c"
+		"gateway/multi_channel/src/base64.c"
+		"gateway/multi_channel/src/jitqueue.c"
+		"gateway/multi_channel/src/lora_pkt_fwd.c"
+		"gateway/multi_channel/src/loragw_aux.c"
+		"gateway/multi_channel/src/loragw_fpga.c"
+		"gateway/multi_channel/src/loragw_gps.c"
+		"gateway/multi_channel/src/loragw_hal.c"
+		"gateway/multi_channel/src/loragw_lbt.c"
+		"gateway/multi_channel/src/loragw_radio.c"
+		"gateway/multi_channel/src/loragw_reg.c"
+		"gateway/multi_channel/src/loragw_spi.native.c"
+		"gateway/multi_channel/src/main.c"
+		"gateway/multi_channel/src/parson.c"
+		"gateway/multi_channel/src/platform.c"
+		"gateway/multi_channel/src/timersync.c"
 	)
 	
 	set(include_dirs "gateway/multi_channel/inc")	
@@ -45,6 +45,7 @@ elseif(CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276)
 		"node/lmic/radio.c"
 		"gateway/single_channel/gateway.c"
 		"gateway/single_channel/sx1276.c"
+		"gateway/multi_channel/src/base64.c"
 	)
 	
 	set(include_dirs

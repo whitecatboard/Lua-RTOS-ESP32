@@ -449,7 +449,7 @@ driver_error_t *lora_mac_get(const char command, char **value) {
 			break;
 
 		case LORA_MAC_GET_DR:
-			result = (char *)malloc(2);
+			result = (char *)malloc(5);
 			if (result) {
 				sprintf(result,"%d",current_dr);
 			}
@@ -484,7 +484,7 @@ driver_error_t *lora_mac_get(const char command, char **value) {
 			break;
 
 		case LORA_MAC_GET_RETX:
-			result = (char *)malloc(2);
+			result = (char *)malloc(4);
 			if (result) {
 				sprintf(result,"%d",LMIC.txAttempts);
 			}

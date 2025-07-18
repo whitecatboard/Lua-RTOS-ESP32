@@ -40,7 +40,6 @@
 
 #include "esp_system.h"
 #include "esp_attr.h"
-#include "esp_intr.h"
 #include "soc/gpio_reg.h"
 #include "soc/rtc_cntl_reg.h"
 
@@ -146,7 +145,7 @@ driver_error_t *lmic_lock_resources(int unit, void *resources) {
 }
 #endif
 
-driver_error_t *hal_init (void) {
+driver_error_t *lmic_hal_init (void) {
 	driver_error_t *error;
 
 	// Init SPI bus
