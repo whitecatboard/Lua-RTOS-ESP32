@@ -96,7 +96,7 @@ static void callback_func(net_event_type_t event_type, net_event_t event_id) {
     char type[5];
 
     if (event_type == NetEventTypeWifi) {
-        switch (event) {
+        switch (event_id) {
             case WIFI_EVENT_STA_START:
             case WIFI_EVENT_STA_STOP:
             case WIFI_EVENT_STA_CONNECTED:
@@ -114,7 +114,7 @@ static void callback_func(net_event_type_t event_type, net_event_t event_id) {
                 break;
         }
     } else  if (event_type == NetEventTypeWifiIp) {
-        switch (event) {
+        switch (event_id) {
 			case IP_EVENT_STA_GOT_IP:
 			case IP_EVENT_STA_LOST_IP:
 				if (!status_get_prev(STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP) && status_get(STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP)) {
