@@ -20,6 +20,8 @@ set(EXTRA_COMPONENT_DIRS
   "lora"
   "openssl"
   "compat"
+  "http"
+  "captivedns"
 )
 
 #set(EXTRA_COMPONENT_DIRS "components")

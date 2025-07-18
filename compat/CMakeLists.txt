@@ -1,4 +1,7 @@
-set(srcs "")
+set(srcs 
+    "getnameinfo.c"
+)
+
 set(include_dirs 
     "include"
 )
