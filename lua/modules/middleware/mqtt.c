@@ -61,16 +61,15 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <mqtt/MQTTAsync.h>
-#include <mqtt/MQTTClientPersistence.h>
+#include "MQTTAsync.h"
+#include "MQTTClientPersistence.h"
 
-#include <sys/mutex.h>
-#include <sys/delay.h>
-#include <sys/status.h>
-#include <sys/syslog.h>
-#include <sys/mount.h>
-
-#include <sys/drivers/net.h>
+#include "mutex.h"
+#include "delay.h"
+#include "status.h"
+#include "syslog.h"
+#include "mount.h"
+#include "net.h"
 
 #define MQTT_CONNECT_TIMEOUT 20000
 

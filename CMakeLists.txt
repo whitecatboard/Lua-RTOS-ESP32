@@ -22,6 +22,7 @@ set(EXTRA_COMPONENT_DIRS
   "compat"
   "http"
   "captivedns"
+  "mqtt"
 )
 
 #set(EXTRA_COMPONENT_DIRS "components")
