@@ -27,8 +27,8 @@ components/mkspiffs/src/mkspiffs
 components/mklfs/src/mklfs
 components/mkromfs/src/mkromfs
 
-sdkconfig
-sdkconfig.old
+# sdkconfig
+# sdkconfig.old
 
 .cproject/
 .settings/
