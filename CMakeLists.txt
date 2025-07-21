@@ -24,6 +24,7 @@ set(EXTRA_COMPONENT_DIRS
   "captivedns"
   "mqtt"
   "telnet"
+  "zlib"
 )
 
 #set(EXTRA_COMPONENT_DIRS "components")
