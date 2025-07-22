@@ -82,8 +82,11 @@ add_compile_options("-DBUILD_COMMIT=\"sss\"")
 
 add_compile_options("--warn-no-multistatement-macros")
 	
+	
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 project(Lua-RTOS)
 
+include(cmake/board.cmake)
 include(cmake/part.cmake)
+include(cmake/fs.cmake)

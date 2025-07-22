@@ -62,7 +62,12 @@ if query:
     for i, board in enumerate(boards, 1):
         for j, firmware in enumerate(board["firmwares"], 1):
             if firmware["id"] == query_firm:
-                sys.stdout.write(board[query_prop])
+                if query_prop == "filesystem":
+                    sys.stdout.write(firmware[query_prop])
+                elif query_prop == "description":
+                    sys.stdout.write(firmware[query_prop])
+                else:
+                    sys.stdout.write(board[query_prop])
                 exit(0)
                 
 # Board selection
@@ -74,7 +79,7 @@ for i, board in enumerate(boards, 1):
     sys.stderr.write("  %2d: %s\r\n" % (i, board["description"]))
 
 sys.stderr.write("\r\nSelected board: ")    
-sboard = raw_input()
+sboard = input()
 
 if not sboard.isdigit():
     sys.stderr.write("Invalid board selection\r\n")
@@ -98,7 +103,7 @@ for j, firmware in enumerate(board["firmwares"], 1):
     sys.stderr.write("  %2d: %s\r\n" % (j, firmware["description"]))
       
 sys.stderr.write("\r\nSelected firmware: ")    
-firm = raw_input()
+firm = input()
   
 if not firm.isdigit():
     sys.stderr.write("Invalid board firmware\r\n")
