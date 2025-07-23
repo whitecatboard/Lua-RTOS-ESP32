@@ -91,7 +91,7 @@ static char sccsid[] = "@(#)syslog.c	8.5 (Berkeley) 4/29/95";
 static int   logSock = 0;
 static char *logHost = NULL;
 static const char *logHostDefault = CONFIG_LUA_RTOS_RSYSLOG_SERVER;
-struct sockaddr_in logAddr;
+struct sockaddr_in6 logAddr;
 #endif
 static FILE *logFile = NULL;
 static int	 logStat = 0;		/* status bits, set by openlog() */
@@ -283,7 +283,7 @@ static void reconnect_syslog() {
 
 			freeaddrinfo(result);
 
-			if (logAddr.sin_port != 0) {
+			if (logAddr.sin6_port != 0) {
 				logSock = socket(AF_INET, SOCK_DGRAM, 0);
 				if (0 != logSock) {
 					fcntl(logSock, F_SETFL, O_NONBLOCK);
@@ -297,7 +297,7 @@ static void reconnect_syslog() {
 	}
 }
 
-static void syslog_net_callback(system_event_t *event){
+static void syslog_net_callback(net_event_type_t event_type, net_event_t event_id){
 	if ( (NETWORK_AVAILABLE() && (0 == logSock)) ||
 	    (!NETWORK_AVAILABLE() && (0 != logSock)) ) {
 		reconnect_syslog();
@@ -335,6 +335,8 @@ int openlog(logstat, logfac)
 
 	driver_error_t *error;
 	if ((error = net_event_register_callback(syslog_net_callback))) {
+		free(error);
+
 		printf("couldn't register net callback, please restart syslog service from lua using after changing connectivity\n");
 		printf("you may use the command 'os.logcons(os.logcons())' to restart the syslog service from lua\n");
 	}
@@ -357,6 +359,8 @@ void closelog() {
 
 	driver_error_t *error;
 	if ((error = net_event_unregister_callback(syslog_net_callback))) {
+		free(error);
+
 		printf("couldn't unregister net callback\n");
 	}
 #endif
