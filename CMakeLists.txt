@@ -25,6 +25,7 @@ set(EXTRA_COMPONENT_DIRS
   "mqtt"
   "telnet"
   "zlib"
+  "rc-switch"
 )
 
 #set(EXTRA_COMPONENT_DIRS "components")

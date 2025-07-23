@@ -16,7 +16,7 @@ set(srcs
 	"modules/hw/neopixel.c"
 	"modules/hw/pio.c"
  	"modules/hw/pwm.c"
-#	"modules/hw/rcswitch.c"
+	"modules/hw/rcswitch.c"
 	"modules/hw/rtc.c"
 	"modules/hw/sdisplay.c"
 	"modules/hw/sensor.c"
@@ -112,7 +112,7 @@ idf_component_register(
 	SRCS "${srcs}"
 	INCLUDE_DIRS "${include_dirs}"
 	LDFRAGMENTS "${fragments}"
-	PRIV_REQUIRES bt wpa_supplicant ulp app_update pthread libcrypt vfs nvs_flash lora sound sys mqtt esp_rom
+	PRIV_REQUIRES bt wpa_supplicant ulp app_update pthread libcrypt vfs nvs_flash lora sound sys mqtt esp_rom rc-switch
 )
 
 # Force linker to link lua modules enabled in build
@@ -125,7 +125,7 @@ list(APPEND extra_link_flags "-u luaopen_i2c")
 list(APPEND extra_link_flags "-u luaopen_neopixel")
 list(APPEND extra_link_flags "-u luaopen_pio")
 list(APPEND extra_link_flags "-u luaopen_pwm")
-#list(APPEND extra_link_flags "-u luaopen_rcswitch")
+list(APPEND extra_link_flags "-u luaopen_rcswitch")
 list(APPEND extra_link_flags "-u luaopen_rtc")
 list(APPEND extra_link_flags "-u luaopen_sdisplay")
 list(APPEND extra_link_flags "-u luaopen_sensor")

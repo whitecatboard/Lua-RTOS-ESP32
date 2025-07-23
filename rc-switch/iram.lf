@@ -1,0 +1,7 @@
+[mapping:luartos_rc_switch_iram]
+archive: rc-switch.a
+entries:
+	RCSwitch:receiveProtocol (noflash)
+	RCSwitch:handleInterrupt (noflash)
+	arduino:micros (noflash)
+	arduino:delayMicroseconds (noflash)

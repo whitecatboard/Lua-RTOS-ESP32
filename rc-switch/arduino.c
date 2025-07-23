@@ -38,57 +38,73 @@
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * Lua RTOS, Lua RCSwitch module
- *
  */
 
 #include "sdkconfig.h"
-
-#if CONFIG_LUA_RTOS_LUA_USE_RCSWITCH
-
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
-#include "error.h"
-#include "modules.h"
 
-#include <stdio.h>
-#include <string.h>
-#include <sys/stat.h>
+#include "arduino.h"
+#include <freertos/task.h>
+#include "driver.h"
+#include "gpio.h"
 #include "status.h"
 #include "delay.h"
 #include "sys.h"
 #include "sleep.h"
-#include "rc-switch.h"
+#include "syslog.h"
+#include "esp_timer.h"
 
-static int lrcswitch_send(lua_State *L) {
-  return rcswitch_send(L);
+void pinMode(uint8_t pin, uint8_t mode) {
+    driver_error_t *error;
+    if (INPUT == mode) {
+      if ((error = gpio_pin_input(pin))) {
+          syslog(LOG_ERR, "ERROR ON gpio_pin_input\n");
+          free(error);
+      }
+    }
+    else {
+      if ((error = gpio_pin_output(pin))) {
+          syslog(LOG_ERR, "ERROR ON gpio_pin_output\n");
+          free(error);
+      }
+    }
 }
 
-static int lrcswitch_receive(lua_State *L) {
-  return rcswitch_listen(L);
+void digitalWrite(uint8_t pin, uint8_t value) {
+    driver_error_t *error;
+    if (HIGH == value) {
+      if ((error = gpio_pin_set(pin))) {
+          syslog(LOG_ERR, "ERROR ON gpio_pin_set\n");
+          free(error);
+      }
+    }
+    else {
+      if ((error = gpio_pin_clr(pin))) {
+          syslog(LOG_ERR, "ERROR ON gpio_pin_clr\n");
+          free(error);
+      }
+    }
 }
 
-static int lrcswitch_stop(lua_State *L) {
-  rcswitch_destroy(L);
-  return 0;
+uint8_t digitalRead(uint8_t pin) {
+    uint8_t value;
+    driver_error_t *error;
+    if ((error = gpio_pin_get(pin, &value))) {
+        syslog(LOG_ERR, "ERROR ON gpio_pin_get\n");
+        free(error);
+    }
+    return value;
 }
 
-static const LUA_REG_TYPE lrcswitch_map[] = {
-  { LSTRKEY( "send" ),                   LFUNCVAL( lrcswitch_send    ) },
-  { LSTRKEY( "receive" ),                LFUNCVAL( lrcswitch_receive ) },
-  { LSTRKEY( "stop" ),                   LFUNCVAL( lrcswitch_stop    ) },
-
-  { LSTRKEY( "BACKGROUND" ),             LINTVAL( 0 ) },
-  DRIVER_REGISTER_LUA_ERRORS(rcswitch)
-	{ LNILKEY, LNILVAL }
-};
-
-LUALIB_API int luaopen_rcswitch( lua_State *L ) {
-  LNEWLIB(L, rcswitch);
+unsigned long micros()
+{
+    return (unsigned long) esp_timer_get_time();
 }
 
-MODULE_REGISTER_ROM(RCSWITCH, rcswitch, lrcswitch_map, luaopen_rcswitch, 1);
+void delayMicroseconds(uint32_t us)
+{
+    usleep(us);
+}
 
-#endif
