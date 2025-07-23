@@ -108,7 +108,9 @@ extern const int net_error_map;
 
 typedef enum {
 	NetEventTypeWifi = 1,
-	NetEventTypeWifiIp
+	NetEventTypeWifiIp,
+	NetEventTypeEth,
+	NetEventTypeEthIp,
 } net_event_type_t;
 
 typedef uint32_t net_event_t;

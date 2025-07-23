@@ -56,6 +56,7 @@
 #define ETH_ERR_NOT_START              (DRIVER_EXCEPTION_BASE(ETH_DRIVER_ID) |  2)
 #define ETH_ERR_CANT_CONNECT           (DRIVER_EXCEPTION_BASE(ETH_DRIVER_ID) |  3)
 #define ETH_ERR_INVALID_ARGUMENT       (DRIVER_EXCEPTION_BASE(ETH_DRIVER_ID) |  4)
+#define ETH_ERR_ETH_NO_MEM             (DRIVER_EXCEPTION_BASE(ETH_DRIVER_ID) |  5)
 
 extern const int eth_errors;
 extern const int eth_error_map;

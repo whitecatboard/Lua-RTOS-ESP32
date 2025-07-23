@@ -52,6 +52,7 @@
 #include "net.h"
 #include "error.h"
 #include "sys.h"
+#include "esp_eth.h"
 
 #include "modules.h"
 
@@ -113,7 +114,7 @@ static void callback_func(net_event_type_t event_type, net_event_t event_id) {
                 }
                 break;
         }
-    } else  if (event_type == NetEventTypeWifiIp) {
+    } else if (event_type == NetEventTypeWifiIp) {
         switch (event_id) {
 			case IP_EVENT_STA_GOT_IP:
 			case IP_EVENT_STA_LOST_IP:
@@ -127,6 +128,39 @@ static void callback_func(net_event_type_t event_type, net_event_t event_id) {
 					strcpy(type,"down");
 				}
         }
+    } else if (event_type == NetEventTypeEth) {
+        switch (event_id) {
+			case ETHERNET_EVENT_START:
+			case ETHERNET_EVENT_STOP:
+			case ETHERNET_EVENT_CONNECTED:
+			case ETHERNET_EVENT_DISCONNECTED:
+				if (!status_get_prev(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP) && status_get(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP)) {
+					for_us = 1;
+					strcpy(interface,"en");
+					strcpy(type,"up");
+				} else if (status_get_prev(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP) && !status_get(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP)) {
+					for_us = 1;
+					strcpy(interface,"en");
+					strcpy(type,"down");
+				}
+				break;
+			}
+    } else if (event_type == NetEventTypeEthIp) {
+        switch (event_id) {
+			case IP_EVENT_ETH_GOT_IP:
+			case IP_EVENT_ETH_LOST_IP:
+			case IP_EVENT_GOT_IP6:
+				if (!status_get_prev(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP) && status_get(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP)) {
+					for_us = 1;
+					strcpy(interface,"en");
+					strcpy(type,"up");
+				} else if (status_get_prev(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP) && !status_get(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP)) {
+					for_us = 1;
+					strcpy(interface,"en");
+					strcpy(type,"down");
+				}
+				break;
+			}
     }
 #if 0
     switch (event) {

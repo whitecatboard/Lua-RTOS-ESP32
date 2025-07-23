@@ -741,7 +741,7 @@ driver_error_t *wifi_stop() {
 }
 
 driver_error_t *wifi_stat(ifconfig_t *info) {
-	esp_netif_ip_info_t ip_info;
+	esp_netif_ip_info_t ip_info = {0};
     ip6_addr_t adr = {0};
     uint8_t mac[6] = {0,0,0,0,0,0};
 
@@ -759,7 +759,9 @@ driver_error_t *wifi_stat(ifconfig_t *info) {
     }
 
     // Get WIFI IF info
-    if ((error = wifi_check_error(esp_netif_get_ip_info(netif, &ip_info)))) return error;
+    if (status_get(STATUS_WIFI_STARTED)) {
+    	if ((error = wifi_check_error(esp_netif_get_ip_info(netif, &ip_info)))) return error;
+    }
 
     // TO DO
 	#if 0

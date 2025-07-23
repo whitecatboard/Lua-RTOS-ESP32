@@ -951,11 +951,20 @@ menu "Lua RTOS"
                 help
                     Select the ethernet phy type.
 
-                config PHY_LAN8720
-                    bool "LAN8720"
+                config IP101
+                    bool "IP101"
 
-                config PHY_TLK110
-                    bool "TLK110"
+                config PHY_RTL8201
+                    bool "RTL8201/SR8201"
+
+                config PHY_LAN8720
+                    bool "RTL8201/SR8201"
+
+                config PHY_DP83848
+                    bool "DP83848"
+
+                config PHY_KSZ80XX
+                    bool "KSZ80XX"
             endchoice
 
             config PHY_ADDRESS

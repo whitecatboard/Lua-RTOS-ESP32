@@ -15,7 +15,7 @@ set(srcs
 	"drivers/cpu.c"
 	"drivers/dac.c"
 	"drivers/encoder.c"
-#	"drivers/eth.c"
+	"drivers/eth.c"
 	"drivers/dgdisplay.c"
 	"drivers/gpio.c"
 	"drivers/gpio_debouncing.c"
@@ -200,7 +200,7 @@ list(APPEND extra_link_flags "-u can_setup")
 list(APPEND extra_link_flags "-u dac_tone_setup")
 list(APPEND extra_link_flags "-u encoder_setup")
 list(APPEND extra_link_flags "-u system_setup")
-#list(APPEND extra_link_flags "-u eth_setup")
+list(APPEND extra_link_flags "-u eth_setup")
 list(APPEND extra_link_flags "-u gpio_pin_output")
 list(APPEND extra_link_flags "-u neopixel_setup")
 list(APPEND extra_link_flags "-u net_init")
