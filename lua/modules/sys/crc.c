@@ -52,13 +52,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
-#include <rom/crc.h>
+
+#include "esp_rom_crc.h"
 
 static int lcrc8(lua_State *L) {
 	size_t length;
 	const uint8_t *string = (uint8_t *) luaL_checklstring(L, 1, &length);
 	uint8_t crc = luaL_optinteger(L, 2, 0xFF );
-	crc = crc8_le(crc, string, length);
+	crc = esp_rom_crc8_le(crc, string, length);
 
 	lua_pushinteger(L, (lua_Integer)crc);
 	return 1;
@@ -68,7 +69,7 @@ static int lcrc16(lua_State *L) {
 	size_t length;
 	const uint8_t *string = (uint8_t *) luaL_checklstring(L, 1, &length);
 	uint16_t crc = luaL_optinteger(L, 2, 0xFFFF );
-	crc = crc16_le(crc, string, length);
+	crc = esp_rom_crc16_le(crc, string, length);
 
 	lua_pushinteger(L, (lua_Integer)crc);
 	return 1;
@@ -78,7 +79,7 @@ static int lcrc32(lua_State *L) {
 	size_t length;
 	const uint8_t *string = (uint8_t *) luaL_checklstring(L, 1, &length);
 	uint32_t crc = luaL_optinteger(L, 2, 0xFFFFFFFF );
-	crc = crc32_le(crc, string, length);
+	crc = esp_rom_crc32_le(crc, string, length);
 
 	lua_pushinteger(L, (lua_Integer)crc);
 	return 1;

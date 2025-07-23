@@ -51,7 +51,7 @@ set(srcs
 	"modules/middleware/mqtt.c"
 	"modules/misc/lsound.c"
 	"modules/net/net.c"
-#	"modules/sys/crc.c"
+	"modules/sys/crc.c"
 	"modules/sys/error.c"
 	"modules/sys/event.c"
 	"modules/sys/fs.c"
@@ -140,7 +140,7 @@ list(APPEND extra_link_flags "-u luaopen_lora")
 list(APPEND extra_link_flags "-u luaopen_mqtt")
 list(APPEND extra_link_flags "-u luaopen_sound")
 list(APPEND extra_link_flags "-u luaopen_net")
-#list(APPEND extra_link_flags "-u luaopen_crc")
+list(APPEND extra_link_flags "-u luaopen_crc")
 list(APPEND extra_link_flags "-u luaopen_event")
 list(APPEND extra_link_flags "-u luaopen_fs")
 list(APPEND extra_link_flags "-u luaopen_pack")
