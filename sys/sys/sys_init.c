@@ -145,27 +145,18 @@ void _sys_init() {
     #endif
     #endif
 
-    // TO DO
-	#if 0
     // Set default power down mode for all RTC power domains in deep sleep
     #if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_PERIPH
     esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
-    #else
-    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
     #endif
 
     #if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_SLOW_MEM
     esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
-    #else
-    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
     #endif
 
     #if CONFIG_LUA_RTOS_DEEP_SLEEP_RTC_FAST_MEM
     esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
-    #else
-    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);
     #endif
-	#endif
 
     // Increment bootcount
     boot_count++;
