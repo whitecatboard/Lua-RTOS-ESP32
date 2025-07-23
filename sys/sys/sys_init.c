@@ -46,6 +46,9 @@
 #include "sdkconfig.h"
 #include "luartos.h"
 
+#include "build_time.h"
+#include "build_commit.h"
+
 #if LUA_RTOS_INCLUDE_LUA
 #include "lua.h"
 #endif

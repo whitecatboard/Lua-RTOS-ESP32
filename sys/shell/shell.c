@@ -47,6 +47,9 @@
 
 #if CONFIG_LUA_RTOS_USE_SSH_SERVER
 
+#include "build_time.h"
+#include "build_commit.h"
+
 #include "shell.h"
 #include "esp_ota_ops.h"
 

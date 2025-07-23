@@ -77,35 +77,12 @@ add_compile_options("-DLUA_RTOS_INCLUDE_IDF_REPLACEMENTS=1")
 
 add_compile_options("--warn-no-multistatement-macros")
 
-# Define BUILD_TIME flag, with the EPOCH time when Lua RTOS is build.
-# This is used for set system time when RTC is not set.
-if("${LUA_RTOS_BUILD_TIME}" STREQUAL "")
-  execute_process(
-      COMMAND python -c "from datetime import datetime;print(int(datetime.now().timestamp()))"
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      OUTPUT_VARIABLE LUA_RTOS_BUILD_TIME OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-endif()
-
-add_compile_options("-DBUILD_TIME=${LUA_RTOS_BUILD_TIME}")
-
-# Define BUILD_COMMIT flag, with the commit hash number used in build.
-# This is used in os.version Lua function for return the build commit.
-if("${LUA_RTOS_BUILD_COMMIT}" STREQUAL "")
-  execute_process(
-      COMMAND git rev-parse HEAD
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      OUTPUT_VARIABLE LUA_RTOS_BUILD_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-endif()
-
-add_compile_options("-DBUILD_COMMIT=\"${LUA_RTOS_BUILD_COMMIT}\"")
-
 # Add project
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(Lua-RTOS)
 
 # Include custom CMake files
+include(cmake/build.cmake)
 include(cmake/board.cmake)
 include(cmake/part.cmake)
 include(cmake/fs.cmake)

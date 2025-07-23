@@ -45,6 +45,8 @@
 
 #include "lauxlib.h"
 #include "luartos.h"
+#include "build_time.h"
+#include "build_commit.h"
 #include "error.h"
 #include "linenoise.h"
 
