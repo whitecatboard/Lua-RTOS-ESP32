@@ -56,7 +56,7 @@ set(srcs
 	"modules/sys/event.c"
 	"modules/sys/fs.c"
 	"modules/sys/lpack.c"
-#	"modules/sys/md5.c"
+	"modules/sys/md5.c"
 	"modules/sys/nvs.c"
 	"modules/sys/thread.c"
 	"modules/sys/tmr.c"
@@ -112,7 +112,7 @@ idf_component_register(
 	SRCS "${srcs}"
 	INCLUDE_DIRS "${include_dirs}"
 	LDFRAGMENTS "${fragments}"
-	PRIV_REQUIRES bt wpa_supplicant ulp app_update pthread libcrypt vfs nvs_flash lora sound sys mqtt
+	PRIV_REQUIRES bt wpa_supplicant ulp app_update pthread libcrypt vfs nvs_flash lora sound sys mqtt esp_rom
 )
 
 # Force linker to link lua modules enabled in build
@@ -144,7 +144,7 @@ list(APPEND extra_link_flags "-u luaopen_net")
 list(APPEND extra_link_flags "-u luaopen_event")
 list(APPEND extra_link_flags "-u luaopen_fs")
 list(APPEND extra_link_flags "-u luaopen_pack")
-#list(APPEND extra_link_flags "-u luaopen_md5")
+list(APPEND extra_link_flags "-u luaopen_md5")
 list(APPEND extra_link_flags "-u luaopen_nvs")
 list(APPEND extra_link_flags "-u luaopen_thread")
 list(APPEND extra_link_flags "-u luaopen_tmr")

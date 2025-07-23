@@ -52,8 +52,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
-#include <rom/md5_hash.h>
 
+#include "esp_rom_md5.h"
 #include "hex_string.h"
 
 #define DIGEST_VAL_LENGTH  16
@@ -65,9 +65,9 @@ static int lmd5_string(lua_State *L) {
     unsigned char digest[DIGEST_VAL_LENGTH];
 
     struct MD5Context ctx;
-    MD5Init(&ctx);
-    MD5Update(&ctx, string, length);
-    MD5Final(digest, &ctx);
+    esp_rom_md5_init(&ctx);
+    esp_rom_md5_update(&ctx, string, length);
+    esp_rom_md5_final(digest, &ctx);
 
     char digest_string[DIGEST_HEX_LENGTH];
     val_to_hex_string_caps(digest_string, (char *)digest, DIGEST_VAL_LENGTH, 0, 0, 0);
@@ -87,12 +87,12 @@ static int lmd5_file(lua_State *L) {
     }
 
     struct MD5Context ctx;
-    MD5Init(&ctx);
+    esp_rom_md5_init(&ctx);
 
     uint8_t buffer[BUFFER_SIZE];
     size_t length;
     while((length = fread(buffer, 1, BUFFER_SIZE, fp))) {
-        MD5Update(&ctx, buffer, length);
+    	esp_rom_md5_update(&ctx, buffer, length);
     }
     if (ferror(fp)) {
         int retval = luaL_fileresult(L, 0, binary);
@@ -102,7 +102,7 @@ static int lmd5_file(lua_State *L) {
     fclose(fp);
 
     unsigned char digest[DIGEST_VAL_LENGTH];
-    MD5Final(digest, &ctx);
+    esp_rom_md5_final(digest, &ctx);
 
     char digest_string[DIGEST_HEX_LENGTH];
     val_to_hex_string_caps(digest_string, (char *)digest, DIGEST_VAL_LENGTH, 0, 0, 0);
