@@ -311,8 +311,8 @@ static driver_error_t *wifi_init(wifi_mode_t mode) {
         return error;
     }
 
-    esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &net_wifi_handler, WIFI_EVENT, NULL);
-    esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &net_wifi_ip_handler, IP_EVENT, NULL);
+    esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &net_wifi_handler, (void *)WIFI_EVENT, NULL);
+    esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &net_wifi_ip_handler, (void *)IP_EVENT, NULL);
 
     if (!status_get(STATUS_WIFI_INITED)) {
         wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
