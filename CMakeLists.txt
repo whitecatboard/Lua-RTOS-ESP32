@@ -50,8 +50,8 @@ add_compile_options("-D_POSIX_THREADS")
 #add_compile_options("-D_SYS_SYSLIMITS_H_")
 
 add_compile_options("-DINCLUDE_xTaskAbortDelay=1")
-add_compile_options("-DNEWLIB_HAVE_SLEEP=0")
-add_compile_options("-DNEWLIB_HAVE_USLEEP=0")
+add_compile_options("-DNEWLIB_HAVE_SLEEP=1")
+add_compile_options("-DNEWLIB_HAVE_USLEEP=1")
 
 add_compile_options("-DCPU_HZ=240000000L")                   # CPU frequency in hertz
 add_compile_options("-DCORE_TIMER_HZ=240000000L")            # CPU core timer frequency

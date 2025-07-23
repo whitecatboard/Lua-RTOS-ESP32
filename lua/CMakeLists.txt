@@ -112,7 +112,7 @@ idf_component_register(
 	SRCS "${srcs}"
 	INCLUDE_DIRS "${include_dirs}"
 	LDFRAGMENTS "${fragments}"
-	PRIV_REQUIRES bt wpa_supplicant ulp app_update pthread libcrypt vfs nvs_flash lora sound sys mqtt esp_rom rc-switch esp_hw_support
+	PRIV_REQUIRES bt wpa_supplicant ulp app_update pthread libcrypt vfs nvs_flash lora sound sys mqtt esp_rom rc-switch esp_hw_support hal
 )
 
 # Force linker to link lua modules enabled in build

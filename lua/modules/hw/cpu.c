@@ -64,6 +64,9 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+
+#include "hal/clk_tree_hal.h"
+
 #include <esp_task_wdt.h>
 
 #include "esp_cpu.h"
@@ -240,11 +243,9 @@ static int lcpu_temperature(lua_State *L) {
 }
 
 static int lcpu_speed(lua_State *L) {
-#if 0
 #ifdef CONFIG_PM_ENABLE
     if (lua_gettop(L) > 0) {
         esp_err_t error;
-        rtc_cpu_freq_t max_freq;
 
         int speed = luaL_checkinteger(L, 1);
         bool dynamic = false;
@@ -253,20 +254,16 @@ static int lcpu_speed(lua_State *L) {
             dynamic = lua_toboolean(L, 2);
         }
 
-        if (speed > 10) {
-            //enable use of sdkconfig value via CPU_SPEED_DEFAULT
-            //speed is an actual mhz value so we need to convert it
-            if (!rtc_clk_cpu_freq_from_mhz(CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ, &max_freq)) {
-                return luaL_exception(L, LUA_CPU_ERR_INVALID_CPU_SPEED);
-            }
-        }
-        else {
-            max_freq = speed;
+        if ((speed != 80) && (speed != 160) && (speed != 240)) {
+            return luaL_exception(L, LUA_CPU_ERR_INVALID_CPU_SPEED);
         }
 
-        esp_pm_config_esp32_t pm_config = {
-                    .max_cpu_freq = max_freq,
-                    .min_cpu_freq = (dynamic ? RTC_CPU_FREQ_XTAL : max_freq)
+        esp_pm_config_t pm_config = {
+			.max_freq_mhz = speed,
+			.min_freq_mhz = (dynamic?clk_hal_xtal_get_freq_mhz(): speed),
+			#if CONFIG_FREERTOS_USE_TICKLESS_IDLE
+			.light_sleep_enable = true
+			#endif
         };
 
         if ((error = esp_pm_configure(&pm_config))) {
@@ -274,9 +271,8 @@ static int lcpu_speed(lua_State *L) {
         }
 
         //need to usleep here for the return value to be correct
-        usleep(1000);
+        usleep(10000);
     }
-#endif
 #endif
 
     lua_pushinteger(L, cpu_speed_mhz());
@@ -418,13 +414,10 @@ static const LUA_REG_TYPE lcpu_map[] = {
     { LSTRKEY( "WATCHPOINT_STORE" ),       LINTVAL( ESP_CPU_WATCHPOINT_STORE   ) },
     { LSTRKEY( "WATCHPOINT_ACCESS" ),      LINTVAL( ESP_CPU_WATCHPOINT_ACCESS  ) },
 
-// TO DO
-#if 0
-    { LSTRKEY( "SPEED_DEFAULT" ),          LINTVAL( CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ ) }, //e.g. 240
-    { LSTRKEY( "SPEED_FAST" ),             LINTVAL( RTC_CPU_FREQ_240M      ) }, //3
-    { LSTRKEY( "SPEED_MEDIUM" ),           LINTVAL( RTC_CPU_FREQ_160M      ) }, //2
-    { LSTRKEY( "SPEED_SLOW" ),             LINTVAL( RTC_CPU_FREQ_80M       ) }, //1
-#endif
+    { LSTRKEY( "SPEED_DEFAULT" ),          LINTVAL( CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ ) },
+    { LSTRKEY( "SPEED_FAST" ),             LINTVAL( 240      ) },
+    { LSTRKEY( "SPEED_MEDIUM" ),           LINTVAL( 160      ) },
+    { LSTRKEY( "SPEED_SLOW" ),             LINTVAL( 80       ) },
 
     DRIVER_REGISTER_LUA_ERRORS(cpu)
     { LNILKEY, LNILVAL }
