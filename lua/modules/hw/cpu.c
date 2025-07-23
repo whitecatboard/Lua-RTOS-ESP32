@@ -60,12 +60,13 @@
 #include <rom/rtc.h>
 #include <esp_sleep.h>
 #include <soc/rtc.h>
-#include <esp32/pm.h>
 #include <esp_pm.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <esp_task_wdt.h>
+
+#include "esp_cpu.h"
 
 extern const int cpu_error_map;
 
@@ -224,12 +225,12 @@ static int lcpu_wakeup_ext1_pin(lua_State *L) {
 static int lcpu_watchpoint(lua_State *L) {
     uint32_t addr = luaL_checkinteger(L, 1);
     int size = luaL_optinteger(L, 2, 4); //must be one of 2^n, with n in [0..6]
-    int flags = luaL_optinteger(L, 3, ESP_WATCHPOINT_STORE); //when to break
+    int flags = luaL_optinteger(L, 3, ESP_CPU_WATCHPOINT_ACCESS); //when to break
 
     if (size!=1 && size!=2 && size!=4 && size!=8 && size!=16 && size!=32 && size!=64)
         return luaL_exception(L, LUA_CPU_ERR_CANT_SET_WATCHPOINT);
 
-    esp_set_watchpoint(0, (void *)addr, size, flags); //watchpoint 1 may be used by freertos CONFIG_FREERTOS_WATCHPOINT_END_OF_STACK
+    esp_cpu_set_watchpoint(0, (void *)addr, size, (esp_cpu_watchpoint_trigger_t)flags);
     return 0;
 }
 
@@ -239,6 +240,7 @@ static int lcpu_temperature(lua_State *L) {
 }
 
 static int lcpu_speed(lua_State *L) {
+#if 0
 #ifdef CONFIG_PM_ENABLE
     if (lua_gettop(L) > 0) {
         esp_err_t error;
@@ -275,17 +277,23 @@ static int lcpu_speed(lua_State *L) {
         usleep(1000);
     }
 #endif
+#endif
 
     lua_pushinteger(L, cpu_speed_mhz());
     return 1;
 }
 
+// TO DO
+#if 0
 #define MAX_BACKTRACE 100
 extern __NOINIT_ATTR uint32_t backtrace_count;
 extern __NOINIT_ATTR uint32_t backtrace_pc[MAX_BACKTRACE];
 extern __NOINIT_ATTR uint32_t backtrace_sp[MAX_BACKTRACE];
+#endif
 
 static int lcpu_backtrace(lua_State *L) {
+	// TO DO
+	#if 0
     bool bPrint = false;
     if (lua_gettop(L) > 0) {
         luaL_checktype(L, 1, LUA_TBOOLEAN);
@@ -320,6 +328,9 @@ static int lcpu_backtrace(lua_State *L) {
     if (bPrint) printf("\r\n");
 
     return 1; //one table
+	#else
+    return 0;
+	#endif
 }
 
 static int lcpu_watchdog_add(lua_State *L) {
@@ -403,14 +414,17 @@ static const LUA_REG_TYPE lcpu_map[] = {
     { LSTRKEY( "WAKEUP_TOUCHPAD" ),        LINTVAL( ESP_SLEEP_WAKEUP_TOUCHPAD  ) },
     { LSTRKEY( "WAKEUP_ULP" ),             LINTVAL( ESP_SLEEP_WAKEUP_ULP       ) },
 
-    { LSTRKEY( "WATCHPOINT_LOAD" ),        LINTVAL( ESP_WATCHPOINT_LOAD    ) },
-    { LSTRKEY( "WATCHPOINT_STORE" ),       LINTVAL( ESP_WATCHPOINT_STORE   ) },
-    { LSTRKEY( "WATCHPOINT_ACCESS" ),      LINTVAL( ESP_WATCHPOINT_ACCESS  ) },
+    { LSTRKEY( "WATCHPOINT_LOAD" ),        LINTVAL( ESP_CPU_WATCHPOINT_LOAD    ) },
+    { LSTRKEY( "WATCHPOINT_STORE" ),       LINTVAL( ESP_CPU_WATCHPOINT_STORE   ) },
+    { LSTRKEY( "WATCHPOINT_ACCESS" ),      LINTVAL( ESP_CPU_WATCHPOINT_ACCESS  ) },
 
+// TO DO
+#if 0
     { LSTRKEY( "SPEED_DEFAULT" ),          LINTVAL( CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ ) }, //e.g. 240
     { LSTRKEY( "SPEED_FAST" ),             LINTVAL( RTC_CPU_FREQ_240M      ) }, //3
     { LSTRKEY( "SPEED_MEDIUM" ),           LINTVAL( RTC_CPU_FREQ_160M      ) }, //2
     { LSTRKEY( "SPEED_SLOW" ),             LINTVAL( RTC_CPU_FREQ_80M       ) }, //1
+#endif
 
     DRIVER_REGISTER_LUA_ERRORS(cpu)
     { LNILKEY, LNILVAL }

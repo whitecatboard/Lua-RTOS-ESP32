@@ -9,7 +9,7 @@ set(srcs
 #	"modules/bluetooth/bluetooth.c"
 	"modules/hw/adc.c"
 	"modules/hw/can.c"
-#	"modules/hw/cpu.c"
+	"modules/hw/cpu.c"
 	"modules/hw/encoder.c"
 	"modules/hw/gdisplay.c"
 	"modules/hw/i2c.c"
@@ -112,13 +112,13 @@ idf_component_register(
 	SRCS "${srcs}"
 	INCLUDE_DIRS "${include_dirs}"
 	LDFRAGMENTS "${fragments}"
-	PRIV_REQUIRES bt wpa_supplicant ulp app_update pthread libcrypt vfs nvs_flash lora sound sys mqtt esp_rom rc-switch
+	PRIV_REQUIRES bt wpa_supplicant ulp app_update pthread libcrypt vfs nvs_flash lora sound sys mqtt esp_rom rc-switch esp_hw_support
 )
 
 # Force linker to link lua modules enabled in build
 set(extra_link_flags "-u luaopen_adc")
 list(APPEND extra_link_flags "-u luaopen_can")
-#list(APPEND extra_link_flags "-u luaopen_cpu")
+list(APPEND extra_link_flags "-u luaopen_cpu")
 list(APPEND extra_link_flags "-u luaopen_encoder")
 list(APPEND extra_link_flags "-u luaopen_gdisplay")
 list(APPEND extra_link_flags "-u luaopen_i2c")
