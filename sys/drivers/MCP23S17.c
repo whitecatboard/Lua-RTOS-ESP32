@@ -51,19 +51,15 @@
  * Operation functions
  */
 
-#include "esp_attr.h"
-
 #include <stdint.h>
 #include <string.h>
 
-#include <drivers/gpio.h>
-
-#include <sys/status.h>
-#include <sys/driver.h>
-#include <sys/syslog.h>
-
-#include <drivers/spi.h>
-#include <drivers/MCP23S17.h>
+#include "gpio.h"
+#include "status.h"
+#include "driver.h"
+#include "syslog.h"
+#include "spi.h"
+#include "MCP23S17.h"
 
 static MCP23S17_t *MCP23S17 = NULL;
 

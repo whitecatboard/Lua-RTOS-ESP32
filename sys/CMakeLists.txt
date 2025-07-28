@@ -1,5 +1,5 @@
 set(srcs
-#	"drivers/MCP23S17.c"
+	"drivers/MCP23S17.c"
 	"drivers/adc.c"
 	"drivers/adc_ads1015.c"
 	"drivers/adc_ads1115.c"
