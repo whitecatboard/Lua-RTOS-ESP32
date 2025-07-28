@@ -45,7 +45,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
+#if CONFIG_LUA_RTOS_LUA_USE_NET && (CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII || CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI)
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
@@ -66,6 +66,8 @@
 #include <drivers/net.h>
 #include <drivers/gpio.h>
 #include <sys/panic.h>
+
+#include "enc424j600.h"
 
 // Register drivers and errors
 DRIVER_REGISTER_BEGIN(ETH,eth,0,NULL,NULL);
@@ -185,31 +187,6 @@ static void net_eth_ip_event_handler(void *arg, esp_event_base_t base, int32_t i
     }
 }
 
-#if CONFIG_PHY_POWER_PIN >= 0
-static void phy_device_power_enable_via_gpio(bool enable)
-{
-    if (!enable) {
-        /* Do the PHY-specific power_enable(false) function before powering down */
-        DEFAULT_ETHERNET_PHY_CONFIG.phy_power_enable(false);
-    }
-
-    gpio_pin_output(CONFIG_PHY_POWER_PIN);
-    if(enable) {
-        gpio_pin_set(CONFIG_PHY_POWER_PIN);
-    } else {
-        gpio_pin_clr(CONFIG_PHY_POWER_PIN);
-    }
-
-    // Allow the power up/down to take effect, min 300us
-    vTaskDelay(1);
-
-    if (enable) {
-        /* Run the PHY-specific power on operations now the PHY has power */
-        DEFAULT_ETHERNET_PHY_CONFIG.phy_power_enable(true);
-    }
-}
-#endif
-
 /*
  * Operation functions
  */
@@ -235,6 +212,7 @@ driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1
 
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     // Lock resources
+	#if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
     if ((lock_error = driver_lock(ETH_DRIVER, 0, GPIO_DRIVER, 19, DRIVER_ALL_FLAGS, "TXD0"))) {
         return driver_lock_error(ETH_DRIVER, lock_error);
     }
@@ -267,22 +245,30 @@ driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1
         return driver_lock_error(ETH_DRIVER, lock_error);
     }
 
-#if CONFIG_PHY_POWER_PIN >= 0
+	#if CONFIG_PHY_POWER_PIN >= 0
     if ((lock_error = driver_lock(ETH_DRIVER, 0, GPIO_DRIVER, CONFIG_PHY_POWER_PIN, DRIVER_ALL_FLAGS, "POWER"))) {
         return driver_lock_error(ETH_DRIVER, lock_error);
     }
-#endif
+	#endif
+	#endif
 #endif
 
     // PHY configuration
     eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
 
+	#if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
     phy_config.phy_addr = CONFIG_PHY_ADDRESS;
     phy_config.reset_gpio_num = CONFIG_PHY_POWER_PIN;
+	#endif
+
+	#if CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
+    phy_config.reset_timeout_ms = 500;
+	#endif
 
     // MAC configuration
     eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
 
+	#if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
     // Specific MAC configuration
     eth_esp32_emac_config_t esp32_emac_config = ETH_ESP32_EMAC_DEFAULT_CONFIG();
 
@@ -294,6 +280,12 @@ driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1
     if (!mac) {
     	return driver_error(ETH_DRIVER, ETH_ERR_ETH_NO_MEM ,NULL);
     }
+	#elif CONFIG_SPI_ETH_CHIP_ENC424J600
+    esp_eth_mac_t *mac = esp_eth_mac_new_enc424j600(&mac_config);
+    if (!mac) {
+    	return driver_error(ETH_DRIVER, ETH_ERR_ETH_NO_MEM ,NULL);
+    }
+	#endif
 
     // Create PHY instance
 #if CONFIG_IP101
@@ -306,6 +298,8 @@ driver_error_t *eth_setup(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1
     esp_eth_phy_t *phy = esp_eth_phy_new_dp83848(&phy_config);
 #elif CONFIG_PHY_KSZ80XX
     esp_eth_phy_t *phy = esp_eth_phy_new_ksz80xx(&phy_config);
+#elif CONFIG_SPI_ETH_CHIP_ENC424J600
+    esp_eth_phy_t *phy = esp_eth_phy_new_enc424j600(&phy_config);
 #endif
 
     if (!phy) {

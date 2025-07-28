@@ -45,7 +45,7 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LUA_USE_NET && CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
+#if CONFIG_LUA_RTOS_LUA_USE_NET && (CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII || CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI)
 
 #include <string.h>
 #include <stdio.h>

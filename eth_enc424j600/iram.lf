@@ -1,0 +1,4 @@
+[mapping:luartos_libeth_enc424j600_iram]
+archive: libeth_enc424j600.a
+entries:
+	eth_mac_enc424j600:enc424j600_isr_handler (noflash)

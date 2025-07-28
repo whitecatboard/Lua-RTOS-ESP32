@@ -1,5 +1,4 @@
 set(srcs
-#	"drivers/ENC424J600.c"
 #	"drivers/MCP23S17.c"
 	"drivers/adc.c"
 	"drivers/adc_ads1015.c"
@@ -158,7 +157,7 @@ idf_component_register(
     INCLUDE_DIRS "${include_dirs}"
 	LDFRAGMENTS "${fragments}"
     PRIV_REQUIRES app_update driver nvs_flash pthread vfs
-    REQUIRES lua esp_adc spiffs ramfs romfs lfs motion nmea gdisplay driver esp_hw_support esp_wifi esp_eth openssl
+    REQUIRES lua esp_adc spiffs ramfs romfs lfs motion nmea gdisplay driver esp_hw_support esp_wifi esp_eth openssl eth_enc424j600
 )
 
 #PRIV_REQUIRES driver bt esp_adc_cal app_update openssl mbedtls wpa_supplicant nmea 

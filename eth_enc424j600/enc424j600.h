@@ -49,142 +49,75 @@
  * Howard Schlunder		11/30/07	Original
  ********************************************************************/
 
-#include "sdkconfig.h"
+#ifndef ETH_ENC424J600_ENC424H600_H_
+#define ETH_ENC424J600_ENC424H600_H_
 
-#if CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
-
-#ifndef __ENCX24J600_H
-#define __ENCX24J600_H
-
-#include "lwip/err.h"
-#include "lwip/netif.h"
-#include "netif/etharp.h"
-
-#include <stdint.h>
+#include "esp_eth.h"
+#include "esp_eth_phy.h"
+#include "esp_eth_mac.h"
 
 // Define macro for 8-bit PSP SFR address translation to SPI addresses
-#define ENC100_TRANSLATE_TO_PIN_ADDR(a)		((a) & 0x00FFu)
+#define ENC100_TRANSLATE_TO_PIN_ADDR(a) ((a) & 0x00FFu)
 
 // ENC424J600 config
 #define ENC424J600_RAMSIZE	(0x6000)
 #define ENC424J600_TXSTART	(0x0000)
 #define ENC424J600_RXSTART	(0x3000) // Should be an even memory address
 
-void enc424j600Init(void);
-uint16_t enc424j600PacketReceive(uint16_t maxlen, uint8_t* packet);
-void enc424j600PacketSend(uint16_t len, uint8_t* packet);
-void enc424j600GetMACAddr(uint8_t addr[6]);
-uint16_t enc424j600ReadReg(uint16_t address);
-void enc424j600WriteReg(uint16_t address, uint16_t data);
-uint16_t enc424j600ReadPHYReg(uint8_t address);
-void enc424j600WritePHYReg(uint8_t address, uint16_t Data);
-
-// Crypto memory addresses.  These are accessible by the DMA only and therefore
-// have the same addresses no matter what MCU interface is being used (SPI,
-// 8-bit PSP, or 16-bit PSP)
-#define ENC100_MODEX_Y			(0x7880u)
-#define ENC100_MODEX_E			(0x7800u)
-#define ENC100_MODEX_X			(0x7880u)
-#define ENC100_MODEX_M			(0x7900u)
-#define ENC100_HASH_DATA_IN		(0x7A00u)
-#define ENC100_HASH_IV_IN		(0x7A40u)
-#define ENC100_HASH_LEN_IN		(0x7A54u)
-#define ENC100_HASH_DIGEST_OUT          (0x7A70u)
-#define ENC100_HASH_LEN_OUT		(0x7A84u)
-#define ENC100_HASH_BASE_ADDR           (0x7A00u)
-#define ENC100_AES_KEY			(0x7C00u)
-#define ENC100_AES_TEXTA		(0x7C20u)
-#define ENC100_AES_TEXTB		(0x7C30u)
-#define ENC100_AES_XOROUT		(0x7C40u)
-
-
-// Receive Status Vector bit fields
-typedef union __attribute__((aligned(2), packed)) {
-	uint8_t v[6];
-	struct {
-		uint16_t	 		ByteCount;
-
-		unsigned char	PreviouslyIgnored:1;
-		unsigned char	RXDCPreviouslySeen:1;
-		unsigned char	CarrierPreviouslySeen:1;
-		unsigned char	CodeViolation:1;
-		unsigned char	CRCError:1;
-		unsigned char	LengthCheckError:1;
-		unsigned char	LengthOutOfRange:1;
-		unsigned char	ReceiveOk:1;
-		unsigned char	Multicast:1;
-		unsigned char	Broadcast:1;
-		unsigned char	DribbleNibble:1;
-		unsigned char	ControlFrame:1;
-		unsigned char	PauseControlFrame:1;
-		unsigned char	UnsupportedOpcode:1;
-		unsigned char	VLANType:1;
-		unsigned char	RuntMatch:1;
-
-		unsigned char	filler:1;
-		unsigned char	HashMatch:1;
-		unsigned char	MagicPacketMatch:1;
-		unsigned char	PatternMatch:1;
-		unsigned char	UnicastMatch:1;
-		unsigned char	BroadcastMatch:1;
-		unsigned char	MulticastMatch:1;
-		unsigned char	ZeroH:1;
-		unsigned char	Zero:8;
-	} bits;
-} RXSTATUS;
-
+#define UDA_WINDOW          (0x1)
+#define GP_WINDOW           (0x2)
+#define RX_WINDOW           (0x4)
 
 ////////////////////////////////////////////////////
-// ENC424J600/624J600 SPI Opcodes		  //
+// ENC424J600/624J600 SPI Opcodes		          //
 ////////////////////////////////////////////////////
-#define RCR 		(0x0u<<5)// Read Control Register
-#define WCR		(0x2u<<5)// Write Control Register
-#define RCRU		(0x20u)	// Read Control Register Unbanked
-#define WCRU		(0x22u)	// Write Control Register Unbanked
-#define BFS		(0x4u<<5)// Bit Field Set
-#define BFSU		(0x24u)	// Bit Field Set Unbanked
-#define BFC		(0x5u<<5)// Bit Field Clear
-#define BFCU		(0x26u)	// Bit Field Clear Unbanked
-#define RBMGP		(0x28u)	// Read Buffer Memory General Purpose
-#define WBMGP		(0x2Au)	// Write Buffer Memory General Purpose
-#define RBMRX		(0x2Cu)	// Read Buffer Memory RX
-#define WBMRX		(0x2Eu)	// Write Buffer Memory RX
-#define RBMUDA		(0x30u)	// Read Buffer Memory User Defined Area
-#define WBMUDA		(0x32u)	// Write Buffer Memory User Defined Area
-#define WGPRDPT		(0x60u)	// Write General Purpose Read Pointer
-#define RGPRDPT		(0x62u)	// Read General Purpose Read Pointer
-#define WRXRDPT		(0x64u)	// Write RX Read Pointer
-#define RRXRDPT		(0x66u)	// Read RX Read Pointer
-#define WUDARDPT	(0x68u)	// Write User Defined Area Read Pointer
-#define RUDARDPT	(0x6Au)	// Read User Defined Area Read Pointer
-#define WGPWRPT		(0x6Cu)	// Write General Purpose Write Pointer
-#define RGPWRPT		(0x6Eu)	// Read General Purpose Write Pointer
-#define WRXWRPT		(0x70u)	// Write RX Write Pointer
-#define RRXWRPT		(0x72u)	// Read RX Write Pointer
-#define	WUDAWRPT	(0x74u)	// Write User Defined Area Write Pointer
-#define RUDAWRPT	(0x76u)	// Read User Defined Area Write Pointer
-#define B0SEL		(0xC0u)	// Bank 0 Select
-#define B1SEL		(0xC2u)	// Bank 1 Select
-#define B2SEL		(0xC4u)	// Bank 2 Select
-#define B3SEL		(0xC6u)	// Bank 3 Select
-#define RBSEL		(0xC8u)	// Read Bank Select
-#define SETETHRST	(0xCAu)	// Set ETHRST bit (perform system reset)
-#define FCDIS		(0xE0u)	// Flow Control Disable
-#define FCSINGLE	(0xE2u)	// Flow Control Single
-#define FCMULTIPLE	(0xE4u)	// Flow Control Multiple
-#define FCCLEAR		(0xE6u)	// Flow Control Clear
-#define SETPKTDEC	(0xCCu)	// Set PKTDEC bit (decrement RX packet pending counter)
-#define DMASTOP		(0xD0u)	// DMA Stop
-#define DMACKSUM	(0xD8u)	// DMA Start Checksum
-#define DMACKSUMS	(0xDAu)	// DMA Start Checksum with Seed
-#define DMACOPY		(0xDCu)	// DMA Start Copy
-#define DMACOPYS	(0xDEu)	// DMA Start Copy and Checksum with Seed
-#define SETTXRTS	(0xD4u)	// Set TXRTS bit (transmit a packet)
-#define ENABLERX	(0xE8u)	// Enable RX
-#define DISABLERX	(0xEAu)	// Disable RX
-#define SETEIE		(0xECu)	// Set Ethernet Interrupt Enable (EIE)
-#define CLREIE		(0xEEu)	// Clear Ethernet Interrupt Enable (EIE)
-
+#define RCR 		(0x0u<<5) // Read Control Register
+#define WCR		    (0x2u<<5) // Write Control Register
+#define RCRU		(0x20u)	  // Read Control Register Unbanked
+#define WCRU		(0x22u)	  // Write Control Register Unbanked
+#define BFS		    (0x4u<<5) // Bit Field Set
+#define BFSU		(0x24u)   // Bit Field Set Unbanked
+#define BFC		    (0x5u<<5) // Bit Field Clear
+#define BFCU		(0x26u)	  // Bit Field Clear Unbanked
+#define RBMGP		(0x28u)	  // Read Buffer Memory General Purpose
+#define WBMGP		(0x2Au)	  // Write Buffer Memory General Purpose
+#define RBMRX		(0x2Cu)	  // Read Buffer Memory RX
+#define WBMRX		(0x2Eu)	  // Write Buffer Memory RX
+#define RBMUDA		(0x30u)	  // Read Buffer Memory User Defined Area
+#define WBMUDA		(0x32u)	  // Write Buffer Memory User Defined Area
+#define WGPRDPT		(0x60u)	  // Write General Purpose Read Pointer
+#define RGPRDPT		(0x62u)	  // Read General Purpose Read Pointer
+#define WRXRDPT		(0x64u)	  // Write RX Read Pointer
+#define RRXRDPT		(0x66u)	  // Read RX Read Pointer
+#define WUDARDPT	(0x68u)	  // Write User Defined Area Read Pointer
+#define RUDARDPT	(0x6Au)	  // Read User Defined Area Read Pointer
+#define WGPWRPT		(0x6Cu)	  // Write General Purpose Write Pointer
+#define RGPWRPT		(0x6Eu)	  // Read General Purpose Write Pointer
+#define WRXWRPT		(0x70u)	  // Write RX Write Pointer
+#define RRXWRPT		(0x72u)	  // Read RX Write Pointer
+#define	WUDAWRPT	(0x74u)	  // Write User Defined Area Write Pointer
+#define RUDAWRPT	(0x76u)	  // Read User Defined Area Write Pointer
+#define B0SEL		(0xC0u)	  // Bank 0 Select
+#define B1SEL		(0xC2u)	  // Bank 1 Select
+#define B2SEL		(0xC4u)	  // Bank 2 Select
+#define B3SEL		(0xC6u)	  // Bank 3 Select
+#define RBSEL		(0xC8u)	  // Read Bank Select
+#define SETETHRST	(0xCAu)	  // Set ETHRST bit (perform system reset)
+#define FCDIS		(0xE0u)	  // Flow Control Disable
+#define FCSINGLE	(0xE2u)	  // Flow Control Single
+#define FCMULTIPLE	(0xE4u)	  // Flow Control Multiple
+#define FCCLEAR		(0xE6u)	  // Flow Control Clear
+#define SETPKTDEC	(0xCCu)	  // Set PKTDEC bit (decrement RX packet pending counter)
+#define DMASTOP		(0xD0u)	  // DMA Stop
+#define DMACKSUM	(0xD8u)	  // DMA Start Checksum
+#define DMACKSUMS	(0xDAu)	  // DMA Start Checksum with Seed
+#define DMACOPY		(0xDCu)	  // DMA Start Copy
+#define DMACOPYS	(0xDEu)	  // DMA Start Copy and Checksum with Seed
+#define SETTXRTS	(0xD4u)	  // Set TXRTS bit (transmit a packet)
+#define ENABLERX	(0xE8u)	  // Enable RX
+#define DISABLERX	(0xEAu)	  // Disable RX
+#define SETEIE		(0xECu)	  // Set Ethernet Interrupt Enable (EIE)
+#define CLREIE		(0xEEu)	  // Clear Ethernet Interrupt Enable (EIE)
 
 ////////////////////////////////////////////////////
 // ENC424J600/624J600 register addresses          //
@@ -234,7 +167,7 @@ typedef union __attribute__((aligned(2), packed)) {
 #define ESTAT		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E1Au)
 #define ESTATL		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E1Au)
 #define ESTATH		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E1Bu)
-#define EIR		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E1Cu)
+#define EIR		    ENC100_TRANSLATE_TO_PIN_ADDR(0x7E1Cu)
 #define EIRL		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E1Cu)
 #define EIRH		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E1Du)
 #define ECON1		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E1Eu)
@@ -337,7 +270,7 @@ typedef union __attribute__((aligned(2), packed)) {
 #define ERXWM		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E70u)
 #define ERXWML		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E70u)
 #define ERXWMH		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E71u)
-#define EIE		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E72u)
+#define EIE		    ENC100_TRANSLATE_TO_PIN_ADDR(0x7E72u)
 #define EIEL		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E72u)
 #define EIEH		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E73u)
 #define EIDLED		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E74u)
@@ -350,13 +283,10 @@ typedef union __attribute__((aligned(2), packed)) {
 // SPI Non-banked Special Function Registers
 #define EGPDATA		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E80u)
 #define EGPDATAL	ENC100_TRANSLATE_TO_PIN_ADDR(0x7E80u)
-//#define r			ENC100_TRANSLATE_TO_PIN_ADDR(0x7E81u)
 #define ERXDATA		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E82u)
 #define ERXDATAL	ENC100_TRANSLATE_TO_PIN_ADDR(0x7E82u)
-//#define r			ENC100_TRANSLATE_TO_PIN_ADDR(0x7E83u)
 #define EUDADATA	ENC100_TRANSLATE_TO_PIN_ADDR(0x7E84u)
 #define EUDADATAL	ENC100_TRANSLATE_TO_PIN_ADDR(0x7E84u)
-//#define r			ENC100_TRANSLATE_TO_PIN_ADDR(0x7E85u)
 #define EGPRDPT		ENC100_TRANSLATE_TO_PIN_ADDR(0x7E86u)
 #define EGPRDPTL	ENC100_TRANSLATE_TO_PIN_ADDR(0x7E86u)
 #define EGPRDPTH	ENC100_TRANSLATE_TO_PIN_ADDR(0x7E87u)
@@ -376,8 +306,6 @@ typedef union __attribute__((aligned(2), packed)) {
 #define EUDAWRPTL	ENC100_TRANSLATE_TO_PIN_ADDR(0x7E90u)
 #define EUDAWRPTH	ENC100_TRANSLATE_TO_PIN_ADDR(0x7E91u)
 
-
-
 ////////////////////////////////////////////////////
 // ENC424J600/624J600 PHY Register Addresses	  //
 ////////////////////////////////////////////////////
@@ -390,13 +318,11 @@ typedef union __attribute__((aligned(2), packed)) {
 #define PHSTAT2	0x1Bu
 #define PHSTAT3	0x1Fu
 
-
-
 ////////////////////////////////////////////////////
 // ENC424J600/624J600 register bits				  //
 ////////////////////////////////////////////////////
 // ESTAT bits ----------
-#define ESTAT_INT		((uint16_t)1<<15)
+#define ESTAT_INT		        ((uint16_t)1<<15)
 #define ESTAT_FCIDLE            ((uint16_t)1<<14)
 #define ESTAT_RXBUSY            ((uint16_t)1<<13)
 #define ESTAT_CLKRDY            ((uint16_t)1<<12)
@@ -414,50 +340,50 @@ typedef union __attribute__((aligned(2), packed)) {
 #define ESTAT_PKTCNT0           (1)
 
 // EIR bits ------------
-#define EIR_CRYPTEN		((uint16_t)1<<15)
-#define EIR_MODEXIF		((uint16_t)1<<14)
-#define EIR_HASHIF		((uint16_t)1<<13)
-#define EIR_AESIF		((uint16_t)1<<12)
-#define EIR_LINKIF		((uint16_t)1<<11)
-#define EIR_PRDYIF		((uint16_t)1<<10)
-#define EIR_r9			((uint16_t)1<<9)
-#define EIR_r8			((uint16_t)1<<8)
-#define EIR_r7			(1<<7)
-#define EIR_PKTIF		(1<<6)
-#define EIR_DMAIF		(1<<5)
-#define EIR_r4			(1<<4)
-#define EIR_TXIF		(1<<3)
-#define EIR_TXABTIF		(1<<2)
-#define EIR_RXABTIF		(1<<1)
-#define EIR_PCFULIF		(1)
+#define EIR_CRYPTEN		        ((uint16_t)1<<15)
+#define EIR_MODEXIF		        ((uint16_t)1<<14)
+#define EIR_HASHIF		        ((uint16_t)1<<13)
+#define EIR_AESIF		        ((uint16_t)1<<12)
+#define EIR_LINKIF		        ((uint16_t)1<<11)
+#define EIR_PRDYIF		        ((uint16_t)1<<10)
+#define EIR_r9			        ((uint16_t)1<<9)
+#define EIR_r8			        ((uint16_t)1<<8)
+#define EIR_r7			        (1<<7)
+#define EIR_PKTIF		        (1<<6)
+#define EIR_DMAIF		        (1<<5)
+#define EIR_r4			        (1<<4)
+#define EIR_TXIF		        (1<<3)
+#define EIR_TXABTIF		        (1<<2)
+#define EIR_RXABTIF		        (1<<1)
+#define EIR_PCFULIF		        (1)
 
 // ECON1 bits ----------
 #define ECON1_MODEXST           ((uint16_t)1<<15)
 #define ECON1_HASHEN            ((uint16_t)1<<14)
 #define ECON1_HASHOP            ((uint16_t)1<<13)
 #define ECON1_HASHLST           ((uint16_t)1<<12)
-#define ECON1_AESST		((uint16_t)1<<11)
+#define ECON1_AESST		        ((uint16_t)1<<11)
 #define ECON1_AESOP1            ((uint16_t)1<<10)
 #define ECON1_AESOP0            ((uint16_t)1<<9)
 #define ECON1_PKTDEC            ((uint16_t)1<<8)
-#define ECON1_FCOP1		(1<<7)
-#define ECON1_FCOP0		(1<<6)
-#define ECON1_DMAST		(1<<5)
+#define ECON1_FCOP1		        (1<<7)
+#define ECON1_FCOP0		        (1<<6)
+#define ECON1_DMAST		        (1<<5)
 #define ECON1_DMACPY            (1<<4)
 #define ECON1_DMACSSD           (1<<3)
 #define ECON1_DMANOCS           (1<<2)
-#define ECON1_TXRTS		(1<<1)
-#define ECON1_RXEN		(1)
+#define ECON1_TXRTS		        (1<<1)
+#define ECON1_RXEN		        (1)
 
 // ETXSTAT bits --------
-#define ETXSTAT_r12		((uint16_t)1<<12)
-#define ETXSTAT_r11		((uint16_t)1<<11)
+#define ETXSTAT_r12		        ((uint16_t)1<<12)
+#define ETXSTAT_r11		        ((uint16_t)1<<11)
 #define ETXSTAT_LATECOL         ((uint16_t)1<<10)
 #define ETXSTAT_MAXCOL          ((uint16_t)1<<9)
 #define ETXSTAT_EXDEFER         ((uint16_t)1<<8)
 #define ETXSTAT_DEFER           (1<<7)
-#define ETXSTAT_r6		(1<<6)
-#define ETXSTAT_r5		(1<<5)
+#define ETXSTAT_r6		        (1<<6)
+#define ETXSTAT_r5		        (1<<5)
 #define ETXSTAT_CRCBAD          (1<<4)
 #define ETXSTAT_COLCNT3         (1<<3)
 #define ETXSTAT_COLCNT2         (1<<2)
@@ -482,31 +408,31 @@ typedef union __attribute__((aligned(2), packed)) {
 #define ERXFCON_BCEN            (1)
 
 // MACON1 bits ---------
-#define MACON1_r15		((uint16_t)1<<15)
-#define MACON1_r14		((uint16_t)1<<14)
-#define MACON1_r11		((uint16_t)1<<11)
-#define MACON1_r10		((uint16_t)1<<10)
-#define MACON1_r9		((uint16_t)1<<9)
-#define MACON1_r8		((uint16_t)1<<8)
+#define MACON1_r15		        ((uint16_t)1<<15)
+#define MACON1_r14		        ((uint16_t)1<<14)
+#define MACON1_r11		        ((uint16_t)1<<11)
+#define MACON1_r10		        ((uint16_t)1<<10)
+#define MACON1_r9		        ((uint16_t)1<<9)
+#define MACON1_r8		        ((uint16_t)1<<8)
 #define MACON1_LOOPBK           (1<<4)
-#define MACON1_r3		(1<<3)
+#define MACON1_r3		        (1<<3)
 #define	MACON1_RXPAUS           (1<<2)
 #define	MACON1_PASSALL          (1<<1)
-#define MACON1_r0		(1)
+#define MACON1_r0		        (1)
 
 // MACON2 bits ---------
 #define	MACON2_DEFER            ((uint16_t)1<<14)
-#define	MACON2_BPEN		((uint16_t)1<<13)
+#define	MACON2_BPEN		        ((uint16_t)1<<13)
 #define	MACON2_NOBKOFF          ((uint16_t)1<<12)
-#define MACON2_r9		((uint16_t)1<<9)
-#define MACON2_r8		((uint16_t)1<<8)
+#define MACON2_r9		        ((uint16_t)1<<9)
+#define MACON2_r8		        ((uint16_t)1<<8)
 #define	MACON2_PADCFG2          (1<<7)
 #define	MACON2_PADCFG1          (1<<6)
 #define	MACON2_PADCFG0          (1<<5)
 #define	MACON2_TXCRCEN          (1<<4)
 #define	MACON2_PHDREN           (1<<3)
 #define	MACON2_HFRMEN           (1<<2)
-#define MACON2_r1		(1<<1)
+#define MACON2_r1		        (1<<1)
 #define	MACON2_FULDPX           (1)
 
 // MABBIPG bits --------
@@ -519,28 +445,28 @@ typedef union __attribute__((aligned(2), packed)) {
 #define MABBIPG_BBIPG0          (1)
 
 // MAIPG bits ----------
-#define MAIPG_r14		((uint16_t)1<<14)
-#define MAIPG_r13		((uint16_t)1<<13)
-#define MAIPG_r12		((uint16_t)1<<12)
-#define MAIPG_r11		((uint16_t)1<<11)
-#define MAIPG_r10		((uint16_t)1<<10)
-#define MAIPG_r9		((uint16_t)1<<9)
-#define MAIPG_r8		((uint16_t)1<<8)
-#define MAIPG_IPG6		(1<<6)
-#define MAIPG_IPG5		(1<<5)
-#define MAIPG_IPG4		(1<<4)
-#define MAIPG_IPG3		(1<<3)
-#define MAIPG_IPG2		(1<<2)
-#define MAIPG_IPG1		(1<<1)
-#define MAIPG_IPG0		(1)
+#define MAIPG_r14		        ((uint16_t)1<<14)
+#define MAIPG_r13		        ((uint16_t)1<<13)
+#define MAIPG_r12		        ((uint16_t)1<<12)
+#define MAIPG_r11		        ((uint16_t)1<<11)
+#define MAIPG_r10		        ((uint16_t)1<<10)
+#define MAIPG_r9		        ((uint16_t)1<<9)
+#define MAIPG_r8		        ((uint16_t)1<<8)
+#define MAIPG_IPG6		        (1<<6)
+#define MAIPG_IPG5		        (1<<5)
+#define MAIPG_IPG4		        (1<<4)
+#define MAIPG_IPG3		        (1<<3)
+#define MAIPG_IPG2		        (1<<2)
+#define MAIPG_IPG1		        (1<<1)
+#define MAIPG_IPG0		        (1)
 
 // MACLCON bits --------
-#define MACLCON_r13		((uint16_t)1<<13)
-#define MACLCON_r12		((uint16_t)1<<12)
-#define MACLCON_r11		((uint16_t)1<<11)
-#define MACLCON_r10		((uint16_t)1<<10)
-#define MACLCON_r9		((uint16_t)1<<9)
-#define MACLCON_r8		((uint16_t)1<<8)
+#define MACLCON_r13		        ((uint16_t)1<<13)
+#define MACLCON_r12		        ((uint16_t)1<<12)
+#define MACLCON_r11		        ((uint16_t)1<<11)
+#define MACLCON_r10		        ((uint16_t)1<<10)
+#define MACLCON_r9		        ((uint16_t)1<<9)
+#define MACLCON_r8		        ((uint16_t)1<<8)
 #define MACLCON_MAXRET3         (1<<3)
 #define MACLCON_MAXRET2         (1<<2)
 #define MACLCON_MAXRET1         (1<<1)
@@ -548,14 +474,14 @@ typedef union __attribute__((aligned(2), packed)) {
 
 // MICMD bits ----------
 #define	MICMD_MIISCAN           (1<<1)
-#define	MICMD_MIIRD		(1)
+#define	MICMD_MIIRD		        (1)
 
 // MIREGADR bits -------
 #define MIREGADR_r12            ((uint16_t)1<<12)
 #define MIREGADR_r11            ((uint16_t)1<<11)
 #define MIREGADR_r10            ((uint16_t)1<<10)
-#define MIREGADR_r9		((uint16_t)1<<9)
-#define MIREGADR_r8		((uint16_t)1<<8)
+#define MIREGADR_r9		        ((uint16_t)1<<9)
+#define MIREGADR_r8		        ((uint16_t)1<<8)
 #define MIREGADR_PHREG4         (1<<4)
 #define MIREGADR_PHREG3         (1<<3)
 #define MIREGADR_PHREG2         (1<<2)
@@ -563,23 +489,23 @@ typedef union __attribute__((aligned(2), packed)) {
 #define MIREGADR_PHREG0         (1)
 
 // MISTAT bits ---------
-#define MISTAT_r3		(1<<3)
+#define MISTAT_r3		        (1<<3)
 #define	MISTAT_NVALID           (1<<2)
-#define	MISTAT_SCAN		(1<<1)
-#define	MISTAT_BUSY		(1)
+#define	MISTAT_SCAN		        (1<<1)
+#define	MISTAT_BUSY		        (1)
 
 // ECON2 bits ----------
-#define ECON2_ETHEN		((uint16_t)1<<15)
-#define ECON2_STRCH		((uint16_t)1<<14)
-#define ECON2_TXMAC		((uint16_t)1<<13)
+#define ECON2_ETHEN		        ((uint16_t)1<<15)
+#define ECON2_STRCH		        ((uint16_t)1<<14)
+#define ECON2_TXMAC		        ((uint16_t)1<<13)
 #define ECON2_SHA1MD5           ((uint16_t)1<<12)
 #define ECON2_COCON3            ((uint16_t)1<<11)
 #define ECON2_COCON2            ((uint16_t)1<<10)
 #define ECON2_COCON1            ((uint16_t)1<<9)
 #define ECON2_COCON0            ((uint16_t)1<<8)
 #define ECON2_AUTOFC            (1<<7)
-#define ECON2_TXRST		(1<<6)
-#define ECON2_RXRST		(1<<5)
+#define ECON2_TXRST		        (1<<6)
+#define ECON2_RXRST		        (1<<5)
 #define ECON2_ETHRST            (1<<4)
 #define ECON2_MODLEN1           (1<<3)
 #define ECON2_MODLEN0           (1<<2)
@@ -605,22 +531,22 @@ typedef union __attribute__((aligned(2), packed)) {
 #define ERXWM_RXEWM0            (1)
 
 // EIE bits ------------
-#define EIE_INTIE		((uint16_t)1<<15)
-#define EIE_MODEXIE		((uint16_t)1<<14)
-#define EIE_HASHIE		((uint16_t)1<<13)
-#define EIE_AESIE		((uint16_t)1<<12)
-#define EIE_LINKIE		((uint16_t)1<<11)
-#define EIE_PRDYIE		((uint16_t)1<<10)
-#define EIE_r9			((uint16_t)1<<9)
-#define EIE_r8			((uint16_t)1<<8)
-#define EIE_r7			(1<<7)
-#define EIE_PKTIE		(1<<6)
-#define EIE_DMAIE		(1<<5)
-#define EIE_r4			(1<<4)
-#define EIE_TXIE		(1<<3)
-#define EIE_TXABTIE		(1<<2)
-#define EIE_RXABTIE		(1<<1)
-#define EIE_PCFULIE		(1)
+#define EIE_INTIE		        ((uint16_t)1<<15)
+#define EIE_MODEXIE		        ((uint16_t)1<<14)
+#define EIE_HASHIE		        ((uint16_t)1<<13)
+#define EIE_AESIE		        ((uint16_t)1<<12)
+#define EIE_LINKIE		        ((uint16_t)1<<11)
+#define EIE_PRDYIE		        ((uint16_t)1<<10)
+#define EIE_r9			        ((uint16_t)1<<9)
+#define EIE_r8			        ((uint16_t)1<<8)
+#define EIE_r7			        (1<<7)
+#define EIE_PKTIE		        (1<<6)
+#define EIE_DMAIE		        (1<<5)
+#define EIE_r4			        (1<<4)
+#define EIE_TXIE		        (1<<3)
+#define EIE_TXABTIE		        (1<<2)
+#define EIE_RXABTIE		        (1<<1)
+#define EIE_PCFULIE		        (1)
 
 // EIDLED bits ---------
 #define EIDLED_LACFG3           ((uint16_t)1<<15)
@@ -641,53 +567,53 @@ typedef union __attribute__((aligned(2), packed)) {
 #define EIDLED_REVID0           (1)
 
 // PHCON1 bits ---------
-#define PHCON1_PRST		((uint16_t)1<<15)
+#define PHCON1_PRST		        ((uint16_t)1<<15)
 #define PHCON1_PLOOPBK          ((uint16_t)1<<14)
 #define PHCON1_SPD100           ((uint16_t)1<<13)
-#define PHCON1_ANEN		((uint16_t)1<<12)
+#define PHCON1_ANEN		        ((uint16_t)1<<12)
 #define PHCON1_PSLEEP           ((uint16_t)1<<11)
-#define PHCON1_r10		((uint16_t)1<<10)
+#define PHCON1_r10        		((uint16_t)1<<10)
 #define PHCON1_RENEG            ((uint16_t)1<<9)
 #define PHCON1_PFULDPX          ((uint16_t)1<<8)
-#define PHCON1_r7		(1<<7)
-#define PHCON1_r6		(1<<6)
-#define PHCON1_r5		(1<<5)
-#define PHCON1_r4		(1<<4)
-#define PHCON1_r3		(1<<3)
-#define PHCON1_r2		(1<<2)
-#define PHCON1_r1		(1<<1)
-#define PHCON1_r0		(1)
+#define PHCON1_r7		        (1<<7)
+#define PHCON1_r6		        (1<<6)
+#define PHCON1_r5		        (1<<5)
+#define PHCON1_r4		        (1<<4)
+#define PHCON1_r3		        (1<<3)
+#define PHCON1_r2		        (1<<2)
+#define PHCON1_r1		        (1<<1)
+#define PHCON1_r0		        (1)
 
 // PHSTAT1 bits --------
-#define PHSTAT1_r15		((uint16_t)1<<15)
+#define PHSTAT1_r15		        ((uint16_t)1<<15)
 #define PHSTAT1_FULL100         ((uint16_t)1<<14)
 #define PHSTAT1_HALF100         ((uint16_t)1<<13)
 #define PHSTAT1_FULL10          ((uint16_t)1<<12)
 #define PHSTAT1_HALF10          ((uint16_t)1<<11)
-#define PHSTAT1_r10		((uint16_t)1<<10)
-#define PHSTAT1_r9		((uint16_t)1<<9)
-#define PHSTAT1_r8		((uint16_t)1<<8)
-#define PHSTAT1_r7		(1<<7)
-#define PHSTAT1_r6		(1<<6)
+#define PHSTAT1_r10		        ((uint16_t)1<<10)
+#define PHSTAT1_r9		        ((uint16_t)1<<9)
+#define PHSTAT1_r8		        ((uint16_t)1<<8)
+#define PHSTAT1_r7		        (1<<7)
+#define PHSTAT1_r6		        (1<<6)
 #define PHSTAT1_ANDONE          (1<<5)
 #define PHSTAT1_LRFAULT         (1<<4)
 #define PHSTAT1_ANABLE          (1<<3)
 #define PHSTAT1_LLSTAT          (1<<2)
-#define PHSTAT1_r1		(1<<1)
+#define PHSTAT1_r1		        (1<<1)
 #define PHSTAT1_EXTREGS         (1)
 
 // PHANA bits ----------
-#define PHANA_ADNP		((uint16_t)1<<15)
-#define PHANA_r14		((uint16_t)1<<14)
+#define PHANA_ADNP		        ((uint16_t)1<<15)
+#define PHANA_r14		        ((uint16_t)1<<14)
 #define PHANA_ADFAULT           ((uint16_t)1<<13)
-#define PHANA_r12		((uint16_t)1<<12)
+#define PHANA_r12		        ((uint16_t)1<<12)
 #define PHANA_ADPAUS1           ((uint16_t)1<<11)
 #define PHANA_ADPAUS0           ((uint16_t)1<<10)
-#define PHANA_r9		((uint16_t)1<<9)
+#define PHANA_r9		        ((uint16_t)1<<9)
 #define PHANA_AD100FD           ((uint16_t)1<<8)
-#define PHANA_AD100		(1<<7)
+#define PHANA_AD100		        (1<<7)
 #define PHANA_AD10FD            (1<<6)
-#define PHANA_AD10		(1<<5)
+#define PHANA_AD10		        (1<<5)
 #define PHANA_ADIEEE4           (1<<4)
 #define PHANA_ADIEEE3           (1<<3)
 #define PHANA_ADIEEE2           (1<<2)
@@ -697,8 +623,8 @@ typedef union __attribute__((aligned(2), packed)) {
 // PHANLPA bits --------
 #define PHANLPA_LPNP            ((uint16_t)1<<15)
 #define PHANLPA_LPACK           ((uint16_t)1<<14)
-#define PHANLPA_LPFAULT 	((uint16_t)1<<13)
-#define PHANLPA_r12		((uint16_t)1<<12)
+#define PHANLPA_LPFAULT 	    ((uint16_t)1<<13)
+#define PHANLPA_r12		        ((uint16_t)1<<12)
 #define PHANLPA_LPPAUS1         ((uint16_t)1<<11)
 #define PHANLPA_LPPAUS0     	((uint16_t)1<<10)
 #define PHANLPA_LP100T4     	((uint16_t)1<<9)
@@ -713,81 +639,132 @@ typedef union __attribute__((aligned(2), packed)) {
 #define PHANLPA_LPIEEE0         (1)
 
 // PHANE bits ----------
-#define PHANE_r15		((uint16_t)1<<15)
-#define PHANE_r14		((uint16_t)1<<14)
-#define PHANE_r13		((uint16_t)1<<13)
-#define PHANE_r12		((uint16_t)1<<12)
-#define PHANE_r11		((uint16_t)1<<11)
-#define PHANE_r10		((uint16_t)1<<10)
-#define PHANE_r9		((uint16_t)1<<9)
-#define PHANE_r8		((uint16_t)1<<8)
-#define PHANE_r7		(1<<7)
-#define PHANE_r6		(1<<6)
-#define PHANE_r5		(1<<5)
-#define PHANE_PDFLT		(1<<4)
-#define PHANE_r3		(1<<3)
-#define PHANE_r2		(1<<2)
+#define PHANE_r15		        ((uint16_t)1<<15)
+#define PHANE_r14		        ((uint16_t)1<<14)
+#define PHANE_r13		        ((uint16_t)1<<13)
+#define PHANE_r12		        ((uint16_t)1<<12)
+#define PHANE_r11		        ((uint16_t)1<<11)
+#define PHANE_r10		        ((uint16_t)1<<10)
+#define PHANE_r9		        ((uint16_t)1<<9)
+#define PHANE_r8		        ((uint16_t)1<<8)
+#define PHANE_r7		        (1<<7)
+#define PHANE_r6		        (1<<6)
+#define PHANE_r5		        (1<<5)
+#define PHANE_PDFLT		        (1<<4)
+#define PHANE_r3		        (1<<3)
+#define PHANE_r2		        (1<<2)
 #define PHANE_LPARCD            (1<<1)
 #define PHANA_LPANABL       	(1)
 
 // PHCON2 bits ---------
-#define PHCON2_r15		((uint16_t)1<<15)
-#define PHCON2_r14		((uint16_t)1<<14)
+#define PHCON2_r15		        ((uint16_t)1<<15)
+#define PHCON2_r14		        ((uint16_t)1<<14)
 #define PHCON2_EDPWRDN          ((uint16_t)1<<13)
-#define PHCON2_r12		((uint16_t)1<<12)
+#define PHCON2_r12		        ((uint16_t)1<<12)
 #define PHCON2_EDTHRES          ((uint16_t)1<<11)
-#define PHCON2_r10		((uint16_t)1<<10)
-#define PHCON2_r9		((uint16_t)1<<9)
-#define PHCON2_r8		((uint16_t)1<<8)
-#define PHCON2_r7		(1<<7)
-#define PHCON2_r6		(1<<6)
-#define PHCON2_r5		(1<<5)
-#define PHCON2_r4		(1<<4)
-#define PHCON2_r3		(1<<3)
+#define PHCON2_r10		        ((uint16_t)1<<10)
+#define PHCON2_r9		        ((uint16_t)1<<9)
+#define PHCON2_r8		        ((uint16_t)1<<8)
+#define PHCON2_r7		        (1<<7)
+#define PHCON2_r6		        (1<<6)
+#define PHCON2_r5		        (1<<5)
+#define PHCON2_r4		        (1<<4)
+#define PHCON2_r3		        (1<<3)
 #define PHCON2_FRCLNK           (1<<2)
 #define PHCON2_EDSTAT           (1<<1)
-#define PHCON2_r0		(1)
+#define PHCON2_r0		        (1)
 
 // PHSTAT2 bits ---------
-#define PHSTAT2_r15		((uint16_t)1<<15)
-#define PHSTAT2_r14		((uint16_t)1<<14)
-#define PHSTAT2_r13		((uint16_t)1<<13)
-#define PHSTAT2_r12		((uint16_t)1<<12)
-#define PHSTAT2_r11		((uint16_t)1<<11)
-#define PHSTAT2_r10		((uint16_t)1<<10)
-#define PHSTAT2_r9		((uint16_t)1<<9)
-#define PHSTAT2_r8		((uint16_t)1<<8)
-#define PHSTAT2_r7		(1<<7)
-#define PHSTAT2_r6		(1<<6)
-#define PHSTAT2_r5		(1<<5)
+#define PHSTAT2_r15		        ((uint16_t)1<<15)
+#define PHSTAT2_r14		        ((uint16_t)1<<14)
+#define PHSTAT2_r13		        ((uint16_t)1<<13)
+#define PHSTAT2_r12		        ((uint16_t)1<<12)
+#define PHSTAT2_r11		        ((uint16_t)1<<11)
+#define PHSTAT2_r10		        ((uint16_t)1<<10)
+#define PHSTAT2_r9		        ((uint16_t)1<<9)
+#define PHSTAT2_r8		        ((uint16_t)1<<8)
+#define PHSTAT2_r7		        (1<<7)
+#define PHSTAT2_r6		        (1<<6)
+#define PHSTAT2_r5		        (1<<5)
 #define PHSTAT2_PLRITY          (1<<4)
-#define PHSTAT2_r3		(1<<3)
-#define PHSTAT2_r2		(1<<2)
-#define PHSTAT2_r1		(1<<1)
-#define PHSTAT2_r0		(1)
+#define PHSTAT2_r3		        (1<<3)
+#define PHSTAT2_r2		        (1<<2)
+#define PHSTAT2_r1		        (1<<1)
+#define PHSTAT2_r0		        (1)
 
 // PHSTAT3 bits --------
-#define PHSTAT3_r15		((uint16_t)1<<15)
-#define PHSTAT3_r14		((uint16_t)1<<14)
-#define PHSTAT3_r13		((uint16_t)1<<13)
-#define PHSTAT3_r12		((uint16_t)1<<12)
-#define PHSTAT3_r11		((uint16_t)1<<11)
-#define PHSTAT3_r10		((uint16_t)1<<10)
-#define PHSTAT3_r9		((uint16_t)1<<9)
-#define PHSTAT3_r8		((uint16_t)1<<8)
-#define PHSTAT3_r7		(1<<7)
-#define PHSTAT3_r6		(1<<6)
-#define PHSTAT3_r5		(1<<5)
-#define PHSTAT3_SPDDPX2 	(1<<4)
+#define PHSTAT3_r15		        ((uint16_t)1<<15)
+#define PHSTAT3_r14		        ((uint16_t)1<<14)
+#define PHSTAT3_r13		        ((uint16_t)1<<13)
+#define PHSTAT3_r12		        ((uint16_t)1<<12)
+#define PHSTAT3_r11		        ((uint16_t)1<<11)
+#define PHSTAT3_r10		        ((uint16_t)1<<10)
+#define PHSTAT3_r9		        ((uint16_t)1<<9)
+#define PHSTAT3_r8		        ((uint16_t)1<<8)
+#define PHSTAT3_r7		        (1<<7)
+#define PHSTAT3_r6		        (1<<6)
+#define PHSTAT3_r5		        (1<<5)
+#define PHSTAT3_SPDDPX2 	    (1<<4)
 #define PHSTAT3_SPDDPX1         (1<<3)
 #define PHSTAT3_SPDDPX0         (1<<2)
-#define PHSTAT3_r1		(1<<1)
-#define PHSTAT3_r0		(1)
+#define PHSTAT3_r1		        (1<<1)
+#define PHSTAT3_r0		        (1)
 
-int enc424j600_init(struct netif *netif);
-err_t enc424j600_output(struct netif *netif, struct pbuf *p);
-struct pbuf *enc424j600_input(struct netif *netif);
+// Receive Status Vector bit fields
+typedef union __attribute__((aligned(2), packed)) {
+	uint8_t v[6];
+	struct {
+		uint16_t	 		ByteCount;
 
-#endif
+		unsigned char	PreviouslyIgnored:1;
+		unsigned char	RXDCPreviouslySeen:1;
+		unsigned char	CarrierPreviouslySeen:1;
+		unsigned char	CodeViolation:1;
+		unsigned char	CRCError:1;
+		unsigned char	LengthCheckError:1;
+		unsigned char	LengthOutOfRange:1;
+		unsigned char	ReceiveOk:1;
+		unsigned char	Multicast:1;
+		unsigned char	Broadcast:1;
+		unsigned char	DribbleNibble:1;
+		unsigned char	ControlFrame:1;
+		unsigned char	PauseControlFrame:1;
+		unsigned char	UnsupportedOpcode:1;
+		unsigned char	VLANType:1;
+		unsigned char	RuntMatch:1;
+
+		unsigned char	filler:1;
+		unsigned char	HashMatch:1;
+		unsigned char	MagicPacketMatch:1;
+		unsigned char	PatternMatch:1;
+		unsigned char	UnicastMatch:1;
+		unsigned char	BroadcastMatch:1;
+		unsigned char	MulticastMatch:1;
+		unsigned char	ZeroH:1;
+		unsigned char	Zero:8;
+	} bits;
+} RXSTATUS;
+
+/**
+* @brief Create enc424j600 Ethernet MAC instance
+*
+* @param[in] mac_config: Ethernet MAC configuration
+*
+* @return
+*      - instance: create MAC instance successfully
+*      - NULL: create MAC instance failed because some error occurred
+*/
+esp_eth_mac_t *esp_eth_mac_new_enc424j600(const eth_mac_config_t *mac_config);
+
+/**
+* @brief Create a PHY instance of enc424j600
+*
+* @param[in] config: configuration of PHY
+*
+* @return
+*      - instance: create PHY instance successfully
+*      - NULL: create PHY instance failed because some error occurred
+*/
+esp_eth_phy_t *esp_eth_phy_new_enc424j600(const eth_phy_config_t *config);
 
 #endif

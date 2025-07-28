@@ -1018,6 +1018,17 @@ menu "Lua RTOS"
                 help
                    GPIO number to use for SMI data pin MDIO to/from PHY.
 
+            choice LUA_RTOS_ETH_SPI_TYPE
+                depends on LUA_RTOS_ETH_HW_TYPE_SPI
+                prompt "Chip type"
+                default SPI_ETH_CHIP_ENC424J600
+                help
+                    Select the spi ethernet chip type.
+
+                config SPI_ETH_CHIP_ENC424J600
+                    bool "ENC424J600"
+            endchoice
+
             config SPI_ETHERNET_SPI
                depends on LUA_RTOS_ETH_HW_TYPE_SPI
                   int "SPI Ethernet port"

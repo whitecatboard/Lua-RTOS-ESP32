@@ -77,7 +77,7 @@
 #include "lualib.h"
 #include "lauxlib.h"
 #include <drivers/net.h>
-#include <drivers/spi_eth.h>
+//#include <drivers/spi_eth.h>
 #include <time.h>
 
 #include "sys.h"

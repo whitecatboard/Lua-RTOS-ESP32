@@ -58,7 +58,6 @@
 
 #include "net_wifi.inc"
 #include "net_eth.inc"
-#include "net_spi_eth.inc"
 #include "net_service_sntp.inc"
 #include "net_service_http.inc"
 #include "net_service_telnet.inc"
@@ -162,59 +161,6 @@ static void callback_func(net_event_type_t event_type, net_event_t event_id) {
 				break;
 			}
     }
-#if 0
-    switch (event) {
-        case SYSTEM_EVENT_STA_START:
-        case SYSTEM_EVENT_STA_STOP:
-        case SYSTEM_EVENT_STA_CONNECTED:
-        case SYSTEM_EVENT_STA_DISCONNECTED:
-        case SYSTEM_EVENT_STA_GOT_IP:
-        case SYSTEM_EVENT_STA_LOST_IP:
-        case SYSTEM_EVENT_STA_AUTHMODE_CHANGE:
-            if (!status_get_prev(STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP) && status_get(STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP)) {
-                for_us = 1;
-                strcpy(interface,"wf");
-                strcpy(type,"up");
-            } else if (status_get_prev(STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP) && !status_get(STATUS_WIFI_CONNECTED | STATUS_WIFI_HAS_IP)) {
-                for_us = 1;
-                strcpy(interface,"wf");
-                strcpy(type,"down");
-            }
-            break;
-#endif
-
-#if 0
-#if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII
-        case SYSTEM_EVENT_ETH_START:
-        case SYSTEM_EVENT_ETH_STOP:
-        case SYSTEM_EVENT_ETH_CONNECTED:
-        case SYSTEM_EVENT_ETH_DISCONNECTED:
-        case SYSTEM_EVENT_ETH_GOT_IP:
-#endif
-#if CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI
-        case SYSTEM_EVENT_SPI_ETH_START:
-        case SYSTEM_EVENT_SPI_ETH_STOP:
-        case SYSTEM_EVENT_SPI_ETH_CONNECTED:
-        case SYSTEM_EVENT_SPI_ETH_DISCONNECTED:
-        case SYSTEM_EVENT_SPI_ETH_GOT_IP:
-#endif
-#if (CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII || CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI)
-            if (!status_get_prev(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP) && status_get(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP)) {
-                for_us = 1;
-                strcpy(interface,"en");
-                strcpy(type,"up");
-            } else if (status_get_prev(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP) && !status_get(STATUS_ETH_CONNECTED | STATUS_ETH_HAS_IP)) {
-                for_us = 1;
-                strcpy(interface,"en");
-                strcpy(type,"down");
-            }
-            break;
-#endif
-        default:
-            for_us = 0;
-            break;
-    }
-#endif
 
     if (for_us != 0 && callback != NULL) {
         lua_State *state = luaS_callback_state(callback);
@@ -511,11 +457,7 @@ static const LUA_REG_TYPE net_map[] = {
 
     { LSTRKEY( "wf" ), LROVAL ( wifi_map ) },
 
-#if CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI && CONFIG_LUA_RTOS_LUA_USE_NET
-    { LSTRKEY( "en" ), LROVAL ( spi_eth_map ) },
-#endif
-
-#if CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII && CONFIG_LUA_RTOS_LUA_USE_NET
+#if (CONFIG_LUA_RTOS_ETH_HW_TYPE_RMII || CONFIG_LUA_RTOS_ETH_HW_TYPE_SPI) && CONFIG_LUA_RTOS_LUA_USE_NET
     { LSTRKEY( "en" ), LROVAL ( eth_map ) },
 #endif
 

@@ -46,9 +46,8 @@
 #ifndef DRIVERS_ETH_H_
 #define DRIVERS_ETH_H_
 
-#include <sys/driver.h>
-
-#include <drivers/net.h>
+#include "driver.h"
+#include "net.h"
 
 // SPI ethernet errors
 #define ETH_ERR_CANT_INIT              (DRIVER_EXCEPTION_BASE(ETH_DRIVER_ID) |  0)

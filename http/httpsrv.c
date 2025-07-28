@@ -78,7 +78,7 @@
 #include "lgc.h"
 #include "sys.h"
 #include <drivers/net.h>
-#include <drivers/spi_eth.h>
+//#include <drivers/spi_eth.h>
 
 #include "wifi.h"
 

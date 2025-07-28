@@ -26,6 +26,7 @@ set(EXTRA_COMPONENT_DIRS
   "telnet"
   "zlib"
   "rc-switch"
+  "eth_enc424j600"
 )
 
 #set(EXTRA_COMPONENT_DIRS "components")
