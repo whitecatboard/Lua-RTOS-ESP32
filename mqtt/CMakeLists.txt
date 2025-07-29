@@ -31,6 +31,8 @@ idf_component_register(
 	PRIV_REQUIRES pthread openssl sys
 )
 
-target_compile_options(${COMPONENT_LIB} PRIVATE -DNOSTACKTRACE)
-target_compile_options(${COMPONENT_LIB} PRIVATE -DOPENSSL)
-target_compile_options(${COMPONENT_LIB} PRIVATE -DHIGH_PERFORMANCE)
+if(CONFIG_LUA_RTOS_LUA_USE_MQTT)
+	target_compile_options(${COMPONENT_LIB} PRIVATE -DNOSTACKTRACE)
+	target_compile_options(${COMPONENT_LIB} PRIVATE -DOPENSSL)
+	target_compile_options(${COMPONENT_LIB} PRIVATE -DHIGH_PERFORMANCE)
+endif()
