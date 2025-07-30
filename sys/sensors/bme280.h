@@ -220,16 +220,17 @@ BME280_BUS_RD_PARAM_TYPE to function calls used inside the API
 #define BME280_SHIFT_BIT_POSITION_BY_47_BITS			(47)
 
 /* numeric definitions */
-#define	BME280_PRESSURE_TEMPERATURE_CALIB_DATA_LENGTH	    (26)
-#define	BME280_HUMIDITY_CALIB_DATA_LENGTH	    (7)
-#define	BME280_GEN_READ_WRITE_DATA_LENGTH		(1)
-#define	BME280_HUMIDITY_DATA_LENGTH				(2)
-#define	BME280_TEMPERATURE_DATA_LENGTH			(3)
-#define	BME280_PRESSURE_DATA_LENGTH				(3)
-#define	BME280_ALL_DATA_FRAME_LENGTH			(8)
-#define	BME280_INIT_VALUE				(0)
-#define	BME280_CHIP_ID_READ_COUNT			(5)
-#define	BME280_INVALID_DATA				(0)
+#define	BME280_PRESSURE_TEMPERATURE_CALIB_DATA_LENGTH	(26)
+#define	BME280_HUMIDITY_CALIB_DATA_LENGTH	            (7)
+#define	BME280_GEN_READ_WRITE_DATA_LENGTH		        (1)
+#define	BME280_HUMIDITY_DATA_LENGTH				        (2)
+#define	BME280_TEMPERATURE_DATA_LENGTH			        (3)
+#define	BME280_PRESSURE_DATA_LENGTH				        (3)
+#define	BME280_ALL_DATA_FRAME_LENGTH			        (8)
+#define	BME280_INIT_VALUE				                (0)
+#define	BME280_CHIP_ID_READ_COUNT			            (5)
+#define	BME280_INVALID_DATA				                (0)
+#define	BME280_MAX_DATA_LENGHT                          BME280_PRESSURE_TEMPERATURE_CALIB_DATA_LENGTH
 
 /****************************************************/
 /**\name	ERROR CODE DEFINITIONS  */

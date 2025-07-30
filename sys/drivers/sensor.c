@@ -287,7 +287,7 @@ static driver_error_t *sensor_i2c_setup(uint8_t interface, sensor_instance_t *un
     driver_error_t *error;
     int i2cdevice;
 
-    if ((error = i2c_attach(unit->setup[interface].i2c.id, I2C_MASTER, unit->setup[interface].i2c.speed, 0, 0, &i2cdevice))) {
+    if ((error = i2c_attach(unit->setup[interface].i2c.id, I2C_MASTER, unit->setup[interface].i2c.speed, 0, unit->setup[interface].i2c.devid, &i2cdevice))) {
         return error;
     }
 

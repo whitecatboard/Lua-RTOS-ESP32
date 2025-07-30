@@ -56,14 +56,13 @@
 #if CONFIG_LUA_RTOS_LUA_USE_SENSOR
 #if CONFIG_LUA_RTOS_USE_SENSOR_BME280
 
-#include "bme280.h"
-
 #include <stdio.h>
 #include <string.h>
 
-#include <sys/driver.h>
+#include "bme280.h"
 
-#include <drivers/i2c.h>
+#include "driver.h"
+#include "i2c.h"
 
 
 // Sensor specification and registration
@@ -125,8 +124,10 @@ BME280_RETURN_FUNCTION_TYPE bme280_init()
 	u8 v_data_u8 = BME280_INIT_VALUE;
 	u8 v_chip_id_read_count = BME280_CHIP_ID_READ_COUNT;
 
-	/* assign BME280 ptr */
-	//p_bme280 = bme280;
+    // Probe device
+    if (!i2c_probe(p_bme280->unit, p_bme280->dev_addr)) {
+		return -1;
+    }
 
 	while (v_chip_id_read_count > 0) {
 
@@ -2193,11 +2194,6 @@ BME280_RETURN_FUNCTION_TYPE bme280_compute_wait_time(u8 *v_delaytime_u8)
 // ================================ BME280 ===========================================
 
 //--------------------------------------------------------------
-static void print_driver_error(driver_error_t *error, int err) {
-	//printf(" DRIVER ERROR [%d]: type: %d, unit: %d, exc: %d\r\n", err, error->type, error->unit, error->exception);
-
-    free(error);
-}
 
 /*	\Brief          : The function is used as I2C bus write
  *	\Return         : Status of the I2C write
@@ -2212,32 +2208,21 @@ s8 BME280_I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
 {
 	driver_error_t *error;
 
-	/*printf("[bme280 wr] (%02x) %02x:", dev_addr, reg_addr);
-	for (int i=0; i<cnt; i++) {
-		printf(" %02x", reg_data[i]);
-	}*/
-    if ((error = i2c_start(p_bme280->unit, &p_bme280->transaction))) {
-    	print_driver_error(error, -1);
-    	return -1;
-    }
-	if ((error = i2c_write_address(p_bme280->unit, &p_bme280->transaction, dev_addr, 0))) {
-    	print_driver_error(error, -2);
-    	return -2;
-    }
-    if ((error = i2c_write(p_bme280->unit, &p_bme280->transaction, (char *)&reg_addr, 1))) {
-    	print_driver_error(error, -3);
-    	return -3;
-    }
-    if ((error = i2c_write(p_bme280->unit, &p_bme280->transaction, (char *)reg_data, cnt))) {
-    	print_driver_error(error, -4);
-    	return -4;
-    }
-    if ((error = i2c_stop(p_bme280->unit, &p_bme280->transaction))) {
-    	print_driver_error(error, -5);
-    	return -5;
-    }
+	// Prepare buffer
+	uint8_t buff[BME280_MAX_DATA_LENGHT + 1];
+	int i;
 
-	//printf("\r\n");
+	buff[0] = reg_addr;
+	for(i = 0;i < cnt;i++) {
+		buff[i + 1] = (uint8_t)(*reg_data++);
+	}
+
+	error = i2c_write(p_bme280->unit, buff, cnt + 1);
+	if (error) {
+		free(error);
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -2252,42 +2237,14 @@ s8 BME280_I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
 s8 BME280_I2C_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
 {
 	driver_error_t *error;
+	uint8_t tmp_reg_addr = reg_addr;
 
-	//printf("[bme280 rd] (%02x) [%d] %02x:", dev_addr, cnt, reg_addr);
-    if ((error = i2c_start(p_bme280->unit, &p_bme280->transaction))) {
-    	print_driver_error(error, -1);
-    	return -1;
-    }
-	if ((error = i2c_write_address(p_bme280->unit, &p_bme280->transaction, dev_addr, 0))) {
-    	print_driver_error(error, -2);
-    	return -2;
-    }
-    if ((error = i2c_write(p_bme280->unit, &p_bme280->transaction, (char *)&reg_addr, 1))) {
-    	print_driver_error(error, -3);
-    	return -3;
-    }
-	// read reg data
-    if ((error = i2c_start(p_bme280->unit, &p_bme280->transaction))) {
-    	print_driver_error(error, -5);
-    	return -6;
-    }
-	if ((error = i2c_write_address(p_bme280->unit, &p_bme280->transaction, dev_addr, 1))) {
-    	print_driver_error(error, -7);
-    	return -7;
-    }
-	if ((error = i2c_read(p_bme280->unit, &p_bme280->transaction, (char *)reg_data, cnt))) {
-    	print_driver_error(error, -8);
-    	return -8;
-    }
-    if ((error = i2c_stop(p_bme280->unit, &p_bme280->transaction))) {
-    	print_driver_error(error, -10);
-    	return -10;
-    }
-
-	/*for (int i=0; i<cnt; i++) {
-		printf(" %02x", reg_data[i]);
+	error = i2c_write_read(p_bme280->unit, &tmp_reg_addr, 1, (uint8_t *)reg_data, cnt);
+	if (error) {
+		free(error);
+		return -1;
 	}
-	printf("\r\n");*/
+
     return 0;
 }
 
