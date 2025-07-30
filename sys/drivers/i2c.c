@@ -734,6 +734,7 @@ driver_error_t *i2c_write(int deviceid, uint8_t *data, int len) {
 driver_error_t *i2c_read(int deviceid, uint8_t *data, int len) {
     driver_error_t *error;
     esp_err_t err;
+    uint8_t min_read_buff[2];
 
     int unit = (deviceid & 0xff00) >> 8;
     int device = (deviceid & 0x00ff);
@@ -744,7 +745,12 @@ driver_error_t *i2c_read(int deviceid, uint8_t *data, int len) {
     }
 
     i2c_lock(unit);
-    err = i2c_master_receive(i2c[unit].device[device].hdnl, data, len, 1000);
+    if (len == 1) {
+    	err = i2c_master_receive(i2c[unit].device[device].hdnl, min_read_buff, sizeof(min_read_buff), 1000);
+    	*data = min_read_buff[0];
+    } else {
+    	err = i2c_master_receive(i2c[unit].device[device].hdnl, data, len, 1000);
+    }
     i2c_unlock(unit);
 
     if (err == ESP_ERR_TIMEOUT) {
@@ -757,6 +763,7 @@ driver_error_t *i2c_read(int deviceid, uint8_t *data, int len) {
 driver_error_t *i2c_write_read(int deviceid, uint8_t *dataw, int lenw, uint8_t *datar, int lenr) {
     driver_error_t *error;
     esp_err_t err;
+    uint8_t min_read_buff[2];
 
     int unit = (deviceid & 0xff00) >> 8;
     int device = (deviceid & 0x00ff);
@@ -767,7 +774,12 @@ driver_error_t *i2c_write_read(int deviceid, uint8_t *dataw, int lenw, uint8_t *
     }
 
     i2c_lock(unit);
-    err = i2c_master_transmit_receive(i2c[unit].device[device].hdnl, dataw, lenw, datar, lenr, 1000);
+    if (lenr == 1) {
+    	err = i2c_master_transmit_receive(i2c[unit].device[device].hdnl, dataw, lenw, min_read_buff, sizeof(min_read_buff), 1000);
+    	*datar = min_read_buff[0];
+    } else {
+    	err = i2c_master_transmit_receive(i2c[unit].device[device].hdnl, dataw, lenw, datar, lenr, 1000);
+    }
     i2c_unlock(unit);
 
     if (err == ESP_ERR_TIMEOUT) {
