@@ -97,6 +97,7 @@ DRIVER_REGISTER_BEGIN(ADC,adc,0,_adc_init,NULL);
 	DRIVER_REGISTER_ERROR(ADC, adc, InvalidMax, "invalid max value", ADC_ERR_INVALID_MAX);
 	DRIVER_REGISTER_ERROR(ADC, adc, CannotCalibrate, "calibration is not allowed for this ADC", ADC_ERR_CANNOT_CALIBRATE);
 	DRIVER_REGISTER_ERROR(ADC, adc, CalibrationError, "calibration error", ADC_ERR_CALIBRATION);
+    DRIVER_REGISTER_ERROR(ADC, adc, DeviceNotFound, "device not found", ADC_ERR_DEVICE_NOT_FOUND);
 DRIVER_REGISTER_END(ADC,adc,0,_adc_init,NULL);
 
 /*

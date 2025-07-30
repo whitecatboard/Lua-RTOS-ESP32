@@ -84,6 +84,7 @@ typedef struct {
 #define ADC_ERR_INVALID_MAX				 (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  7)
 #define ADC_ERR_CANNOT_CALIBRATE	     (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  8)
 #define ADC_ERR_CALIBRATION	             (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) |  9)
+#define ADC_ERR_DEVICE_NOT_FOUND         (DRIVER_EXCEPTION_BASE(ADC_DRIVER_ID) | 10)
 
 extern const int adc_errors;
 extern const int adc_error_map;

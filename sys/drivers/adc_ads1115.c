@@ -49,21 +49,19 @@
 
 #include <string.h>
 
-#include <sys/syslog.h>
-
-#include <drivers/gpio.h>
-#include <drivers/i2c.h>
-#include <drivers/adc.h>
-#include <drivers/adc_ads1115.h>
-#include <drivers/power_bus.h>
+#include "syslog.h"
+#include "gpio.h"
+#include "i2c.h"
+#include "adc.h"
+#include "adc_ads1115.h"
+#include "power_bus.h"
 
 static int i2cdevice;
 
 /*
  * Helper functions
  */
-driver_error_t *adc_ads1115_write_reg(uint8_t type, adc_ads1115_reg_t *reg, uint8_t address) {
-	int transaction = I2C_TRANSACTION_INITIALIZER;
+driver_error_t *adc_ads1115_write_reg(uint8_t type, adc_ads1115_reg_t *reg) {
 	driver_error_t *error;
 	uint8_t buff[3];
 
@@ -71,33 +69,19 @@ driver_error_t *adc_ads1115_write_reg(uint8_t type, adc_ads1115_reg_t *reg, uint
 	buff[1] = reg->byte.h;
 	buff[2] = reg->byte.l;
 
-	error = i2c_start(i2cdevice, &transaction);if (error) return error;
-	error = i2c_write_address(i2cdevice, &transaction, address, 0);if (error) return error;
-	error = i2c_write(i2cdevice, &transaction, (char *)&buff, sizeof(buff));if (error) return error;
-	error = i2c_stop(i2cdevice, &transaction);if (error) return error;
+	error = i2c_write(i2cdevice, buff, sizeof(buff));if (error) return error;
 
 	return NULL;
 }
 
-driver_error_t *adc_ads1115_read_reg(uint8_t type, adc_ads1115_reg_t *reg, uint8_t address) {
-	int transaction = I2C_TRANSACTION_INITIALIZER;
+driver_error_t *adc_ads1115_read_reg(uint8_t type, adc_ads1115_reg_t *reg) {
 	driver_error_t *error;
 	uint8_t buff[1];
 	uint8_t val[2];
 
-	// Point to register
 	buff[0] = type;
 
-	error = i2c_start(i2cdevice, &transaction);if (error) return error;
-	error = i2c_write_address(i2cdevice, &transaction, address, 0);if (error) return error;
-	error = i2c_write(i2cdevice, &transaction, (char *)&buff, sizeof(buff));if (error) return error;
-	error = i2c_stop(i2cdevice, &transaction);if (error) return error;
-
-	// Read register
-	error = i2c_start(i2cdevice, &transaction);if (error) return error;
-	error = i2c_write_address(i2cdevice, &transaction, address, 1);if (error) return error;
-	error = i2c_read(i2cdevice, &transaction, (char *)&val, sizeof(val));if (error) return error;
-	error = i2c_stop(i2cdevice, &transaction);if (error) return error;
+	error = i2c_write_read(i2cdevice, buff, sizeof(buff), val, sizeof(val));if (error) return error;
 
 	reg->byte.h = val[0];
 	reg->byte.l = val[1];
@@ -113,7 +97,7 @@ driver_error_t *adc_ads1115_setup(adc_chann_t *chan) {
 
 	uint8_t i2c = CONFIG_ADC_I2C;
 	int8_t channel = chan->channel;
-	uint8_t address = chan->devid;
+	uint8_t address = 0;
 
 	// Apply default max value
 	if (chan->max == 0) {
@@ -124,6 +108,8 @@ driver_error_t *adc_ads1115_setup(adc_chann_t *chan) {
 	if (chan->devid == 0) {
 		chan->devid = ADS1115_ADDR1;
 	}
+
+	address = chan->devid;
 
 	// Apply default resolution if needed
 	if (chan->resolution == 0) {
@@ -144,9 +130,14 @@ driver_error_t *adc_ads1115_setup(adc_chann_t *chan) {
 #endif
 
 	// Attach
-	if ((error = i2c_attach(i2c, I2C_MASTER, CONFIG_ADC_SPEED, 0, 0, &i2cdevice))) {
+	if ((error = i2c_attach(i2c, I2C_MASTER, CONFIG_ADC_SPEED, 0, address, &i2cdevice))) {
 		return error;
 	}
+
+    // Probe device
+    if (!i2c_probe(i2cdevice, address)) {
+    	return driver_error(ADC_DRIVER, ADC_ERR_DEVICE_NOT_FOUND, NULL);
+    }
 
 	if (chan->vref != 0) {
 		return driver_error(ADC_DRIVER, ADC_ERR_VREF_SET_NOT_ALLOWED, NULL);
@@ -189,7 +180,6 @@ driver_error_t *adc_ads1115_read(adc_chann_t *chan, int *raw, double *mvolts) {
 	driver_error_t *error;
 
 	int8_t channel = chan->channel;
-	uint8_t address = chan->devid;
 
 	// Configure channel, and start a conversion
 	adc_ads1115_reg_t reg;
@@ -219,18 +209,18 @@ driver_error_t *adc_ads1115_read(adc_chann_t *chan, int *raw, double *mvolts) {
 	reg.config.comp_queue = ADS1115_CONF_COMP_QUEUE_0;
 	reg.config.os = ADS1115_CONF_START_CONV;
 
-	error = adc_ads1115_write_reg(ADS1115_CONFIG, &reg, address);if (error) return error;
+	error = adc_ads1115_write_reg(ADS1115_CONFIG, &reg);if (error) return error;
 
 	// Wait for conversion
 	for(;;) {
-		error = adc_ads1115_read_reg(ADS1115_CONFIG, &reg, address);if (error) return error;
+		error = adc_ads1115_read_reg(ADS1115_CONFIG, &reg);if (error) return error;
 		if (reg.config.os == ADS1115_CONF_STATUS_IDLE) {
 			break;
 		}
 	}
 
 	// Read
-	error = adc_ads1115_read_reg(ADS1115_AP_CONV, &reg, address);if (error) return error;
+	error = adc_ads1115_read_reg(ADS1115_AP_CONV, &reg);if (error) return error;
 
 	if (raw) {
 		*raw = reg.word.val;
