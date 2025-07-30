@@ -148,7 +148,6 @@ static void pca9xxx_isr(void* arg) {
 
 // Write to a PCA968 register
 static driver_error_t *pca9xxx_write_register(uint8_t reg, uint8_t val) {
-	int transaction = I2C_TRANSACTION_INITIALIZER;
 	driver_error_t *error;
 	uint8_t buff[2];
 
@@ -156,49 +155,56 @@ static driver_error_t *pca9xxx_write_register(uint8_t reg, uint8_t val) {
 	buff[1] = val;
 
 	pca_9xxx_lock();
-
-	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
-	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 0);if (error) {pca_9xxx_unlock();return error;}
-	error = i2c_write(pca_9xxx->i2cdevice, &transaction, (char *)&buff, sizeof(buff));if (error) {pca_9xxx_unlock();return error;}
-	error = i2c_stop(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
-
+	error = i2c_write(pca_9xxx->i2cdevice, buff, sizeof(buff));
 	pca_9xxx_unlock();
 
-	return NULL;
+	return error;
 }
 
 // Read from a PCA968 register
 static driver_error_t * pca9xxx_read_all_register(uint8_t reg, uint8_t *val) {
-	int transaction = I2C_TRANSACTION_INITIALIZER;
 	driver_error_t *error;
 	uint8_t buff[1];
 
 	buff[0] = 0b10000000 | reg;
 
 	pca_9xxx_lock();
-
-	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
-	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 0);if (error) {pca_9xxx_unlock();return error;}
-	error = i2c_write(pca_9xxx->i2cdevice, &transaction, (char *)&buff, 1);if (error) {pca_9xxx_unlock();return error;}
-	error = i2c_start(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
-	error = i2c_write_address(pca_9xxx->i2cdevice, &transaction, CONFIG_PCA9xxx_I2C_ADDRESS, 1);if (error) {pca_9xxx_unlock();return error;}
-	error = i2c_read(pca_9xxx->i2cdevice, &transaction, (char *)val, 5);if (error) {pca_9xxx_unlock();return error;}
-	error = i2c_stop(pca_9xxx->i2cdevice, &transaction);if (error) {pca_9xxx_unlock();return error;}
-
+	error = i2c_write_read(pca_9xxx->i2cdevice, buff, sizeof(buff), val, 5);
 	pca_9xxx_unlock();
 
-	return NULL;
+	return error;
 }
 
 /*
  * Operation functions
  */
+driver_error_t *pca9xxx_unsetup(bool locked) {
+	if (pca_9xxx) {
+		if (pca_9xxx->task) {
+			vTaskDelete(pca_9xxx->task);
+		}
+
+		if (pca_9xxx->mtx) {
+			if (locked) {
+			    while (xSemaphoreGiveRecursive(pca_9xxx->mtx) == pdTRUE);
+			}
+
+			vSemaphoreDelete(pca_9xxx->mtx);
+		}
+
+		free(pca_9xxx);
+
+		pca_9xxx = NULL;
+	}
+
+	return NULL;
+}
 
 driver_error_t *pca9xxx_setup() {
 	driver_error_t *error;
 	int i2cdevice;
 
-	if ((error = i2c_attach(CONFIG_PCA9xxx_I2C, I2C_MASTER, CONFIG_PCA9xxx_I2C_SPEED, 0, 0, &i2cdevice))) {
+	if ((error = i2c_attach(CONFIG_PCA9xxx_I2C, I2C_MASTER, CONFIG_PCA9xxx_I2C_SPEED, 0, CONFIG_PCA9xxx_I2C_ADDRESS, &i2cdevice))) {
 		return error;
 	}
 
@@ -206,6 +212,7 @@ driver_error_t *pca9xxx_setup() {
 		// Create pca_9xxx data
 		pca_9xxx = (pca_9xxx_t *)calloc(1, sizeof(pca_9xxx_t) * PCA9xxx_BANKS);
 		if (!pca_9xxx) {
+			pca9xxx_unsetup(false);
 			return driver_error(GPIO_DRIVER, GPIO_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
 
@@ -213,6 +220,10 @@ driver_error_t *pca9xxx_setup() {
 
 		// Init mutex
 		pca_9xxx->mtx = xSemaphoreCreateRecursiveMutex();
+		if (!pca_9xxx->mtx) {
+			pca9xxx_unsetup(false);
+			return driver_error(GPIO_DRIVER, GPIO_ERR_NOT_ENOUGH_MEMORY, NULL);
+		}
 
 		syslog(
 				LOG_INFO,
@@ -234,42 +245,48 @@ driver_error_t *pca9xxx_setup() {
         pca_9xxx->latch[3] = 0xff;
         pca_9xxx->latch[4] = 0xff;
 
+        // Probe device
+        if (!i2c_probe(i2cdevice, CONFIG_PCA9xxx_I2C_ADDRESS)) {
+        	pca9xxx_unsetup(true);
+        	return driver_error(GPIO_DRIVER, GPIO_ERR_DEVICE_NOT_FOUND, NULL);
+        }
+
 		// Output Port registers, all to L
-		pca9xxx_write_register(0x8, 0x00);
-		pca9xxx_write_register(0x9, 0x00);
-		pca9xxx_write_register(0xa, 0x00);
-		pca9xxx_write_register(0xb, 0x00);
-		pca9xxx_write_register(0xc, 0x00);
+		if ((error = pca9xxx_write_register(0x8, 0x00))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x9, 0x00))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0xa, 0x00))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0xb, 0x00))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0xc, 0x00))) {pca9xxx_unsetup(true);return error;}
 
 		// Polarity Inversion registers, do not invert
-        pca9xxx_write_register(0x10, 0x00);
-        pca9xxx_write_register(0x11, 0x00);
-        pca9xxx_write_register(0x12, 0x00);
-        pca9xxx_write_register(0x13, 0x00);
-        pca9xxx_write_register(0x14, 0x00);
+		if ((error = pca9xxx_write_register(0x10, 0x00))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x11, 0x00))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x12, 0x00))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x13, 0x00))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x14, 0x00))) {pca9xxx_unsetup(true);return error;}
 
         // I/O Configuration registers, set all to input
-        pca9xxx_write_register(0x18, 0xff);
-        pca9xxx_write_register(0x19, 0xff);
-        pca9xxx_write_register(0x1a, 0xff);
-        pca9xxx_write_register(0x1b, 0xff);
-        pca9xxx_write_register(0x1c, 0xff);
+		if ((error = pca9xxx_write_register(0x18, 0xff))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x19, 0xff))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x1a, 0xff))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x1b, 0xff))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x1c, 0xff))) {pca9xxx_unsetup(true);return error;}
 
         // Mask interrupt registers, all disabled
-        pca9xxx_write_register(0x20, 0xff);
-        pca9xxx_write_register(0x21, 0xff);
-        pca9xxx_write_register(0x22, 0xff);
-        pca9xxx_write_register(0x23, 0xff);
-        pca9xxx_write_register(0x24, 0xff);
+		if ((error = pca9xxx_write_register(0x20, 0xff))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x21, 0xff))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x22, 0xff))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x23, 0xff))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x24, 0xff))) {pca9xxx_unsetup(true);return error;}
 
         // Output structure configuration register, default values
-        pca9xxx_write_register(0x28, 0xff);
+		if ((error = pca9xxx_write_register(0x28, 0xff))) {pca9xxx_unsetup(true);return error;}
 
         // All Bank control register, default values
-        pca9xxx_write_register(0x29, 0x80);
+		if ((error = pca9xxx_write_register(0x29, 0x80))) {pca9xxx_unsetup(true);return error;}
 
         // Mode selection register, default values
-        pca9xxx_write_register(0x2a, 0x02);
+		if ((error = pca9xxx_write_register(0x2a, 0x02))) {pca9xxx_unsetup(true);return error;}
 
 		// Configure interrupts
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
@@ -277,7 +294,7 @@ driver_error_t *pca9xxx_setup() {
 
 		// Lock resources
 		if ((lock_error = driver_lock(GPIO_DRIVER, 0, GPIO_DRIVER, CONFIG_PCA9xxx_INT, 0, NULL))) {
-			pca_9xxx_unlock();
+			pca9xxx_unsetup(true);
 
 			// Revoked lock on pin
 			return driver_lock_error(GPIO_DRIVER, lock_error);
@@ -286,7 +303,7 @@ driver_error_t *pca9xxx_setup() {
 
 		BaseType_t xReturn = xTaskCreatePinnedToCore(pca_9xxx_task, "pca9xxx", CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE, NULL, CONFIG_LUA_RTOS_LUA_THREAD_PRIORITY, &pca_9xxx->task, xPortGetCoreID());
 		if (xReturn != pdPASS) {
-			pca_9xxx_unlock();
+			pca9xxx_unsetup(true);
 
 			return driver_error(GPIO_DRIVER, GPIO_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
@@ -295,11 +312,11 @@ driver_error_t *pca9xxx_setup() {
 		gpio_isr_attach(CONFIG_PCA9xxx_INT, pca9xxx_isr, GPIO_INTR_NEGEDGE, NULL);
 
 		// Mask interrupt registers, all enabled
-		pca9xxx_write_register(0x20, 0x00);
-		pca9xxx_write_register(0x21, 0x00);
-		pca9xxx_write_register(0x22, 0x00);
-		pca9xxx_write_register(0x23, 0x00);
-		pca9xxx_write_register(0x24, 0x00);
+		if ((error = pca9xxx_write_register(0x20, 0x00))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x21, 0x00))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x22, 0x00))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x23, 0x00))) {pca9xxx_unsetup(true);return error;}
+		if ((error = pca9xxx_write_register(0x24, 0x00))) {pca9xxx_unsetup(true);return error;}
 
 		pca_9xxx_unlock();
 
@@ -320,17 +337,21 @@ driver_error_t *pca9xxx_setup() {
 }
 
 driver_error_t *pca_9xxx_pin_output(uint8_t pin) {
+	driver_error_t *error;
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 
-	if (!pca_9xxx) pca9xxx_setup();
+	if (!pca_9xxx) {
+		error = pca9xxx_setup();
+		if (error) {
+			return error;
+		}
+	}
 
 	// Update direction. For input set bit to 0.
 	pca_9xxx_lock();
 	pca_9xxx->direction[port] &= ~pinmask;
 	pca_9xxx_unlock();
-
-	driver_error_t *error;
 
 	error = pca9xxx_write_register(0x18 + port, pca_9xxx->direction[port]);
 
@@ -338,17 +359,21 @@ driver_error_t *pca_9xxx_pin_output(uint8_t pin) {
 }
 
 driver_error_t *pca_9xxx_pin_input(uint8_t pin) {
+	driver_error_t *error;
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 
-	if (!pca_9xxx) pca9xxx_setup();
+	if (!pca_9xxx) {
+		error = pca9xxx_setup();
+		if (error) {
+			return error;
+		}
+	}
 
 	// Update direction. For input set bit to 1.
 	pca_9xxx_lock();
 	pca_9xxx->direction[port] |= pinmask;
 	pca_9xxx_unlock();
-
-	driver_error_t *error;
 
 	pca9xxx_write_register(0x20 + port, 0x00);
 
@@ -358,17 +383,21 @@ driver_error_t *pca_9xxx_pin_input(uint8_t pin) {
 }
 
 driver_error_t *pca_9xxx_pin_set(uint8_t pin) {
+	driver_error_t *error;
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 
-	if (!pca_9xxx) pca9xxx_setup();
+	if (!pca_9xxx) {
+		error = pca9xxx_setup();
+		if (error) {
+			return error;
+		}
+	}
 
 	// Update latch.
 	pca_9xxx_lock();
 	pca_9xxx->latch[port] |= pinmask;
 	pca_9xxx_unlock();
-
-	driver_error_t *error;
 
 	error = pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
 
@@ -376,17 +405,21 @@ driver_error_t *pca_9xxx_pin_set(uint8_t pin) {
 }
 
 driver_error_t *pca_9xxx_pin_clr(uint8_t pin) {
+	driver_error_t *error;
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 
-	if (!pca_9xxx) pca9xxx_setup();
+	if (!pca_9xxx) {
+		error = pca9xxx_setup();
+		if (error) {
+			return error;
+		}
+	}
 
 	// Update latch.
 	pca_9xxx_lock();
 	pca_9xxx->latch[port] &= ~pinmask;
 	pca_9xxx_unlock();
-
-	driver_error_t *error;
 
 	error = pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
 
@@ -394,17 +427,21 @@ driver_error_t *pca_9xxx_pin_clr(uint8_t pin) {
 }
 
 driver_error_t *pca_9xxx_pin_inv(uint8_t pin) {
+	driver_error_t *error;
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 
-	if (!pca_9xxx) pca9xxx_setup();
+	if (!pca_9xxx) {
+		error = pca9xxx_setup();
+		if (error) {
+			return error;
+		}
+	}
 
 	// Update latch.
 	pca_9xxx_lock();
 	pca_9xxx->latch[port] = pca_9xxx->latch[port] ^ pinmask;
 	pca_9xxx_unlock();
-
-	driver_error_t *error;
 
 	error = pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
 
@@ -412,11 +449,16 @@ driver_error_t *pca_9xxx_pin_inv(uint8_t pin) {
 }
 
 uint8_t pca_9xxx_pin_get(uint8_t pin) {
+	driver_error_t *error;
 	uint8_t port = PCA9xxx_GPIO_BANK_NUM(pin);
 	uint8_t pinmask = (1 << PCA9xxx_GPIO_BANK_POS(pin));
 	uint8_t val;
 
-	if (!pca_9xxx) pca9xxx_setup();
+	if (!pca_9xxx) {
+		error = pca9xxx_setup();
+		free(error);
+		return 0;
+	}
 
 	pca_9xxx_lock();
 	val = ((pca_9xxx->latch[port] & pinmask) != 0);
@@ -426,14 +468,19 @@ uint8_t pca_9xxx_pin_get(uint8_t pin) {
 }
 
 driver_error_t *pca_9xxx_pin_input_mask(uint8_t port, uint8_t pinmask) {
-	if (!pca_9xxx) pca9xxx_setup();
+	driver_error_t *error;
+
+	if (!pca_9xxx) {
+		error = pca9xxx_setup();
+		if (error) {
+			return error;
+		}
+	}
 
 	// Update direction. For input set bit to 1.
 	pca_9xxx_lock();
 	pca_9xxx->direction[port] |= pinmask;
 	pca_9xxx_unlock();
-
-	driver_error_t *error;
 
 	error = pca9xxx_write_register(0x18 + port, pca_9xxx->direction[port]);
 
@@ -441,14 +488,19 @@ driver_error_t *pca_9xxx_pin_input_mask(uint8_t port, uint8_t pinmask) {
 }
 
 driver_error_t *pca_9xxx_pin_output_mask(uint8_t port, uint8_t pinmask) {
-	if (!pca_9xxx) pca9xxx_setup();
+	driver_error_t *error;
+
+	if (!pca_9xxx) {
+		error = pca9xxx_setup();
+		if (error) {
+			return error;
+		}
+	}
 
 	// Update direction. For output set bit to 0.
 	pca_9xxx_lock();
 	pca_9xxx->direction[port] &= ~pinmask;
 	pca_9xxx_unlock();
-
-	driver_error_t *error;
 
 	error = pca9xxx_write_register(0x18 + port, pca_9xxx->direction[port]);
 
@@ -456,14 +508,19 @@ driver_error_t *pca_9xxx_pin_output_mask(uint8_t port, uint8_t pinmask) {
 }
 
 driver_error_t * pca_9xxx_pin_set_mask(uint8_t port, uint8_t pinmask) {
-	if (!pca_9xxx) pca9xxx_setup();
+	driver_error_t *error;
+
+	if (!pca_9xxx) {
+		error = pca9xxx_setup();
+		if (error) {
+			return error;
+		}
+	}
 
 	// Update latch.
 	pca_9xxx_lock();
 	pca_9xxx->latch[port] |= pinmask;
 	pca_9xxx_unlock();
-
-	driver_error_t *error;
 
 	error = pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
 
@@ -471,14 +528,19 @@ driver_error_t * pca_9xxx_pin_set_mask(uint8_t port, uint8_t pinmask) {
 }
 
 driver_error_t *pca_9xxx_pin_clr_mask(uint8_t port, uint8_t pinmask) {
-	if (!pca_9xxx) pca9xxx_setup();
+	driver_error_t *error;
+
+	if (!pca_9xxx) {
+		error = pca9xxx_setup();
+		if (error) {
+			return error;
+		}
+	}
 
 	// Update latch.
 	pca_9xxx_lock();
 	pca_9xxx->latch[port] &= ~pinmask;
 	pca_9xxx_unlock();
-
-	driver_error_t *error;
 
 	error = pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
 
@@ -486,14 +548,19 @@ driver_error_t *pca_9xxx_pin_clr_mask(uint8_t port, uint8_t pinmask) {
 }
 
 driver_error_t *pca_9xxx_pin_inv_mask(uint8_t port, uint8_t pinmask) {
-	if (!pca_9xxx) pca9xxx_setup();
+	driver_error_t *error;
+
+	if (!pca_9xxx) {
+		error = pca9xxx_setup();
+		if (error) {
+			return error;
+		}
+	}
 
 	// Update latch.
 	pca_9xxx_lock();
 	pca_9xxx->latch[port] = pca_9xxx->latch[port] ^ pinmask;
 	pca_9xxx_unlock();
-
-	driver_error_t *error;
 
 	error = pca9xxx_write_register(0x08 + port, pca_9xxx->latch[port]);
 
@@ -501,7 +568,13 @@ driver_error_t *pca_9xxx_pin_inv_mask(uint8_t port, uint8_t pinmask) {
 }
 
 void pca_9xxx_pin_get_mask(uint8_t port, uint8_t pinmask, uint8_t *value) {
-	if (!pca_9xxx) pca9xxx_setup();
+	driver_error_t *error;
+
+	if (!pca_9xxx) {
+		error = pca9xxx_setup();
+		free(error);
+		return;
+	}
 
 	pca_9xxx_lock();
 	*value = (pca_9xxx->latch[port] & pinmask);
@@ -521,7 +594,13 @@ uint64_t pca_9xxx_pin_get_all() {
 }
 
 void pca_9xxx_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type, void *args) {
-	if (!pca_9xxx) pca9xxx_setup();
+	driver_error_t *error;
+
+	if (!pca_9xxx) {
+		error = pca9xxx_setup();
+		free(error);
+		return;
+	}
 
 	pca_9xxx_lock();
 	if (type == GPIO_INTR_DISABLE) {
@@ -537,7 +616,13 @@ void pca_9xxx_isr_attach(uint8_t pin, gpio_isr_t gpio_isr, gpio_int_type_t type,
 }
 
 void pca_9xxx_isr_detach(uint8_t pin) {
-	if (!pca_9xxx) pca9xxx_setup();
+	driver_error_t *error;
+
+	if (!pca_9xxx) {
+		error = pca9xxx_setup();
+		free(error);
+		return;
+	}
 
 	pca_9xxx_lock();
 	pca_9xxx->isr_func[pin] = NULL;

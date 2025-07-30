@@ -181,13 +181,6 @@ void _sys_init() {
     memcpy(flash_unique_id, response + 5, sizeof(flash_unique_id));
     #endif
 
-    // Disable hardware modules modules
-    periph_module_disable(PERIPH_LEDC_MODULE);
-    periph_module_disable(PERIPH_CAN_MODULE);
-    periph_module_disable(PERIPH_I2C0_MODULE);
-    periph_module_disable(PERIPH_I2C1_MODULE);
-    periph_module_disable(PERIPH_RMT_MODULE);
-
     // Init important things for Lua RTOS
     _mount_init();
     _status_init();

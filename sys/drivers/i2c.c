@@ -45,23 +45,21 @@
 
 #include "luartos.h"
 
-#if CONFIG_LUA_RTOS_LUA_USE_I2C
-
-#include "freertos/FreeRTOS.h"
-#include "driver/i2c.h"
-#include "esp_private/periph_ctrl.h"
+//#if CONFIG_LUA_RTOS_LUA_USE_I2C
 
 #include <stdint.h>
 #include <string.h>
 
-#include <sys/macros.h>
-#include <sys/list.h>
-#include <sys/driver.h>
-#include <sys/syslog.h>
+#include "freertos/FreeRTOS.h"
+#include "esp_private/periph_ctrl.h"
 
-#include <drivers/gpio.h>
-#include <drivers/cpu.h>
-#include <drivers/i2c.h>
+#include "macros.h"
+#include "driver.h"
+#include "syslog.h"
+
+#include "gpio.h"
+#include "cpu.h"
+#include "i2c.h"
 
 #define ACK_CHECK_EN   0x1     /*!< I2C master will check ack from slave*/
 #define ACK_CHECK_DIS  0x0     /*!< I2C master will not check ack from slave */
@@ -86,9 +84,6 @@ DRIVER_REGISTER_END(I2C,i2c,CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS * ((CPU_LAST_I2C 
 // i2c info needed by driver
 i2c_t i2c[CPU_LAST_I2C + 1];
 
-// Transaction list
-static struct list transactions;
-
 /*
  * Helper functions
  */
@@ -97,7 +92,7 @@ static int i2c_get_free_device(int unit) {
     int i;
 
     for (i = 0; i < I2C_BUS_DEVICES; i++) {
-        if (i2c[unit].device[i].speed == 0)
+        if (i2c[unit].device[i].hdnl == NULL)
             return i;
     }
 
@@ -115,15 +110,8 @@ static void i2c_unlock(uint8_t unit) {
 static void i2c_init() {
     int i;
 
-    // Disable i2c modules
-    periph_module_disable(PERIPH_I2C0_MODULE);
-    periph_module_disable(PERIPH_I2C1_MODULE);
-
     // Set driver structure to 0;
     memset(i2c, 0, sizeof(i2c_t) * (CPU_LAST_I2C + 1));
-
-    // Init transaction list
-    lstinit(&transactions, 0, LIST_DEFAULT);
 
     // Init mutexes and pin maps
     for (i = 0; i < CPU_LAST_I2C + 1; i++) {
@@ -171,7 +159,6 @@ static driver_error_t *i2c_unlock_resources(int unit) {
 
     return NULL;
 }
-
 #endif
 
 static driver_error_t *i2c_check(int unit) {
@@ -187,6 +174,7 @@ static driver_error_t *i2c_check(int unit) {
     return NULL;
 }
 
+#if 0
 static driver_error_t *i2c_get_command(int unit, int *transaction,
         i2c_cmd_handle_t *cmd) {
     if (lstget(&transactions, *transaction, (void **) cmd)) {
@@ -251,11 +239,13 @@ static driver_error_t *i2c_flush_internal(int unit, int device,
 
     return NULL;
 }
+#endif
 
 /*
  * Operation functions
  */
 driver_error_t *i2c_flush(int deviceid, int *transaction, int new_transaction) {
+#if 0
     driver_error_t *error;
     i2c_cmd_handle_t cmd = NULL;
 
@@ -279,6 +269,7 @@ driver_error_t *i2c_flush(int deviceid, int *transaction, int new_transaction) {
             return error;
         }
     }
+#endif
 
     return NULL;
 }
@@ -338,11 +329,12 @@ driver_error_t *i2c_pin_map(int unit, int sda, int scl) {
     return NULL;
 }
 
-driver_error_t *i2c_attach(int unit, int mode, int speed, int addr10_en,
-        int addr, int *deviceid) {
+driver_error_t *i2c_attach(int unit, int mode, int speed, int addr10_en, int addr, int *deviceid) {
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
     driver_error_t *error;
 #endif
+
+    esp_err_t err;
 
     // Sanity checks
     if (!((1 << unit) & CPU_I2C_ALL)) {
@@ -360,60 +352,54 @@ driver_error_t *i2c_attach(int unit, int mode, int speed, int addr10_en,
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
         if ((error = i2c_lock_resources(unit))) {
             i2c_unlock(unit);
-
             return error;
         }
 #endif
-
-        // Enable module
-        if (unit == 0) {
-            periph_module_enable(PERIPH_I2C0_MODULE);
-        } else {
-            periph_module_enable(PERIPH_I2C1_MODULE);
+        // Get a free device
+        int device = i2c_get_free_device(unit);
+        if (device < 0) {
+            // No more devices
+            return driver_error(I2C_DRIVER, I2C_ERR_NO_MORE_DEVICES_ALLOWED, NULL);
         }
 
-        // Setup
-        int buff_len = 0;
-        i2c_config_t conf;
+        // Configure bus
+        i2c_master_bus_config_t i2c_bus_config = {
+            .clk_source = I2C_CLK_SRC_DEFAULT,
+            .i2c_port = unit,
+            .scl_io_num = i2c[unit].scl,
+            .sda_io_num = i2c[unit].sda,
+        };
 
-        conf.sda_io_num = i2c[unit].sda;
-        conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-        conf.scl_io_num = i2c[unit].scl;
-        conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-
-        if (mode == I2C_MASTER) {
-            conf.mode = I2C_MODE_MASTER;
-            conf.master.clk_speed = speed;
-            buff_len = 0;
-        } else {
-            conf.mode = I2C_MODE_SLAVE;
-            conf.slave.addr_10bit_en = addr10_en;
-            conf.slave.slave_addr = addr;
-            buff_len = 1024;
+        err = i2c_new_master_bus(&i2c_bus_config, &i2c[unit].hdnl);
+        if (err == ESP_ERR_NO_MEM) {
+            i2c_unlock(unit);
+        	return driver_error(I2C_DRIVER, I2C_ERR_NOT_ENOUGH_MEMORY, NULL);
         }
 
-        i2c_param_config(unit, &conf);
-        i2c_driver_install(unit, conf.mode, buff_len, buff_len, 0);
+        // Configure device
+        i2c_device_config_t i2c_dev_conf = {
+        	.dev_addr_length = I2C_ADDR_BIT_LEN_7,
+            .scl_speed_hz = speed,
+            .device_address = addr,
+        };
+
+        err = i2c_master_bus_add_device(i2c[unit].hdnl, &i2c_dev_conf, &i2c[unit].device[device].hdnl);
+        if (err == ESP_ERR_NO_MEM) {
+        	i2c_del_master_bus(i2c[unit].hdnl);
+        	i2c[unit].hdnl = NULL;
+            i2c_unlock(unit);
+        	return driver_error(I2C_DRIVER, I2C_ERR_NOT_ENOUGH_MEMORY, NULL);
+        }
 
         i2c[unit].mode = mode;
         i2c[unit].setup = 1;
 
-        syslog(LOG_INFO, "i2c%u at pins scl=%s%d/sdc=%s%d", unit,
+        syslog(LOG_INFO, "i2c%u at pins scl=%s%d/sda=%s%d", unit,
                 gpio_portname(i2c[unit].scl), gpio_name(i2c[unit].scl),
                 gpio_portname(i2c[unit].sda), gpio_name(i2c[unit].sda));
+
+        *deviceid = ((unit << 8) | device);
     }
-
-    // Get a free device
-    int device = i2c_get_free_device(unit);
-    if (device < 0) {
-        // No more devices
-        return driver_error(I2C_DRIVER, I2C_ERR_NO_MORE_DEVICES_ALLOWED, NULL);
-    }
-
-    i2c[unit].device[device].speed = speed;
-    i2c[unit].device[device].reading = 0;
-
-    *deviceid = ((unit << 8) | device);
 
     i2c_unlock(unit);
 
@@ -433,16 +419,16 @@ driver_error_t *i2c_detach(int deviceid) {
 
     i2c_lock(unit);
 
-    // Mark device as unused
-    i2c[unit].device[device].speed = 0;
-    i2c[unit].device[device].reading = 0;
+    // Remove device
+    i2c_master_bus_rm_device(i2c[unit].device[device].hdnl);
+    i2c[unit].device[device].hdnl = NULL;
 
     // Check if all devices are unused or not
     int i;
     int no_devices = 1;
 
     for (i = 0; i < I2C_BUS_DEVICES; i++) {
-        if (i2c[unit].device[i].speed != 0) {
+        if (i2c[unit].device[i].hdnl != NULL) {
             no_devices = 0;
             break;
         }
@@ -454,14 +440,9 @@ driver_error_t *i2c_detach(int deviceid) {
         i2c_unlock_resources(unit);
 #endif
 
-        i2c_driver_delete(unit);
-
-        // Disable unit
-        if (unit == 0) {
-            periph_module_disable(PERIPH_I2C0_MODULE);
-        } else {
-            periph_module_disable(PERIPH_I2C1_MODULE);
-        }
+        // Remove bus
+        i2c_del_master_bus(i2c[unit].hdnl);
+        i2c[unit].hdnl = NULL;
 
         i2c[unit].setup = 0;
     }
@@ -472,6 +453,7 @@ driver_error_t *i2c_detach(int deviceid) {
 }
 
 driver_error_t *i2c_setspeed(int deviceid, int speed) {
+#if 0
     driver_error_t *error;
 
     int unit = (deviceid & 0xff00) >> 8;
@@ -498,11 +480,12 @@ driver_error_t *i2c_setspeed(int deviceid, int speed) {
     i2c[unit].speed = speed;
 
     i2c_unlock(unit);
-
+#endif
     return NULL;
 }
 
 driver_error_t *i2c_start(int deviceid, int *transaction) {
+#if 0
     driver_error_t *error;
     i2c_cmd_handle_t cmd = NULL;
 
@@ -533,11 +516,13 @@ driver_error_t *i2c_start(int deviceid, int *transaction) {
     i2c_master_start(cmd);
 
     i2c_unlock(unit);
+#endif
 
     return NULL;
 }
 
 driver_error_t *i2c_stop(int deviceid, int *transaction) {
+#if 0
     driver_error_t *error;
 
     int unit = (deviceid & 0xff00) >> 8;
@@ -578,12 +563,14 @@ driver_error_t *i2c_stop(int deviceid, int *transaction) {
     i2c[unit].device[device].reading = 0;
 
     i2c_unlock(unit);
+#endif
 
     return NULL;
 }
 
 driver_error_t *i2c_write_address(int deviceid, int *transaction, char address,
         int read) {
+#if 0
     driver_error_t *error;
 
     int unit = (deviceid & 0xff00) >> 8;
@@ -616,11 +603,13 @@ driver_error_t *i2c_write_address(int deviceid, int *transaction, char address,
             ACK_CHECK_EN);
 
     i2c_unlock(unit);
+#endif
 
     return NULL;
 }
-
+/*
 driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len) {
+#if 0
     driver_error_t *error;
 
     int unit = (deviceid & 0xff00) >> 8;
@@ -658,11 +647,13 @@ driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len) {
     }
 
     i2c_unlock(unit);
+#endif
 
     return NULL;
 }
 
 driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len) {
+#if 0
     driver_error_t *error;
 
     int unit = (deviceid & 0xff00) >> 8;
@@ -699,8 +690,91 @@ driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len) {
     }
 
     i2c_unlock(unit);
-
+#endif
     return NULL;
 }
+*/
 
-#endif
+bool i2c_probe(int deviceid, uint16_t address) {
+    driver_error_t *error;
+    int unit = (deviceid & 0xff00) >> 8;
+
+    // Sanity checks
+    if ((error = i2c_check(unit))) {
+    	free(error);
+        return false;
+    }
+
+	return ((i2c_master_probe(i2c[unit].hdnl, address, 1000)) == ESP_OK);
+}
+
+driver_error_t *i2c_write(int deviceid, uint8_t *data, int len) {
+    driver_error_t *error;
+    esp_err_t err;
+
+    int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
+
+    // Sanity checks
+    if ((error = i2c_check(unit))) {
+        return error;
+    }
+
+    i2c_lock(unit);
+	err = i2c_master_transmit(i2c[unit].device[device].hdnl, data, len, 1000);
+    i2c_unlock(unit);
+
+    if (err == ESP_ERR_TIMEOUT) {
+    	return driver_error(I2C_DRIVER, I2C_ERR_TIMEOUT, NULL);
+    }
+
+	return NULL;
+}
+
+driver_error_t *i2c_read(int deviceid, uint8_t *data, int len) {
+    driver_error_t *error;
+    esp_err_t err;
+
+    int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
+
+    // Sanity checks
+    if ((error = i2c_check(unit))) {
+        return error;
+    }
+
+    i2c_lock(unit);
+    err = i2c_master_receive(i2c[unit].device[device].hdnl, data, len, 1000);
+    i2c_unlock(unit);
+
+    if (err == ESP_ERR_TIMEOUT) {
+    	return driver_error(I2C_DRIVER, I2C_ERR_TIMEOUT, NULL);
+    }
+
+	return NULL;
+}
+
+driver_error_t *i2c_write_read(int deviceid, uint8_t *dataw, int lenw, uint8_t *datar, int lenr) {
+    driver_error_t *error;
+    esp_err_t err;
+
+    int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
+
+    // Sanity checks
+    if ((error = i2c_check(unit))) {
+        return error;
+    }
+
+    i2c_lock(unit);
+    err = i2c_master_transmit_receive(i2c[unit].device[device].hdnl, dataw, lenw, datar, lenr, 1000);
+    i2c_unlock(unit);
+
+    if (err == ESP_ERR_TIMEOUT) {
+    	return driver_error(I2C_DRIVER, I2C_ERR_TIMEOUT, NULL);
+    }
+
+	return NULL;
+}
+
+//#endif

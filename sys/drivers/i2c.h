@@ -48,27 +48,26 @@
 #ifndef I2C_H
 #define I2C_H
 
+#include <stdint.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-#include "driver/i2c.h"
-
-#include <stdint.h>
-
-#include <sys/driver.h>
-
-#include <drivers/cpu.h>
+#include "driver.h"
+#include "cpu.h"
+#include "driver/i2c_master.h"
 
 #define I2C_BUS_DEVICES CONFIG_LUA_RTOS_I2C_DEVICES_PER_BUS
 #define I2C_TRANSACTION_INITIALIZER -1
 
 typedef struct i2c_device {
-    int speed;
-    int8_t reading;
+	i2c_master_dev_handle_t hdnl;
 } i2c_device_t;
 
 // Internal driver structure
 typedef struct i2c {
+	i2c_master_bus_handle_t hdnl;
+
     uint8_t mode;
     uint8_t setup;
     int8_t sda;
@@ -229,7 +228,7 @@ driver_error_t *i2c_write_address(int deviceid, int *transaction, char address, 
  *          I2C_ERR_INVALID_OPERATION
  *          I2C_ERR_INVALID_TRANSACTION
  */
-driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len);
+//driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len);
 
 /**
  * @brief Read data, if configured in master mode. This function is thread safe.
@@ -248,7 +247,7 @@ driver_error_t *i2c_write(int deviceid, int *transaction, char *data, int len);
  *          I2C_ERR_INVALID_OPERATION
  *          I2C_ERR_INVALID_TRANSACTION
  */
-driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len);
+//driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len);
 
 /**
  * @brief Flush all operations. This function is thread safe.
@@ -267,5 +266,10 @@ driver_error_t *i2c_read(int deviceid, int *transaction, char *data, int len);
  *          I2C_ERR_INVALID_TRANSACTION
  */
 driver_error_t *i2c_flush(int deviceid, int *transaction, int new_transaction);
+
+bool i2c_probe(int deviceid, uint16_t address);
+driver_error_t *i2c_write(int deviceid, uint8_t *data, int len);
+driver_error_t *i2c_read(int deviceid, uint8_t *data, int len);
+driver_error_t *i2c_write_read(int deviceid, uint8_t *dataw, int lenw, uint8_t *datar, int lenr);
 
 #endif /* I2C_H */

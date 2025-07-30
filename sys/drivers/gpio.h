@@ -78,6 +78,7 @@ typedef uint64_t gpio_pin_mask_t;
 #define GPIO_ERR_PULL_DOWN_NOT_ALLOWED		  (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  5)
 #define GPIO_ERR_INT_NOT_ALLOWED			  (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  6)
 #define GPIO_ERR_PULL_UP_DOWN_NOT_ALLOWED     (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  7)
+#define GPIO_ERR_DEVICE_NOT_FOUND             (DRIVER_EXCEPTION_BASE(GPIO_DRIVER_ID) |  8)
 
 extern const int gpio_errors;
 extern const int gpio_error_map;
