@@ -88,6 +88,18 @@ i2c_t i2c[CPU_LAST_I2C + 1];
  * Helper functions
  */
 
+static int i2c_get_device(int unit, int address) {
+    int i;
+
+    for (i = 0; i < I2C_BUS_DEVICES; i++) {
+        if ((i2c[unit].device[i].hdnl != NULL) && (i2c[unit].device[i].address == address)) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 static int i2c_get_free_device(int unit) {
     int i;
 
@@ -167,7 +179,7 @@ static driver_error_t *i2c_check(int unit) {
         return driver_error(I2C_DRIVER, I2C_ERR_INVALID_UNIT, NULL);
     }
 
-    if (!i2c[unit].setup) {
+    if (!i2c[unit].hdnl) {
         return driver_error(I2C_DRIVER, I2C_ERR_IS_NOT_SETUP, NULL);
     }
 
@@ -282,7 +294,7 @@ driver_error_t *i2c_pin_map(int unit, int sda, int scl) {
 
     i2c_lock(unit);
 
-    if (i2c[unit].setup) {
+    if (i2c[unit].hdnl) {
         i2c_unlock(unit);
         return driver_error(I2C_DRIVER, I2C_ERR_CANNOT_CHANGE_PINMAP, NULL);
     }
@@ -335,6 +347,7 @@ driver_error_t *i2c_attach(int unit, int mode, int speed, int addr10_en, int add
 #endif
 
     esp_err_t err;
+    int device = 0;
 
     // Sanity checks
     if (!((1 << unit) & CPU_I2C_ALL)) {
@@ -347,21 +360,14 @@ driver_error_t *i2c_attach(int unit, int mode, int speed, int addr10_en, int add
 
     i2c_lock(unit);
 
-    // Setup only once
-    if (!i2c[unit].setup) {
+    // Setup bus only once
+    if (!i2c[unit].hdnl) {
 #if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
         if ((error = i2c_lock_resources(unit))) {
             i2c_unlock(unit);
             return error;
         }
 #endif
-        // Get a free device
-        int device = i2c_get_free_device(unit);
-        if (device < 0) {
-            // No more devices
-            return driver_error(I2C_DRIVER, I2C_ERR_NO_MORE_DEVICES_ALLOWED, NULL);
-        }
-
         // Configure bus
         i2c_master_bus_config_t i2c_bus_config = {
             .clk_source = I2C_CLK_SRC_DEFAULT,
@@ -374,6 +380,16 @@ driver_error_t *i2c_attach(int unit, int mode, int speed, int addr10_en, int add
         if (err == ESP_ERR_NO_MEM) {
             i2c_unlock(unit);
         	return driver_error(I2C_DRIVER, I2C_ERR_NOT_ENOUGH_MEMORY, NULL);
+        }
+    }
+
+    // Setup device only once
+    if (i2c_get_device(unit, addr) < 0) {
+        // Get a free device
+        device = i2c_get_free_device(unit);
+        if (device < 0) {
+            // No more devices
+            return driver_error(I2C_DRIVER, I2C_ERR_NO_MORE_DEVICES_ALLOWED, NULL);
         }
 
         // Configure device
@@ -390,18 +406,17 @@ driver_error_t *i2c_attach(int unit, int mode, int speed, int addr10_en, int add
             i2c_unlock(unit);
         	return driver_error(I2C_DRIVER, I2C_ERR_NOT_ENOUGH_MEMORY, NULL);
         }
-
-        i2c[unit].mode = mode;
-        i2c[unit].setup = 1;
-
-        syslog(LOG_INFO, "i2c%u at pins scl=%s%d/sda=%s%d", unit,
-                gpio_portname(i2c[unit].scl), gpio_name(i2c[unit].scl),
-                gpio_portname(i2c[unit].sda), gpio_name(i2c[unit].sda));
-
-        *deviceid = ((unit << 8) | device);
     }
 
+    i2c[unit].mode = mode;
+
+    *deviceid = ((unit << 8) | device);
+
     i2c_unlock(unit);
+
+    syslog(LOG_INFO, "i2c%u at pins scl=%s%d/sda=%s%d", unit,
+            gpio_portname(i2c[unit].scl), gpio_name(i2c[unit].scl),
+            gpio_portname(i2c[unit].sda), gpio_name(i2c[unit].sda));
 
     return NULL;
 }
@@ -443,8 +458,6 @@ driver_error_t *i2c_detach(int deviceid) {
         // Remove bus
         i2c_del_master_bus(i2c[unit].hdnl);
         i2c[unit].hdnl = NULL;
-
-        i2c[unit].setup = 0;
     }
 
     i2c_unlock(unit);

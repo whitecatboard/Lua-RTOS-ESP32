@@ -62,6 +62,7 @@
 
 typedef struct i2c_device {
 	i2c_master_dev_handle_t hdnl;
+	uint16_t address;
 } i2c_device_t;
 
 // Internal driver structure
