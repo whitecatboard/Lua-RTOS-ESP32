@@ -26,6 +26,8 @@
 
 #include <math.h>
 
+#include "driver/rmt_encoder.h"
+
 #include "rmt.h"
 #include "motion.h"
 
@@ -33,10 +35,13 @@
 #define NSTEP 8
 
 // Step pulse duration in nanos
-#define STEPPER_PULSE_NANOS 3000.0F
+#define STEPPER_PULSE_NANOS 3000
 
-// Nonos per RMT tick
-#define STEPPER_RMT_NANOS_PER_TICK 25.0F
+// Nanos per RMT tick
+#define STEPPER_RMT_NANOS_PER_TICK 25ULL
+
+// RMT frequency
+#define STEPPER_RMT_FREQ (1000000000ULL / STEPPER_RMT_NANOS_PER_TICK)
 
 // Step pulse duration in RMT ticks
 #define STEPPER_PULSE_TICKS (STEPPER_PULSE_NANOS / STEPPER_RMT_NANOS_PER_TICK)
@@ -84,6 +89,9 @@ typedef struct {
     float current_position;
 
     motion_t motion;
+
+    rmt_channel_handle_t tx_chan;
+    rmt_encoder_handle_t tx_encoder;
 } stepper_t;
 
 // Stepper errors

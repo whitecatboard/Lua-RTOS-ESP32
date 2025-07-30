@@ -43,10 +43,26 @@
 #include <string.h>
 #include <math.h>
 
+#include "driver/rmt_tx.h"
+#include "driver/rmt_encoder.h"
+#include "rmt_private.h"
+
+#include "esp_log.h"
+#include "esp_check.h"
+
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
+
 typedef struct {
     uint8_t stepper;
     float units;
 } stepper_oder_t;
+
+typedef struct rmt_copy_encoder_t {
+    rmt_encoder_t base;       // encoder base class
+    size_t last_symbol_index; // index of symbol position in the primary stream
+} stepper_encoder_t;
 
 // Register driver and messages
 static void stepper_init();
@@ -70,7 +86,9 @@ QueueHandle_t acceleration_queue = NULL;
 static TaskHandle_t acceleration_profile_task_h = NULL;
 
 // RMT ISR handle
+#if 0
 rmt_isr_handle_t isr_h = NULL;
+#endif
 
 // Steppers who are currently started (1 = started, 0 = not started),
 static uint32_t start_mask = 0;
@@ -86,6 +104,133 @@ static EventGroupHandle_t stop_event_group = NULL;
 /*
  * Helper functions
  */
+
+static size_t IRAM_ATTR encoder_copy(rmt_encoder_t *encoder, rmt_channel_handle_t channel,
+                                     const void *primary_data, size_t data_size, rmt_encode_state_t *ret_state)
+{
+    stepper_encoder_t *copy_encoder = __containerof(encoder, stepper_encoder_t, base);
+    rmt_tx_channel_t *tx_chan = __containerof(channel, rmt_tx_channel_t, base);
+    rmt_symbol_word_t *symbols = (rmt_symbol_word_t *)primary_data;
+    rmt_encode_state_t state = RMT_ENCODING_RESET;
+    rmt_dma_descriptor_t *desc0 = NULL;
+    rmt_dma_descriptor_t *desc1 = NULL;
+    uint8_t chan_id = channel->channel_id;
+
+    size_t symbol_index = copy_encoder->last_symbol_index;
+    // how many symbols will be copied by the encoder
+    size_t mem_want = (data_size / 4 - symbol_index);
+    // how many symbols we can save for this round
+    size_t mem_have = tx_chan->mem_end - tx_chan->mem_off;
+    // where to put the encoded symbols? DMA buffer or RMT HW memory
+    rmt_symbol_word_t *mem_to_nc = NULL;
+    if (channel->dma_chan) {
+        mem_to_nc = (rmt_symbol_word_t *)RMT_GET_NON_CACHE_ADDR(channel->dma_mem_base);
+    } else {
+        mem_to_nc = channel->hw_mem_base;
+    }
+    // how many symbols will be encoded in this round
+    size_t encode_len = MIN(mem_want, mem_have);
+    bool encoding_truncated = mem_have < mem_want;
+    bool encoding_space_free = mem_have > mem_want;
+
+    if (channel->dma_chan) {
+        // mark the start descriptor
+        if (tx_chan->mem_off < tx_chan->ping_pong_symbols) {
+            desc0 = &tx_chan->dma_nodes_nc[0];
+        } else {
+            desc0 = &tx_chan->dma_nodes_nc[1];
+        }
+    }
+
+    size_t len = encode_len;
+    rmt_symbol_word_t symbol;
+
+    while (len > 0) {
+    	symbol = symbols[stepper[chan_id].rmt_data_tail];
+    	mem_to_nc[tx_chan->mem_off++] = symbol;
+		stepper[chan_id].rmt_data_tail = ((stepper[chan_id].rmt_data_tail + 1) % (STEPPER_RMT_DATA_SIZE));
+
+    	if (symbol.val == 0) {
+    		encoding_truncated = false;
+    		len = 0;
+    	} else {
+            len--;
+    	}
+    }
+
+    if (channel->dma_chan) {
+        // mark the end descriptor
+        if (tx_chan->mem_off < tx_chan->ping_pong_symbols) {
+            desc1 = &tx_chan->dma_nodes_nc[0];
+        } else {
+            desc1 = &tx_chan->dma_nodes_nc[1];
+        }
+
+        // cross line, means desc0 has prepared with sufficient data buffer
+        if (desc0 != desc1) {
+            desc0->dw0.length = tx_chan->ping_pong_symbols * sizeof(rmt_symbol_word_t);
+            desc0->dw0.owner = DMA_DESCRIPTOR_BUFFER_OWNER_DMA;
+        }
+    }
+
+    if (encoding_truncated) {
+        // this encoding has not finished yet, save the truncated position
+        copy_encoder->last_symbol_index = symbol_index;
+    } else {
+        // reset internal index if encoding session has finished
+        copy_encoder->last_symbol_index = 0;
+        state |= RMT_ENCODING_COMPLETE;
+    }
+
+    if (!encoding_space_free) {
+        // no more free memory, the caller should yield
+        state |= RMT_ENCODING_MEM_FULL;
+    }
+
+    // reset offset pointer when exceeds maximum range
+    if (tx_chan->mem_off >= tx_chan->ping_pong_symbols * 2) {
+        if (channel->dma_chan) {
+            desc1->dw0.length = tx_chan->ping_pong_symbols * sizeof(rmt_symbol_word_t);
+            desc1->dw0.owner = DMA_DESCRIPTOR_BUFFER_OWNER_DMA;
+        }
+        tx_chan->mem_off = 0;
+    }
+
+    *ret_state = state;
+    return encode_len;
+}
+
+static esp_err_t encoder_reset(rmt_encoder_t *encoder)
+{
+	stepper_encoder_t *copy_encoder = __containerof(encoder, stepper_encoder_t, base);
+    copy_encoder->last_symbol_index = 0;
+    return ESP_OK;
+}
+
+static esp_err_t encoder_del(rmt_encoder_t *encoder)
+{
+	stepper_encoder_t *copy_encoder = __containerof(encoder, stepper_encoder_t, base);
+    free(copy_encoder);
+    return ESP_OK;
+}
+
+static esp_err_t rmt_encoder(const rmt_copy_encoder_config_t *config,  rmt_encoder_handle_t *ret_encoder)
+{
+    esp_err_t ret = ESP_OK;
+    stepper_encoder_t *encoder = rmt_alloc_encoder_mem(sizeof(stepper_encoder_t));
+    if (!encoder) {
+    	return ESP_ERR_NO_MEM;
+    }
+
+    encoder->base.encode = encoder_copy;
+    encoder->base.del = encoder_del;
+    encoder->base.reset = encoder_reset;
+    // return general encoder handle
+    *ret_encoder = &encoder->base;
+
+    return ret;
+}
+
 static int _cmp(const void *o1, const void *o2) {
     stepper_oder_t *ord1 = (stepper_oder_t *)o1;
     stepper_oder_t *ord2 = (stepper_oder_t *)o2;
@@ -114,7 +259,45 @@ static void step_feedback(void *arg) {
     }
 }
 
+static bool tx_cb(rmt_channel_handle_t channel, const rmt_tx_done_event_data_t *edata, void *args) {
+    // Need to make a context switch at the end of the callback?
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    BaseType_t xCurrentHigherPriorityTaskWoken = pdFALSE;
+
+	// Get channel
+	uint8_t chan_id = channel->channel_id;
+
+    // Consume a half of a RMT block from the pre-computed RMT data
+	if (stepper[chan_id].rmt_data_tail != stepper[chan_id].rmt_data_head) {
+        rmt_transmit_config_t tx_config = {
+            .loop_count = 0,
+        };
+
+		rmt_transmit(stepper[chan_id].tx_chan, stepper[chan_id].tx_encoder, stepper[chan_id].rmt_data, STEPPER_RMT_HALF_BUFF_SIZE, &tx_config);
+
+		uint32_t dummy = (1 << chan_id);
+        xQueueSendFromISR(acceleration_queue, &dummy, &xHigherPriorityTaskWoken);
+	} else {
+		// Stepper movement finish
+		start_mask &= ~(1 << chan_id);
+
+		// One stepper is stopped now
+		if (start_num > 0) {
+			start_num--;
+		}
+
+		xEventGroupSetBitsFromISR(stop_event_group, 1 << chan_id, &xCurrentHigherPriorityTaskWoken);
+		xHigherPriorityTaskWoken |= xCurrentHigherPriorityTaskWoken;
+
+		xEventGroupSetBitsFromISR(move_event_group, 1 << chan_id, &xCurrentHigherPriorityTaskWoken);
+		xHigherPriorityTaskWoken |= xCurrentHigherPriorityTaskWoken;
+	}
+
+	return xHigherPriorityTaskWoken;
+}
+
 static void rmt_isr(void *arg) {
+#if 0
     // Get ISR status
     uint32_t intr_st = RMT.int_st.val;
 
@@ -181,6 +364,7 @@ static void rmt_isr(void *arg) {
     if(xHigherPriorityTaskWoken == pdTRUE) {
         portYIELD_FROM_ISR();
     }
+#endif
 }
 
 static void acceleration_profile_task(void *args) {
@@ -188,7 +372,7 @@ static void acceleration_profile_task(void *args) {
     uint8_t stepper_num;     // Current stepper number in cycle
     uint32_t cycle_for_mask; // Mask with the steppers that require to perform an acceleration cycle
     uint32_t cycle_mask;     // A copy of cycle_for_mask
-    rmt_item32_t rmt_item;	 // RMT item for current step
+    rmt_symbol_word_t rmt_item;	 // RMT item for current step
 
     while (true) {
         // Wait for cycle
@@ -207,11 +391,22 @@ static void acceleration_profile_task(void *args) {
                 uint32_t next = ((pstepper->rmt_data_head + 1) % (STEPPER_RMT_DATA_SIZE));
 
                 if ((pstepper->steps == 0) && (next != pstepper->rmt_data_tail)) {
-                    // RMT end condition
-                    pstepper->rmt_data[pstepper->rmt_data_head] = 0;
+                	// Check that previous elements is not an end condition
+                	uint32_t prev = (pstepper->rmt_data_head + STEPPER_RMT_DATA_SIZE - 1) % STEPPER_RMT_DATA_SIZE;
 
-                    // Advance
-                    pstepper->rmt_data_head = next;
+                	if (pstepper->rmt_data[prev] != 0) {
+						// RMT end condition
+						pstepper->rmt_data[pstepper->rmt_data_head] = 0;
+
+						// Advance
+						pstepper->rmt_data_head = next;
+                	}
+
+                    // Next stepper
+                    cycle_mask = cycle_mask >> 1;
+                    pstepper++;
+                    stepper_num++;
+
                     continue;
                 }
 
@@ -341,15 +536,11 @@ static void acceleration_profile_task(void *args) {
         while (cycle_mask) {
             if (cycle_mask & 0x01) {
                 if (pstepper->rmt_start && !pstepper->rmt_started) {
-                    int idx;
+                    rmt_transmit_config_t tx_config = {
+                        .loop_count = 0,
+                    };
 
-                    for(idx = 0;idx < STEPPER_RMT_BUFF_SIZE; idx++) {
-                        RMTMEM.chan[stepper_num].data32[idx].val = pstepper->rmt_data[pstepper->rmt_data_tail];
-                        pstepper->rmt_data_tail = ((pstepper->rmt_data_tail + 1) % (STEPPER_RMT_DATA_SIZE));
-                    }
-
-                    RMT.conf_ch[stepper_num].conf1.tx_start = 1;
-
+            		rmt_transmit(stepper[stepper_num].tx_chan, stepper[stepper_num].tx_encoder, stepper[stepper_num].rmt_data, STEPPER_RMT_BUFF_SIZE, &tx_config);
                     pstepper->rmt_started = 1;
                 }
             }
@@ -432,18 +623,12 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
     }
 #endif
 
-    // Configure stepper pins, as output, initial low
-    if ((error = gpio_pin_output(step_pin))) {
-        mtx_unlock(&stepper_mutex);
-        return error;
-    }
-
+    // Configure DIR pin, as output, initial low
     if ((error = gpio_pin_output(dir_pin))) {
         mtx_unlock(&stepper_mutex);
         return error;
     }
 
-    gpio_ll_pin_clr(step_pin);
     gpio_ll_pin_clr(dir_pin);
 
     stepper[*unit].step_pin = step_pin;
@@ -455,6 +640,25 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
     stepper[*unit].mac_acc = max_acc;
     stepper[*unit].setup = 1;
 
+    // Create TX channel
+    rmt_tx_channel_config_t tx_chan_config = {
+		.clk_src = RMT_CLK_SRC_DEFAULT, // select clock source
+		.gpio_num = stepper[*unit].step_pin,
+		.mem_block_symbols = STEPPER_RMT_BUFF_SIZE,
+		.resolution_hz = STEPPER_RMT_FREQ,
+		.trans_queue_depth = 10, // set the number of transactions that can be pending in the background
+    };
+
+    esp_err_t err;
+
+    err = rmt_new_tx_channel(&tx_chan_config, &stepper[*unit].tx_chan);
+    err = rmt_enable(stepper[*unit].tx_chan);
+
+    rmt_copy_encoder_config_t config = {0};
+    err = rmt_encoder(&config, &stepper[*unit].tx_encoder);
+
+
+#if 0
     // Reset RMT
     if (isr_h == NULL) {
         periph_module_reset(PERIPH_RMT_MODULE);
@@ -510,8 +714,35 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
 
     // Enable TX_THR interrupt
     RMT.int_ena.val |= BIT(24 + *unit);
+#endif
+
+    // Install callbacks
+    rmt_tx_event_callbacks_t cbs = {
+        .on_trans_done = tx_cb,
+    };
+
+    err = rmt_tx_register_event_callbacks(stepper[*unit].tx_chan, &cbs, NULL);
+
+    if (!stop_event_group) {
+    	stop_event_group = xEventGroupCreate();
+    	if (stop_event_group == NULL) {
+            mtx_unlock(&stepper_mutex);
+            return driver_error(STEPPER_DRIVER, STEPPER_ERR_NOT_ENOUGH_MEMORY, NULL);
+    	}
+    }
+
+    if (!move_event_group) {
+		move_event_group = xEventGroupCreate();
+		if (move_event_group == NULL) {
+			vEventGroupDelete(stop_event_group);
+			mtx_unlock(&stepper_mutex);
+			return driver_error(STEPPER_DRIVER, STEPPER_ERR_NOT_ENOUGH_MEMORY, NULL);
+		}
+    }
+
 
     // Allocate ISR
+#if 0
     if (isr_h == NULL) {
     	stop_event_group = xEventGroupCreate();
     	if (stop_event_group == NULL) {
@@ -528,10 +759,13 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
 
     	esp_intr_alloc(ETS_RMT_INTR_SOURCE, ESP_INTR_FLAG_IRAM, rmt_isr, NULL, &isr_h);
     }
+#endif
 
     // Attach ISR on step_in to get feedback
+#if 0
     gpio_set_intr_type(stepper[*unit].step_pin, GPIO_INTR_POSEDGE);
     gpio_isr_handler_add(stepper[*unit].step_pin, step_feedback, &stepper[*unit]);
+#endif
 
     mtx_unlock(&stepper_mutex);
 
@@ -789,10 +1023,12 @@ void stepper_stop(int mask, uint8_t async) {
 
     while (testMask != (1 << (NSTEP - 1))) {
         if (start_mask & testMask) {
+#if 0
             RMTMEM.chan[channel].data32[0].val = 0;
             RMT.conf_ch[channel].conf1.tx_start = 0;
             RMT.conf_ch[channel].conf1.mem_rd_rst = 1;
             RMT.conf_ch[channel].conf1.mem_rd_rst = 0;
+#endif
             stop_mask |= testMask;
         }
 

@@ -22,7 +22,7 @@ set(srcs
 	"modules/hw/sensor.c"
 	"modules/hw/servo.c"
 	"modules/hw/spi.c"
-#	"modules/hw/stepper.c"
+	"modules/hw/stepper.c"
 	"modules/hw/touch.c"
 	"modules/hw/uart.c"
 #	"modules/hw/ulp.c"
@@ -131,7 +131,7 @@ list(APPEND extra_link_flags "-u luaopen_sdisplay")
 list(APPEND extra_link_flags "-u luaopen_sensor")
 list(APPEND extra_link_flags "-u luaopen_servo")
 list(APPEND extra_link_flags "-u luaopen_spi")
-#list(APPEND extra_link_flags "-u luaopen_stepper")
+list(APPEND extra_link_flags "-u luaopen_stepper")
 list(APPEND extra_link_flags "-u luaopen_touch")
 list(APPEND extra_link_flags "-u luaopen_uart")
 #list(APPEND extra_link_flags "-u luaopen_ulp")

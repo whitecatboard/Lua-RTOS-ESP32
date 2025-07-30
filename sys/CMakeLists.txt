@@ -38,7 +38,7 @@ set(srcs
 #	"drivers/spi_eth.c"
 	"drivers/ssd1306.c"
 	"drivers/st7735.c"
-#	"drivers/stepper.c"
+	"drivers/stepper.c"
 	"drivers/system.c"
 	"drivers/timer.c"
 #	"drivers/tm1637.c"
@@ -145,7 +145,7 @@ set(include_dirs
 	"lwip/netif"
 	"lwip"
 #	"shell"
-	"misc"
+	"misc"	
 )
 				
 set(fragments
@@ -213,12 +213,12 @@ list(APPEND extra_link_flags "-u sensor_setup")
 list(APPEND extra_link_flags "-u servo_setup")
 #list(APPEND extra_link_flags "-u spi_eth_setup")
 list(APPEND extra_link_flags "-u spi_setup")
-#list(APPEND extra_link_flags "-u stepper_setup")
+list(APPEND extra_link_flags "-u stepper_setup")
 list(APPEND extra_link_flags "-u system_init")
 list(APPEND extra_link_flags "-u tmr_init")
 list(APPEND extra_link_flags "-u uart_init")
 list(APPEND extra_link_flags "-u wifi_setup")
-#list(APPEND extra_link_flags "-u i2c_attach")
+list(APPEND extra_link_flags "-u i2c_init")
 list(APPEND extra_link_flags "-u gdisplay_init")
 #list(APPEND extra_link_flags "-u lora_setup")
 #list(APPEND extra_link_flags "-u cpu_port_number")
