@@ -637,9 +637,9 @@ void pthreadTask(void *taskArgs) {
     uxSetThreadId((UBaseType_t) args->thread);
 
     // Call additional thread init function
-    //if (args->thread->attr.init_func) {
-    //    args->thread->attr.init_func(args->args);
-    //}
+    if (args->thread->attr.init_func) {
+        args->thread->attr.init_func(args->args);
+    }
 
     // Lua RTOS specific TCB parts are set, parent thread can continue
     xTaskNotify(args->parent_task, 0, eNoAction);

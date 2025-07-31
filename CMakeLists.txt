@@ -46,7 +46,7 @@ include_directories("$ENV{IDF_PATH}/components/driver/rmt")
 
 # Do not use toolchain pthread definitions
 #add_compile_options("-D_SYS_SCHED_H_")
-#add_compile_options("-D_SYS__PTHREADTYPES_H_")
+add_compile_options("-D_SYS__PTHREADTYPES_H_")
 add_compile_options("-D_POSIX_THREADS")
 
 #add_compile_options("-D__PTHREAD_h")

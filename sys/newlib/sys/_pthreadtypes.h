@@ -67,15 +67,14 @@ typedef struct {
   int schedpolicy;
   struct sched_param schedparam;
 
-  #if LUA_RTOS_INCLUDE_IDF_REPLACEMENTS
-  void (*init_func)(void *);
-  #endif
-
   /* P1003.4b/D8, p. 54 adds cputime_clock_allowed attribute.  */
 #if defined(_POSIX_THREAD_CPUTIME)
   int  cputime_clock_allowed;  /* see time.h */
 #endif
   int  detachstate;
+
+  // WHITECAT
+  void (*init_func)(void *);
 } pthread_attr_t;
 
 #endif /* !defined(__XMK__) */

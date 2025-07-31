@@ -54,10 +54,10 @@ int pthread_attr_init(pthread_attr_t *attr) {
 
 	attr->stacksize = (CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE >= PTHREAD_STACK_MIN?CONFIG_LUA_RTOS_LUA_THREAD_STACK_SIZE:PTHREAD_STACK_MIN);
 
-  attr->schedparam.initial_state = PTHREAD_INITIAL_STATE_RUN;
-  attr->schedparam.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
+	attr->schedparam.initial_state = PTHREAD_INITIAL_STATE_RUN;
+	attr->schedparam.sched_priority = CONFIG_LUA_RTOS_LUA_TASK_PRIORITY;
 	attr->schedparam.affinityset = CPU_INITIALIZER; // No affinity
-	//attr->init_func = NULL;
+	attr->init_func = NULL;
 	attr->detachstate = PTHREAD_CREATE_JOINABLE;
 
     return 0;
@@ -238,7 +238,7 @@ int pthread_attr_setinitfunc_np(pthread_attr_t *attr, void (*init_routine)(void 
 		return EINVAL;
 	}
 
-    //attr->init_func = init_routine;
+    attr->init_func = init_routine;
 
     return 0;
 }
