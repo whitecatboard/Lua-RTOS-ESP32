@@ -52,6 +52,14 @@
 
 #include "status.h"
 
+#if !CONFIG_RMT_ISR_IRAM_SAFE
+#error "Stepper requires CONFIG_RMT_ISR_IRAM_SAFE = 1. Please activate it with make menuconfig, enabling option in Driver Configurations → RMT Configuration -> RMT ISR IRAM-SafE."
+#endif
+
+#if !CONFIG_RMT_RECV_FUNC_IN_IRAM
+#error "Stepper requires CONFIG_RMT_ISR_IRAM_SAFE = 1. Please activate it with make menuconfig, enabling option in Driver Configurations → RMT Configuration -> Place RMT receive function into IRAM."
+#endif
+
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
