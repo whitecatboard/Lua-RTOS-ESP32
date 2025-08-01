@@ -447,7 +447,7 @@ driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t range, rmt_idle_level id
     mtx_lock(&mtx);
 
     // Create device structure, if required
-    if (create_devices() < 0) {
+    if (rmt_create_devices() < 0) {
         mtx_unlock(&mtx);
 
         return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
