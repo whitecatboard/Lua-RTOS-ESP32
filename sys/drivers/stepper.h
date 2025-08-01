@@ -65,6 +65,8 @@ typedef struct {
     uint8_t  dir;           // Direction. 0 = ccw, 1 = cw
     uint32_t steps;         // Number of steps
     int32_t pos;            // position in steps
+    uint32_t steps_request; // Number of requested steps
+    uint32_t steps_done;    // Number of steps done in last movement using RMT feedback
     float units;            // Displacement units
 
     float units_per_step;   // Units per step
@@ -81,6 +83,9 @@ typedef struct {
     uint32_t rmt_ticks_remain;
     uint8_t  rmt_offset;          // When RMT has send the half of a block, points to the start
                                   // of the consumed half block. Can be 0 or 32.
+
+    float rmt_wanted_ticks;
+    float rmt_missing_ticks;
 
     uint8_t  rmt_start;
     uint8_t  rmt_started;
@@ -102,6 +107,9 @@ typedef struct {
 #define STEPPER_ERR_INVALID_PIN              (DRIVER_EXCEPTION_BASE(STEPPER_DRIVER_ID) |  4)
 #define STEPPER_ERR_INVALID_DIRECTION        (DRIVER_EXCEPTION_BASE(STEPPER_DRIVER_ID) |  5)
 #define STEPPER_ERR_INVALID_ACCELERATION     (DRIVER_EXCEPTION_BASE(STEPPER_DRIVER_ID) |  6)
+#define STEPPER_RMT_ERR_NO_MORE_RMT          (DRIVER_EXCEPTION_BASE(STEPPER_DRIVER_ID) |  7)
+#define STEPPER_RMT_ERR_NOT_SUPPORTED        (DRIVER_EXCEPTION_BASE(STEPPER_DRIVER_ID) |  8)
+#define STEPPER_RMT_ERR_FAIL                 (DRIVER_EXCEPTION_BASE(STEPPER_DRIVER_ID) |  9)
 
 extern const int stepper_errors;
 extern const int stepper_error_map;

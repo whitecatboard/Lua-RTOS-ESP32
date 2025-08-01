@@ -50,6 +50,8 @@
 #include "esp_log.h"
 #include "esp_check.h"
 
+#include "status.h"
+
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
@@ -75,6 +77,9 @@ DRIVER_REGISTER_BEGIN(STEPPER,stepper,0,stepper_init,NULL);
     DRIVER_REGISTER_ERROR(STEPPER, stepper, InvalidPin, "invalid pin", STEPPER_ERR_INVALID_PIN);
     DRIVER_REGISTER_ERROR(STEPPER, stepper, InvalidDirection, "invalid direction", STEPPER_ERR_INVALID_DIRECTION);
     DRIVER_REGISTER_ERROR(STEPPER, stepper, InvalidAcceleration, "invalid acceleration", STEPPER_ERR_INVALID_ACCELERATION);
+    DRIVER_REGISTER_ERROR(STEPPER, stepper, NoMoreRMT, "rmt no more channels available", STEPPER_RMT_ERR_NO_MORE_RMT);
+    DRIVER_REGISTER_ERROR(STEPPER, stepper, NotSupported, "nrmt ot supported", STEPPER_RMT_ERR_NOT_SUPPORTED);
+    DRIVER_REGISTER_ERROR(STEPPER, stepper, Fail, "rmt fail", STEPPER_RMT_ERR_FAIL);
 DRIVER_REGISTER_END(STEPPER,stepper,0,stepper_init,NULL);
 
 static stepper_t stepper[NSTEP];
@@ -252,6 +257,8 @@ static void stepper_init() {
 static void step_feedback(void *arg) {
 	stepper_t *pstepper = (stepper_t *)arg;
 
+	pstepper->steps_done++;
+
     if  (pstepper->dir){
         pstepper->pos++;
     } else {
@@ -269,12 +276,6 @@ static bool tx_cb(rmt_channel_handle_t channel, const rmt_tx_done_event_data_t *
 
     // Consume a half of a RMT block from the pre-computed RMT data
 	if (stepper[chan_id].rmt_data_tail != stepper[chan_id].rmt_data_head) {
-        rmt_transmit_config_t tx_config = {
-            .loop_count = 0,
-        };
-
-		rmt_transmit(stepper[chan_id].tx_chan, stepper[chan_id].tx_encoder, stepper[chan_id].rmt_data, STEPPER_RMT_HALF_BUFF_SIZE, &tx_config);
-
 		uint32_t dummy = (1 << chan_id);
         xQueueSendFromISR(acceleration_queue, &dummy, &xHigherPriorityTaskWoken);
 	} else {
@@ -296,75 +297,15 @@ static bool tx_cb(rmt_channel_handle_t channel, const rmt_tx_done_event_data_t *
 	return xHigherPriorityTaskWoken;
 }
 
-static void rmt_isr(void *arg) {
-#if 0
-    // Get ISR status
-    uint32_t intr_st = RMT.int_st.val;
+static driver_error_t *stepper_check(esp_err_t err) {
+	switch (err) {
+		case ESP_ERR_NO_MEM: return driver_error(STEPPER_DRIVER, STEPPER_ERR_NOT_ENOUGH_MEMORY, NULL);
+		case ESP_ERR_NOT_FOUND: return driver_error(STEPPER_DRIVER, STEPPER_RMT_ERR_NO_MORE_RMT, NULL);
+		case ESP_ERR_NOT_SUPPORTED: return driver_error(STEPPER_DRIVER, STEPPER_RMT_ERR_NOT_SUPPORTED, NULL);
+		case ESP_FAIL: return driver_error(STEPPER_DRIVER, STEPPER_RMT_ERR_FAIL, NULL);
+	}
 
-    // Need to make a context switch at the end of the ISR?
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-    // Current RMT channel inspected
-    uint8_t channel;
-
-    for(channel = 0;channel < NSTEP;channel++) {
-        if (intr_st & BIT(channel * 3)) {
-            // TX for channel (RMT has ended transmission)
-
-        	// Stop RMT
-            RMTMEM.chan[channel].data32[0].val = 0;
-            RMT.conf_ch[channel].conf1.tx_start = 0;
-            RMT.conf_ch[channel].conf1.mem_rd_rst = 1;
-            RMT.conf_ch[channel].conf1.mem_rd_rst = 0;
-
-            // Clear interrupt flag
-            RMT.int_clr.val = BIT(channel * 3);
-
-            // Stepper movement finish
-            start_mask &= ~(1 << channel);
-
-            // One stepper is stopped now
-            if (start_num > 0) {
-            	start_num--;
-            }
-
-            xEventGroupSetBitsFromISR(stop_event_group, 1 << channel, &xHigherPriorityTaskWoken);
-            xEventGroupSetBitsFromISR(move_event_group, 1 << channel, &xHigherPriorityTaskWoken);
-        }
-
-        if (intr_st & BIT(24 + channel)) {
-            // TX_THR for channel
-
-            // Clear interrupt flag
-            RMT.int_clr.val = BIT(24 + channel);
-
-            // Consume a half of a RMT block from the pre-computed RMT data
-            uint32_t i;
-
-            i = 0;
-            while ((i < (STEPPER_RMT_HALF_BUFF_SIZE)) && (stepper[channel].rmt_data_tail != stepper[channel].rmt_data_head)) {
-            	if (stepper[channel].rmt_data_tail != stepper[channel].rmt_data_head) {
-                    RMTMEM.chan[channel].data32[stepper[channel].rmt_offset + i].val = stepper[channel].rmt_data[stepper[channel].rmt_data_tail];
-                    stepper[channel].rmt_data_tail = ((stepper[channel].rmt_data_tail + 1) % (STEPPER_RMT_DATA_SIZE));
-            	}
-                i++;
-            }
-
-            stepper[channel].rmt_offset = ((stepper[channel].rmt_offset + (STEPPER_RMT_HALF_BUFF_SIZE)) % STEPPER_RMT_BUFF_SIZE);
-
-            // If data, inform to acceleration profile task that RMT has consumed a half of RMT block data
-            if (i > 0) {
-                uint32_t dummy = (1 << channel);
-                xQueueSendFromISR(acceleration_queue, &dummy, &xHigherPriorityTaskWoken);
-            }
-        }
-    }
-
-    // Context switch if required
-    if(xHigherPriorityTaskWoken == pdTRUE) {
-        portYIELD_FROM_ISR();
-    }
-#endif
+	return NULL;
 }
 
 static void acceleration_profile_task(void *args) {
@@ -387,6 +328,15 @@ static void acceleration_profile_task(void *args) {
 
         while (cycle_mask) {
             if (cycle_mask & 0x01) {
+            	// Transmit precomputed RMT buffer
+            	if (pstepper->rmt_data_tail != pstepper->rmt_data_head) {
+                    rmt_transmit_config_t tx_config = {
+                        .loop_count = 0,
+                    };
+
+                    rmt_transmit(pstepper->tx_chan, pstepper->tx_encoder, pstepper->rmt_data, STEPPER_RMT_BUFF_SIZE, &tx_config);
+            	}
+
                 // Prepare next RMT buffer
                 uint32_t next = ((pstepper->rmt_data_head + 1) % (STEPPER_RMT_DATA_SIZE));
 
@@ -422,11 +372,19 @@ static void acceleration_profile_task(void *args) {
                         // Compute RMT ticks for next step
                     	first = 1;
 
-                        pstepper->rmt_ticks = floor((motion_next(&pstepper->motion) * 1000000000.0) / (float)STEPPER_RMT_NANOS_PER_TICK);
+                    	pstepper->rmt_wanted_ticks = ((motion_next(&pstepper->motion) * 1000000000.0) / (float)STEPPER_RMT_NANOS_PER_TICK);
+                        pstepper->rmt_ticks = floor(pstepper->rmt_wanted_ticks);
+                        pstepper->rmt_missing_ticks += (pstepper->rmt_wanted_ticks - pstepper->rmt_ticks);
+
                         rmt_ticks = pstepper->rmt_ticks;
                     } else {
                     	first = 0;
                         rmt_ticks = pstepper->rmt_ticks_remain;
+                    }
+
+                    if (pstepper->rmt_missing_ticks >= 1.0) {
+                    	rmt_ticks++;
+                    	pstepper->rmt_missing_ticks -= 1.0;
                     }
 
                     while (rmt_ticks > 0) {
@@ -505,19 +463,22 @@ static void acceleration_profile_task(void *args) {
 
                     // Decrement steps
                     pstepper->steps--;
-                    if (pstepper->steps == 0) {
-                        // RMT end
+                }
+
+                if (pstepper->steps == 0) {
+                    // RMT end
+                    if (next != pstepper->rmt_data_tail) {
                         // Enough space in buffer?
-                        if (next != pstepper->rmt_data_tail) {
-                            // RMT end condition
-                            pstepper->rmt_data[pstepper->rmt_data_head] = 0;
+                        // RMT end condition
+                        pstepper->rmt_data[pstepper->rmt_data_head] = 0;
 
-                            // Advance
-                            pstepper->rmt_data_head = next;
-                        }
-
-                        // Not enough space in buffer, wait for next cycle
+                        // Advance
+                        pstepper->rmt_data_head = next;
+                    } else {
+                    	// Not enough space in buffer, wait for next cycle
                     }
+
+                    pstepper->rmt_missing_ticks = 0;
                 }
             }
 
@@ -646,16 +607,27 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
 		.gpio_num = stepper[*unit].step_pin,
 		.mem_block_symbols = STEPPER_RMT_BUFF_SIZE,
 		.resolution_hz = STEPPER_RMT_FREQ,
-		.trans_queue_depth = 10, // set the number of transactions that can be pending in the background
+		.trans_queue_depth = 10,
+		.flags.io_loop_back = 1,
     };
 
     esp_err_t err;
 
     err = rmt_new_tx_channel(&tx_chan_config, &stepper[*unit].tx_chan);
+    if ((error = stepper_check(err))) {
+    	return error;
+    }
+
     err = rmt_enable(stepper[*unit].tx_chan);
+    if ((err != ESP_ERR_INVALID_STATE) && (error = stepper_check(err))) {
+    	return error;
+    }
 
     rmt_copy_encoder_config_t config = {0};
     err = rmt_encoder(&config, &stepper[*unit].tx_encoder);
+    if ((error = stepper_check(err))) {
+    	return error;
+    }
 
 
 #if 0
@@ -722,6 +694,9 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
     };
 
     err = rmt_tx_register_event_callbacks(stepper[*unit].tx_chan, &cbs, NULL);
+    if ((err != ESP_ERR_INVALID_STATE) && (error = stepper_check(err))) {
+    	return error;
+    }
 
     if (!stop_event_group) {
     	stop_event_group = xEventGroupCreate();
@@ -762,10 +737,15 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
 #endif
 
     // Attach ISR on step_in to get feedback
-#if 0
+
+    // Configure interrupts
+    if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
+        gpio_install_isr_service(0);
+        status_set(STATUS_ISR_SERVICE_INSTALLED, 0x00000000);
+    }
+
     gpio_set_intr_type(stepper[*unit].step_pin, GPIO_INTR_POSEDGE);
     gpio_isr_handler_add(stepper[*unit].step_pin, step_feedback, &stepper[*unit]);
-#endif
 
     mtx_unlock(&stepper_mutex);
 
@@ -816,8 +796,11 @@ driver_error_t *stepper_move(uint8_t unit, float units, float initial_spd, float
     motion_prepare(&constraints, &pstepper->motion);
 
     stepper[unit].steps = floor(fabs(units) * pstepper->steps_per_unit);
+    stepper[unit].steps_request = stepper[unit].steps;
+    stepper[unit].steps_done = 0;
     stepper[unit].units = fabs(units);
 
+    stepper[unit].rmt_missing_ticks = 0.0;
     stepper[unit].rmt_ticks_remain = 0;
     stepper[unit].rmt_data_head = 0;
     stepper[unit].rmt_data_tail = 0;
@@ -1011,6 +994,25 @@ void stepper_start(int mask, uint8_t async) {
     if (mask && !async) {
     	xEventGroupWaitBits(move_event_group, mask, pdTRUE, pdTRUE, portMAX_DELAY);
     }
+
+    // Check feedback
+    pstepper = stepper;
+    testMask = 0x01;
+
+    while (testMask != (1 << (NSTEP - 1))) {
+        if (mask & testMask) {
+        	if (pstepper->steps_request != pstepper->steps_done) {
+        	    syslog(LOG_ERR,"stepper%d, requested %d steps, but done %d", 0,
+        	           pstepper->steps_request,
+        	           pstepper->steps_done
+        	    );
+        	}
+        }
+
+        testMask = testMask << 1;
+        pstepper++;
+    }
+
 }
 
 void stepper_stop(int mask, uint8_t async) {
