@@ -47,15 +47,21 @@
 #define _DRIVERS_RMT_H_
 
 #include "freertos/FreeRTOS.h"
-#include "freertos/ringbuf.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
 
-#include <sys/driver.h>
+#include "driver.h"
+
+#include "driver/rmt_tx.h"
+#include "driver/rmt_rx.h"
+#include "driver/rmt_encoder.h"
+#include "rmt_private.h"
 
 typedef int rmt_pulse_idle_t;
 typedef int rmt_idle_threshold_t;
 typedef int rmt_filter_ticks_thresh_t;
 
-typedef void (*rmt_callback_t)(int);
+typedef void (*rmt_callback_t)(int, void *);
 
 typedef enum {
     RMTPulseRangeNSEC = 0,
@@ -86,19 +92,26 @@ typedef struct {
 typedef struct {
     int8_t pin;
     struct mtx mtx;
-    RingbufHandle_t rb;
 
     uint8_t rx_config;
     struct {
         rmt_pulse_range_t range;
         float scale;
+        uint32_t signal_range_min_ns;
+        uint32_t signal_range_max_ns;
+        rmt_channel_handle_t rx_chan;
+        QueueHandle_t q;
     } rx;
 
     uint8_t tx_config;
     struct {
         rmt_pulse_range_t range;
+        rmt_idle_level idle_level;
         float scale;
         rmt_callback_t callback;
+        void *callback_args;
+        rmt_channel_handle_t tx_chan;
+        rmt_encoder_handle_t tx_encoder;
     } tx;
 } rmt_device_t;
 
@@ -112,6 +125,8 @@ typedef struct {
 #define RMT_ERR_INVALID_TIMEOUT                 (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) |  6)
 #define RMT_ERR_INVALID_FILTER_TICKS            (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) |  7)
 #define RMT_ERR_INVALID_IDLE_THRESHOLD          (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) |  8)
+#define RMT_ERR_NOT_SUPPORTED                   (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) |  9)
+#define RMT_ERR_FAIL                            (DRIVER_EXCEPTION_BASE(RMT_DRIVER_ID) | 10)
 
 extern const int rmt_errors;
 extern const int rmt_error_map;

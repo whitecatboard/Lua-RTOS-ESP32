@@ -69,3 +69,18 @@ entries:
 	MCP23S17:MCP23S17_pin_get_all (noflash)
 	pca9xxx:pca9xxx_isr (noflash)
 	pca9xxx:pca_9xxx_pin_get_all (noflash)
+	rmt:tx_end (noflash)
+	rmt:rx_done (noflash)
+	rmt:switch_rx (noflash)  
+	rmt:rmt_prepare_for_rx (noflash)  
+  
+[mapping:luartos_libsys_hal_iram]
+archive: libhal.a
+entries:
+	gpio_hal:gpio_hal_output_disable (noflash)  
+	gpio_hal:gpio_hal_input_enable (noflash)    
+  
+[mapping:luartos_libsys_rom_iram]
+archive: libesp_rom.a
+entries:
+	rmt:esp_rom_gpio_connect_in_signal (noflash)  

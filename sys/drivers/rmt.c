@@ -50,16 +50,25 @@
 #include <math.h>
 #include <string.h>
 
-#include <esp_log.h>
-#include <soc/soc.h>
-#include <driver/rmt.h>
+#include "rmt.h"
+#include "cpu.h"
+#include "gpio.h"
+#include "driver.h"
+#include "mutex.h"
+#include "esp_log.h"
+#include "driver/rmt_tx.h"
+#include "driver/rmt_encoder.h"
+#include "rmt_private.h"
 
-#include <drivers/rmt.h>
-#include <drivers/cpu.h>
-#include <drivers/gpio.h>
+#include "esp_rom_gpio.h"
+#include "soc/rmt_periph.h"
+#include "soc/rtc.h"
+#include "hal/rmt_ll.h"
+#include "hal/gpio_hal.h"
 
-#include <sys/driver.h>
-#include <sys/mutex.h>
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
 
 static void rmt_init();
 static struct mtx mtx;
@@ -67,6 +76,7 @@ static struct mtx mtx;
 // Register driver and messages
 DRIVER_REGISTER_BEGIN(RMT,rmt,CPU_LAST_RMT_CH - CPU_FIRST_RMT_CH + 1,rmt_init,NULL);
     DRIVER_REGISTER_ERROR(RMT, rmt, InvalidPulseRange, "invalid pulse range", RMT_ERR_INVALID_PULSE_RANGE);
+    DRIVER_REGISTER_ERROR(RMT, rmt, NotEnoughtMemory, "not enough memory", RMT_ERR_NOT_ENOUGH_MEMORY);
     DRIVER_REGISTER_ERROR(RMT, rmt, NoMoreRMT, "no more channels available", RMT_ERR_NO_MORE_RMT);
     DRIVER_REGISTER_ERROR(RMT, rmt, InvalidPin, "invalid pin", RMT_ERR_INVALID_PIN);
     DRIVER_REGISTER_ERROR(RMT, rmt, Timeout, "timeout", RMT_ERR_TIMEOUT);
@@ -74,37 +84,167 @@ DRIVER_REGISTER_BEGIN(RMT,rmt,CPU_LAST_RMT_CH - CPU_FIRST_RMT_CH + 1,rmt_init,NU
     DRIVER_REGISTER_ERROR(RMT, rmt, InvalidTimeout, "invalid timeout", RMT_ERR_INVALID_TIMEOUT);
     DRIVER_REGISTER_ERROR(RMT, rmt, InvalidFilterTicks, "invalid filter ticks", RMT_ERR_INVALID_FILTER_TICKS);
     DRIVER_REGISTER_ERROR(RMT, rmt, InvalidIdleThreshold, "invalid idle threshold", RMT_ERR_INVALID_IDLE_THRESHOLD);
+    DRIVER_REGISTER_ERROR(RMT, rmt, NotSupported, "not supported", RMT_ERR_NOT_SUPPORTED);
+    DRIVER_REGISTER_ERROR(RMT, rmt, Fail, "fail", RMT_ERR_FAIL);
 DRIVER_REGISTER_END(RMT,rmt,CPU_LAST_RMT_CH - CPU_FIRST_RMT_CH + 1,rmt_init,NULL);
 
+typedef struct {
+	rmt_symbol_word_t *buffer;
+	uint32_t buffer_size;
+	rmt_receive_config_t *config;
+} switch_rx_args_t;
+
 static rmt_device_t *devices = NULL;
+static gpio_hal_context_t gpio_hal = {0};
 
 /*
  * Helper functions
  */
-
 static void rmt_init() {
     mtx_init(&mtx, NULL, NULL, 0);
+
+    gpio_hal.dev = GPIO_HAL_GET_HW(GPIO_PORT_0);
 }
 
-static void tx_end(rmt_channel_t channel, void *arg) {
-    if (devices[channel].tx.callback) {
-        devices[channel].tx.callback(channel);
+static bool tx_end(rmt_channel_handle_t channel, const rmt_tx_done_event_data_t *edata, void *args) {
+	// Get channel
+	uint8_t chan_id = channel->channel_id;
+
+	// Call callbacks
+    if (devices[chan_id].tx.callback) {
+    	devices[chan_id].tx.callback(chan_id, devices[chan_id].tx.callback_args);
     }
+
+	return pdFALSE;
 }
 
-static void switch_rx(int channel) {
-    // Stop transmission
-    rmt_tx_stop(channel);
+static bool rx_done(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    QueueHandle_t q = (QueueHandle_t)user_data;
 
-    // Configure RMT in reception mode, and start reception
-    rmt_set_gpio(channel, RMT_MODE_RX, devices[channel].pin, false);
-    rmt_rx_start(channel, 1);
+    xQueueSendFromISR(q, edata, &xHigherPriorityTaskWoken);
+
+    return xHigherPriorityTaskWoken;
+}
+
+static void rmt_prepare_for_tx(uint8_t channel) {
+	// Get pin
+	uint8_t pin = devices[channel].pin;
+
+	// Get internal channel id
+	uint8_t channel_id = devices[channel].tx.tx_chan->channel_id;
+
+	// Disable input / enable output
+    gpio_hal_input_disable(&gpio_hal, pin);
+    gpio_hal_output_enable(&gpio_hal, pin);
+
+    // Route signals
+    rmt_group_t *group = devices[channel].tx.tx_chan->group;
+    int group_id = group->group_id;
+
+    esp_rom_gpio_connect_out_signal(
+    	pin,
+        rmt_periph_signals.groups[group_id].channels[channel_id + RMT_TX_CHANNEL_OFFSET_IN_GROUP].tx_sig,
+        false, false
+    );
+
+    gpio_hal_iomux_func_sel(GPIO_PIN_MUX_REG[pin], PIN_FUNC_GPIO);
+}
+
+static void rmt_prepare_for_rx(uint8_t channel) {
+	// Get pin
+	uint8_t pin = devices[channel].pin;
+
+	// Get internal channel id
+	uint8_t channel_id = devices[channel].tx.tx_chan->channel_id;
+
+	// Disable output / enable input
+    gpio_hal_output_disable(&gpio_hal, pin);
+    gpio_hal_input_enable(&gpio_hal, pin);
+
+    // Route signals
+    rmt_group_t *group = devices[channel].rx.rx_chan->group;
+    int group_id = group->group_id;
+
+    esp_rom_gpio_connect_in_signal(
+    	pin,
+		rmt_periph_signals.groups[group_id].channels[channel_id + RMT_RX_CHANNEL_OFFSET_IN_GROUP].rx_sig,
+        false
+	);
+
+    gpio_hal_iomux_func_sel(GPIO_PIN_MUX_REG[pin], PIN_FUNC_GPIO);
+}
+
+static void switch_rx(int channel, void *args) {
+	switch_rx_args_t *fargs = (switch_rx_args_t *)args;
+
+    rmt_prepare_for_rx(channel);
+    rmt_receive(devices[channel].rx.rx_chan, fargs->buffer, fargs->buffer_size, fargs->config);
+}
+
+static void rmt_internal_unsetup_tx(int deviceid) {
+	// Get channel
+    uint8_t channel = deviceid;
+
+    // Unsetup if configured as TX
+	if (devices[channel].tx_config) {
+		// Disable and delete channel and encoder
+		if (devices[channel].tx.tx_chan) {
+			rmt_disable(devices[channel].tx.tx_chan);
+			rmt_del_channel(devices[channel].tx.tx_chan);
+		}
+
+		if (devices[channel].tx.tx_encoder) {
+			rmt_del_encoder(devices[channel].tx.tx_encoder);
+		}
+
+		// Device now is not for TX
+		devices[channel].tx.tx_chan = NULL;
+		devices[channel].tx.tx_encoder = NULL;
+		devices[channel].tx_config = 0;
+	}
+}
+
+static void rmt_internal_unsetup_rx(int deviceid) {
+	// Get channel
+    uint8_t channel = deviceid;
+
+    // Unsetup if configured as RX
+	if (devices[channel].rx_config) {
+		// Disable and delete channel
+		if (devices[channel].rx.rx_chan) {
+			rmt_disable(devices[channel].rx.rx_chan);
+			rmt_del_channel(devices[channel].rx.rx_chan);
+		}
+
+		// Delete queue
+		if (devices[channel].rx.q) {
+			vQueueDelete(devices[channel].rx.q);
+		}
+
+		// Device now is not for RX
+		devices[channel].rx.rx_chan = NULL;
+		devices[channel].rx.q = NULL;
+		devices[channel].rx_config = 0;
+	}
+}
+
+static void rmt_internal_unsetup(int deviceid) {
+	// Get channel
+    uint8_t channel = deviceid;
+
+	if (!devices[channel].tx_config && !devices[channel].rx_config) {
+        // Free device
+        devices[channel].pin = -1;
+
+        // Destroy channel mtx
+        mtx_destroy(&devices[channel].mtx);
+	}
 }
 
 /*
  * Operation functions
  */
-
 static int rmt_get_channel_by_pin(int pin) {
     int i;
 
@@ -129,7 +269,7 @@ static int rmt_get_free_channel() {
     return -1;
 }
 
-static int create_devices() {
+static int rmt_create_devices() {
     if (devices == NULL) {
         devices = calloc(CPU_LAST_RMT_CH - CPU_FIRST_RMT_CH + 1, sizeof(rmt_device_t));
         if (!devices) {
@@ -144,6 +284,17 @@ static int create_devices() {
     }
 
     return 0;
+}
+
+static driver_error_t *rmt_check(esp_err_t err) {
+	switch (err) {
+		case ESP_ERR_NO_MEM: return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
+		case ESP_ERR_NOT_FOUND: return driver_error(RMT_DRIVER, RMT_ERR_NO_MORE_RMT, NULL);
+		case ESP_ERR_NOT_SUPPORTED: return driver_error(RMT_DRIVER, RMT_ERR_NOT_SUPPORTED, NULL);
+		case ESP_FAIL: return driver_error(RMT_DRIVER, RMT_ERR_FAIL, NULL);
+	}
+
+	return NULL;
 }
 
 driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, rmt_filter_ticks_thresh_t filter_ticks, rmt_idle_threshold_t idle_threshold, int *deviceid) {
@@ -168,7 +319,7 @@ driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, rmt_filter_ticks_
     mtx_lock(&mtx);
 
     // Create device structure, if required
-    if (create_devices() < 0) {
+    if (rmt_create_devices() < 0) {
         mtx_unlock(&mtx);
 
         return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
@@ -204,60 +355,67 @@ driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, rmt_filter_ticks_
     }
 #endif
 
-    // Configure the RMT
-    rmt_config_t rmt_rx;
-    esp_err_t ret;
+    // Create queue for receive
+    QueueHandle_t receive_queue = xQueueCreate(1, sizeof(rmt_rx_done_event_data_t));
+    if (!receive_queue) {
+        mtx_unlock(&mtx);
 
-    rmt_rx.channel = channel;
-    rmt_rx.gpio_num = pin;
-    rmt_rx.rmt_mode = RMT_MODE_RX;
+        return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
+    }
 
-    // Set divider
+    // Set speed
+    uint32_t speed = APB_CLK_FREQ;
+
     if (range == RMTPulseRangeNSEC) {
         // Count in nanoseconds, but with APB_CLK_FREQ resolution of RMT is 12.5 nanoseconds
-        rmt_rx.clk_div = 1;
+        speed = APB_CLK_FREQ;
         devices[channel].rx.scale = 12.5;
+        devices[channel].rx.signal_range_min_ns = filter_ticks;
+        devices[channel].rx.signal_range_max_ns = idle_threshold;
     } else if (range == RMTPulseRangeUSEC) {
         // Count in microseconds
-        rmt_rx.clk_div = (uint8_t)(APB_CLK_FREQ / 1000000UL);
+        speed = 1000000;
         devices[channel].rx.scale = 1;
+        devices[channel].rx.signal_range_min_ns = filter_ticks;
+        devices[channel].rx.signal_range_max_ns = idle_threshold * 1000;
     } else if (range == RMTPulseRangeMSEC) {
         // Count in milliseconds
-        rmt_rx.clk_div = (uint8_t)(APB_CLK_FREQ / 1000UL);
+        speed = 1000;
         devices[channel].rx.scale = 1;
+        devices[channel].rx.signal_range_min_ns = filter_ticks;
+        devices[channel].rx.signal_range_max_ns = idle_threshold * 1000000;
     }
 
-    rmt_rx.mem_block_num = 1;
+    // Create new RX channel
+    esp_err_t err;
+    driver_error_t *error;
 
-    if (filter_ticks > 0) {
-        rmt_rx.rx_config.filter_en = 1;
-        rmt_rx.rx_config.filter_ticks_thresh = filter_ticks;
-    } else{
-        rmt_rx.rx_config.filter_en = 0;
-        rmt_rx.rx_config.filter_ticks_thresh = 0;
+    rmt_rx_channel_config_t rx_channel_cfg = {
+        .clk_src = RMT_CLK_SRC_DEFAULT,
+        .resolution_hz = speed,
+        .mem_block_symbols = 64,
+        .gpio_num = pin,
+    };
+
+    err = rmt_new_rx_channel(&rx_channel_cfg, &devices[channel].rx.rx_chan);
+    if ((error = rmt_check(err))) {
+    	return error;
     }
 
-    rmt_rx.rx_config.idle_threshold = idle_threshold / devices[channel].rx.scale;
-
-    assert(rmt_config(&rmt_rx) == ESP_OK);
-
-    // Be sure that driver is not installed for channel, but first time esp-idf shows an error.
-    // Unfortunately esp-idf hasn't an API to check if driver installed, so we avoid esp-idf to
-    // show the error.
-    esp_log_level_set("rmt", ESP_LOG_NONE);
-    rmt_driver_uninstall(channel);
-    esp_log_level_set("rmt", CONFIG_LOG_DEFAULT_LEVEL);
-
-    if ((ret = rmt_driver_install(channel, 1000, 0)) != ESP_OK) {
-        if (ret == ESP_ERR_NO_MEM) {
-            return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
-        } else {
-            assert(ret != ESP_ERR_INVALID_STATE);
-        }
+    err = rmt_enable(devices[channel].rx.rx_chan);
+    if ((err != ESP_ERR_INVALID_STATE) && (error = rmt_check(err))) {
+    	return error;
     }
 
-    // Get the ring buffer to receive data
-    assert((rmt_get_ringbuf_handle(channel, &devices[channel].rb) == ESP_OK) && (devices[channel].rb != NULL));
+    // Install callbacks
+    rmt_rx_event_callbacks_t cbs = {
+        .on_recv_done = rx_done,
+    };
+
+    err = rmt_rx_register_event_callbacks(devices[channel].rx.rx_chan, &cbs, receive_queue);
+    if ((err != ESP_ERR_INVALID_STATE) && (error = rmt_check(err))) {
+    	return error;
+    }
 
     // Create mutex for channel, if not yet created
     if (!mtx_inited(&devices[channel].mtx)) {
@@ -266,6 +424,8 @@ driver_error_t *rmt_setup_rx(int pin, rmt_pulse_range_t range, rmt_filter_ticks_
 
     devices[channel].pin = pin;
     devices[channel].rx.range = range;
+    devices[channel].rx.q = receive_queue;
+
     *deviceid = channel;
 
     mtx_unlock(&mtx);
@@ -293,7 +453,7 @@ driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t range, rmt_idle_level id
         return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
     }
 
-    // Find an existing channel to pin
+    // Find an existing channel attached to pin
     int8_t channel = rmt_get_channel_by_pin(pin);
     if (channel < 0) {
         // Device not found, so get a free device
@@ -323,62 +483,62 @@ driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t range, rmt_idle_level id
     }
 #endif
 
-    // Configure RMT, TX part
-    rmt_config_t rmt_tx;
-    esp_err_t ret;
+    // Get speed and scale
+    uint32_t speed = APB_CLK_FREQ;
 
-    rmt_tx.channel = channel;
-    rmt_tx.gpio_num = pin;
-    rmt_tx.rmt_mode = RMT_MODE_TX;
-
-    // Set divider
     if (range == RMTPulseRangeNSEC) {
         // Count in nanoseconds, but with APB_CLK_FREQ resolution of RMT is 12.5 nanoseconds
-        rmt_tx.clk_div = 1;
+        speed = APB_CLK_FREQ;
         devices[channel].tx.scale = 12.5;
     } else if (range == RMTPulseRangeUSEC) {
         // Count in microseconds
-        rmt_tx.clk_div = (uint8_t)(APB_CLK_FREQ / 1000000UL);
+        speed = 1000000;
         devices[channel].tx.scale = 1;
     } else if (range == RMTPulseRangeMSEC) {
         // Count in milliseconds
-        rmt_tx.clk_div = (uint8_t)(APB_CLK_FREQ / 1000UL);
+        speed = 1000;
         devices[channel].tx.scale = 1;
     }
 
-    rmt_tx.mem_block_num = 1;
-    rmt_tx.tx_config.loop_en = 0;
-    rmt_tx.tx_config.carrier_en = 0;
+    // Create new TX channel
+    esp_err_t err;
+    driver_error_t *error;
 
-    if (idle_level == RMTIdleZ) {
-        rmt_tx.tx_config.idle_output_en = 0;
-        rmt_tx.tx_config.idle_level = 0;
-    } else if (idle_level == RMTIdleL) {
-        rmt_tx.tx_config.idle_output_en = 1;
-        rmt_tx.tx_config.idle_level = 0;
-    } else if (idle_level == RMTIdleH) {
-        rmt_tx.tx_config.idle_output_en = 1;
-        rmt_tx.tx_config.idle_level = 1;
+    rmt_tx_channel_config_t tx_chan_config = {
+		.clk_src = RMT_CLK_SRC_DEFAULT, // select clock source
+		.gpio_num = pin,
+		.mem_block_symbols = 64,
+		.resolution_hz = speed,
+		.trans_queue_depth = 1,
+		.flags.io_od_mode = (idle_level == RMTIdleZ),
+    };
+
+    err = rmt_new_tx_channel(&tx_chan_config, &devices[channel].tx.tx_chan);
+    if ((error = rmt_check(err))) {
+    	return error;
     }
 
-    assert(rmt_config(&rmt_tx) == ESP_OK);
-
-    // Be sure that driver is not installed for channel, but first time esp-idf shows an error.
-    // Unfortunately esp-idf hasn't an API to check if driver installed, so we avoid esp-idf to
-    // show the error.
-    esp_log_level_set("rmt", ESP_LOG_NONE);
-    rmt_driver_uninstall(channel);
-    esp_log_level_set("rmt", CONFIG_LOG_DEFAULT_LEVEL);
-
-    if ((ret = rmt_driver_install(channel, 0, 0)) != ESP_OK) {
-        if (ret == ESP_ERR_NO_MEM) {
-            return driver_error(RMT_DRIVER, RMT_ERR_NOT_ENOUGH_MEMORY, NULL);
-        } else {
-            assert(ret != ESP_ERR_INVALID_STATE);
-        }
+    err = rmt_enable(devices[channel].tx.tx_chan);
+    if ((err != ESP_ERR_INVALID_STATE) && (error = rmt_check(err))) {
+    	return error;
     }
 
-    rmt_register_tx_end_callback(tx_end, NULL);
+    // Create encoder
+    rmt_copy_encoder_config_t config;
+    err = rmt_new_copy_encoder(&config, &devices[channel].tx.tx_encoder);
+    if ((error = rmt_check(err))) {
+    	return error;
+    }
+
+    // Install callbacks
+    rmt_tx_event_callbacks_t cbs = {
+        .on_trans_done = tx_end,
+    };
+
+    err = rmt_tx_register_event_callbacks(devices[channel].tx.tx_chan, &cbs, NULL);
+    if ((err != ESP_ERR_INVALID_STATE) && (error = rmt_check(err))) {
+    	return error;
+    }
 
     // Create mutex for channel, if not yet created
     if (!mtx_inited(&devices[channel].mtx)) {
@@ -387,6 +547,8 @@ driver_error_t *rmt_setup_tx(int pin, rmt_pulse_range_t range, rmt_idle_level id
 
     devices[channel].pin = pin;
     devices[channel].tx.range = range;
+    devices[channel].tx.idle_level = idle_level;
+
     *deviceid = channel;
 
     mtx_unlock(&mtx);
@@ -409,29 +571,38 @@ driver_error_t *rmt_rx(int deviceid, rmt_item_t *rx, size_t rx_pulses, uint32_t 
 
     mtx_lock(&devices[channel].mtx);
 
-    assert(rmt_set_gpio(channel, RMT_MODE_RX, devices[channel].pin, false) == ESP_OK);
-    assert(rmt_rx_start(channel, 1) == ESP_OK);
+    rmt_prepare_for_rx(channel);
 
-    rmt_item32_t *ritems;         // Items received in current iteration
+    // Start receive
+    rmt_symbol_word_t raw_symbols[64];
+
+    rmt_receive_config_t receive_config = {
+        .signal_range_min_ns = devices[channel].rx.signal_range_min_ns,
+        .signal_range_max_ns = devices[channel].rx.signal_range_max_ns,
+    };
+
+    rmt_receive(devices[channel].rx.rx_chan, raw_symbols, sizeof(raw_symbols), &receive_config);
+
+    // Receive
     uint32_t pending = rx_pulses; // Number of pending pulses
-    size_t items = 0;              // Number of items received in current iteration
+    size_t items = 0;             // Number of items received in current iteration
+    rmt_rx_done_event_data_t      rx_data;
 
     cbuff = rx;
     while (pending > 0) {
-        // Wait for data
-        ritems = (rmt_item32_t*)xRingbufferReceive(devices[channel].rb, &items, timeout);
-        if (ritems) {
+        // wait for data
+        if (xQueueReceive(devices[channel].rx.q, &rx_data, timeout) == pdPASS) {
             // Process only as much items as pending pulses
-            items = ((items <= pending)?items:pending);
+            items = ((rx_data.num_symbols <= pending)?rx_data.num_symbols:pending);
 
             // Copy to reception buffer
-            memcpy(cbuff, ritems, items * sizeof(rmt_item32_t));
+            memcpy(cbuff, rx_data.received_symbols, items * sizeof(rmt_item_t));
             cbuff += items;
 
             pending -= items;
 
-            // Return items to ring buffer
-            vRingbufferReturnItem(devices[channel].rb, (void *)ritems);
+            // start receive again
+            rmt_receive(devices[channel].rx.rx_chan, raw_symbols, sizeof(raw_symbols), &receive_config);
         } else {
             // No data received, timeout
             mtx_unlock(&devices[channel].mtx);
@@ -439,8 +610,6 @@ driver_error_t *rmt_rx(int deviceid, rmt_item_t *rx, size_t rx_pulses, uint32_t 
             return driver_error(RMT_DRIVER, RMT_ERR_TIMEOUT, NULL);
         }
     }
-
-    assert(rmt_rx_stop(channel) == ESP_OK);
 
     mtx_unlock(&devices[channel].mtx);
 
@@ -480,21 +649,25 @@ driver_error_t *rmt_tx(int deviceid, rmt_item_t *tx, size_t tx_pulses) {
         }
     }
 
-    // Start RMT and transmit data
-    rmt_set_gpio(channel, RMT_MODE_TX, devices[channel].pin, false);
-    assert(rmt_write_items(channel, (rmt_item32_t *)tx, tx_pulses, 1) == ESP_OK);
-    assert(rmt_tx_stop(channel) == ESP_OK);
+    // Transmit
+    rmt_transmit_config_t tx_config = {
+        .loop_count = 0,
+		.flags.eot_level = devices[channel].tx.idle_level,
+    };
 
-    mtx_unlock(&devices[channel].mtx);
+    rmt_prepare_for_tx(channel);
+	rmt_transmit(devices[channel].tx.tx_chan, devices[channel].tx.tx_encoder, tx, tx_pulses * sizeof(rmt_item_t), &tx_config);
+	rmt_tx_wait_all_done(devices[channel].tx.tx_chan, -1);
+
+	mtx_unlock(&devices[channel].mtx);
 
     return NULL;
 }
 
 driver_error_t *rmt_tx_rx(int deviceid, rmt_item_t *tx, size_t tx_pulses, rmt_item_t *rx, size_t rx_pulses, uint32_t timeout) {
     uint8_t channel = deviceid; // RMT channel
-    rmt_item_t *cbuff;          // Current position in tx / rx buffer
-
-    mtx_lock(&devices[channel].mtx);
+    rmt_item_t *cbuff;          // Current position in tx buffer
+    rmt_symbol_word_t raw_symbols[64];
 
     // TX buffer is expressed in channel's range time units, so scale values if it's required
     if (devices[channel].tx.scale != 1.0) {
@@ -509,20 +682,6 @@ driver_error_t *rmt_tx_rx(int deviceid, rmt_item_t *tx, size_t tx_pulses, rmt_it
         }
     }
 
-    // When transmission is ended, RMT is configured in reception mode, and reception is started
-    // as soon as possible. This is done installing a transmission end callback, which is executed
-    // inside the RMT ISR.
-    devices[channel].tx.callback = switch_rx;
-
-    // Start RMT and transmit data
-    rmt_set_gpio(channel, RMT_MODE_TX, devices[channel].pin, false);
-
-    assert(rmt_write_items(channel, (rmt_item32_t *)tx, tx_pulses, 1) == ESP_OK);
-
-    // At this point reception was started in the transmission end callback, wait for
-    // data reception
-    devices[channel].tx.callback = NULL;
-
     // Convert timeout to FreeRTOS ticks
     if (devices[channel].rx.range == RMTPulseRangeNSEC) {
         timeout = ceil(((double)timeout / 1000000.0) / portTICK_PERIOD_MS);
@@ -532,43 +691,68 @@ driver_error_t *rmt_tx_rx(int deviceid, rmt_item_t *tx, size_t tx_pulses, rmt_it
         timeout = ceil((double)timeout / portTICK_PERIOD_MS);
     }
 
-    rmt_item32_t *ritems;         // Items received in current iteration
+    rmt_transmit_config_t tx_config = {
+        .loop_count = 0,
+		.flags.eot_level = devices[channel].tx.idle_level,
+    };
+
+    rmt_receive_config_t receive_config = {
+        .signal_range_min_ns = devices[channel].rx.signal_range_min_ns,
+        .signal_range_max_ns = devices[channel].rx.signal_range_max_ns,
+    };
+
+    mtx_lock(&devices[channel].mtx);
+
+    // When transmission is ended, RMT is configured in reception mode, and reception is started
+    // as soon as possible. This is done installing a transmission end callback, which is executed
+    // inside the RMT ISR.
+    switch_rx_args_t switch_args = {
+        .buffer = raw_symbols,
+		.buffer_size = sizeof(raw_symbols),
+		.config = &receive_config,
+    };
+
+    devices[channel].tx.callback = switch_rx;
+    devices[channel].tx.callback_args = &switch_args;
+
+    // Transmit
+    rmt_prepare_for_tx(channel);
+	rmt_transmit(devices[channel].tx.tx_chan, devices[channel].tx.tx_encoder, tx, tx_pulses * sizeof(rmt_item_t), &tx_config);
+	rmt_tx_wait_all_done(devices[channel].tx.tx_chan, -1);
+
+    // At this point reception was started in the transmission end callback, wait for
+    // data reception
+    devices[channel].tx.callback = NULL;
+
+    // Receive
     uint32_t pending = rx_pulses; // Number of pending pulses
     size_t items = 0;             // Number of items received in current iteration
+    rmt_rx_done_event_data_t      rx_data;
 
     cbuff = rx;
-
-    int retries = 0;
     while (pending > 0) {
-        // Wait for data
-        ritems = (rmt_item32_t*)xRingbufferReceive(devices[channel].rb, &items, timeout);
-        if (ritems) {
+        // wait for data
+        if (xQueueReceive(devices[channel].rx.q, &rx_data, timeout) == pdPASS) {
             // Process only as much items as pending pulses
-            items = ((items <= pending)?items:pending);
+            items = ((rx_data.num_symbols <= pending)?rx_data.num_symbols:pending);
 
             // Copy to reception buffer
-            memcpy(cbuff, ritems, items * sizeof(rmt_item32_t));
+            memcpy(cbuff, rx_data.received_symbols, items * sizeof(rmt_item_t));
             cbuff += items;
 
             pending -= items;
 
-            // Return items to ring buffer
-            vRingbufferReturnItem(devices[channel].rb, (void *)ritems);
-        } else {
-            // No data received
-            if (retries < 10) {
-                retries++;
-                continue;
+            if (pending > 0) {
+				// start receive again
+				rmt_receive(devices[channel].rx.rx_chan, raw_symbols, sizeof(raw_symbols), &receive_config);
             }
-
-            assert(rmt_rx_stop(channel) == ESP_OK);
-
+        } else {
+            // No data received, timeout
             mtx_unlock(&devices[channel].mtx);
+
             return driver_error(RMT_DRIVER, RMT_ERR_TIMEOUT, NULL);
         }
     }
-
-    assert(rmt_rx_stop(channel) == ESP_OK);
 
     mtx_unlock(&devices[channel].mtx);
 
@@ -590,59 +774,25 @@ driver_error_t *rmt_tx_rx(int deviceid, rmt_item_t *tx, size_t tx_pulses, rmt_it
 }
 
 void rmt_unsetup_tx(int deviceid) {
-    uint8_t channel = deviceid; // RMT channel
-
     mtx_lock(&mtx);
 
-    // Device now is not for TX
-    devices[channel].tx_config = 0;
+    // Unsetup TX part
+	rmt_internal_unsetup_tx(deviceid);
 
-    if (!devices[channel].rx_config) {
-        // Device is also not for RX, we can free resources
-
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-        // Unlock resources
-        driver_unlock(RMT_DRIVER, channel, GPIO_DRIVER, devices[channel].pin);
-#endif
-
-        // Free device
-        devices[channel].pin = -1;
-
-        // Destroy device mtx
-        mtx_destroy(&devices[channel].mtx);
-
-        // Uninstall channel
-        rmt_driver_uninstall(channel);
-    }
+	// Unsetup device
+	rmt_internal_unsetup(deviceid);
 
     mtx_unlock(&mtx);
 }
 
 void rmt_unsetup_rx(int deviceid) {
-    uint8_t channel = deviceid; // RMT channel
-
     mtx_lock(&mtx);
 
-    // Device now is not for RX
-    devices[channel].rx_config = 0;
+    // Unsetup RX part
+	rmt_internal_unsetup_rx(deviceid);
 
-    if (!devices[channel].tx_config) {
-        // Device is also not for TX, we can free resources
-
-#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
-        // Unlock resources
-        driver_unlock(RMT_DRIVER, channel, GPIO_DRIVER, devices[channel].pin);
-#endif
-
-        // Free device
-        devices[channel].pin = -1;
-
-        // Destroy device mtx
-        mtx_destroy(&devices[channel].mtx);
-
-        // Uninstall channel
-        rmt_driver_uninstall(channel);
-    }
+	// Unsetup device
+	rmt_internal_unsetup(deviceid);
 
     mtx_unlock(&mtx);
 }

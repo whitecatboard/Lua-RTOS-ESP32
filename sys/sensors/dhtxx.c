@@ -160,9 +160,11 @@ driver_error_t *dhtxx_setup(sensor_instance_t *unit) {
     }
 #endif
 
-    // Release data bus
-    gpio_pin_input(pin);
-    gpio_pin_pullup(pin);
+    if (unit->args == (void *)0xffffffff) {
+		// Release data bus
+		gpio_pin_input(pin);
+		gpio_pin_pullup(pin);
+    }
 
     return NULL;
 }
