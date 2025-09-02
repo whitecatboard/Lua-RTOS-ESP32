@@ -98,11 +98,6 @@ QueueHandle_t acceleration_queue = NULL;
 // Acceleration profile task handle
 static TaskHandle_t acceleration_profile_task_h = NULL;
 
-// RMT ISR handle
-#if 0
-rmt_isr_handle_t isr_h = NULL;
-#endif
-
 // Steppers who are currently started (1 = started, 0 = not started),
 static uint32_t start_mask = 0;
 static uint8_t start_num = 0;
@@ -641,65 +636,6 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
     	return error;
     }
 
-
-#if 0
-    // Reset RMT
-    if (isr_h == NULL) {
-        periph_module_reset(PERIPH_RMT_MODULE);
-    }
-
-    // Configure RMT for this stepper
-    periph_module_enable(PERIPH_RMT_MODULE);
-
-    // Set divider
-    RMT.conf_ch[*unit].conf0.div_cnt = 2; // 40 Mhz, 25 nsecs for tick
-
-    // Visit data use memory not FIFO
-    RMT.apb_conf.fifo_mask = RMT_DATA_MODE_MEM;
-
-    // No continuous mode
-    RMT.conf_ch[*unit].conf1.tx_conti_mode = 0;
-
-    // Reset TX / RX memory index
-    RMT.conf_ch[*unit].conf1.mem_rd_rst = 1;
-    RMT.conf_ch[*unit].conf1.mem_rd_rst = 0;
-
-    // Wraparound mode
-    RMT.apb_conf.mem_tx_wrap_en = 1;
-    RMT.tx_lim_ch[*unit].limit = STEPPER_RMT_HALF_BUFF_SIZE;
-
-    // Memory set block number
-    RMT.conf_ch[*unit].conf0.mem_size = 1;
-    RMT.conf_ch[*unit].conf1.mem_owner = RMT_MEM_OWNER_TX;
-
-    // Use APB clock (80Mhz)
-    RMT.conf_ch[*unit].conf1.ref_always_on = RMT_BASECLK_APB;
-
-    // Set idle level to L
-    RMT.conf_ch[*unit].conf1.idle_out_en = 1;
-    RMT.conf_ch[*unit].conf1.idle_out_lv = 0;
-
-    // No carrier
-    RMT.conf_ch[*unit].conf0.carrier_en = 0;
-    RMT.conf_ch[*unit].conf0.carrier_out_lv = 0;
-    RMT.carrier_duty_ch[*unit].high = 0;
-    RMT.carrier_duty_ch[*unit].low = 0;
-
-    // Set pin
-    //
-    // NOTE: pin is configured as input/output because we need feedback to count exactly
-    // the number of steps.
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[stepper[*unit].step_pin], 2);
-    gpio_set_direction(stepper[*unit].step_pin, GPIO_MODE_INPUT_OUTPUT);
-    gpio_matrix_out(stepper[*unit].step_pin, RMT_SIG_OUT0_IDX + *unit, 0, 0);
-
-    // Enable TX interrupt
-    RMT.int_ena.val |= BIT(*unit * 3);
-
-    // Enable TX_THR interrupt
-    RMT.int_ena.val |= BIT(24 + *unit);
-#endif
-
     // Install callbacks
     rmt_tx_event_callbacks_t cbs = {
         .on_trans_done = tx_cb,
@@ -726,27 +662,6 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
 			return driver_error(STEPPER_DRIVER, STEPPER_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
     }
-
-
-    // Allocate ISR
-#if 0
-    if (isr_h == NULL) {
-    	stop_event_group = xEventGroupCreate();
-    	if (stop_event_group == NULL) {
-            mtx_unlock(&stepper_mutex);
-            return driver_error(STEPPER_DRIVER, STEPPER_ERR_NOT_ENOUGH_MEMORY, NULL);
-    	}
-
-    	move_event_group = xEventGroupCreate();
-    	if (move_event_group == NULL) {
-    		vEventGroupDelete(stop_event_group);
-            mtx_unlock(&stepper_mutex);
-            return driver_error(STEPPER_DRIVER, STEPPER_ERR_NOT_ENOUGH_MEMORY, NULL);
-    	}
-
-    	esp_intr_alloc(ETS_RMT_INTR_SOURCE, ESP_INTR_FLAG_IRAM, rmt_isr, NULL, &isr_h);
-    }
-#endif
 
     // Attach ISR on step_in to get feedback
 
