@@ -47,6 +47,8 @@
 
 #if CONFIG_LUA_RTOS_LUA_USE_CAN
 
+#include "driver/twai.h"
+
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
@@ -54,11 +56,11 @@
 #include "can.h"
 #include "modules.h"
 
-#include <signal.h>
-
-#include <driver/can.h>
 #include <drivers/can.h>
 #include <drivers/cpu.h>
+
+#include <signal.h>
+#include <inttypes.h>
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 static uint8_t dump_stop = 0;
@@ -168,7 +170,7 @@ static int lcan_dump(lua_State* L) {
                 return luaL_driver_error(L, error);
         }
 
-        printf("can%d  %08x  [%d] ", id, msg_id, len);
+        printf("can%d  %08x  [%d] ", id, (unsigned int)msg_id, len);
 
         for(i = 0;i<len;i++) {
             if (i > 0) {
@@ -185,8 +187,8 @@ static int lcan_dump(lua_State* L) {
 }
 
 static int lcan_stats(lua_State* L) {
-    can_status_info_t status_info;
-    driver_error_t *error = can_check_error(can_get_status_info(&status_info));
+	twai_status_info_t status_info;
+    driver_error_t *error = can_check_error(twai_get_status_info(&status_info));
     if (error) {
         return luaL_driver_error(L, error);
     }
@@ -234,21 +236,21 @@ static int lcan_stats(lua_State* L) {
     } else {
         char *state = NULL;
         switch(status_info.state) {
-            case CAN_STATE_STOPPED: state = "stopped"; break;
-            case CAN_STATE_RUNNING: state = "running"; break;
-            case CAN_STATE_BUS_OFF: state = "bus off"; break;
-            case CAN_STATE_RECOVERING: state = "recovering"; break;
+            case TWAI_STATE_STOPPED: state = "stopped"; break;
+            case TWAI_STATE_RUNNING: state = "running"; break;
+            case TWAI_STATE_BUS_OFF: state = "bus off"; break;
+            case TWAI_STATE_RECOVERING: state = "recovering"; break;
         }
         if (state) printf("State: %s\r\n", state);
-        printf("TX packets waiting: %d\r\n", status_info.msgs_to_tx);
-        printf("RX packets waiting: %d\r\n", status_info.msgs_to_rx);
-        printf("TX failed counter: %d\r\n",status_info.tx_failed_count);
-        printf("RX missed counter: %d\r\n",status_info.rx_missed_count);
+        printf("TX packets waiting: %"PRIu32"\r\n", status_info.msgs_to_tx);
+        printf("RX packets waiting: %"PRIu32"\r\n", status_info.msgs_to_rx);
+        printf("TX failed counter: %"PRIu32"\r\n",status_info.tx_failed_count);
+        printf("RX missed counter: %"PRIu32"\r\n",status_info.rx_missed_count);
 
         printf("errors:\r\n");
-        printf("   TX error counter: %d\r\n",status_info.tx_error_counter);
-        printf("   RX error counter: %d\r\n",status_info.rx_error_counter);
-        printf("   bus: %d arbitration lost: %d\r\n",
+        printf("   TX error counter: %"PRIu32"\r\n",status_info.tx_error_counter);
+        printf("   RX error counter: %"PRIu32"\r\n",status_info.rx_error_counter);
+        printf("   bus: %"PRIu32" arbitration lost: %"PRIu32"\r\n",
             status_info.bus_error_count,
             status_info.arb_lost_count
         );

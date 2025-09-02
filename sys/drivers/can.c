@@ -58,7 +58,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <driver/can.h>
+#include "driver/twai.h"
 
 #include <sys/driver.h>
 #include <sys/syslog.h>
@@ -74,16 +74,19 @@
 
 static uint8_t setup = 0;
 
-static can_timing_config_t t_config = CAN_TIMING_CONFIG_25KBITS();
+static twai_timing_config_t t_config = TWAI_TIMING_CONFIG_25KBITS();
+
 /*
 //Filter all other IDs except MSG_ID
 static const can_filter_config_t f_config = {.acceptance_code = (MSG_ID << 21),
                                              .acceptance_mask = ~(CAN_STD_ID_MASK << 21),
                                              .single_filter = true};
 */
-static can_filter_config_t f_config = CAN_FILTER_CONFIG_ACCEPT_ALL();
+static const twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+
 //Set to NO_ACK mode due to self testing with single module
-static can_general_config_t g_config = CAN_GENERAL_CONFIG_DEFAULT(CONFIG_LUA_RTOS_CAN_TX, CONFIG_LUA_RTOS_CAN_RX, CAN_MODE_NORMAL);
+static twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(CONFIG_LUA_RTOS_CAN_TX, CONFIG_LUA_RTOS_CAN_RX, TWAI_MODE_NORMAL);
+
 /*                                                                 {.mode = CAN_MODE_NO_ACK, .tx_io = CONFIG_LUA_RTOS_CAN_TX, .rx_io = CONFIG_LUA_RTOS_CAN_RX,       \
                                                                    .clkout_io = CAN_IO_UNUSED, .bus_off_io = CAN_IO_UNUSED,       \
                                                                    .tx_queue_len = 5, .rx_queue_len = 5,                          \
@@ -152,26 +155,27 @@ driver_error_t *can_check_error(esp_err_t error) {
 #define MAX_WAITMS_TX 100
 
 void can_recovery() {
-    can_status_info_t status_info;
-    esp_err_t error = can_get_status_info(&status_info);
-    if (error == ESP_OK && status_info.state==CAN_STATE_RUNNING && status_info.bus_error_count<MAX_BUS_ERROR) {
+	twai_status_info_t status_info;
+    esp_err_t error = twai_get_status_info(&status_info);
+    if (error == ESP_OK && status_info.state==TWAI_STATE_RUNNING && status_info.bus_error_count<MAX_BUS_ERROR) {
         ; //do nothing
     } else {
-        can_start();
-        can_initiate_recovery();
+    	twai_start();
+        twai_initiate_recovery();
     }
 }
 
-static driver_error_t *can_ll_tx(can_message_t *frame) {
+static driver_error_t *can_ll_tx(twai_message_t  *frame) {
     driver_error_t *error;
-    if ((error = can_check_error(can_transmit(frame, pdMS_TO_TICKS(MAX_WAITMS_TX))))) {
+    if ((error = can_check_error(twai_transmit(frame, pdMS_TO_TICKS(MAX_WAITMS_TX))))) {
         can_recovery();
         return error;
     }
-    return 0;
+
+    return NULL;
 }
 
-static driver_error_t *can_ll_rx(can_message_t *frame, uint32_t timeout) {
+static driver_error_t *can_ll_rx(twai_message_t  *frame, uint32_t timeout) {
     // Read next frame
     // Check filter
     uint8_t i;
@@ -183,7 +187,7 @@ static driver_error_t *can_ll_rx(can_message_t *frame, uint32_t timeout) {
     }
 
     while (!pass) {
-        if ((error = can_check_error(can_receive(frame, timeout)))) {
+        if ((error = can_check_error(twai_receive(frame, timeout)))) {
             can_recovery();
             return error;
         }
@@ -200,11 +204,11 @@ static driver_error_t *can_ll_rx(can_message_t *frame, uint32_t timeout) {
         }
     }
 
-    return 0;
+    return NULL;
 }
 
 static void *gw_thread_up(void *arg) {
-    can_message_t frame;
+	twai_message_t frame;
     struct can_frame packet;
 
     // Set a timeout for send
@@ -244,7 +248,7 @@ static void *gw_thread_up(void *arg) {
 
 static void *gw_thread_down(void *arg) {
     struct can_frame packet;
-    can_message_t frame;
+    twai_message_t frame;
 
     while(!gw_config->stop) {
         if (read(gw_config->client, &packet, sizeof(packet)) == sizeof(packet)) {
@@ -368,52 +372,52 @@ driver_error_t *can_setup(int32_t unit, uint32_t speed, uint16_t rx_size) {
     g_config.tx_queue_len = rx_size;
     switch(speed) {
         case 1000: {
-            can_timing_config_t set_config = CAN_TIMING_CONFIG_1MBITS();
+        	twai_timing_config_t set_config = TWAI_TIMING_CONFIG_1MBITS();
             memcpy(&t_config, &set_config, sizeof(set_config));
             }
             break;
         case 800: {
-            can_timing_config_t set_config = CAN_TIMING_CONFIG_800KBITS();
+        	twai_timing_config_t set_config = TWAI_TIMING_CONFIG_800KBITS();
             memcpy(&t_config, &set_config, sizeof(set_config));
             }
             break;
         case 500: {
-            can_timing_config_t set_config = CAN_TIMING_CONFIG_500KBITS();
+        	twai_timing_config_t set_config = TWAI_TIMING_CONFIG_500KBITS();
             memcpy(&t_config, &set_config, sizeof(set_config));
             }
             break;
         case 250: {
-            can_timing_config_t set_config = CAN_TIMING_CONFIG_250KBITS();
+        	twai_timing_config_t set_config = TWAI_TIMING_CONFIG_25KBITS();
             memcpy(&t_config, &set_config, sizeof(set_config));
             }
             break;
         case 125: {
-            can_timing_config_t set_config = CAN_TIMING_CONFIG_125KBITS();
+        	twai_timing_config_t set_config = TWAI_TIMING_CONFIG_125KBITS();
             memcpy(&t_config, &set_config, sizeof(set_config));
             }
             break;
         case 100: {
-            can_timing_config_t set_config = CAN_TIMING_CONFIG_100KBITS();
+        	twai_timing_config_t set_config = TWAI_TIMING_CONFIG_100KBITS();
             memcpy(&t_config, &set_config, sizeof(set_config));
             }
             break;
         case 50: {
-            can_timing_config_t set_config = CAN_TIMING_CONFIG_50KBITS();
+        	twai_timing_config_t set_config = TWAI_TIMING_CONFIG_50KBITS();
             memcpy(&t_config, &set_config, sizeof(set_config));
             }
             break;
         default: {
-            can_timing_config_t set_config = CAN_TIMING_CONFIG_25KBITS();
+        	twai_timing_config_t set_config = TWAI_TIMING_CONFIG_25KBITS();
             memcpy(&t_config, &set_config, sizeof(set_config));
             }
     }
 
     // Start CAN module
     driver_error_t *error;
-    if ((error = can_check_error(can_driver_install(&g_config, &t_config, &f_config)))) {
+    if ((error = can_check_error(twai_driver_install(&g_config, &t_config, &f_config)))) {
         return error;
     }
-    if ((error = can_check_error(can_start()))) {
+    if ((error = can_check_error(twai_start()))) {
         return error;
     }
 
@@ -425,11 +429,12 @@ driver_error_t *can_setup(int32_t unit, uint32_t speed, uint16_t rx_size) {
     }
 
     setup = 1;
+
     return NULL;
 }
 
 driver_error_t *can_tx(int32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t *data, uint8_t len) {
-    can_message_t frame;
+	twai_message_t  frame = {0};
 
     // Sanity checks
     if ((unit < CPU_FIRST_CAN) || (unit > CPU_LAST_CAN)) {
@@ -445,16 +450,18 @@ driver_error_t *can_tx(int32_t unit, uint32_t msg_id, uint8_t msg_type, uint8_t 
     }
 
     // Populate frame
+    frame.extd = (msg_type == 1 ? CAN_frame_ext:CAN_frame_std);
+
     frame.identifier = msg_id;
     frame.data_length_code = len;
-    frame.flags = (msg_type == 1 ? CAN_MSG_FLAG_EXTD:CAN_MSG_FLAG_NONE);
+    frame.flags = (msg_type == 1 ? CAN_frame_ext:CAN_frame_std);
     memcpy(&frame.data, data, len);
 
     return can_ll_tx(&frame);
 }
 
 driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_t *data, uint8_t *len, uint32_t timeout) {
-    can_message_t frame;
+	twai_message_t frame;
 
     // Sanity checks
     if ((unit < CPU_FIRST_CAN) || (unit > CPU_LAST_CAN)) {
@@ -468,7 +475,7 @@ driver_error_t *can_rx(int32_t unit, uint32_t *msg_id, uint8_t *msg_type, uint8_
     driver_error_t *error = can_ll_rx(&frame, timeout);
     if (!error) {
         *msg_id = frame.identifier;
-        *msg_type = (frame.flags & CAN_MSG_FLAG_EXTD ? 1 : 0);
+        *msg_type = (frame.extd? CAN_frame_ext : CAN_frame_std);
         *len = frame.data_length_code;
         memcpy(data, &frame.data, *len);
     }
@@ -519,10 +526,10 @@ driver_error_t *can_add_filter(int32_t unit, int32_t fromId, int32_t toId) {
 
 	// Reset rx queue
 	driver_error_t *error;
-    if ((error = can_check_error(can_stop()))) {
+    if ((error = can_check_error(twai_stop()))) {
         return error;
     }
-    if ((error = can_check_error(can_start()))) {
+    if ((error = can_check_error(twai_start()))) {
         return error;
     }
 
@@ -561,10 +568,10 @@ driver_error_t *can_remove_filter(int32_t unit, int32_t fromId, int32_t toId) {
 
 	// Reset rx queue
 	driver_error_t *error;
-    if ((error = can_check_error(can_stop()))) {
+    if ((error = can_check_error(twai_stop()))) {
         return error;
     }
-    if ((error = can_check_error(can_start()))) {
+    if ((error = can_check_error(twai_start()))) {
         return error;
     }
 
@@ -623,7 +630,7 @@ driver_error_t *can_gateway_stop(int32_t unit) {
     gw_config->stop = 1;
 
     // Send an empty frame to the queue to unblock gw_thread_up
-    can_message_t frame;
+    twai_message_t frame;
     memset(&frame, 0, sizeof(frame));
     driver_error_t *error;
     if ((error = can_ll_tx(&frame))) {
@@ -639,10 +646,10 @@ driver_error_t *can_gateway_stop(int32_t unit) {
     gw_config = NULL;
 
 	// Reset rx queue
-    if ((error = can_check_error(can_stop()))) {
+    if ((error = can_check_error(twai_stop()))) {
         return error;
     }
-    if ((error = can_check_error(can_start()))) {
+    if ((error = can_check_error(twai_start()))) {
         return error;
     }
 
