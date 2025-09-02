@@ -279,26 +279,29 @@ static bool tx_cb(rmt_channel_handle_t channel, const rmt_tx_done_event_data_t *
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     BaseType_t xCurrentHigherPriorityTaskWoken = pdFALSE;
 
-	// Get channel
-	uint8_t chan_id = channel->channel_id;
+    // Get stepper
+    stepper_t *cstepper = (stepper_t *)args;
+
+	// Get unit
+	uint8_t unit = cstepper->unit;
 
     // Consume a half of a RMT block from the pre-computed RMT data
-	if (stepper[chan_id].rmt_data_tail != stepper[chan_id].rmt_data_head) {
-		uint32_t dummy = (1 << chan_id);
+	if (cstepper->rmt_started && (cstepper->rmt_data_tail != cstepper->rmt_data_head)) {
+		uint32_t dummy = (1 << unit);
         xQueueSendFromISR(acceleration_queue, &dummy, &xHigherPriorityTaskWoken);
 	} else {
 		// Stepper movement finish
-		start_mask &= ~(1 << chan_id);
+		start_mask &= ~(1 << unit);
 
 		// One stepper is stopped now
 		if (start_num > 0) {
 			start_num--;
 		}
 
-		xEventGroupSetBitsFromISR(stop_event_group, 1 << chan_id, &xCurrentHigherPriorityTaskWoken);
+		xEventGroupSetBitsFromISR(stop_event_group, 1 << unit, &xCurrentHigherPriorityTaskWoken);
 		xHigherPriorityTaskWoken |= xCurrentHigherPriorityTaskWoken;
 
-		xEventGroupSetBitsFromISR(move_event_group, 1 << chan_id, &xCurrentHigherPriorityTaskWoken);
+		xEventGroupSetBitsFromISR(move_event_group, 1 << unit, &xCurrentHigherPriorityTaskWoken);
 		xHigherPriorityTaskWoken |= xCurrentHigherPriorityTaskWoken;
 	}
 
@@ -608,6 +611,7 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
     stepper[*unit].max_spd = max_spd;
     stepper[*unit].mac_acc = max_acc;
     stepper[*unit].setup = 1;
+    stepper[*unit].unit = *unit;
 
     // Create TX channel
     rmt_tx_channel_config_t tx_chan_config = {
@@ -631,7 +635,7 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
     	return error;
     }
 
-    rmt_copy_encoder_config_t config = {0};
+    rmt_copy_encoder_config_t config = {};
     err = rmt_encoder(&config, &stepper[*unit].tx_encoder);
     if ((error = stepper_check(err))) {
     	return error;
@@ -701,7 +705,7 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
         .on_trans_done = tx_cb,
     };
 
-    err = rmt_tx_register_event_callbacks(stepper[*unit].tx_chan, &cbs, NULL);
+    err = rmt_tx_register_event_callbacks(stepper[*unit].tx_chan, &cbs, &stepper[*unit]);
     if ((err != ESP_ERR_INVALID_STATE) && (error = stepper_check(err))) {
     	return error;
     }
@@ -1029,21 +1033,17 @@ void stepper_stop(int mask, uint8_t async) {
 
     int stop_mask = 0x00;
     int testMask = 0x01;
-    uint8_t channel = 0;
+    uint8_t unit = 0;
 
     while (testMask != (1 << (NSTEP - 1))) {
         if (start_mask & testMask) {
-#if 0
-            RMTMEM.chan[channel].data32[0].val = 0;
-            RMT.conf_ch[channel].conf1.tx_start = 0;
-            RMT.conf_ch[channel].conf1.mem_rd_rst = 1;
-            RMT.conf_ch[channel].conf1.mem_rd_rst = 0;
-#endif
+        	stepper[unit].rmt_started = 0;
+        	stepper[unit].tx_chan->hw_mem_base[0].val = 0;
             stop_mask |= testMask;
         }
 
         testMask = testMask << 1;
-        channel++;
+        unit++;
     }
 
     portEXIT_CRITICAL(&spinlock);

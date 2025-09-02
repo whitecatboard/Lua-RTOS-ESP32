@@ -55,6 +55,7 @@
 #define STEPPER_DEBUG 0
 
 typedef struct {
+	uint8_t unit;           // Stepper unit
 	uint8_t  setup;         // Is this stepper unit setup?
     uint8_t  step_pin;      // Step pin number
     uint8_t  dir_pin;       // Direction pin number
