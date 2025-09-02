@@ -928,7 +928,7 @@ void stepper_start(int mask, uint8_t async) {
 
     while (testMask != (1 << (NSTEP - 1))) {
         if (mask & testMask) {
-        	if (pstepper->steps_request != pstepper->steps_done) {
+        	if (pstepper->rmt_started && (pstepper->steps_request != pstepper->steps_done)) {
         	    syslog(LOG_ERR,"stepper%d, requested %d steps, but done %d", 0,
         	           pstepper->steps_request,
         	           pstepper->steps_done
