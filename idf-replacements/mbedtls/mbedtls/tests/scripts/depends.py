@@ -199,7 +199,10 @@ and subsequent commands are tests that cannot run if the build failed).'''
         success = True
         for command in self.commands:
             log_command(command)
-            ret = subprocess.call(command)
+            env = os.environ.copy()
+            if 'MBEDTLS_TEST_CONFIGURATION' in env:
+                env['MBEDTLS_TEST_CONFIGURATION'] += '-' + self.name
+            ret = subprocess.call(command, env=env)
             if ret != 0:
                 if command[0] not in ['make', options.make_command]:
                     log_line('*** [{}] Error {}'.format(' '.join(command), ret))
@@ -248,16 +251,16 @@ REVERSE_DEPENDENCIES = {
                       'MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED'],
     'MBEDTLS_SHA256_C': ['MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED',
                          'MBEDTLS_ENTROPY_FORCE_SHA256',
-                         'MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT',
-                         'MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY',
+                         'MBEDTLS_SHA256_USE_ARMV8_A_CRYPTO_IF_PRESENT',
+                         'MBEDTLS_SHA256_USE_ARMV8_A_CRYPTO_ONLY',
                          'MBEDTLS_LMS_C',
                          'MBEDTLS_LMS_PRIVATE'],
     'MBEDTLS_SHA512_C': ['MBEDTLS_SHA512_USE_A64_CRYPTO_IF_PRESENT',
                          'MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY'],
     'MBEDTLS_SHA224_C': ['MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED',
                          'MBEDTLS_ENTROPY_FORCE_SHA256',
-                         'MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT',
-                         'MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY'],
+                         'MBEDTLS_SHA256_USE_ARMV8_A_CRYPTO_IF_PRESENT',
+                         'MBEDTLS_SHA256_USE_ARMV8_A_CRYPTO_ONLY'],
     'MBEDTLS_X509_RSASSA_PSS_SUPPORT': []
 }
 
@@ -381,7 +384,7 @@ class DomainData:
 
     def __init__(self, options, conf):
         """Gather data about the library and establish a list of domains to test."""
-        build_command = [options.make_command, 'CFLAGS=-Werror']
+        build_command = [options.make_command, 'CFLAGS=-Werror -O2']
         build_and_test = [build_command, [options.make_command, 'test']]
         self.all_config_symbols = set(conf.settings.keys())
         # Find hash modules by name.
@@ -534,7 +537,7 @@ def main():
                             default=True)
         options = parser.parse_args()
         os.chdir(options.directory)
-        conf = config.ConfigFile(options.config)
+        conf = config.MbedTLSConfig(options.config)
         domain_data = DomainData(options, conf)
 
         if options.tasks is True:

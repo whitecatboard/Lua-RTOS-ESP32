@@ -23,10 +23,10 @@
 #include "mbedtls/private_access.h"
 
 /*
- * Include the build-time configuration information file. Here, we do not
+ * Include the build-time configuration information header. Here, we do not
  * include `"mbedtls/build_info.h"` directly but `"psa/build_info.h"`, which
  * is basically just an alias to it. This is to ease the maintenance of the
- * PSA cryptography repository which has a different build system and
+ * TF-PSA-Crypto repository which has a different build system and
  * configuration.
  */
 #include "psa/build_info.h"
@@ -88,5 +88,15 @@ typedef struct {
     uintptr_t MBEDTLS_PRIVATE(opaque)[2];
 } mbedtls_psa_external_random_context_t;
 #endif /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
+
+#if defined(MBEDTLS_PSA_CRYPTO_CLIENT) && !defined(MBEDTLS_PSA_CRYPTO_C)
+/** The type of the client handle used in context structures
+ *
+ * When a client view of the multipart context structures is required,
+ * this handle is used to keep a mapping with the service side of the
+ * context which contains the actual data.
+ */
+typedef uint32_t mbedtls_psa_client_handle_t;
+#endif
 
 #endif /* PSA_CRYPTO_PLATFORM_H */

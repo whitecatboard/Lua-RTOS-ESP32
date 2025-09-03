@@ -17,15 +17,17 @@ extern "C" {
 #endif
 
 int pthread_condattr_getclock(const pthread_condattr_t * attr, clockid_t * clock_id);
+
 int pthread_condattr_setclock(pthread_condattr_t *attr, clockid_t clock_id);
 
-// WHITECAT
+// WHITECAT BEGIN
 int  pthread_attr_setaffinity_np(pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset);
 int  pthread_attr_getaffinity_np(const pthread_attr_t *attr, size_t cpusetsize, cpu_set_t *cpuset);
 int pthread_setname_np(pthread_t id, const char *name);
 int pthread_getname_np(pthread_t id, char *name, size_t len);
 int  pthread_attr_setinitialstate_np(pthread_attr_t *attr, int initial_state);
 int pthread_attr_setinitfunc_np(pthread_attr_t *attr, void (*init_func)(void *));
+// WHITECAT END
 
 #ifdef __cplusplus
 }

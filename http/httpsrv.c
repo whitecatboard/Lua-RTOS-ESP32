@@ -82,6 +82,9 @@
 
 #include "wifi.h"
 
+// TO DO: required in idf 5.2.5?
+int mbedtls_pk_load_file(const char *path, unsigned char **buf, size_t *n);
+
 char *strcasestr(const char *haystack, const char *needle);
 driver_error_t *wifi_check_error(esp_err_t error);
 

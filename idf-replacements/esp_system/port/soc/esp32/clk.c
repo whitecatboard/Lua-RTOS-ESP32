@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2015-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -91,7 +91,10 @@ static void select_rtc_slow_clk(slow_clk_sel_t slow_clk)
             rtc_clk_8m_enable(true, true);
         }
         rtc_clk_slow_src_set(rtc_slow_clk_src);
-
+        if (rtc_slow_clk_src != SOC_RTC_SLOW_CLK_SRC_XTAL32K) {
+            rtc_clk_32k_enable(false);
+            rtc_clk_32k_disable_external();
+        }
         if (SLOW_CLK_CAL_CYCLES > 0) {
             /* TODO: 32k XTAL oscillator has some frequency drift at startup.
              * Improve calibration routine to wait until the frequency is stable.
@@ -106,11 +109,14 @@ static void select_rtc_slow_clk(slow_clk_sel_t slow_clk)
     esp_clk_slowclk_cal_set(cal_val);
 }
 
- __attribute__((weak)) void esp_clk_init(void)
+void esp_rtc_init(void)
 {
     rtc_config_t cfg = RTC_CONFIG_DEFAULT();
     rtc_init(cfg);
+}
 
+__attribute__((weak)) void esp_clk_init(void)
+{
 #if (CONFIG_APP_COMPATIBLE_PRE_V2_1_BOOTLOADERS || CONFIG_APP_INIT_CLK)
     /* Check the bootloader set the XTAL frequency.
 

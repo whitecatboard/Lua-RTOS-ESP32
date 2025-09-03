@@ -23,6 +23,7 @@ static const char *psa_strerror(psa_status_t status)
     case PSA_ERROR_INVALID_SIGNATURE: return "PSA_ERROR_INVALID_SIGNATURE";
     case PSA_ERROR_NOT_PERMITTED: return "PSA_ERROR_NOT_PERMITTED";
     case PSA_ERROR_NOT_SUPPORTED: return "PSA_ERROR_NOT_SUPPORTED";
+    case PSA_ERROR_SERVICE_FAILURE: return "PSA_ERROR_SERVICE_FAILURE";
     case PSA_ERROR_STORAGE_FAILURE: return "PSA_ERROR_STORAGE_FAILURE";
     case PSA_SUCCESS: return "PSA_SUCCESS";
     default: return NULL;
@@ -48,7 +49,6 @@ static const char *psa_ecc_family_name(psa_ecc_family_t curve)
 static const char *psa_dh_family_name(psa_dh_family_t group)
 {
     switch (group) {
-    case PSA_DH_FAMILY_CUSTOM: return "PSA_DH_FAMILY_CUSTOM";
     case PSA_DH_FAMILY_RFC7919: return "PSA_DH_FAMILY_RFC7919";
     default: return NULL;
     }

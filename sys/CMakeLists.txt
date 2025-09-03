@@ -41,7 +41,7 @@ set(srcs
 	"drivers/stepper.c"
 	"drivers/system.c"
 	"drivers/timer.c"
-#	"drivers/tm1637.c"
+	"drivers/tm1637.c"
 	"drivers/uart.c"
 	"drivers/wifi.c"
 	"editor/edit.c"

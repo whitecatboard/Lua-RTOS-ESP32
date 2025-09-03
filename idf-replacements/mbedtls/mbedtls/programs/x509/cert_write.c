@@ -15,7 +15,7 @@
     !defined(MBEDTLS_X509_CRT_PARSE_C) || !defined(MBEDTLS_FS_IO) || \
     !defined(MBEDTLS_ENTROPY_C) || !defined(MBEDTLS_CTR_DRBG_C) || \
     !defined(MBEDTLS_ERROR_C) || !defined(MBEDTLS_MD_CAN_SHA256) || \
-    !defined(MBEDTLS_PEM_WRITE_C)
+    !defined(MBEDTLS_PEM_WRITE_C) || !defined(MBEDTLS_MD_C)
 int main(void)
 {
     mbedtls_printf("MBEDTLS_X509_CRT_WRITE_C and/or MBEDTLS_X509_CRT_PARSE_C and/or "
@@ -204,9 +204,9 @@ struct options {
     int format;                 /* format                               */
 } opt;
 
-int write_certificate(mbedtls_x509write_cert *crt, const char *output_file,
-                      int (*f_rng)(void *, unsigned char *, size_t),
-                      void *p_rng)
+static int write_certificate(mbedtls_x509write_cert *crt, const char *output_file,
+                             int (*f_rng)(void *, unsigned char *, size_t),
+                             void *p_rng)
 {
     int ret;
     FILE *f;
@@ -249,8 +249,8 @@ int write_certificate(mbedtls_x509write_cert *crt, const char *output_file,
     return 0;
 }
 
-int parse_serial_decimal_format(unsigned char *obuf, size_t obufmax,
-                                const char *ibuf, size_t *len)
+static int parse_serial_decimal_format(unsigned char *obuf, size_t obufmax,
+                                       const char *ibuf, size_t *len)
 {
     unsigned long long int dec;
     unsigned int remaining_bytes = sizeof(dec);
@@ -312,7 +312,6 @@ int main(int argc, char *argv[])
     mbedtls_ctr_drbg_context ctr_drbg;
     const char *pers = "crt example app";
     mbedtls_x509_san_list *cur, *prev;
-    mbedtls_asn1_named_data *ext_san_dirname = NULL;
     uint8_t ip[4] = { 0 };
     /*
      * Set to sane values
@@ -571,6 +570,10 @@ usage:
 
                 if ((subtype_value = strchr(q, ':')) != NULL) {
                     *subtype_value++ = '\0';
+                } else {
+                    mbedtls_printf(
+                        "Invalid argument for option SAN: Entry must be of the form TYPE:value\n");
+                    goto usage;
                 }
                 if (strcmp(q, "RFC822") == 0) {
                     cur->node.type = MBEDTLS_X509_SAN_RFC822_NAME;
@@ -579,10 +582,10 @@ usage:
                 } else if (strcmp(q, "DNS") == 0) {
                     cur->node.type = MBEDTLS_X509_SAN_DNS_NAME;
                 } else if (strcmp(q, "IP") == 0) {
-                    size_t ip_len = 0;
+                    size_t ip_addr_len = 0;
                     cur->node.type = MBEDTLS_X509_SAN_IP_ADDRESS;
-                    ip_len = mbedtls_x509_crt_parse_cn_inet_pton(subtype_value, ip);
-                    if (ip_len == 0) {
+                    ip_addr_len = mbedtls_x509_crt_parse_cn_inet_pton(subtype_value, ip);
+                    if (ip_addr_len == 0) {
                         mbedtls_printf("mbedtls_x509_crt_parse_cn_inet_pton failed to parse %s\n",
                                        subtype_value);
                         goto exit;
@@ -591,7 +594,15 @@ usage:
                     cur->node.san.unstructured_name.len = sizeof(ip);
                 } else if (strcmp(q, "DN") == 0) {
                     cur->node.type = MBEDTLS_X509_SAN_DIRECTORY_NAME;
-                    if ((ret = mbedtls_x509_string_to_names(&ext_san_dirname,
+                    /* Work around an API mismatch between string_to_names() and
+                     * mbedtls_x509_subject_alternative_name, which holds an
+                     * actual mbedtls_x509_name while a pointer to one would be
+                     * more convenient here. (Note mbedtls_x509_name and
+                     * mbedtls_asn1_named_data are synonymous, again
+                     * string_to_names() uses one while
+                     * cur->node.san.directory_name is nominally the other.) */
+                    mbedtls_asn1_named_data *tmp_san_dirname = NULL;
+                    if ((ret = mbedtls_x509_string_to_names(&tmp_san_dirname,
                                                             subtype_value)) != 0) {
                         mbedtls_strerror(ret, buf, sizeof(buf));
                         mbedtls_printf(
@@ -600,7 +611,9 @@ usage:
                             (unsigned int) -ret, buf);
                         goto exit;
                     }
-                    cur->node.san.directory_name = *ext_san_dirname;
+                    cur->node.san.directory_name = *tmp_san_dirname;
+                    mbedtls_free(tmp_san_dirname);
+                    tmp_san_dirname = NULL;
                 } else {
                     mbedtls_free(cur);
                     goto usage;
@@ -991,10 +1004,26 @@ usage:
     exit_code = MBEDTLS_EXIT_SUCCESS;
 
 exit:
+    cur = opt.san_list;
+    while (cur != NULL) {
+        mbedtls_x509_san_list *next = cur->next;
+        /* Note: mbedtls_x509_free_subject_alt_name() is not what we want here.
+         * It's the right thing for entries that were parsed from a certificate,
+         * where pointers are to the raw certificate, but here all the
+         * pointers were allocated while parsing from a user-provided string. */
+        if (cur->node.type == MBEDTLS_X509_SAN_DIRECTORY_NAME) {
+            mbedtls_x509_name *dn = &cur->node.san.directory_name;
+            mbedtls_free(dn->oid.p);
+            mbedtls_free(dn->val.p);
+            mbedtls_asn1_free_named_data_list(&dn->next);
+        }
+        mbedtls_free(cur);
+        cur = next;
+    }
+
 #if defined(MBEDTLS_X509_CSR_PARSE_C)
     mbedtls_x509_csr_free(&csr);
 #endif /* MBEDTLS_X509_CSR_PARSE_C */
-    mbedtls_asn1_free_named_data_list(&ext_san_dirname);
     mbedtls_x509_crt_free(&issuer_crt);
     mbedtls_x509write_crt_free(&crt);
     mbedtls_pk_free(&loaded_subject_key);

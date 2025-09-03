@@ -190,7 +190,7 @@ int mbedtls_net_connect(mbedtls_net_context *ctx, const char *host,
             break;
         }
 
-        close(ctx->fd);
+        mbedtls_net_close(ctx);
         ret = MBEDTLS_ERR_NET_CONNECT_FAILED;
     }
 
@@ -237,13 +237,13 @@ int mbedtls_net_bind(mbedtls_net_context *ctx, const char *bind_ip, const char *
         n = 1;
         if (setsockopt(ctx->fd, SOL_SOCKET, SO_REUSEADDR,
                        (const char *) &n, sizeof(n)) != 0) {
-            close(ctx->fd);
+            mbedtls_net_close(ctx);
             ret = MBEDTLS_ERR_NET_SOCKET_FAILED;
             continue;
         }
 
         if (bind(ctx->fd, cur->ai_addr, MSVC_INT_CAST cur->ai_addrlen) != 0) {
-            close(ctx->fd);
+            mbedtls_net_close(ctx);
             ret = MBEDTLS_ERR_NET_BIND_FAILED;
             continue;
         }
@@ -251,7 +251,7 @@ int mbedtls_net_bind(mbedtls_net_context *ctx, const char *bind_ip, const char *
         /* Listen only makes sense for TCP */
         if (proto == MBEDTLS_NET_PROTO_TCP) {
             if (listen(ctx->fd, MBEDTLS_NET_LISTEN_BACKLOG) != 0) {
-                close(ctx->fd);
+                mbedtls_net_close(ctx);
                 ret = MBEDTLS_ERR_NET_LISTEN_FAILED;
                 continue;
             }
@@ -316,7 +316,7 @@ static int net_would_block(const mbedtls_net_context *ctx)
  */
 int mbedtls_net_accept(mbedtls_net_context *bind_ctx,
                        mbedtls_net_context *client_ctx,
-                       void *client_ip, size_t buf_size, size_t *ip_len)
+                       void *client_ip, size_t buf_size, size_t *cip_len)
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     int type;
@@ -399,22 +399,22 @@ int mbedtls_net_accept(mbedtls_net_context *bind_ctx,
     if (client_ip != NULL) {
         if (client_addr.ss_family == AF_INET) {
             struct sockaddr_in *addr4 = (struct sockaddr_in *) &client_addr;
-            *ip_len = sizeof(addr4->sin_addr.s_addr);
+            *cip_len = sizeof(addr4->sin_addr.s_addr);
 
-            if (buf_size < *ip_len) {
+            if (buf_size < *cip_len) {
                 return MBEDTLS_ERR_NET_BUFFER_TOO_SMALL;
             }
 
-            memcpy(client_ip, &addr4->sin_addr.s_addr, *ip_len);
+            memcpy(client_ip, &addr4->sin_addr.s_addr, *cip_len);
         } else {
             struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *) &client_addr;
-            *ip_len = sizeof(addr6->sin6_addr.s6_addr);
+            *cip_len = sizeof(addr6->sin6_addr.s6_addr);
 
-            if (buf_size < *ip_len) {
+            if (buf_size < *cip_len) {
                 return MBEDTLS_ERR_NET_BUFFER_TOO_SMALL;
             }
 
-            memcpy(client_ip, &addr6->sin6_addr.s6_addr, *ip_len);
+            memcpy(client_ip, &addr6->sin6_addr.s6_addr, *cip_len);
         }
     }
 
@@ -524,8 +524,8 @@ void mbedtls_net_usleep(unsigned long usec)
 #else
     struct timeval tv;
     tv.tv_sec  = usec / 1000000;
-#if defined(__unix__) || defined(__unix) || \
-    (defined(__APPLE__) && defined(__MACH__))
+#if (defined(__unix__) || defined(__unix) || \
+    (defined(__APPLE__) && defined(__MACH__))) && !defined(__DJGPP__)
     tv.tv_usec = (suseconds_t) usec % 1000000;
 #else
     tv.tv_usec = usec % 1000000;
@@ -683,7 +683,7 @@ void mbedtls_net_close(mbedtls_net_context *ctx)
  */
 void mbedtls_net_free(mbedtls_net_context *ctx)
 {
-    if (ctx->fd == -1) {
+    if (ctx == NULL || ctx->fd == -1) {
         return;
     }
 

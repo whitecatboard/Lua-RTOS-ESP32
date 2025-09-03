@@ -50,6 +50,10 @@ typedef struct mbedtls_ssl_ticket_key {
 #if defined(MBEDTLS_HAVE_TIME)
     mbedtls_time_t MBEDTLS_PRIVATE(generation_time); /*!< key generation timestamp (seconds) */
 #endif
+    /*! Lifetime of the key in seconds. This is also the lifetime of the
+     *  tickets created under that key.
+     */
+    uint32_t MBEDTLS_PRIVATE(lifetime);
 #if !defined(MBEDTLS_USE_PSA_CRYPTO)
     mbedtls_cipher_context_t MBEDTLS_PRIVATE(ctx);   /*!< context for auth enc/decryption    */
 #else
@@ -94,7 +98,9 @@ void mbedtls_ssl_ticket_init(mbedtls_ssl_ticket_context *ctx);
  *
  * \param ctx       Context to be set up
  * \param f_rng     RNG callback function (mandatory)
- * \param p_rng     RNG callback context
+ * \param p_rng     RNG callback context.
+ *                  Note that the RNG callback must remain valid
+ *                  until the ticket context is freed.
  * \param cipher    AEAD cipher to use for ticket protection.
  *                  Recommended value: MBEDTLS_CIPHER_AES_256_GCM.
  * \param lifetime  Tickets lifetime in seconds
@@ -104,15 +110,21 @@ void mbedtls_ssl_ticket_init(mbedtls_ssl_ticket_context *ctx);
  *                  least as strong as the strongest ciphersuite
  *                  supported. Usually that means a 256-bit key.
  *
- * \note            The lifetime of the keys is twice the lifetime of tickets.
- *                  It is recommended to pick a reasonable lifetime so as not
+ * \note            It is recommended to pick a reasonable lifetime so as not
  *                  to negate the benefits of forward secrecy.
+ *
+ * \note            The TLS 1.3 specification states that ticket lifetime must
+ *                  be smaller than seven days. If ticket lifetime has been
+ *                  set to a value greater than seven days in this module then
+ *                  if the TLS 1.3 is configured to send tickets after the
+ *                  handshake it will fail the connection when trying to send
+ *                  the first ticket.
  *
  * \return          0 if successful,
  *                  or a specific MBEDTLS_ERR_XXX error code
  */
 int mbedtls_ssl_ticket_setup(mbedtls_ssl_ticket_context *ctx,
-                             int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
+                             mbedtls_f_rng_t *f_rng, void *p_rng,
                              mbedtls_cipher_type_t cipher,
                              uint32_t lifetime);
 
@@ -141,9 +153,15 @@ int mbedtls_ssl_ticket_setup(mbedtls_ssl_ticket_context *ctx,
  * \note            \c klength must be sufficient for use by cipher specified
  *                  to \c mbedtls_ssl_ticket_setup
  *
- * \note            The lifetime of the keys is twice the lifetime of tickets.
- *                  It is recommended to pick a reasonable lifetime so as not
+ * \note            It is recommended to pick a reasonable lifetime so as not
  *                  to negate the benefits of forward secrecy.
+ *
+ * \note            The TLS 1.3 specification states that ticket lifetime must
+ *                  be smaller than seven days. If ticket lifetime has been
+ *                  set to a value greater than seven days in this module then
+ *                  if the TLS 1.3 is configured to send tickets after the
+ *                  handshake it will fail the connection when trying to send
+ *                  the first ticket.
  *
  * \return          0 if successful,
  *                  or a specific MBEDTLS_ERR_XXX error code

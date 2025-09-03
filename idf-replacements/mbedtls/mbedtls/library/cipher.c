@@ -14,6 +14,7 @@
 #if defined(MBEDTLS_CIPHER_C)
 
 #include "mbedtls/cipher.h"
+#include "cipher_invasive.h"
 #include "cipher_wrap.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
@@ -251,8 +252,11 @@ int mbedtls_cipher_setup(mbedtls_cipher_context_t *ctx,
 
     memset(ctx, 0, sizeof(mbedtls_cipher_context_t));
 
-    if (NULL == (ctx->cipher_ctx = mbedtls_cipher_get_base(cipher_info)->ctx_alloc_func())) {
-        return MBEDTLS_ERR_CIPHER_ALLOC_FAILED;
+    if (mbedtls_cipher_get_base(cipher_info)->ctx_alloc_func != NULL) {
+        ctx->cipher_ctx = mbedtls_cipher_get_base(cipher_info)->ctx_alloc_func();
+        if (ctx->cipher_ctx == NULL) {
+            return MBEDTLS_ERR_CIPHER_ALLOC_FAILED;
+        }
     }
 
     ctx->cipher_info = cipher_info;
@@ -307,6 +311,12 @@ int mbedtls_cipher_setkey(mbedtls_cipher_context_t *ctx,
     if (ctx->cipher_info == NULL) {
         return MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA;
     }
+#if defined(MBEDTLS_BLOCK_CIPHER_NO_DECRYPT)
+    if (MBEDTLS_MODE_ECB == ((mbedtls_cipher_mode_t) ctx->cipher_info->mode) &&
+        MBEDTLS_DECRYPT == operation) {
+        return MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE;
+    }
+#endif
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO) && !defined(MBEDTLS_DEPRECATED_REMOVED)
     if (ctx->psa_enabled == 1) {
@@ -374,6 +384,7 @@ int mbedtls_cipher_setkey(mbedtls_cipher_context_t *ctx,
     ctx->key_bitlen = key_bitlen;
     ctx->operation = operation;
 
+#if !defined(MBEDTLS_BLOCK_CIPHER_NO_DECRYPT)
     /*
      * For OFB, CFB and CTR mode always use the encryption key schedule
      */
@@ -389,6 +400,12 @@ int mbedtls_cipher_setkey(mbedtls_cipher_context_t *ctx,
         return mbedtls_cipher_get_base(ctx->cipher_info)->setkey_dec_func(ctx->cipher_ctx, key,
                                                                           ctx->key_bitlen);
     }
+#else
+    if (operation == MBEDTLS_ENCRYPT || operation == MBEDTLS_DECRYPT) {
+        return mbedtls_cipher_get_base(ctx->cipher_info)->setkey_enc_func(ctx->cipher_ctx, key,
+                                                                          ctx->key_bitlen);
+    }
+#endif
 
     return MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA;
 }
@@ -822,8 +839,14 @@ static void add_pkcs_padding(unsigned char *output, size_t output_len,
     }
 }
 
-static int get_pkcs_padding(unsigned char *input, size_t input_len,
-                            size_t *data_len)
+/*
+ * Get the length of the PKCS7 padding.
+ *
+ * Note: input_len must be the block size of the cipher.
+ */
+MBEDTLS_STATIC_TESTABLE int mbedtls_get_pkcs_padding(unsigned char *input,
+                                                     size_t input_len,
+                                                     size_t *data_len)
 {
     size_t i, pad_idx;
     unsigned char padding_len;
@@ -833,7 +856,6 @@ static int get_pkcs_padding(unsigned char *input, size_t input_len,
     }
 
     padding_len = input[input_len - 1];
-    *data_len = input_len - padding_len;
 
     mbedtls_ct_condition_t bad = mbedtls_ct_uint_gt(padding_len, input_len);
     bad = mbedtls_ct_bool_or(bad, mbedtls_ct_uint_eq(padding_len, 0));
@@ -846,6 +868,9 @@ static int get_pkcs_padding(unsigned char *input, size_t input_len,
         mbedtls_ct_condition_t different  = mbedtls_ct_uint_ne(input[i], padding_len);
         bad = mbedtls_ct_bool_or(bad, mbedtls_ct_bool_and(in_padding, different));
     }
+
+    /* If the padding is invalid, set the output length to 0 */
+    *data_len = mbedtls_ct_if(bad, 0, input_len - padding_len);
 
     return mbedtls_ct_error_if_else_0(bad, MBEDTLS_ERR_CIPHER_INVALID_PADDING);
 }
@@ -1125,7 +1150,7 @@ int mbedtls_cipher_set_padding_mode(mbedtls_cipher_context_t *ctx,
 #if defined(MBEDTLS_CIPHER_PADDING_PKCS7)
         case MBEDTLS_PADDING_PKCS7:
             ctx->add_padding = add_pkcs_padding;
-            ctx->get_padding = get_pkcs_padding;
+            ctx->get_padding = mbedtls_get_pkcs_padding;
             break;
 #endif
 #if defined(MBEDTLS_CIPHER_PADDING_ONE_AND_ZEROS)

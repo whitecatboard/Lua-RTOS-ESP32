@@ -12,6 +12,10 @@ endif()
 set(mbedtls_srcs "")
 set(mbedtls_include_dirs "port/include" "mbedtls/include" "mbedtls/library")
 
+if(CONFIG_MBEDTLS_USE_CRYPTO_ROM_IMPL)
+    list(APPEND mbedtls_include_dirs "port/mbedtls_rom")
+endif()
+
 if(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE)
     list(APPEND mbedtls_srcs "esp_crt_bundle/esp_crt_bundle.c")
     list(APPEND mbedtls_include_dirs "esp_crt_bundle/include")
@@ -86,7 +90,18 @@ idf_build_get_property(python PYTHON)
 set(Python3_EXECUTABLE ${python})
 
 # Needed to for include_next includes to work from within mbedtls
-include_directories("${COMPONENT_DIR}/port/include")
+set(include_dirs "${COMPONENT_DIR}/port/include")
+
+if(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE)
+    list(APPEND include_dirs "${COMPONENT_DIR}/esp_crt_bundle/include")
+endif()
+
+include_directories(${include_dirs})
+
+# Needed to for mbedtls_rom includes to work from within mbedtls
+if(CONFIG_MBEDTLS_USE_CRYPTO_ROM_IMPL)
+    include_directories("${COMPONENT_DIR}/port/mbedtls_rom")
+endif()
 
 # Import mbedtls library targets
 add_subdirectory(mbedtls)
@@ -255,6 +270,9 @@ if(CONFIG_MBEDTLS_HARDWARE_ECDSA_SIGN OR CONFIG_MBEDTLS_HARDWARE_ECDSA_VERIFY)
 
     if(CONFIG_MBEDTLS_HARDWARE_ECDSA_VERIFY)
         target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=mbedtls_ecdsa_verify")
+        target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=mbedtls_ecdsa_verify_restartable")
+        target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=mbedtls_ecdsa_read_signature")
+        target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=mbedtls_ecdsa_read_signature_restartable")
     endif()
 endif()
 
@@ -304,6 +322,19 @@ target_link_libraries(${COMPONENT_LIB} ${linkage_type} ${mbedtls_targets})
 if(CONFIG_ESP_TLS_USE_DS_PERIPHERAL)
     # The linker seems to be unable to resolve all the dependencies without increasing this
     set_property(TARGET mbedcrypto APPEND PROPERTY LINK_INTERFACE_MULTIPLICITY 6)
+endif()
+
+# Additional optional dependencies for the mbedcrypto library
+function(mbedcrypto_optional_deps component_name)
+    idf_build_get_property(components BUILD_COMPONENTS)
+    if(${component_name} IN_LIST components)
+        idf_component_get_property(lib_name ${component_name} COMPONENT_LIB)
+        target_link_libraries(mbedcrypto PRIVATE ${lib_name})
+    endif()
+endfunction()
+
+if(CONFIG_MBEDTLS_HARDWARE_ECDSA_SIGN_CONSTANT_TIME_CM)
+    mbedcrypto_optional_deps(esp_timer idf::esp_timer)
 endif()
 
 # Link esp-cryptoauthlib to mbedtls

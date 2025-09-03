@@ -192,11 +192,11 @@ static int gcm_gen_table( esp_gcm_context *ctx )
  *      last4[x] = x times P^128
  * where x and last4[x] are seen as elements of GF(2^128) as in [MGV]
  */
-static const uint64_t last4[16] = {
-    0x0000, 0x1c20, 0x3840, 0x2460,
-    0x7080, 0x6ca0, 0x48c0, 0x54e0,
-    0xe100, 0xfd20, 0xd940, 0xc560,
-    0x9180, 0x8da0, 0xa9c0, 0xb5e0
+static const uint32_t last4[16] = {
+    0x00000000, 0x1c200000, 0x38400000, 0x24600000,
+    0x70800000, 0x6ca00000, 0x48c00000, 0x54e00000,
+    0xe1000000, 0xfd200000, 0xd9400000, 0xc5600000,
+    0x91800000, 0x8da00000, 0xa9c00000, 0xb5e00000
 };
 /* Based on MbedTLS's implemenation
  *
@@ -211,28 +211,33 @@ static void gcm_mult( esp_gcm_context *ctx, const unsigned char x[16],
     uint64_t zh, zl;
 
     lo = x[15] & 0xf;
+    hi = x[15] >> 4;
 
     zh = ctx->HH[lo];
     zl = ctx->HL[lo];
 
-    for ( i = 15; i >= 0; i-- ) {
+    rem = (unsigned char) zl & 0xf;
+    zl = ( zh << 60 ) | ( zl >> 4 );
+    zh = ( zh >> 4 );
+    zh ^= (uint64_t) last4[rem] << 32;
+    zh ^= ctx->HH[hi];
+    zl ^= ctx->HL[hi];
+
+    for ( i = 14; i >= 0; i-- ) {
         lo = x[i] & 0xf;
         hi = x[i] >> 4;
-
-        if ( i != 15 ) {
-            rem = (unsigned char) zl & 0xf;
-            zl = ( zh << 60 ) | ( zl >> 4 );
-            zh = ( zh >> 4 );
-            zh ^= (uint64_t) last4[rem] << 48;
-            zh ^= ctx->HH[lo];
-            zl ^= ctx->HL[lo];
-
-        }
 
         rem = (unsigned char) zl & 0xf;
         zl = ( zh << 60 ) | ( zl >> 4 );
         zh = ( zh >> 4 );
-        zh ^= (uint64_t) last4[rem] << 48;
+        zh ^= (uint64_t) last4[rem] << 32;
+        zh ^= ctx->HH[lo];
+        zl ^= ctx->HL[lo];
+
+        rem = (unsigned char) zl & 0xf;
+        zl = ( zh << 60 ) | ( zl >> 4 );
+        zh = ( zh >> 4 );
+        zh ^= (uint64_t) last4[rem] << 32;
         zh ^= ctx->HH[hi];
         zl ^= ctx->HL[hi];
     }
@@ -251,6 +256,27 @@ int esp_aes_gcm_setkey( esp_gcm_context *ctx,
                         const unsigned char *key,
                         unsigned int keybits )
 {
+    /* Fallback to software implementation of GCM operation when a non-AES
+     * cipher is selected, as we support hardware acceleration only for a
+     * GCM operation using AES cipher.
+     */
+#if defined(MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK)
+    if (ctx->ctx_soft != NULL) {
+        mbedtls_gcm_free_soft(ctx->ctx_soft);
+        free(ctx->ctx_soft);
+        ctx->ctx_soft = NULL;
+    }
+
+    if (cipher != MBEDTLS_CIPHER_ID_AES) {
+        ctx->ctx_soft = (mbedtls_gcm_context_soft*) malloc(sizeof(mbedtls_gcm_context_soft));
+        if (ctx->ctx_soft == NULL) {
+            return MBEDTLS_ERR_CIPHER_ALLOC_FAILED;
+        }
+        mbedtls_gcm_init_soft(ctx->ctx_soft);
+        return mbedtls_gcm_setkey_soft(ctx->ctx_soft, cipher, key, keybits);
+    }
+#endif
+
 #if !SOC_AES_SUPPORT_AES_192
     if (keybits == 192) {
         return MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED;
@@ -332,6 +358,14 @@ void esp_aes_gcm_free( esp_gcm_context *ctx)
     if (ctx == NULL) {
         return;
     }
+#if defined(MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK)
+    if (ctx->ctx_soft != NULL) {
+        mbedtls_gcm_free_soft(ctx->ctx_soft);
+        free(ctx->ctx_soft);
+        /* Note that the value of ctx->ctx_soft should be NULL'ed out
+        and here it is taken care by the bzero call below */
+    }
+#endif
     bzero(ctx, sizeof(esp_gcm_context));
 }
 
@@ -341,16 +375,22 @@ int esp_aes_gcm_starts( esp_gcm_context *ctx,
                         const unsigned char *iv,
                         size_t iv_len )
 {
+    if (!ctx) {
+        ESP_LOGE(TAG, "No AES context supplied");
+        return MBEDTLS_ERR_GCM_BAD_INPUT;
+    }
+
+#if defined(MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK)
+    if (ctx->ctx_soft != NULL) {
+        return mbedtls_gcm_starts_soft(ctx->ctx_soft, mode, iv, iv_len);
+    }
+#endif
+
     /* IV is limited to 2^32 bits, so 2^29 bytes */
     /* IV is not allowed to be zero length */
     if ( iv_len == 0 ||
             ( (uint32_t) iv_len  ) >> 29 != 0 ) {
         return ( MBEDTLS_ERR_GCM_BAD_INPUT );
-    }
-
-    if (!ctx) {
-        ESP_LOGE(TAG, "No AES context supplied");
-        return MBEDTLS_ERR_GCM_BAD_INPUT;
     }
 
     if (!iv) {
@@ -407,14 +447,20 @@ int esp_aes_gcm_update_ad( esp_gcm_context *ctx,
                            const unsigned char *aad,
                            size_t aad_len )
 {
-    /* AD are limited to 2^32 bits, so 2^29 bytes */
-    if ( ( (uint32_t) aad_len ) >> 29 != 0 ) {
-        return ( MBEDTLS_ERR_GCM_BAD_INPUT );
-    }
-
     if (!ctx) {
         ESP_LOGE(TAG, "No AES context supplied");
         return MBEDTLS_ERR_GCM_BAD_INPUT;
+    }
+
+#if defined(MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK)
+    if (ctx->ctx_soft != NULL) {
+        return mbedtls_gcm_update_ad_soft(ctx->ctx_soft, aad, aad_len);
+    }
+#endif
+
+    /* AD are limited to 2^32 bits, so 2^29 bytes */
+    if ( ( (uint32_t) aad_len ) >> 29 != 0 ) {
+        return ( MBEDTLS_ERR_GCM_BAD_INPUT );
     }
 
     if ( (aad_len > 0) && !aad) {
@@ -442,6 +488,17 @@ int esp_aes_gcm_update( esp_gcm_context *ctx,
                         unsigned char *output, size_t output_size,
                         size_t *output_length )
 {
+    if (!ctx) {
+        ESP_LOGE(TAG, "No GCM context supplied");
+        return MBEDTLS_ERR_GCM_BAD_INPUT;
+    }
+
+#if defined(MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK)
+    if (ctx->ctx_soft != NULL) {
+        return mbedtls_gcm_update_soft(ctx->ctx_soft, input, input_length, output, output_size, output_length);
+    }
+#endif
+
     size_t nc_off = 0;
     uint8_t nonce_counter[AES_BLOCK_BYTES] = {0};
     uint8_t stream[AES_BLOCK_BYTES] = {0};
@@ -452,10 +509,6 @@ int esp_aes_gcm_update( esp_gcm_context *ctx,
     }
     *output_length = input_length;
 
-    if (!ctx) {
-        ESP_LOGE(TAG, "No GCM context supplied");
-        return MBEDTLS_ERR_GCM_BAD_INPUT;
-    }
     if (!input) {
         ESP_LOGE(TAG, "No input supplied");
         return MBEDTLS_ERR_GCM_BAD_INPUT;
@@ -512,6 +565,11 @@ int esp_aes_gcm_finish( esp_gcm_context *ctx,
                         size_t *output_length,
                         unsigned char *tag, size_t tag_len )
 {
+#if defined(MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK)
+    if (ctx->ctx_soft != NULL) {
+        return mbedtls_gcm_finish_soft(ctx->ctx_soft, output, output_size, output_length, tag, tag_len);
+    }
+#endif
     size_t nc_off = 0;
     uint8_t len_block[AES_BLOCK_BYTES] = {0};
     uint8_t stream[AES_BLOCK_BYTES] = {0};
@@ -607,6 +665,16 @@ int esp_aes_gcm_crypt_and_tag( esp_gcm_context *ctx,
                                size_t tag_len,
                                unsigned char *tag )
 {
+    if (!ctx) {
+        ESP_LOGE(TAG, "No AES context supplied");
+        return MBEDTLS_ERR_GCM_BAD_INPUT;
+    }
+
+#if defined(MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK)
+    if (ctx->ctx_soft != NULL) {
+        return mbedtls_gcm_crypt_and_tag_soft(ctx->ctx_soft, mode, length, iv, iv_len, aad, aad_len, input, output, tag_len, tag);
+    }
+#endif
 #if CONFIG_MBEDTLS_HARDWARE_GCM
     int ret;
     lldesc_t aad_desc[2] = {};
@@ -633,11 +701,6 @@ int esp_aes_gcm_crypt_and_tag( esp_gcm_context *ctx,
             ( (uint32_t) iv_len  ) >> 29 != 0 ||
             ( (uint32_t) aad_len ) >> 29 != 0 ) {
         return ( MBEDTLS_ERR_GCM_BAD_INPUT );
-    }
-
-    if (!ctx) {
-        ESP_LOGE(TAG, "No AES context supplied");
-        return MBEDTLS_ERR_GCM_BAD_INPUT;
     }
 
     if (!iv) {
@@ -727,6 +790,11 @@ int esp_aes_gcm_auth_decrypt( esp_gcm_context *ctx,
                               const unsigned char *input,
                               unsigned char *output )
 {
+#if defined(MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK)
+    if (ctx->ctx_soft != NULL) {
+        return mbedtls_gcm_auth_decrypt_soft(ctx->ctx_soft, length, iv, iv_len, aad, aad_len, tag, tag_len, input, output);
+    }
+#endif
     int ret;
     unsigned char check_tag[16];
     size_t i;

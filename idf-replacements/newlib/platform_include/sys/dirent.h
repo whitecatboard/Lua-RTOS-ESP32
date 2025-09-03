@@ -46,8 +46,9 @@ struct dirent {
 #else
     char d_name[256];
 #endif
-    // WHITECAT
+    // WHITECAT BEGIN
     uint32_t d_fsize;
+    // WHITECAT END
 };
 
 DIR* opendir(const char* name);

@@ -71,7 +71,7 @@
  * \def MBEDTLS_HAVE_TIME_DATE
  *
  * System has time.h and time(), gmtime() and the clock is correct.
- * The time needs to be correct (not necesarily very accurate, but at least
+ * The time needs to be correct (not necessarily very accurate, but at least
  * the date should be correct). This is used to verify the validity period of
  * X.509 certificates.
  *
@@ -155,6 +155,12 @@
 
 #ifdef CONFIG_MBEDTLS_HARDWARE_AES
 #define MBEDTLS_GCM_ALT
+#ifdef CONFIG_MBEDTLS_GCM_SUPPORT_NON_AES_CIPHER
+    /* Prefer hardware and fallback to software */
+    #define MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK
+#else
+    #undef MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK
+#endif
 #endif
 
 /* MBEDTLS_SHAxx_ALT to enable hardware SHA support
@@ -864,7 +870,13 @@
  *
  * Enable functions that use the filesystem.
  */
+#if CONFIG_MBEDTLS_FS_IO
 #define MBEDTLS_FS_IO
+#else
+#undef MBEDTLS_FS_IO
+#undef MBEDTLS_PSA_ITS_FILE_C
+#undef MBEDTLS_PSA_CRYPTO_STORAGE_C
+#endif
 
 /**
  * \def MBEDTLS_NO_PLATFORM_ENTROPY
@@ -986,7 +998,7 @@
  * functions mbedtls_ssl_context_save() and mbedtls_ssl_context_load().
  *
  * This pair of functions allows one side of a connection to serialize the
- * context associated with the connection, then free or re-use that context
+ * context associated with the connection, then free or reuse that context
  * while the serialized state is persisted elsewhere, and finally deserialize
  * that state to a live context for resuming read/write operations on the
  * connection. From a protocol perspective, the state of the connection is
@@ -1096,6 +1108,24 @@
 #define MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
 #else
 #undef MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
+#endif
+
+/**
+ * \def MBEDTLS_SSL_KEYING_MATERIAL_EXPORT
+ *
+ * When this option is enabled, the client and server can extract additional
+ * shared symmetric keys after an SSL handshake using the function
+ * mbedtls_ssl_export_keying_material().
+ *
+ * The process for deriving the keys is specified in RFC 5705 for TLS 1.2 and
+ * in RFC 8446, Section 7.5, for TLS 1.3.
+ *
+ * Comment this macro to disable mbedtls_ssl_export_keying_material().
+ */
+#ifdef CONFIG_MBEDTLS_SSL_KEYING_MATERIAL_EXPORT
+#define MBEDTLS_SSL_KEYING_MATERIAL_EXPORT
+#else
+#undef MBEDTLS_SSL_KEYING_MATERIAL_EXPORT
 #endif
 
 /**
@@ -1484,7 +1514,7 @@
  * \def MBEDTLS_SSL_SESSION_TICKETS
  *
  * Enable support for RFC 5077 session tickets in SSL.
- * Client-side, provides full support for session tickets (maintainance of a
+ * Client-side, provides full support for session tickets (maintenance of a
  * session store remains the responsibility of the application, though).
  * Server-side, you also need to provide callbacks for writing and parsing
  * tickets, including authenticated encryption and key management. Example
@@ -2066,7 +2096,26 @@
  *
  * This module enables mbedtls_strerror().
  */
+#if CONFIG_MBEDTLS_ERROR_STRINGS
 #define MBEDTLS_ERROR_C
+#else
+#undef MBEDTLS_ERROR_C
+#endif
+
+/**
+ * \def MBEDTLS_SSL_CLI_ALLOW_WEAK_CERTIFICATE_VERIFICATION_WITHOUT_HOSTNAME
+ *
+ * Caller: library/ssl_tls.c
+ *
+ * Allow weak certificate verification without a hostname.
+ * This option is not recommended for production use.
+ */
+
+#if CONFIG_MBEDTLS_ALLOW_WEAK_CERTIFICATE_VERIFICATION
+#define MBEDTLS_SSL_CLI_ALLOW_WEAK_CERTIFICATE_VERIFICATION_WITHOUT_HOSTNAME
+#else
+#undef MBEDTLS_SSL_CLI_ALLOW_WEAK_CERTIFICATE_VERIFICATION_WITHOUT_HOSTNAME
+#endif
 
 /**
  * \def MBEDTLS_GCM_C
@@ -2116,7 +2165,7 @@
  *
  * Requires: MBEDTLS_MD_C
  *
- * Uncomment to enable the HMAC_DRBG random number geerator.
+ * Uncomment to enable the HMAC_DRBG random number generator.
  */
 #define MBEDTLS_HMAC_DRBG_C
 
@@ -2512,6 +2561,21 @@
 #endif
 
 /**
+ * \def MBEDTLS_SHA3_C
+ *
+ *  Enable the SHA3 cryptographic hash algorithm.
+ *
+ * Module:  library/sha3.c
+ *
+ * This module adds support for SHA3.
+ */
+#ifdef CONFIG_MBEDTLS_SHA3_C
+#define MBEDTLS_SHA3_C
+#else
+#undef MBEDTLS_SHA3_C
+#endif
+
+/**
  * \def MBEDTLS_SSL_CACHE_C
  *
  * Enable simple SSL cache implementation.
@@ -2808,7 +2872,7 @@
 /* SSL options */
 #ifndef CONFIG_MBEDTLS_ASYMMETRIC_CONTENT_LEN
 
-#define MBEDTLS_SSL_MAX_CONTENT_LEN             CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN /**< Maxium fragment length in bytes, determines the size of each of the two internal I/O buffers */
+#define MBEDTLS_SSL_MAX_CONTENT_LEN             CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN /**< Maximum fragment length in bytes, determines the size of each of the two internal I/O buffers */
 
 #else
 
@@ -2996,9 +3060,12 @@
 #include MBEDTLS_USER_CONFIG_FILE
 #endif
 
+// WHITECAT BEGIN
+#if 0
 /* This flag makes sure that we are not using
  * any function that is deprecated by mbedtls */
-// WHITECAT
-//#define MBEDTLS_DEPRECATED_REMOVED
+#define MBEDTLS_DEPRECATED_REMOVED
+#endif
+// WHITECAT END
 
 #endif /* ESP_CONFIG_H */

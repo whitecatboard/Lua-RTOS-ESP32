@@ -2,6 +2,8 @@
  * \file mbedtls/config_adjust_psa_from_legacy.h
  * \brief Adjust PSA configuration: construct PSA configuration from legacy
  *
+ * This is an internal header. Do not include it directly.
+ *
  * When MBEDTLS_PSA_CRYPTO_CONFIG is disabled, we automatically enable
  * cryptographic mechanisms through the PSA interface when the corresponding
  * legacy mechanism is enabled. In many cases, this just enables the PSA
@@ -18,6 +20,14 @@
 #ifndef MBEDTLS_CONFIG_ADJUST_PSA_FROM_LEGACY_H
 #define MBEDTLS_CONFIG_ADJUST_PSA_FROM_LEGACY_H
 
+#if !defined(MBEDTLS_CONFIG_FILES_READ)
+#error "Do not include mbedtls/config_adjust_*.h manually! This can lead to problems, " \
+    "up to and including runtime errors such as buffer overflows. " \
+    "If you're trying to fix a complaint from check_config.h, just remove " \
+    "it from your configuration file: since Mbed TLS 3.0, it is included " \
+    "automatically at the right point."
+#endif /* */
+
 /*
  * Ensure PSA_WANT_* defines are setup properly if MBEDTLS_PSA_CRYPTO_CONFIG
  * is not defined
@@ -25,9 +35,11 @@
 
 #if defined(MBEDTLS_CCM_C)
 #define MBEDTLS_PSA_BUILTIN_ALG_CCM 1
-#define MBEDTLS_PSA_BUILTIN_ALG_CCM_STAR_NO_TAG 1
 #define PSA_WANT_ALG_CCM 1
+#if defined(MBEDTLS_CIPHER_C)
+#define MBEDTLS_PSA_BUILTIN_ALG_CCM_STAR_NO_TAG 1
 #define PSA_WANT_ALG_CCM_STAR_NO_TAG 1
+#endif /* MBEDTLS_CIPHER_C */
 #endif /* MBEDTLS_CCM_C */
 
 #if defined(MBEDTLS_CMAC_C)
@@ -79,13 +91,22 @@
 #define PSA_WANT_KEY_TYPE_DH_KEY_PAIR_GENERATE 1
 #define PSA_WANT_KEY_TYPE_DH_PUBLIC_KEY 1
 #define PSA_WANT_ALG_FFDH 1
-#define PSA_WANT_DH_FAMILY_RFC7919 1
+#define PSA_WANT_DH_RFC7919_2048 1
+#define PSA_WANT_DH_RFC7919_3072 1
+#define PSA_WANT_DH_RFC7919_4096 1
+#define PSA_WANT_DH_RFC7919_6144 1
+#define PSA_WANT_DH_RFC7919_8192 1
 #define MBEDTLS_PSA_BUILTIN_ALG_FFDH 1
 #define MBEDTLS_PSA_BUILTIN_KEY_TYPE_DH_KEY_PAIR_BASIC 1
 #define MBEDTLS_PSA_BUILTIN_KEY_TYPE_DH_KEY_PAIR_IMPORT 1
 #define MBEDTLS_PSA_BUILTIN_KEY_TYPE_DH_KEY_PAIR_EXPORT 1
 #define MBEDTLS_PSA_BUILTIN_KEY_TYPE_DH_KEY_PAIR_GENERATE 1
 #define MBEDTLS_PSA_BUILTIN_KEY_TYPE_DH_PUBLIC_KEY 1
+#define MBEDTLS_PSA_BUILTIN_DH_RFC7919_2048 1
+#define MBEDTLS_PSA_BUILTIN_DH_RFC7919_3072 1
+#define MBEDTLS_PSA_BUILTIN_DH_RFC7919_4096 1
+#define MBEDTLS_PSA_BUILTIN_DH_RFC7919_6144 1
+#define MBEDTLS_PSA_BUILTIN_DH_RFC7919_8192 1
 #endif /* MBEDTLS_DHM_C */
 
 #if defined(MBEDTLS_GCM_C)
@@ -226,9 +247,12 @@
 
 #if defined(MBEDTLS_CHACHA20_C)
 #define PSA_WANT_KEY_TYPE_CHACHA20 1
-#define PSA_WANT_ALG_STREAM_CIPHER 1
 #define MBEDTLS_PSA_BUILTIN_KEY_TYPE_CHACHA20 1
+/* ALG_STREAM_CIPHER requires CIPHER_C in order to be supported in PSA */
+#if defined(MBEDTLS_CIPHER_C)
+#define PSA_WANT_ALG_STREAM_CIPHER 1
 #define MBEDTLS_PSA_BUILTIN_ALG_STREAM_CIPHER 1
+#endif
 #if defined(MBEDTLS_CHACHAPOLY_C)
 #define PSA_WANT_ALG_CHACHA20_POLY1305 1
 #define MBEDTLS_PSA_BUILTIN_ALG_CHACHA20_POLY1305 1
@@ -244,8 +268,9 @@
 #endif
 #endif
 
-#if defined(MBEDTLS_AES_C) || defined(MBEDTLS_DES_C) || \
-    defined(MBEDTLS_ARIA_C) || defined(MBEDTLS_CAMELLIA_C)
+#if (defined(MBEDTLS_AES_C) || defined(MBEDTLS_DES_C) || \
+    defined(MBEDTLS_ARIA_C) || defined(MBEDTLS_CAMELLIA_C)) && \
+    defined(MBEDTLS_CIPHER_C)
 #define MBEDTLS_PSA_BUILTIN_ALG_ECB_NO_PADDING 1
 #define PSA_WANT_ALG_ECB_NO_PADDING 1
 #endif

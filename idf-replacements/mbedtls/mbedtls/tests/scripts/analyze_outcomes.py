@@ -6,691 +6,729 @@ This script can also run on outcomes from a partial run, but the results are
 less likely to be useful.
 """
 
-import argparse
-import sys
-import traceback
 import re
-import subprocess
-import os
+import typing
 
-import check_test_cases
+import scripts_path # pylint: disable=unused-import
+from mbedtls_framework import outcome_analysis
 
-class Results:
-    """Process analysis results."""
 
-    def __init__(self):
-        self.error_count = 0
-        self.warning_count = 0
+class CoverageTask(outcome_analysis.CoverageTask):
+    """Justify test cases that are never executed."""
 
     @staticmethod
-    def log(fmt, *args, **kwargs):
-        sys.stderr.write((fmt + '\n').format(*args, **kwargs))
+    def _has_word_re(words: typing.Iterable[str],
+                     exclude: typing.Optional[str] = None) -> typing.Pattern:
+        """Construct a regex that matches if any of the words appears.
 
-    def error(self, fmt, *args, **kwargs):
-        self.log('Error: ' + fmt, *args, **kwargs)
-        self.error_count += 1
+        The occurrence must start and end at a word boundary.
 
-    def warning(self, fmt, *args, **kwargs):
-        self.log('Warning: ' + fmt, *args, **kwargs)
-        self.warning_count += 1
-
-class TestCaseOutcomes:
-    """The outcomes of one test case across many configurations."""
-    # pylint: disable=too-few-public-methods
-
-    def __init__(self):
-        # Collect a list of witnesses of the test case succeeding or failing.
-        # Currently we don't do anything with witnesses except count them.
-        # The format of a witness is determined by the read_outcome_file
-        # function; it's the platform and configuration joined by ';'.
-        self.successes = []
-        self.failures = []
-
-    def hits(self):
-        """Return the number of times a test case has been run.
-
-        This includes passes and failures, but not skips.
+        If exclude is specified, strings containing a match for that
+        regular expression will not match the returned pattern.
         """
-        return len(self.successes) + len(self.failures)
+        exclude_clause = r''
+        if exclude:
+            exclude_clause = r'(?!.*' + exclude + ')'
+        return re.compile(exclude_clause +
+                          r'.*\b(?:' + r'|'.join(words) + r')\b.*',
+                          re.DOTALL)
 
-def execute_reference_driver_tests(ref_component, driver_component, outcome_file):
-    """Run the tests specified in ref_component and driver_component. Results
-    are stored in the output_file and they will be used for the following
-    coverage analysis"""
-    # If the outcome file already exists, we assume that the user wants to
-    # perform the comparison analysis again without repeating the tests.
-    if os.path.exists(outcome_file):
-        Results.log("Outcome file (" + outcome_file + ") already exists. " + \
-                    "Tests will be skipped.")
-        return
+    IGNORED_TESTS = {
+        'ssl-opt': [
+            # We don't run ssl-opt.sh with Valgrind on the CI because
+            # it's extremely slow. We don't intend to change this.
+            'DTLS client reconnect from same port: reconnect, nbio, valgrind',
+            # We don't have IPv6 in our CI environment.
+            # https://github.com/Mbed-TLS/mbedtls-test/issues/176
+            'DTLS cookie: enabled, IPv6',
+            # Disabled due to OpenSSL bug.
+            # https://github.com/openssl/openssl/issues/18887
+            'DTLS fragmenting: 3d, openssl client, DTLS 1.2',
+            # We don't run ssl-opt.sh with Valgrind on the CI because
+            # it's extremely slow. We don't intend to change this.
+            'DTLS fragmenting: proxy MTU: auto-reduction (with valgrind)',
+            # It seems that we don't run `ssl-opt.sh` with
+            # `MBEDTLS_USE_PSA_CRYPTO` enabled but `MBEDTLS_SSL_ASYNC_PRIVATE`
+            # disabled.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9581
+            'Opaque key for server authentication: invalid key: decrypt with ECC key, no async',
+            'Opaque key for server authentication: invalid key: ecdh with RSA key, no async',
+        ],
+        'test_suite_config.mbedtls_boolean': [
+            # We never test with CBC/PKCS5/PKCS12 enabled but
+            # PKCS7 padding disabled.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9580
+            'Config: !MBEDTLS_CIPHER_PADDING_PKCS7',
+            # https://github.com/Mbed-TLS/mbedtls/issues/9583
+            'Config: !MBEDTLS_ECP_NIST_OPTIM',
+            # MBEDTLS_ECP_NO_FALLBACK only affects builds using a partial
+            # alternative implementation of ECP arithmetic (with
+            # MBEDTLS_ECP_INTERNAL_ALT enabled). We don't test those builds.
+            # The configuration enumeration script skips xxx_ALT options
+            # but not MBEDTLS_ECP_NO_FALLBACK, so it appears in the report,
+            # but we don't care about it.
+            'Config: MBEDTLS_ECP_NO_FALLBACK',
+            # Missing coverage of test configurations.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9585
+            'Config: !MBEDTLS_SSL_DTLS_ANTI_REPLAY',
+            # Missing coverage of test configurations.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9585
+            'Config: !MBEDTLS_SSL_DTLS_HELLO_VERIFY',
+            # We don't run test_suite_config when we test this.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9586
+            'Config: !MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED',
+            # We only test multithreading with pthreads.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9584
+            'Config: !MBEDTLS_THREADING_PTHREAD',
+            # Built but not tested.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9587
+            'Config: MBEDTLS_AES_USE_HARDWARE_ONLY',
+            # Untested platform-specific optimizations.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9588
+            'Config: MBEDTLS_HAVE_SSE2',
+            # Obsolete configuration option, to be replaced by
+            # PSA entropy drivers.
+            # https://github.com/Mbed-TLS/mbedtls/issues/8150
+            'Config: MBEDTLS_NO_PLATFORM_ENTROPY',
+            # Untested aspect of the platform interface.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9589
+            'Config: MBEDTLS_PLATFORM_NO_STD_FUNCTIONS',
+            # In a client-server build, test_suite_config runs in the
+            # client configuration, so it will never report
+            # MBEDTLS_PSA_CRYPTO_SPM as enabled. That's ok.
+            'Config: MBEDTLS_PSA_CRYPTO_SPM',
+            # We don't test on armv8 yet.
+            'Config: MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT',
+            'Config: MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY',
+            'Config: MBEDTLS_SHA256_USE_ARMV8_A_CRYPTO_ONLY',
+            'Config: MBEDTLS_SHA512_USE_A64_CRYPTO_ONLY',
+            # We don't run test_suite_config when we test this.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9586
+            'Config: MBEDTLS_TEST_CONSTANT_FLOW_VALGRIND',
+        ],
+        'test_suite_config.psa_boolean': [
+            # We don't test with HMAC disabled.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9591
+            'Config: !PSA_WANT_ALG_HMAC',
+            # The DERIVE key type is always enabled.
+            'Config: !PSA_WANT_KEY_TYPE_DERIVE',
+            # More granularity of key pair type enablement macros
+            # than we care to test.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9590
+            'Config: !PSA_WANT_KEY_TYPE_DH_KEY_PAIR_EXPORT',
+            'Config: !PSA_WANT_KEY_TYPE_DH_KEY_PAIR_GENERATE',
+            'Config: !PSA_WANT_KEY_TYPE_DH_KEY_PAIR_IMPORT',
+            # More granularity of key pair type enablement macros
+            # than we care to test.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9590
+            'Config: !PSA_WANT_KEY_TYPE_ECC_KEY_PAIR_EXPORT',
+            'Config: !PSA_WANT_KEY_TYPE_ECC_KEY_PAIR_IMPORT',
+            # We don't test with HMAC disabled.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9591
+            'Config: !PSA_WANT_KEY_TYPE_HMAC',
+            # The PASSWORD key type is always enabled.
+            'Config: !PSA_WANT_KEY_TYPE_PASSWORD',
+            # The PASSWORD_HASH key type is always enabled.
+            'Config: !PSA_WANT_KEY_TYPE_PASSWORD_HASH',
+            # The RAW_DATA key type is always enabled.
+            'Config: !PSA_WANT_KEY_TYPE_RAW_DATA',
+            # More granularity of key pair type enablement macros
+            # than we care to test.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9590
+            'Config: !PSA_WANT_KEY_TYPE_RSA_KEY_PAIR_EXPORT',
+            'Config: !PSA_WANT_KEY_TYPE_RSA_KEY_PAIR_IMPORT',
+            # Algorithm declared but not supported.
+            'Config: PSA_WANT_ALG_CBC_MAC',
+            # Algorithm declared but not supported.
+            'Config: PSA_WANT_ALG_XTS',
+            # Family declared but not supported.
+            'Config: PSA_WANT_ECC_SECP_K1_224',
+            # More granularity of key pair type enablement macros
+            # than we care to test.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9590
+            'Config: PSA_WANT_KEY_TYPE_DH_KEY_PAIR_DERIVE',
+            'Config: PSA_WANT_KEY_TYPE_ECC_KEY_PAIR',
+            'Config: PSA_WANT_KEY_TYPE_RSA_KEY_PAIR',
+            'Config: PSA_WANT_KEY_TYPE_RSA_KEY_PAIR_DERIVE',
+        ],
+        'test_suite_config.psa_combinations': [
+            # We don't test this unusual, but sensible configuration.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9592
+            'Config: PSA_WANT_ALG_DETERMINSTIC_ECDSA without PSA_WANT_ALG_ECDSA',
+        ],
+        'test_suite_pkcs12': [
+            # We never test with CBC/PKCS5/PKCS12 enabled but
+            # PKCS7 padding disabled.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9580
+            'PBE Decrypt, (Invalid padding & PKCS7 padding disabled)',
+            'PBE Encrypt, pad = 8 (PKCS7 padding disabled)',
+        ],
+        'test_suite_pkcs5': [
+            # We never test with CBC/PKCS5/PKCS12 enabled but
+            # PKCS7 padding disabled.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9580
+            'PBES2 Decrypt (Invalid padding & PKCS7 padding disabled)',
+            'PBES2 Encrypt, pad=6 (PKCS7 padding disabled)',
+            'PBES2 Encrypt, pad=8 (PKCS7 padding disabled)',
+        ],
+        'test_suite_psa_crypto': [
+            # We don't test this unusual, but sensible configuration.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9592
+            re.compile(r'.*ECDSA.*only deterministic supported'),
+        ],
+        'test_suite_psa_crypto_metadata': [
+            # Algorithms declared but not supported.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9579
+            'Asymmetric signature: Ed25519ph',
+            'Asymmetric signature: Ed448ph',
+            'Asymmetric signature: pure EdDSA',
+            'Cipher: XTS',
+            'MAC: CBC_MAC-3DES',
+            'MAC: CBC_MAC-AES-128',
+            'MAC: CBC_MAC-AES-192',
+            'MAC: CBC_MAC-AES-256',
+        ],
+        'test_suite_psa_crypto_not_supported.generated': [
+            # We never test with DH key support disabled but support
+            # for a DH group enabled. The dependencies of these test
+            # cases don't really make sense.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9574
+            re.compile(r'PSA \w+ DH_.*type not supported'),
+            # We only test partial support for DH with the 2048-bit group
+            # enabled and the other groups disabled.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9575
+            'PSA generate DH_KEY_PAIR(RFC7919) 2048-bit group not supported',
+            'PSA import DH_KEY_PAIR(RFC7919) 2048-bit group not supported',
+            'PSA import DH_PUBLIC_KEY(RFC7919) 2048-bit group not supported',
+        ],
+        'test_suite_psa_crypto_op_fail.generated': [
+            # We don't test this unusual, but sensible configuration.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9592
+            re.compile(r'.*: !ECDSA but DETERMINISTIC_ECDSA with ECC_.*'),
+            # PBKDF2_HMAC is not in the default configuration, so we don't
+            # enable it in depends.py where we remove hashes.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9576
+            re.compile(r'PSA key_derivation PBKDF2_HMAC\(\w+\): !(?!PBKDF2_HMAC\Z).*'),
 
-    shell_command = "tests/scripts/all.sh --outcome-file " + outcome_file + \
-                    " " + ref_component + " " + driver_component
-    Results.log("Running: " + shell_command)
-    ret_val = subprocess.run(shell_command.split(), check=False).returncode
+            # We never test with the HMAC algorithm enabled but the HMAC
+            # key type disabled. Those dependencies don't really make sense.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9573
+            re.compile(r'.* !HMAC with HMAC'),
+            # There's something wrong with PSA_WANT_ALG_RSA_PSS_ANY_SALT
+            # differing from PSA_WANT_ALG_RSA_PSS.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9578
+            re.compile(r'PSA sign RSA_PSS_ANY_SALT.*!(?:MD|RIPEMD|SHA).*'),
+            # We don't test with ECDH disabled but the key type enabled.
+            # https://github.com/Mbed-TLS/TF-PSA-Crypto/issues/161
+            re.compile(r'PSA key_agreement.* !ECDH with ECC_KEY_PAIR\(.*'),
+            # We don't test with FFDH disabled but the key type enabled.
+            # https://github.com/Mbed-TLS/TF-PSA-Crypto/issues/160
+            re.compile(r'PSA key_agreement.* !FFDH with DH_KEY_PAIR\(.*'),
+        ],
+        'test_suite_psa_crypto_op_fail.misc': [
+            # We don't test this unusual, but sensible configuration.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9592
+            'PSA sign DETERMINISTIC_ECDSA(SHA_256): !ECDSA but DETERMINISTIC_ECDSA with ECC_KEY_PAIR(SECP_R1)', #pylint: disable=line-too-long
+        ],
+        'tls13-misc': [
+            # Disabled due to OpenSSL bug.
+            # https://github.com/openssl/openssl/issues/10714
+            'TLS 1.3 O->m: resumption',
+            # Disabled due to OpenSSL command line limitation.
+            # https://github.com/Mbed-TLS/mbedtls/issues/9582
+            'TLS 1.3 m->O: resumption with early data',
+        ],
+    }
 
-    if ret_val != 0:
-        Results.log("Error: failed to run reference/driver components")
-        sys.exit(ret_val)
 
-def analyze_coverage(results, outcomes, allow_list, full_coverage):
-    """Check that all available test cases are executed at least once."""
-    available = check_test_cases.collect_available_test_cases()
-    for key in available:
-        hits = outcomes[key].hits() if key in outcomes else 0
-        if hits == 0 and key not in allow_list:
-            if full_coverage:
-                results.error('Test case not executed: {}', key)
-            else:
-                results.warning('Test case not executed: {}', key)
-        elif hits != 0 and key in allow_list:
-            # Test Case should be removed from the allow list.
-            if full_coverage:
-                results.error('Allow listed test case was executed: {}', key)
-            else:
-                results.warning('Allow listed test case was executed: {}', key)
+# The names that we give to classes derived from DriverVSReference do not
+# follow the usual naming convention, because it's more readable to use
+# underscores and parts of the configuration names. Also, these classes
+# are just there to specify some data, so they don't need repetitive
+# documentation.
+#pylint: disable=invalid-name,missing-class-docstring
 
-def analyze_driver_vs_reference(outcomes, component_ref, component_driver,
-                                ignored_suites, ignored_test=None):
-    """Check that all tests executed in the reference component are also
-    executed in the corresponding driver component.
-    Skip:
-    - full test suites provided in ignored_suites list
-    - only some specific test inside a test suite, for which the corresponding
-      output string is provided
-    """
-    available = check_test_cases.collect_available_test_cases()
-    result = True
+class DriverVSReference_hash(outcome_analysis.DriverVSReference):
+    REFERENCE = 'test_psa_crypto_config_reference_hash_use_psa'
+    DRIVER = 'test_psa_crypto_config_accel_hash_use_psa'
+    IGNORED_SUITES = [
+        'shax', 'mdx', # the software implementations that are being excluded
+        'md.psa',  # purposefully depends on whether drivers are present
+        'psa_crypto_low_hash.generated', # testing the builtins
+    ]
+    IGNORED_TESTS = {
+        'test_suite_config': [
+            re.compile(r'.*\bMBEDTLS_(MD5|RIPEMD160|SHA[0-9]+)_.*'),
+        ],
+        'test_suite_platform': [
+            # Incompatible with sanitizers (e.g. ASan). If the driver
+            # component uses a sanitizer but the reference component
+            # doesn't, we have a PASS vs SKIP mismatch.
+            'Check mbedtls_calloc overallocation',
+        ],
+    }
 
-    for key in available:
-        # Continue if test was not executed by any component
-        hits = outcomes[key].hits() if key in outcomes else 0
-        if hits == 0:
-            continue
-        # Skip ignored test suites
-        full_test_suite = key.split(';')[0] # retrieve full test suite name
-        test_string = key.split(';')[1] # retrieve the text string of this test
-        test_suite = full_test_suite.split('.')[0] # retrieve main part of test suite name
-        if test_suite in ignored_suites or full_test_suite in ignored_suites:
-            continue
-        if ((full_test_suite in ignored_test) and
-                (test_string in ignored_test[full_test_suite])):
-            continue
-        # Search for tests that run in reference component and not in driver component
-        driver_test_passed = False
-        reference_test_passed = False
-        for entry in outcomes[key].successes:
-            if component_driver in entry:
-                driver_test_passed = True
-            if component_ref in entry:
-                reference_test_passed = True
-        if(reference_test_passed and not driver_test_passed):
-            Results.log(key)
-            result = False
-    return result
+class DriverVSReference_hmac(outcome_analysis.DriverVSReference):
+    REFERENCE = 'test_psa_crypto_config_reference_hmac'
+    DRIVER = 'test_psa_crypto_config_accel_hmac'
+    IGNORED_SUITES = [
+        # These suites require legacy hash support, which is disabled
+        # in the accelerated component.
+        'shax', 'mdx',
+        # This suite tests builtins directly, but these are missing
+        # in the accelerated case.
+        'psa_crypto_low_hash.generated',
+    ]
+    IGNORED_TESTS = {
+        'test_suite_config': [
+            re.compile(r'.*\bMBEDTLS_(MD5|RIPEMD160|SHA[0-9]+)_.*'),
+            re.compile(r'.*\bMBEDTLS_MD_C\b')
+        ],
+        'test_suite_md': [
+            # Builtin HMAC is not supported in the accelerate component.
+            re.compile('.*HMAC.*'),
+            # Following tests make use of functions which are not available
+            # when MD_C is disabled, as it happens in the accelerated
+            # test component.
+            re.compile('generic .* Hash file .*'),
+            'MD list',
+        ],
+        'test_suite_md.psa': [
+            # "legacy only" tests require hash algorithms to be NOT
+            # accelerated, but this of course false for the accelerated
+            # test component.
+            re.compile('PSA dispatch .* legacy only'),
+        ],
+        'test_suite_platform': [
+            # Incompatible with sanitizers (e.g. ASan). If the driver
+            # component uses a sanitizer but the reference component
+            # doesn't, we have a PASS vs SKIP mismatch.
+            'Check mbedtls_calloc overallocation',
+        ],
+    }
 
-def analyze_outcomes(outcomes, args):
-    """Run all analyses on the given outcome collection."""
-    results = Results()
-    analyze_coverage(results, outcomes, args['allow_list'],
-                     args['full_coverage'])
-    return results
+class DriverVSReference_cipher_aead_cmac(outcome_analysis.DriverVSReference):
+    REFERENCE = 'test_psa_crypto_config_reference_cipher_aead_cmac'
+    DRIVER = 'test_psa_crypto_config_accel_cipher_aead_cmac'
+    # Modules replaced by drivers.
+    IGNORED_SUITES = [
+        # low-level (block/stream) cipher modules
+        'aes', 'aria', 'camellia', 'des', 'chacha20',
+        # AEAD modes and CMAC
+        'ccm', 'chachapoly', 'cmac', 'gcm',
+        # The Cipher abstraction layer
+        'cipher',
+    ]
+    IGNORED_TESTS = {
+        'test_suite_config': [
+            re.compile(r'.*\bMBEDTLS_(AES|ARIA|CAMELLIA|CHACHA20|DES)_.*'),
+            re.compile(r'.*\bMBEDTLS_(CCM|CHACHAPOLY|CMAC|GCM)_.*'),
+            re.compile(r'.*\bMBEDTLS_AES(\w+)_C\b.*'),
+            re.compile(r'.*\bMBEDTLS_CIPHER_.*'),
+        ],
+        # PEM decryption is not supported so far.
+        # The rest of PEM (write, unencrypted read) works though.
+        'test_suite_pem': [
+            re.compile(r'PEM read .*(AES|DES|\bencrypt).*'),
+        ],
+        'test_suite_platform': [
+            # Incompatible with sanitizers (e.g. ASan). If the driver
+            # component uses a sanitizer but the reference component
+            # doesn't, we have a PASS vs SKIP mismatch.
+            'Check mbedtls_calloc overallocation',
+        ],
+        # Following tests depend on AES_C/DES_C but are not about
+        # them really, just need to know some error code is there.
+        'test_suite_error': [
+            'Low and high error',
+            'Single low error'
+        ],
+        # Similar to test_suite_error above.
+        'test_suite_version': [
+            'Check for MBEDTLS_AES_C when already present',
+        ],
+        # The en/decryption part of PKCS#12 is not supported so far.
+        # The rest of PKCS#12 (key derivation) works though.
+        'test_suite_pkcs12': [
+            re.compile(r'PBE Encrypt, .*'),
+            re.compile(r'PBE Decrypt, .*'),
+        ],
+        # The en/decryption part of PKCS#5 is not supported so far.
+        # The rest of PKCS#5 (PBKDF2) works though.
+        'test_suite_pkcs5': [
+            re.compile(r'PBES2 Encrypt, .*'),
+            re.compile(r'PBES2 Decrypt .*'),
+        ],
+        # Encrypted keys are not supported so far.
+        # pylint: disable=line-too-long
+        'test_suite_pkparse': [
+            'Key ASN1 (Encrypted key PKCS12, trailing garbage data)',
+            'Key ASN1 (Encrypted key PKCS5, trailing garbage data)',
+            re.compile(r'Parse (RSA|EC) Key .*\(.* ([Ee]ncrypted|password).*\)'),
+        ],
+        # Encrypted keys are not supported so far.
+        'ssl-opt': [
+            'TLS: password protected server key',
+            'TLS: password protected client key',
+            'TLS: password protected server key, two certificates',
+        ],
+    }
 
-def read_outcome_file(outcome_file):
-    """Parse an outcome file and return an outcome collection.
+class DriverVSReference_ecp_light_only(outcome_analysis.DriverVSReference):
+    REFERENCE = 'test_psa_crypto_config_reference_ecc_ecp_light_only'
+    DRIVER = 'test_psa_crypto_config_accel_ecc_ecp_light_only'
+    IGNORED_SUITES = [
+        # Modules replaced by drivers
+        'ecdsa', 'ecdh', 'ecjpake',
+        # Unit tests for the built-in implementation
+        'psa_crypto_ecp',
+    ]
+    IGNORED_TESTS = {
+        'test_suite_config': [
+            re.compile(r'.*\bMBEDTLS_(ECDH|ECDSA|ECJPAKE|ECP)_.*'),
+        ],
+        'test_suite_platform': [
+            # Incompatible with sanitizers (e.g. ASan). If the driver
+            # component uses a sanitizer but the reference component
+            # doesn't, we have a PASS vs SKIP mismatch.
+            'Check mbedtls_calloc overallocation',
+        ],
+        # This test wants a legacy function that takes f_rng, p_rng
+        # arguments, and uses legacy ECDSA for that. The test is
+        # really about the wrapper around the PSA RNG, not ECDSA.
+        'test_suite_random': [
+            'PSA classic wrapper: ECDSA signature (SECP256R1)',
+        ],
+        # In the accelerated test ECP_C is not set (only ECP_LIGHT is)
+        # so we must ignore disparities in the tests for which ECP_C
+        # is required.
+        'test_suite_ecp': [
+            re.compile(r'ECP check public-private .*'),
+            re.compile(r'ECP calculate public: .*'),
+            re.compile(r'ECP gen keypair .*'),
+            re.compile(r'ECP point muladd .*'),
+            re.compile(r'ECP point multiplication .*'),
+            re.compile(r'ECP test vectors .*'),
+        ],
+        'test_suite_ssl': [
+            # This deprecated function is only present when ECP_C is On.
+            'Test configuration of EC groups through mbedtls_ssl_conf_curves()',
+        ],
+    }
 
-An outcome collection is a dictionary mapping keys to TestCaseOutcomes objects.
-The keys are the test suite name and the test case description, separated
-by a semicolon.
-"""
-    outcomes = {}
-    with open(outcome_file, 'r', encoding='utf-8') as input_file:
-        for line in input_file:
-            (platform, config, suite, case, result, _cause) = line.split(';')
-            key = ';'.join([suite, case])
-            setup = ';'.join([platform, config])
-            if key not in outcomes:
-                outcomes[key] = TestCaseOutcomes()
-            if result == 'PASS':
-                outcomes[key].successes.append(setup)
-            elif result == 'FAIL':
-                outcomes[key].failures.append(setup)
-    return outcomes
+class DriverVSReference_no_ecp_at_all(outcome_analysis.DriverVSReference):
+    REFERENCE = 'test_psa_crypto_config_reference_ecc_no_ecp_at_all'
+    DRIVER = 'test_psa_crypto_config_accel_ecc_no_ecp_at_all'
+    IGNORED_SUITES = [
+        # Modules replaced by drivers
+        'ecp', 'ecdsa', 'ecdh', 'ecjpake',
+        # Unit tests for the built-in implementation
+        'psa_crypto_ecp',
+    ]
+    IGNORED_TESTS = {
+        'test_suite_config': [
+            re.compile(r'.*\bMBEDTLS_(ECDH|ECDSA|ECJPAKE|ECP)_.*'),
+            re.compile(r'.*\bMBEDTLS_PK_PARSE_EC_COMPRESSED\b.*'),
+        ],
+        'test_suite_platform': [
+            # Incompatible with sanitizers (e.g. ASan). If the driver
+            # component uses a sanitizer but the reference component
+            # doesn't, we have a PASS vs SKIP mismatch.
+            'Check mbedtls_calloc overallocation',
+        ],
+        # See ecp_light_only
+        'test_suite_random': [
+            'PSA classic wrapper: ECDSA signature (SECP256R1)',
+        ],
+        'test_suite_pkparse': [
+            # When PK_PARSE_C and ECP_C are defined then PK_PARSE_EC_COMPRESSED
+            # is automatically enabled in build_info.h (backward compatibility)
+            # even if it is disabled in config_psa_crypto_no_ecp_at_all(). As a
+            # consequence compressed points are supported in the reference
+            # component but not in the accelerated one, so they should be skipped
+            # while checking driver's coverage.
+            re.compile(r'Parse EC Key .*compressed\)'),
+            re.compile(r'Parse Public EC Key .*compressed\)'),
+        ],
+        # See ecp_light_only
+        'test_suite_ssl': [
+            'Test configuration of EC groups through mbedtls_ssl_conf_curves()',
+        ],
+    }
 
-def do_analyze_coverage(outcome_file, args):
-    """Perform coverage analysis."""
-    outcomes = read_outcome_file(outcome_file)
-    Results.log("\n*** Analyze coverage ***\n")
-    results = analyze_outcomes(outcomes, args)
-    return results.error_count == 0
+class DriverVSReference_ecc_no_bignum(outcome_analysis.DriverVSReference):
+    REFERENCE = 'test_psa_crypto_config_reference_ecc_no_bignum'
+    DRIVER = 'test_psa_crypto_config_accel_ecc_no_bignum'
+    IGNORED_SUITES = [
+        # Modules replaced by drivers
+        'ecp', 'ecdsa', 'ecdh', 'ecjpake',
+        'bignum_core', 'bignum_random', 'bignum_mod', 'bignum_mod_raw',
+        'bignum.generated', 'bignum.misc',
+        # Unit tests for the built-in implementation
+        'psa_crypto_ecp',
+    ]
+    IGNORED_TESTS = {
+        'test_suite_config': [
+            re.compile(r'.*\bMBEDTLS_BIGNUM_C\b.*'),
+            re.compile(r'.*\bMBEDTLS_(ECDH|ECDSA|ECJPAKE|ECP)_.*'),
+            re.compile(r'.*\bMBEDTLS_PK_PARSE_EC_COMPRESSED\b.*'),
+        ],
+        'test_suite_platform': [
+            # Incompatible with sanitizers (e.g. ASan). If the driver
+            # component uses a sanitizer but the reference component
+            # doesn't, we have a PASS vs SKIP mismatch.
+            'Check mbedtls_calloc overallocation',
+        ],
+        # See ecp_light_only
+        'test_suite_random': [
+            'PSA classic wrapper: ECDSA signature (SECP256R1)',
+        ],
+        # See no_ecp_at_all
+        'test_suite_pkparse': [
+            re.compile(r'Parse EC Key .*compressed\)'),
+            re.compile(r'Parse Public EC Key .*compressed\)'),
+        ],
+        'test_suite_asn1parse': [
+            'INTEGER too large for mpi',
+        ],
+        'test_suite_asn1write': [
+            re.compile(r'ASN.1 Write mpi.*'),
+        ],
+        'test_suite_debug': [
+            re.compile(r'Debug print mbedtls_mpi.*'),
+        ],
+        # See ecp_light_only
+        'test_suite_ssl': [
+            'Test configuration of EC groups through mbedtls_ssl_conf_curves()',
+        ],
+    }
 
-def do_analyze_driver_vs_reference(outcome_file, args):
-    """Perform driver vs reference analyze."""
-    execute_reference_driver_tests(args['component_ref'], \
-                                    args['component_driver'], outcome_file)
+class DriverVSReference_ecc_ffdh_no_bignum(outcome_analysis.DriverVSReference):
+    REFERENCE = 'test_psa_crypto_config_reference_ecc_ffdh_no_bignum'
+    DRIVER = 'test_psa_crypto_config_accel_ecc_ffdh_no_bignum'
+    IGNORED_SUITES = [
+        # Modules replaced by drivers
+        'ecp', 'ecdsa', 'ecdh', 'ecjpake', 'dhm',
+        'bignum_core', 'bignum_random', 'bignum_mod', 'bignum_mod_raw',
+        'bignum.generated', 'bignum.misc',
+        # Unit tests for the built-in implementation
+        'psa_crypto_ecp',
+    ]
+    IGNORED_TESTS = {
+        'ssl-opt': [
+            # DHE support in TLS 1.2 requires built-in MBEDTLS_DHM_C
+            # (because it needs custom groups, which PSA does not
+            # provide), even with MBEDTLS_USE_PSA_CRYPTO.
+            re.compile(r'PSK callback:.*\bdhe-psk\b.*'),
+        ],
+        'test_suite_config': [
+            re.compile(r'.*\bMBEDTLS_BIGNUM_C\b.*'),
+            re.compile(r'.*\bMBEDTLS_DHM_C\b.*'),
+            re.compile(r'.*\bMBEDTLS_(ECDH|ECDSA|ECJPAKE|ECP)_.*'),
+            re.compile(r'.*\bMBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED\b.*'),
+            re.compile(r'.*\bMBEDTLS_PK_PARSE_EC_COMPRESSED\b.*'),
+        ],
+        'test_suite_platform': [
+            # Incompatible with sanitizers (e.g. ASan). If the driver
+            # component uses a sanitizer but the reference component
+            # doesn't, we have a PASS vs SKIP mismatch.
+            'Check mbedtls_calloc overallocation',
+        ],
+        # See ecp_light_only
+        'test_suite_random': [
+            'PSA classic wrapper: ECDSA signature (SECP256R1)',
+        ],
+        # See no_ecp_at_all
+        'test_suite_pkparse': [
+            re.compile(r'Parse EC Key .*compressed\)'),
+            re.compile(r'Parse Public EC Key .*compressed\)'),
+        ],
+        'test_suite_asn1parse': [
+            'INTEGER too large for mpi',
+        ],
+        'test_suite_asn1write': [
+            re.compile(r'ASN.1 Write mpi.*'),
+        ],
+        'test_suite_debug': [
+            re.compile(r'Debug print mbedtls_mpi.*'),
+        ],
+        # See ecp_light_only
+        'test_suite_ssl': [
+            'Test configuration of EC groups through mbedtls_ssl_conf_curves()',
+        ],
+    }
 
-    ignored_suites = ['test_suite_' + x for x in args['ignored_suites']]
+class DriverVSReference_ffdh_alg(outcome_analysis.DriverVSReference):
+    REFERENCE = 'test_psa_crypto_config_reference_ffdh'
+    DRIVER = 'test_psa_crypto_config_accel_ffdh'
+    IGNORED_SUITES = ['dhm']
+    IGNORED_TESTS = {
+        'test_suite_config': [
+            re.compile(r'.*\bMBEDTLS_DHM_C\b.*'),
+        ],
+        'test_suite_platform': [
+            # Incompatible with sanitizers (e.g. ASan). If the driver
+            # component uses a sanitizer but the reference component
+            # doesn't, we have a PASS vs SKIP mismatch.
+            'Check mbedtls_calloc overallocation',
+        ],
+    }
 
-    outcomes = read_outcome_file(outcome_file)
-    Results.log("\n*** Analyze driver {} vs reference {} ***\n".format(
-        args['component_driver'], args['component_ref']))
-    return analyze_driver_vs_reference(outcomes, args['component_ref'],
-                                       args['component_driver'], ignored_suites,
-                                       args['ignored_tests'])
+class DriverVSReference_tfm_config(outcome_analysis.DriverVSReference):
+    REFERENCE = 'test_tfm_config_no_p256m'
+    DRIVER = 'test_tfm_config_p256m_driver_accel_ec'
+    IGNORED_SUITES = [
+        # Modules replaced by drivers
+        'asn1parse', 'asn1write',
+        'ecp', 'ecdsa', 'ecdh', 'ecjpake',
+        'bignum_core', 'bignum_random', 'bignum_mod', 'bignum_mod_raw',
+        'bignum.generated', 'bignum.misc',
+        # Unit tests for the built-in implementation
+        'psa_crypto_ecp',
+    ]
+    IGNORED_TESTS = {
+        'test_suite_config': [
+            re.compile(r'.*\bMBEDTLS_BIGNUM_C\b.*'),
+            re.compile(r'.*\bMBEDTLS_(ASN1\w+)_C\b.*'),
+            re.compile(r'.*\bMBEDTLS_(ECDH|ECDSA|ECP)_.*'),
+            re.compile(r'.*\bMBEDTLS_PSA_P256M_DRIVER_ENABLED\b.*')
+        ],
+        'test_suite_config.crypto_combinations': [
+            'Config: ECC: Weierstrass curves only',
+        ],
+        'test_suite_platform': [
+            # Incompatible with sanitizers (e.g. ASan). If the driver
+            # component uses a sanitizer but the reference component
+            # doesn't, we have a PASS vs SKIP mismatch.
+            'Check mbedtls_calloc overallocation',
+        ],
+        # See ecp_light_only
+        'test_suite_random': [
+            'PSA classic wrapper: ECDSA signature (SECP256R1)',
+        ],
+    }
+
+class DriverVSReference_rsa(outcome_analysis.DriverVSReference):
+    REFERENCE = 'test_psa_crypto_config_reference_rsa_crypto'
+    DRIVER = 'test_psa_crypto_config_accel_rsa_crypto'
+    IGNORED_SUITES = [
+        # Modules replaced by drivers.
+        'rsa', 'pkcs1_v15', 'pkcs1_v21',
+        # We temporarily don't care about PK stuff.
+        'pk', 'pkwrite', 'pkparse'
+    ]
+    IGNORED_TESTS = {
+        'test_suite_config': [
+            re.compile(r'.*\bMBEDTLS_(PKCS1|RSA)_.*'),
+            re.compile(r'.*\bMBEDTLS_GENPRIME\b.*')
+        ],
+        'test_suite_platform': [
+            # Incompatible with sanitizers (e.g. ASan). If the driver
+            # component uses a sanitizer but the reference component
+            # doesn't, we have a PASS vs SKIP mismatch.
+            'Check mbedtls_calloc overallocation',
+        ],
+        # Following tests depend on RSA_C but are not about
+        # them really, just need to know some error code is there.
+        'test_suite_error': [
+            'Low and high error',
+            'Single high error'
+        ],
+        # Constant time operations only used for PKCS1_V15
+        'test_suite_constant_time': [
+            re.compile(r'mbedtls_ct_zeroize_if .*'),
+            re.compile(r'mbedtls_ct_memmove_left .*')
+        ],
+        'test_suite_psa_crypto': [
+            # We don't support generate_key_custom entry points
+            # in drivers yet.
+            re.compile(r'PSA generate key custom: RSA, e=.*'),
+            re.compile(r'PSA generate key ext: RSA, e=.*'),
+        ],
+    }
+
+class DriverVSReference_block_cipher_dispatch(outcome_analysis.DriverVSReference):
+    REFERENCE = 'test_full_block_cipher_legacy_dispatch'
+    DRIVER = 'test_full_block_cipher_psa_dispatch'
+    IGNORED_SUITES = [
+        # Skipped in the accelerated component
+        'aes', 'aria', 'camellia',
+        # These require AES_C, ARIA_C or CAMELLIA_C to be enabled in
+        # order for the cipher module (actually cipher_wrapper) to work
+        # properly. However these symbols are disabled in the accelerated
+        # component so we ignore them.
+        'cipher.ccm', 'cipher.gcm', 'cipher.aes', 'cipher.aria',
+        'cipher.camellia',
+    ]
+    IGNORED_TESTS = {
+        'test_suite_config': [
+            re.compile(r'.*\bMBEDTLS_(AES|ARIA|CAMELLIA)_.*'),
+            re.compile(r'.*\bMBEDTLS_AES(\w+)_C\b.*'),
+        ],
+        'test_suite_cmac': [
+            # Following tests require AES_C/ARIA_C/CAMELLIA_C to be enabled,
+            # but these are not available in the accelerated component.
+            'CMAC null arguments',
+            re.compile('CMAC.* (AES|ARIA|Camellia).*'),
+        ],
+        'test_suite_cipher.padding': [
+            # Following tests require AES_C/CAMELLIA_C to be enabled,
+            # but these are not available in the accelerated component.
+            re.compile('Set( non-existent)? padding with (AES|CAMELLIA).*'),
+        ],
+        'test_suite_pkcs5': [
+            # The AES part of PKCS#5 PBES2 is not yet supported.
+            # The rest of PKCS#5 (PBKDF2) works, though.
+            re.compile(r'PBES2 .* AES-.*')
+        ],
+        'test_suite_pkparse': [
+            # PEM (called by pkparse) requires AES_C in order to decrypt
+            # the key, but this is not available in the accelerated
+            # component.
+            re.compile('Parse RSA Key.*(password|AES-).*'),
+        ],
+        'test_suite_pem': [
+            # Following tests require AES_C, but this is diabled in the
+            # accelerated component.
+            re.compile('PEM read .*AES.*'),
+            'PEM read (unknown encryption algorithm)',
+        ],
+        'test_suite_error': [
+            # Following tests depend on AES_C but are not about them
+            # really, just need to know some error code is there.
+            'Single low error',
+            'Low and high error',
+        ],
+        'test_suite_version': [
+            # Similar to test_suite_error above.
+            'Check for MBEDTLS_AES_C when already present',
+        ],
+        'test_suite_platform': [
+            # Incompatible with sanitizers (e.g. ASan). If the driver
+            # component uses a sanitizer but the reference component
+            # doesn't, we have a PASS vs SKIP mismatch.
+            'Check mbedtls_calloc overallocation',
+        ],
+    }
+
+#pylint: enable=invalid-name,missing-class-docstring
+
 
 # List of tasks with a function that can handle this task and additional arguments if required
-TASKS = {
-    'analyze_coverage':                 {
-        'test_function': do_analyze_coverage,
-        'args': {
-            'allow_list': [
-                # Algorithm not supported yet
-                'test_suite_psa_crypto_metadata;Asymmetric signature: pure EdDSA',
-                # Algorithm not supported yet
-                'test_suite_psa_crypto_metadata;Cipher: XTS',
-            ],
-            'full_coverage': False,
-        }
-    },
-    # There are 2 options to use analyze_driver_vs_reference_xxx locally:
-    # 1. Run tests and then analysis:
-    #   - tests/scripts/all.sh --outcome-file "$PWD/out.csv" <component_ref> <component_driver>
-    #   - tests/scripts/analyze_outcomes.py out.csv analyze_driver_vs_reference_xxx
-    # 2. Let this script run both automatically:
-    #   - tests/scripts/analyze_outcomes.py out.csv analyze_driver_vs_reference_xxx
-    'analyze_driver_vs_reference_hash': {
-        'test_function': do_analyze_driver_vs_reference,
-        'args': {
-            'component_ref': 'test_psa_crypto_config_reference_hash_use_psa',
-            'component_driver': 'test_psa_crypto_config_accel_hash_use_psa',
-            'ignored_suites': [
-                'shax', 'mdx', # the software implementations that are being excluded
-                'md.psa',  # purposefully depends on whether drivers are present
-                'psa_crypto_low_hash.generated', # testing the builtins
-            ],
-            'ignored_tests': {
-            }
-        }
-    },
-    'analyze_driver_vs_reference_ecp_light_only': {
-        'test_function': do_analyze_driver_vs_reference,
-        'args': {
-            'component_ref': 'test_psa_crypto_config_reference_ecc_ecp_light_only',
-            'component_driver': 'test_psa_crypto_config_accel_ecc_ecp_light_only',
-            'ignored_suites': [
-                'ecdsa',
-                'ecdh',
-                'ecjpake',
-            ],
-            'ignored_tests': {
-                'test_suite_random': [
-                    'PSA classic wrapper: ECDSA signature (SECP256R1)',
-                ],
-                # In the accelerated test ECP_C is not set (only ECP_LIGHT is)
-                # so we must ignore disparities in the tests for which ECP_C
-                # is required.
-                'test_suite_ecp': [
-                    'ECP check public-private #1 (OK)',
-                    'ECP check public-private #2 (group none)',
-                    'ECP check public-private #3 (group mismatch)',
-                    'ECP check public-private #4 (Qx mismatch)',
-                    'ECP check public-private #5 (Qy mismatch)',
-                    'ECP check public-private #6 (wrong Qx)',
-                    'ECP check public-private #7 (wrong Qy)',
-                    'ECP gen keypair [#1]',
-                    'ECP gen keypair [#2]',
-                    'ECP gen keypair [#3]',
-                    'ECP gen keypair wrapper',
-                    'ECP point muladd secp256r1 #1',
-                    'ECP point muladd secp256r1 #2',
-                    'ECP point multiplication Curve25519 (element of order 2: origin) #3',
-                    'ECP point multiplication Curve25519 (element of order 4: 1) #4',
-                    'ECP point multiplication Curve25519 (element of order 8) #5',
-                    'ECP point multiplication Curve25519 (normalized) #1',
-                    'ECP point multiplication Curve25519 (not normalized) #2',
-                    'ECP point multiplication rng fail Curve25519',
-                    'ECP point multiplication rng fail secp256r1',
-                    'ECP test vectors Curve25519',
-                    'ECP test vectors Curve448 (RFC 7748 6.2, after decodeUCoordinate)',
-                    'ECP test vectors brainpoolP256r1 rfc 7027',
-                    'ECP test vectors brainpoolP384r1 rfc 7027',
-                    'ECP test vectors brainpoolP512r1 rfc 7027',
-                    'ECP test vectors secp192k1',
-                    'ECP test vectors secp192r1 rfc 5114',
-                    'ECP test vectors secp224k1',
-                    'ECP test vectors secp224r1 rfc 5114',
-                    'ECP test vectors secp256k1',
-                    'ECP test vectors secp256r1 rfc 5114',
-                    'ECP test vectors secp384r1 rfc 5114',
-                    'ECP test vectors secp521r1 rfc 5114',
-                ],
-                'test_suite_psa_crypto': [
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1 (1 redraw)',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1, exercise ECDSA',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp384r1',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp521r1 #0',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp521r1 #1',
-                ],
-                'test_suite_ssl': [
-                    'Test configuration of groups for DHE through mbedtls_ssl_conf_curves()',
-                ],
-            }
-        }
-    },
-    'analyze_driver_vs_reference_no_ecp_at_all': {
-        'test_function': do_analyze_driver_vs_reference,
-        'args': {
-            'component_ref': 'test_psa_crypto_config_reference_ecc_no_ecp_at_all',
-            'component_driver': 'test_psa_crypto_config_accel_ecc_no_ecp_at_all',
-            'ignored_suites': [
-                # Ignore test suites for the modules that are disabled in the
-                # accelerated test case.
-                'ecp',
-                'ecdsa',
-                'ecdh',
-                'ecjpake',
-            ],
-            'ignored_tests': {
-                'test_suite_random': [
-                    'PSA classic wrapper: ECDSA signature (SECP256R1)',
-                ],
-                'test_suite_psa_crypto': [
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1 (1 redraw)',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1, exercise ECDSA',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp384r1',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp521r1 #0',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp521r1 #1',
-                    'PSA key derivation: bits=7 invalid for ECC BRAINPOOL_P_R1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECP_K1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECP_R1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECP_R2 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECT_K1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECT_R1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECT_R2 (ECC enabled)',
-                ],
-                'test_suite_pkparse': [
-                    # When PK_PARSE_C and ECP_C are defined then PK_PARSE_EC_COMPRESSED
-                    # is automatically enabled in build_info.h (backward compatibility)
-                    # even if it is disabled in config_psa_crypto_no_ecp_at_all(). As a
-                    # consequence compressed points are supported in the reference
-                    # component but not in the accelerated one, so they should be skipped
-                    # while checking driver's coverage.
-                    'Parse EC Key #10a (SEC1 PEM, secp384r1, compressed)',
-                    'Parse EC Key #11a (SEC1 PEM, secp521r1, compressed)',
-                    'Parse EC Key #12a (SEC1 PEM, bp256r1, compressed)',
-                    'Parse EC Key #13a (SEC1 PEM, bp384r1, compressed)',
-                    'Parse EC Key #14a (SEC1 PEM, bp512r1, compressed)',
-                    'Parse EC Key #2a (SEC1 PEM, secp192r1, compressed)',
-                    'Parse EC Key #8a (SEC1 PEM, secp224r1, compressed)',
-                    'Parse EC Key #9a (SEC1 PEM, secp256r1, compressed)',
-                    'Parse Public EC Key #2a (RFC 5480, PEM, secp192r1, compressed)',
-                    'Parse Public EC Key #3a (RFC 5480, secp224r1, compressed)',
-                    'Parse Public EC Key #4a (RFC 5480, secp256r1, compressed)',
-                    'Parse Public EC Key #5a (RFC 5480, secp384r1, compressed)',
-                    'Parse Public EC Key #6a (RFC 5480, secp521r1, compressed)',
-                    'Parse Public EC Key #7a (RFC 5480, brainpoolP256r1, compressed)',
-                    'Parse Public EC Key #8a (RFC 5480, brainpoolP384r1, compressed)',
-                    'Parse Public EC Key #9a (RFC 5480, brainpoolP512r1, compressed)',
-                ],
-                'test_suite_ssl': [
-                    'Test configuration of groups for DHE through mbedtls_ssl_conf_curves()',
-                ],
-            }
-        }
-    },
-    'analyze_driver_vs_reference_ecc_no_bignum': {
-        'test_function': do_analyze_driver_vs_reference,
-        'args': {
-            'component_ref': 'test_psa_crypto_config_reference_ecc_no_bignum',
-            'component_driver': 'test_psa_crypto_config_accel_ecc_no_bignum',
-            'ignored_suites': [
-                # Ignore test suites for the modules that are disabled in the
-                # accelerated test case.
-                'ecp',
-                'ecdsa',
-                'ecdh',
-                'ecjpake',
-                'bignum_core',
-                'bignum_random',
-                'bignum_mod',
-                'bignum_mod_raw',
-                'bignum.generated',
-                'bignum.misc',
-            ],
-            'ignored_tests': {
-                'test_suite_random': [
-                    'PSA classic wrapper: ECDSA signature (SECP256R1)',
-                ],
-                'test_suite_psa_crypto': [
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1 (1 redraw)',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1, exercise ECDSA',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp384r1',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp521r1 #0',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp521r1 #1',
-                    'PSA key derivation: bits=7 invalid for ECC BRAINPOOL_P_R1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECP_K1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECP_R1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECP_R2 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECT_K1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECT_R1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECT_R2 (ECC enabled)',
-                ],
-                'test_suite_pkparse': [
-                    # See the description provided above in the
-                    # analyze_driver_vs_reference_no_ecp_at_all component.
-                    'Parse EC Key #10a (SEC1 PEM, secp384r1, compressed)',
-                    'Parse EC Key #11a (SEC1 PEM, secp521r1, compressed)',
-                    'Parse EC Key #12a (SEC1 PEM, bp256r1, compressed)',
-                    'Parse EC Key #13a (SEC1 PEM, bp384r1, compressed)',
-                    'Parse EC Key #14a (SEC1 PEM, bp512r1, compressed)',
-                    'Parse EC Key #2a (SEC1 PEM, secp192r1, compressed)',
-                    'Parse EC Key #8a (SEC1 PEM, secp224r1, compressed)',
-                    'Parse EC Key #9a (SEC1 PEM, secp256r1, compressed)',
-                    'Parse Public EC Key #2a (RFC 5480, PEM, secp192r1, compressed)',
-                    'Parse Public EC Key #3a (RFC 5480, secp224r1, compressed)',
-                    'Parse Public EC Key #4a (RFC 5480, secp256r1, compressed)',
-                    'Parse Public EC Key #5a (RFC 5480, secp384r1, compressed)',
-                    'Parse Public EC Key #6a (RFC 5480, secp521r1, compressed)',
-                    'Parse Public EC Key #7a (RFC 5480, brainpoolP256r1, compressed)',
-                    'Parse Public EC Key #8a (RFC 5480, brainpoolP384r1, compressed)',
-                    'Parse Public EC Key #9a (RFC 5480, brainpoolP512r1, compressed)',
-                ],
-                'test_suite_asn1parse': [
-                    # This test depends on BIGNUM_C
-                    'INTEGER too large for mpi',
-                ],
-                'test_suite_asn1write': [
-                    # Following tests depends on BIGNUM_C
-                    'ASN.1 Write mpi 0 (1 limb)',
-                    'ASN.1 Write mpi 0 (null)',
-                    'ASN.1 Write mpi 0x100',
-                    'ASN.1 Write mpi 0x7f',
-                    'ASN.1 Write mpi 0x7f with leading 0 limb',
-                    'ASN.1 Write mpi 0x80',
-                    'ASN.1 Write mpi 0x80 with leading 0 limb',
-                    'ASN.1 Write mpi 0xff',
-                    'ASN.1 Write mpi 1',
-                    'ASN.1 Write mpi, 127*8 bits',
-                    'ASN.1 Write mpi, 127*8+1 bits',
-                    'ASN.1 Write mpi, 127*8-1 bits',
-                    'ASN.1 Write mpi, 255*8 bits',
-                    'ASN.1 Write mpi, 255*8-1 bits',
-                    'ASN.1 Write mpi, 256*8-1 bits',
-                ],
-                'test_suite_debug': [
-                    # Following tests depends on BIGNUM_C
-                    'Debug print mbedtls_mpi #2: 3 bits',
-                    'Debug print mbedtls_mpi: 0 (empty representation)',
-                    'Debug print mbedtls_mpi: 0 (non-empty representation)',
-                    'Debug print mbedtls_mpi: 49 bits',
-                    'Debug print mbedtls_mpi: 759 bits',
-                    'Debug print mbedtls_mpi: 764 bits #1',
-                    'Debug print mbedtls_mpi: 764 bits #2',
-                ],
-                'test_suite_ssl': [
-                    'Test configuration of groups for DHE through mbedtls_ssl_conf_curves()',
-                ],
-            }
-        }
-    },
-    'analyze_driver_vs_reference_ecc_ffdh_no_bignum': {
-        'test_function': do_analyze_driver_vs_reference,
-        'args': {
-            'component_ref': 'test_psa_crypto_config_reference_ecc_ffdh_no_bignum',
-            'component_driver': 'test_psa_crypto_config_accel_ecc_ffdh_no_bignum',
-            'ignored_suites': [
-                # Ignore test suites for the modules that are disabled in the
-                # accelerated test case.
-                'ecp',
-                'ecdsa',
-                'ecdh',
-                'ecjpake',
-                'bignum_core',
-                'bignum_random',
-                'bignum_mod',
-                'bignum_mod_raw',
-                'bignum.generated',
-                'bignum.misc',
-                'dhm',
-            ],
-            'ignored_tests': {
-                'test_suite_random': [
-                    'PSA classic wrapper: ECDSA signature (SECP256R1)',
-                ],
-                'test_suite_psa_crypto': [
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1 (1 redraw)',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1, exercise ECDSA',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp384r1',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp521r1 #0',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp521r1 #1',
-                    'PSA key derivation: bits=7 invalid for ECC BRAINPOOL_P_R1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECP_K1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECP_R1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECP_R2 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECT_K1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECT_R1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECT_R2 (ECC enabled)',
-                ],
-                'test_suite_pkparse': [
-                    # See the description provided above in the
-                    # analyze_driver_vs_reference_no_ecp_at_all component.
-                    'Parse EC Key #10a (SEC1 PEM, secp384r1, compressed)',
-                    'Parse EC Key #11a (SEC1 PEM, secp521r1, compressed)',
-                    'Parse EC Key #12a (SEC1 PEM, bp256r1, compressed)',
-                    'Parse EC Key #13a (SEC1 PEM, bp384r1, compressed)',
-                    'Parse EC Key #14a (SEC1 PEM, bp512r1, compressed)',
-                    'Parse EC Key #2a (SEC1 PEM, secp192r1, compressed)',
-                    'Parse EC Key #8a (SEC1 PEM, secp224r1, compressed)',
-                    'Parse EC Key #9a (SEC1 PEM, secp256r1, compressed)',
-                    'Parse Public EC Key #2a (RFC 5480, PEM, secp192r1, compressed)',
-                    'Parse Public EC Key #3a (RFC 5480, secp224r1, compressed)',
-                    'Parse Public EC Key #4a (RFC 5480, secp256r1, compressed)',
-                    'Parse Public EC Key #5a (RFC 5480, secp384r1, compressed)',
-                    'Parse Public EC Key #6a (RFC 5480, secp521r1, compressed)',
-                    'Parse Public EC Key #7a (RFC 5480, brainpoolP256r1, compressed)',
-                    'Parse Public EC Key #8a (RFC 5480, brainpoolP384r1, compressed)',
-                    'Parse Public EC Key #9a (RFC 5480, brainpoolP512r1, compressed)',
-                ],
-                'test_suite_asn1parse': [
-                    # This test depends on BIGNUM_C
-                    'INTEGER too large for mpi',
-                ],
-                'test_suite_asn1write': [
-                    # Following tests depends on BIGNUM_C
-                    'ASN.1 Write mpi 0 (1 limb)',
-                    'ASN.1 Write mpi 0 (null)',
-                    'ASN.1 Write mpi 0x100',
-                    'ASN.1 Write mpi 0x7f',
-                    'ASN.1 Write mpi 0x7f with leading 0 limb',
-                    'ASN.1 Write mpi 0x80',
-                    'ASN.1 Write mpi 0x80 with leading 0 limb',
-                    'ASN.1 Write mpi 0xff',
-                    'ASN.1 Write mpi 1',
-                    'ASN.1 Write mpi, 127*8 bits',
-                    'ASN.1 Write mpi, 127*8+1 bits',
-                    'ASN.1 Write mpi, 127*8-1 bits',
-                    'ASN.1 Write mpi, 255*8 bits',
-                    'ASN.1 Write mpi, 255*8-1 bits',
-                    'ASN.1 Write mpi, 256*8-1 bits',
-                ],
-                'test_suite_debug': [
-                    # Following tests depends on BIGNUM_C
-                    'Debug print mbedtls_mpi #2: 3 bits',
-                    'Debug print mbedtls_mpi: 0 (empty representation)',
-                    'Debug print mbedtls_mpi: 0 (non-empty representation)',
-                    'Debug print mbedtls_mpi: 49 bits',
-                    'Debug print mbedtls_mpi: 759 bits',
-                    'Debug print mbedtls_mpi: 764 bits #1',
-                    'Debug print mbedtls_mpi: 764 bits #2',
-                ],
-                'test_suite_ssl': [
-                    'Test configuration of groups for DHE through mbedtls_ssl_conf_curves()',
-                ],
-            }
-        }
-    },
-    'analyze_driver_vs_reference_ffdh_alg': {
-        'test_function': do_analyze_driver_vs_reference,
-        'args': {
-            'component_ref': 'test_psa_crypto_config_reference_ffdh',
-            'component_driver': 'test_psa_crypto_config_accel_ffdh',
-            'ignored_suites': ['dhm'],
-            'ignored_tests': {}
-        }
-    },
-    'analyze_driver_vs_reference_tfm_config': {
-        'test_function':  do_analyze_driver_vs_reference,
-        'args': {
-            'component_ref': 'test_tfm_config',
-            'component_driver': 'test_tfm_config_p256m_driver_accel_ec',
-            'ignored_suites': [
-                # Ignore test suites for the modules that are disabled in the
-                # accelerated test case.
-                'ecp',
-                'ecdsa',
-                'ecdh',
-                'ecjpake',
-                'bignum_core',
-                'bignum_random',
-                'bignum_mod',
-                'bignum_mod_raw',
-                'bignum.generated',
-                'bignum.misc',
-            ],
-            'ignored_tests': {
-                # Ignore all tests that require DERIVE support which is disabled
-                # in the driver version
-                'test_suite_psa_crypto': [
-                    'PSA key agreement setup: ECDH + HKDF-SHA-256: good',
-                    ('PSA key agreement setup: ECDH + HKDF-SHA-256: good, key algorithm broader '
-                     'than required'),
-                    'PSA key agreement setup: ECDH + HKDF-SHA-256: public key not on curve',
-                    'PSA key agreement setup: KDF instead of a key agreement algorithm',
-                    'PSA key agreement setup: bad key agreement algorithm',
-                    'PSA key agreement: ECDH SECP256R1 (RFC 5903) + HKDF-SHA-256: capacity=8160',
-                    'PSA key agreement: ECDH SECP256R1 (RFC 5903) + HKDF-SHA-256: read 0+32',
-                    'PSA key agreement: ECDH SECP256R1 (RFC 5903) + HKDF-SHA-256: read 1+31',
-                    'PSA key agreement: ECDH SECP256R1 (RFC 5903) + HKDF-SHA-256: read 31+1',
-                    'PSA key agreement: ECDH SECP256R1 (RFC 5903) + HKDF-SHA-256: read 32+0',
-                    'PSA key agreement: ECDH SECP256R1 (RFC 5903) + HKDF-SHA-256: read 32+32',
-                    'PSA key agreement: ECDH SECP256R1 (RFC 5903) + HKDF-SHA-256: read 64+0',
-                    'PSA key derivation: ECDH on P256 with HKDF-SHA256, info first',
-                    'PSA key derivation: ECDH on P256 with HKDF-SHA256, key output',
-                    'PSA key derivation: ECDH on P256 with HKDF-SHA256, missing info',
-                    'PSA key derivation: ECDH on P256 with HKDF-SHA256, omitted salt',
-                    'PSA key derivation: ECDH on P256 with HKDF-SHA256, raw output',
-                    'PSA key derivation: ECDH on P256 with HKDF-SHA256, salt after secret',
-                    'PSA key derivation: ECDH with TLS 1.2 PRF SHA-256, good case',
-                    'PSA key derivation: ECDH with TLS 1.2 PRF SHA-256, missing label',
-                    'PSA key derivation: ECDH with TLS 1.2 PRF SHA-256, missing label and secret',
-                    'PSA key derivation: ECDH with TLS 1.2 PRF SHA-256, no inputs',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1 (1 redraw)',
-                    'PSA key derivation: HKDF-SHA-256 -> ECC secp256r1, exercise ECDSA',
-                    'PSA key derivation: TLS 1.2 Mix-PSK-to-MS, SHA-256, 0+48, ka',
-                    'PSA key derivation: TLS 1.2 Mix-PSK-to-MS, SHA-256, 24+24, ka',
-                    'PSA key derivation: TLS 1.2 Mix-PSK-to-MS, SHA-256, 48+0, ka',
-                    'PSA key derivation: TLS 1.2 Mix-PSK-to-MS, bad state #1, ka',
-                    'PSA key derivation: TLS 1.2 Mix-PSK-to-MS, bad state #3, ka',
-                    'PSA key derivation: TLS 1.2 Mix-PSK-to-MS, bad state #4, ka',
-                    'PSA key derivation: bits=7 invalid for ECC BRAINPOOL_P_R1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC MONTGOMERY (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECP_K1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECP_R1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECP_R2 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECT_K1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECT_R1 (ECC enabled)',
-                    'PSA key derivation: bits=7 invalid for ECC SECT_R2 (ECC enabled)',
-                    'PSA raw key agreement: ECDH SECP256R1 (RFC 5903)',
-                ],
-                'test_suite_random': [
-                    'PSA classic wrapper: ECDSA signature (SECP256R1)',
-                ],
-                'test_suite_psa_crypto_pake': [
-                    'PSA PAKE: ecjpake size macros',
-                ],
-                'test_suite_asn1parse': [
-                    # This test depends on BIGNUM_C
-                    'INTEGER too large for mpi',
-                ],
-                'test_suite_asn1write': [
-                    # Following tests depends on BIGNUM_C
-                    'ASN.1 Write mpi 0 (1 limb)',
-                    'ASN.1 Write mpi 0 (null)',
-                    'ASN.1 Write mpi 0x100',
-                    'ASN.1 Write mpi 0x7f',
-                    'ASN.1 Write mpi 0x7f with leading 0 limb',
-                    'ASN.1 Write mpi 0x80',
-                    'ASN.1 Write mpi 0x80 with leading 0 limb',
-                    'ASN.1 Write mpi 0xff',
-                    'ASN.1 Write mpi 1',
-                    'ASN.1 Write mpi, 127*8 bits',
-                    'ASN.1 Write mpi, 127*8+1 bits',
-                    'ASN.1 Write mpi, 127*8-1 bits',
-                    'ASN.1 Write mpi, 255*8 bits',
-                    'ASN.1 Write mpi, 255*8-1 bits',
-                    'ASN.1 Write mpi, 256*8-1 bits',
-                ],
-            }
-        }
-    }
+KNOWN_TASKS = {
+    'analyze_coverage': CoverageTask,
+    'analyze_driver_vs_reference_hash': DriverVSReference_hash,
+    'analyze_driver_vs_reference_hmac': DriverVSReference_hmac,
+    'analyze_driver_vs_reference_cipher_aead_cmac': DriverVSReference_cipher_aead_cmac,
+    'analyze_driver_vs_reference_ecp_light_only': DriverVSReference_ecp_light_only,
+    'analyze_driver_vs_reference_no_ecp_at_all': DriverVSReference_no_ecp_at_all,
+    'analyze_driver_vs_reference_ecc_no_bignum': DriverVSReference_ecc_no_bignum,
+    'analyze_driver_vs_reference_ecc_ffdh_no_bignum': DriverVSReference_ecc_ffdh_no_bignum,
+    'analyze_driver_vs_reference_ffdh_alg': DriverVSReference_ffdh_alg,
+    'analyze_driver_vs_reference_tfm_config': DriverVSReference_tfm_config,
+    'analyze_driver_vs_reference_rsa': DriverVSReference_rsa,
+    'analyze_block_cipher_dispatch': DriverVSReference_block_cipher_dispatch,
 }
 
-def main():
-    try:
-        parser = argparse.ArgumentParser(description=__doc__)
-        parser.add_argument('outcomes', metavar='OUTCOMES.CSV',
-                            help='Outcome file to analyze')
-        parser.add_argument('task', default='all', nargs='?',
-                            help='Analysis to be done. By default, run all tasks. '
-                                 'With one or more TASK, run only those. '
-                                 'TASK can be the name of a single task or '
-                                 'comma/space-separated list of tasks. ')
-        parser.add_argument('--list', action='store_true',
-                            help='List all available tasks and exit.')
-        parser.add_argument('--require-full-coverage', action='store_true',
-                            dest='full_coverage', help="Require all available "
-                            "test cases to be executed and issue an error "
-                            "otherwise. This flag is ignored if 'task' is "
-                            "neither 'all' nor 'analyze_coverage'")
-        options = parser.parse_args()
-
-        if options.list:
-            for task in TASKS:
-                Results.log(task)
-            sys.exit(0)
-
-        result = True
-
-        if options.task == 'all':
-            tasks = TASKS.keys()
-        else:
-            tasks = re.split(r'[, ]+', options.task)
-
-            for task in tasks:
-                if task not in TASKS:
-                    Results.log('Error: invalid task: {}'.format(task))
-                    sys.exit(1)
-
-        TASKS['analyze_coverage']['args']['full_coverage'] = \
-            options.full_coverage
-
-        for task in TASKS:
-            if task in tasks:
-                if not TASKS[task]['test_function'](options.outcomes, TASKS[task]['args']):
-                    result = False
-
-        if result is False:
-            sys.exit(1)
-        Results.log("SUCCESS :-)")
-    except Exception: # pylint: disable=broad-except
-        # Print the backtrace and exit explicitly with our chosen status.
-        traceback.print_exc()
-        sys.exit(120)
-
 if __name__ == '__main__':
-    main()
+    outcome_analysis.main(KNOWN_TASKS)

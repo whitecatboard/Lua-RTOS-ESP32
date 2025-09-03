@@ -3,6 +3,9 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
+#include "sdkconfig.h"
+
 /*  Default entry point:  */
 ENTRY(call_start_cpu0);
 
@@ -198,6 +201,7 @@ SECTIONS
     *(.UserEnter.literal);
     *(.UserEnter.text);
     . = ALIGN (16);
+    *(.entry.literal)
     *(.entry.text)
     *(.init.literal)
     *(.init)
@@ -313,9 +317,11 @@ SECTIONS
     *(.gnu.linkonce.e.*)
     *(.gnu.version_r)
     . = (. + 3) & ~ 3;
+#if CONFIG_COMPILER_CXX_EXCEPTIONS
     __eh_frame = ABSOLUTE(.);
     KEEP(*(.eh_frame))
     . = (. + 7) & ~ 3;
+#endif // CONFIG_COMPILER_CXX_EXCEPTIONS
     /*  C++ constructor and destructor tables
 
         Make a point of not including anything from crtbegin.o or crtend.o, as IDF doesn't use toolchain crt
@@ -360,7 +366,8 @@ SECTIONS
     *(.tbss.*)
     _thread_local_end = ABSOLUTE(.);
     . = ALIGN(4);
-    
+
+    /* WHITECAT BEGIN */    
     _lua_rtos_rodata_start = ABSOLUTE(.);
 
 	/* This is the array for Lua libraries to load at startup */
@@ -396,7 +403,9 @@ SECTIONS
     . = ALIGN(4);
     KEEP(*(.romfs))
     
-    _lua_rtos_rodata_end = ABSOLUTE(.);
+    _lua_rtos_rodata_end = ABSOLUTE(.);    
+    
+    /* WHITECAT END */    
     
   } >default_rodata_seg
 
@@ -486,24 +495,7 @@ SECTIONS
     _heap_low_start = ABSOLUTE(.);
   } > dram0_0_seg
 
-  /** This section will be used by the debugger and disassembler to get more information
-    * about raw data present in the code.
-    * Indeed, it may be required to add some padding at some points in the code
-    * in order to align a branch/jump destination on a particular bound.
-    * Padding these instructions will generate null bytes that shall be
-    * interpreted as data, and not code by the debugger or disassembler.
-    * This section will only be present in the ELF file, not in the final binary
-    * For more details, check GCC-212
-    */
-  .xt.prop 0 :
-  {
-    KEEP (*(.xt.prop .gnu.linkonce.prop.*))
-  }
-
-  .xt.lit 0 :
-  {
-    KEEP (*(.xt.lit .gnu.linkonce.p.*))
-  }
+#include "elf_misc.ld.in"
 }
 
 ASSERT(((_iram_end - ORIGIN(iram0_0_seg)) <= LENGTH(iram0_0_seg)),

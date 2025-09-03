@@ -1,9 +1,9 @@
 /* BEGIN_HEADER */
 #include "mbedtls/dhm.h"
 
-int check_get_value(const mbedtls_dhm_context *ctx,
-                    mbedtls_dhm_parameter param,
-                    const mbedtls_mpi *expected)
+static int check_get_value(const mbedtls_dhm_context *ctx,
+                           mbedtls_dhm_parameter param,
+                           const mbedtls_mpi *expected)
 {
     mbedtls_mpi actual;
     int ok = 0;
@@ -31,7 +31,7 @@ static int check_dhm_param_output(const mbedtls_mpi *expected,
     int ok = 0;
     mbedtls_mpi_init(&actual);
 
-    ++mbedtls_test_info.step;
+    mbedtls_test_increment_step();
 
     TEST_ASSERT(size >= *offset + 2);
     n = (buffer[*offset] << 8) | buffer[*offset + 1];

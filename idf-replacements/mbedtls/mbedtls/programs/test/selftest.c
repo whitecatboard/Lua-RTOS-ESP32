@@ -5,8 +5,6 @@
  *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
-
 #include "mbedtls/build_info.h"
 
 #include "mbedtls/entropy.h"
@@ -79,6 +77,7 @@ static int calloc_self_test(int verbose)
         if (verbose) {
             mbedtls_printf("  CALLOC(0,1): passed (same non-null)\n");
         }
+        empty2 = NULL;
     } else {
         if (verbose) {
             mbedtls_printf("  CALLOC(0,1): passed (distinct non-null)\n");
@@ -103,6 +102,7 @@ static int calloc_self_test(int verbose)
         if (verbose) {
             mbedtls_printf("  CALLOC(1,0): passed (same non-null)\n");
         }
+        empty2 = NULL;
     } else {
         if (verbose) {
             mbedtls_printf("  CALLOC(1,0): passed (distinct non-null)\n");
@@ -119,6 +119,7 @@ static int calloc_self_test(int verbose)
             mbedtls_printf("  CALLOC(1): failed (same buffer twice)\n");
         }
         ++failures;
+        buffer2 = NULL;
     } else {
         if (verbose) {
             mbedtls_printf("  CALLOC(1): passed\n");
@@ -240,7 +241,7 @@ static void create_entropy_seed_file(void)
 }
 #endif
 
-int mbedtls_entropy_self_test_wrapper(int verbose)
+static int mbedtls_entropy_self_test_wrapper(int verbose)
 {
 #if defined(MBEDTLS_ENTROPY_NV_SEED) && !defined(MBEDTLS_NO_PLATFORM_ENTROPY)
     create_entropy_seed_file();
@@ -251,7 +252,7 @@ int mbedtls_entropy_self_test_wrapper(int verbose)
 
 #if defined(MBEDTLS_SELF_TEST)
 #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
-int mbedtls_memory_buffer_alloc_free_and_self_test(int verbose)
+static int mbedtls_memory_buffer_alloc_free_and_self_test(int verbose)
 {
     if (verbose != 0) {
 #if defined(MBEDTLS_MEMORY_DEBUG)

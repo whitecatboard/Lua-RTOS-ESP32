@@ -341,6 +341,7 @@ static inline void print_cache_err_details(const void *f)
             break;
         case EXTMEM_DCACHE_WRITE_FLASH_ST:
             panic_print_str("Write back error occurred while dcache tries to write back to flash\r\n");
+            panic_print_str("The following backtrace may not indicate the code that caused Cache invalid access\r\n");
             break;
         case EXTMEM_MMU_ENTRY_FAULT_ST:
             vaddr = REG_READ(EXTMEM_CACHE_MMU_FAULT_VADDR_REG);
@@ -468,4 +469,10 @@ void panic_print_backtrace(const void *f, int core)
     XtExcFrame *xt_frame = (XtExcFrame *) f;
     esp_backtrace_frame_t frame = {.pc = xt_frame->pc, .sp = xt_frame->a1, .next_pc = xt_frame->a0, .exc_frame = xt_frame};
     esp_backtrace_print_from_frame(100, &frame, true);
+}
+
+void panic_prepare_frame_from_ctx(void* frame)
+{
+    /* Nothing to cleanup on xtensa */
+    (void)frame;
 }

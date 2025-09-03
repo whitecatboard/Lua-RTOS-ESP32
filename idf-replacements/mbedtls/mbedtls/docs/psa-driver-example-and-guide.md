@@ -43,7 +43,7 @@ There are three deliverables for creating such a driver. These are:
  - C header files defining the types required by the driver description. The names of these header files are declared in the driver description file.
  - An object file compiled for the target platform defining the functions required by the driver description. Implementations may allow drivers to be provided as source files and compiled with the core instead of being pre-compiled.
 
-The Mbed TLS driver tests for the aforementioned entry points provide examples of how these deliverables can be implemented. For sample driver description JSON files, see [`mbedtls_test_transparent_driver.json`](https://github.com/Mbed-TLS/mbedtls/blob/development/scripts/data_files/driver_jsons/mbedtls_test_transparent_driver.json) or [`mbedtls_test_opaque_driver.json`](https://github.com/Mbed-TLS/mbedtls/blob/development/scripts/data_files/driver_jsons/mbedtls_test_transparent_driver.json). The header file required by the driver description is [`test_driver.h`](https://github.com/Mbed-TLS/mbedtls/blob/development/tests/include/test/drivers/test_driver.h). As Mbed TLS tests are built from source, there is no object file for the test driver. However, the source for the test driver can be found under `tests/src/drivers`.
+The Mbed TLS driver tests for the aforementioned entry points provide examples of how these deliverables can be implemented. For sample driver description JSON files, see [`mbedtls_test_transparent_driver.json`](https://github.com/Mbed-TLS/mbedtls/blob/development/scripts/data_files/driver_jsons/mbedtls_test_transparent_driver.json) or [`mbedtls_test_opaque_driver.json`](https://github.com/Mbed-TLS/mbedtls/blob/development/scripts/data_files/driver_jsons/mbedtls_test_transparent_driver.json). The header file required by the driver description is [`test_driver.h`](https://github.com/Mbed-TLS/mbedtls/blob/development/framework/tests/include/test/drivers/test_driver.h). As Mbed TLS tests are built from source, there is no object file for the test driver. However, the source for the test driver can be found under `framework/tests/src/drivers`.
 
 ### Process for Entry Points where auto-generation is not implemented
 
@@ -157,11 +157,11 @@ The driver wrapper functions in `psa_crypto_driver_wrappers.h.jinja` for all fou
 
 ```
 #if defined (MBEDTLS_PSA_P256M_DRIVER_ENABLED)
-            if( PSA_KEY_TYPE_IS_ECC( attributes->core.type ) &&
+            if( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &&
                 PSA_ALG_IS_ECDSA(alg) &&
                 !PSA_ALG_ECDSA_IS_DETERMINISTIC( alg ) &&
-                PSA_KEY_TYPE_ECC_GET_FAMILY(attributes->core.type) == PSA_ECC_FAMILY_SECP_R1 &&
-                attributes->core.bits == 256 )
+                PSA_KEY_TYPE_ECC_GET_FAMILY(psa_get_key_type(attributes)) == PSA_ECC_FAMILY_SECP_R1 &&
+                psa_get_key_bits(attributes) == 256 )
             {
                 status = p256_transparent_sign_hash( attributes,
                                                      key_buffer,

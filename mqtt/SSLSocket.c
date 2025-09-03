@@ -107,6 +107,9 @@ static ssl_mutex_type sslCoreMutex = PTHREAD_MUTEX_INITIALIZER;
 #define iov_base buf
 #endif
 
+// TO DO: required in idf 5.2.5?
+int mbedtls_pk_load_file(const char *path, unsigned char **buf, size_t *n);
+
 #if defined(OPENSSL) && __XTENSA__
 SSL_SESSION *SSL_get1_session(SSL *ssl)
 {

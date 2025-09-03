@@ -1,3 +1,26 @@
+ifndef MBEDTLS_PATH
+MBEDTLS_PATH := ..
+endif
+
+GENERATED_FILES := \
+	error.c version_features.c \
+	ssl_debug_helpers_generated.c \
+	psa_crypto_driver_wrappers.h \
+	psa_crypto_driver_wrappers_no_static.c
+
+ifneq ($(GENERATED_FILES),$(wildcard $(GENERATED_FILES)))
+    ifeq (,$(wildcard $(MBEDTLS_PATH)/framework/exported.make))
+        # Use the define keyword to get a multi-line message.
+        # GNU make appends ".  Stop.", so tweak the ending of our message accordingly.
+        define error_message
+$(MBEDTLS_PATH)/framework/exported.make not found.
+Run `git submodule update --init` to fetch the submodule contents.
+This is a fatal error
+        endef
+        $(error $(error_message))
+    endif
+    include $(MBEDTLS_PATH)/framework/exported.make
+endif
 
 # Also see "include/mbedtls/mbedtls_config.h"
 
@@ -51,9 +74,9 @@ LOCAL_CFLAGS += -fPIC -fpic
 endif
 endif
 
-SOEXT_TLS?=so.20
-SOEXT_X509?=so.6
-SOEXT_CRYPTO?=so.15
+SOEXT_TLS?=so.21
+SOEXT_X509?=so.7
+SOEXT_CRYPTO?=so.16
 
 # Set AR_DASH= (empty string) to use an ar implementation that does not accept
 # the - prefix for command line options (e.g. llvm-ar)
@@ -91,6 +114,7 @@ OBJS_CRYPTO= \
 	     bignum_core.o \
 	     bignum_mod.o \
 	     bignum_mod_raw.o \
+	     block_cipher.o \
 	     camellia.o \
 	     ccm.o \
 	     chacha20.o \
@@ -124,6 +148,7 @@ OBJS_CRYPTO= \
 	     padlock.o \
 	     pem.o \
 	     pk.o \
+	     pk_ecc.o \
 	     pk_wrap.o \
 	     pkcs12.o \
 	     pkcs5.o \
@@ -312,12 +337,11 @@ libmbedcrypto.dll: $(OBJS_CRYPTO)
 	echo "  CC    $<"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -o $@ -c $<
 
+.c.s:
+	echo "  CC    $<"
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -S -o $@ -c $<
+
 .PHONY: generated_files
-GENERATED_FILES = \
-	error.c version_features.c \
-	ssl_debug_helpers_generated.c \
-	psa_crypto_driver_wrappers.h \
-	psa_crypto_driver_wrappers_no_static.c
 generated_files: $(GENERATED_FILES)
 
 # See root Makefile
@@ -335,11 +359,11 @@ error.c:
 	echo "  Gen   $@"
 	$(PERL) ../scripts/generate_errors.pl
 
-ssl_debug_helpers_generated.c: $(gen_file_dep) ../scripts/generate_ssl_debug_helpers.py
+ssl_debug_helpers_generated.c: $(gen_file_dep) ../framework/scripts/generate_ssl_debug_helpers.py
 ssl_debug_helpers_generated.c: $(gen_file_dep) $(filter-out %config%,$(wildcard ../include/mbedtls/*.h))
 ssl_debug_helpers_generated.c:
 	echo "  Gen   $@"
-	$(PYTHON) ../scripts/generate_ssl_debug_helpers.py --mbedtls-root .. .
+	$(PYTHON) ../framework/scripts/generate_ssl_debug_helpers.py --mbedtls-root .. .
 
 version_features.c: $(gen_file_dep) ../scripts/generate_features.pl
 version_features.c: $(gen_file_dep) ../scripts/data_files/version_features.fmt
@@ -367,12 +391,13 @@ psa_crypto.o:psa_crypto_driver_wrappers.h
 
 clean:
 ifndef WINDOWS
-	rm -f *.o libmbed*
-	rm -f $(THIRDPARTY_CRYPTO_OBJECTS)
+	rm -f *.o *.s libmbed*
+	rm -f $(THIRDPARTY_CRYPTO_OBJECTS) $(THIRDPARTY_CRYPTO_OBJECTS:.o=.s)
 else
 	if exist *.o del /Q /F *.o
+	if exist *.s del /Q /F *.s
 	if exist libmbed* del /Q /F libmbed*
-	del /Q /F del_errors_out_if_the_file_list_is_empty_but_not_if_a_file_does_not_exist $(subst /,\,$(THIRDPARTY_CRYPTO_OBJECTS))
+	del /Q /F del_errors_out_if_the_file_list_is_empty_but_not_if_a_file_does_not_exist $(subst /,\,$(THIRDPARTY_CRYPTO_OBJECTS) $(THIRDPARTY_CRYPTO_OBJECTS:.o=.s))
 endif
 
 neat: clean

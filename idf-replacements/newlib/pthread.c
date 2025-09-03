@@ -8,12 +8,14 @@
 
 const static char *TAG = "esp32_asio_pthread";
 
-#if !LUA_RTOS_INCLUDE_IDF_REPLACEMENTS
+// WHITECAT BEGIN
+#if 0
 int pthread_setcancelstate(int state, int *oldstate)
 {
     return 0;
 }
 #endif
+// WHITECAT END
 
 //  This functions (pthread_sigmask(), sigfillset) are called from ASIO::signal_blocker to temporarily silence signals
 //  Since signals are not yet supported in ESP pthread these functions serve as no-ops

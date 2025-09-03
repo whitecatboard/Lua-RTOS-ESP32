@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2015-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,6 +13,7 @@
 
 #include "esp_log.h"
 #include "esp_chip_info.h"
+#include "esp_app_format.h"
 
 #include "esp_efuse.h"
 #include "esp_private/cache_err_int.h"
@@ -44,7 +45,6 @@
 #include "soc/assist_debug_reg.h"
 #include "soc/system_reg.h"
 #include "esp32s3/rom/opi_flash.h"
-#include "hal/cache_hal.h"
 #elif CONFIG_IDF_TARGET_ESP32C3
 #include "esp32c3/rtc.h"
 #include "esp32c3/rom/cache.h"
@@ -87,6 +87,7 @@
 #include "esp_private/sleep_gpio.h"
 #include "hal/wdt_hal.h"
 #include "soc/rtc.h"
+#include "hal/cache_hal.h"
 #include "hal/cache_ll.h"
 #include "hal/efuse_ll.h"
 #include "soc/periph_defs.h"
@@ -315,6 +316,17 @@ static void start_other_core(void)
 }
 
 #if !SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
+#if CONFIG_IDF_TARGET_ESP32
+static void restore_app_mmu_from_pro_mmu(void)
+{
+    const int mmu_reg_num = 2048;
+    volatile uint32_t* from = (uint32_t*)DR_REG_FLASH_MMU_TABLE_PRO;
+    volatile uint32_t* to = (uint32_t*)DR_REG_FLASH_MMU_TABLE_APP;
+    for (int i = 0; i < mmu_reg_num; i++) {
+        *(to++) = *(from++);
+    }
+}
+#endif
 // This function is needed to make the multicore app runnable on a unicore bootloader (built with FREERTOS UNICORE).
 // It does some cache settings for other CPUs.
 void IRAM_ATTR do_multicore_settings(void)
@@ -326,9 +338,11 @@ void IRAM_ATTR do_multicore_settings(void)
         Cache_Read_Disable(1);
         Cache_Flush(1);
         DPORT_REG_SET_BIT(DPORT_APP_CACHE_CTRL1_REG, DPORT_APP_CACHE_MMU_IA_CLR);
+        mmu_init(1);
         DPORT_REG_CLR_BIT(DPORT_APP_CACHE_CTRL1_REG, DPORT_APP_CACHE_MMU_IA_CLR);
         // We do not enable cache for CPU1 now because it will be done later in start_other_core().
     }
+    restore_app_mmu_from_pro_mmu();
 #endif
 
     cache_bus_mask_t cache_bus_mask_core0 = cache_ll_l1_get_enabled_bus(0);
@@ -428,6 +442,11 @@ void IRAM_ATTR call_start_cpu0(void)
 #endif
 #endif // !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP
 
+#if !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP
+    //cache hal ctx needs to be initialised
+    cache_hal_init();
+#endif
+
     // When the APP is loaded into ram for execution, some hardware initialization behaviors
     // in the bootloader are still necessary
 #if CONFIG_APP_BUILD_TYPE_RAM
@@ -487,9 +506,6 @@ void IRAM_ATTR call_start_cpu0(void)
     extern void esp_config_l2_cache_mode(void);
     esp_config_l2_cache_mode();
 #endif
-    if (esp_efuse_check_errors() != ESP_OK) {
-        esp_restart();
-    }
 
 #if ESP_ROM_NEEDS_SET_CACHE_MMU_SIZE
 #if CONFIG_APP_BUILD_TYPE_ELF_RAM
@@ -521,6 +537,10 @@ void IRAM_ATTR call_start_cpu0(void)
     // For Octal flash, it's hard to implement a read_id function in OPI mode for all vendors.
     // So we have to read it here in SPI mode, before entering the OPI mode.
     bootloader_flash_update_id();
+
+    // Configure the power related stuff. After this the MSPI timing tuning can be done.
+    esp_rtc_init();
+
     /**
      * This function initialise the Flash chip to the user-defined settings.
      *
@@ -529,14 +549,9 @@ void IRAM_ATTR call_start_cpu0(void)
      * In this stage, we re-configure the Flash (and MSPI) to required configuration
      */
     spi_flash_init_chip_state();
-
-    // In earlier version of ESP-IDF, the PLL provided by bootloader is not stable enough.
-    // Do calibration again here so that we can use better clock for the timing tuning.
-#if CONFIG_ESP_SYSTEM_BBPLL_RECALIB
-    rtc_clk_recalib_bbpll();
-#endif
 #if SOC_MEMSPI_SRC_FREQ_120M
-    // This function needs to be called when PLL is enabled
+    // This function needs to be called when PLL is enabled. Needs to be called after spi_flash_init_chip_state in case
+    // some state of flash is modified.
     mspi_timing_flash_tuning();
 #endif
 
@@ -558,6 +573,10 @@ void IRAM_ATTR call_start_cpu0(void)
     }
 #endif
 #endif // !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP
+
+    if (esp_efuse_check_errors() != ESP_OK) {
+        esp_restart();
+    }
 
     bootloader_init_mem();
 
@@ -733,18 +752,26 @@ void IRAM_ATTR call_start_cpu0(void)
 
     // Read the application binary image header. This will also decrypt the header if the image is encrypted.
     __attribute__((unused)) esp_image_header_t fhdr = {0};
-#if CONFIG_APP_BUILD_TYPE_RAM && !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP
+#if CONFIG_APP_BUILD_TYPE_RAM
+#if !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP
     fhdr.spi_mode = ESP_IMAGE_SPI_MODE_DIO;
     fhdr.spi_speed = ESP_IMAGE_SPI_SPEED_DIV_2;
     fhdr.spi_size = ESP_IMAGE_FLASH_SIZE_4MB;
 
     bootloader_flash_unlock();
-#else
-    // This assumes that DROM is the first segment in the application binary, i.e. that we can read
-    // the binary header through cache by accessing SOC_DROM_LOW address.
-    hal_memcpy(&fhdr, (void *) SOC_DROM_LOW, sizeof(fhdr));
 
-#endif // CONFIG_APP_BUILD_TYPE_RAM && !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP
+#endif
+#else
+    // We can access the image header through the cache by reading from the memory-mapped virtual DROM start offset
+    uint32_t fhdr_src_addr = (uint32_t)(&_rodata_reserved_start) - sizeof(esp_image_header_t) - sizeof(esp_image_segment_header_t);
+    hal_memcpy(&fhdr, (void *) fhdr_src_addr, sizeof(fhdr));
+    if (fhdr.magic != ESP_IMAGE_HEADER_MAGIC) {
+        ESP_EARLY_LOGE(TAG, "Invalid app image header");
+        abort();
+    }
+
+
+#endif // CONFIG_APP_BUILD_TYPE_RAM
 
 #if !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP
 #if CONFIG_IDF_TARGET_ESP32

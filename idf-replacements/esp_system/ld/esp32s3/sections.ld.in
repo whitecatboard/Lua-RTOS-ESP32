@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "sdkconfig.h"
+
 /* Default entry point */
 ENTRY(call_start_cpu0);
 
@@ -20,7 +22,8 @@ SECTIONS
     . = ALIGN(4);
     _rtc_fast_start = ABSOLUTE(.);
     _rtc_text_start = ABSOLUTE(.);
-    *(.rtc.entry.text)
+
+    *(.rtc.entry.literal .rtc.entry.text)
 
     mapping[rtc_text]
 
@@ -180,6 +183,7 @@ SECTIONS
     *(.UserEnter.literal);
     *(.UserEnter.text);
     . = ALIGN (16);
+    *(.entry.literal)
     *(.entry.text)
     *(.init.literal)
     *(.init)
@@ -340,9 +344,11 @@ SECTIONS
     *(.gnu.linkonce.e.*)
     *(.gnu.version_r)
     . = (. + 3) & ~ 3;
+#if CONFIG_COMPILER_CXX_EXCEPTIONS
     __eh_frame = ABSOLUTE(.);
     KEEP(*(.eh_frame))
     . = (. + 7) & ~ 3;
+#endif // CONFIG_COMPILER_CXX_EXCEPTIONS
     /* C++ constructor and destructor tables */
     /* Don't include anything from crtbegin.o or crtend.o, as IDF doesn't use toolchain crt */
     __init_array_start = ABSOLUTE(.);
@@ -412,6 +418,7 @@ SECTIONS
     . = ALIGN (0x10000);
   } > extern_ram_seg
 
+#if CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
   /* This section holds .ext_ram.bss data, and will be put in PSRAM */
   .ext_ram.bss (NOLOAD) :
   {
@@ -420,6 +427,23 @@ SECTIONS
     . = ALIGN(4);
     _ext_ram_bss_end = ABSOLUTE(.);
   } > extern_ram_seg
+#endif //CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
+
+#if CONFIG_SPIRAM_ALLOW_NOINIT_SEG_EXTERNAL_MEMORY
+  /**
+   * This section holds data that won't be initialised when startup.
+   * This section locates in External RAM region.
+   */
+  .ext_ram_noinit (NOLOAD) :
+  {
+    _ext_ram_noinit_start = ABSOLUTE(.);
+
+    *(.ext_ram_noinit*)
+
+    . = ALIGN(4);
+    _ext_ram_noinit_end = ABSOLUTE(.);
+  } > extern_ram_seg
+#endif //CONFIG_SPIRAM_ALLOW_NOINIT_SEG_EXTERNAL_MEMORY
 
   /* Marks the end of IRAM code segment */
   .iram0.text_end (NOLOAD) :
@@ -462,24 +486,7 @@ SECTIONS
     _heap_low_start = ABSOLUTE(.);
   } > dram0_0_seg
 
-  /** This section will be used by the debugger and disassembler to get more information
-    * about raw data present in the code.
-    * Indeed, it may be required to add some padding at some points in the code
-    * in order to align a branch/jump destination on a particular bound.
-    * Padding these instructions will generate null bytes that shall be
-    * interpreted as data, and not code by the debugger or disassembler.
-    * This section will only be present in the ELF file, not in the final binary
-    * For more details, check GCC-212
-    */
-  .xt.prop 0 :
-  {
-    KEEP (*(.xt.prop .gnu.linkonce.prop.*))
-  }
-
-  .xt.lit 0 :
-  {
-    KEEP (*(.xt.lit .gnu.linkonce.p.*))
-  }
+#include "elf_misc.ld.in"
 }
 
 ASSERT(((_iram_end - ORIGIN(iram0_0_seg)) <= LENGTH(iram0_0_seg)),

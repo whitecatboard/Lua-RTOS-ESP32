@@ -21,9 +21,10 @@ import sys
 import typing
 from enum import Enum
 
-from mbedtls_dev import build_tree
-from mbedtls_dev import logging_util
-from mbedtls_dev import typing_util
+import framework_scripts_path # pylint: disable=unused-import
+from mbedtls_framework import build_tree
+from mbedtls_framework import logging_util
+from mbedtls_framework import typing_util
 
 class SupportedArch(Enum):
     """Supported architecture for code size measurement."""
@@ -144,8 +145,8 @@ def detect_arch() -> str:
         print("Unknown host architecture, cannot auto-detect arch.")
         sys.exit(1)
 
-TFM_MEDIUM_CONFIG_H = 'configs/tfm_mbedcrypto_config_profile_medium.h'
-TFM_MEDIUM_CRYPTO_CONFIG_H = 'configs/crypto_config_profile_medium.h'
+TFM_MEDIUM_CONFIG_H = 'configs/ext/tfm_mbedcrypto_config_profile_medium.h'
+TFM_MEDIUM_CRYPTO_CONFIG_H = 'configs/ext/crypto_config_profile_medium.h'
 
 CONFIG_H = 'include/mbedtls/mbedtls_config.h'
 CRYPTO_CONFIG_H = 'include/psa/crypto_config.h'
@@ -889,7 +890,7 @@ def main():
         '-c', '--config', type=str, default=SupportedConfig.DEFAULT.value,
         choices=list(map(lambda s: s.value, SupportedConfig)),
         help='Specify configuration type for code size comparison. '
-             '(Default is the current MbedTLS configuration.)')
+             '(Default is the current Mbed TLS configuration.)')
     group_optional.add_argument(
         '--markdown', action='store_true', dest='markdown',
         help='Show comparision of code size in a markdown table. '

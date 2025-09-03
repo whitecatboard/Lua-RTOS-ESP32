@@ -1,14 +1,16 @@
 /* BEGIN_HEADER */
 
 #include <psa/crypto.h>
+#include <psa_crypto_storage.h>
 
 #include <test/psa_crypto_helpers.h>
 #include <test/psa_exercise_key.h>
 
 #include <psa_crypto_its.h>
 
-#define TEST_FLAG_EXERCISE      0x00000001
-#define TEST_FLAG_READ_ONLY     0x00000002
+#define TEST_FLAG_EXERCISE              0x00000001
+#define TEST_FLAG_READ_ONLY             0x00000002
+#define TEST_FLAG_OVERSIZED_KEY         0x00000004
 
 /** Write a key with the given attributes and key material to storage.
  * Test that it has the expected representation.
@@ -82,77 +84,6 @@ static int is_accelerated_rsa(psa_algorithm_t alg)
     (void) alg;
     return 0;
 }
-
-/* Whether the algorithm is implemented as a builtin, i.e. not accelerated,
- * and calls mbedtls_md() functions that require the hash algorithm to
- * also be built-in. */
-static int is_builtin_calling_md(psa_algorithm_t alg)
-{
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_RSA_PSS)
-    if (PSA_ALG_IS_RSA_PSS(alg))
-#if defined(MBEDTLS_MD_C)
-    { return 1; }
-#else
-    { return 0; }
-#endif
-#endif
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_RSA_OAEP)
-    if (PSA_ALG_IS_RSA_OAEP(alg))
-#if defined(MBEDTLS_MD_C)
-    { return 1; }
-#else
-    { return 0; }
-#endif
-#endif
-#if defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA)
-    if (PSA_ALG_IS_DETERMINISTIC_ECDSA(alg)) {
-        return 1;
-    }
-#endif
-    (void) alg;
-    return 0;
-}
-
-static int has_builtin_hash(psa_algorithm_t alg)
-{
-#if !defined(MBEDTLS_MD5_C)
-    if (alg == PSA_ALG_MD5) {
-        return 0;
-    }
-#endif
-#if !defined(MBEDTLS_RIPEMD160_C)
-    if (alg == PSA_ALG_RIPEMD160) {
-        return 0;
-    }
-#endif
-#if !defined(MBEDTLS_SHA1_C)
-    if (alg == PSA_ALG_SHA_1) {
-        return 0;
-    }
-#endif
-#if !defined(MBEDTLS_SHA224_C)
-    if (alg == PSA_ALG_SHA_224) {
-        return 0;
-    }
-#endif
-#if !defined(MBEDTLS_SHA256_C)
-    if (alg == PSA_ALG_SHA_256) {
-        return 0;
-    }
-#endif
-#if !defined(MBEDTLS_SHA384_C)
-    if (alg == PSA_ALG_SHA_384) {
-        return 0;
-    }
-#endif
-#if !defined(MBEDTLS_SHA512_C)
-    if (alg == PSA_ALG_SHA_512) {
-        return 0;
-    }
-#endif
-    (void) alg;
-    return 1;
-}
 #endif
 
 /* Mbed TLS doesn't support certain combinations of key type and algorithm
@@ -193,22 +124,9 @@ static int can_exercise(const psa_key_attributes_t *attributes)
         return 0;
     }
 #endif
+
     if (is_accelerated_rsa(alg) &&
         (hash_alg == PSA_ALG_RIPEMD160 || hash_alg == PSA_ALG_SHA_384)) {
-        return 0;
-    }
-#if defined(MBEDTLS_PSA_ACCEL_ALG_RSA_OAEP)
-    if (PSA_ALG_IS_RSA_OAEP(alg) &&
-        (hash_alg == PSA_ALG_RIPEMD160 || hash_alg == PSA_ALG_SHA_384)) {
-        return 0;
-    }
-#endif
-
-    /* The built-in implementation of asymmetric algorithms that use a
-     * hash internally only dispatch to the internal md module, not to
-     * PSA. Until this is supported, don't try to actually perform
-     * operations when the operation is built-in and the hash isn't.  */
-    if (is_builtin_calling_md(alg) && !has_builtin_hash(hash_alg)) {
         return 0;
     }
 #endif /* MBEDTLS_TEST_LIBTESTDRIVER1 */
@@ -242,6 +160,12 @@ static int test_read_key(const psa_key_attributes_t *expected_attributes,
     /* Prime the storage with a key file. */
     PSA_ASSERT(psa_its_set(uid, representation->len, representation->x, 0));
 
+    if (flags & TEST_FLAG_OVERSIZED_KEY) {
+        TEST_EQUAL(psa_get_key_attributes(key_id, &actual_attributes), PSA_ERROR_DATA_INVALID);
+        ok = 1;
+        goto exit;
+    }
+
     /* Check that the injected key exists and looks as expected. */
     PSA_ASSERT(psa_get_key_attributes(key_id, &actual_attributes));
     TEST_ASSERT(mbedtls_svc_key_id_equal(key_id,
@@ -271,7 +195,7 @@ static int test_read_key(const psa_key_attributes_t *expected_attributes,
         TEST_ASSERT(mbedtls_test_psa_exercise_key(
                         key_id,
                         psa_get_key_usage_flags(expected_attributes),
-                        psa_get_key_algorithm(expected_attributes)));
+                        psa_get_key_algorithm(expected_attributes), 0));
     }
 
 
@@ -365,6 +289,7 @@ void key_storage_read(int lifetime_arg, int type_arg, int bits_arg,
     mbedtls_svc_key_id_t key_id = mbedtls_svc_key_id_make(0, 1);
     psa_storage_uid_t uid = 1;
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
+    uint8_t *custom_key_data = NULL, *custom_storage_data = NULL;
 
     PSA_INIT();
     TEST_USES_KEY_ID(key_id);
@@ -377,6 +302,23 @@ void key_storage_read(int lifetime_arg, int type_arg, int bits_arg,
     psa_set_key_algorithm(&attributes, alg);
     psa_set_key_enrollment_algorithm(&attributes, alg2);
 
+    /* Create a persistent key which is intentionally larger than the specified
+     * bit size. */
+    if (flags & TEST_FLAG_OVERSIZED_KEY) {
+        TEST_CALLOC(custom_key_data, PSA_BITS_TO_BYTES(bits));
+        memset(custom_key_data, 0xAA, PSA_BITS_TO_BYTES(bits));
+        material->len = PSA_BITS_TO_BYTES(bits);
+        material->x = custom_key_data;
+
+        /* 36 bytes are the overhead of psa_persistent_key_storage_format */
+        TEST_CALLOC(custom_storage_data, PSA_BITS_TO_BYTES(bits) + 36);
+        representation->len = PSA_BITS_TO_BYTES(bits) + 36;
+        representation->x = custom_storage_data;
+
+        psa_format_key_data_for_storage(custom_key_data, PSA_BITS_TO_BYTES(bits),
+                                        &attributes, custom_storage_data);
+    }
+
     /* Test that we can use a key with the given representation. This
      * guarantees backward compatibility with keys that were stored by
      * past versions of Mbed TLS. */
@@ -384,6 +326,8 @@ void key_storage_read(int lifetime_arg, int type_arg, int bits_arg,
                               uid, representation, flags));
 
 exit:
+    mbedtls_free(custom_key_data);
+    mbedtls_free(custom_storage_data);
     psa_reset_key_attributes(&attributes);
     PSA_DONE();
 }

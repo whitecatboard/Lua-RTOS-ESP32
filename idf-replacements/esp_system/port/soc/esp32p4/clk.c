@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -40,12 +40,15 @@ static void select_rtc_slow_clk(soc_rtc_slow_clk_src_t rtc_slow_clk_src);
 static const char *TAG = "clk";
 
 
- __attribute__((weak)) void esp_clk_init(void)
+void esp_rtc_init(void)
 {
 #if SOC_PMU_SUPPORTED
     pmu_init();
 #endif  //SOC_PMU_SUPPORTED
+}
 
+__attribute__((weak)) void esp_clk_init(void)
+{
     assert(rtc_clk_xtal_freq_get() == RTC_XTAL_FREQ_40M);
 
     rtc_clk_8m_enable(true);
@@ -70,8 +73,6 @@ static const char *TAG = "clk";
     select_rtc_slow_clk(SOC_RTC_SLOW_CLK_SRC_XTAL32K);
 #elif defined(CONFIG_RTC_CLK_SRC_EXT_OSC)
     select_rtc_slow_clk(SOC_RTC_SLOW_CLK_SRC_OSC_SLOW);
-#elif defined(CONFIG_RTC_CLK_SRC_INT_RC32K)
-    select_rtc_slow_clk(SOC_RTC_SLOW_CLK_SRC_RC32K);
 #else
     select_rtc_slow_clk(SOC_RTC_SLOW_CLK_SRC_RC_SLOW);
 #endif
@@ -146,6 +147,15 @@ static void select_rtc_slow_clk(soc_rtc_slow_clk_src_t rtc_slow_clk_src)
             rtc_clk_rc32k_enable(true);
         }
         rtc_clk_slow_src_set(rtc_slow_clk_src);
+
+        // Disable unused clock sources after clock source switching is complete.
+        // Regardless of the clock source selection, the internal 136K clock source will always keep on.
+        if (rtc_slow_clk_src != SOC_RTC_SLOW_CLK_SRC_XTAL32K) {
+            rtc_clk_32k_enable(false);
+        }
+        if (rtc_slow_clk_src != SOC_RTC_SLOW_CLK_SRC_RC32K) {
+            rtc_clk_rc32k_enable(false);
+        }
 
         if (SLOW_CLK_CAL_CYCLES > 0) {
             /* TODO: 32k XTAL oscillator has some frequency drift at startup.
@@ -266,7 +276,7 @@ __attribute__((weak)) void esp_perip_clk_init(void)
 
     /* Set WiFi light sleep clock source to RTC slow clock */
     REG_SET_FIELD(SYSTEM_BT_LPCK_DIV_INT_REG, SYSTEM_BT_LPCK_DIV_NUM, 0);
-    CLEAR_PERI_REG_MASK(SYSTEM_BT_LPCK_DIV_FRAC_REG, SYSTEM_LPCLK_SEL_8M);
+    CLEAR_PERI_REG_MASK(SYSTEM_BT_LPCK_DIV_FRAC_REG, SYSTEM_LPCLK_SEL_XTAL32K | SYSTEM_LPCLK_SEL_XTAL | SYSTEM_LPCLK_SEL_8M | SYSTEM_LPCLK_SEL_RTC_SLOW);
     SET_PERI_REG_MASK(SYSTEM_BT_LPCK_DIV_FRAC_REG, SYSTEM_LPCLK_SEL_RTC_SLOW);
 
     /* Enable RNG clock. */

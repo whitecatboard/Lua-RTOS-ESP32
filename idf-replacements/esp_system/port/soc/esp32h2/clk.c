@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,6 +22,7 @@
 #include "soc/pcr_reg.h"
 #include "hal/wdt_hal.h"
 #include "esp_private/periph_ctrl.h"
+#include "esp_private/esp_modem_clock.h"
 #include "esp_private/esp_clk.h"
 #include "esp_private/esp_pmu.h"
 #include "esp_rom_uart.h"
@@ -37,15 +38,27 @@
 #define MHZ (1000000)
 
 static void select_rtc_slow_clk(soc_rtc_slow_clk_src_t rtc_slow_clk_src);
+static __attribute__((unused)) void recalib_bbpll(void);
 
 static const char *TAG = "clk";
 
 
- __attribute__((weak)) void esp_clk_init(void)
+void esp_rtc_init(void)
 {
+#if CONFIG_ESP_SYSTEM_BBPLL_RECALIB
+    // In earlier version of ESP-IDF, the PLL provided by bootloader is not stable enough.
+    // Do calibration again here so that we can use better clock for the timing tuning.
+    recalib_bbpll();
+#endif
+
 #if !CONFIG_IDF_ENV_FPGA
     pmu_init();
+#endif
+}
 
+__attribute__((weak)) void esp_clk_init(void)
+{
+#if !CONFIG_IDF_ENV_FPGA
     assert(rtc_clk_xtal_freq_get() == RTC_XTAL_FREQ_32M);
 
     rtc_clk_8m_enable(true);
@@ -69,12 +82,11 @@ static const char *TAG = "clk";
     wdt_hal_write_protect_enable(&rtc_wdt_ctx);
 #endif
 
+    modem_clock_deselect_all_module_lp_clock_source();
 #if defined(CONFIG_RTC_CLK_SRC_EXT_CRYS)
     select_rtc_slow_clk(SOC_RTC_SLOW_CLK_SRC_XTAL32K);
 #elif defined(CONFIG_RTC_CLK_SRC_EXT_OSC)
     select_rtc_slow_clk(SOC_RTC_SLOW_CLK_SRC_OSC_SLOW);
-#elif defined(CONFIG_RTC_CLK_SRC_INT_RC32K)
-    select_rtc_slow_clk(SOC_RTC_SLOW_CLK_SRC_RC32K);
 #else
     select_rtc_slow_clk(SOC_RTC_SLOW_CLK_SRC_RC_SLOW);
 #endif
@@ -152,6 +164,15 @@ static void select_rtc_slow_clk(soc_rtc_slow_clk_src_t rtc_slow_clk_src)
             rtc_clk_rc32k_enable(true);
         }
         rtc_clk_slow_src_set(rtc_slow_clk_src);
+        // Disable unused clock sources after clock source switching is complete.
+        // Regardless of the clock source selection, the internal 136K clock source will always keep on.
+        if ((rtc_slow_clk_src != SOC_RTC_SLOW_CLK_SRC_XTAL32K) && (rtc_slow_clk_src != SOC_RTC_SLOW_CLK_SRC_OSC_SLOW)) {
+            rtc_clk_32k_enable(false);
+            rtc_clk_32k_disable_external();
+        }
+        if (rtc_slow_clk_src != SOC_RTC_SLOW_CLK_SRC_RC32K) {
+            rtc_clk_rc32k_enable(false);
+        }
 
         if (SLOW_CLK_CAL_CYCLES > 0) {
             /* TODO: 32k XTAL oscillator has some frequency drift at startup.
@@ -280,10 +301,28 @@ __attribute__((weak)) void esp_perip_clk_init(void)
 
     /* Set WiFi light sleep clock source to RTC slow clock */
     REG_SET_FIELD(SYSTEM_BT_LPCK_DIV_INT_REG, SYSTEM_BT_LPCK_DIV_NUM, 0);
-    CLEAR_PERI_REG_MASK(SYSTEM_BT_LPCK_DIV_FRAC_REG, SYSTEM_LPCLK_SEL_8M);
+    CLEAR_PERI_REG_MASK(SYSTEM_BT_LPCK_DIV_FRAC_REG, SYSTEM_LPCLK_SEL_XTAL32K | SYSTEM_LPCLK_SEL_XTAL | SYSTEM_LPCLK_SEL_8M | SYSTEM_LPCLK_SEL_RTC_SLOW);
     SET_PERI_REG_MASK(SYSTEM_BT_LPCK_DIV_FRAC_REG, SYSTEM_LPCLK_SEL_RTC_SLOW);
 
     /* Enable RNG clock. */
     periph_module_enable(PERIPH_RNG_MODULE);
 #endif
+}
+
+// Workaround for bootloader not calibrated well issue.
+// Placed in IRAM because disabling BBPLL may influence the cache
+static void IRAM_ATTR NOINLINE_ATTR recalib_bbpll(void)
+{
+    rtc_cpu_freq_config_t old_config;
+    rtc_clk_cpu_freq_get_config(&old_config);
+
+    // There are two paths we arrive here: 1. CPU reset. 2. Other reset reasons.
+    // - For other reasons, the bootloader will set CPU source to BBPLL and enable it. But there are calibration issues.
+    //   Turn off the BBPLL and do calibration again to fix the issue. Flash_PLL comes from the same source as PLL.
+    // - For CPU reset, the CPU source will be set to XTAL, while the BBPLL is kept to meet USB Serial JTAG's
+    //   requirements. In this case, we don't touch BBPLL to avoid USJ disconnection.
+    if (old_config.source == SOC_CPU_CLK_SRC_PLL || old_config.source == SOC_CPU_CLK_SRC_FLASH_PLL) {
+        rtc_clk_cpu_freq_set_xtal();
+        rtc_clk_cpu_freq_set_config(&old_config);
+    }
 }

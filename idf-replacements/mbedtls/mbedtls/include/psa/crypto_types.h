@@ -21,8 +21,15 @@
 #ifndef PSA_CRYPTO_TYPES_H
 #define PSA_CRYPTO_TYPES_H
 
-/* Make sure the Mbed TLS configuration is visible. */
-#include "mbedtls/build_info.h"
+/*
+ * Include the build-time configuration information header. Here, we do not
+ * include `"mbedtls/build_info.h"` directly but `"psa/build_info.h"`, which
+ * is basically just an alias to it. This is to ease the maintenance of the
+ * TF-PSA-Crypto repository which has a different build system and
+ * configuration.
+ */
+#include "psa/build_info.h"
+
 /* Define the MBEDTLS_PRIVATE macro. */
 #include "mbedtls/private_access.h"
 
@@ -447,6 +454,54 @@ typedef uint64_t psa_key_slot_number_t;
  * `PSA_KEY_DERIVATION_INPUT_xxx`.
  */
 typedef uint16_t psa_key_derivation_step_t;
+
+/** \brief Custom parameters for key generation or key derivation.
+ *
+ * This is a structure type with at least the following field:
+ *
+ * - \c flags: an unsigned integer type. 0 for the default production parameters.
+ *
+ * Functions that take such a structure as input also take an associated
+ * input buffer \c custom_data of length \c custom_data_length.
+ *
+ * The interpretation of this structure and the associated \c custom_data
+ * parameter depend on the type of the created key.
+ *
+ * - #PSA_KEY_TYPE_RSA_KEY_PAIR:
+ *     - \c flags: must be 0.
+ *     - \c custom_data: the public exponent, in little-endian order.
+ *       This must be an odd integer and must not be 1.
+ *       Implementations must support 65537, should support 3 and may
+ *       support other values.
+ *       When not using a driver, Mbed TLS supports values up to \c INT_MAX.
+ *       If this is empty, the default value 65537 is used.
+ * - Other key types: reserved for future use. \c flags must be 0.
+ */
+typedef struct psa_custom_key_parameters_s psa_custom_key_parameters_t;
+
+/** \brief Custom parameters for key generation or key derivation.
+ *
+ * This is a structure type with at least the following fields:
+ *
+ * - \c flags: an unsigned integer type. 0 for the default production parameters.
+ * - \c data: a flexible array of bytes.
+ *
+ * The interpretation of this structure depend on the type of the
+ * created key.
+ *
+ * - #PSA_KEY_TYPE_RSA_KEY_PAIR:
+ *     - \c flags: must be 0.
+ *     - \c data: the public exponent, in little-endian order.
+ *       This must be an odd integer and must not be 1.
+ *       Implementations must support 65537, should support 3 and may
+ *       support other values.
+ *       When not using a driver, Mbed TLS supports values up to \c INT_MAX.
+ *       If this is empty or if the custom production parameters are omitted
+ *       altogether, the default value 65537 is used.
+ * - Other key types: reserved for future use. \c flags must be 0.
+ *
+ */
+typedef struct psa_key_production_parameters_s psa_key_production_parameters_t;
 
 /**@}*/
 

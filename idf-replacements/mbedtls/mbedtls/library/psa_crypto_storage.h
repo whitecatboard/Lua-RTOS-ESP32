@@ -21,9 +21,16 @@ extern "C" {
 #include <stdint.h>
 #include <string.h>
 
-/* Limit the maximum key size in storage. This should have no effect
- * since the key size is limited in memory. */
+/* Limit the maximum key size in storage. */
+#if defined(MBEDTLS_PSA_STATIC_KEY_SLOTS)
+/* Reflect the maximum size for the key buffer. */
+#define PSA_CRYPTO_MAX_STORAGE_SIZE (MBEDTLS_PSA_STATIC_KEY_SLOT_BUFFER_SIZE)
+#else
+/* Just set an upper boundary but it should have no effect since the key size
+ * is limited in memory. */
 #define PSA_CRYPTO_MAX_STORAGE_SIZE (PSA_BITS_TO_BYTES(PSA_MAX_KEY_BITS))
+#endif
+
 /* Sanity check: a file size must fit in 32 bits. Allow a generous
  * 64kB of metadata. */
 #if PSA_CRYPTO_MAX_STORAGE_SIZE > 0xffff0000
@@ -93,7 +100,7 @@ int psa_is_key_present_in_storage(const mbedtls_svc_key_id_t key);
  * \retval #PSA_ERROR_DATA_INVALID \emptydescription
  * \retval #PSA_ERROR_DATA_CORRUPT \emptydescription
  */
-psa_status_t psa_save_persistent_key(const psa_core_key_attributes_t *attr,
+psa_status_t psa_save_persistent_key(const psa_key_attributes_t *attr,
                                      const uint8_t *data,
                                      const size_t data_length);
 
@@ -123,7 +130,7 @@ psa_status_t psa_save_persistent_key(const psa_core_key_attributes_t *attr,
  * \retval #PSA_ERROR_DATA_CORRUPT \emptydescription
  * \retval #PSA_ERROR_DOES_NOT_EXIST \emptydescription
  */
-psa_status_t psa_load_persistent_key(psa_core_key_attributes_t *attr,
+psa_status_t psa_load_persistent_key(psa_key_attributes_t *attr,
                                      uint8_t **data,
                                      size_t *data_length);
 
@@ -163,7 +170,7 @@ void psa_free_persistent_key_data(uint8_t *key_data, size_t key_data_length);
  */
 void psa_format_key_data_for_storage(const uint8_t *data,
                                      const size_t data_length,
-                                     const psa_core_key_attributes_t *attr,
+                                     const psa_key_attributes_t *attr,
                                      uint8_t *storage_data);
 
 /**
@@ -186,7 +193,7 @@ psa_status_t psa_parse_key_data_from_storage(const uint8_t *storage_data,
                                              size_t storage_data_length,
                                              uint8_t **key_data,
                                              size_t *key_data_length,
-                                             psa_core_key_attributes_t *attr);
+                                             psa_key_attributes_t *attr);
 
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
 /** This symbol is defined if transaction support is required. */
@@ -231,8 +238,9 @@ typedef uint16_t psa_crypto_transaction_type_t;
  * This type is designed to be serialized by writing the memory representation
  * and reading it back on the same device.
  *
- * \note The transaction mechanism is designed for a single active transaction
- *       at a time. The transaction object is #psa_crypto_transaction.
+ * \note The transaction mechanism is not thread-safe. There can only be one
+ *       single active transaction at a time.
+ *       The transaction object is #psa_crypto_transaction.
  *
  * \note If an API call starts a transaction, it must complete this transaction
  *       before returning to the application.

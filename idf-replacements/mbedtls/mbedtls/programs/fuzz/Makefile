@@ -1,39 +1,15 @@
-MBEDTLS_TEST_PATH:=../../tests/src
-MBEDTLS_TEST_OBJS:=$(patsubst %.c,%.o,$(wildcard ${MBEDTLS_TEST_PATH}/*.c ${MBEDTLS_TEST_PATH}/drivers/*.c))
+MBEDTLS_TEST_PATH:=../../tests
 
-CFLAGS ?= -O2
-WARNING_CFLAGS ?= -Wall -Wextra
-LOCAL_CFLAGS = $(WARNING_CFLAGS) -I../../tests/include -I../../include -D_FILE_OFFSET_BITS=64
-LOCAL_LDFLAGS = ${MBEDTLS_TEST_OBJS}		\
-		-L../../library			\
-		-lmbedtls$(SHARED_SUFFIX)	\
-		-lmbedx509$(SHARED_SUFFIX)	\
-		-lmbedcrypto$(SHARED_SUFFIX)
+MBEDTLS_PATH := ../..
+include ../../scripts/common.make
 
-LOCAL_CFLAGS += $(patsubst -I../%,-I../../%,$(THIRDPARTY_INCLUDES))
-
-ifndef SHARED
-DEP=../../library/libmbedcrypto.a ../../library/libmbedx509.a ../../library/libmbedtls.a
-else
-DEP=../../library/libmbedcrypto.$(DLEXT) ../../library/libmbedx509.$(DLEXT) ../../library/libmbedtls.$(DLEXT)
-endif
-
-
-DLEXT ?= so
-EXEXT=
-SHARED_SUFFIX=
+DEP=${MBEDLIBS}
 
 ifdef FUZZINGENGINE
 LOCAL_LDFLAGS += -lFuzzingEngine
 endif
 
-ifdef WINDOWS_BUILD
-LOCAL_LDFLAGS += -lbcrypt
-endif
-
-# A test application is built for each suites/test_suite_*.data file.
-# Application name is same as .data file's base name and can be
-# constructed by stripping path 'suites/' and extension .data.
+# A test application is built for each fuzz_*.c file.
 APPS = $(basename $(wildcard fuzz_*.c))
 
 # Construct executable name by adding OS specific suffix $(EXEXT).
@@ -44,9 +20,6 @@ BINARIES := $(addsuffix $(EXEXT),$(APPS))
 .PHONY: all check test clean
 
 all: $(BINARIES)
-
-$(DEP):
-	$(MAKE) -C ../../library
 
 C_FILES := $(addsuffix .c,$(APPS))
 

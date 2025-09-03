@@ -142,6 +142,19 @@ typedef struct mbedtls_ecdh_context {
 mbedtls_ecdh_context;
 
 /**
+ * \brief          Return the ECP group for provided context.
+ *
+ * \note           To access group specific fields, users should use
+ *                 `mbedtls_ecp_curve_info_from_grp_id` or
+ *                 `mbedtls_ecp_group_load` on the extracted `group_id`.
+ *
+ * \param ctx      The ECDH context to parse. This must not be \c NULL.
+ *
+ * \return         The \c mbedtls_ecp_group_id of the context.
+ */
+mbedtls_ecp_group_id mbedtls_ecdh_get_grp_id(mbedtls_ecdh_context *ctx);
+
+/**
  * \brief          Check whether a given group can be used for ECDH.
  *
  * \param gid      The ECP group ID to check.
@@ -176,7 +189,7 @@ int mbedtls_ecdh_can_do(mbedtls_ecp_group_id gid);
  *                  \c MBEDTLS_MPI_XXX error code on failure.
  */
 int mbedtls_ecdh_gen_public(mbedtls_ecp_group *grp, mbedtls_mpi *d, mbedtls_ecp_point *Q,
-                            int (*f_rng)(void *, unsigned char *, size_t),
+                            mbedtls_f_rng_t *f_rng,
                             void *p_rng);
 
 /**
@@ -212,7 +225,7 @@ int mbedtls_ecdh_gen_public(mbedtls_ecp_group *grp, mbedtls_mpi *d, mbedtls_ecp_
  */
 int mbedtls_ecdh_compute_shared(mbedtls_ecp_group *grp, mbedtls_mpi *z,
                                 const mbedtls_ecp_point *Q, const mbedtls_mpi *d,
-                                int (*f_rng)(void *, unsigned char *, size_t),
+                                mbedtls_f_rng_t *f_rng,
                                 void *p_rng);
 
 /**
@@ -277,7 +290,7 @@ void mbedtls_ecdh_free(mbedtls_ecdh_context *ctx);
  */
 int mbedtls_ecdh_make_params(mbedtls_ecdh_context *ctx, size_t *olen,
                              unsigned char *buf, size_t blen,
-                             int (*f_rng)(void *, unsigned char *, size_t),
+                             mbedtls_f_rng_t *f_rng,
                              void *p_rng);
 
 /**
@@ -312,7 +325,7 @@ int mbedtls_ecdh_read_params(mbedtls_ecdh_context *ctx,
  * \brief           This function sets up an ECDH context from an EC key.
  *
  *                  It is used by clients and servers in place of the
- *                  ServerKeyEchange for static ECDH, and imports ECDH
+ *                  ServerKeyExchange for static ECDH, and imports ECDH
  *                  parameters from the EC key information of a certificate.
  *
  * \see             ecp.h
@@ -359,7 +372,7 @@ int mbedtls_ecdh_get_params(mbedtls_ecdh_context *ctx,
  */
 int mbedtls_ecdh_make_public(mbedtls_ecdh_context *ctx, size_t *olen,
                              unsigned char *buf, size_t blen,
-                             int (*f_rng)(void *, unsigned char *, size_t),
+                             mbedtls_f_rng_t *f_rng,
                              void *p_rng);
 
 /**
@@ -415,7 +428,7 @@ int mbedtls_ecdh_read_public(mbedtls_ecdh_context *ctx,
  */
 int mbedtls_ecdh_calc_secret(mbedtls_ecdh_context *ctx, size_t *olen,
                              unsigned char *buf, size_t blen,
-                             int (*f_rng)(void *, unsigned char *, size_t),
+                             mbedtls_f_rng_t *f_rng,
                              void *p_rng);
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)

@@ -13,11 +13,16 @@
 extern "C" {
 #endif
 
-// WHITECAT
+// WHITECAT BEGIN
+#if 0
+struct iovec;
+#endif
+
 struct iovec {
 	void *iov_base;
 	size_t iov_len;
 };
+// WHITECAT END
 
 int writev(int s, const struct iovec *iov, int iovcnt);
 

@@ -17,36 +17,44 @@ A difference between the original strategy and the current one is that in this w
 
 #### Backward compatibility user story
 
-As a developer of an application that uses Mbed TLS's interfaces (including legacy crypto),  
-I want Mbed TLS to preserve backward compatibility,  
+As a developer of an application that uses Mbed TLS's interfaces (including legacy crypto),
+I want Mbed TLS to preserve backward compatibility,
 so that my code keeps working in new minor versions of Mbed TLS.
 
 #### Interface design user story
 
-As a developer of library code that uses Mbed TLS to perform cryptographic operations,  
-I want to know which functions to call and which feature macros to check,  
+As a developer of library code that uses Mbed TLS to perform cryptographic operations,
+I want to know which functions to call and which feature macros to check,
 so that my code works in all Mbed TLS configurations.
 
 Note: this is the same problem we face in X.509 and TLS.
 
 #### Hardware accelerator vendor user stories
 
-As a vendor of a platform with hardware acceleration for some crypto,  
-I want to build Mbed TLS in a way that uses my hardware wherever relevant,  
+As a vendor of a platform with hardware acceleration for some crypto,
+I want to build Mbed TLS in a way that uses my hardware wherever relevant,
 so that my customers maximally benefit from my hardware.
 
-As a vendor of a platform with hardware acceleration for some crypto,  
-I want to build Mbed TLS without software that replicates what my hardware does,  
+As a vendor of a platform with hardware acceleration for some crypto,
+I want to build Mbed TLS without software that replicates what my hardware does,
 to minimize the code size.
+
+#### Integrators of Mbed TLS alongside a PSA Crypto provider
+
+I have a platform where the PSA Crypto is already provided "externally" from
+Mbed TLS (ex: through TF-M in Zephyr) and I would like Mbed TLS to make use
+of it whenever possible in order to benefit from higher performances (if some
+hardware acceleration is supported in the provider) and/or higher isolation/security
+(if the PSA provider is running in a completetly separated/inaccessible context).
 
 #### Maintainer user stories
 
-As a maintainer of Mbed TLS,  
-I want to have clear rules for when to use which interface,  
+As a maintainer of Mbed TLS,
+I want to have clear rules for when to use which interface,
 to avoid bugs in “unusual” configurations.
 
-As a maintainer of Mbed TLS,  
-I want to avoid duplicating code,  
+As a maintainer of Mbed TLS,
+I want to avoid duplicating code,
 because this is inefficient and error-prone.
 
 ### Use PSA more
@@ -55,8 +63,8 @@ In the long term, all code using cryptography should use PSA interfaces, to bene
 
 The goal of this work is to arrange for more non-PSA interfaces to use PSA interfaces under the hood, without breaking code in the cases where this doesn't work. Using PSA interfaces has two benefits:
 
-* Where a PSA driver is available, it likely has better performance, and sometimes better security, than the built-in software implementation.
-* In many scenarios, where a PSA driver is available, this allows removing the software implementation altogether.
+* Where a PSA driver/provider is available, it likely has better performance, and sometimes better security, than the built-in software implementation.
+* In many scenarios, where a PSA driver/provider is available, this allows removing the software implementation altogether.
 * We may be able to get rid of some redundancies, for example the duplication between the implementations of HMAC in `md.c` and in `psa_crypto_mac.c`, and HKDF in `hkdf.c` and `psa_crypto.c`.
 
 ### Correct dependencies
@@ -72,7 +80,6 @@ All documented behavior must be preserved, except for interfaces currently descr
 The following configuration options are described as experimental, and are likely to change at least marginally:
 
 * `MBEDTLS_PSA_CRYPTO_CLIENT`: “This interface is experimental and may change or be removed without notice.” In practice we don't want to remove this, but we may constrain how it's used.
-* `MBEDTLS_PSA_CRYPTO_DRIVERS`: “This interface is experimental. We intend to maintain backward compatibility with application code that relies on drivers, but the driver interfaces may change without notice.” In practice, this may mean constraints not only on how to write drivers, but also on how to integrate drivers into code that is platform code more than application code.
 * `MBEDTLS_PSA_CRYPTO_CONFIG`: “This feature is still experimental and is not ready for production since it is not completed.” We may want to change this, for example, to automatically enable more mechanisms (although this wouldn't be considered a backward compatibility break anyway, since we don't promise that you will not get a feature if you don't enable its `PSA_WANT_xxx`).
 
 ### Non-goals
@@ -99,8 +106,8 @@ We can classify code that implements or uses cryptographic mechanisms into sever
 * Software implementations of primitive cryptographic mechanisms. These are not expected to change.
 * Software implementations of constructed cryptographic mechanisms (e.g. HMAC, CTR_DRBG, RSA (calling a hash for PSS/OAEP, and needing to know the hash length in PKCS1v1.5 sign/verify), …). These need to keep working whenever a legacy implementation of the auxiliary mechanism is available, regardless of whether a PSA implementation is also available.
 * Code implementing the PSA crypto interface. This is not expected to change, except perhaps to expose some internal functionality to overhauled glue code.
-* Code that's subject to `MBEDTLS_USE_PSA_CRYPTO`: `pk.h`, X.509, TLS (excluding TLS 1.3).
-* Code that always uses PSA for crypto: TLS 1.3, LMS.
+* Code that's subject to `MBEDTLS_USE_PSA_CRYPTO`: `pk.h`, X.509, TLS (excluding parts specific TLS 1.3).
+* Code that always uses PSA for crypto: TLS 1.3 (except things common with 1.2), LMS.
 
 For the purposes of this work, three domains emerge:
 
@@ -110,23 +117,79 @@ For the purposes of this work, three domains emerge:
 
 #### Non-use-PSA modules
 
-The following modules in Mbed TLS call another module to perform cryptographic operations which, in the long term, will be provided through a PSA interface, but cannot make any PSA-related assumption:
+The following modules in Mbed TLS call another module to perform cryptographic operations which, in the long term, will be provided through a PSA interface, but cannot make any PSA-related assumption.
 
-* CCM (block cipher in ECB mode; interdependent with cipher)
-* cipher (cipher and AEAD algorithms)
-* CMAC (AES-ECB and DES-ECB, but could be extended to the other block ciphers; interdependent with cipher)
-* CTR\_DRBG (AES-ECB, but could be extended to the other block ciphers)
-* entropy (hashes via low-level)
+Hashes and HMAC (after the work on driver-only hashes):
+
+* entropy (hashes via MD-light)
 * ECDSA (HMAC\_DRBG; `md.h` exposed through API)
-* ECJPAKE (hashes via md; `md.h` exposed through API)
-* GCM (block cipher in ECB mode; interdependent with cipher)
-* md (hashes and HMAC)
-* NIST\_KW (AES-ECB; interdependent with cipher)
+* ECJPAKE (hashes via MD-light; `md.h` exposed through API)
+* MD (hashes and HMAC)
+* HKDF (HMAC via `md.h`; `md.h` exposed through API)
 * HMAC\_DRBG (hashes and HMAC via `md.h`; `md.h` exposed through API)
-* PEM (AES and DES in CBC mode without padding; MD5 hash via low-level)
-* PKCS12 (cipher, generically, selected from ASN.1 or function parameters; hashes via md; `cipher.h` exposed through API)
-* PKCS5 (cipher, generically, selected from ASN.1; HMAC via `md.h`; `md.h` exposed through API)
-* RSA (hash via md for PSS and OAEP; `md.h` exposed through API)
+* PKCS12 (hashes via MD-light)
+* PKCS5 (HMAC via `md.h`; `md.h` exposed through API)
+* PKCS7 (hashes via MD)
+* RSA (hash via MD-light for PSS and OAEP; `md.h` exposed through API)
+* PEM (MD5 hash via MD-light)
+
+Symmetric ciphers and AEADs (before work on driver-only cipher):
+
+* PEM:
+  * AES, DES or 3DES in CBC mode without padding, decrypt only (!).
+  * Currently using low-level non-generic APIs.
+  * No hard dependency, features guarded by `AES_C` resp. `DES_C`.
+  * Functions called: `setkey_dec()` + `crypt_cbc()`.
+* PKCS12:
+  * In practice: 2DES or 3DES in CBC mode with PKCS7 padding, decrypt only
+    (when called from pkparse).
+  * In principle: any cipher-mode (default padding), passed an
+    `mbedtls_cipher_type_t` as an argument, no documented restriction.
+  * Cipher, generically, selected from ASN.1 or function parameters;
+    no documented restriction but in practice TODO (inc. padding and
+    en/decrypt, look at standards and tests)
+  * Unconditional dependency on `CIPHER_C` in `check_config.h`.
+  * Note: `cipher.h` exposed through API.
+  * Functions called: `setup`, `setkey`, `set_iv`, `reset`, `update`, `finish` (in sequence, once).
+* PKCS5 (PBES2, `mbedtls_pkcs5_pbes2()`):
+  * 3DES or DES in CBC mode with PKCS7 padding, both encrypt and decrypt.
+  * Note: could also be AES in the future, see #7038.
+  * Unconditional dependency on `CIPHER_C` in `check_config.h`.
+  * Functions called: `setup`, `setkey`, `crypt`.
+* CTR\_DRBG:
+  * AES in ECB mode, encrypt only.
+  * Currently using low-level non-generic API (`aes.h`).
+  * Unconditional dependency on `AES_C` in `check_config.h`.
+  * Functions called: `setkey_enc`, `crypt_ecb`.
+* CCM:
+  * AES, Camellia or Aria in ECB mode, encrypt only.
+  * Unconditional dependency on `AES_C || CAMELLIA_C || ARIA_C` in `check_config.h`.
+  * Unconditional dependency on `CIPHER_C` in `check_config.h`.
+  * Note: also called by `cipher.c` if enabled.
+  * Functions called: `info`, `setup`, `setkey`, `update` (several times) - (never finish)
+* CMAC:
+  * AES or DES in ECB mode, encrypt only.
+  * Unconditional dependency on `AES_C || DES_C` in `check_config.h`.
+  * Unconditional dependency on `CIPHER_C` in `check_config.h`.
+  * Note: also called by `cipher.c` if enabled.
+  * Functions called: `info`, `setup`, `setkey`, `update` (several times) - (never finish)
+* GCM:
+  * AES, Camellia or Aria in ECB mode, encrypt only.
+  * Unconditional dependency on `AES_C || CAMELLIA_C || ARIA_C` in `check_config.h`.
+  * Unconditional dependency on `CIPHER_C` in `check_config.h`.
+  * Note: also called by `cipher.c` if enabled.
+  * Functions called: `info`, `setup`, `setkey`, `update` (several times) - (never finish)
+* NIST\_KW:
+  * AES in ECB mode, both encryt and decrypt.
+  * Unconditional dependency on `AES_C || DES_C` in `check_config.h`.
+  * Unconditional dependency on `CIPHER_C` in `check_config.h`.
+  * Note: also called by `cipher.c` if enabled.
+  * Note: `cipher.h` exposed through API.
+  * Functions called: `info`, `setup`, `setkey`, `update` (several times) - (never finish)
+* Cipher:
+  * potentially any cipher/AEAD in any mode and any direction
+
+Note: PSA cipher is built on Cipher, but PSA AEAD directly calls the underlying AEAD modules (GCM, CCM, ChachaPoly).
 
 ### Difficulties
 
@@ -134,7 +197,7 @@ The following modules in Mbed TLS call another module to perform cryptographic o
 
 Here are some reasons why calling `psa_xxx()` to perform a hash or cipher calculation might not be desirable in some circumstances, explaining why the application would arrange to call the legacy software implementation instead.
 
-* `MBEDTLS_PSA_CRYPTO_C` is disabled.
+* `MBEDTLS_PSA_CRYPTO_CLIENT` is disabled.
 * There is a PSA driver which has not been initialized (this happens in `psa_crypto_init()`).
 * For ciphers, the keystore is not initialized yet, and Mbed TLS uses a custom implementation of PSA ITS where the file system is not accessible yet (because something else needs to happen first, and the application takes care that it happens before it calls `psa_crypto_init()`). A possible workaround may be to dispatch to the internal functions that are called after the keystore lookup, rather than to the PSA API functions (but this is incompatible with `MBEDTLS_PSA_CRYPTO_CLIENT`).
 * The requested mechanism is enabled in the legacy interface but not in the PSA interface. This was not really intended, but is possible, for example, if you enable `MBEDTLS_MD5_C` for PEM decoding with PBKDF1 but don't want `PSA_ALG_WANT_MD5` because it isn't supported for `PSA_ALG_RSA_PSS` and `PSA_ALG_DETERMINISTIC_ECDSA`.
@@ -152,7 +215,7 @@ Generally speaking, modules in the mixed domain:
 
 #### Non-support guarantees: requirements
 
-Generally speaking, just because some feature is not enabled in `mbedtls_config.h` or `psa_config.h` doesn't guarantee that it won't be enabled in the build. We can enable additional features through `build_info.h`.
+Generally speaking, just because some feature is not enabled in `mbedtls_config.h` or `crypto_config.h` doesn't guarantee that it won't be enabled in the build. We can enable additional features through `build_info.h` and other header files included there (`*adjust*.h`).
 
 If `PSA_WANT_xxx` is disabled, this should guarantee that attempting xxx through the PSA API will fail. This is generally guaranteed by the test suite `test_suite_psa_crypto_not_supported` with automatically enumerated test cases, so it would be inconvenient to carve out an exception.
 
@@ -263,11 +326,67 @@ These problems are easily solvable.
 * We can make names and HMAC optional. The mixed-domain hash interface won't be the full `MBEDTLS_MD_C` but a subset.
 * We can optimize `md.c` without making API changes to `md.h`.
 
+### Scope reductions and priorities for 3.x
+
+This section documents things that we chose to temporarily exclude from the scope in the 3.x branch (which will eventually be in scope again after 4.0) as well as things we chose to prioritize if we don't have time to support everything.
+
+#### Don't support PK, X.509 and TLS without `MBEDTLS_USE_PSA_CRYPTO`
+
+We do not need to support driver-only hashes and ciphers in PK. X.509 and TLS without `MBEDTLS_USE_PSA_CRYPTO`. Users who want to take full advantage of drivers will need to enabled this macro.
+
+Note that this applies to TLS 1.3 as well, as some uses of hashes and all uses of ciphers there are common with TLS 1.2, hence governed by `MBEDTLS_USE_PSA_CRYPTO`, see [this macro's extended documentation](../../docs/use-psa-crypto.html).
+
+This will go away naturally in 4.0 when this macros is not longer an option (because it's always on).
+
+#### Support for `MBEDTLS_PSA_CRYPTO_CLIENT` without `MBEDTLS_PSA_CRYPTO_C`
+
+We generally don't really support builds with `MBEDTLS_PSA_CRYPTO_CLIENT` without `MBEDTLS_PSA_CRYPTO_C`. For example, both `MBEDTLS_USE_PSA_CRYPTO` and `MBEDTLS_SSL_PROTO_TLS1_3` require `MBEDTLS_PSA_CRYPTO_C`, while in principle they should only require `MBEDTLS_PSA_CRYPTO_CLIENT`.
+
+#### For cipher: prioritize constrained devices and modern TLS
+
+The primary target is a configuration like TF-M's medium profile, plus TLS with only AEAD ciphersuites.
+
+This excludes things like:
+- Support for encrypted PEM, PKCS5 and PKCS12 encryption, and PKCS8 encrypted keys in PK parse. (Not widely used on highly constrained devices.)
+- Support for NIST-KW. (Same justification.)
+- Support for CMAC. (Same justification, plus can be directly accelerated.)
+- Support for CBC ciphersuites in TLS. (They've been recommended against for a while now.)
+
+### Dual-dispatch for block cipher primitives
+
+Considering the priorities stated above, initially we want to support GCM, CCM and CTR-DRBG. All three of them use the block cipher primitive only in the encrypt direction. Currently, GCM and CCM use the Cipher layer in order to work with AES, Aria and Camellia (DES is excluded by the standards due to its smaller block size) and CTR-DRBG directly uses the low-level API from `aes.h`. In all cases, access to the "block cipher primitive" is done by using "ECB mode" (which for both Cipher and `aes.h` only allows a single block, contrary to PSA which implements actual ECB mode).
+
+The two AEAD modes, GCM and CCM, have very similar needs and positions in the stack, strongly suggesting using the same design for both. On the other hand, there are a number of differences between CTR-DRBG and them.
+- CTR-DRBG only uses AES (and there is no plan to extend it to other block ciphers at the moment), while GCM and CCM need to work with 3 block ciphers already.
+- CTR-DRBG holds a special position in the stack: most users don't care about it per se, they only care about getting random numbers - in fact PSA users don't even need to know what DRBG is used. In particular, no part of the stack is asking questions like "is CTR-DRBG-AES available?" - an RNG needs to be available and that's it - contrary to similar questions about AES-GCM etc. which are asked for example by TLS.
+
+So, it makes sense to use different designs for CTR-DRBG on one hand, and GCM/CCM on the other hand:
+- CTR-DRBG can just check if `AES_C` is present and "fall back" to PSA if not.
+- GCM and CCM need an common abstraction layer that allows:
+  - Using AES, Aria or Camellia in a uniform way.
+  - Dispatching to built-in or driver.
+
+The abstraction layer used by GCM and CCM may either be a new internal module, or a subset of the existing Cipher API, extended with the ability to dispatch to a PSA driver.
+
+Reasons for making this layer's API a subset of the existing Cipher API:
+- No need to design, implement and test a new module. (Will need to test the new subset though, as well as the extended behaviour.)
+- No code change in GCM and CCM - only need to update dependencies.
+- No risk for code duplication between a potential new module and Cipher: source-level, and in in particular in builds that still have `CIPHER_C` enabled. (Compiled-code duplication could be avoided by excluding the new module in such builds, though.)
+- If want to support other users of Cipher later (such as NIST-KW, CMAC, PKCS5 and PKCS12), we can just extend dual-dispatch support to other modes/operations in Cipher and keep those extra modules unchanged as well.
+
+Possible costs of re-using (a subset of) the existing Cipher API instead of defining a new one:
+- We carry over costs associated with `cipher_info_t` structures. (Currently the info structure is used for 3 things: (1) to check if the cipher is supported, (2) to check its block size, (3) because `setup()` requires it).
+- We carry over questionable implementation decisions, like dynamic allocation of context.
+
+Those costs could be avoided by refactoring (parts of) Cipher, but that would probably mean either:
+- significant differences in how the `cipher.h` API is implemented between builds with the full Cipher or only a subset;
+- or more work to apply the simplifications to all of Cipher.
+
+Prototyping both approaches showed better code size savings and cleaner code with a new internal module (see section "Internal "block cipher" abstraction (Cipher light)" below).
+
 ## Specification
 
 ### MD light
-
-https://github.com/Mbed-TLS/mbedtls/pull/6474 implements part of this specification, but it's based on Mbed TLS 3.2, so it needs to be rewritten for 3.3.
 
 #### Definition of MD light
 
@@ -304,8 +423,9 @@ Unlike the full MD, MD light does not support null pointers as `mbedtls_md_conte
 
 For each hash algorithm, `md.h` defines a macro `MBEDTLS_MD_CAN_xxx` whenever the corresponding hash is available through MD light. These macros are only defined when `MBEDTLS_MD_LIGHT` is enabled. Per “[Availability of hashes](#availability-of-hashes)”, `MBEDTLS_MD_CAN_xxx` is enabled if:
 
-* the corresponding `MBEDTLS_xxx_C` is defined; or
-* one of `MBEDTLS_PSA_CRYPTO_C` or `MBEDTLS_PSA_CRYPTO_CLIENT` is enabled, and the corresponding `PSA_WANT_ALG_xxx` is enabled.
+* the corresponding `MBEDTLS_xxx_C` is defined.
+* `MBEDTLS_PSA_CRYPTO_C` is enabled and the corresponding `PSA_WANT_ALG_xxx` and `MBEDTLS_PSA_ACCEL_ALG_xxx` are enabled. This enables driver acceleration support.
+* `MBEDTLS_PSA_CRYPTO_CLIENT` is enabled the corresponding `PSA_WANT_ALG_xxx` is enabled. Then the Mbed TLS library must be linked against the PSA Crypto provider one which will eventually handle all PSA calls.
 
 Note that some algorithms have different spellings in legacy and PSA. Since MD is a legacy interface, we'll use the legacy names. Thus, for example:
 
@@ -324,7 +444,7 @@ for now this is out of scope.
 
 #### MD light internal support macros
 
-* If at least one hash has a PSA driver, define `MBEDTLS_MD_SOME_PSA`.
+* If at least one hash has a PSA driver or support in PSA Crypto provider, define `MBEDTLS_MD_SOME_PSA`.
 * If at least one hash has a legacy implementation, defined `MBEDTLS_MD_SOME_LEGACY`.
 
 #### Support for PSA in the MD context
@@ -372,15 +492,24 @@ static inline psa_algorithm_t psa_alg_of_md_info(
 
 #### Determination of PSA support at runtime
 
+Mbed TLS defines internal symbols `MBEDTLS_MD_xxx_VIA_PSA` which are used to check if the `xxx` hash algorithm is supported in PSA. They are enabled when:
+
+* `MBEDTLS_PSA_CRYPTO_C && MBEDTLS_PSA_ACCEL_ALG_xxx`, i.e. when the PSA Crypto core is built with Mbed TLS and the `xxx` is accelerated through a driver.
+* `MBEDTLS_PSA_CRYPTO_CLIENT && PSA_WANT_ALG_xxx`, i.e. there is a PSA Crypto provider/server which supports `xxx` hash algorithm.
+
+MD internally uses the following private function to determine if PSA can be used at runtime or not:
+
 ```
-int psa_can_do_hash(psa_algorithm_t hash_alg);
+static int md_can_use_psa(const mbedtls_md_info_t *info)
 ```
 
-The job of this private function is to return 1 if `hash_alg` can be performed through PSA now, and 0 otherwise. It is only defined on algorithms that are enabled via PSA.
+Internally this function does the following:
 
-As a starting point, return 1 if PSA crypto has been initialized. This will be refined later (to return 1 if the [accelerator subsystem](https://github.com/Mbed-TLS/mbedtls/issues/6007) has been initialized).
+* First of all it converts the `mbedtls_md_info_t` to `psa_algorithm_t`. The result of this conversion is based on the `MBEDTLS_MD_xxx_VIA_PSA` symbols: if an algorithm does not have the corresponding `MBEDTLS_MD_xxx_VIA_PSA` enabled, then `md_can_use_psa` will return false.
 
-Usage note: for algorithms that are not enabled via PSA, calling `psa_can_do_hash` is generally safe: whether it returns 0 or 1, you can call a PSA hash function on the algorithm and it will return `PSA_ERROR_NOT_SUPPORTED`.
+* `int psa_can_do_hash(psa_algorithm_t hash_alg)` is then used to further checking if the PSA Crypto core has been initialized or not. If so then `md_can_use_psa` will finally succeed, otherwise it will fail.
+
+To be noted that in client/server builds (i.e. `MBEDTLS_PSA_CRYPTO_CLIENT && !MBEDTLS_PSA_CRYPTO_C`) the implementer of the client interface is expected to provide psa_can_do_hash().
 
 #### Support for PSA dispatch in hash operations
 
@@ -390,7 +519,7 @@ If given an established context, use its `engine` field.
 
 If given an algorithm as an `mbedtls_md_type_t type` (possibly being the `type` field of a `const mbedtls_md_info_t *`):
 
-* If there is a PSA accelerator for this hash and `psa_can_do_hash(alg)`, call the corresponding PSA function, and if applicable set the engine to `MBEDTLS_MD_ENGINE_PSA`. (Skip this is `MBEDTLS_MD_SOME_PSA` is not defined.)
+* If there is a PSA accelerator/provider for this hash and `md_can_use_psa` succeeds, call the corresponding PSA function, and if applicable set the engine to `MBEDTLS_MD_ENGINE_PSA`. (Skip this is `MBEDTLS_MD_SOME_PSA` is not defined.)
 * Otherwise dispatch to the legacy module based on the type as currently done. (Skip this is `MBEDTLS_MD_SOME_LEGACY` is not defined.)
 * If no dispatch is possible, return `MBEDTLS_ERR_MD_FEATURE_UNAVAILABLE`.
 
@@ -398,31 +527,7 @@ Note that this assumes that an operation that has been started via PSA can be co
 
 #### Error code conversion
 
-After calling a PSA function, call `mbedtls_md_error_from_psa` to convert its status code. This function is currently defined in `hash_info.c`.
-
-### Migration to MD light
-
-#### Migration of modules that used to call MD and now do the legacy-or-PSA dance
-
-Get rid of the case where `MBEDTLS_MD_C` is undefined. Enable `MBEDTLS_MD_LIGHT` in `build_info.h`.
-
-#### Migration of modules that used to call a low-level hash module and now do the legacy-or-PSA dance
-
-Switch to calling MD (light) unconditionally. Enable `MBEDTLS_MD_LIGHT` in `build_info.h`.
-
-#### Migration of modules that call a low-level hash module
-
-Switch to calling MD (light). Enable `MBEDTLS_MD_LIGHT` in `build_info.h`.
-
-#### Migration of use-PSA mixed code
-
-Instead of calling `hash_info.h` functions to obtain metadata, get it from `md.h`.
-
-Optionally, code that currently tests on `MBEDTLS_USE_PSA_CRYPTO` just to determine whether to call MD or PSA to calculate hashes can switch to just having the MD variant.
-
-#### Remove `legacy_or_psa.h`
-
-It's no longer used.
+After calling a PSA function, MD light calls `mbedtls_md_error_from_psa` to convert its status code.
 
 ### Support all legacy algorithms in PSA
 
@@ -430,7 +535,7 @@ As discussed in [“Implications between legacy availability and PSA availabilit
 
 > If an algorithm has a legacy implementation, it is also available through PSA.
 
-When `MBEDTLS_PSA_CRYPTO_CONFIG` is disabled, this is already the case. When is enabled, we will now make it so as well. Change `include/mbedtls/config_psa.h` accordingly.
+When `MBEDTLS_PSA_CRYPTO_CONFIG` is disabled, this is already the case. When is enabled, `include/config_adjust_psa_superset_legacy.h` will ensure that PSA configuration is always a superset of what's enabled in legacy.
 
 ### MD light optimizations
 
@@ -461,19 +566,55 @@ static inline psa_algorithm_t psa_alg_of_md_info(
 
 Work in progress on this conversion is at https://github.com/gilles-peskine-arm/mbedtls/tree/hash-unify-ids-wip-1
 
-#### Get rid of the hash_info module
-
-The hash_info module is redundant with MD light. Move `mbedtls_md_error_from_psa` to `md.c`, defined only when `MBEDTLS_MD_SOME_PSA` is defined. The rest is no longer used.
-
 #### Unify HMAC with PSA
 
 PSA has its own HMAC implementation. In builds with both `MBEDTLS_MD_C` and `PSA_WANT_ALG_HMAC` not fully provided by drivers, we should have a single implementation. Replace the one in `md.h` by calls to the PSA driver interface. This will also give mixed-domain modules access to HMAC accelerated directly by a PSA driver (eliminating the need to a HMAC interface in software if all supported hashes have an accelerator that includes HMAC support).
 
-### Improving support for `MBEDTLS_PSA_CRYPTO_CLIENT`
+### Internal "block cipher" abstraction (previously known as "Cipher light")
 
-So far, MD light only dispatches to PSA if an algorithm is available via `MBEDTLS_PSA_CRYPTO_C`, not if it's available via `MBEDTLS_PSA_CRYPTO_CLIENT`. This is acceptable because `MBEDTLS_USE_PSA_CRYPTO` requires `MBEDTLS_PSA_CRYPTO_C`, hence mixed-domain code never invokes PSA.
+#### Definition
 
-The architecture can be extended to support `MBEDTLS_PSA_CRYPTO_CLIENT` with a little extra work. Here is an overview of the task breakdown, which should be fleshed up after we've done the first [migration](#migration-to-md-light):
+The new module is automatically enabled in `config_adjust_legacy_crypto.h` by modules that need
+it (namely: CCM, GCM) only when `CIPHER_C` is not available, or the new module
+is needed for PSA dispatch (see next section). Note: CCM and GCM currently
+depend on the full `CIPHER_C` (enforced by `check_config.h`); this hard
+dependency would be replaced by the above auto-enablement.
 
-* Compile-time dependencies: instead of checking `defined(MBEDTLS_PSA_CRYPTO_C)`, check `defined(MBEDTLS_PSA_CRYPTO_C) || defined(MBEDTLS_PSA_CRYPTO_CLIENT)`.
-* Implementers of `MBEDTLS_PSA_CRYPTO_CLIENT` will need to provide `psa_can_do_hash()` (or a more general function `psa_can_do`) alongside `psa_crypto_init()`. Note that at this point, it will become a public interface, hence we won't be able to change it at a whim.
+The following API functions are offered:
+```
+void mbedtls_block_cipher_init(mbedtls_block_cipher_context_t *ctx);
+void mbedtls_block_cipher_free(mbedtls_block_cipher_context_t *ctx);
+int mbedtls_block_cipher_setup(mbedtls_block_cipher_context_t *ctx,
+                               mbedtls_cipher_id_t cipher_id);
+int mbedtls_block_cipher_setkey(mbedtls_block_cipher_context_t *ctx,
+                                const unsigned char *key,
+                                unsigned key_bitlen);
+int mbedtls_block_cipher_encrypt(mbedtls_block_cipher_context_t *ctx,
+                                 const unsigned char input[16],
+                                 unsigned char output[16]);
+```
+
+The only supported ciphers are AES, ARIA and Camellia. They are identified by
+an `mbedtls_cipher_id_t` in the `setup()` function, because that's how they're
+identifed by callers (GCM/CCM).
+
+#### Block cipher dual dispatch
+
+Support for dual dispatch in the new internal module `block_cipher` is extremely similar to that in MD light.
+
+A block cipher context contains either a legacy module's context (AES, ARIA, Camellia) or a PSA key identifier; it has a field indicating which one is in use. All fields are private.
+
+The `engine` field is almost redundant with knowledge about `type`. However, when an algorithm is available both via a legacy module and a PSA accelerator, we will choose based on the runtime availability of the accelerator when the context is set up. This choice needs to be recorded in the context structure.
+
+Support is determined at runtime using the new internal function
+```
+int psa_can_do_cipher(psa_key_type_t key_type, psa_algorithm_t cipher_alg);
+```
+
+The job of this private function is to return 1 if `hash_alg` can be performed through PSA now, and 0 otherwise. It is only defined on algorithms that are enabled via PSA. As a starting point, return 1 if PSA crypto's driver subsystem has been initialized.
+
+Each function in the module needs to know whether to dispatch via PSA or legacy. All functions consult the context's `engine` field, except `setup()` which will set it according to the key type and the return value of `psa_can_do_cipher()` as discussed above.
+
+Note that this assumes that an operation that has been started via PSA can be completed. This implies that `mbedtls_psa_crypto_free` must not be called while an operation using PSA is in progress.
+
+After calling a PSA function, `block_cipher` functions call `mbedtls_cipher_error_from_psa` to convert its status code.

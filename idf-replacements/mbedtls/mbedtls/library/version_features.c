@@ -423,12 +423,18 @@ static const char * const features[] = {
 #if defined(MBEDTLS_PSA_CRYPTO_SPM)
     "PSA_CRYPTO_SPM", //no-check-names
 #endif /* MBEDTLS_PSA_CRYPTO_SPM */
+#if defined(MBEDTLS_PSA_KEY_STORE_DYNAMIC)
+    "PSA_KEY_STORE_DYNAMIC", //no-check-names
+#endif /* MBEDTLS_PSA_KEY_STORE_DYNAMIC */
 #if defined(MBEDTLS_PSA_P256M_DRIVER_ENABLED)
     "PSA_P256M_DRIVER_ENABLED", //no-check-names
 #endif /* MBEDTLS_PSA_P256M_DRIVER_ENABLED */
 #if defined(MBEDTLS_PSA_INJECT_ENTROPY)
     "PSA_INJECT_ENTROPY", //no-check-names
 #endif /* MBEDTLS_PSA_INJECT_ENTROPY */
+#if defined(MBEDTLS_PSA_ASSUME_EXCLUSIVE_BUFFERS)
+    "PSA_ASSUME_EXCLUSIVE_BUFFERS", //no-check-names
+#endif /* MBEDTLS_PSA_ASSUME_EXCLUSIVE_BUFFERS */
 #if defined(MBEDTLS_RSA_NO_CRT)
     "RSA_NO_CRT", //no-check-names
 #endif /* MBEDTLS_RSA_NO_CRT */
@@ -453,6 +459,9 @@ static const char * const features[] = {
 #if defined(MBEDTLS_SSL_ASYNC_PRIVATE)
     "SSL_ASYNC_PRIVATE", //no-check-names
 #endif /* MBEDTLS_SSL_ASYNC_PRIVATE */
+#if defined(MBEDTLS_SSL_CLI_ALLOW_WEAK_CERTIFICATE_VERIFICATION_WITHOUT_HOSTNAME)
+    "SSL_CLI_ALLOW_WEAK_CERTIFICATE_VERIFICATION_WITHOUT_HOSTNAME", //no-check-names
+#endif /* MBEDTLS_SSL_CLI_ALLOW_WEAK_CERTIFICATE_VERIFICATION_WITHOUT_HOSTNAME */
 #if defined(MBEDTLS_SSL_CONTEXT_SERIALIZATION)
     "SSL_CONTEXT_SERIALIZATION", //no-check-names
 #endif /* MBEDTLS_SSL_CONTEXT_SERIALIZATION */
@@ -468,6 +477,9 @@ static const char * const features[] = {
 #if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
     "SSL_KEEP_PEER_CERTIFICATE", //no-check-names
 #endif /* MBEDTLS_SSL_KEEP_PEER_CERTIFICATE */
+#if defined(MBEDTLS_SSL_KEYING_MATERIAL_EXPORT)
+    "SSL_KEYING_MATERIAL_EXPORT", //no-check-names
+#endif /* MBEDTLS_SSL_KEYING_MATERIAL_EXPORT */
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
     "SSL_RENEGOTIATION", //no-check-names
 #endif /* MBEDTLS_SSL_RENEGOTIATION */
@@ -576,6 +588,9 @@ static const char * const features[] = {
 #if defined(MBEDTLS_BASE64_C)
     "BASE64_C", //no-check-names
 #endif /* MBEDTLS_BASE64_C */
+#if defined(MBEDTLS_BLOCK_CIPHER_NO_DECRYPT)
+    "BLOCK_CIPHER_NO_DECRYPT", //no-check-names
+#endif /* MBEDTLS_BLOCK_CIPHER_NO_DECRYPT */
 #if defined(MBEDTLS_BIGNUM_C)
     "BIGNUM_C", //no-check-names
 #endif /* MBEDTLS_BIGNUM_C */
@@ -633,6 +648,9 @@ static const char * const features[] = {
 #if defined(MBEDTLS_GCM_C)
     "GCM_C", //no-check-names
 #endif /* MBEDTLS_GCM_C */
+#if defined(MBEDTLS_GCM_LARGE_TABLE)
+    "GCM_LARGE_TABLE", //no-check-names
+#endif /* MBEDTLS_GCM_LARGE_TABLE */
 #if defined(MBEDTLS_HKDF_C)
     "HKDF_C", //no-check-names
 #endif /* MBEDTLS_HKDF_C */
@@ -708,6 +726,9 @@ static const char * const features[] = {
 #if defined(MBEDTLS_PSA_ITS_FILE_C)
     "PSA_ITS_FILE_C", //no-check-names
 #endif /* MBEDTLS_PSA_ITS_FILE_C */
+#if defined(MBEDTLS_PSA_STATIC_KEY_SLOTS)
+    "PSA_STATIC_KEY_SLOTS", //no-check-names
+#endif /* MBEDTLS_PSA_STATIC_KEY_SLOTS */
 #if defined(MBEDTLS_RIPEMD160_C)
     "RIPEMD160_C", //no-check-names
 #endif /* MBEDTLS_RIPEMD160_C */
@@ -723,9 +744,15 @@ static const char * const features[] = {
 #if defined(MBEDTLS_SHA256_C)
     "SHA256_C", //no-check-names
 #endif /* MBEDTLS_SHA256_C */
+#if defined(MBEDTLS_SHA256_USE_ARMV8_A_CRYPTO_IF_PRESENT)
+    "SHA256_USE_ARMV8_A_CRYPTO_IF_PRESENT", //no-check-names
+#endif /* MBEDTLS_SHA256_USE_ARMV8_A_CRYPTO_IF_PRESENT */
 #if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT)
     "SHA256_USE_A64_CRYPTO_IF_PRESENT", //no-check-names
 #endif /* MBEDTLS_SHA256_USE_A64_CRYPTO_IF_PRESENT */
+#if defined(MBEDTLS_SHA256_USE_ARMV8_A_CRYPTO_ONLY)
+    "SHA256_USE_ARMV8_A_CRYPTO_ONLY", //no-check-names
+#endif /* MBEDTLS_SHA256_USE_ARMV8_A_CRYPTO_ONLY */
 #if defined(MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY)
     "SHA256_USE_A64_CRYPTO_ONLY", //no-check-names
 #endif /* MBEDTLS_SHA256_USE_A64_CRYPTO_ONLY */
