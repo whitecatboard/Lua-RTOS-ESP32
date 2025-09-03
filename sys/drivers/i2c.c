@@ -744,6 +744,36 @@ driver_error_t *i2c_write(int deviceid, uint8_t *data, int len) {
 	return NULL;
 }
 
+driver_error_t *i2c_multiple_write(int deviceid, uint8_t *d1, int s1, uint8_t *d2, int s2) {
+    driver_error_t *error;
+    esp_err_t err = ESP_OK;
+
+    int unit = (deviceid & 0xff00) >> 8;
+    int device = (deviceid & 0x00ff);
+
+    // Sanity checks
+    if ((error = i2c_check(unit))) {
+        return error;
+    }
+
+	i2c_operation_job_t i2c_ops[] = {
+	    { .command = I2C_MASTER_CMD_START },
+	    { .command = I2C_MASTER_CMD_WRITE, .write = { .ack_check = false, .data = d1, .total_bytes = s1 } },
+	    { .command = I2C_MASTER_CMD_WRITE, .write = { .ack_check = false, .data = d2, .total_bytes = s2 } },
+	    { .command = I2C_MASTER_CMD_STOP },
+	};
+
+    i2c_lock(unit);
+	err = i2c_master_execute_defined_operations(i2c[unit].device[device].hdnl, i2c_ops, sizeof(i2c_ops) / sizeof(i2c_operation_job_t), 1000);
+    i2c_unlock(unit);
+
+    if (err == ESP_ERR_TIMEOUT) {
+    	return driver_error(I2C_DRIVER, I2C_ERR_TIMEOUT, NULL);
+    }
+
+	return NULL;
+}
+
 driver_error_t *i2c_read(int deviceid, uint8_t *data, int len) {
     driver_error_t *error;
     esp_err_t err;

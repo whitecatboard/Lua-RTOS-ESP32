@@ -55,6 +55,7 @@
 
 #include "driver.h"
 #include "cpu.h"
+#include "driver/i2c.h"
 #include "driver/i2c_master.h"
 
 #define I2C_BUS_DEVICES CONFIG_LUA_RTOS_I2C_DEVICES_PER_BUS
@@ -270,6 +271,7 @@ driver_error_t *i2c_flush(int deviceid, int *transaction, int new_transaction);
 
 bool i2c_probe(int deviceid, uint16_t address);
 driver_error_t *i2c_write(int deviceid, uint8_t *data, int len);
+driver_error_t *i2c_multiple_write(int deviceid, uint8_t *d1, int s1, uint8_t *d2, int s2);
 driver_error_t *i2c_read(int deviceid, uint8_t *data, int len);
 driver_error_t *i2c_write_read(int deviceid, uint8_t *dataw, int lenw, uint8_t *datar, int lenr);
 

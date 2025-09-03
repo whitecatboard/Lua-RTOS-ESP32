@@ -84,16 +84,11 @@ static uint8_t chipset;
  * Helper functions
  */
 static driver_error_t *ssd1306_command(int device, uint8_t command) {
-	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
 	driver_error_t *error;
 
-	int transaction = I2C_TRANSACTION_INITIALIZER;
 	uint8_t buff[2] = {0x00, command};
 
-	error = i2c_start(device, &transaction);if (error) return error;
-	error = i2c_write_address(device, &transaction, caps->address, 0);if (error) return error;
-	error = i2c_write(device, &transaction, (char *)&buff, sizeof(buff));if (error) return error;
-	error = i2c_stop(device, &transaction);if (error) return error;
+	error = i2c_write(device, buff, sizeof(buff));if (error) return error;
 
 	return NULL;
 }
@@ -142,7 +137,7 @@ driver_error_t *ssd1306_init(uint8_t chip, uint8_t orient, uint8_t address) {
 	chipset = chip;
 
 	// Attach to I2C
-	if ((error = i2c_attach(CONFIG_LUA_RTOS_GDISPLAY_I2C, I2C_MASTER, 400000, 0, 0, &caps->device))) {
+	if ((error = i2c_attach(CONFIG_LUA_RTOS_GDISPLAY_I2C, I2C_MASTER, 400000, 0, caps->address, &caps->device))) {
 		return error;
 	}
 
@@ -224,14 +219,9 @@ void ssd1306_update(int x0, int y0, int x1, int y1, uint8_t *buffer) {
 	gdisplay_caps_t *caps = gdisplay_ll_get_caps();
 	driver_error_t *error;
 
-	int transaction = I2C_TRANSACTION_INITIALIZER;
 	uint8_t buff[1] = {0x40};
 
-	error = i2c_start(caps->device, &transaction);if (error) goto i2c_error;
-	error = i2c_write_address(caps->device, &transaction, caps->address, 0);if (error) goto i2c_error;
-	error = i2c_write(caps->device, &transaction, (char *)buff, 1);if (error) goto i2c_error;
-	error = i2c_write(caps->device, &transaction, (char *)dst, (caps->height * caps->width) / 8);if (error) goto i2c_error;
-	error = i2c_stop(caps->device, &transaction);if (error) goto i2c_error;
+	error = i2c_multiple_write(caps->device, buff, sizeof(buff),dst, (caps->height * caps->width) / 8);if (error) goto i2c_error;
 
 	return;
 
