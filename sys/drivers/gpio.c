@@ -156,7 +156,7 @@ uint8_t gpio_ll_pin_get(int8_t pin) {
  */
 driver_error_t *gpio_pin_output(uint8_t pin) {
     if (pin < 40) {
-        gpio_config_t io_conf;
+        gpio_config_t io_conf = {0};
 
         // Sanity checks
         if (!(GPIO_ALL_OUT & (GPIO_BIT_MASK << pin))) {
@@ -195,7 +195,7 @@ driver_error_t *gpio_pin_output(uint8_t pin) {
 
 driver_error_t *gpio_pin_input(uint8_t pin) {
     if (pin < 40) {
-        gpio_config_t io_conf;
+        gpio_config_t io_conf = {0};
 
         // Sanity checks
         if (!(GPIO_ALL_IN & (GPIO_BIT_MASK << pin))) {
@@ -356,6 +356,15 @@ driver_error_t *gpio_pin_pullup(uint8_t pin) {
             return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN_DIRECTION, NULL);
         }
 
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wtype-limits"
+
+		if (!(GPIO_IS_VALID_OUTPUT_GPIO(pin))) {
+			return NULL;
+		}
+
+		#pragma GCC diagnostic pop
+
         gpio_set_pull_mode(pin, GPIO_PULLUP_ONLY);
         gpio_pullup_en(pin);
         gpio_pulldown_dis(pin);
@@ -392,6 +401,15 @@ driver_error_t *gpio_pin_pulldwn(uint8_t pin) {
         if (!(GPIO_ALL & (GPIO_BIT_MASK << pin))) {
             return driver_error(GPIO_DRIVER, GPIO_ERR_INVALID_PIN, NULL);
         }
+
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wtype-limits"
+		
+		if (!(GPIO_IS_VALID_OUTPUT_GPIO(pin))) {
+			return NULL;
+		}
+
+		#pragma GCC diagnostic pop
 
         gpio_set_pull_mode(pin, GPIO_PULLDOWN_ONLY);
         gpio_pullup_dis(pin);
@@ -471,7 +489,7 @@ driver_error_t *gpio_pin_nopull(uint8_t pin) {
 // If bit n on mask is set to 1 the gpio is configured
 driver_error_t *gpio_pin_input_mask(uint8_t port, gpio_pin_mask_t pinmask) {
     if (port == 1) {
-        gpio_config_t io_conf;
+        gpio_config_t io_conf = {0};
 
         // Sanity checks
         if (0xffffff0000000000 & pinmask) {
@@ -520,7 +538,7 @@ driver_error_t *gpio_pin_input_mask(uint8_t port, gpio_pin_mask_t pinmask) {
 // If bit n on mask is set to 1 the gpio is configured
 driver_error_t *gpio_pin_output_mask(uint8_t port, gpio_pin_mask_t pinmask) {
     if (port == 1) {
-        gpio_config_t io_conf;
+        gpio_config_t io_conf = {0};
 
         // Sanity checks
         if (0xffffff0000000000 & pinmask) {
