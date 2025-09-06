@@ -75,6 +75,9 @@ void gpio_isr(void *args) {
     }
 #endif
 
+    // Ensure that timer is stopped before
+	tmr_ll_stop(GPIO_DEBOUNCING_TIMER);
+
     // Start timer
 	tmr_ll_start(GPIO_DEBOUNCING_TIMER);
 }
@@ -188,8 +191,7 @@ driver_error_t *gpio_debouncing_register(uint8_t pin, uint16_t threshold, gpio_d
             return driver_error(GPIO_DRIVER, GPIO_ERR_NOT_ENOUGH_MEMORY, NULL);
         }
 
-         mtx_init(&debouncing->mtx, NULL, NULL, 0);
-
+        mtx_init(&debouncing->mtx, NULL, NULL, 0);
         portENABLE_INTERRUPTS();
     } else {
         setup = 1;
