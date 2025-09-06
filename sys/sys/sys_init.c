@@ -161,7 +161,8 @@ void _sys_init() {
     // Increment bootcount
     boot_count++;
 
-    esp_log_level_set("*", ESP_LOG_ERROR);
+	// Disable early logs
+    esp_log_level_set("*", ESP_LOG_NONE);
 
     // set the current time only if RTC has not already been set
     struct timeval tv;
