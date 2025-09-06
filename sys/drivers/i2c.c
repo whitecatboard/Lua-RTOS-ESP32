@@ -380,7 +380,10 @@ driver_error_t *i2c_attach(int unit, int mode, int speed, int addr10_en, int add
         if (err == ESP_ERR_NO_MEM) {
             i2c_unlock(unit);
         	return driver_error(I2C_DRIVER, I2C_ERR_NOT_ENOUGH_MEMORY, NULL);
-        }
+        } else if (err == ESP_ERR_NOT_FOUND) {
+            i2c_unlock(unit);
+        	return driver_error(I2C_DRIVER, I2C_ERR_NO_MORE_DEVICES_ALLOWED, NULL);
+		}
     }
 
     // Setup device only once
@@ -389,6 +392,9 @@ driver_error_t *i2c_attach(int unit, int mode, int speed, int addr10_en, int add
         device = i2c_get_free_device(unit);
         if (device < 0) {
             // No more devices
+        	i2c_del_master_bus(i2c[unit].hdnl);
+        	i2c[unit].hdnl = NULL;
+        	
             return driver_error(I2C_DRIVER, I2C_ERR_NO_MORE_DEVICES_ALLOWED, NULL);
         }
 

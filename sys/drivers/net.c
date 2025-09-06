@@ -47,6 +47,8 @@
 
 #if CONFIG_LUA_RTOS_LUA_USE_NET
 
+#include "build_commit.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 
@@ -478,12 +480,12 @@ driver_error_t *net_ota() {
     if ((response.code == 200) && (response.size > 0)) {
         printf(
             "Running partition is %s, at offset 0x%08x\r\n",
-             running->label, running->address
+             running->label, (unsigned int)running->address
         );
 
         printf(
             "Writing partition is %s, at offset 0x%08x\r\n",
-            update_partition->label, update_partition->address
+            update_partition->label, (unsigned int)update_partition->address
         );
 
         esp_task_wdt_reset();
@@ -507,11 +509,11 @@ driver_error_t *net_ota() {
 
             err = esp_ota_write(update_handle, buffer, response.len);
             if (err != ESP_OK) {
-                printf("\nChunk written unsuccessfully in partition (offset 0x%08x), error %d\r\n", address, err);
+                printf("\nChunk written unsuccessfully in partition (offset 0x%08x), error %d\r\n", (unsigned int)address, err);
                 net_http_destroy_client(&client);
                 return NULL;
             } else {
-                printf("\rChunk written successfully in partition at offset 0x%08x", address);
+                printf("\rChunk written successfully in partition at offset 0x%08x", (unsigned int)address);
             }
 
             address = address + response.len;

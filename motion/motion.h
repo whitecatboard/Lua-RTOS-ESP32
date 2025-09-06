@@ -24,7 +24,7 @@
 #ifndef _MOTION_MOTION_H_
 #define _MOTION_MOTION_H_
 
-#define MOTION_DEBUG 1
+#define MOTION_DEBUG 0
 #define MOTION_CURVE_DEBUG 0
 
 #include "motion_math.h"

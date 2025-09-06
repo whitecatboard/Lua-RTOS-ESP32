@@ -52,7 +52,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <inttypes.h>
 
 static rotable_cache_t cache;
 static portMUX_TYPE lock = portMUX_INITIALIZER_UNLOCKED;
@@ -64,7 +64,7 @@ void rotable_cache_dump() {
 	portENTER_CRITICAL(&lock);
 
 	while (entry) {
-		printf("[%d]: used %d ", i, entry->used);
+		printf("[%d]: used %"PRIu32" ", i, entry->used);
 
 		if (entry->rotable) {
 			if (entry->entry->key.len) {
@@ -80,7 +80,7 @@ void rotable_cache_dump() {
 
 	printf("\r\n");
 
-	printf("hit: %d, miss: %d\r\n", cache.hit, cache.miss);
+	printf("hit: %"PRIu32", miss: %"PRIu32"\r\n", cache.hit, cache.miss);
 
 	portEXIT_CRITICAL(&lock);
 
