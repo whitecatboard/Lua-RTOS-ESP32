@@ -21,6 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "driver/rmt_common.h"
 #include "luartos.h"
 
 #if CONFIG_LUA_RTOS_LUA_USE_STEPPER
@@ -65,13 +66,17 @@
 #endif
 
 typedef struct {
+    int mask;     // Stepper mask
+    bool initial; // start a RMT transmission?
+} acceleration_quue_msg;
+
+typedef struct {
     uint8_t stepper;
     float units;
 } stepper_oder_t;
 
 typedef struct rmt_copy_encoder_t {
     rmt_encoder_t base;       // encoder base class
-    size_t last_symbol_index; // index of symbol position in the primary stream
 } stepper_encoder_t;
 
 // Register driver and messages
@@ -100,14 +105,12 @@ static TaskHandle_t acceleration_profile_task_h = NULL;
 
 // Steppers who are currently started (1 = started, 0 = not started),
 static uint32_t start_mask = 0;
-static uint8_t start_num = 0;
 
 static struct mtx stepper_mutex;
 
 static portMUX_TYPE spinlock = portMUX_INITIALIZER_UNLOCKED;
 
 static EventGroupHandle_t move_event_group = NULL;
-static EventGroupHandle_t stop_event_group = NULL;
 
 /*
  * Helper functions
@@ -116,7 +119,6 @@ static EventGroupHandle_t stop_event_group = NULL;
 static size_t IRAM_ATTR encoder_copy(rmt_encoder_t *encoder, rmt_channel_handle_t channel,
                                      const void *primary_data, size_t data_size, rmt_encode_state_t *ret_state)
 {
-    stepper_encoder_t *copy_encoder = __containerof(encoder, stepper_encoder_t, base);
     rmt_tx_channel_t *tx_chan = __containerof(channel, rmt_tx_channel_t, base);
     rmt_symbol_word_t *symbols = (rmt_symbol_word_t *)primary_data;
     rmt_encode_state_t state = RMT_ENCODING_RESET;
@@ -124,22 +126,42 @@ static size_t IRAM_ATTR encoder_copy(rmt_encoder_t *encoder, rmt_channel_handle_
     rmt_dma_descriptor_t *desc1 = NULL;
     uint8_t chan_id = channel->channel_id;
 
-    size_t symbol_index = copy_encoder->last_symbol_index;
-    // how many symbols will be copied by the encoder
-    size_t mem_want = (data_size / 4 - symbol_index);
-    // how many symbols we can save for this round
-    size_t mem_have = tx_chan->mem_end - tx_chan->mem_off;
-    // where to put the encoded symbols? DMA buffer or RMT HW memory
+    // Get how many items should be transfer
+    size_t items_want = (data_size / 4);
+
+    // Get how many items are pending to transfer
+    size_t items_pending = 0;
+    uint32_t tail;
+    uint32_t head;
+    
+    
+    tail = atomic_load(&stepper[chan_id].rmt_data_tail);
+    head = atomic_load(&stepper[chan_id].rmt_data_head);
+    
+    if (tail < head) {
+		items_pending = head - tail;
+	} else if (tail > head) {
+		items_pending = STEPPER_RMT_DATA_SIZE - tail + head;
+	} 
+
+	// Adjust how many items should be transfer
+	if (items_want > items_pending) {
+		items_want = items_pending;
+	}
+
+    // Get how many symbols we can save for this round (hardware limit)
+    size_t items_have = tx_chan->mem_end - tx_chan->mem_off;
+
+    // Where to put the encoded symbols? DMA buffer or RMT HW memory
     rmt_symbol_word_t *mem_to_nc = NULL;
     if (channel->dma_chan) {
         mem_to_nc = (rmt_symbol_word_t *)RMT_GET_NON_CACHE_ADDR(channel->dma_mem_base);
     } else {
         mem_to_nc = channel->hw_mem_base;
     }
-    // how many symbols will be encoded in this round
-    size_t encode_len = MIN(mem_want, mem_have);
-    bool encoding_truncated = mem_have < mem_want;
-    bool encoding_space_free = mem_have > mem_want;
+    
+    // Get how many items will be encoded in this round
+    size_t encode_len = MIN(items_want, items_have);
 
     if (channel->dma_chan) {
         // mark the start descriptor
@@ -154,17 +176,19 @@ static size_t IRAM_ATTR encoder_copy(rmt_encoder_t *encoder, rmt_channel_handle_
     rmt_symbol_word_t symbol;
 
     while (len > 0) {
-    	symbol = symbols[stepper[chan_id].rmt_data_tail];
-    	mem_to_nc[tx_chan->mem_off++] = symbol;
-		stepper[chan_id].rmt_data_tail = ((stepper[chan_id].rmt_data_tail + 1) % (STEPPER_RMT_DATA_SIZE));
-
-    	if (symbol.val == 0) {
-    		encoding_truncated = false;
-    		len = 0;
-    	} else {
-            len--;
-    	}
+		symbol = symbols[tail];
+		mem_to_nc[tx_chan->mem_off++] = symbol;
+		tail = ((tail + 1) % (STEPPER_RMT_DATA_SIZE));
+	
+		if (symbol.val == 0) {
+	        state |= RMT_ENCODING_COMPLETE;	        
+	        break;
+		} else {
+	        len--;
+		}						
     }
+    
+    atomic_store(&stepper[chan_id].rmt_data_tail, tail);
 
     if (channel->dma_chan) {
         // mark the end descriptor
@@ -181,20 +205,6 @@ static size_t IRAM_ATTR encoder_copy(rmt_encoder_t *encoder, rmt_channel_handle_
         }
     }
 
-    if (encoding_truncated) {
-        // this encoding has not finished yet, save the truncated position
-        copy_encoder->last_symbol_index = symbol_index;
-    } else {
-        // reset internal index if encoding session has finished
-        copy_encoder->last_symbol_index = 0;
-        state |= RMT_ENCODING_COMPLETE;
-    }
-
-    if (!encoding_space_free) {
-        // no more free memory, the caller should yield
-        state |= RMT_ENCODING_MEM_FULL;
-    }
-
     // reset offset pointer when exceeds maximum range
     if (tx_chan->mem_off >= tx_chan->ping_pong_symbols * 2) {
         if (channel->dma_chan) {
@@ -205,13 +215,25 @@ static size_t IRAM_ATTR encoder_copy(rmt_encoder_t *encoder, rmt_channel_handle_
     }
 
     *ret_state = state;
-    return encode_len;
+    
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    
+    acceleration_quue_msg msg;
+    
+    msg.mask = (1 << chan_id);
+    msg.initial = false;
+    
+    xQueueSendFromISR(acceleration_queue, &msg, &xHigherPriorityTaskWoken);
+
+    // Context switch if required
+    if(xHigherPriorityTaskWoken == pdTRUE) {
+        portYIELD_FROM_ISR();
+    }
+    return len;
 }
 
 static esp_err_t encoder_reset(rmt_encoder_t *encoder)
 {
-	stepper_encoder_t *copy_encoder = __containerof(encoder, stepper_encoder_t, base);
-    copy_encoder->last_symbol_index = 0;
     return ESP_OK;
 }
 
@@ -257,22 +279,9 @@ static void stepper_init() {
     memset(stepper,0,sizeof(stepper_t) * NSTEP);
 }
 
-static void step_feedback(void *arg) {
-	stepper_t *pstepper = (stepper_t *)arg;
-
-	pstepper->steps_done++;
-
-    if  (pstepper->dir){
-        pstepper->pos++;
-    } else {
-        pstepper->pos--;
-    }
-}
-
 static bool tx_cb(rmt_channel_handle_t channel, const rmt_tx_done_event_data_t *edata, void *args) {
     // Need to make a context switch at the end of the callback?
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    BaseType_t xCurrentHigherPriorityTaskWoken = pdFALSE;
 
     // Get stepper
     stepper_t *cstepper = (stepper_t *)args;
@@ -280,26 +289,9 @@ static bool tx_cb(rmt_channel_handle_t channel, const rmt_tx_done_event_data_t *
 	// Get unit
 	uint8_t unit = cstepper->unit;
 
-    // Consume a half of a RMT block from the pre-computed RMT data
-	if (cstepper->rmt_started && (cstepper->rmt_data_tail != cstepper->rmt_data_head)) {
-		uint32_t dummy = (1 << unit);
-        xQueueSendFromISR(acceleration_queue, &dummy, &xHigherPriorityTaskWoken);
-	} else {
-		// Stepper movement finish
-		start_mask &= ~(1 << unit);
-
-		// One stepper is stopped now
-		if (start_num > 0) {
-			start_num--;
-		}
-
-		xEventGroupSetBitsFromISR(stop_event_group, 1 << unit, &xCurrentHigherPriorityTaskWoken);
-		xHigherPriorityTaskWoken |= xCurrentHigherPriorityTaskWoken;
-
-		xEventGroupSetBitsFromISR(move_event_group, 1 << unit, &xCurrentHigherPriorityTaskWoken);
-		xHigherPriorityTaskWoken |= xCurrentHigherPriorityTaskWoken;
-	}
-
+	// Notify that the stepper movement has ended
+	xEventGroupSetBitsFromISR(move_event_group, 1 << unit, &xHigherPriorityTaskWoken);
+	
 	return xHigherPriorityTaskWoken;
 }
 
@@ -315,60 +307,52 @@ static driver_error_t *stepper_check(esp_err_t err) {
 }
 
 static void acceleration_profile_task(void *args) {
-    stepper_t *pstepper;     // Current stepper in cycle
-    uint8_t stepper_num;     // Current stepper number in cycle
-    uint32_t cycle_for_mask; // Mask with the steppers that require to perform an acceleration cycle
-    uint32_t cycle_mask;     // A copy of cycle_for_mask
+    acceleration_quue_msg msg;   // Cycle message
+    stepper_t *pstepper;         // Current stepper in cycle
+    uint32_t cycle_for_mask;     // Stepper involved in cycle
+    uint32_t cycle_mask;         // A copy of cycle_for_mask
     rmt_symbol_word_t rmt_item;	 // RMT item for current step
 
     while (true) {
         // Wait for cycle
-        xQueueReceive(acceleration_queue, &cycle_for_mask, portMAX_DELAY);
+        xQueueReceive(acceleration_queue, &msg, portMAX_DELAY);
+        
+        // Get involved steppers
+        cycle_for_mask = msg.mask;
 
         // Run a new cycle with the involved steppers
         pstepper = stepper;
-        stepper_num = 0;
-
-        // For all the required steppers
         cycle_mask = cycle_for_mask;
 
         while (cycle_mask) {
             if (cycle_mask & 0x01) {
-            	// Transmit precomputed RMT buffer
-            	if (pstepper->rmt_data_tail != pstepper->rmt_data_head) {
-                    rmt_transmit_config_t tx_config = {
-                        .loop_count = 0,
-                    };
-
-                    rmt_transmit(pstepper->tx_chan, pstepper->tx_encoder, pstepper->rmt_data, STEPPER_RMT_BUFF_SIZE, &tx_config);
-            	}
-
                 // Prepare next RMT buffer
-                uint32_t next = ((pstepper->rmt_data_head + 1) % (STEPPER_RMT_DATA_SIZE));
+                uint32_t tail = atomic_load(&pstepper->rmt_data_tail);
+				uint32_t head = atomic_load(&pstepper->rmt_data_head);
+                uint32_t next = ((head + 1) % (STEPPER_RMT_DATA_SIZE));
 
-                if ((pstepper->steps == 0) && (next != pstepper->rmt_data_tail)) {
+                if ((pstepper->steps == 0) && (next != tail)) {
                 	// Check that previous elements is not an end condition
-                	uint32_t prev = (pstepper->rmt_data_head + STEPPER_RMT_DATA_SIZE - 1) % STEPPER_RMT_DATA_SIZE;
+                	uint32_t prev = (head + STEPPER_RMT_DATA_SIZE - 1) % STEPPER_RMT_DATA_SIZE;
 
                 	if (pstepper->rmt_data[prev] != 0) {
 						// RMT end condition
-						pstepper->rmt_data[pstepper->rmt_data_head] = 0;
+						pstepper->rmt_data[head] = 0;
 
 						// Advance
-						pstepper->rmt_data_head = next;
+						head = next;
                 	}
 
                     // Next stepper
                     cycle_mask = cycle_mask >> 1;
                     pstepper++;
-                    stepper_num++;
 
                     continue;
                 }
 
-                next = ((pstepper->rmt_data_head + 1) % (STEPPER_RMT_DATA_SIZE));
+                next = ((head + 1) % (STEPPER_RMT_DATA_SIZE));
 
-                while ((pstepper->steps > 0) && (next != pstepper->rmt_data_tail)) {
+                while ((pstepper->steps > 0) && (next != tail)) {
                     // In each RMT entry we have 1 bit level, and 15 bits for period, so in each item we can represent
                     // STEPPER_RMT_MAX_DURATION tick-period.
                     uint32_t rmt_ticks = 0;
@@ -392,7 +376,7 @@ static void acceleration_profile_task(void *args) {
                     	rmt_ticks++;
                     	pstepper->rmt_missing_ticks -= 1.0;
                     }
-
+                    
                     while (rmt_ticks > 0) {
                         if (first) {
                             // Step signal -> H for 1 usec
@@ -412,16 +396,16 @@ static void acceleration_profile_task(void *args) {
                             }
 
                             // Write to RMT buffer
-                            pstepper->rmt_data[pstepper->rmt_data_head] = rmt_item.val;
+                            pstepper->rmt_data[head] = rmt_item.val;
 
                             // Advance
-                            pstepper->rmt_data_head = next;
-                            next = ((pstepper->rmt_data_head + 1) % (STEPPER_RMT_DATA_SIZE));
+                            head = next;
+                            next = ((head + 1) % (STEPPER_RMT_DATA_SIZE));
                         } else {
                             // We need more RMT items
 
                             // Enough space in buffer?
-                            if (next != pstepper->rmt_data_tail) {
+                            if (next != tail) {
                                 // Enough space
 
                                 // Now we can use level0 and level1
@@ -448,11 +432,11 @@ static void acceleration_profile_task(void *args) {
                                 }
 
                                 // Write to RMT buffer
-                                pstepper->rmt_data[pstepper->rmt_data_head] = rmt_item.val;
+                                pstepper->rmt_data[head] = rmt_item.val;
 
                                 // Advance
-                                pstepper->rmt_data_head = next;
-                                next = ((pstepper->rmt_data_head + 1) % (STEPPER_RMT_DATA_SIZE));
+                                head = next;
+                                next = ((head + 1) % (STEPPER_RMT_DATA_SIZE));
                             } else {
                                 // No space in buffer, we need to wait for next iteration
                                 pstepper->rmt_ticks_remain = rmt_ticks;
@@ -473,49 +457,53 @@ static void acceleration_profile_task(void *args) {
 
                 if (pstepper->steps == 0) {
                     // RMT end
-                    if (next != pstepper->rmt_data_tail) {
+                    if (next != tail) {
                         // Enough space in buffer?
                         // RMT end condition
-                        pstepper->rmt_data[pstepper->rmt_data_head] = 0;
+                        pstepper->rmt_data[head] = 0;
 
                         // Advance
-                        pstepper->rmt_data_head = next;
+                        head = next;
                     } else {
                     	// Not enough space in buffer, wait for next cycle
                     }
 
                     pstepper->rmt_missing_ticks = 0;
                 }
+                
+                
+                atomic_store(&pstepper->rmt_data_head, head);
             }
 
             // Next stepper
             cycle_mask = cycle_mask >> 1;
             pstepper++;
-            stepper_num++;
         }
 
         // Start, RMT, if required
-        cycle_mask = cycle_for_mask;
+        if (msg.initial) {
+			// Steppers are started in a critical section to ensure that no context-switching
+			// happens, avoiding delays in the start
+		    portENTER_CRITICAL(&spinlock);
 
-        pstepper = stepper;
-        stepper_num = 0;
-
-        while (cycle_mask) {
-            if (cycle_mask & 0x01) {
-                if (pstepper->rmt_start && !pstepper->rmt_started) {
-                    rmt_transmit_config_t tx_config = {
-                        .loop_count = 0,
-                    };
-
-            		rmt_transmit(stepper[stepper_num].tx_chan, stepper[stepper_num].tx_encoder, stepper[stepper_num].rmt_data, STEPPER_RMT_BUFF_SIZE, &tx_config);
-                    pstepper->rmt_started = 1;
-                }
-            }
-
-            cycle_mask = cycle_mask >> 1;
-            pstepper++;
-            stepper_num++;
-        }
+	        cycle_mask = cycle_for_mask;
+	        pstepper = stepper;
+	
+	        while (cycle_mask) {
+	            if (cycle_mask & 0x01) {
+	                rmt_transmit_config_t tx_config = {
+	                    .loop_count = 0,
+	                };
+	
+	        		rmt_transmit(pstepper->tx_chan, pstepper->tx_encoder, pstepper->rmt_data, STEPPER_RMT_BUFF_SIZE * 4, &tx_config);
+	            }
+	
+	            cycle_mask = cycle_mask >> 1;
+	            pstepper++;
+	        }
+	        
+		    portEXIT_CRITICAL(&spinlock);
+        }        
     }
 }
 
@@ -557,18 +545,18 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
         return driver_error(STEPPER_DRIVER, STEPPER_ERR_NOT_ENOUGH_MEMORY, NULL);
     }
 
-    stepper[*unit].rmt_data_head = 0;
-    stepper[*unit].rmt_data_tail = 0;
+	atomic_init(&stepper[*unit].rmt_data_tail, 0);
+	atomic_init(&stepper[*unit].rmt_data_head, 0);
 
     // Create acceleration task if not created yet
     if (acceleration_profile_task_h == NULL) {
-        acceleration_queue = xQueueCreate(100, sizeof(uint32_t));
+        acceleration_queue = xQueueCreate(100, sizeof(acceleration_quue_msg));
         if (acceleration_queue == NULL) {
             mtx_unlock(&stepper_mutex);
             return driver_error(STEPPER_DRIVER, STEPPER_ERR_NOT_ENOUGH_MEMORY, NULL);
         }
 
-        if (xTaskCreatePinnedToCore(acceleration_profile_task, "stepper_accel", 2048, NULL, configMAX_PRIORITIES - 1, &acceleration_profile_task_h, 1) != pdTRUE) {
+        if (xTaskCreatePinnedToCore(acceleration_profile_task, "stepper_accel", 4096, NULL, configMAX_PRIORITIES - 1, &acceleration_profile_task_h, 1) != pdTRUE) {
             mtx_unlock(&stepper_mutex);
             return driver_error(STEPPER_DRIVER, STEPPER_ERR_NOT_ENOUGH_MEMORY, NULL);
         }
@@ -624,9 +612,9 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
     if ((error = stepper_check(err))) {
     	return error;
     }
-
+    
     err = rmt_enable(stepper[*unit].tx_chan);
-    if ((err != ESP_ERR_INVALID_STATE) && (error = stepper_check(err))) {
+    if ((error = stepper_check(err))) {
     	return error;
     }
 
@@ -646,33 +634,13 @@ driver_error_t *stepper_setup(uint8_t step_pin, uint8_t dir_pin, float min_spd, 
     	return error;
     }
 
-    if (!stop_event_group) {
-    	stop_event_group = xEventGroupCreate();
-    	if (stop_event_group == NULL) {
-            mtx_unlock(&stepper_mutex);
-            return driver_error(STEPPER_DRIVER, STEPPER_ERR_NOT_ENOUGH_MEMORY, NULL);
-    	}
-    }
-
     if (!move_event_group) {
 		move_event_group = xEventGroupCreate();
 		if (move_event_group == NULL) {
-			vEventGroupDelete(stop_event_group);
 			mtx_unlock(&stepper_mutex);
 			return driver_error(STEPPER_DRIVER, STEPPER_ERR_NOT_ENOUGH_MEMORY, NULL);
 		}
     }
-
-    // Attach ISR on step_in to get feedback
-
-    // Configure interrupts
-    if (!status_get(STATUS_ISR_SERVICE_INSTALLED)) {
-        gpio_install_isr_service(0);
-        status_set(STATUS_ISR_SERVICE_INSTALLED, 0x00000000);
-    }
-
-    gpio_set_intr_type(stepper[*unit].step_pin, GPIO_INTR_POSEDGE);
-    gpio_isr_handler_add(stepper[*unit].step_pin, step_feedback, &stepper[*unit]);
 
     mtx_unlock(&stepper_mutex);
 
@@ -703,8 +671,7 @@ driver_error_t *stepper_move(uint8_t unit, float units, float initial_spd, float
     stepper_t *pstepper = &stepper[unit];
 
     // Calculate direction
-    uint8_t dir = (units >= 0.0);
-    pstepper->dir = dir;
+    pstepper->dir = (units >= 0.0);
 
     // Prepare motion
     motion_constraints_t constraints;
@@ -724,16 +691,13 @@ driver_error_t *stepper_move(uint8_t unit, float units, float initial_spd, float
 
     stepper[unit].steps = floor(fabs(units) * pstepper->steps_per_unit);
     stepper[unit].steps_request = stepper[unit].steps;
-    stepper[unit].steps_done = 0;
     stepper[unit].units = fabs(units);
 
     stepper[unit].rmt_missing_ticks = 0.0;
     stepper[unit].rmt_ticks_remain = 0;
-    stepper[unit].rmt_data_head = 0;
-    stepper[unit].rmt_data_tail = 0;
-    stepper[unit].rmt_offset = 0;
-    stepper[unit].rmt_start = 1;
-    stepper[unit].rmt_started = 0;
+    
+    atomic_store(&pstepper->rmt_data_head, 0);
+    atomic_store(&pstepper->rmt_data_tail, 0);
 
     mtx_unlock(&stepper_mutex);
 
@@ -807,7 +771,7 @@ driver_error_t *stepper_get_position(uint8_t unit, float* units) {
 }
 
 driver_error_t *stepper_is_running(uint8_t unit, uint32_t* running) {
-  // Sanity checks
+	// Sanity checks
     if (unit > NSTEP) {
         // Invalid unit
         return driver_error(STEPPER_DRIVER, STEPPER_ERR_INVALID_UNIT, NULL);
@@ -819,31 +783,42 @@ driver_error_t *stepper_is_running(uint8_t unit, uint32_t* running) {
     return NULL;
 }
 
-
-void stepper_start(int mask, uint8_t async) {
+void stepper_start(int mask, uint8_t async) {  
     mtx_lock(&stepper_mutex);
 
-    start_num = 0;
-
-    // For each required stepper set its direction pin
+    // For each required stepper set its direction pin if have steps request
     stepper_t *pstepper = stepper;
     int testMask = 0x01;
+    uint8_t start_num = 0;
 
     while (testMask != (1 << (NSTEP - 1))) {
         if (mask & testMask) {
-            if (pstepper->dir) {
-                gpio_ll_pin_set(pstepper->dir_pin);
+			if (pstepper->steps_request > 0) {
+	            if (pstepper->dir) {
+	                gpio_ll_pin_set(pstepper->dir_pin);
+	            } else {
+	                gpio_ll_pin_clr(pstepper->dir_pin);
+	            }
+	            start_num++;
             } else {
-                gpio_ll_pin_clr(pstepper->dir_pin);
+				// No steps request, so stepper is not required to be started
+				mask &= ~testMask;
             }
-            start_num++;
         }
-
+        
+        // Next stepper
         testMask = testMask << 1;
         pstepper++;
     }
-
-    if (start_num > 1) {
+    
+    if (start_num == 0) {
+		// No steppers to start
+		mtx_unlock(&stepper_mutex);
+		
+		return;
+	} else  if (start_num > 1) {
+		// Multiple steppers to start
+		
         // Now, order involved stepper by displacement units
         stepper_oder_t *stepper_order;
         stepper_oder_t *pstepper_order;
@@ -888,6 +863,8 @@ void stepper_start(int mask, uint8_t async) {
 
         	motion_dumnp(&pstepper->motion);
         }
+        
+        free(stepper_order);
     } else {
         stepper_t *pstepper = stepper;
         int testMask = 0x01;
@@ -903,69 +880,103 @@ void stepper_start(int mask, uint8_t async) {
         }
     }
 
-    // Start required steppers
-    portENTER_CRITICAL(&spinlock);
-    start_mask |= mask;
-
-    xEventGroupClearBits(stop_event_group, 0xff);
-    xEventGroupClearBits(move_event_group, 0xff);
-
-    portEXIT_CRITICAL(&spinlock);
-
-    mtx_unlock(&stepper_mutex);
-
-    // Start acceleration cycle for all the steppers
-    xQueueSend(acceleration_queue, &start_mask, portMAX_DELAY);
-
-    // Wait until movements done
-    if (mask && !async) {
-    	xEventGroupWaitBits(move_event_group, mask, pdTRUE, pdTRUE, portMAX_DELAY);
-    }
-
-    // Check feedback
+	// Get max motion duration
     pstepper = stepper;
     testMask = 0x01;
+    float duration;
+    float current_duration;
+
+	duration = 0.0;
+	current_duration = 0.0;
 
     while (testMask != (1 << (NSTEP - 1))) {
         if (mask & testMask) {
-        	if (pstepper->rmt_started && (pstepper->steps_request != pstepper->steps_done)) {
-        	    syslog(LOG_ERR,"stepper%d, requested %d steps, but done %d", 0,
-        	           pstepper->steps_request,
-        	           pstepper->steps_done
-        	    );
-        	}
+			current_duration = motion_get_duration(&pstepper->motion);
+			if (current_duration > duration) {
+				duration = current_duration;
+			}
         }
 
         testMask = testMask << 1;
         pstepper++;
     }
+    
+    // Convert duration to msecs
+    duration = ceil(duration * 1000.00);
+    
+    // Start steppers
+    portENTER_CRITICAL(&spinlock);
+    start_mask |= mask;
+    portEXIT_CRITICAL(&spinlock);
+    
+    mtx_unlock(&stepper_mutex);
 
+    xEventGroupClearBits(move_event_group, 0xff);
+
+    acceleration_quue_msg msg;
+    
+    msg.mask = mask;
+    msg.initial = true;
+    
+    xQueueSend(acceleration_queue, &msg, portMAX_DELAY);
+
+    if (mask && !async) {
+	    // Wait until movements done
+	    xEventGroupWaitBits(move_event_group, mask, pdTRUE, pdTRUE, portMAX_DELAY);
+	    
+		// Movements end
+		portENTER_CRITICAL(&spinlock);
+		start_mask = 0;
+		portEXIT_CRITICAL(&spinlock);	
+	}
 }
 
 void stepper_stop(int mask, uint8_t async) {
-    // Stop required steppers
+    stepper_t *pstepper = stepper;
+    int testMask;
+    int stopMask;
+    
+    // Stop required steppers as soon as possible, using a critical section.
     portENTER_CRITICAL(&spinlock);
 
-    int stop_mask = 0x00;
-    int testMask = 0x01;
-    uint8_t unit = 0;
-
+    pstepper = stepper;
+    testMask = 0x01;
+    stopMask = 0x00;
+	   
     while (testMask != (1 << (NSTEP - 1))) {
-        if (start_mask & testMask) {
-        	stepper[unit].rmt_started = 0;
-        	stepper[unit].tx_chan->hw_mem_base[0].val = 0;
-            stop_mask |= testMask;
+        if ((start_mask & testMask) && (mask & testMask)) {
+			// Disable stepper temporary. This stops the transmission, and resets the internal
+			// RMT state, but tx callback is not called, so we need to update the wait bits later.
+			rmt_disable(pstepper->tx_chan);
+			
+			// Update stop mask
+			stopMask |= (1 << pstepper->unit);
+			
+			// Movement end          
+	        start_mask &= ~(1 << pstepper->unit);
         }
 
         testMask = testMask << 1;
-        unit++;
+        pstepper++;
     }
+    
+    // Enable disabled steppers
+    pstepper = stepper;
+    testMask = 0x01;
+    while (testMask != (1 << (NSTEP - 1))) {
+        if (stopMask & testMask) {
+			rmt_enable(pstepper->tx_chan);
+		}
+		
+        testMask = testMask << 1;
+        pstepper++;
+	}
 
     portEXIT_CRITICAL(&spinlock);
-
-    // Wait for stop
-    if (stop_mask && ! async) {
-    	xEventGroupWaitBits(stop_event_group, stop_mask, pdTRUE, pdTRUE, portMAX_DELAY);
-    }
+    
+    if (stopMask) {
+		// Notify movement end
+		xEventGroupSetBits(move_event_group, stopMask);
+	}
 }
 #endif

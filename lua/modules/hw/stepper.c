@@ -164,6 +164,7 @@ static int list_to_mask( lua_State* L ){
             }
         }
     }
+    
     return mask;
 }
 

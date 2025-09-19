@@ -67,33 +67,24 @@ typedef struct {
     uint32_t steps;         // Number of steps
     int32_t pos;            // position in steps
     uint32_t steps_request; // Number of requested steps
-    uint32_t steps_done;    // Number of steps done in last movement using RMT feedback
     float units;            // Displacement units
 
     float units_per_step;   // Units per step
     float steps_per_unit;   // Steps per unit
 
     uint32_t *rmt_data;           // Circular - buffer with precomputed RMT data
-    uint32_t rmt_data_head;
-    uint32_t rmt_data_tail;
+    _Atomic uint32_t rmt_data_head;
+    _Atomic uint32_t rmt_data_tail;
 
-    uint32_t *rmt_block;          // Pointer to RMT RAM block
-    uint32_t *rmt_block_current;  // Current write position in RMT RAM block
-    float    rmt_period;          // Current RMT period
     uint32_t rmt_ticks;           // Current RMT period in RMT ticks
     uint32_t rmt_ticks_remain;
-    uint8_t  rmt_offset;          // When RMT has send the half of a block, points to the start
-                                  // of the consumed half block. Can be 0 or 32.
 
     float rmt_wanted_ticks;
     float rmt_missing_ticks;
 
-    uint8_t  rmt_start;
-    uint8_t  rmt_started;
-
     float current_time;
     float current_position;
-
+    
     motion_t motion;
 
     rmt_channel_handle_t tx_chan;

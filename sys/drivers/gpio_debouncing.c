@@ -65,6 +65,11 @@ static uint32_t max_threshold = 0;
 void gpio_isr(void *args) {
     uint8_t pin = ((uint32_t)args);
 
+    if ((debouncing->mask == 0) && (debouncing->mask_ext == 0)) {
+        // Stop timer
+    	tmr_ll_stop(GPIO_DEBOUNCING_TIMER);
+    }
+
     // Update mask
     if (pin < 40) {
         debouncing->mask |= (uint64_t)(GPIO_BIT_MASK << pin);
@@ -74,9 +79,6 @@ void gpio_isr(void *args) {
         debouncing->mask_ext |= (uint64_t)(GPIO_BIT_MASK << (pin - 40));
     }
 #endif
-
-    // Ensure that timer is stopped before
-	tmr_ll_stop(GPIO_DEBOUNCING_TIMER);
 
     // Start timer
 	tmr_ll_start(GPIO_DEBOUNCING_TIMER);

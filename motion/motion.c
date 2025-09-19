@@ -49,6 +49,8 @@ void motion_prepare(motion_constraints_t *pconstraints, motion_t *pmotion) {
 		#if MOTION_DEBUG
         pmotion->_dump = s_curve_dump;
 		#endif
+		
+		pmotion->_get_duration = s_curve_get__duration;
     }
 
     pmotion->_prepare(pmotion);
@@ -70,4 +72,8 @@ void motion_dumnp(motion_t *pmotion) {
 
 float IRAM_ATTR motion_next(motion_t *pmotion) {
     return pmotion->_next(pmotion);
+}
+
+float motion_get_duration(motion_t *pmotion) {
+	return pmotion->_get_duration(pmotion);
 }

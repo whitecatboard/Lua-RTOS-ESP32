@@ -184,24 +184,38 @@ void s_curve_prepare(motion_t *pmotion) {
     uint8_t phase_2 = 1;
     uint8_t phase_4 = 1;
 
-    if (t != 0.0) {
+    if (t != 0.0) {		
 		// partial s-curve with phase 4
+		phase_2 = 0;
+
+		// find an acceleration to met the time constraint
 		a_ = solve_third_order_newton(-2.0 / (j*j), t / j, 0.0, t * v0 - s, a, 0.0001);
-		v_ = v0 + ((a_ * a_) / j);
-
-		float s_acc_ = ((4.0 * a_ * v0) / j) + ((2.0 * a_ * a_ * a_) / (j * j));
-		float s_tra_ = s - s_acc_;
-		float t_acc_ = (4.0 * a_) / j;
-		float t_tra_ = s_tra_ / v_;
-
-		if (fabs(t_acc_ + t_tra_ - t) >= 0.0001) {
+		if (isnan(a_)) {
 			a  = 0.0;
 			j  = 0.0;
 			v0 = 0.0;
-			v  = s / t;
+			v  = s / t;			
 		} else {
-			a = a_;
-			v = v_;
+			v_ = v0 + ((a_ * a_) / j);
+	
+			// Acceleration distance (phases 1 + 3 + 5 + 7)
+			float s_acc_ = ((4.0 * a_ * v0) / j) + ((2.0 * a_ * a_ * a_) / (j * j));
+			
+			// Traverse distance
+			float s_tra_ = s - s_acc_;
+			
+			float t_acc_ = (4.0 * a_) / j;
+			float t_tra_ = s_tra_ / v_;
+	
+			if (fabs(t_acc_ + t_tra_ - t) >= 0.0001) {
+				a  = 0.0;
+				j  = 0.0;
+				v0 = 0.0;
+				v  = s / t;
+			} else {
+				a = a_;
+				v = v_;
+			}
 		}
     } else {
         float half_s = s / 2.0;
@@ -212,6 +226,12 @@ void s_curve_prepare(motion_t *pmotion) {
         	phase_2 = 0;
 
             a_ = solve_third_order_newton(1.0 / (j*j), 0, (2.0 * v0) / j, -1.0 * half_s, a, 0.0001); // (7.9)
+            if (isnan(a_)) {
+				a_ = solve_third_order_newton(1.0 / (j*j), 0, 0, -1.0 * half_s, a, 0.0001); // (7.9)
+	            if (!isnan(a_)) {
+					v0 = 0.0;
+				}				
+			}
             v_ = v0 + ((a_*a_)/j); // (7.14)
 
             if (v_ > v) {
@@ -244,9 +264,9 @@ void s_curve_prepare(motion_t *pmotion) {
             v = v_;
         } else if (v < v0 + ((a*a)/j)) { // (7.24)
             a = sqrt(j*(v-v0));
-        }
+        }        
     }
-
+	
     pmotion->s_curve.v0 = v0;
     pmotion->s_curve.v  = v;
     pmotion->s_curve.a  = a;
@@ -477,3 +497,17 @@ void s_curve_dump(motion_t *pmotion) {
 					  pmotion->s_curve.bound.steps[7]);
 }
 #endif
+
+float s_curve_get__duration(motion_t *pmotion) {
+	float duration = 0.0;
+	
+	if (pmotion->s_curve.bound.steps[1] != 0.0) duration += pmotion->s_curve.bound.t[1];
+	if (pmotion->s_curve.bound.steps[2] != 0.0) duration += pmotion->s_curve.bound.t[2];
+	if (pmotion->s_curve.bound.steps[3] != 0.0) duration += pmotion->s_curve.bound.t[3];
+	if (pmotion->s_curve.bound.steps[4] != 0.0) duration += pmotion->s_curve.bound.t[4];
+	if (pmotion->s_curve.bound.steps[5] != 0.0) duration += pmotion->s_curve.bound.t[5];
+	if (pmotion->s_curve.bound.steps[6] != 0.0) duration += pmotion->s_curve.bound.t[6];
+	if (pmotion->s_curve.bound.steps[7] != 0.0) duration += pmotion->s_curve.bound.t[7];
+	
+	return duration;
+}
