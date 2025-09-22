@@ -69,11 +69,13 @@ typedef struct {
     int8_t phase; // In which profile acceleration phase we are?
 
     // Motion profile data in current phase
-    float j_; // Phase jerk
-    float a_; // Phase entry acceleration
-    float v_; // Phase entry velocity
-    float s_; // Phase cumulative displacement
-    float t_; // Phase cumulative time
+    float j_;   // Phase jerk
+    float js_;  // Sixth of phase jerk
+    float a_;   // Phase entry acceleration
+    float ah_;  // Half of phase entry acceleration
+    float v_;   // Phase entry velocity
+    float s_;   // Phase cumulative displacement
+    float t_;   // Phase cumulative time
 } s_curve_motion_t;
 
 #endif

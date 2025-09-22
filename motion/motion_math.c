@@ -33,6 +33,8 @@ float IRAM_ATTR solve_third_order_newton(float a, float b, float c, float d, flo
     float previous_unknown;
     float error;
     float previous_error;
+    float a3 = 3.0 * a;
+    float b2 = 2.0 * b;
 
     // First iteration
     float unknown = first_approximation;
@@ -47,7 +49,7 @@ float IRAM_ATTR solve_third_order_newton(float a, float b, float c, float d, flo
 
     unknown = unknown - (
             (a * unknown_third + b * unknown_square + c * unknown + d) /
-            (3.0 * a * unknown_square + 2.0 * b * unknown + c)
+            (a3 * unknown_square + b2 * unknown + c)
     );
 
     // Compute error
@@ -63,7 +65,7 @@ float IRAM_ATTR solve_third_order_newton(float a, float b, float c, float d, flo
 
         unknown = unknown - (
                 (a * unknown_third + b * unknown_square + c * unknown + d) /
-                (3.0 * a * unknown_square + 2.0 * b * unknown + c)
+                (a3 * unknown_square + b2 * unknown + c)
         );
 
         previous_error = error;
