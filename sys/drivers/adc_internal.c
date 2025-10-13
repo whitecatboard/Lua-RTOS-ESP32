@@ -221,7 +221,7 @@ driver_error_t *adc_internal_setup(adc_chann_t *chan) {
 		strcpy(attens, "6db");
 	} else {
 		atten = ADC_ATTEN_DB_12;
-		strcpy(attens, "11db");
+		strcpy(attens, "12db");
 	}
 
 	if (_adc_internal[unit].hndl == NULL) {

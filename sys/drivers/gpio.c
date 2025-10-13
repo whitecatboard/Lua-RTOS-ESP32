@@ -925,7 +925,7 @@ driver_error_t *gpio_pin_get_mask(uint8_t port, gpio_pin_mask_t pinmask, gpio_pi
         driver_error_t *error = NULL;
         gpio_pin_mask_t mask = GPIO_BIT_MASK;
         gpio_pin_mask_t get_mask = 0;
-        uint8_t val;
+        uint8_t val = 0;
         int i;
 
         for(i=0; i < GPIO_PER_PORT; i++) {

@@ -110,7 +110,7 @@ DRIVER_REGISTER_END(RTC,rtc,0,__rtc_init,NULL);
 static void __rtc_init() {
     size_t size = rtc_mem_size();
 
-    rtc_data_start = (uint8_t *)(&_rtc_force_slow_end + sizeof(uint32_t));
+    rtc_data_start = (uint8_t *)(((uint32_t)&_rtc_force_slow_end) + sizeof(uint32_t));
     rtc_meta_start = rtc_data_start + size - 1;
 
     // Get reset reason
@@ -118,7 +118,7 @@ static void __rtc_init() {
 
     if (reason != DEEPSLEEP_RESET) {
         // Initialize stack pointers
-        rtc_data_p = (uint8_t *)(&_rtc_force_slow_end + sizeof(uint32_t));
+        rtc_data_p = (uint8_t *)(((uint32_t)&_rtc_force_slow_end) + sizeof(uint32_t));
         rtc_meta_p = rtc_data_p + size - 1;
 
         // Initialize RTC memory
