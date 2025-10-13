@@ -71,11 +71,23 @@ typedef struct {
     // Motion profile data in current phase
     float j_;   // Phase jerk
     float js_;  // Sixth of phase jerk
+    float js3_; // Sixth of phase jerk * 3
     float a_;   // Phase entry acceleration
     float ah_;  // Half of phase entry acceleration
+    float ah2_; // Half of phase entry acceleration * 2
     float v_;   // Phase entry velocity
     float s_;   // Phase cumulative displacement
     float t_;   // Phase cumulative time
+    float tg_;  // Initial guess
+    
+    #if MOTION_CURVE_STATS
+    int32_t next_max_time_;
+    int32_t next_min_time_;
+    int32_t newton_max_time_;
+    int32_t newton_min_time_;
+    int32_t newton_max_iterations_;
+    int32_t newton_min_iterations_;
+    #endif
 } s_curve_motion_t;
 
 #endif

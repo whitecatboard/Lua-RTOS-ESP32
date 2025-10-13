@@ -49,6 +49,11 @@ void motion_prepare(motion_constraints_t *pconstraints, motion_t *pmotion) {
 		#if MOTION_DEBUG
         pmotion->_dump = s_curve_dump;
 		#endif
+
+		#if MOTION_CURVE_STATS
+        pmotion->_dump_stats = s_curve_dump_stats;
+        pmotion->_init_stats = s_curve_init_stats;
+		#endif
 		
 		pmotion->_get_duration = s_curve_get__duration;
     }
@@ -64,9 +69,21 @@ void motion_constraint_t(motion_t *pmotion, float t) {
     pmotion->_prepare(pmotion);
 }
 
-void motion_dumnp(motion_t *pmotion) {
+void motion_dump(motion_t *pmotion) {
 	#if MOTION_DEBUG
 	pmotion->_dump(pmotion);
+	#endif
+}
+
+void motion_init_stats(motion_t *pmotion) {
+	#if MOTION_CURVE_STATS
+	pmotion->_init_stats(pmotion);
+	#endif
+}
+
+void motion_dump_stats(motion_t *pmotion) {
+	#if MOTION_CURVE_STATS
+	pmotion->_dump_stats(pmotion);
 	#endif
 }
 

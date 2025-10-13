@@ -44,6 +44,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include <inttypes.h>
 
 #include "driver/rmt_tx.h"
 #include "driver/rmt_encoder.h"
@@ -134,10 +135,16 @@ static size_t IRAM_ATTR encoder_copy(rmt_encoder_t *encoder, rmt_channel_handle_
     uint32_t tail = atomic_load(&pstepper->rmt_data_tail);
     uint32_t head = atomic_load(&pstepper->rmt_data_head);
             
-    if (tail < head) {
+    if (tail <= head) {
 		symbols_available = head - tail;
 	} else if (tail > head) {
 		symbols_available = STEPPER_RMT_DATA_SIZE - tail + head;
+	}
+	
+	if (symbols_available == 0) {
+		// This is a critical condition, because the stepper buffer has
+		// not enough pre-calculated symbols to fill the internal RMT memory
+		esp_rom_printf("stepper %"PRIu32": buffer is small to keep pulse train stable, phase %d (1)\r\n", pstepper->unit, pstepper->motion.s_curve.phase);
 	}
 	
 	// Adjust how many symbols should be copied from stepper buffer
@@ -147,7 +154,7 @@ static size_t IRAM_ATTR encoder_copy(rmt_encoder_t *encoder, rmt_channel_handle_
 
     // Get how many symbols can be copied to internal RMT memory
     size_t symbols_have = tx_chan->mem_end - tx_chan->mem_off;
-
+    
     // Get reference to internal RMT memory
     rmt_symbol_word_t *mem_to_nc = channel->hw_mem_base;
     
@@ -201,6 +208,12 @@ static size_t IRAM_ATTR encoder_copy(rmt_encoder_t *encoder, rmt_channel_handle_
 	    if(xHigherPriorityTaskWoken == pdTRUE) {
 	        portYIELD_FROM_ISR();
 	    }
+	} else {
+		if (symbols_available < symbols_want) {
+			// This is a critical condition, because the stepper buffer has
+			// not enough symbols calculated to fill the internal RMT memory
+			esp_rom_printf("stepper %"PRIu32": buffer is small to keep pulse train stable, phase %d(2)\r\n", pstepper->unit, pstepper->motion.s_curve.phase);
+		}		
 	}
 
     *ret_state = state;
@@ -330,8 +343,8 @@ static void acceleration_profile_task(void *args) {
                         // Compute RMT ticks for next step
                     	first = 1;
 
-                    	pstepper->rmt_wanted_ticks = ((motion_next(&pstepper->motion) * 1000000000.0) / (float)STEPPER_RMT_NANOS_PER_TICK);
-                        pstepper->rmt_ticks = floor(pstepper->rmt_wanted_ticks);
+                    	pstepper->rmt_wanted_ticks = motion_next(&pstepper->motion) * STEPPER_SECONDS_TO_RMT_TICKS;
+                        pstepper->rmt_ticks = floorf(pstepper->rmt_wanted_ticks);
                         pstepper->rmt_missing_ticks += (pstepper->rmt_wanted_ticks - pstepper->rmt_ticks);
                         
                         rmt_ticks = pstepper->rmt_ticks;
@@ -658,7 +671,7 @@ driver_error_t *stepper_move(uint8_t unit, float units, float initial_spd, float
 
     motion_prepare(&constraints, &pstepper->motion);
 
-    stepper[unit].steps = floor(fabs(units) * pstepper->steps_per_unit);
+    stepper[unit].steps = floorf(fabs(units) * pstepper->steps_per_unit);
     stepper[unit].steps_request = stepper[unit].steps;
     stepper[unit].units = fabs(units);
 
@@ -821,7 +834,7 @@ void stepper_start(int mask, uint8_t async) {
         float t = stepper[stepper_order[0].stepper].motion.s_curve.bound.total_t;
         pstepper = &stepper[stepper_order[0].stepper];
 
-    	motion_dumnp(&pstepper->motion);
+    	motion_dump(&pstepper->motion);
 
     	uint8_t order_id;
 
@@ -832,7 +845,7 @@ void stepper_start(int mask, uint8_t async) {
                 motion_constraint_t(&pstepper->motion, t);
             }
 
-        	motion_dumnp(&pstepper->motion);
+        	motion_dump(&pstepper->motion);
         }
         
         free(stepper_order);
@@ -842,7 +855,7 @@ void stepper_start(int mask, uint8_t async) {
 
         while (testMask != (1 << (NSTEP - 1))) {
             if (mask & testMask) {
-            	motion_dumnp(&pstepper->motion);
+            	motion_dump(&pstepper->motion);
             	break;
             }
 
@@ -857,6 +870,20 @@ void stepper_start(int mask, uint8_t async) {
 		// Update active steppers
 	    atomic_fetch_or(&active_mask, mask);
 
+	    #if MOTION_CURVE_STATS
+        stepper_t *pstepper = stepper;
+        int testMask = 0x01;
+
+        while (testMask != (1 << (NSTEP - 1))) {
+            if (mask & testMask) {
+             	motion_init_stats(&pstepper->motion);
+            }
+
+            testMask = testMask << 1;
+            pstepper++;
+        }
+        #endif
+
 		// Notify acceleration task to start a new motion	    
 	    xEventGroupClearBits(move_event_group, 0xff);
 		xTaskNotify(acceleration_profile_task_h, 1, eSetValueWithOverwrite);
@@ -867,6 +894,18 @@ void stepper_start(int mask, uint8_t async) {
 		    
 		    // Update active steppers, none active
 		    atomic_store(&pstepper->rmt_data_tail, 0);		
+		    
+	        stepper_t *pstepper = stepper;
+	        int testMask = 0x01;
+	
+	        while (testMask != (1 << (NSTEP - 1))) {
+	            if (mask & testMask) {
+	            	motion_dump_stats(&pstepper->motion);
+	            }
+	
+	            testMask = testMask << 1;
+	            pstepper++;
+	        }
 		}
 	}
 }

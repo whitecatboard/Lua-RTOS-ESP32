@@ -24,11 +24,16 @@
 #include "motion.h"
 
 #include "esp_attr.h"
+#include "esp_timer.h"
 
 #include <sys/syslog.h>
 
 #include <math.h>
 #include <stdio.h>
+#include <limits.h>
+#include <inttypes.h>
+
+#define S_CURVE_NEWTON_ERROR 0.0001
 
 static void _compute_bounds(motion_t *pmotion, uint8_t phase_2, uint8_t phase_4) {
     float s = pmotion->s_curve.s;
@@ -47,7 +52,7 @@ static void _compute_bounds(motion_t *pmotion, uint8_t phase_2, uint8_t phase_4)
         pmotion->s_curve.bound.v[1] = v0 + ((a * a) / (2.0 * j)); // (1.4)
         pmotion->s_curve.bound.s[1] = v0 * t1 + (j / 6.0) * t1 * t1 * t1; // (1.2)
         pmotion->s_curve.bound.t[1] = t1;
-        pmotion->s_curve.bound.steps[1] = floor(pmotion->s_curve.bound.s[1] * pmotion->s_curve.steps_per_unit);
+        pmotion->s_curve.bound.steps[1] = floorf(pmotion->s_curve.bound.s[1] * pmotion->s_curve.steps_per_unit);
     } else {
     	t1 = 0.0;
     	pmotion->s_curve.bound.v[1] = v0;
@@ -61,7 +66,7 @@ static void _compute_bounds(motion_t *pmotion, uint8_t phase_2, uint8_t phase_4)
 		pmotion->s_curve.bound.v[2] = v - ((a * a)/(2.0 * j)); // (3.2)
 		pmotion->s_curve.bound.s[2] = pmotion->s_curve.bound.v[1] * t2 + 0.5 * a * t2 * t2; // (2.2)
         pmotion->s_curve.bound.t[2] = t2;
-		pmotion->s_curve.bound.steps[2] = floor(pmotion->s_curve.bound.s[2] * pmotion->s_curve.steps_per_unit);
+		pmotion->s_curve.bound.steps[2] = floorf(pmotion->s_curve.bound.s[2] * pmotion->s_curve.steps_per_unit);
     } else {
     	t2 = 0.0;
     	pmotion->s_curve.bound.v[2] = pmotion->s_curve.bound.v[1];
@@ -86,7 +91,7 @@ static void _compute_bounds(motion_t *pmotion, uint8_t phase_2, uint8_t phase_4)
 		pmotion->s_curve.bound.v[3] = v;
 		pmotion->s_curve.bound.s[3] = pmotion->s_curve.bound.v[2] * t3 + 0.5 * a * t3 * t3 - (j / 6.0) * t3 * t3 * t3; // (3.3)
         pmotion->s_curve.bound.t[3] = t3;
-		pmotion->s_curve.bound.steps[3] = floor(pmotion->s_curve.bound.s[3] * pmotion->s_curve.steps_per_unit);
+		pmotion->s_curve.bound.steps[3] = floorf(pmotion->s_curve.bound.s[3] * pmotion->s_curve.steps_per_unit);
     } else {
     	t3 = 0.0;
     	pmotion->s_curve.bound.v[3] = v0;
@@ -103,7 +108,7 @@ static void _compute_bounds(motion_t *pmotion, uint8_t phase_2, uint8_t phase_4)
 				pmotion->s_curve.bound.v[4] = v;
 				pmotion->s_curve.bound.s[4] = s - 2.0 * (pmotion->s_curve.bound.s[1] + pmotion->s_curve.bound.s[2] + pmotion->s_curve.bound.s[3]);
 				pmotion->s_curve.bound.t[4] = t4;
-				pmotion->s_curve.bound.steps[4] = floor(pmotion->s_curve.bound.s[4] * pmotion->s_curve.steps_per_unit);
+				pmotion->s_curve.bound.steps[4] = floorf(pmotion->s_curve.bound.s[4] * pmotion->s_curve.steps_per_unit);
 			} else {
 				t4 = 0.0;
 				pmotion->s_curve.bound.v[4] = pmotion->s_curve.bound.v[3];
@@ -116,7 +121,7 @@ static void _compute_bounds(motion_t *pmotion, uint8_t phase_2, uint8_t phase_4)
 			pmotion->s_curve.bound.v[4] = v;
 			pmotion->s_curve.bound.s[4] = s;
 			pmotion->s_curve.bound.t[4] = t4;
-			pmotion->s_curve.bound.steps[4] = floor(pmotion->s_curve.bound.s[4] * pmotion->s_curve.steps_per_unit);;
+			pmotion->s_curve.bound.steps[4] = floorf(pmotion->s_curve.bound.s[4] * pmotion->s_curve.steps_per_unit);;
 		}
     } else {
 		t4 = 0.0;
@@ -130,19 +135,19 @@ static void _compute_bounds(motion_t *pmotion, uint8_t phase_2, uint8_t phase_4)
     pmotion->s_curve.bound.v[5] = pmotion->s_curve.bound.v[2]; // (5.3)
     pmotion->s_curve.bound.s[5] = pmotion->s_curve.bound.s[3]; // (5.2)
     pmotion->s_curve.bound.t[5] = t5;
-    pmotion->s_curve.bound.steps[5] = floor(pmotion->s_curve.bound.s[5] * pmotion->s_curve.steps_per_unit);
+    pmotion->s_curve.bound.steps[5] = floorf(pmotion->s_curve.bound.s[5] * pmotion->s_curve.steps_per_unit);
 
     t6 = t2; // (6.1)
     pmotion->s_curve.bound.v[6] = pmotion->s_curve.bound.v[1]; // (6.3)
     pmotion->s_curve.bound.s[6] = pmotion->s_curve.bound.s[2]; // (6.2)
     pmotion->s_curve.bound.t[6] = t6;
-    pmotion->s_curve.bound.steps[6] = floor(pmotion->s_curve.bound.s[6] * pmotion->s_curve.steps_per_unit);
+    pmotion->s_curve.bound.steps[6] = floorf(pmotion->s_curve.bound.s[6] * pmotion->s_curve.steps_per_unit);
 
     t7 = t1; // (7.1)
     pmotion->s_curve.bound.v[7] = v0; // (7.3)
     pmotion->s_curve.bound.s[7] = pmotion->s_curve.bound.s[1]; // (7.2)
     pmotion->s_curve.bound.t[7] = t7;
-    pmotion->s_curve.bound.steps[7] = floor(pmotion->s_curve.bound.s[7] * pmotion->s_curve.steps_per_unit);
+    pmotion->s_curve.bound.steps[7] = floorf(pmotion->s_curve.bound.s[7] * pmotion->s_curve.steps_per_unit);
 
     if ((a != 0.0) && (j != 0.0)) {
         if (
@@ -160,7 +165,7 @@ static void _compute_bounds(motion_t *pmotion, uint8_t phase_2, uint8_t phase_4)
         }
     }
 
-    pmotion->s_curve.bound.total_t = t1 + t2 + t3 + t4 + t5 + t6 + t7;
+    pmotion->s_curve.bound.total_t = t1 + t2 + t3 + t4 + t5 + t6 + t7;   
 }
 
 float s_curve_displacement(float v0, float a, float j) {
@@ -188,8 +193,9 @@ void s_curve_prepare(motion_t *pmotion) {
 		phase_2 = 0;
 
 		// find an acceleration to met the time constraint
-		a_ = solve_third_order_newton(-2.0 / (j*j), t / j, 0.0, t * v0 - s, a, 0.0001);
+		a_ = solve_third_order_newton(-2.0 / (j*j), t / j, 0.0, t * v0 - s, a, S_CURVE_NEWTON_ERROR);
 		if (isnan(a_)) {
+			printf("oops0\r\n");
 			a  = 0.0;
 			j  = 0.0;
 			v0 = 0.0;
@@ -224,11 +230,14 @@ void s_curve_prepare(motion_t *pmotion) {
         if (s_part > half_s) {
         	phase_2 = 0;
 
-            a_ = solve_third_order_newton(1.0 / (j*j), 0, (2.0 * v0) / j, -1.0 * half_s, a, 0.0001); // (7.9)
+            a_ = solve_third_order_newton(1.0 / (j*j), 0, (2.0 * v0) / j, -1.0 * half_s, a, S_CURVE_NEWTON_ERROR); // (7.9)
             if (isnan(a_)) {
-				a_ = solve_third_order_newton(1.0 / (j*j), 0, 0, -1.0 * half_s, a, 0.0001); // (7.9)
+				printf("oops1\r\n");
+				a_ = solve_third_order_newton(1.0 / (j*j), 0, 0, -1.0 * half_s, a, S_CURVE_NEWTON_ERROR); // (7.9)
 	            if (!isnan(a_)) {
 					v0 = 0.0;
+				} else {
+				printf("oops2\r\n");					
 				}				
 			}
             v_ = v0 + ((a_*a_)/j); // (7.14)
@@ -273,7 +282,7 @@ void s_curve_prepare(motion_t *pmotion) {
 
     // Calculate the steps required to achieve the required displacement (units).
     // As we cannot perform fraction of steps, round it to the largest integer value less than or equal.
-    pmotion->s_curve.steps = floor(s * pmotion->s_curve.steps_per_unit);
+    pmotion->s_curve.steps = floorf(s * pmotion->s_curve.steps_per_unit);
 
     // Set current step to 0
     pmotion->s_curve.step = 0.0;
@@ -305,7 +314,11 @@ void s_curve_prepare(motion_t *pmotion) {
 
 float IRAM_ATTR s_curve_next(motion_t *pmotion) {
     #if MOTION_CURVE_DEBUG
-    uint8_t new_phase = 0.0;
+    uint8_t new_phase = 0;
+    #endif
+    
+    #if MOTION_CURVE_STATS
+    int64_t next_begin = esp_timer_get_time();
     #endif
 
     // Increment steps done
@@ -315,128 +328,146 @@ float IRAM_ATTR s_curve_next(motion_t *pmotion) {
     // jerk
     if ((pmotion->s_curve.bound.steps[1] != 0) && (pmotion->s_curve.step <= pmotion->s_curve.bound.acc_steps[1])) {
         if (pmotion->s_curve.phase != 1) {
-            pmotion->s_curve.a_  = 0.0;
-            pmotion->s_curve.ah_ = 0.0;
-            pmotion->s_curve.j_  = pmotion->s_curve.j;
-            pmotion->s_curve.js_ = pmotion->s_curve.j_ / 6.0;
-            pmotion->s_curve.v_  = pmotion->s_curve.v0;
-            pmotion->s_curve.s_  = 0.0;
-            pmotion->s_curve.t_  = 0.0;
+            pmotion->s_curve.a_   = 0.0;
+            pmotion->s_curve.ah_  = 0.0;
+            pmotion->s_curve.ah2_ = 0.0;
+            pmotion->s_curve.j_   = pmotion->s_curve.j;
+            pmotion->s_curve.js_  = pmotion->s_curve.j_ / 6.0;
+            pmotion->s_curve.js3_ = 3.0 * pmotion->s_curve.js_;
+            pmotion->s_curve.v_   = pmotion->s_curve.v0;
+            pmotion->s_curve.s_   = 0.0;
+            pmotion->s_curve.t_   = 0.0;
+
+            pmotion->s_curve.tg_ = pmotion->s_curve.units_per_step / pmotion->s_curve.v_; // (8.6)
 
             #if MOTION_CURVE_DEBUG
             new_phase = 1;
             #endif
+            
+	        pmotion->s_curve.phase = 1;
         }
-
-        pmotion->s_curve.phase = 1;
     } else if ((pmotion->s_curve.bound.steps[2] != 0) && (pmotion->s_curve.step <= pmotion->s_curve.bound.acc_steps[2])) {
         if (pmotion->s_curve.phase != 2) {
-            pmotion->s_curve.a_  = pmotion->s_curve.a;
-            pmotion->s_curve.ah_ = 0.5 * pmotion->s_curve.a_;
-            pmotion->s_curve.j_  = 0.0;
-            pmotion->s_curve.js_ = 0.0;
-            pmotion->s_curve.v_  = pmotion->s_curve.bound.v[1];
-            pmotion->s_curve.s_  = 0.0;
-            pmotion->s_curve.t_  = 0.0;
+            pmotion->s_curve.a_   = pmotion->s_curve.a;
+            pmotion->s_curve.ah_  = 0.5 * pmotion->s_curve.a_;
+            pmotion->s_curve.ah2_ = pmotion->s_curve.ah_ * 2.0;
+            pmotion->s_curve.j_   = 0.0;
+            pmotion->s_curve.js_  = 0.0;
+            pmotion->s_curve.js3_ = 0.0;
+            pmotion->s_curve.v_   = pmotion->s_curve.bound.v[1];
+            pmotion->s_curve.s_   = 0.0;
+            pmotion->s_curve.t_   = 0.0;
 
             #if MOTION_CURVE_DEBUG
             new_phase = 1;
             #endif
+            
+	        pmotion->s_curve.phase = 2;
         }
-
-        pmotion->s_curve.phase = 2;
     } else if ((pmotion->s_curve.bound.steps[3] != 0) && (pmotion->s_curve.step <= pmotion->s_curve.bound.acc_steps[3])) {
         if (pmotion->s_curve.phase != 3) {
-            pmotion->s_curve.a_  = pmotion->s_curve.a;
-            pmotion->s_curve.ah_ = 0.5 * pmotion->s_curve.a_;
-            pmotion->s_curve.j_  = -1.0 * pmotion->s_curve.j;
-            pmotion->s_curve.js_ = pmotion->s_curve.j_ / 6.0;
-            pmotion->s_curve.v_  = pmotion->s_curve.bound.v[2];
-            pmotion->s_curve.s_  = 0.0;
-            pmotion->s_curve.t_  = 0.0;
+            pmotion->s_curve.a_   = pmotion->s_curve.a;
+            pmotion->s_curve.ah_  = 0.5 * pmotion->s_curve.a_;
+            pmotion->s_curve.ah2_ = pmotion->s_curve.ah_ * 2.0;
+            pmotion->s_curve.j_   = -1.0 * pmotion->s_curve.j;
+            pmotion->s_curve.js_  = pmotion->s_curve.j_ / 6.0;
+            pmotion->s_curve.js3_ = 3.0 * pmotion->s_curve.js_;
+            pmotion->s_curve.v_   = pmotion->s_curve.bound.v[2];
+            pmotion->s_curve.s_   = 0.0;
+            pmotion->s_curve.t_   = 0.0;
+
+            pmotion->s_curve.tg_ = pmotion->s_curve.units_per_step / pmotion->s_curve.v_; // (8.6)
 
             #if MOTION_CURVE_DEBUG
             new_phase = 1;
             #endif
+            
+	        pmotion->s_curve.phase = 3;
         }
-
-        pmotion->s_curve.phase = 3;
     } else if ((pmotion->s_curve.bound.steps[4] != 0) && (pmotion->s_curve.step <= pmotion->s_curve.bound.acc_steps[4])) {
         if (pmotion->s_curve.phase != 4) {
-            pmotion->s_curve.a_  = 0.0;
-            pmotion->s_curve.ah_ = 0.0;
-            pmotion->s_curve.j_  = 0.0;
-            pmotion->s_curve.js_ = 0.0;
-            pmotion->s_curve.v_  = pmotion->s_curve.bound.v[3];
-            pmotion->s_curve.s_  = 0.0;
-            pmotion->s_curve.t_  = 0.0;
+            pmotion->s_curve.a_   = 0.0;
+            pmotion->s_curve.ah_  = 0.0;
+            pmotion->s_curve.ah2_ = 0.0;
+            pmotion->s_curve.j_   = 0.0;
+            pmotion->s_curve.js_  = 0.0;
+            pmotion->s_curve.js3_ = 0.0;
+            pmotion->s_curve.v_   = pmotion->s_curve.bound.v[3];
+            pmotion->s_curve.s_   = 0.0;
+            pmotion->s_curve.t_   = 0.0;
+            
+            pmotion->s_curve.step_time = pmotion->s_curve.units_per_step /  pmotion->s_curve.bound.v[4];            
 
             #if MOTION_CURVE_DEBUG
             new_phase = 1;
             #endif
+            
+	        pmotion->s_curve.phase = 4;
         }
-
-        pmotion->s_curve.phase = 4;
     } else if ((pmotion->s_curve.bound.steps[5] != 0) && (pmotion->s_curve.step <= pmotion->s_curve.bound.acc_steps[5])) {
         if (pmotion->s_curve.phase != 5) {
-            pmotion->s_curve.a_  = 0.0;
-            pmotion->s_curve.ah_ = 0.0;
-            pmotion->s_curve.j_  = -1.0 * pmotion->s_curve.j;
-            pmotion->s_curve.js_ = pmotion->s_curve.j_ / 6.0;
-            pmotion->s_curve.v_  = pmotion->s_curve.bound.v[4];
-            pmotion->s_curve.s_  = 0.0;
-            pmotion->s_curve.t_  = 0.0;
-
+            pmotion->s_curve.a_   = 0.0;
+            pmotion->s_curve.ah_  = 0.0;
+            pmotion->s_curve.ah2_ = 0.0;
+            pmotion->s_curve.j_   = -1.0 * pmotion->s_curve.j;
+            pmotion->s_curve.js_  = pmotion->s_curve.j_ / 6.0;
+            pmotion->s_curve.js3_ = 3.0 * pmotion->s_curve.js_;
+            pmotion->s_curve.v_   = pmotion->s_curve.bound.v[4];
+            pmotion->s_curve.s_   = 0.0;
+            pmotion->s_curve.t_   = 0.0;
+            
+            pmotion->s_curve.tg_ = pmotion->s_curve.units_per_step / pmotion->s_curve.v_; // (8.6)
+            
             #if MOTION_CURVE_DEBUG
             new_phase = 1;
             #endif
+            
+	        pmotion->s_curve.phase = 5;
         }
-
-        pmotion->s_curve.phase = 5;
     } else if ((pmotion->s_curve.bound.steps[6] != 0) && (pmotion->s_curve.step <= pmotion->s_curve.bound.acc_steps[6])) {
         if (pmotion->s_curve.phase != 6) {
-            pmotion->s_curve.a_  = -1.0* pmotion->s_curve.a;
-            pmotion->s_curve.ah_ = 0.5 * pmotion->s_curve.a_;
-            pmotion->s_curve.j_  = 0.0;
-            pmotion->s_curve.js_ = 0.0;
-            pmotion->s_curve.v_  = pmotion->s_curve.bound.v[5];
-            pmotion->s_curve.s_  = 0.0;
-            pmotion->s_curve.t_  = 0.0;
+            pmotion->s_curve.a_   = -1.0* pmotion->s_curve.a;
+            pmotion->s_curve.ah_  = 0.5 * pmotion->s_curve.a_;
+            pmotion->s_curve.ah2_ = pmotion->s_curve.ah_ * 2.0;
+            pmotion->s_curve.j_   = 0.0;
+            pmotion->s_curve.js_  = 0.0;
+            pmotion->s_curve.js3_ = 0.0;
+            pmotion->s_curve.v_   = pmotion->s_curve.bound.v[5];
+            pmotion->s_curve.s_   = 0.0;
+            pmotion->s_curve.t_   = 0.0;
 
             #if MOTION_CURVE_DEBUG
             new_phase = 1;
             #endif
+            
+	        pmotion->s_curve.phase = 6;
         }
-
-        pmotion->s_curve.phase = 6;
     } else if ((pmotion->s_curve.bound.steps[7] != 0) && (pmotion->s_curve.step <= pmotion->s_curve.bound.acc_steps[7])) {
         if (pmotion->s_curve.phase != 7) {
-            pmotion->s_curve.a_  = -1.0* pmotion->s_curve.a;
-            pmotion->s_curve.ah_ = 0.5 * pmotion->s_curve.a_;
-            pmotion->s_curve.j_  = pmotion->s_curve.j;
-            pmotion->s_curve.js_ = pmotion->s_curve.j_ / 6.0;
-            pmotion->s_curve.v_  = pmotion->s_curve.bound.v[6];
-            pmotion->s_curve.s_  = 0.0;
-            pmotion->s_curve.t_  = 0.0;
+            pmotion->s_curve.a_   = -1.0* pmotion->s_curve.a;
+            pmotion->s_curve.ah_  = 0.5 * pmotion->s_curve.a_;
+            pmotion->s_curve.ah2_ = pmotion->s_curve.ah_ * 2.0;
+            pmotion->s_curve.j_   = pmotion->s_curve.j;
+            pmotion->s_curve.js_  = pmotion->s_curve.j_ / 6.0;
+            pmotion->s_curve.js3_ = 3.0 * pmotion->s_curve.js_;
+            pmotion->s_curve.v_   = pmotion->s_curve.bound.v[6];
+            pmotion->s_curve.s_   = 0.0;
+            pmotion->s_curve.t_   = 0.0;
+
+            pmotion->s_curve.tg_ = pmotion->s_curve.units_per_step / pmotion->s_curve.v_; // (8.6)
 
             #if MOTION_CURVE_DEBUG
             new_phase = 1;
             #endif
+            
+	        pmotion->s_curve.phase = 7;
         }
-
-        pmotion->s_curve.phase = 7;
     }
 
     // Compute the elapse time between the current step and the next step
-    float next_in;
+    float next_in = pmotion->s_curve.step_time;
 
-    if (pmotion->s_curve.phase == 4) {
-        next_in = pmotion->s_curve.step_time; // (8.14)
-        if (next_in == 0.0) {
-        	next_in = pmotion->s_curve.units_per_step /  pmotion->s_curve.bound.v[4];
-        	pmotion->s_curve.step_time = next_in;
-        }
-    } else if ((pmotion->s_curve.phase == 2) || (pmotion->s_curve.phase == 6)) {
+    if ((pmotion->s_curve.phase == 2) || (pmotion->s_curve.phase == 6)) {
         // We are in phase 2 or 6.
         float t = solve_second_order_pos(pmotion->s_curve.ah_, pmotion->s_curve.v_, -pmotion->s_curve.s_ - pmotion->s_curve.units_per_step); // (8.8)
 
@@ -444,23 +475,44 @@ float IRAM_ATTR s_curve_next(motion_t *pmotion) {
         next_in = t - pmotion->s_curve.t_;
 
         pmotion->s_curve.t_ = t;
-    } else {
+    } else if (pmotion->s_curve.phase != 4) {
         // We are in phase 1, 3, 5 or 7. We need to solve (8.2).
-        float initial_guess;
-
-        if (pmotion->s_curve.current_time == 0) {
-            initial_guess = pmotion->s_curve.units_per_step / pmotion->s_curve.v_; // (8.6)
-        } else {
-            initial_guess = pmotion->s_curve.t_; // (8.7)
-        }
-
+        
         // Solve (8.1)
-        float t = solve_third_order_newton(((pmotion->s_curve.j_) / 6.0), pmotion->s_curve.ah_, pmotion->s_curve.v_, - pmotion->s_curve.s_ - pmotion->s_curve.units_per_step, initial_guess, 0.0001);
+	    #if MOTION_CURVE_STATS
+	    int64_t newton_begin = esp_timer_get_time();
+	    int32_t iterations = 0;
+	    #endif
+	    
+        float t = solve_third_order_newton_fast(pmotion->s_curve.js_, pmotion->s_curve.js3_, pmotion->s_curve.ah_, pmotion->s_curve.ah2_, pmotion->s_curve.v_, - pmotion->s_curve.s_ - pmotion->s_curve.units_per_step, pmotion->s_curve.tg_, S_CURVE_NEWTON_ERROR, &iterations);
+
+	    #if MOTION_CURVE_STATS
+	    int64_t newton_end = esp_timer_get_time();
+
+	    int32_t elapsed = (int32_t)(newton_end - newton_begin);
+	    
+	    if (elapsed >= pmotion->s_curve.newton_max_time_) {
+			pmotion->s_curve.newton_max_time_ = elapsed;
+		}
+		
+	    if (elapsed <= pmotion->s_curve.next_min_time_) {
+			pmotion->s_curve.newton_min_time_ = elapsed;
+		}
+		
+	    if (iterations >= pmotion->s_curve.newton_max_iterations_) {
+			pmotion->s_curve.newton_max_iterations_ = iterations;
+		}
+		
+	    if (iterations <= pmotion->s_curve.newton_min_iterations_) {
+			pmotion->s_curve.newton_min_iterations_ = iterations;
+		}
+	    #endif
 
         // Compute time to next step
         next_in = t - pmotion->s_curve.t_;
 
         pmotion->s_curve.t_ = t;
+        pmotion->s_curve.tg_ = pmotion->s_curve.t_;
     }
 
     // Increment stepper position into current phase
@@ -478,6 +530,19 @@ float IRAM_ATTR s_curve_next(motion_t *pmotion) {
     printf("%f %f %d\r\n", pmotion->s_curve.current_time, pmotion->s_curve.v_ + pmotion->s_curve.a_ * pmotion->s_curve.t_ + 0.5 * pmotion->s_curve.j_ * pmotion->s_curve.t_ * pmotion->s_curve.t_,new_phase?1:0);
     #endif
 
+    #if MOTION_CURVE_STATS
+    int64_t next_end = esp_timer_get_time();
+    int32_t elapsed = (int32_t)(next_end - next_begin);
+    
+    if (elapsed >= pmotion->s_curve.next_max_time_) {
+		pmotion->s_curve.next_max_time_ = elapsed;
+	}
+	
+    if (elapsed <= pmotion->s_curve.next_min_time_) {
+		pmotion->s_curve.next_min_time_ = elapsed;
+	}
+    #endif
+    
     return next_in;
 }
 
@@ -492,6 +557,13 @@ void s_curve_dump(motion_t *pmotion) {
     syslog(LOG_DEBUG, "  stpu : %.4f units/s^3", pmotion->s_curve.steps_per_unit);
     syslog(LOG_DEBUG, "  upst : %.4f units/s^3", pmotion->s_curve.units_per_step);
     syslog(LOG_DEBUG, "  steps: %d",  pmotion->s_curve.steps);
+    
+    #if MOTION_CURVE_STATS
+    syslog(LOG_DEBUG, "\r\nStats:");
+    syslog(LOG_DEBUG, "  min motion iteration time: %"PRIu32" usecs",     pmotion->s_curve.next_min_time_);
+    syslog(LOG_DEBUG, "  max motion iteration time: %"PRIu32" usecs",     pmotion->s_curve.next_max_time_);
+    #endif
+    
     syslog(LOG_DEBUG, "  s-curve phases:");
     if (pmotion->s_curve.bound.steps[1] != 0.0) syslog(LOG_DEBUG, "    t1 %9.4f s, v1 %9.4f units/s, s1 %9.4f units, %5d steps",  pmotion->s_curve.bound.t[1], pmotion->s_curve.bound.v[1], pmotion->s_curve.bound.s[1], pmotion->s_curve.bound.steps[1]);
     if (pmotion->s_curve.bound.steps[2] != 0.0) syslog(LOG_DEBUG, "    t2 %9.4f s, v2 %9.4f units/s, s2 %9.4f units, %5d steps",  pmotion->s_curve.bound.t[2], pmotion->s_curve.bound.v[2], pmotion->s_curve.bound.s[2], pmotion->s_curve.bound.steps[2]);
@@ -508,6 +580,27 @@ void s_curve_dump(motion_t *pmotion) {
 					  pmotion->s_curve.bound.steps[1]+pmotion->s_curve.bound.steps[2]+pmotion->s_curve.bound.steps[3]+
 					  pmotion->s_curve.bound.steps[4]+pmotion->s_curve.bound.steps[5]+pmotion->s_curve.bound.steps[6]+
 					  pmotion->s_curve.bound.steps[7]);
+}
+#endif
+
+#if MOTION_CURVE_STATS
+void s_curve_init_stats(motion_t *pmotion) {
+    pmotion->s_curve.next_max_time_ = INT_MIN;
+    pmotion->s_curve.next_min_time_ = INT_MAX ;
+    pmotion->s_curve.newton_max_time_ = INT_MIN;
+    pmotion->s_curve.newton_min_time_ = INT_MAX ;
+    pmotion->s_curve.newton_max_iterations_ = INT_MIN;
+    pmotion->s_curve.newton_min_iterations_ = INT_MAX ;
+}
+
+void s_curve_dump_stats(motion_t *pmotion) {
+	syslog(LOG_DEBUG, "\r\nStats:");
+	syslog(LOG_DEBUG, "  min motion iteration time: %"PRIi32" usecs",     pmotion->s_curve.next_min_time_);
+	syslog(LOG_DEBUG, "  max motion iteration time: %"PRIi32" usecs",     pmotion->s_curve.next_max_time_);
+	syslog(LOG_DEBUG, "  min newton time: %"PRIi32" usecs",     pmotion->s_curve.newton_min_time_);
+	syslog(LOG_DEBUG, "  max newton time: %"PRIi32" usecs",     pmotion->s_curve.newton_max_time_);
+	syslog(LOG_DEBUG, "  min newton iterations: %"PRIi32"",     pmotion->s_curve.newton_min_iterations_);
+	syslog(LOG_DEBUG, "  max newton iterations %"PRIi32"",     pmotion->s_curve.newton_max_iterations_);
 }
 #endif
 

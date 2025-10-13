@@ -24,8 +24,9 @@
 #ifndef _MOTION_MOTION_H_
 #define _MOTION_MOTION_H_
 
-#define MOTION_DEBUG 0
+#define MOTION_DEBUG 1
 #define MOTION_CURVE_DEBUG 0
+#define MOTION_CURVE_STATS 1
 
 #include "motion_math.h"
 #include "s_curve_motion_types.h"
@@ -60,6 +61,11 @@ typedef struct motion {
     motion_dump_func_t _dump;
 #endif
 
+#if MOTION_CURVE_STATS
+    motion_dump_func_t _init_stats;
+    motion_dump_func_t _dump_stats;
+#endif
+
 	motion_get_duration_func_t _get_duration;
 
     union {
@@ -70,7 +76,9 @@ typedef struct motion {
 void motion_prepare(motion_constraints_t *pconstraints, motion_t *pmotion);
 void motion_constraint_t(motion_t *pmotion, float t);
 float motion_next(motion_t *pmotion);
-void motion_dumnp(motion_t *pmotion);
+void motion_dump(motion_t *pmotion);
+void motion_dump_stats(motion_t *pmotion);
+void motion_init_stats(motion_t *pmotion);
 float motion_get_duration(motion_t *pmotion);
 
 #include "s_curve_motion.h"

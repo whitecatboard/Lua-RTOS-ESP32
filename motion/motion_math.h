@@ -24,7 +24,10 @@
 #ifndef _MOTION_MATH_H_
 #define _MOTION_MATH_H_
 
+#include <stdint.h>
+
 float solve_third_order_newton(float a, float b, float c, float d, float first_approximation, float err);
+float solve_third_order_newton_fast(float a, float a3, float b, float b2, float c, float d, float first_approximation, float err, int32_t *iterations);
 float solve_second_order_pos(float a, float b, float c);
 float solve_second_min_pos(float a, float b, float c);
 

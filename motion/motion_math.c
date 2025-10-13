@@ -29,6 +29,23 @@
 
 #define FLT_MAX    1E+37
 
+#include "esp_attr.h"
+
+inline float __divsf3(float a, float b) {
+    float inversed_b, tmp;
+    __asm__ volatile (
+        "recip0.s %0, %2\n"
+        "const.s %1, 1\n"
+        "msub.s %1, %2, %0\n"
+        "madd.s %0, %0, %1\n"
+        "const.s %1, 1\n"
+        "msub.s %1, %2, %0\n"
+        "maddn.s %0, %0, %1\n"
+        :"=&f"(inversed_b),"=&f"(tmp):"f"(b)
+    );
+    return a * inversed_b;
+}
+
 float IRAM_ATTR solve_third_order_newton(float a, float b, float c, float d, float first_approximation, float err) {
     float previous_unknown;
     float error;
@@ -40,6 +57,11 @@ float IRAM_ATTR solve_third_order_newton(float a, float b, float c, float d, flo
     float unknown = first_approximation;
     float unknown_square = unknown * unknown;
     float unknown_third = unknown_square * unknown;
+
+    unknown = unknown - (
+            (a * unknown_third + b * unknown_square + c * unknown + d) /
+            (a3 * unknown_square + b2 * unknown + c)
+    );
 
     previous_unknown = unknown;
 
@@ -58,10 +80,10 @@ float IRAM_ATTR solve_third_order_newton(float a, float b, float c, float d, flo
 
     // Iterate until current error <= err
     while ((error > err) && (error != previous_error)) {
+        previous_unknown = unknown;
+        
         unknown_square = unknown * unknown;
         unknown_third = unknown_square * unknown;
-
-        previous_unknown = unknown;
 
         unknown = unknown - (
                 (a * unknown_third + b * unknown_square + c * unknown + d) /
@@ -76,6 +98,44 @@ float IRAM_ATTR solve_third_order_newton(float a, float b, float c, float d, flo
             break;
         }
     }
+
+    return unknown;
+}
+
+float IRAM_ATTR solve_third_order_newton_fast(float a, float a3, float b, float b2, float c, float d, float first_approximation, float err, int32_t *iterations) {
+    float previous_unknown;
+    float error;
+    float previous_error;
+    uint32_t it = 0;
+
+	float unknown;
+	float unknown_square;
+	float unknown_third;
+	float f;
+	float f_derivate;
+	float h;
+
+   	unknown = first_approximation;
+   	
+    do {
+		it++;
+		
+    	unknown_square = unknown * unknown;
+    	unknown_third = unknown_square * unknown;
+		
+		f = (a * unknown_third + b * unknown_square + c * unknown + d);
+		f_derivate = (a3 * unknown_square + b2 * unknown + c);
+		
+		h = __divsf3(f,f_derivate);
+		
+		previous_unknown = unknown;
+		unknown = previous_unknown - h;
+		
+	    // Compute error
+	    error = fabs(unknown - previous_unknown);
+	} while (error > err);
+	
+    *iterations = it;
 
     return unknown;
 }
@@ -101,6 +161,10 @@ float IRAM_ATTR solve_second_order_pos(float a, float b, float c) {
         unknown = NAN;
     }
 
+	if (unknown == NAN) {
+		printf("oops in solve third order\r\n");		
+	}
+	
     return unknown;
 }
 
@@ -138,5 +202,9 @@ float IRAM_ATTR solve_second_min_pos(float a, float b, float c) {
         unknown = NAN;
     }
 
+	if (unknown == NAN) {
+		printf("oops in solve second order\r\n");		
+	}
+	
     return unknown;
 }

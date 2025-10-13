@@ -29,6 +29,12 @@
 void s_curve_prepare(motion_t *pmotion);
 float s_curve_next(motion_t *pmotion);
 void s_curve_dump(motion_t *pmotion);
+
+#if MOTION_CURVE_STATS
+void s_curve_init_stats(motion_t *pmotion);
+void s_curve_dump_stats(motion_t *pmotion);
+#endif
+
 float s_curve_get__duration(motion_t *pmotion);
 
 #endif
