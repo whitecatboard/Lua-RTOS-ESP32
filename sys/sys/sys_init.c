@@ -58,6 +58,11 @@
 #include "esp_sleep.h"
 #include "esp_ota_ops.h"
 
+#if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
+#include "esp_flash.h"
+#include "esp_spi_flash.h"
+#endif
+
 #include "esp_private/periph_ctrl.h"
 
 #include "nvs_flash.h"
@@ -175,11 +180,7 @@ void _sys_init() {
 
     #if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
     // Get flash unique id
-    uint8_t command[13] = {0x4b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t response[13];
-
-    spi_flash_send_cmd(sizeof(command), command, response);
-    memcpy(flash_unique_id, response + 5, sizeof(flash_unique_id));
+    esp_flash_read_unique_chip_id(NULL, (uint64_t *)flash_unique_id);
     #endif
 
     // Init important things for Lua RTOS
