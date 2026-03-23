@@ -1,4 +1,8 @@
 .config
+.cproject
+.clangd
+.clang-format
+
 *.o
 *.pyc
 *.a
@@ -30,6 +34,8 @@ components/mkromfs/src/mkromfs
 # sdkconfig
 # sdkconfig.old
 
+.metadata/
+.cache/
 .cproject/
 .settings/
 .project
