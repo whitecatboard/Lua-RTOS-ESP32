@@ -43,6 +43,7 @@
  *
  */
 
+#include "esp_timer.h"
 #include "lauxlib.h"
 #include "luartos.h"
 #include "build_time.h"
@@ -1112,10 +1113,7 @@ static int os_uptime(lua_State *L) {
     }
 
     // Get time since last boot (no RTC)
-    struct tms tms;
-
-    times(&tms);
-    uint32_t uptime = tms.tms_stime / 1000;
+    uint32_t uptime = esp_timer_get_time() / 1000000;
 
     int updays = uptime / 86400;
     int uphours = (uptime - (updays * 86400)) / 3600;
