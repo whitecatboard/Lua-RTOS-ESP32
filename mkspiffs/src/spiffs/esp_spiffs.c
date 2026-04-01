@@ -31,10 +31,9 @@
 
 #include "esp_spiffs.h"
 #include "esp_attr.h"
+#include "spi_flash_mmap.h"
 
 #include "spiffs.h"
-
-#include <esp_spi_flash.h>
 
 s32_t esp32_spi_flash_read(u32_t addr, u32_t size, u8_t *dst) {
 	if (spi_flash_read(addr, (void *)dst, size) != 0) {
