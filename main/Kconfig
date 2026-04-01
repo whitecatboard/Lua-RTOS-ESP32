@@ -262,6 +262,45 @@ menu "Lua RTOS"
                   or LFS file systems is enabled.
       endmenu
 
+      menu "EEPROM"
+	     config LUA_RTOS_USE_EEPROM
+	        bool "Enable EEPROM flash emulation"
+	        default n
+	        
+         choice LUA_RTOS_EEPROM_SIZE
+            depends on LUA_RTOS_USE_EEPROM
+            prompt "EEPROM size"
+            default LUA_RTOS_EEPROM_SIZE_16K
+
+            config LUA_RTOS_EEPROM_SIZE_1K
+               bool "1 Kbits"
+               
+            config LUA_RTOS_EEPROM_SIZE_2K
+               bool "2 Kbits"
+
+            config LUA_RTOS_EEPROM_SIZE_4K
+               bool "4 Kbits"
+               
+            config LUA_RTOS_EEPROM_SIZE_16K
+               bool "16 Kbits"
+               
+            config LUA_RTOS_EEPROM_SIZE_32K
+               bool "32 Kbits"
+               
+            config LUA_RTOS_EEPROM_SIZE_64K
+               bool "64 Kbits"
+               
+            config LUA_RTOS_EEPROM_SIZE_128K
+               bool "128 Kbits"
+               
+            config LUA_RTOS_EEPROM_SIZE_256K
+               bool "256 Kbits"
+               
+            config LUA_RTOS_EEPROM_SIZE_512K
+               bool "512 Kbits"               
+         endchoice
+      endmenu
+
       menu "File Systems"
          choice LUA_RTOS_ROM_STORAGE_FS
             prompt "ROM storage"
@@ -1077,6 +1116,20 @@ menu "Lua RTOS"
                 config LUA_RTOS_LORA_HW_TYPE_SX1301
                     bool "sx1301, used in multi-channel gateways"
             endchoice
+            
+            choice LUA_RTOS_LORA_STACK
+                prompt "LoRa stack"
+                default LUA_RTOS_LORA_STACK_SEMTECH
+                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
+                help
+                    Select the LoRa stack.
+        
+                config LUA_RTOS_LORA_STACK_LMIC
+                    bool "LMIC"
+            
+                config LUA_RTOS_LORA_STACK_SEMTECH
+                    bool "Semtech"
+            endchoice            
 
             choice LUA_RTOS_LORA_BAND
                 depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272

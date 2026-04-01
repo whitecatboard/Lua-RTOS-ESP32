@@ -60,7 +60,7 @@
 
 #if CONFIG_LUA_RTOS_READ_FLASH_UNIQUE_ID
 #include "esp_flash.h"
-#include "esp_spi_flash.h"
+#include "spi_flash_mmap.h"
 #endif
 
 #include "esp_private/periph_ctrl.h"

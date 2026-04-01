@@ -1,5 +1,6 @@
 set(srcs
 	"drivers/MCP23S17.c"
+	"drivers/eeprom_flash.c"
 	"drivers/adc.c"
 	"drivers/adc_ads1015.c"
 	"drivers/adc_ads1115.c"
@@ -272,3 +273,6 @@ target_link_libraries(${COMPONENT_LIB} INTERFACE "${extra_link_flags}")
 
 # Enable / disable LUA free mem debug utility (only for debug purposes)
 target_compile_options(${COMPONENT_LIB} PUBLIC -DDEBUG_FREE_MEM=0)
+
+#get_property(eeprom_size GLOBAL PROPERTY CONFIG_LUA_RTOS_PART_EEPROM_SIZE)
+#target_compile_options(${COMPONENT_LIB} PUBLIC -DCONFIG_LUA_RTOS_PART_EEPROM_SIZE=${eeprom_size})

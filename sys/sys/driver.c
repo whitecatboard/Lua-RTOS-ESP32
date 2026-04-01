@@ -52,6 +52,7 @@
 #include <sys/syslog.h>
 #include <sys/panic.h>
 #include <sys/mutex.h>
+#include <sys/memory.h>
 
 #include <drivers/pwm.h>
 #include <drivers/adc.h>
@@ -171,6 +172,86 @@ driver_error_t *driver_error(const driver_t *driver, uint32_t exception, const c
     }
 
     return error;
+}
+
+void driver_error_log_and_destroy(driver_error_t *error) {
+    // We must copy relevant information about the error in the stack space.
+    //
+    // This is needed because *error is created in the heap and must be
+    // destroy, but relevant information is used when calling to the
+    // luaL_error that interrupts the program flow and instructions after this
+    // call are not executed, so any free call after this call is not
+    // executed.
+    const char *msg = NULL;
+    const char *ext_msg = NULL;
+    char ext_msg_copy[180];
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    const char *target_name;
+    const char *owner_name;
+    int target_unit;
+    int owner_unit;
+#endif
+    int exception;
+	
+	if (!error) {
+		return;
+	}
+
+    int error_type = error->type;
+
+#if CONFIG_LUA_RTOS_USE_HARDWARE_LOCKS
+    if (error_type == LOCK) {
+    	target_name = error->lock_error->target_driver->name;
+		owner_name = error->lock_error->lock->owner->name;
+		target_unit = error->lock_error->target_unit;
+		owner_unit = error->lock_error->lock->unit;
+
+		if (strcmp(error->lock_error->lock->owner->name, "spi") == 0) {
+			owner_unit = (owner_unit & 0xff00) >> 8;
+		} else if (strcmp(error->lock_error->lock->owner->name, "i2c") == 0) {
+			owner_unit = (owner_unit & 0xff00) >> 8;
+		}
+
+		free(error->lock_error);
+	    free(error);
+	    
+	    syslog(LOG_ERR, "%s%d is used by %s%d", target_name, target_unit,
+			   owner_name, owner_unit);
+    } else
+#endif
+    if (error_type == OPERATION) {
+    	msg = driver_get_err_msg(error);
+
+    	if (error->msg) {
+    		// As nothing is executed after calling luaL_error we must copy the
+    		// message into a local variable (may be truncated) to ensure that we can
+    		// safely free the message (if it's allocated in the heap) before calling
+    		// luaL_error.
+    		memcpy(ext_msg_copy, error->msg, sizeof(ext_msg_copy));
+    		ext_msg_copy[sizeof(ext_msg_copy) - 1] = '\0';
+    		ext_msg = ext_msg_copy;
+    	}
+
+    	exception = error->exception;
+
+    	if (memory_check_in_heap((void *)error->msg)) {
+    		free((void *)error->msg);
+    	}
+
+    	free(error);
+
+    	if (ext_msg) {
+		    syslog(LOG_ERR, "%d:%s (%s)", exception, msg, ext_msg);
+    	} else {
+		    syslog(LOG_ERR, "%d:%s", exception,	msg);
+    	}
+    } else {
+    	msg = driver_get_err_msg(error);
+    	
+    	free(error);
+    	
+    	syslog(LOG_ERR, "%s", msg);
+    }    	
 }
 
 char *driver_target_name(const driver_t *target_driver, int target_unit, const char *tag) {

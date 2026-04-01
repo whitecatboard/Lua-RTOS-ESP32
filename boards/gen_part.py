@@ -45,6 +45,7 @@ import sys, argparse
 
 SPIFFS_PART = 0x40
 LFS_PART = 0x41
+EEPROM_PART = 0x42
 
 def make_part(label, type, subtype, offset, size):
   new_offset = offset + size
@@ -55,9 +56,11 @@ def make_part(label, type, subtype, offset, size):
 # Process arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("-LUA_RTOS_PART_STORAGE_SIZE")
+parser.add_argument("-LUA_RTOS_PART_EEPROM_SIZE")
 parser.add_argument("-LUA_RTOS_USE_FAT")
 parser.add_argument("-LUA_RTOS_USE_SPIFFS")
 parser.add_argument("-LUA_RTOS_USE_LFS")
+parser.add_argument("-LUA_RTOS_USE_EEPROM")
 parser.add_argument("-LUA_RTOS_PARTION_CSV")
 parser.add_argument("-LUA_RTOS_FLASH_SIZE")
 parser.add_argument("-LUA_RTOS_PARTITION_TABLE_OFFSET")
@@ -73,11 +76,14 @@ flash_size = int(args.LUA_RTOS_FLASH_SIZE)
 # Get the partition table offset
 part_table_offset = int(args.LUA_RTOS_PARTITION_TABLE_OFFSET, 16)
 
-# Check if read-write partition is required
+# Check if read-write partition is required (spiffs & lfs)
 use_spiffs = (args.LUA_RTOS_USE_SPIFFS == 'y');
 use_lfs = (args.LUA_RTOS_USE_LFS == 'y');
 
 storage_partition = (use_spiffs or use_lfs)
+
+# Check if read-write partition is required (EEPROM)
+eeprom_partition = (args.LUA_RTOS_USE_EEPROM == 'y');
 
 # Chek if OTA is enabled in build
 with_ota = (args.LUA_RTOS_USE_OTA == 'y')
@@ -119,6 +125,11 @@ storage_offset = offset
 if storage_partition:    
   print ("storage    0x%08x\t0x%08x  % 5dK" % (offset, int(args.LUA_RTOS_PART_STORAGE_SIZE), int(args.LUA_RTOS_PART_STORAGE_SIZE) / 1024))
   offset = offset + int(args.LUA_RTOS_PART_STORAGE_SIZE)
+
+eeprom_offset = offset
+if eeprom_partition:    
+  print ("eeprom     0x%08x\t0x%08x  % 5dK" % (offset, int(args.LUA_RTOS_PART_EEPROM_SIZE), int(args.LUA_RTOS_PART_EEPROM_SIZE) / 1024))
+  offset = offset + int(args.LUA_RTOS_PART_EEPROM_SIZE)
 
 phy_init_offset = offset
 if with_phy_init:
@@ -162,6 +173,9 @@ if storage_partition:
     exit(1)
 
   make_part("storage","data",str(storage_subtype),storage_offset,int(args.LUA_RTOS_PART_STORAGE_SIZE))
+
+if eeprom_partition:
+  make_part("eeprom","data",str(EEPROM_PART),eeprom_offset,int(args.LUA_RTOS_PART_EEPROM_SIZE))
 
 if with_phy_init:
   make_part("phy_init","data","phy",phy_init_offset,phy_init_size)
