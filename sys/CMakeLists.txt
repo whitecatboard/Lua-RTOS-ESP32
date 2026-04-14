@@ -1,6 +1,5 @@
 set(srcs
-	"drivers/MCP23S17.c"
-	"drivers/eeprom_flash.c"
+	"drivers/MCP23S17.c"	
 	"drivers/adc.c"
 	"drivers/adc_ads1015.c"
 	"drivers/adc_ads1115.c"
@@ -129,6 +128,10 @@ set(srcs
 #	"vfs/urandom.c"
 	"vfs/vfs.c"
 )
+
+if(CONFIG_LUA_RTOS_USE_EEPROM)
+list(APPEND srcs "drivers/eeprom_flash.c")
+endif()
 
 set(include_dirs 
     "."
