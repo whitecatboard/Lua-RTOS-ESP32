@@ -1,5 +1,6 @@
 set(srcs 
     "getnameinfo.c"
+    "gai_strerror.c"
 )
 
 set(include_dirs 

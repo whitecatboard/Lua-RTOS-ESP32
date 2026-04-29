@@ -15,8 +15,6 @@ Maintainer: Sylvain Miermont
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
-
 /* -------------------------------------------------------------------------- */
 /* --- DEPENDANCIES --------------------------------------------------------- */
 
@@ -309,5 +307,3 @@ int b64_to_bin(const char * in, int size, uint8_t * out, int max_len) {
 
 
 /* --- EOF ------------------------------------------------------------------ */
-
-#endif

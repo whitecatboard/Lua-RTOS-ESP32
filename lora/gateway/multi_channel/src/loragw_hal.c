@@ -16,7 +16,6 @@ Maintainer: Sylvain Miermont
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
 #include <sys/delay.h>
 #include <drivers/gpio.h>
 
@@ -1735,5 +1734,3 @@ uint32_t lgw_time_on_air(struct lgw_pkt_tx_s *packet) {
 }
 
 /* --- EOF ------------------------------------------------------------------ */
-
-#endif

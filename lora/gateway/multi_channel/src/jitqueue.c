@@ -18,9 +18,10 @@ Maintainer: Michael Coracin
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
-
+#if !WHITECAT_CUSTOM_CODE
 #define _GNU_SOURCE     /* needed for qsort_r to be defined */
+#endif
+
 #include <stdlib.h>     /* qsort_r */
 #include <stdio.h>      /* printf, fprintf, snprintf, fopen, fputs */
 #include <string.h>     /* memset, memcpy */
@@ -471,5 +472,3 @@ void jit_print_queue(struct jit_queue_s *queue, bool show_all, int debug_level) 
         pthread_mutex_unlock(&mx_jit_queue);
     }
 }
-
-#endif

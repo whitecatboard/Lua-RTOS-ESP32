@@ -43,8 +43,8 @@
  *
  */
 
-#ifndef __GPIO_H__
-#define __GPIO_H__
+#ifndef __LUARTOS_GPIO_H__
+#define __LUARTOS_GPIO_H__
 
 #include <stdint.h>
 

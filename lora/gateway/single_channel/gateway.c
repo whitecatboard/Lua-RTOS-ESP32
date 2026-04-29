@@ -52,8 +52,6 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -920,5 +918,3 @@ void lora_gw_unsetup() {
         lora_rx_q = NULL;
     }
 }
-
-#endif

@@ -16,6 +16,6 @@
  *     - 1 if str is an hexadecimal string
  *     - 0 if str is not an hexadecimal string
  */
-int lcheck_hex_str(const char *str);
+int check_hex_str(const char *str);
 
 #endif

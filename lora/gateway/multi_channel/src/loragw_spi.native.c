@@ -19,8 +19,6 @@ Maintainer: Sylvain Miermont
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
-
 #define SPI_DELAY() delay(1)
 
 #include <drivers/spi.h>
@@ -249,5 +247,3 @@ int lgw_spi_rb(void *spi_target, uint8_t spi_mux_mode, uint8_t spi_mux_target, u
 }
 
 /* --- EOF ------------------------------------------------------------------ */
-
-#endif

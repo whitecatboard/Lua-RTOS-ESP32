@@ -267,7 +267,7 @@ void gdisplay_ll_update(int x0, int y0, int x1, int y1, uint8_t *buffer) {
 
 void gdisplay_ll_set_pixel(int x, int y, uint32_t color, uint8_t *buffer, int buffw, int buffh) {
 	// Take care about endianness
-	uint32_t wd;
+	uint32_t wd = 0;
 
 	if (caps.bytes_per_pixel == 0) {
 		// Rotate x,y according to current orientation

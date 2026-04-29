@@ -1,0 +1,148 @@
+menu "LoRaWAN"
+    choice LORA_DEVICE_TYPE
+        prompt "LoRaWAN Operation Mode"
+        default LUA_RTOS_LORA_NONE
+        help
+          Select the type of LoRa device configuration for this build.
+
+        config LUA_RTOS_LORA_NONE
+            bool "None"
+                    
+        config LUA_RTOS_LORA_MODE_MULTICHANNEL_GATEWAY
+            bool "Multichannel Gateway"
+            help
+              Enable this for full-featured gateways (e.g., SX1301/SX1308).
+
+        config LUA_RTOS_LORA_MODE_SINGLE_CHANNEL_GATEWAY
+            bool "Single Channel Gateway"
+            help
+              Enable this for limited, single-frequency gateway testing.
+
+        config LUA_RTOS_LORA_MODE_NODE
+            bool "LoRa Node"
+            help
+              Enable this for standard end-devices/sensors.
+    endchoice
+
+    choice LUA_RTOS_LORA_HW_TYPE
+        prompt "LoRa hardware type"
+        default LUA_RTOS_LORA_HW_TYPE_SX1276 if LUA_RTOS_LORA_MODE_SINGLE_CHANNEL_GATEWAY || LUA_RTOS_LORA_MODE_NODE
+        default LUA_RTOS_LORA_HW_TYPE_SX1301 if LUA_RTOS_LORA_MODE_MULTICHANNEL_GATEWAY
+        help
+            Select the LoRa hardware type.
+
+        config LUA_RTOS_LORA_HW_TYPE_SX1276
+            depends on LUA_RTOS_LORA_MODE_SINGLE_CHANNEL_GATEWAY || LUA_RTOS_LORA_MODE_NODE
+            bool "sx1276"
+
+        config LUA_RTOS_LORA_HW_TYPE_SX1272
+            depends on LUA_RTOS_LORA_MODE_SINGLE_CHANNEL_GATEWAY || LUA_RTOS_LORA_MODE_NODE
+            bool "sx1272"
+
+        config LUA_RTOS_LORA_HW_TYPE_SX1301
+            depends on LUA_RTOS_LORA_MODE_MULTICHANNEL_GATEWAY
+            bool "sx1301"
+    endchoice
+    
+    choice LUA_RTOS_LORA_BAND
+        depends on LUA_RTOS_LORA_MODE_SINGLE_CHANNEL_GATEWAY || LUA_RTOS_LORA_MODE_NODE
+        prompt "ISM band"
+        default LUA_RTOS_LORA_BAND_EU868
+        help
+          Select the ISM band to use. Please, select band allowed in your region according to ISM regulations.
+
+        config LUA_RTOS_LORA_BAND_EU868
+            bool "Europe - 868 Mhz"
+
+        config LUA_RTOS_LORA_BAND_US915
+            bool "United States - 915 Mhz"
+    endchoice
+
+    config LUA_RTOS_LORA_SPI
+        depends on LUA_RTOS_LORA_MODE_MULTICHANNEL_GATEWAY  || LUA_RTOS_LORA_MODE_SINGLE_CHANNEL_GATEWAY || LUA_RTOS_LORA_MODE_NODE
+        int "LoRa SPI port"
+            range 2 3
+            default 3
+            help
+              The SPI port number where LoRa hardware is attached
+
+    config LUA_RTOS_LORA_CS
+        depends on LUA_RTOS_LORA_MODE_MULTICHANNEL_GATEWAY  || LUA_RTOS_LORA_MODE_SINGLE_CHANNEL_GATEWAY || LUA_RTOS_LORA_MODE_NODE
+        int "LoRa SPI CS GPIO number"
+            range 0 39
+            default 5
+            help
+              The GPIO port number used to select the LoRa hardware. Set -1 to use the default CS assigned to the SPI port.
+
+    config LUA_RTOS_LORA_RST
+        depends on LUA_RTOS_LORA_MODE_MULTICHANNEL_GATEWAY  || LUA_RTOS_LORA_MODE_SINGLE_CHANNEL_GATEWAY || LUA_RTOS_LORA_MODE_NODE
+        int "LoRa RST GPIO number"
+            range -1 39
+            default -1 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
+            default 27 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
+            help
+              The GPIO port number used to select the LoRa hardware. Use -1 if RST pin is not used.
+
+    config LUA_RTOS_LORA_DIO0
+        depends on LUA_RTOS_LORA_MODE_SINGLE_CHANNEL_GATEWAY || LUA_RTOS_LORA_MODE_NODE
+       int "LoRa DIO0 GPIO number"
+            range -1 39
+            default 4 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
+            default 26 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
+            help
+              The GPIO port number used for the DIO0 signal. Use -1 if DIO0 pin is not used.
+
+    config LUA_RTOS_LORA_DIO1
+        depends on LUA_RTOS_LORA_MODE_SINGLE_CHANNEL_GATEWAY || LUA_RTOS_LORA_MODE_NODE
+        int "LoRa DIO1 GPIO number"
+            range -1 39
+            default 16 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
+            default 25 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
+            help
+              The GPIO port number used for the DIO1 signal. Use -1 if DIO1 pin is not used.
+
+    config LUA_RTOS_LORA_DIO2
+        depends on LUA_RTOS_LORA_MODE_SINGLE_CHANNEL_GATEWAY || LUA_RTOS_LORA_MODE_NODE
+        int "LoRa DIO2 GPIO number"
+            range -1 39
+            default 17 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
+            default 33 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
+            help
+              The GPIO port number used for the DIO2 signal. Use -1 if DIO2 pin is not used.
+
+    config LUA_RTOS_LORA_CONNECTED_TO_POWER_BUS
+        bool "Connected to Power BUS"
+        depends on LUA_RTOS_LORA_MODE_MULTICHANNEL_GATEWAY  || LUA_RTOS_LORA_MODE_SINGLE_CHANNEL_GATEWAY || LUA_RTOS_LORA_MODE_NODE
+        default n
+        help
+          Some Lua RTOS compatible boards, such as WHITECAT N2 DEVKIT, have a load switch that can turn on and
+          off power rails through a GPIO. In Lua RTOS this feature is know as Power BUS, on which you can connect
+          devices that can be turn on and off on-demand, such as sensors and transceivers that are turn off when
+          they are not needed, to save power consumption. If your LoraWAN module is connected to Power BUS,
+          enable this option.
+
+    config LUA_RTOS_LORA_RX_QUEUE_SIZE
+        int "Max number of queued LoRaWAN downlinks"
+        range 1 64
+        default 4
+        help
+          Sets the capacity of the RX Queue used to store incoming LoRaWAN downlink messages. Each item in the queue 
+          will correspond to the maximum MTU of LoRaWAN. Increasing this value allows the device to handle bursts of downlinks
+          if the application is busy, but increases static RAM consumption.
+        
+    config LUA_RTOS_LORA_TASK_PRIORITY
+        depends on LUA_RTOS_LORA_MODE_SINGLE_CHANNEL_GATEWAY || LUA_RTOS_LORA_MODE_NODE
+        int "LoRa WAN stack task priority"
+        range 3 25
+        default 21
+        help
+          Task priority assigned to the LoRa WAN stack.
+
+    config LUA_RTOS_LORA_TASK_CPU
+        depends on !FREERTOS_UNICORE && (LUA_RTOS_LORA_MODE_SINGLE_CHANNEL_GATEWAY || LUA_RTOS_LORA_MODE_NODE)
+        int "to LoRa WAN thread CPU affinity"
+        range 0 1
+        default 0
+        help
+          CPU affinity assigned to the LoRa WAN stack.
+endmenu

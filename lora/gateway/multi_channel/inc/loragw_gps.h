@@ -23,7 +23,10 @@ Maintainer: Sylvain Miermont
 /* --- DEPENDANCIES --------------------------------------------------------- */
 
 /* fix an issue between POSIX and C99 */
+#if !WHITECAT_CUSTOM_CODE
 #define _GNU_SOURCE
+#endif
+
 #include <stdint.h>     /* C99 types */
 #include <time.h>       /* time library */
 

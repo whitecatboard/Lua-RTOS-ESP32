@@ -424,6 +424,8 @@ menu "Lua RTOS"
       endmenu
 
       menu "Network services"
+ 		 orsource "../lora/Kconfig.lora.in"
+
          menu "OpenVPN client"
             config LUA_RTOS_USE_OPENVPN
                bool "Enable OpenVPN client support"
@@ -520,7 +522,7 @@ menu "Lua RTOS"
             config LUA_RTOS_HTTP_SERVER_DOCUMENT_ROOT
                 depends on LUA_RTOS_USE_HTTP_SERVER
                    string "HTTP document root"
-                   default /
+                   default "/"
                 help
                    base folder where HTTP server looks for files
 
@@ -997,7 +999,7 @@ menu "Lua RTOS"
                     bool "RTL8201/SR8201"
 
                 config PHY_LAN8720
-                    bool "RTL8201/SR8201"
+                    bool "LAN87xx"
 
                 config PHY_DP83848
                     bool "DP83848"
@@ -1096,143 +1098,7 @@ menu "Lua RTOS"
                      range 1 39
                      default 35
       endmenu
-
-      menu "LoRa Wan"
-            choice LUA_RTOS_LORA_HW_TYPE
-                prompt "LoRa hardware type"
-                default LUA_RTOS_LORA_NONE
-                help
-                    Select the LoRa hardware type.
-
-                config LUA_RTOS_LORA_NONE
-                    bool "None"
-
-                config LUA_RTOS_LORA_HW_TYPE_SX1276
-                    bool "sx1276, used in nodes and single-channel gateways"
-
-                config LUA_RTOS_LORA_HW_TYPE_SX1272
-                    bool "sx1272, used in nodes and single-channel gateways"
-
-                config LUA_RTOS_LORA_HW_TYPE_SX1301
-                    bool "sx1301, used in multi-channel gateways"
-            endchoice
-            
-            choice LUA_RTOS_LORA_STACK
-                prompt "LoRa stack"
-                default LUA_RTOS_LORA_STACK_SEMTECH
-                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
-                help
-                    Select the LoRa stack.
-        
-                config LUA_RTOS_LORA_STACK_LMIC
-                    bool "LMIC"
-            
-                config LUA_RTOS_LORA_STACK_SEMTECH
-                    bool "Semtech"
-            endchoice            
-
-            choice LUA_RTOS_LORA_BAND
-                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
-                prompt "ISM band"
-                default LUA_RTOS_LORA_BAND_EU868
-                help
-                    Select the ISM band to use. Please, select band allowed in your region according to ISM regulations.
-
-                config LUA_RTOS_LORA_BAND_EU868
-                    bool "Europe - 868 Mhz"
-
-                config LUA_RTOS_LORA_BAND_US915
-                    bool "United States - 915 Mhz"
-            endchoice
-
-            config LUA_RTOS_LORA_SPI
-                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272 || LUA_RTOS_LORA_HW_TYPE_SX1301
-                int "LoRa SPI port"
-                    range 2 3
-                    default 3
-                    help
-                        The SPI port number where LoRa hardware is attached
-
-            config LUA_RTOS_LORA_CS
-                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272 || LUA_RTOS_LORA_HW_TYPE_SX1301
-                int "LoRa SPI CS GPIO number"
-                    range 0 39
-                    default 5
-                    help
-                        The GPIO port number used to select the LoRa hardware. Set -1 to use the default CS assigned to the SPI port.
-
-            config LUA_RTOS_LORA_RST
-                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272 || LUA_RTOS_LORA_HW_TYPE_SX1301
-                int "LoRa RST GPIO number"
-                    range -1 39
-                    default -1 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
-                    default 27 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
-                    help
-                        The GPIO port number used to select the LoRa hardware. Use -1 if RST pin is not used.
-
-            config LUA_RTOS_LORA_DIO0
-                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
-                int "LoRa DIO0 GPIO number"
-                    range -1 39
-                    default 4 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
-                    default 26 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
-                    help
-                        The GPIO port number used for the DIO0 signal. Use -1 if DIO0 pin is not used.
-
-            config LUA_RTOS_LORA_DIO1
-                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
-                int "LoRa DIO1 GPIO number"
-                    range -1 39
-                    default 16 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
-                    default 25 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
-                    help
-                        The GPIO port number used for the DIO1 signal. Use -1 if DIO1 pin is not used.
-
-            config LUA_RTOS_LORA_DIO2
-                depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
-                int "LoRa DIO2 GPIO number"
-                    range -1 39
-                    default 17 if (LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
-                    default 33 if !(LUA_RTOS_BOARD_WHITECAT_N1ESP32 || LUA_RTOS_BOARD_WHITECAT_N1ESP32_DEVKIT || LUA_RTOS_BOARD_WHITECAT_N2ESP32_DEVKIT)
-                    help
-                        The GPIO port number used for the DIO2 signal. Use -1 if DIO2 pin is not used.
-
-         config LUA_RTOS_LORA_CONNECTED_TO_POWER_BUS
-             bool "Connected to Power BUS"
-             depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272 || LUA_RTOS_LORA_HW_TYPE_SX1301
-             default n
-             help
-               Some Lua RTOS compatible boards, such as WHITECAT N2 DEVKIT, have a load switch that can turn on and
-               off power rails through a GPIO. In Lua RTOS this feature is know as Power BUS, on which you can connect
-               devices that can be turn on and off on-demand, such as sensors and transceivers that are turn off when
-               they are not needed, to save power consumption. If your LoraWAN module is connected to Power BUS,
-               enable this option.
-
-         config LUA_RTOS_LORA_STACK_SIZE
-            depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
-                int "LoRa WAN thread stack size"
-                range 1024 4096
-                default 2048
-                help
-                   Default stack size assigned to LoRa WAN thread.
-
-         config LUA_RTOS_LORA_TASK_PRIORITY
-            depends on LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272
-                int "LoRa WAN thread priority"
-                range 3 25
-                default 21
-                help
-                   Task priority assigned to LoRa WAN thread.
-
-         config LUA_RTOS_LORA_TASK_CPU
-            depends on !FREERTOS_UNICORE && (LUA_RTOS_LORA_HW_TYPE_SX1276 || LUA_RTOS_LORA_HW_TYPE_SX1272)
-            int "to LoRa WAN thread CPU affinity"
-                range 0 1
-                default 0
-                help
-                   CPU affinity for LoRa WAN thread.
-       endmenu
-
+	  
       menu "SD Card"
          choice LUA_RTOS_SD_CARD_INTERFACE
             prompt "Interface"

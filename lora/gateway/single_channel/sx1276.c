@@ -45,8 +45,6 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1276 || CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1272
-
 #include "sx1276.h"
 
 #include <sys/driver.h>
@@ -104,5 +102,3 @@ void IRAM_ATTR stx1276_read_buff(int spi_device, uint8_t addr, uint8_t *data, ui
 	spi_ll_bulk_read(spi_device, len, data);
 	spi_ll_deselect(spi_device);
 }
-
-#endif

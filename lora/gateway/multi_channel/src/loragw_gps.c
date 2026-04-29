@@ -17,8 +17,6 @@ Maintainer: Sylvain Miermont
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
-
 /* -------------------------------------------------------------------------- */
 /* --- DEPENDANCIES --------------------------------------------------------- */
 
@@ -583,5 +581,3 @@ int lgw_utc2cnt(struct tref ref, struct timespec utc, uint32_t *count_us) {
 }
 
 /* --- EOF ------------------------------------------------------------------ */
-
-#endif

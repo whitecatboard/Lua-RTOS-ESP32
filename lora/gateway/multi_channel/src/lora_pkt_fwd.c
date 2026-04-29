@@ -19,8 +19,6 @@ Maintainer: Michael Coracin
 
 #include "hex_string.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
-
 /* -------------------------------------------------------------------------- */
 /* --- DEPENDANCIES --------------------------------------------------------- */
 
@@ -63,6 +61,8 @@ Maintainer: Michael Coracin
 
 #include <sys/socket.h>
 #include <netdb.h>
+
+const char *gai_strerror(int ecode);
 
 // Lua RTOS end
 
@@ -1173,7 +1173,11 @@ int lora_pkt_fwd(void)
     }
     pthread_setname_np(thrid_up, "lora_upstream");
 
+#if WHITECAT_CUSTOM_CODE
+	pthread_attr_setstacksize(&attr, 5120);
+	#else
     pthread_attr_setstacksize(&attr, 4096);
+#endif
     i = pthread_create( &thrid_down, &attr, (void * (*)(void *))thread_down, NULL);
     if (i != 0) {
         MSG("ERROR: [main] impossible to create downstream thread\n");
@@ -2708,5 +2712,3 @@ void thread_valid(void) {
 }
 
 /* --- EOF ------------------------------------------------------------------ */
-
-#endif

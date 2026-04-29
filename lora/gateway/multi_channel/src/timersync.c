@@ -16,8 +16,6 @@ Maintainer: Michael Coracin
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
-
 /* -------------------------------------------------------------------------- */
 /* --- DEPENDANCIES --------------------------------------------------------- */
 
@@ -38,6 +36,7 @@ Maintainer: Michael Coracin
 /* -------------------------------------------------------------------------- */
 /* --- PRIVATE MACROS ------------------------------------------------------- */
 
+#if !WHITECAT_CUSTOM_CODE
 #define timersub(a, b, result)                                                \
   do {                                                                        \
     (result)->tv_sec = (a)->tv_sec - (b)->tv_sec;                             \
@@ -47,6 +46,7 @@ Maintainer: Michael Coracin
       (result)->tv_usec += 1000000;                                           \
     }                                                                         \
   } while (0)
+#endif
 
 /* -------------------------------------------------------------------------- */
 /* --- PRIVATE VARIABLES (GLOBAL) ------------------------------------------- */
@@ -147,5 +147,3 @@ void thread_timersync(void) {
         wait_ms(60000);
     }
 }
-
-#endif

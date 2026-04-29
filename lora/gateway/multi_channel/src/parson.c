@@ -26,8 +26,6 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
-
 #include "parson.h"
 
 #include <stdio.h>
@@ -1767,5 +1765,3 @@ void json_set_allocation_functions(JSON_Malloc_Function malloc_fun, JSON_Free_Fu
     parson_malloc = malloc_fun;
     parson_free = free_fun;
 }
-
-#endif

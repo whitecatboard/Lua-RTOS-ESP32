@@ -165,7 +165,7 @@ static int lbt_advertise_start( lua_State* L ) {
 
 	const char *peer_addr = luaL_checkstring(L, 6);
 
-    if (!lcheck_hex_str(peer_addr)) {
+    if (!check_hex_str(peer_addr)) {
     		return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT, "peer address must be in hex string format");
     }
 
@@ -176,7 +176,7 @@ static int lbt_advertise_start( lua_State* L ) {
 	params.filter_policy = luaL_checkinteger( L, 8 );
 
 	const char *adv_data = luaL_checkstring(L, 9);
-    if (!lcheck_hex_str(adv_data)) {
+    if (!check_hex_str(adv_data)) {
     		return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT, "advertise data must be in hex string format");
     }
 

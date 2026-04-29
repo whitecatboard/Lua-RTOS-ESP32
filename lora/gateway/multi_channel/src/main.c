@@ -48,7 +48,6 @@
 
 #include <drivers/net.h>
 #include <drivers/eth.h>
-#include <drivers/spi_eth.h>
 #include <drivers/wifi.h>
 
 #include <sys/syslog.h>

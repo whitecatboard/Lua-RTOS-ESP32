@@ -18,8 +18,6 @@ Maintainer: Sylvain Miermont
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
-
 /* -------------------------------------------------------------------------- */
 /* --- DEPENDANCIES --------------------------------------------------------- */
 
@@ -816,5 +814,3 @@ int lgw_reg_rb(uint16_t register_id, uint8_t *data, uint16_t size) {
 }
 
 /* --- EOF ------------------------------------------------------------------ */
-
-#endif

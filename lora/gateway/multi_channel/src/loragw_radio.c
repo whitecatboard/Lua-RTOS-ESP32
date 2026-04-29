@@ -15,8 +15,6 @@ Maintainer: Michael Coracin
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
-
 /* -------------------------------------------------------------------------- */
 /* --- DEPENDANCIES --------------------------------------------------------- */
 
@@ -564,5 +562,3 @@ int lgw_setup_sx127x(uint32_t frequency, uint8_t modulation, enum lgw_sx127x_rxb
 }
 
 /* --- EOF ------------------------------------------------------------------ */
-
-#endif

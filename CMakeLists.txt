@@ -78,6 +78,7 @@ add_compile_options("-DDEBUG_FREE_MEM=0")           # Enable LUA free mem debug 
 
 add_compile_options("-DLUA_RTOS_INCLUDE_LUA=1")
 add_compile_options("-DLUA_RTOS_INCLUDE_IDF_REPLACEMENTS=1")
+add_compile_options("-DWHITECAT_CUSTOM_CODE=1")
 
 add_compile_options("--warn-no-multistatement-macros")
 

@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-int lcheck_hex_str(const char *str) {
+int check_hex_str(const char *str) {
     if (strlen(str) % 2 != 0) {
         return 0;
     }

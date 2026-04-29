@@ -15,19 +15,19 @@ Maintainer: Sylvain Miermont
 
 #include "sdkconfig.h"
 
-#if CONFIG_LUA_RTOS_LORA_HW_TYPE_SX1301
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 /* -------------------------------------------------------------------------- */
 /* --- DEPENDANCIES --------------------------------------------------------- */
 
+#if !WHITECAT_CUSTOM_CODE
 /* fix an issue between POSIX and C99 */
 #if __STDC_VERSION__ >= 199901L
     #define _XOPEN_SOURCE 600
 #else
     #define _XOPEN_SOURCE 500
+#endif
 #endif
 
 #include <sys/delay.h>
@@ -55,5 +55,3 @@ void wait_ms(unsigned long a) {
 }
 
 /* --- EOF ------------------------------------------------------------------ */
-
-#endif

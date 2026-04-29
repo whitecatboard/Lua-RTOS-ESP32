@@ -115,7 +115,7 @@ static int leddystone_uid(lua_State* L) {
 
 	// Get address
 	const char *a_address = (const char *) luaL_checkstring(L, 1);
-	if (!lcheck_hex_str(a_address)) {
+	if (!check_hex_str(a_address)) {
 		return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT,
 		        "address must be in hex string format");
 	}
@@ -125,14 +125,14 @@ static int leddystone_uid(lua_State* L) {
 
 	// Get namespace
 	const char *a_name_space = (const char *) luaL_checkstring(L, 3);
-	if (!lcheck_hex_str(a_name_space)) {
+	if (!check_hex_str(a_name_space)) {
 		return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT,
 		        "namespace must be in hex string format");
 	}
 
 	// Get instance
 	const char *a_instance = (const char *) luaL_checkstring(L, 4);
-	if (!lcheck_hex_str(a_instance)) {
+	if (!check_hex_str(a_instance)) {
 		return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT,
 		        "instance must be in hex string format");
 	}
@@ -178,7 +178,7 @@ static int leddystone_url(lua_State* L) {
 
 	// Get address
 	const char *a_address = (const char *) luaL_checkstring(L, 1);
-	if (!lcheck_hex_str(a_address)) {
+	if (!check_hex_str(a_address)) {
 		return luaL_exception_extended(L, BT_ERR_INVALID_ARGUMENT,
 		        "address must be in hex string format");
 	}
